@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RealEstate CRM — Transaction & Showing Automation",
+  title: "RealtorAI — Real Estate Transaction & Showing Automation",
   description:
-    "Real Estate Transaction & Showing Automation CRM for British Columbia",
+    "AI-powered Real Estate Transaction & Showing Automation CRM for British Columbia",
 };
 
 export default function RootLayout({

@@ -16,7 +16,12 @@ export default async function ContactsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Contacts</h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Contacts</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Your buyers and sellers
+          </p>
+        </div>
         <ContactForm />
       </div>
 

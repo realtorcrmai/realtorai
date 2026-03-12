@@ -26,7 +26,12 @@ export default async function ShowingsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Showings</h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Showings</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Track and manage showing requests
+          </p>
+        </div>
         <ShowingRequestForm listings={listings ?? []} />
       </div>
 

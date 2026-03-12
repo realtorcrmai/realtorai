@@ -1,7 +1,14 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Clock, CalendarCheck, AlertTriangle } from "lucide-react";
+import {
+  Building2,
+  Clock,
+  CalendarCheck,
+  AlertTriangle,
+  ArrowRight,
+  TrendingUp,
+} from "lucide-react";
 import { ShowingStatusBadge } from "@/components/showings/ShowingStatusBadge";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
@@ -11,7 +18,6 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const supabase = createAdminClient();
 
-  // Fetch stats in parallel
   const [
     { count: activeListings },
     { count: pendingShowings },
@@ -43,7 +49,6 @@ export default async function DashboardPage() {
       .limit(5),
   ]);
 
-  // Check for listings with missing required documents
   const { data: allListings } = await supabase
     .from("listings")
     .select("id")
@@ -65,68 +70,98 @@ export default async function DashboardPage() {
       title: "Active Listings",
       value: activeListings ?? 0,
       icon: Building2,
-      color: "text-green-600",
+      iconBg: "bg-blue-50 text-blue-600",
+      href: "/listings",
     },
     {
       title: "Pending Requests",
       value: pendingShowings ?? 0,
       icon: Clock,
-      color: "text-amber-600",
+      iconBg: "bg-amber-50 text-amber-600",
       badge: (pendingShowings ?? 0) > 0,
+      href: "/showings",
     },
     {
       title: "Confirmed This Week",
       value: confirmedThisWeek?.length ?? 0,
       icon: CalendarCheck,
-      color: "text-blue-600",
+      iconBg: "bg-emerald-50 text-emerald-600",
+      href: "/calendar",
     },
     {
       title: "Missing Documents",
       value: listingsWithMissing.length,
       icon: AlertTriangle,
-      color: "text-red-600",
+      iconBg: "bg-red-50 text-red-600",
+      href: "/listings",
     },
   ];
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Overview of your real estate activity
+        </p>
+      </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
-          <Card key={stat.title}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.title}</p>
-                  <div className="flex items-center gap-2">
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                    {stat.badge && (
-                      <Badge variant="destructive" className="text-xs">
-                        Action needed
-                      </Badge>
-                    )}
+          <Link key={stat.title} href={stat.href}>
+            <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-xl ${stat.iconBg}`}
+                  >
+                    <stat.icon className="h-5 w-5" />
                   </div>
+                  {stat.badge && (
+                    <Badge variant="destructive" className="text-[10px] px-1.5">
+                      New
+                    </Badge>
+                  )}
                 </div>
-                <stat.icon className={`h-8 w-8 ${stat.color}`} />
-              </div>
-            </CardContent>
-          </Card>
+                <div className="mt-3">
+                  <p className="text-2xl font-bold">{stat.value}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {stat.title}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 
-      {/* Recent Showings */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Recent Showings</CardTitle>
+      {/* Recent Showings + Quick Actions */}
+      <div className="grid lg:grid-cols-5 gap-6">
+        <Card className="lg:col-span-3">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-base font-semibold">
+              Recent Showings
+            </CardTitle>
+            <Link
+              href="/showings"
+              className="text-xs text-primary font-medium flex items-center gap-1 hover:underline"
+            >
+              View all
+              <ArrowRight className="h-3 w-3" />
+            </Link>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2">
             {(recentShowings ?? []).length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No showings yet.
-              </p>
+              <div className="text-center py-8">
+                <Clock className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  No showings yet
+                </p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  Create a showing request to get started
+                </p>
+              </div>
             )}
             {(recentShowings ?? []).map((showing) => {
               const listing = (showing as Record<string, unknown>)
@@ -134,13 +169,13 @@ export default async function DashboardPage() {
               return (
                 <div
                   key={showing.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                  className="flex items-center justify-between p-3 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors"
                 >
-                  <div>
-                    <p className="text-sm font-medium">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">
                       {listing?.address ?? "Unknown"}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {showing.buyer_agent_name} &middot;{" "}
                       {formatDistanceToNow(new Date(showing.created_at), {
                         addSuffix: true,
@@ -159,56 +194,63 @@ export default async function DashboardPage() {
                 </div>
               );
             })}
-            <Link
-              href="/showings"
-              className="block text-sm text-primary text-center pt-2"
-            >
-              View all showings
-            </Link>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Quick Actions</CardTitle>
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold">
+              Quick Actions
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <Link
-              href="/showings"
-              className="block p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-            >
-              <p className="text-sm font-medium">Manage Showings</p>
-              <p className="text-xs text-muted-foreground">
-                Review and respond to showing requests
-              </p>
-            </Link>
-            <Link
-              href="/contacts"
-              className="block p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-            >
-              <p className="text-sm font-medium">Add Contact</p>
-              <p className="text-xs text-muted-foreground">
-                Create a new buyer or seller contact
-              </p>
-            </Link>
-            <Link
-              href="/listings"
-              className="block p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-            >
-              <p className="text-sm font-medium">View Listings</p>
-              <p className="text-xs text-muted-foreground">
-                Manage your active property listings
-              </p>
-            </Link>
-            <Link
-              href="/calendar"
-              className="block p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-            >
-              <p className="text-sm font-medium">Open Calendar</p>
-              <p className="text-xs text-muted-foreground">
-                View your schedule and upcoming showings
-              </p>
-            </Link>
+          <CardContent className="space-y-2">
+            {[
+              {
+                href: "/showings",
+                title: "Manage Showings",
+                desc: "Review and respond to requests",
+                icon: Clock,
+                iconBg: "bg-amber-50 text-amber-600",
+              },
+              {
+                href: "/contacts",
+                title: "Add Contact",
+                desc: "Create a buyer or seller contact",
+                icon: TrendingUp,
+                iconBg: "bg-emerald-50 text-emerald-600",
+              },
+              {
+                href: "/listings",
+                title: "View Listings",
+                desc: "Manage your property listings",
+                icon: Building2,
+                iconBg: "bg-blue-50 text-blue-600",
+              },
+              {
+                href: "/calendar",
+                title: "Open Calendar",
+                desc: "View upcoming schedule",
+                icon: CalendarCheck,
+                iconBg: "bg-purple-50 text-purple-600",
+              },
+            ].map((action) => (
+              <Link
+                key={action.href}
+                href={action.href}
+                className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors group"
+              >
+                <div
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg ${action.iconBg} shrink-0`}
+                >
+                  <action.icon className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">{action.title}</p>
+                  <p className="text-xs text-muted-foreground">{action.desc}</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-foreground transition-colors shrink-0" />
+              </Link>
+            ))}
           </CardContent>
         </Card>
       </div>

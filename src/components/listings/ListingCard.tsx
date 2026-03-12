@@ -5,25 +5,27 @@ import { MapPin, DollarSign } from "lucide-react";
 import type { Listing } from "@/types";
 
 const statusColors = {
-  active: "bg-green-100 text-green-800",
-  pending: "bg-amber-100 text-amber-800",
-  sold: "bg-blue-100 text-blue-800",
+  active: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  pending: "bg-amber-50 text-amber-700 border-amber-200",
+  sold: "bg-blue-50 text-blue-700 border-blue-200",
 };
 
 export function ListingCard({ listing }: { listing: Listing & { contacts?: { name: string; phone: string } } }) {
   return (
     <Link href={`/listings/${listing.id}`}>
-      <Card className="hover:shadow-md transition-shadow cursor-pointer">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-1.5">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <h3 className="font-semibold text-base">{listing.address}</h3>
+      <Card className="hover:shadow-md transition-all cursor-pointer group">
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary shrink-0" />
+                <h3 className="font-semibold text-sm truncate group-hover:text-primary transition-colors">
+                  {listing.address}
+                </h3>
               </div>
               {listing.list_price && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                  <DollarSign className="h-3.5 w-3.5" />
+                <div className="flex items-center gap-1 text-sm font-medium mt-2">
+                  <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>
                     {listing.list_price.toLocaleString("en-CA", {
                       style: "currency",
@@ -33,20 +35,22 @@ export function ListingCard({ listing }: { listing: Listing & { contacts?: { nam
                   </span>
                 </div>
               )}
-              {listing.mls_number && (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  MLS# {listing.mls_number}
-                </p>
-              )}
-              {listing.contacts && (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Seller: {listing.contacts.name}
-                </p>
-              )}
+              <div className="flex items-center gap-3 mt-2">
+                {listing.mls_number && (
+                  <p className="text-xs text-muted-foreground">
+                    MLS# {listing.mls_number}
+                  </p>
+                )}
+                {listing.contacts && (
+                  <p className="text-xs text-muted-foreground">
+                    Seller: {listing.contacts.name}
+                  </p>
+                )}
+              </div>
             </div>
             <Badge
-              variant="secondary"
-              className={statusColors[listing.status]}
+              variant="outline"
+              className={`${statusColors[listing.status]} text-[11px] font-medium capitalize shrink-0`}
             >
               {listing.status}
             </Badge>
