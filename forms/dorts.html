@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DORTS — Disclosure of Representation in Trading Services</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   ListingFlow — BC Real Estate Forms  |  Editable Template
+   ══════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bcrea-red:   #BE0000;
+  --bcrea-navy:  #141e3c;
+  --bcfsa-teal:  #009DAE;
+  --govt-blue:   #003087;
+  --fintrac-red: #AF0014;
+  --dark:        #1a1a2e;
+  --mid:         #44445a;
+  --gray:        #7a7a8c;
+  --light:       #e8e8f0;
+  --bg:          #f5f5f8;
+  --field-focus: #f0edff;
+  --purple:      #4f35d2;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10pt;
+  color: var(--dark);
+  background: #e8e8e8;
+  padding-top: 54px;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────── */
+#toolbar {
+  position: fixed; top: 0; left: 0; right: 0; height: 54px;
+  background: #1e1c3a;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 18px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.35);
+  z-index: 9999;
+}
+#toolbar .t-title { flex: 1; }
+#toolbar .t-title strong { color: #c8beff; font-size: 10.5pt; }
+#toolbar .t-title span  { color: #6b6b9b; font-size: 8pt; margin-left: 8px; }
+#toolbar .t-badge {
+  padding: 3px 10px; border-radius: 12px;
+  font-size: 7.5pt; font-weight: 700; letter-spacing: .04em;
+  background: rgba(99,235,176,.15); color: #63ebb0; border: 1px solid rgba(99,235,176,.3);
+}
+.t-btn {
+  padding: 7px 16px; border-radius: 7px; border: none;
+  font-size: 9pt; font-weight: 700; cursor: pointer;
+  transition: opacity .15s, transform .1s;
+}
+.t-btn:hover { opacity: .88; transform: translateY(-1px); }
+.t-btn.print  { background: var(--purple); color: #fff; }
+.t-btn.reset  { background: #2d2d4e; color: #a0a0c8; border: 1px solid #3d3d6e; }
+
+/* ── Page ────────────────────────────────────────────────── */
+.page {
+  width: 8.5in;
+  min-height: 11in;
+  background: white;
+  margin: 18px auto;
+  padding: .65in .70in .55in;
+  box-shadow: 0 4px 24px rgba(0,0,0,.12);
+  position: relative;
+  page-break-after: always;
+}
+.page:last-child { page-break-after: auto; }
+
+/* ── Form header bars ────────────────────────────────────── */
+.form-hdr {
+  display: flex; align-items: center;
+  padding: 10px 14px;
+  margin: 0 -.70in .22in;
+  width: calc(100% + 1.4in);
+}
+.form-hdr .fh-left  { display: flex; align-items: baseline; gap: 10px; flex: 1; }
+.form-hdr .fh-org   { font-size: 20pt; font-weight: 900; color: white; letter-spacing: -.02em; }
+.form-hdr .fh-full  { font-size: 8pt; color: rgba(255,255,255,.7); }
+.form-hdr .fh-right { text-align: right; }
+.form-hdr .fh-name  { font-size: 13pt; font-weight: 800; color: white; letter-spacing: .02em; }
+.form-hdr .fh-num   { font-size: 8pt; color: rgba(255,255,255,.65); margin-top: 2px; }
+
+/* ── Continuation header ─────────────────────────────────── */
+.cont-hdr {
+  padding: 7px 12px;
+  margin: 0 -.70in .22in;
+  width: calc(100% + 1.4in);
+  font-size: 10pt; font-weight: 700; color: white;
+  letter-spacing: .04em;
+}
+
+/* ── Section headers ─────────────────────────────────────── */
+.sec {
+  padding: 5px 10px;
+  margin: 16px 0 10px;
+  font-size: 8.5pt; font-weight: 700;
+  color: white; letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+/* ── Field rows ──────────────────────────────────────────── */
+.field { margin-bottom: 12px; }
+.field label {
+  display: block;
+  font-size: 7pt; color: var(--gray);
+  margin-bottom: 2px;
+}
+.field input[type=text], .field input[type=date], .field select, .field textarea {
+  width: 100%;
+  border: none;
+  border-bottom: 1.2px solid #aaa;
+  background: transparent;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10.5pt;
+  color: var(--dark);
+  padding: 2px 3px 5px;
+  transition: border-color .15s, background .1s;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none;
+  border-bottom: 2px solid var(--purple);
+  background: var(--field-focus);
+}
+.field select {
+  border: 1px solid #bbb; border-radius: 4px; padding: 4px 6px;
+  cursor: pointer;
+}
+.field textarea {
+  border: 1.2px solid #bbb; border-radius: 3px;
+  padding: 5px 8px; resize: vertical; min-height: 48px;
+}
+.field textarea:focus { border: 2px solid var(--purple); }
+
+/* ── Columns ─────────────────────────────────────────────── */
+.cols    { display: flex; gap: 16px; margin-bottom: 12px; }
+.cols .field { margin-bottom: 0; }
+.col1 { flex: 1; }
+.col2 { flex: 2; }
+.col3 { flex: 3; }
+.col-half { flex: 1; }
+.col-third { flex: 1; }
+
+/* ── Checkbox / Radio ────────────────────────────────────── */
+.chk-row, .radio-row {
+  display: flex; align-items: flex-start;
+  gap: 9px; margin: 6px 0; cursor: pointer;
+}
+.chk-row input[type=checkbox] {
+  margin-top: 2px; width: 13px; height: 13px;
+  accent-color: var(--purple); flex-shrink: 0; cursor: pointer;
+}
+.radio-row input[type=radio] {
+  margin-top: 3px; width: 14px; height: 14px;
+  accent-color: var(--bcfsa-teal); flex-shrink: 0; cursor: pointer;
+}
+.chk-row label, .radio-row label {
+  font-size: 9.5pt; line-height: 1.45; cursor: pointer;
+}
+.chk-row label b, .radio-row label b { color: var(--dark); }
+
+/* ── Yes/No/Unknown question rows ─────────────────────────── */
+.ynu-table { width: 100%; border-collapse: collapse; margin: 4px 0; }
+.ynu-table tr { border-bottom: 1px solid #eee; }
+.ynu-table td { padding: 6px 4px; vertical-align: top; font-size: 8.5pt; }
+.ynu-table td.qnum { font-weight: 700; color: var(--bcrea-red); width: 24px; }
+.ynu-table td.qtext { line-height: 1.4; }
+.ynu-table td.ynu-opts { white-space: nowrap; width: 190px; }
+.ynu-opt-group { display: flex; gap: 12px; align-items: center; }
+.ynu-opt { display: flex; align-items: center; gap: 4px; font-size: 8pt; }
+.ynu-opt input[type=radio] { width: 12px; height: 12px; accent-color: var(--bcrea-red); }
+.ynu-detail { width: 100%; margin-top: 3px; font-size: 8.5pt; }
+.ynu-detail input {
+  width: 100%; border: none; border-bottom: 1px dashed #bbb;
+  background: transparent; font-size: 8.5pt; padding: 1px 2px;
+}
+.ynu-detail input:focus { outline: none; border-bottom: 1.5px solid var(--purple); }
+
+/* ── Signature blocks ────────────────────────────────────── */
+.sig-section { margin-top: 22px; }
+.sig-row { display: flex; gap: 16px; margin-bottom: 20px; }
+.sig-col { flex: 1; }
+.sig-line {
+  border-top: 1.3px solid #888;
+  padding-top: 5px;
+  margin-bottom: 0;
+}
+.sig-line .sig-label { font-size: 7pt; color: var(--gray); }
+.sig-name { font-size: 10pt; color: var(--dark); font-weight: 500; min-height: 18px; }
+.sig-input {
+  width: 100%; border: none;
+  background: transparent; font-size: 10pt;
+  font-family: 'Georgia', serif; color: var(--dark);
+  padding: 2px 0;
+}
+.sig-input:focus { outline: none; }
+.date-field {
+  width: 100%; border: none; border-bottom: 1.2px solid #aaa;
+  background: transparent; font-size: 10pt; color: var(--dark); padding: 2px 3px;
+}
+.date-field:focus { outline: none; border-bottom: 2px solid var(--purple); }
+
+/* ── Notice / Info boxes ─────────────────────────────────── */
+.notice {
+  border: 1px solid #e0d8f8; border-radius: 5px;
+  background: #faf9ff; padding: 10px 14px;
+  font-size: 8.5pt; line-height: 1.55;
+  margin: 10px 0;
+}
+.notice.warning { background: #fffbf0; border-color: #f0d58a; }
+.notice.legal   { background: #fff8f0; border-color: #f0c48a; }
+.notice.green   { background: #f0faf5; border-color: #6ee7b7; }
+
+/* ── Page footer ─────────────────────────────────────────── */
+.pg-footer {
+  position: absolute; bottom: .35in; left: .70in; right: .70in;
+  border-top: .5px solid #ccc;
+  padding-top: 6px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.pg-footer .pf-left  { font-size: 7pt; font-weight: 700; color: var(--dark); }
+.pg-footer .pf-right { font-size: 7pt; color: var(--gray); text-align: right; }
+.pg-footer .pf-center { font-size: 7pt; color: var(--gray); text-align: center; flex: 1; }
+
+/* ── Teal compliance box (DORTS) ─────────────────────────── */
+.compliance-box {
+  border: 1.5px solid var(--bcfsa-teal);
+  border-radius: 4px;
+  padding: 12px 16px;
+  background: #f0fafb;
+  margin: 12px 0;
+}
+.compliance-box .cb-hdr {
+  font-size: 11pt; font-weight: 800;
+  color: var(--bcfsa-teal); text-transform: uppercase;
+  letter-spacing: .06em; margin-bottom: 8px;
+}
+
+/* ── Badge ───────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 4px 12px; border-radius: 4px;
+  font-size: 8.5pt; font-weight: 700;
+  float: right; margin-top: -30px;
+}
+
+/* ═══ PRINT ═══════════════════════════════════════════════ */
+@media print {
+  body { background: white; padding: 0; }
+  #toolbar { display: none !important; }
+  .page {
+    width: 100%; margin: 0; box-shadow: none;
+    padding: .55in .60in .45in;
+    page-break-after: always;
+  }
+  .page:last-child { page-break-after: auto; }
+  .field input, .field select, .field textarea, .sig-input, .date-field, .ynu-detail input {
+    background: transparent !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    background: transparent !important;
+  }
+  .form-hdr, .cont-hdr, .sec, .compliance-box, .badge,
+  .notice, .notice.warning, .notice.legal, .notice.green {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <div class="t-title">
+    <strong>DORTS — Disclosure of Representation in Trading Services</strong>
+    <span>BC Real Estate Standard Form — Editable</span>
+  </div>
+  <span class="t-badge">✏ EDITABLE</span>
+  <button class="t-btn reset" onclick="location.reload()">↺ Reset</button>
+  <button class="t-btn print" onclick="window.print()">🖨 Print / Save PDF</button>
+</div>
+
+<div class="page">
+  <!-- BCFSA Logo -->
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+    <div>
+      <div style="display:flex;align-items:baseline;gap:0">
+        <span style="font-size:26pt;font-weight:900;color:#141e3c;letter-spacing:-.03em">BCFS</span>
+        <span style="font-size:26pt;font-weight:900;color:#009DAE;letter-spacing:-.03em">A</span>
+        <span style="display:inline-block;width:1px;background:#ccc;height:28px;margin:0 10px;vertical-align:middle"></span>
+        <div style="display:flex;flex-direction:column;justify-content:center">
+          <span style="font-size:11pt;font-weight:700;color:#141e3c">BC Financial</span>
+          <span style="font-size:11pt;color:#141e3c">Services Authority</span>
+        </div>
+      </div>
+      <div style="font-size:28pt;font-weight:900;color:#009DAE;line-height:1.1;margin-top:10px">Your Relationship<br>with a Real Estate<br>Professional</div>
+      <div style="font-size:11pt;font-weight:700;color:#141e3c;margin-top:10px;max-width:400px">
+        Real estate professionals have a regulatory requirement to present you with this consumer information before providing services to you.
+      </div>
+    </div>
+    <div style="border:1px solid #ccc;border-radius:4px;padding:12px 14px;max-width:240px;font-size:8pt;line-height:1.5">
+      <strong>BC Financial Services Authority</strong><br>
+      is the legislated regulatory agency that works to ensure real estate professionals have the skills and knowledge to provide you with a high standard of service. All real estate professionals must follow rules that help protect consumers, like you. We're here to help you understand your rights as a real estate consumer.<br><br>
+      <strong>Keep this information page for your reference.</strong>
+    </div>
+  </div>
+
+  <p style="font-size:9pt;color:#333;margin-bottom:14px">This information explains the different relationships you can have with a real estate professional to buy, sell or lease property. Before you disclose confidential information to a real estate professional regarding a real estate transaction, you should understand what type of business relationship you have with that individual.</p>
+
+  <div style="background:#f3f3f3;padding:14px 16px;border-radius:4px">
+    <p style="font-size:9.5pt;font-weight:700;color:#141e3c;margin-bottom:12px">You can work with a real estate professional in one of the following ways:</p>
+    <div style="display:flex;gap:20px">
+      <div style="flex:1">
+        <div style="font-size:8.5pt;font-weight:700;color:#009DAE;text-transform:uppercase;margin-bottom:8px">AS A CLIENT</div>
+        <p style="font-size:8.5pt;margin-bottom:8px">If you are the client of a real estate professional, they work on your behalf. The real estate professional representing you has special legal duties to you, including:</p>
+        <ul style="font-size:8.5pt;padding-left:16px;line-height:1.7">
+          <li><strong>Loyalty.</strong> They will act only in your best interests.</li>
+          <li><strong>Full disclosure.</strong> They must tell you everything they know that might influence your decision in a transaction.</li>
+          <li><strong>Avoid conflicts of interest.</strong> They must avoid any situation that would affect their duty to act in your best interests.</li>
+          <li><strong>Confidentiality.</strong> They must not reveal your private information without your permission, even after your relationship ends. That includes:
+            <ul style="padding-left:14px">
+              <li>your reasons for buying, selling or leasing</li>
+              <li>your minimum/maximum price</li>
+              <li>any preferred terms and conditions you may want to include in a contract</li>
+            </ul>
+          </li>
+        </ul>
+        <p style="font-size:8.5pt;margin-top:8px">When you become a client, you may be asked to sign a written agreement setting out your and the real estate professional's responsibilities.</p>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:8.5pt;font-weight:700;color:#009DAE;text-transform:uppercase;margin-bottom:8px">AS A NON-CLIENT</div>
+        <p style="font-size:8.5pt;margin-bottom:8px">A real estate professional who is not representing you as a client does not owe you special legal duties:</p>
+        <ul style="font-size:8.5pt;padding-left:16px;line-height:1.7">
+          <li><strong>No loyalty.</strong> They may be representing a client with competing interests to yours in a transaction.</li>
+          <li><strong>No duty of full disclosure.</strong> They do not have a duty to give you all relevant information.</li>
+          <li><strong>No duty to avoid conflicts.</strong> They are not acting in your interests.</li>
+          <li><strong>No confidentiality.</strong> They must share any information you tell them with their clients in a transaction.</li>
+        </ul>
+        <p style="font-size:8.5pt;margin-top:8px">As a non-client, a real estate professional may give you only limited services.</p>
+        <div style="background:#ddd;padding:10px;border-radius:3px;margin-top:12px;font-size:8pt;line-height:1.5">
+          Whenever a real estate professional works with you in a real estate transaction, whether you are their client or not, they have a responsibility to act honestly and with reasonable care and skill.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:14px;font-size:9pt;font-weight:700;color:#141e3c">
+    Did you know buyers have a right to cancel a contract to purchase some types of residential real property in B.C.?
+    To learn more about the Home Buyer Rescission Period, visit www.bcfsa.ca or talk to your real estate licensee, a lawyer, or a notary.
+  </div>
+
+  <div class="pg-footer">
+  <span class="pf-left">PAGE 1 OF 2</span>
+  <span class="pf-center">Your Relationship with a Real Estate Professional</span>
+  <span class="pf-right">BCFSA</span>
+</div>
+</div><div class="page">
+  <div style="font-size:16pt;font-weight:800;color:#141e3c;border-bottom:2px solid #141e3c;padding-bottom:6px;margin-bottom:14px">
+    Your Relationship with a Real Estate Professional
+  </div>
+
+  <div style="font-size:9.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#141e3c;margin-bottom:8px">
+    DISCLOSURE OF REPRESENTATION IN TRADING SERVICES
+  </div>
+  <div style="border-bottom:1px solid #ccc;margin-bottom:12px"></div>
+
+  <p style="font-size:9pt;margin-bottom:10px">
+    <span style="color:#009DAE;font-weight:700">This is a required disclosure form in compliance with sections 54 of the Real Estate Services Rules.</span>
+    Your real estate professional must present the <em>Your Relationship with a Real Estate Professional</em> information page to you along with this disclosure form.
+  </p>
+
+  <div class="compliance-box">
+    <div class="cb-hdr">REAL ESTATE PROFESSIONAL DISCLOSURE DETAILS</div>
+
+    <p style="font-size:9.5pt;margin-bottom:10px">I disclose that I am <em>(check one)</em>:</p>
+
+    <div class="radio-row">
+  <input type="radio" name="representation" value="1" checked>
+  <label>representing you as my client</label>
+</div>
+<div class="radio-row">
+  <input type="radio" name="representation" value="2" >
+  <label><strong>not</strong> representing you as a client</label>
+</div>
+
+    <div style="height:14px"></div>
+
+    <div class="field">
+  <label>Name</label>
+  <input type="text"  value="Sarah Mitchell" placeholder="">
+</div>
+    <div class="field">
+  <label>Team name and members, if applicable. &lt;em style=&quot;font-size:7.5pt;color:#888&quot;&gt;The duties of a real estate professional as outlined in this form apply to all team members.&lt;/em&gt;</label>
+  <input type="text"  value="" placeholder="">
+</div>
+    <div class="field">
+  <label>Brokerage</label>
+  <input type="text"  value="RE/MAX City Realty" placeholder="">
+</div>
+    <div class="cols"><div class="col-half"><div class="field"><label>Signature</label><input class="sig-input" type="text" placeholder="Sign here…"></div></div><div class="col-half"><div class="field">
+  <label>Date</label>
+  <input type="text"  value="March 11, 2026" placeholder="">
+</div></div></div>
+    <div class="field"><label>Notes:</label><textarea rows="3"></textarea></div>
+  </div>
+
+  <div style="height:16px"></div>
+
+  <div style="border:1.5px solid #009DAE;border-radius:4px;padding:16px;background:#f0fafb;position:relative">
+    <div style="position:absolute;top:14px;right:14px;background:#009DAE;color:white;padding:5px 14px;border-radius:3px;font-size:8.5pt;font-weight:700">This is NOT a contract</div>
+    <div style="font-size:11pt;font-weight:800;color:#009DAE;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">CONSUMER ACKNOWLEDGMENT:</div>
+    <p style="font-size:9.5pt;margin-bottom:18px">I acknowledge that I have received the <strong>Your Relationship with a Real Estate Professional</strong> consumer information page and this disclosure form.</p>
+    <div style="display:flex;gap:20px">
+      <div style="flex:1">
+        <div style="border-bottom:1.2px solid #888;margin-bottom:4px"></div>
+        <div style="font-size:7pt;color:#666">Name (optional)</div>
+        <div style="height:16px"></div>
+        <div style="display:flex;gap:12px">
+          <div style="flex:1;border-bottom:1.2px solid #888;padding-bottom:2px"><div style="font-size:7pt;color:#666;margin-top:3px">Initials (optional)</div></div>
+          <div style="flex:1;border-bottom:1.2px solid #888;padding-bottom:2px"><div style="font-size:7pt;color:#666;margin-top:3px">Date</div></div>
+        </div>
+      </div>
+      <div style="flex:1">
+        <div style="border-bottom:1.2px solid #888;margin-bottom:4px"></div>
+        <div style="font-size:7pt;color:#666">Name (optional)</div>
+        <div style="height:16px"></div>
+        <div style="display:flex;gap:12px">
+          <div style="flex:1;border-bottom:1.2px solid #888;padding-bottom:2px"><div style="font-size:7pt;color:#666;margin-top:3px">Initials (optional)</div></div>
+          <div style="flex:1;border-bottom:1.2px solid #888;padding-bottom:2px"><div style="font-size:7pt;color:#666;margin-top:3px">Date</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p style="font-size:7.5pt;color:#666;margin-top:14px">A copy of this disclosure is not required to be provided to BC Financial Services Authority unless it is specifically requested.</p>
+
+  <div style="display:flex;justify-content:center;align-items:center;gap:12px;margin-top:30px">
+    <span style="font-size:14pt;font-weight:900;color:#141e3c">BCFS</span><span style="font-size:14pt;font-weight:900;color:#009DAE">A</span>
+    <span style="color:#ccc;font-size:18pt">|</span>
+    <div style="font-size:7.5pt;line-height:1.4;color:#444"><strong>BC Financial</strong><br>Services Authority</div>
+    <span style="color:#ccc;font-size:16pt"> / </span>
+    <div style="font-size:9pt;font-weight:700;color:#009DAE">You're Protected<br>bcfsa.ca</div>
+  </div>
+
+  <div class="pg-footer">
+  <span class="pf-left">PAGE 2 OF 2</span>
+  <span class="pf-center">Disclosure of Representation in Trading Services</span>
+  <span class="pf-right">BCFSA</span>
+</div>
+</div>
+
+<script>
+// Auto-resize textareas
+document.querySelectorAll('textarea').forEach(t => {
+  t.addEventListener('input', () => {
+    t.style.height = 'auto';
+    t.style.height = t.scrollHeight + 'px';
+  });
+});
+// Date default helper
+document.querySelectorAll('input[data-today]').forEach(el => {
+  if (!el.value) el.value = new Date().toLocaleDateString('en-CA');
+});
+</script>
+</body>
+</html>
