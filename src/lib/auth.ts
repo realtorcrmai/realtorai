@@ -1,9 +1,33 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+const DEMO_EMAIL = process.env.DEMO_EMAIL || "demo@realestatecrm.com";
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD || "demo1234";
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  session: { strategy: "jwt" },
   providers: [
+    CredentialsProvider({
+      name: "Demo Account",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        const email = credentials?.email as string | undefined;
+        const password = credentials?.password as string | undefined;
+        if (email === DEMO_EMAIL && password === DEMO_PASSWORD) {
+          return {
+            id: "demo-user",
+            name: "Demo User",
+            email: DEMO_EMAIL,
+          };
+        }
+        return null;
+      },
+    }),
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
@@ -24,7 +48,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, account }) {
-      if (account && account.refresh_token) {
+      if (account && account.provider === "google" && account.refresh_token) {
         const supabase = createAdminClient();
         await supabase.from("google_tokens").upsert(
           {
@@ -52,5 +76,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/login",
   },
+  trustHost: true,
   secret: process.env.NEXTAUTH_SECRET,
 });
