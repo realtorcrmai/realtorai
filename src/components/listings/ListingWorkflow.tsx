@@ -583,11 +583,11 @@ export function ListingWorkflow({
     [listing, documents.length, formStatuses]
   );
 
-  // In-progress steps start expanded, others collapsed
+  // Completed and in-progress steps start expanded to show activity messages
   const initialExpanded = useMemo(() => {
     const expanded = new Set<string>();
     for (const step of WORKFLOW_STEPS) {
-      if (statuses[step.id] === "in-progress") {
+      if (statuses[step.id] !== "pending") {
         expanded.add(step.id);
       }
     }
