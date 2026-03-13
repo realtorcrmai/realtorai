@@ -395,27 +395,33 @@ export function ListingWorkflow({
               {/* Timeline connector + circle */}
               <div className="flex flex-col items-center">
                 {status === "completed" ? (
-                  <div
-                    className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${styles.circle}`}
+                  <button
+                    type="button"
+                    onClick={() => hasSubsteps && toggleStep(step.id)}
+                    className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-transform hover:scale-110 ${styles.circle}`}
                   >
                     <Check className="h-5 w-5 text-white" />
-                  </div>
+                  </button>
                 ) : status === "in-progress" ? (
-                  <div
-                    className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${styles.circle}`}
+                  <button
+                    type="button"
+                    onClick={() => hasSubsteps && toggleStep(step.id)}
+                    className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-transform hover:scale-110 ${styles.circle}`}
                   >
                     <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
                       {stepNumber}
                     </span>
-                  </div>
+                  </button>
                 ) : (
-                  <div
-                    className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${styles.circle}`}
+                  <button
+                    type="button"
+                    onClick={() => hasSubsteps && toggleStep(step.id)}
+                    className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-transform hover:scale-110 ${styles.circle}`}
                   >
                     <span className="text-sm font-medium text-muted-foreground/50">
                       {stepNumber}
                     </span>
-                  </div>
+                  </button>
                 )}
                 {!isLast && (
                   <div
