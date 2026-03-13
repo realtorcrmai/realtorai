@@ -166,6 +166,7 @@ export default async function ListingDetailPage({
               <ListingWorkflow
                 listing={listing}
                 documents={(documents ?? []) as ListingDocument[]}
+                formStatuses={formStatuses}
               />
             </CardContent>
           </Card>
