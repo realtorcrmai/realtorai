@@ -42,6 +42,7 @@ type FormData = z.infer<typeof formSchema>;
 export function ListingForm({ sellers }: { sellers: Contact[] }) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedSeller, setSelectedSeller] = useState<string>("");
 
   const {
     register,
@@ -68,6 +69,7 @@ export function ListingForm({ sellers }: { sellers: Contact[] }) {
     });
     setSubmitting(false);
     reset();
+    setSelectedSeller("");
     setOpen(false);
   }
 
@@ -101,9 +103,22 @@ export function ListingForm({ sellers }: { sellers: Contact[] }) {
 
           <div>
             <Label>Seller</Label>
-            <Select onValueChange={(val) => setValue("seller_id", val as string)}>
+            <Select
+              value={selectedSeller}
+              onValueChange={(val) => {
+                setValue("seller_id", val as string);
+                setSelectedSeller(val as string);
+              }}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Select seller" />
+                <SelectValue placeholder="Select seller">
+                  {selectedSeller
+                    ? (() => {
+                        const s = sellers.find((s) => s.id === selectedSeller);
+                        return s ? `${s.name} — ${s.phone}` : "Select seller";
+                      })()
+                    : undefined}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {sellers.map((s) => (

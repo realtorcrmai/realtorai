@@ -7,16 +7,16 @@ import {
   Users,
   Building2,
   Calendar,
-  Clock,
+  ListTodo,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Home", icon: LayoutDashboard },
   { href: "/contacts", label: "Contacts", icon: Users },
+  { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/listings", label: "Listings", icon: Building2 },
   { href: "/calendar", label: "Calendar", icon: Calendar },
-  { href: "/showings", label: "Showings", icon: Clock },
 ];
 
 export function MobileNav() {

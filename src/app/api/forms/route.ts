@@ -1,46 +1,23 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
-
-const FORM_SERVER = process.env.FORM_SERVER_URL ?? "http://127.0.0.1:8767";
+import { NextResponse } from "next/server";
 
 /**
- * POST /api/forms
- * Body: { form_key: string, listing: object, cfg: object }
- * Proxies to Python form server → returns HTML of the editable BC form.
+ * POST /api/forms (DEPRECATED)
+ *
+ * This endpoint previously generated HTML forms.
+ * It has been replaced by the PDF-based form system:
+ * - /api/forms/fill — pre-fill PDF with CRM data
+ * - /api/forms/save — save draft field values
+ * - /api/forms/complete — finalize and download PDF
+ * - /api/forms/templates — manage PDF form templates
+ *
+ * Use the full-page editor at /forms/[listingId]/[formKey] instead.
  */
-export async function POST(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
-
-  try {
-    const body = await req.json();
-    const res = await fetch(`${FORM_SERVER}/api/form/html`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      const err = await res.text();
-      return NextResponse.json(
-        { error: `Form server error: ${err}` },
-        { status: res.status }
-      );
-    }
-
-    const html = await res.text();
-    return new NextResponse(html, {
-      status: 200,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
-  } catch (err) {
-    console.error("[/api/forms]", err);
-    return NextResponse.json(
-      {
-        error:
-          "Could not reach the form server. Please ensure the Python form server is running (python server.py) and FORM_SERVER_URL is configured.",
-      },
-      { status: 503 }
-    );
-  }
+export async function POST() {
+  return NextResponse.json(
+    {
+      error: "This endpoint has been deprecated. Use /api/forms/fill instead.",
+      migration: "Forms now use official PDF templates. Navigate to /forms/[listingId]/[formKey] for the full-page editor.",
+    },
+    { status: 410 } // 410 Gone
+  );
 }

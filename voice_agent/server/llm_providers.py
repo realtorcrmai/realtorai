@@ -3,6 +3,7 @@
 Multi-Provider LLM Abstraction
 Supports Ollama, OpenAI, Anthropic, and Groq with automatic fallback.
 """
+from __future__ import annotations
 
 import json
 import os

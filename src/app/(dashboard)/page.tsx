@@ -1,28 +1,40 @@
+import { auth } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 import {
   Building2,
   Clock,
   CalendarCheck,
-  AlertTriangle,
+  ListTodo,
+  Search,
+  GitBranch,
+  Upload,
+  FileText,
+  Users,
   ArrowRight,
-  TrendingUp,
+  AlertTriangle,
 } from "lucide-react";
-import { ShowingStatusBadge } from "@/components/showings/ShowingStatusBadge";
-import { formatDistanceToNow } from "date-fns";
-import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 export default async function DashboardPage() {
+  const session = await auth();
+  const userName = session?.user?.name ?? "there";
+
   const supabase = createAdminClient();
 
   const [
     { count: activeListings },
     { count: pendingShowings },
     { data: confirmedThisWeek },
-    { data: recentShowings },
+    { data: tasks },
   ] = await Promise.all([
     supabase
       .from("listings")
@@ -43,8 +55,9 @@ export default async function DashboardPage() {
         ).toISOString()
       ),
     supabase
-      .from("appointments")
-      .select("*, listings(address)")
+      .from("tasks")
+      .select("*")
+      .neq("status", "completed")
       .order("created_at", { ascending: false })
       .limit(5),
   ]);
@@ -65,195 +78,220 @@ export default async function DashboardPage() {
     return requiredTypes.some((t) => !docTypes.includes(t));
   });
 
-  const stats = [
+  const pendingTasks = (tasks ?? []).filter(
+    (t) => t.status === "pending"
+  ).length;
+  const inProgressTasks = (tasks ?? []).filter(
+    (t) => t.status === "in_progress"
+  ).length;
+  const openTasksCount = pendingTasks + inProgressTasks;
+
+  const featureTiles = [
     {
-      title: "Active Listings",
-      value: activeListings ?? 0,
+      href: "/listings",
+      title: "Listings",
+      description: "Manage property listings, photos & pricing",
       icon: Building2,
-      iconBg: "bg-blue-50 text-blue-600",
-      href: "/listings",
+      gradient: "gradient-indigo",
+      count: (activeListings ?? 0) > 0 ? activeListings : null,
+      countLabel: "active",
     },
     {
-      title: "Pending Requests",
-      value: pendingShowings ?? 0,
-      icon: Clock,
-      iconBg: "bg-amber-50 text-amber-600",
-      badge: (pendingShowings ?? 0) > 0,
+      href: "/contacts",
+      title: "Contacts",
+      description: "Buyers, sellers & agent relationships",
+      icon: Users,
+      gradient: "gradient-violet",
+      count: null,
+      countLabel: null,
+    },
+    {
+      href: "/tasks",
+      title: "Tasks",
+      description: "Daily to-do items & follow-ups",
+      icon: ListTodo,
+      gradient: "gradient-blue",
+      count: openTasksCount > 0 ? openTasksCount : null,
+      countLabel: "open",
+    },
+    {
       href: "/showings",
+      title: "Showings",
+      description: "Track & manage showing requests",
+      icon: Clock,
+      gradient: "gradient-teal",
+      count: (pendingShowings ?? 0) > 0 ? pendingShowings : null,
+      countLabel: "pending",
     },
     {
-      title: "Confirmed This Week",
-      value: confirmedThisWeek?.length ?? 0,
-      icon: CalendarCheck,
-      iconBg: "bg-emerald-50 text-emerald-600",
       href: "/calendar",
+      title: "Calendar",
+      description: "View your schedule at a glance",
+      icon: CalendarCheck,
+      gradient: "gradient-emerald",
+      count:
+        (confirmedThisWeek?.length ?? 0) > 0
+          ? confirmedThisWeek?.length
+          : null,
+      countLabel: "this week",
     },
     {
-      title: "Missing Documents",
+      href: "/search",
+      title: "Property Search",
+      description: "Find properties for your buyers",
+      icon: Search,
+      gradient: "gradient-cyan",
+      count: null,
+      countLabel: null,
+    },
+    {
+      href: "/workflow",
+      title: "MLS Workflow",
+      description: "7-phase listing pipeline tracker",
+      icon: GitBranch,
+      gradient: "gradient-amber",
+      count: null,
+      countLabel: null,
+    },
+    {
+      href: "/import",
+      title: "Excel Import",
+      description: "Import listings from spreadsheets",
+      icon: Upload,
+      gradient: "gradient-orange",
+      count: null,
+      countLabel: null,
+    },
+    {
+      href: "/forms",
+      title: "BC Forms",
+      description: "Standard BC real estate documents",
+      icon: FileText,
+      gradient: "gradient-rose",
+      count: null,
+      countLabel: null,
+    },
+  ];
+
+  const quickStats = [
+    {
+      label: "Active Listings",
+      value: activeListings ?? 0,
+      color: "text-indigo-600 dark:text-indigo-400",
+    },
+    {
+      label: "Open Tasks",
+      value: openTasksCount,
+      color: "text-blue-600 dark:text-blue-400",
+    },
+    {
+      label: "Pending Showings",
+      value: pendingShowings ?? 0,
+      color: "text-teal-600 dark:text-teal-400",
+    },
+    {
+      label: "Missing Docs",
       value: listingsWithMissing.length,
-      icon: AlertTriangle,
-      iconBg: "bg-red-50 text-red-600",
-      href: "/listings",
+      color: "text-rose-600 dark:text-rose-400",
+      icon: listingsWithMissing.length > 0 ? AlertTriangle : null,
     },
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Overview of your real estate activity
-        </p>
+    <div className="h-full overflow-y-auto p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
+    <div className="space-y-8">
+      {/* Greeting */}
+      <div className="animate-float-in">
+        <div className="flex items-end justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-muted-foreground">
+              {new Date().toLocaleDateString("en-CA", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+              })}
+            </p>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+              {getGreeting()}, {userName}
+            </h1>
+          </div>
+          <p className="hidden sm:block text-xs text-muted-foreground bg-primary/5 border border-primary/15 rounded-lg px-3 py-2 shrink-0">
+            Try <span className="text-primary font-semibold">&ldquo;show me my tasks&rdquo;</span> in the voice panel
+          </p>
+        </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Link key={stat.title} href={stat.href}>
-            <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-xl ${stat.iconBg}`}
-                  >
-                    <stat.icon className="h-5 w-5" />
-                  </div>
-                  {stat.badge && (
-                    <Badge variant="destructive" className="text-[10px] px-1.5">
-                      New
-                    </Badge>
-                  )}
-                </div>
-                <div className="mt-3">
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {stat.title}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+      {/* Quick Stats Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-float-in" style={{ animationDelay: "80ms" }}>
+        {quickStats.map((stat) => (
+          <div
+            key={stat.label}
+            className="glass rounded-xl px-4 py-3 elevation-2 transition-all duration-200 hover:elevation-4"
+          >
+            <div className="flex items-center gap-2">
+              <p className={`text-2xl font-bold ${stat.color}`}>
+                {stat.value}
+              </p>
+              {stat.icon && (
+                <stat.icon className="h-4 w-4 text-rose-500" />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {stat.label}
+            </p>
+          </div>
         ))}
       </div>
 
-      {/* Recent Showings + Quick Actions */}
-      <div className="grid lg:grid-cols-5 gap-6">
-        <Card className="lg:col-span-3">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base font-semibold">
-              Recent Showings
-            </CardTitle>
+      {/* Feature Hub */}
+      <div>
+        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">
+          Your Workspace
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5 stagger-children">
+          {featureTiles.map((tile) => (
             <Link
-              href="/showings"
-              className="text-xs text-primary font-medium flex items-center gap-1 hover:underline"
+              key={tile.href}
+              href={tile.href}
+              className="group relative overflow-hidden rounded-2xl p-6 text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_8px_30px_oklch(0_0_0/20%)] elevation-4"
             >
-              View all
-              <ArrowRight className="h-3 w-3" />
-            </Link>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {(recentShowings ?? []).length === 0 && (
-              <div className="text-center py-8">
-                <Clock className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  No showings yet
-                </p>
-                <p className="text-xs text-muted-foreground/70 mt-1">
-                  Create a showing request to get started
+              {/* Gradient background */}
+              <div
+                className={`absolute inset-0 ${tile.gradient} transition-opacity`}
+              />
+
+              {/* Light overlay for depth */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/12 via-transparent to-black/8" />
+
+              {/* Content */}
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-5">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm ring-1 ring-white/20">
+                    <tile.icon className="h-6 w-6" />
+                  </div>
+                  {tile.count != null && tile.count > 0 && (
+                    <span className="flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-sm ring-1 ring-white/15 px-2.5 py-1 text-xs font-semibold">
+                      {tile.count} {tile.countLabel}
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-lg font-bold mb-1 tracking-tight">
+                  {tile.title}
+                </h3>
+                <p className="text-sm text-white/75 leading-relaxed">
+                  {tile.description}
                 </p>
               </div>
-            )}
-            {(recentShowings ?? []).map((showing) => {
-              const listing = (showing as Record<string, unknown>)
-                .listings as { address: string } | null;
-              return (
-                <div
-                  key={showing.id}
-                  className="flex items-center justify-between p-3 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">
-                      {listing?.address ?? "Unknown"}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {showing.buyer_agent_name} &middot;{" "}
-                      {formatDistanceToNow(new Date(showing.created_at), {
-                        addSuffix: true,
-                      })}
-                    </p>
-                  </div>
-                  <ShowingStatusBadge
-                    status={
-                      showing.status as
-                        | "requested"
-                        | "confirmed"
-                        | "denied"
-                        | "cancelled"
-                    }
-                  />
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
 
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">
-              Quick Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {[
-              {
-                href: "/showings",
-                title: "Manage Showings",
-                desc: "Review and respond to requests",
-                icon: Clock,
-                iconBg: "bg-amber-50 text-amber-600",
-              },
-              {
-                href: "/contacts",
-                title: "Add Contact",
-                desc: "Create a buyer or seller contact",
-                icon: TrendingUp,
-                iconBg: "bg-emerald-50 text-emerald-600",
-              },
-              {
-                href: "/listings",
-                title: "View Listings",
-                desc: "Manage your property listings",
-                icon: Building2,
-                iconBg: "bg-blue-50 text-blue-600",
-              },
-              {
-                href: "/calendar",
-                title: "Open Calendar",
-                desc: "View upcoming schedule",
-                icon: CalendarCheck,
-                iconBg: "bg-purple-50 text-purple-600",
-              },
-            ].map((action) => (
-              <Link
-                key={action.href}
-                href={action.href}
-                className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors group"
-              >
-                <div
-                  className={`flex h-9 w-9 items-center justify-center rounded-lg ${action.iconBg} shrink-0`}
-                >
-                  <action.icon className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{action.title}</p>
-                  <p className="text-xs text-muted-foreground">{action.desc}</p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-foreground transition-colors shrink-0" />
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
+              {/* Hover arrow */}
+              <div className="absolute bottom-5 right-5 opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                <ArrowRight className="h-5 w-5 text-white/70" />
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
+    </div>
     </div>
   );
 }

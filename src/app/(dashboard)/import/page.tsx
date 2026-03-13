@@ -92,12 +92,11 @@ export default function ImportPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Excel Import</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Bulk-import listings from an Excel spreadsheet. Download the template to get started.
-        </p>
+    <div className="h-full overflow-y-auto p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
+    <div className="space-y-8">
+      <div className="animate-float-in space-y-1">
+        <p className="text-sm font-medium text-muted-foreground">Bulk import</p>
+        <h1 className="text-3xl font-bold tracking-tight">Excel Import</h1>
       </div>
 
       {/* Template download */}
@@ -231,6 +230,7 @@ export default function ImportPage() {
           </CardContent>
         </Card>
       )}
+    </div>
     </div>
   );
 }

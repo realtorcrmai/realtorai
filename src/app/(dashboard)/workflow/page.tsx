@@ -46,16 +46,15 @@ export default async function WorkflowPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">MLS Workflow</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          7-phase listing pipeline — track every listing from pre-listing to completion.
-        </p>
+    <div className="h-full overflow-y-auto p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
+    <div className="space-y-8">
+      <div className="animate-float-in space-y-1">
+        <p className="text-sm font-medium text-muted-foreground">7-phase listing pipeline</p>
+        <h1 className="text-3xl font-bold tracking-tight">MLS Workflow</h1>
       </div>
 
       {/* Phase pipeline overview */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 animate-float-in" style={{ animationDelay: "80ms" }}>
         {phaseCounts.map((p, i) => (
           <div key={p.phase} className="relative">
             <div className={`rounded-xl border p-3 text-center ${PHASE_COLORS[p.phase]}`}>
@@ -131,6 +130,7 @@ export default async function WorkflowPage() {
           </Card>
         )}
       </div>
+    </div>
     </div>
   );
 }

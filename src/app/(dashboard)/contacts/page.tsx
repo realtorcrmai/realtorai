@@ -1,44 +1,40 @@
+import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ContactCard } from "@/components/contacts/ContactCard";
-import { ContactForm } from "@/components/contacts/ContactForm";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { Users } from "lucide-react";
-
-export const dynamic = "force-dynamic";
+import { Users, ArrowLeft } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default async function ContactsPage() {
   const supabase = createAdminClient();
-  const { data: contacts } = await supabase
+
+  const { data: latest } = await supabase
     .from("contacts")
-    .select("*")
-    .order("created_at", { ascending: false });
+    .select("id")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (latest) {
+    redirect(`/contacts/${latest.id}`);
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Contacts</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Your buyers and sellers
+    <div className="flex items-center justify-center h-full min-h-[60vh]">
+      <Card className="max-w-sm w-full animate-float-in">
+        <CardContent className="py-12 text-center">
+          <Users className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-foreground mb-1">
+            No Contacts Yet
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Add your first contact using the form in the sidebar to get
+            started.
           </p>
-        </div>
-        <ContactForm />
-      </div>
-
-      {(contacts ?? []).length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title="No contacts yet"
-          description="Add your first buyer or seller contact to get started."
-          action={<ContactForm />}
-        />
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {(contacts ?? []).map((contact) => (
-            <ContactCard key={contact.id} contact={contact} />
-          ))}
-        </div>
-      )}
+          <div className="flex items-center justify-center gap-1.5 mt-4 text-xs text-muted-foreground/60">
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Use the form on the left to add one</span>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

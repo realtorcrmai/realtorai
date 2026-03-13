@@ -14,6 +14,8 @@ import {
   Upload,
   GitBranch,
   ChevronRight,
+  ListTodo,
+  Search,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -29,6 +31,7 @@ const navSections = [
     label: "CRM",
     items: [
       { href: "/contacts", label: "Contacts", icon: Users },
+      { href: "/tasks", label: "Tasks", icon: ListTodo },
       { href: "/showings", label: "Showings", icon: Clock },
       { href: "/calendar", label: "Calendar", icon: Calendar },
     ],
@@ -37,6 +40,7 @@ const navSections = [
     label: "Listings",
     items: [
       { href: "/listings", label: "Listings", icon: Building2 },
+      { href: "/search", label: "Property Search", icon: Search },
       { href: "/workflow", label: "MLS Workflow", icon: GitBranch },
       { href: "/import", label: "Excel Import", icon: Upload },
     ],

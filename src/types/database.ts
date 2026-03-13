@@ -216,6 +216,85 @@ export interface Database {
           updated_at?: string;
         };
       };
+      form_templates: {
+        Row: {
+          id: string;
+          form_key: string;
+          form_name: string;
+          organization: string;
+          version: string;
+          pdf_url: string;
+          field_mapping: Record<string, string>;
+          field_names: string[];
+          is_public: boolean;
+          source_url: string | null;
+          last_checked: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          form_key: string;
+          form_name: string;
+          organization?: string;
+          version?: string;
+          pdf_url: string;
+          field_mapping?: Record<string, string>;
+          field_names?: string[];
+          is_public?: boolean;
+          source_url?: string | null;
+          last_checked?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          form_key?: string;
+          form_name?: string;
+          organization?: string;
+          version?: string;
+          pdf_url?: string;
+          field_mapping?: Record<string, string>;
+          field_names?: string[];
+          is_public?: boolean;
+          source_url?: string | null;
+          last_checked?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      form_submissions: {
+        Row: {
+          id: string;
+          listing_id: string;
+          form_key: string;
+          form_data: Record<string, unknown>;
+          pdf_url: string | null;
+          status: "draft" | "completed";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          listing_id: string;
+          form_key: string;
+          form_data?: Record<string, unknown>;
+          pdf_url?: string | null;
+          status?: "draft" | "completed";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          listing_id?: string;
+          form_key?: string;
+          form_data?: Record<string, unknown>;
+          pdf_url?: string | null;
+          status?: "draft" | "completed";
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

@@ -8,6 +8,8 @@ export type Appointment = Database["public"]["Tables"]["appointments"]["Row"];
 export type AppointmentInsert = Database["public"]["Tables"]["appointments"]["Insert"];
 export type Communication = Database["public"]["Tables"]["communications"]["Row"];
 export type ListingDocument = Database["public"]["Tables"]["listing_documents"]["Row"];
+export type FormTemplate = Database["public"]["Tables"]["form_templates"]["Row"];
+export type FormSubmission = Database["public"]["Tables"]["form_submissions"]["Row"];
 
 export type AppointmentWithListing = Appointment & {
   listings: Listing;

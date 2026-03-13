@@ -1,51 +1,40 @@
+import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ListingCard } from "@/components/listings/ListingCard";
-import { ListingForm } from "@/components/listings/ListingForm";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { Building2 } from "lucide-react";
-
-export const dynamic = "force-dynamic";
+import { Building2, ArrowLeft } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default async function ListingsPage() {
   const supabase = createAdminClient();
 
-  const [{ data: listings }, { data: sellers }] = await Promise.all([
-    supabase
-      .from("listings")
-      .select("*, contacts(name, phone)")
-      .order("created_at", { ascending: false }),
-    supabase.from("contacts").select("*").eq("type", "seller"),
-  ]);
+  const { data: latest } = await supabase
+    .from("listings")
+    .select("id")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (latest) {
+    redirect(`/listings/${latest.id}`);
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Listings</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage your property listings
+    <div className="flex items-center justify-center h-full min-h-[60vh]">
+      <Card className="max-w-sm w-full animate-float-in">
+        <CardContent className="py-12 text-center">
+          <Building2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-foreground mb-1">
+            No Listings Yet
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Create your first listing using the form in the sidebar to get
+            started.
           </p>
-        </div>
-        <ListingForm sellers={sellers ?? []} />
-      </div>
-
-      {(listings ?? []).length === 0 ? (
-        <EmptyState
-          icon={Building2}
-          title="No listings yet"
-          description="Add your first property listing. Make sure to add a seller contact first."
-          action={<ListingForm sellers={sellers ?? []} />}
-        />
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {(listings ?? []).map((listing) => (
-            <ListingCard
-              key={listing.id}
-              listing={listing as typeof listing & { contacts: { name: string; phone: string } }}
-            />
-          ))}
-        </div>
-      )}
+          <div className="flex items-center justify-center gap-1.5 mt-4 text-xs text-muted-foreground/60">
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Use the form on the left to add one</span>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

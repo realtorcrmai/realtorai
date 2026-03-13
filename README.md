@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RealtorAI
+
+**A BC AI Agent for Real Estate Transaction & Showing Automation**
+
+Project by **Rahul Mittal** & **Aman Dhindsa**
+
+---
+
+## Overview
+
+RealtorAI is an AI-powered CRM built for BC (British Columbia) real estate agents. It automates the entire listing lifecycle — from seller intake and document generation to MLS submission and showing coordination — with a built-in voice assistant for hands-free operation.
+
+### Key Features
+
+- **Listing Workflow** — 9-step guided process from Seller Intake through Post-Listing, with real-time progress tracking
+- **Document Management** — Upload and track required documents (FINTRAC, DORTS, PDS) with readiness indicators
+- **BC Standard Forms** — Auto-fill 12 BCREA forms (DORTS, MLC, PDS, Privacy, C3, and more) from listing data
+- **Showing Automation** — Request, confirm, and manage property showings with seller SMS/WhatsApp notifications
+- **Contact CRM** — Manage buyers, sellers, and agents with communication history
+- **Voice Assistant** — AI-powered assistant for hands-free navigation, property search, and task management
+- **Calendar Integration** — Weekly/monthly calendar with Google Calendar sync
+- **Task Management** — Track to-dos linked to listings and contacts
+- **Conveyancing Packs** — Generate document packages for transactions
+- **Neighborhood Insights** — View recent sales and market data for any address
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| UI | React 19, Tailwind CSS 4, shadcn/ui (Base UI) |
+| Database | Supabase (PostgreSQL + Storage + RLS) |
+| Auth | NextAuth v5 (beta) |
+| Voice | Web Speech API + custom voice agent backend |
+| Forms | React Hook Form + Zod validation |
+| Calendar | react-big-calendar |
+| Deployment | Netlify |
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 18+
+- A Supabase project with tables created (see `supabase/migrations/`)
+- Environment variables configured (see below)
+
+### Environment Variables
+
+Create a `.env.local` file in the project root:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+AUTH_SECRET=your-nextauth-secret
+AUTH_GOOGLE_ID=your-google-client-id
+AUTH_GOOGLE_SECRET=your-google-client-secret
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000) to view the app.
 
-## Learn More
+### Database Setup
 
-To learn more about Next.js, take a look at the following resources:
+Apply migrations to your Supabase instance via the SQL Editor:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. `supabase/migrations/001_initial_schema.sql` — Core tables (contacts, listings, appointments, etc.)
+2. `supabase/migrations/002_add_tasks.sql` — Tasks table
+3. `supabase/migrations/003_allow_anon_role.sql` — RLS policies for anon access
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
+```
+src/
+  app/(dashboard)/          # Dashboard routes (listings, contacts, showings, etc.)
+  actions/                  # Server actions for CRUD operations
+  components/
+    layout/                 # AppHeader, MobileNav
+    listings/               # ListingSidebar, ListingWorkflow, FormReadinessPanel
+    showings/               # ShowingRequestForm, ShowingStatusBadge
+    voice-agent/            # VoiceAgentWidget, VoiceAgentPanel
+    ui/                     # shadcn/ui components
+  lib/
+    supabase/               # Supabase client (admin + browser)
+  types/                    # TypeScript type definitions
+supabase/
+  migrations/               # SQL migration files
+voice_agent/                # Python voice agent backend
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

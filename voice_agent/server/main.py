@@ -9,6 +9,8 @@ Usage:
     LLM_PROVIDER=openai python main.py      # Use OpenAI instead of Ollama
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import json
