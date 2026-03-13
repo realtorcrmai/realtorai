@@ -1,0 +1,47 @@
+# ═══════════════════════════════════════════════════════════════
+#  Voice Agent — Dependencies
+# ═══════════════════════════════════════════════════════════════
+
+# ── Async HTTP Server ──────────────────────────────────────────
+aiohttp>=3.9.0
+
+# ── Async HTTP Client ─────────────────────────────────────────
+httpx>=0.27.0
+
+# ── Core pipeline framework ───────────────────────────────────
+pipecat-ai[daily,silero]==0.0.47
+
+# ── STT — Whisper (local, via faster-whisper) ─────────────────
+faster-whisper>=1.0.0
+
+# ── TTS — Piper (local) ──────────────────────────────────────
+piper-tts>=1.2.0
+
+# ── LLM Providers ─────────────────────────────────────────────
+# Ollama: installed separately (https://ollama.com), accessed via httpx
+# OpenAI (GPT-4o, Whisper API, TTS API)
+openai>=1.30.0
+# Anthropic (Claude)
+anthropic>=0.25.0
+# Groq (fast inference)
+groq>=0.5.0
+
+# ── Web Search (no API key needed) ────────────────────────────
+duckduckgo-search>=5.0
+
+# ── HTTP requests (fallback / legacy) ─────────────────────────
+requests>=2.31.0
+
+# ── Environment variables ─────────────────────────────────────
+python-dotenv>=1.0.0
+
+# ── Daily.co transport (WebRTC) ───────────────────────────────
+daily-python>=0.10.0
+
+# ── Google Calendar integration (optional) ────────────────────
+google-api-python-client>=2.100.0
+google-auth-httplib2>=0.1.0
+google-auth-oauthlib>=1.1.0
+
+# ── ElevenLabs TTS (optional, cloud) ─────────────────────────
+# elevenlabs>=1.0.0  # Uncomment if using ElevenLabs TTS
