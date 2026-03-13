@@ -7,11 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import type { Contact } from "@/types";
-
-const typeColors: Record<string, string> = {
-  seller: "bg-purple-100 text-purple-800",
-  buyer: "bg-blue-100 text-blue-800",
-};
+import { CONTACT_TYPE_COLORS, type ContactType } from "@/lib/constants";
 
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/);
@@ -104,7 +100,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                       {/* Type badge */}
                       <Badge
                         variant="secondary"
-                        className={`${typeColors[contact.type] ?? ""} text-[11px] px-1.5 py-0 shrink-0 capitalize`}
+                        className={`${CONTACT_TYPE_COLORS[contact.type as ContactType] ?? ""} text-[11px] px-1.5 py-0 shrink-0 capitalize`}
                       >
                         {contact.type}
                       </Badge>

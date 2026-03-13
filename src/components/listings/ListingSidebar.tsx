@@ -7,12 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { MapPin, Search, DollarSign } from "lucide-react";
 import type { Listing } from "@/types";
-
-const statusColors: Record<string, string> = {
-  active: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  pending: "bg-amber-50 text-amber-700 border-amber-200",
-  sold: "bg-blue-50 text-blue-700 border-blue-200",
-};
+import { LISTING_STATUS_COLORS } from "@/lib/constants";
 
 export function ListingSidebar({
   listings,
@@ -114,7 +109,7 @@ export function ListingSidebar({
                       </div>
                       <Badge
                         variant="outline"
-                        className={`${statusColors[listing.status] ?? ""} text-[11px] px-1.5 py-0 shrink-0 capitalize`}
+                        className={`${LISTING_STATUS_COLORS[listing.status as keyof typeof LISTING_STATUS_COLORS] ?? ""} text-[11px] px-1.5 py-0 shrink-0 capitalize`}
                       >
                         {listing.status}
                       </Badge>

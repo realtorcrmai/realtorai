@@ -3,12 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, DollarSign } from "lucide-react";
 import type { Listing } from "@/types";
-
-const statusColors = {
-  active: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  pending: "bg-amber-50 text-amber-700 border-amber-200",
-  sold: "bg-blue-50 text-blue-700 border-blue-200",
-};
+import { LISTING_STATUS_COLORS } from "@/lib/constants";
 
 export function ListingCard({ listing }: { listing: Listing & { contacts?: { name: string; phone: string } } }) {
   return (
@@ -50,7 +45,7 @@ export function ListingCard({ listing }: { listing: Listing & { contacts?: { nam
             </div>
             <Badge
               variant="outline"
-              className={`${statusColors[listing.status]} text-[11px] font-medium capitalize shrink-0`}
+              className={`${LISTING_STATUS_COLORS[listing.status as keyof typeof LISTING_STATUS_COLORS]} text-[11px] font-medium capitalize shrink-0`}
             >
               {listing.status}
             </Badge>

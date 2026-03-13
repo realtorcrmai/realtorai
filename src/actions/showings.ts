@@ -4,22 +4,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendShowingRequest } from "@/lib/twilio";
 import { fetchBusyBlocks, isSlotAvailable } from "@/lib/google-calendar";
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
-
-const showingSchema = z.object({
-  listingId: z.string().uuid(),
-  startTime: z.string().datetime(),
-  endTime: z.string().datetime(),
-  buyerAgentName: z.string().min(2),
-  buyerAgentPhone: z
-    .string()
-    .min(10, "Phone number must be at least 10 digits")
-    .regex(/^[\d\s\-\(\)\+\.]+$/, "Invalid phone number format"),
-  buyerAgentEmail: z.string().email().optional(),
-});
+import { showingSchema, type ShowingFormData } from "@/lib/schemas";
 
 export async function createShowingRequest(
-  formData: z.infer<typeof showingSchema>
+  formData: ShowingFormData
 ) {
   const parsed = showingSchema.safeParse(formData);
   if (!parsed.success) {

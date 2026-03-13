@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth } from "@/lib/api-auth";
-import { z } from "zod";
+import { listingSchema } from "@/lib/schemas";
 
 export async function GET(req: NextRequest) {
   const { unauthorized } = await requireAuth();
@@ -29,24 +29,12 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(data ?? []);
 }
 
-const createListingSchema = z.object({
-  address: z.string().min(5),
-  seller_id: z.string().uuid(),
-  lockbox_code: z.string().min(1),
-  status: z.enum(["active", "pending", "sold"]).default("active"),
-  mls_number: z.string().optional(),
-  list_price: z.number().positive().optional(),
-  showing_window_start: z.string().optional(),
-  showing_window_end: z.string().optional(),
-  notes: z.string().optional(),
-});
-
 export async function POST(req: NextRequest) {
   const { unauthorized } = await requireAuth();
   if (unauthorized) return unauthorized;
 
   const body = await req.json();
-  const parsed = createListingSchema.safeParse(body);
+  const parsed = listingSchema.safeParse(body);
 
   if (!parsed.success) {
     return NextResponse.json(

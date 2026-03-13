@@ -9,6 +9,7 @@ import { ContactContextPanel } from "@/components/contacts/ContactContextPanel";
 import { CommunicationTimeline } from "@/components/contacts/CommunicationTimeline";
 import { Button } from "@/components/ui/button";
 import type { Contact, Communication, Listing } from "@/types";
+import { CONTACT_TYPE_COLORS, type ContactType } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -67,11 +68,7 @@ export default async function ContactDetailPage({
                   <div className="flex gap-2 mt-2">
                     <Badge
                       variant="secondary"
-                      className={
-                        contact.type === "seller"
-                          ? "bg-purple-100 text-purple-800"
-                          : "bg-blue-100 text-blue-800"
-                      }
+                      className={CONTACT_TYPE_COLORS[contact.type as ContactType]}
                     >
                       {contact.type}
                     </Badge>

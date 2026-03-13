@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { TASK_PRIORITY_CONFIG, TASK_CATEGORY_LABELS } from "@/lib/constants";
 import {
   CheckCircle2,
   Circle,
@@ -37,38 +38,8 @@ interface TaskCardProps {
   onUpdate: () => void;
 }
 
-const priorityConfig = {
-  low: { color: "text-gray-400", bg: "bg-gray-50 dark:bg-gray-900", label: "Low" },
-  medium: {
-    color: "text-blue-500",
-    bg: "bg-blue-50 dark:bg-blue-950",
-    label: "Medium",
-  },
-  high: {
-    color: "text-orange-500",
-    bg: "bg-orange-50 dark:bg-orange-950",
-    label: "High",
-  },
-  urgent: {
-    color: "text-red-500",
-    bg: "bg-red-50 dark:bg-red-950",
-    label: "Urgent",
-  },
-};
-
-const categoryLabels: Record<string, string> = {
-  follow_up: "Follow Up",
-  showing: "Showing",
-  document: "Document",
-  listing: "Listing",
-  marketing: "Marketing",
-  inspection: "Inspection",
-  closing: "Closing",
-  general: "General",
-};
-
 export function TaskCard({ task, onUpdate }: TaskCardProps) {
-  const priority = priorityConfig[task.priority] ?? priorityConfig.medium;
+  const priority = TASK_PRIORITY_CONFIG[task.priority] ?? TASK_PRIORITY_CONFIG.medium;
 
   const isOverdue =
     task.due_date &&
@@ -162,7 +133,7 @@ export function TaskCard({ task, onUpdate }: TaskCardProps) {
         <div className="flex flex-wrap items-center gap-2 mt-2">
           {/* Category badge */}
           <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-secondary text-secondary-foreground font-medium">
-            {categoryLabels[task.category] ?? task.category}
+            {TASK_CATEGORY_LABELS[task.category as keyof typeof TASK_CATEGORY_LABELS] ?? task.category}
           </span>
 
           {/* Due date */}

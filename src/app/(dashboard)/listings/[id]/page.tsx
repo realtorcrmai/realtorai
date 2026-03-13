@@ -13,14 +13,9 @@ import { NeighborhoodButton } from "@/components/listings/NeighborhoodButton";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import type { ListingDocument } from "@/types";
+import { LISTING_STATUS_COLORS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
-
-const statusColors = {
-  active: "bg-green-100 text-green-800",
-  pending: "bg-amber-100 text-amber-800",
-  sold: "bg-blue-100 text-blue-800",
-};
 
 export default async function ListingDetailPage({
   params,
@@ -102,7 +97,7 @@ export default async function ListingDetailPage({
                     </h1>
                     <Badge
                       variant="secondary"
-                      className={`${statusColors[listing.status as keyof typeof statusColors]} text-xs shrink-0`}
+                      className={`${LISTING_STATUS_COLORS[listing.status as keyof typeof LISTING_STATUS_COLORS]} text-xs shrink-0`}
                     >
                       {listing.status}
                     </Badge>

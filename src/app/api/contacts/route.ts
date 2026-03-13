@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth } from "@/lib/api-auth";
-import { z } from "zod";
+import { contactSchema } from "@/lib/schemas";
 
 export async function GET(req: NextRequest) {
   const { unauthorized } = await requireAuth();
@@ -30,24 +30,12 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(data ?? []);
 }
 
-const createContactSchema = z.object({
-  name: z.string().min(2),
-  phone: z
-    .string()
-    .min(10, "Phone number must be at least 10 digits")
-    .regex(/^[\d\s\-\(\)\+\.]+$/, "Invalid phone number format"),
-  email: z.string().email().optional().or(z.literal("")),
-  type: z.enum(["buyer", "seller"]),
-  pref_channel: z.enum(["whatsapp", "sms"]).default("sms"),
-  notes: z.string().optional(),
-});
-
 export async function POST(req: NextRequest) {
   const { unauthorized } = await requireAuth();
   if (unauthorized) return unauthorized;
 
   const body = await req.json();
-  const parsed = createContactSchema.safeParse(body);
+  const parsed = contactSchema.safeParse(body);
 
   if (!parsed.success) {
     return NextResponse.json(

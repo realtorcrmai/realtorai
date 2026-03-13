@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { TASK_PRIORITY_CONFIG, TASK_CATEGORY_LABELS } from "@/lib/constants";
 import { Search, Calendar } from "lucide-react";
 
 type Task = {
@@ -11,24 +12,6 @@ type Task = {
   priority: "low" | "medium" | "high" | "urgent";
   category: string;
   due_date: string | null;
-};
-
-const priorityDotColors: Record<string, string> = {
-  urgent: "bg-red-500",
-  high: "bg-orange-500",
-  medium: "bg-blue-500",
-  low: "bg-gray-400",
-};
-
-const categoryLabels: Record<string, string> = {
-  follow_up: "Follow Up",
-  showing: "Showing",
-  document: "Document",
-  listing: "Listing",
-  marketing: "Marketing",
-  inspection: "Inspection",
-  closing: "Closing",
-  general: "General",
 };
 
 type StatusFilter = "all" | "pending" | "in_progress" | "completed";
@@ -124,7 +107,7 @@ export function TaskSidebar({ initialTasks }: { initialTasks: Task[] }) {
                   <div className="flex items-start gap-2">
                     <span
                       className={`h-2 w-2 rounded-full mt-1.5 shrink-0 ${
-                        priorityDotColors[task.priority] ?? "bg-gray-400"
+                        TASK_PRIORITY_CONFIG[task.priority]?.dotColor ?? "bg-gray-400"
                       }`}
                     />
                     <div className="min-w-0 flex-1">
@@ -148,7 +131,7 @@ export function TaskSidebar({ initialTasks }: { initialTasks: Task[] }) {
                           </span>
                         )}
                         <span className="text-[11px] px-1.5 py-0 rounded-md bg-secondary text-secondary-foreground">
-                          {categoryLabels[task.category] ?? task.category}
+                          {TASK_CATEGORY_LABELS[task.category as keyof typeof TASK_CATEGORY_LABELS] ?? task.category}
                         </span>
                       </div>
                     </div>

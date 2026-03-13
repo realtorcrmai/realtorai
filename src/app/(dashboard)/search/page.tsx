@@ -24,6 +24,7 @@ import {
   Clock,
 } from "lucide-react";
 import Link from "next/link";
+import { LISTING_STATUS_COLORS, type ListingStatus } from "@/lib/constants";
 
 type Listing = {
   id: string;
@@ -88,10 +89,10 @@ export default function PropertySearchPage() {
     return true;
   });
 
-  const statusConfig: Record<string, { color: string; label: string }> = {
-    active: { color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300", label: "Active" },
-    pending: { color: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300", label: "Pending" },
-    sold: { color: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300", label: "Sold" },
+  const statusLabels: Record<string, string> = {
+    active: "Active",
+    pending: "Pending",
+    sold: "Sold",
   };
 
   function clearFilters() {
@@ -233,7 +234,9 @@ export default function PropertySearchPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((listing) => {
-            const status = statusConfig[listing.status] ?? statusConfig.active;
+            const statusKey = (listing.status as ListingStatus) ?? "active";
+            const statusColor = LISTING_STATUS_COLORS[statusKey] ?? LISTING_STATUS_COLORS.active;
+            const statusLabel = statusLabels[listing.status] ?? "Active";
             return (
               <Card
                 key={listing.id}
@@ -263,9 +266,9 @@ export default function PropertySearchPage() {
                     </div>
                     <Badge
                       variant="outline"
-                      className={`text-[10px] ${status.color} border-0 shrink-0 ml-2`}
+                      className={`text-[10px] ${statusColor} border-0 shrink-0 ml-2`}
                     >
-                      {status.label}
+                      {statusLabel}
                     </Badge>
                   </div>
                 </CardHeader>

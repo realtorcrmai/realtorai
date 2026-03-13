@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth } from "@/lib/api-auth";
-import { z } from "zod";
+import { taskSchema } from "@/lib/schemas";
 
 export async function GET(req: NextRequest) {
   const { unauthorized } = await requireAuth();
@@ -33,34 +33,12 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(data ?? []);
 }
 
-const createTaskSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
-  status: z.enum(["pending", "in_progress", "completed"]).default("pending"),
-  priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
-  category: z
-    .enum([
-      "follow_up",
-      "showing",
-      "document",
-      "listing",
-      "marketing",
-      "inspection",
-      "closing",
-      "general",
-    ])
-    .default("general"),
-  due_date: z.string().optional(),
-  contact_id: z.string().uuid().optional(),
-  listing_id: z.string().uuid().optional(),
-});
-
 export async function POST(req: NextRequest) {
   const { unauthorized } = await requireAuth();
   if (unauthorized) return unauthorized;
 
   const body = await req.json();
-  const parsed = createTaskSchema.safeParse(body);
+  const parsed = taskSchema.safeParse(body);
 
   if (!parsed.success) {
     return NextResponse.json(

@@ -2,21 +2,9 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
+import { listingSchema, type ListingFormData } from "@/lib/schemas";
 
-const listingSchema = z.object({
-  address: z.string().min(5),
-  seller_id: z.string().uuid(),
-  lockbox_code: z.string().min(1),
-  status: z.enum(["active", "pending", "sold"]).default("active"),
-  mls_number: z.string().optional(),
-  list_price: z.number().positive().optional(),
-  showing_window_start: z.string().optional(),
-  showing_window_end: z.string().optional(),
-  notes: z.string().optional(),
-});
-
-export async function createListing(formData: z.infer<typeof listingSchema>) {
+export async function createListing(formData: ListingFormData) {
   const parsed = listingSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: "Invalid form data", issues: parsed.error.issues };
@@ -46,7 +34,7 @@ export async function createListing(formData: z.infer<typeof listingSchema>) {
 
 export async function updateListing(
   id: string,
-  formData: Partial<z.infer<typeof listingSchema>>
+  formData: Partial<ListingFormData>
 ) {
   const supabase = createAdminClient();
   const { error } = await supabase

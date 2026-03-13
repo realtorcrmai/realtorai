@@ -2,18 +2,9 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
+import { contactSchema, type ContactFormData } from "@/lib/schemas";
 
-const contactSchema = z.object({
-  name: z.string().min(2),
-  phone: z.string().min(10),
-  email: z.string().email().optional().or(z.literal("")),
-  type: z.enum(["buyer", "seller"]),
-  pref_channel: z.enum(["whatsapp", "sms"]).default("sms"),
-  notes: z.string().optional(),
-});
-
-export async function createContact(formData: z.infer<typeof contactSchema>) {
+export async function createContact(formData: ContactFormData) {
   const parsed = contactSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: "Invalid form data", issues: parsed.error.issues };
@@ -39,7 +30,7 @@ export async function createContact(formData: z.infer<typeof contactSchema>) {
 
 export async function updateContact(
   id: string,
-  formData: Partial<z.infer<typeof contactSchema>>
+  formData: Partial<ContactFormData>
 ) {
   const supabase = createAdminClient();
   const { error } = await supabase
