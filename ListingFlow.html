@@ -1,0 +1,2689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ListingFlow — BC Real Estate Agent</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f2ff;--bg2:#ece8fc;--white:#fff;
+  --indigo:#4f35d2;--indigo2:#6b52e0;--indigo3:#8b74f0;
+  --indigol:rgba(79,53,210,.08);--indigom:rgba(79,53,210,.16);
+  --coral:#ff5c3a;--coral2:#ff7a5c;--corall:rgba(255,92,58,.1);
+  --teal:#00bfa5;--teall:rgba(0,191,165,.1);
+  --amber:#f59e0b;--amberl:rgba(245,158,11,.1);
+  --rose:#f43f5e;--rosel:rgba(244,63,94,.08);
+  --emerald:#059669;--emeraldl:rgba(5,150,105,.1);
+  --sky:#0284c7;--skyl:rgba(2,132,199,.1);
+  --text:#1a1535;--text2:#4a4270;--text3:#9b95c0;--text4:#c8c4e0;
+  --border:rgba(79,53,210,.1);--border2:rgba(79,53,210,.18);
+  --sh:0 2px 12px rgba(79,53,210,.08);--sh2:0 6px 30px rgba(79,53,210,.13);
+  --r:13px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Bricolage Grotesque',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;}
+.bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.bg-canvas::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 600px 500px at -10% -5%,#d4ccf8 0%,transparent 65%),
+    radial-gradient(ellipse 500px 450px at 110% 90%,#ffd4cc 0%,transparent 65%),
+    radial-gradient(ellipse 420px 400px at 95% 5%,#c8f5f0 0%,transparent 65%);
+  animation:bgShift 22s ease-in-out infinite;}
+@keyframes bgShift{0%,100%{transform:scale(1);}50%{transform:scale(1.03) translate(8px,-6px);}}
+/* HEADER */
+.header{position:relative;z-index:100;height:60px;background:rgba(255,255,255,.9);backdrop-filter:blur(20px);border-bottom:1.5px solid var(--border2);display:flex;align-items:center;padding:0 22px;gap:12px;box-shadow:0 2px 20px rgba(79,53,210,.07);}
+.logo{font-family:'Cabinet Grotesk',sans-serif;font-size:1.3rem;font-weight:800;letter-spacing:-.03em;background:linear-gradient(130deg,var(--indigo) 20%,var(--coral) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.logo-badge{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;background:var(--indigol);border:1.5px solid var(--indigom);color:var(--indigo);padding:3px 8px;border-radius:20px;}
+.header-actions{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.hbtn{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:9px;font-family:'Cabinet Grotesk',sans-serif;font-size:.73rem;font-weight:700;cursor:pointer;transition:all .18s;border:none;}
+.hbtn-primary{background:linear-gradient(135deg,var(--indigo),var(--indigo2));color:#fff;box-shadow:0 3px 12px rgba(79,53,210,.28);}
+.hbtn-primary:hover{transform:translateY(-1px);}
+.hbtn-ghost{background:var(--white);border:1.5px solid var(--border2)!important;color:var(--text2);}
+.hbtn-ghost:hover{border-color:var(--indigo)!important;color:var(--indigo);}
+.agent-pill{display:flex;align-items:center;gap:8px;background:var(--white);border:1.5px solid var(--border2);border-radius:24px;padding:4px 12px 4px 5px;cursor:pointer;}
+.agent-av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--indigo),var(--coral));display:flex;align-items:center;justify-content:center;font-family:'Cabinet Grotesk',sans-serif;font-size:.68rem;font-weight:800;color:#fff;}
+.agent-nm{font-size:.78rem;font-weight:600;color:var(--text2);}
+/* LAYOUT */
+.app{position:relative;z-index:1;display:grid;grid-template-columns:270px 1fr 320px;height:calc(100vh - 60px);}
+/* LEFT */
+.left-panel{background:rgba(255,255,255,.78);backdrop-filter:blur(16px);border-right:1.5px solid var(--border2);display:flex;flex-direction:column;overflow:hidden;}
+.panel-head{padding:13px 16px 11px;border-bottom:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.panel-lbl{font-family:'Cabinet Grotesk',sans-serif;font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--text3);}
+.btn-sm{padding:6px 12px;border-radius:8px;font-family:'Cabinet Grotesk',sans-serif;font-size:.71rem;font-weight:700;cursor:pointer;transition:all .18s;border:none;}
+.btn-sm-indigo{background:linear-gradient(135deg,var(--indigo),var(--indigo2));color:#fff;box-shadow:0 2px 10px rgba(79,53,210,.25);}
+.btn-sm-indigo:hover{transform:translateY(-1px);}
+.listing-list{flex:1;overflow-y:auto;}
+.listing-list::-webkit-scrollbar{width:3px;}
+.listing-list::-webkit-scrollbar-thumb{background:var(--border2);}
+.lrow{padding:11px 16px;border-bottom:1.5px solid var(--border);cursor:pointer;transition:all .18s;position:relative;}
+.lrow::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(180deg,var(--indigo),var(--coral));transform:scaleY(0);transition:transform .2s;}
+.lrow:hover{background:var(--indigol);}
+.lrow.active{background:linear-gradient(135deg,rgba(79,53,210,.06),rgba(255,92,58,.03));}
+.lrow.active::before{transform:scaleY(1);}
+.lrow-addr{font-size:.82rem;font-weight:600;}
+.lrow-meta{font-size:.68rem;color:var(--text3);margin-top:2px;}
+.lrow-phase{display:flex;gap:3px;margin-top:6px;flex-wrap:wrap;}
+.phase-dot{width:8px;height:8px;border-radius:50%;}
+.ph-done{background:var(--emerald);}
+.ph-active{background:var(--amber);}
+.ph-none{background:var(--border2);}
+/* MID */
+.mid-panel{display:flex;flex-direction:column;overflow:hidden;}
+.mid-topbar{background:rgba(255,255,255,.85);backdrop-filter:blur(16px);border-bottom:1.5px solid var(--border2);padding:12px 22px;display:flex;align-items:center;gap:14px;flex-shrink:0;}
+.mid-title{font-family:'Cabinet Grotesk',sans-serif;font-size:1.05rem;font-weight:800;}
+.mid-sub{font-size:.72rem;color:var(--text3);margin-top:1px;}
+.mid-body{flex:1;overflow-y:auto;padding:18px 22px;}
+.mid-body::-webkit-scrollbar{width:4px;}
+.mid-body::-webkit-scrollbar-thumb{background:var(--border2);}
+/* PHASE STEPPER */
+.phase-stepper{display:flex;flex-direction:column;gap:0;}
+.phase-item{display:flex;gap:14px;position:relative;}
+.phase-item:not(:last-child)::after{content:'';position:absolute;left:15px;top:34px;bottom:-1px;width:2px;background:linear-gradient(180deg,var(--border2),transparent);}
+.phase-item.done::after{background:linear-gradient(180deg,var(--emerald),var(--border2));}
+.phase-item.active::after{background:linear-gradient(180deg,var(--amber),var(--border2));}
+.phase-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cabinet Grotesk',sans-serif;font-size:.75rem;font-weight:800;flex-shrink:0;margin-top:2px;border:2px solid var(--border2);background:#fff;color:var(--text3);transition:all .2s;}
+.phase-item.done .phase-num{background:var(--emerald);border-color:var(--emerald);color:#fff;}
+.phase-item.active .phase-num{background:linear-gradient(135deg,var(--indigo),var(--coral));border-color:transparent;color:#fff;}
+.phase-card{flex:1;background:#fff;border:1.5px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:all .2s;}
+.phase-card:hover{box-shadow:var(--sh);border-color:var(--indigo);}
+.phase-item.active .phase-card{border-color:var(--indigo);box-shadow:0 0 0 3px var(--indigol);}
+.phase-item.done .phase-card{border-color:rgba(5,150,105,.25);background:rgba(5,150,105,.02);}
+.phase-card-head{display:flex;align-items:center;justify-content:space-between;}
+.phase-name{font-family:'Cabinet Grotesk',sans-serif;font-size:.88rem;font-weight:800;}
+.phase-status{font-size:.62rem;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em;}
+.ps-done{background:var(--emeraldl);color:var(--emerald);}
+.ps-active{background:var(--amberl);color:var(--amber);}
+.ps-pending{background:var(--bg2);color:var(--text3);}
+.ps-blocked{background:var(--rosel);color:var(--rose);}
+.phase-desc{font-size:.73rem;color:var(--text3);margin-top:4px;line-height:1.5;}
+.phase-detail{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:none;}
+.phase-item.active .phase-detail{display:block;}
+.phase-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+/* FORM ELEMENTS */
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.ff{display:flex;flex-direction:column;gap:4px;}
+.fl{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);}
+.fl .req{color:var(--coral);}
+.fi,.fs{padding:8px 11px;background:var(--bg);border:1.5px solid var(--border2);border-radius:8px;color:var(--text);font-family:'Bricolage Grotesque',sans-serif;font-size:.81rem;outline:none;transition:all .18s;width:100%;}
+.fi:focus,.fs:focus{border-color:var(--indigo);background:#fff;box-shadow:0 0 0 3px var(--indigol);}
+.fi::placeholder{color:var(--text4);}
+.fs{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239b95c0'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:26px;cursor:pointer;}
+.ffull{grid-column:span 2;}
+.fsec-title{font-family:'Cabinet Grotesk',sans-serif;font-size:.78rem;font-weight:800;color:var(--text);margin-bottom:10px;padding-bottom:7px;border-bottom:1.5px solid var(--border);display:flex;align-items:center;gap:7px;}
+/* ENRICHMENT STATUS */
+.enrich-grid{display:flex;flex-direction:column;gap:7px;}
+.enrich-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border-radius:9px;border:1.5px solid var(--border);}
+.enrich-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;}
+.enrich-name{font-size:.78rem;font-weight:600;flex:1;}
+.enrich-val{font-size:.71rem;color:var(--text3);max-width:140px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.enrich-badge{font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0;}
+.eb-ok{background:var(--emeraldl);color:var(--emerald);}
+.eb-pending{background:var(--amberl);color:var(--amber);}
+.eb-manual{background:var(--skyl);color:var(--sky);}
+.eb-fail{background:var(--rosel);color:var(--rose);}
+/* FORMS TABLE */
+.forms-table{width:100%;border-collapse:collapse;font-size:.75rem;}
+.forms-table th{text-align:left;padding:7px 10px;background:var(--bg2);font-family:'Cabinet Grotesk',sans-serif;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);}
+.forms-table td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.forms-table tr:hover td{background:var(--indigol);}
+.form-name-cell{font-weight:600;color:var(--text);}
+.form-num{font-size:.65rem;color:var(--text3);display:block;}
+/* RIGHT */
+.right-panel{background:rgba(255,255,255,.8);backdrop-filter:blur(18px);border-left:1.5px solid var(--border2);display:flex;flex-direction:column;overflow:hidden;}
+.right-tabs{display:flex;border-bottom:1.5px solid var(--border2);background:rgba(247,245,255,.7);flex-shrink:0;}
+.rtab{flex:1;padding:10px 6px;font-family:'Cabinet Grotesk',sans-serif;font-size:.65rem;font-weight:700;text-align:center;cursor:pointer;border-bottom:2.5px solid transparent;color:var(--text3);transition:all .18s;}
+.rtab.active{color:var(--indigo);border-bottom-color:var(--indigo);}
+.right-body{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;}
+.right-body::-webkit-scrollbar{width:3px;}
+.right-body::-webkit-scrollbar-thumb{background:var(--border2);}
+.rsec-title{font-family:'Cabinet Grotesk',sans-serif;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:6px;}
+/* STAKEHOLDER CARDS */
+.scard{background:#fff;border:1.5px solid var(--border);border-radius:10px;overflow:hidden;}
+.scard-head{padding:9px 12px;display:flex;align-items:center;gap:9px;background:rgba(247,245,255,.5);}
+.scard-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cabinet Grotesk',sans-serif;font-size:.68rem;font-weight:800;color:#fff;flex-shrink:0;}
+.scard-role{font-family:'Cabinet Grotesk',sans-serif;font-size:.75rem;font-weight:800;}
+.scard-name{font-size:.68rem;color:var(--text3);}
+.scard-status{margin-left:auto;font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:20px;text-transform:uppercase;}
+.scard-body{padding:8px 12px;}
+.scard-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:.72rem;}
+.scard-row-label{color:var(--text3);}
+.scard-row-val{font-weight:500;color:var(--text2);text-align:right;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* FORM STATUS MINI */
+.fmini{display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--bg);border-radius:8px;border:1.5px solid var(--border);margin-bottom:5px;}
+.fmini-name{font-size:.74rem;font-weight:600;flex:1;}
+.fmini-bar{flex:0 0 60px;height:4px;background:var(--border2);border-radius:99px;overflow:hidden;}
+.fmini-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--indigo),var(--coral));transition:width .4s;}
+.fmini-pct{font-size:.65rem;font-weight:700;color:var(--text3);min-width:28px;text-align:right;}
+.fmini-env{font-size:.6rem;padding:2px 6px;border-radius:20px;font-weight:700;flex-shrink:0;}
+/* MLS CHECKLIST */
+.checklist{display:flex;flex-direction:column;gap:5px;}
+.check-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg);border-radius:8px;font-size:.74rem;}
+.check-icon{font-size:.85rem;flex-shrink:0;}
+.check-label{flex:1;color:var(--text2);}
+.check-item.done .check-label{text-decoration:line-through;color:var(--text3);}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(26,21,53,.35);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#fff;width:100%;max-width:680px;border-radius:18px;overflow:hidden;box-shadow:0 24px 64px rgba(79,53,210,.2);animation:modalPop .3s cubic-bezier(.16,1,.3,1);}
+.modal-box.wide{max-width:960px;width:92vw;}
+@keyframes modalPop{from{opacity:0;transform:scale(.95) translateY(10px);}to{opacity:1;transform:none;}}
+.modal-header{padding:18px 22px 14px;border-bottom:1.5px solid var(--border);display:flex;align-items:center;gap:11px;}
+.modal-title{font-family:'Cabinet Grotesk',sans-serif;font-size:1.05rem;font-weight:800;background:linear-gradient(130deg,var(--indigo),var(--coral));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.modal-close{margin-left:auto;width:28px;height:28px;border-radius:7px;background:var(--bg);border:1.5px solid var(--border2);color:var(--text3);cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;}
+.modal-close:hover{border-color:var(--rose);color:var(--rose);}
+.modal-body{padding:18px 22px;max-height:68vh;overflow-y:auto;}
+.modal-footer{padding:13px 22px;border-top:1.5px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+.btn-cancel{padding:8px 16px;background:#fff;border:1.5px solid var(--border2);border-radius:8px;font-size:.78rem;cursor:pointer;color:var(--text2);}
+.btn-cancel:hover{border-color:var(--rose);color:var(--rose);}
+.btn-primary{padding:9px 20px;background:linear-gradient(135deg,var(--indigo),var(--indigo2));color:#fff;border:none;border-radius:9px;font-family:'Cabinet Grotesk',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;box-shadow:0 3px 12px rgba(79,53,210,.25);}
+.btn-primary:hover{transform:translateY(-1px);}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none!important;}
+/* DRAG DROP */
+.drop-zone{border:2.5px dashed var(--border2);border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;}
+.drop-zone.over{border-color:var(--indigo);background:var(--indigol);}
+.drop-zone-icon{font-size:2.5rem;margin-bottom:10px;}
+.drop-zone h3{font-family:'Cabinet Grotesk',sans-serif;font-size:.95rem;font-weight:800;color:var(--text2);}
+.drop-zone p{font-size:.75rem;color:var(--text3);margin-top:5px;}
+/* COL MAP */
+.col-map-table{width:100%;border-collapse:collapse;}
+.col-map-table th{text-align:left;padding:7px 10px;background:var(--bg2);font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);}
+.col-map-table td{padding:7px 10px;border-bottom:1px solid var(--border);}
+.col-map-excel{font-size:.77rem;font-weight:600;}
+.col-map-score{font-size:.65rem;color:var(--text3);}
+.col-map-preview{font-size:.7rem;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* ENVELOPES */
+.env-card{background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:11px 13px;margin-bottom:8px;}
+.env-card-head{display:flex;align-items:center;gap:9px;margin-bottom:8px;}
+.env-form-name{font-family:'Cabinet Grotesk',sans-serif;font-size:.78rem;font-weight:800;}
+.env-status{font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;margin-left:auto;}
+.es-sent{background:var(--amberl);color:var(--amber);}
+.es-partial{background:var(--skyl);color:var(--sky);}
+.es-complete{background:var(--emeraldl);color:var(--emerald);}
+.es-none{background:var(--bg2);color:var(--text3);}
+.es-declined{background:var(--rosel);color:var(--rose);}
+.signer-row{display:flex;align-items:center;gap:8px;font-size:.72rem;margin-bottom:4px;}
+.signer-av-sm{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:700;color:#fff;flex-shrink:0;}
+.signer-name{flex:1;}
+.signer-status{font-size:.62rem;font-weight:600;}
+/* EMPTY */
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:40px;text-align:center;}
+.empty-icon{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--indigol),var(--corall));border:1.5px solid var(--indigom);display:flex;align-items:center;justify-content:center;font-size:1.7rem;}
+.empty h3{font-family:'Cabinet Grotesk',sans-serif;font-size:.95rem;font-weight:800;color:var(--text2);}
+.empty p{font-size:.75rem;color:var(--text3);line-height:1.6;max-width:220px;}
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(70px);background:#fff;border:1.5px solid var(--border2);color:var(--text);padding:10px 20px;border-radius:10px;font-size:.78rem;font-weight:500;z-index:999;transition:transform .3s cubic-bezier(.16,1,.3,1);pointer-events:none;white-space:nowrap;box-shadow:var(--sh2);}
+.toast.on{transform:translateX(-50%) translateY(0);}
+/* INFO BANNER */
+.info-banner{background:var(--amberl);border:1.5px solid rgba(245,158,11,.25);border-radius:9px;padding:10px 13px;font-size:.74rem;color:var(--text2);margin-bottom:14px;display:flex;gap:8px;align-items:flex-start;}
+/* SETTINGS FORM */
+.settings-grid{display:grid;grid-template-columns:1fr;gap:12px;}
+.settings-row{display:flex;flex-direction:column;gap:5px;}
+.settings-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);}
+.settings-input{padding:9px 12px;background:var(--bg);border:1.5px solid var(--border2);border-radius:8px;font-family:'Bricolage Grotesque',sans-serif;font-size:.82rem;color:var(--text);outline:none;width:100%;}
+.settings-input:focus{border-color:var(--indigo);background:#fff;box-shadow:0 0 0 3px var(--indigol);}
+.settings-hint{font-size:.68rem;color:var(--text3);margin-top:2px;}
+/* SECTION NAV */
+.section-nav{position:relative;z-index:99;height:40px;background:rgba(255,255,255,.92);backdrop-filter:blur(16px);border-bottom:1.5px solid var(--border2);display:flex;align-items:center;padding:0 18px;gap:4px;}
+.snav-pill{padding:4px 14px;border-radius:20px;font-family:'Cabinet Grotesk',sans-serif;font-size:.71rem;font-weight:700;cursor:pointer;transition:all .18s;color:var(--text3);border:1.5px solid transparent;background:none;}
+.snav-pill.active{background:linear-gradient(135deg,var(--indigo),var(--indigo2));color:#fff;box-shadow:0 3px 10px rgba(79,53,210,.25);}
+.snav-pill:not(.active):hover{background:var(--indigol);color:var(--indigo);border-color:var(--indigom);}
+.snav-sep{width:1.5px;height:18px;background:var(--border2);margin:0 6px;}
+/* FIX height now that we have a 40px nav */
+.app{height:calc(100vh - 100px)!important;}
+/* SECTION PANELS */
+.sec-panel{display:none;position:relative;z-index:1;height:calc(100vh - 100px);overflow:hidden;}
+.sec-panel.active{display:grid;}
+/* CONTACTS */
+#secContacts{grid-template-columns:280px 1fr 300px;}
+#secShowings{grid-template-columns:300px 1fr 280px;}
+#secCalendar{grid-template-columns:220px 1fr 260px;}
+/* Contact list items */
+.ccard{background:#fff;border:1.5px solid var(--border);border-radius:var(--r);padding:11px 13px;cursor:pointer;transition:all .18s;margin-bottom:6px;}
+.ccard:hover{box-shadow:var(--sh);border-color:var(--indigo);}
+.ccard.active{border-color:var(--indigo);box-shadow:0 0 0 3px var(--indigol);background:linear-gradient(135deg,rgba(79,53,210,.04),rgba(255,92,58,.02));}
+.contact-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cabinet Grotesk',sans-serif;font-size:.72rem;font-weight:800;color:#fff;flex-shrink:0;}
+.av-buyer{background:linear-gradient(135deg,var(--sky),#0ea5e9);}
+.av-seller{background:linear-gradient(135deg,var(--indigo),var(--coral));}
+/* Communication timeline */
+.comm-item{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid var(--border);}
+.comm-item:last-child{border-bottom:none;}
+.comm-dir-icon{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0;margin-top:1px;}
+.comm-in{background:var(--skyl);color:var(--sky);}
+.comm-out{background:var(--emeraldl);color:var(--emerald);}
+.comm-body-text{font-size:.76rem;color:var(--text2);flex:1;line-height:1.45;}
+.comm-meta{font-size:.62rem;color:var(--text3);margin-top:3px;display:flex;gap:7px;align-items:center;}
+.ch-badge{font-size:.58rem;font-weight:700;padding:1px 5px;border-radius:20px;text-transform:uppercase;}
+.ch-sms{background:var(--skyl);color:var(--sky);}
+.ch-whatsapp{background:var(--emeraldl);color:var(--emerald);}
+.ch-email{background:var(--amberl);color:var(--amber);}
+.ch-note{background:var(--indigol);color:var(--indigo);}
+/* Showing rows */
+.showing-row{background:#fff;border:1.5px solid var(--border);border-radius:var(--r);padding:12px 14px;cursor:pointer;transition:all .18s;margin-bottom:6px;}
+.showing-row:hover{box-shadow:var(--sh);border-color:var(--indigo);}
+.showing-row.active{border-color:var(--indigo);box-shadow:0 0 0 3px var(--indigol);}
+.ss-badge{font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;}
+.ss-requested{background:var(--amberl);color:var(--amber);}
+.ss-confirmed{background:var(--emeraldl);color:var(--emerald);}
+.ss-denied{background:var(--rosel);color:var(--rose);}
+.ss-cancelled{background:var(--bg2);color:var(--text3);}
+/* Calendar */
+.cal-month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.cal-month-title{font-family:'Cabinet Grotesk',sans-serif;font-size:.95rem;font-weight:800;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.cal-day-hdr{font-family:'Cabinet Grotesk',sans-serif;font-size:.58rem;font-weight:700;text-transform:uppercase;color:var(--text3);text-align:center;padding:5px 0;}
+.cal-cell{min-height:78px;background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:4px 5px;cursor:pointer;transition:all .12s;}
+.cal-cell:hover{background:var(--indigol);border-color:var(--indigom);}
+.cal-cell.today{background:linear-gradient(135deg,rgba(79,53,210,.06),rgba(255,92,58,.03));border-color:var(--indigo);}
+.cal-num{font-family:'Cabinet Grotesk',sans-serif;font-size:.68rem;font-weight:700;color:var(--text3);}
+.cal-cell.today .cal-num{color:var(--indigo);font-size:.72rem;}
+.cal-cell.other-month{opacity:.3;}
+.cal-ev{font-size:.56rem;font-weight:600;padding:1px 4px;border-radius:3px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal-ev-req{background:var(--amberl);color:var(--amber);}
+.cal-ev-conf{background:var(--emeraldl);color:var(--emerald);}
+/* Note textarea */
+.note-ta{width:100%;min-height:54px;resize:vertical;padding:8px 10px;background:var(--bg);border:1.5px solid var(--border2);border-radius:8px;font-family:'Bricolage Grotesque',sans-serif;font-size:.78rem;color:var(--text);outline:none;}
+.note-ta:focus{border-color:var(--indigo);background:#fff;box-shadow:0 0 0 3px var(--indigol);}
+/* Stat mini cards for each section header */
+.sec-stat{background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;gap:2px;}
+.sec-stat-val{font-family:'Cabinet Grotesk',sans-serif;font-size:1.4rem;font-weight:800;line-height:1;}
+.sec-stat-lbl{font-size:.63rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-weight:700;}
+</style>
+</head>
+<body>
+<div class="bg-canvas"></div>
+<div class="header">
+  <div class="logo">ListingFlow</div>
+  <div class="logo-badge">BC AI Agent</div>
+  <div class="header-actions">
+    <button class="hbtn hbtn-ghost" onclick="openImport()">📥 Import Excel</button>
+    <button class="hbtn hbtn-ghost" onclick="openSettings()">⚙️ Settings</button>
+    <button class="hbtn" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;box-shadow:0 3px 12px rgba(245,158,11,.3)" onclick="loadDemo()">🎭 Load Demo</button>
+    <div class="agent-pill" onclick="openSettings()">
+      <div class="agent-av" id="agentAv">SA</div>
+      <div class="agent-nm" id="agentNm">Sarah Ahmadi</div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION NAV -->
+<div class="section-nav">
+  <button class="snav-pill active" onclick="switchSection('listings')" data-sec="listings">🏠 Listings</button>
+  <button class="snav-pill" onclick="switchSection('contacts')" data-sec="contacts">👥 Contacts</button>
+  <button class="snav-pill" onclick="switchSection('showings')" data-sec="showings">👁 Showings</button>
+  <button class="snav-pill" onclick="switchSection('calendar')" data-sec="calendar">📅 Calendar</button>
+  <div class="snav-sep"></div>
+  <span id="secBadge" style="font-size:.65rem;color:var(--text3);font-weight:600"></span>
+</div>
+
+<div class="app">
+  <!-- LEFT -->
+  <div class="left-panel">
+    <div class="panel-head">
+      <span class="panel-lbl">Listings</span>
+      <button class="btn-sm btn-sm-indigo" onclick="newListing()">+ New</button>
+    </div>
+    <div class="listing-list" id="listingList">
+      <div class="empty" style="margin:auto;padding:28px 16px">
+        <div class="empty-icon" style="width:48px;height:48px;font-size:1.2rem">🏠</div>
+        <p style="font-size:.73rem">Import an Excel file or click + New to add a listing.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MID -->
+  <div class="mid-panel">
+    <div class="mid-topbar">
+      <div>
+        <div class="mid-title" id="midTitle">ListingFlow</div>
+        <div class="mid-sub" id="midSub">BC Real Estate MLS Automation — Phase 1 → Phase 8</div>
+      </div>
+      <div id="midActions" style="margin-left:auto;display:flex;gap:8px;"></div>
+    </div>
+    <div class="mid-body" id="midBody">
+      <div class="empty">
+        <div class="empty-icon">🏡</div>
+        <h3>Select or import a listing</h3>
+        <p>Click + New or use Import Excel to bring in listings from your spreadsheet. The agent handles phases 1–8 automatically.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right-panel">
+    <div class="right-tabs">
+      <div class="rtab active" onclick="showRightTab('forms')" data-rtab="forms">📋 Forms</div>
+      <div class="rtab" onclick="showRightTab('envelopes')" data-rtab="envelopes">✍️ Signatures</div>
+      <div class="rtab" onclick="showRightTab('stakeholders')" data-rtab="stakeholders">👥 Parties</div>
+      <div class="rtab" onclick="showRightTab('checklist')" data-rtab="checklist">✅ MLS</div>
+    </div>
+    <div class="right-body" id="rightBody">
+      <div class="empty" style="margin:auto">
+        <div class="empty-icon" style="width:44px;height:44px;font-size:1.1rem">📄</div>
+        <p style="font-size:.73rem">Select a listing to see status.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CONTACTS SECTION ══ -->
+<div class="sec-panel" id="secContacts">
+  <!-- Left: contact list -->
+  <div class="left-panel">
+    <div class="panel-head">
+      <span class="panel-lbl">Contacts</span>
+      <button class="btn-sm btn-sm-indigo" onclick="openAddContact()">+ Add</button>
+    </div>
+    <div style="padding:8px 12px;border-bottom:1.5px solid var(--border);display:flex;gap:6px;flex-shrink:0">
+      <button class="btn-sm" id="ctFilter-all" style="background:var(--indigol);color:var(--indigo);border:1.5px solid var(--indigom);font-size:.65rem;padding:3px 10px" onclick="filterContacts('all')">All</button>
+      <button class="btn-sm" id="ctFilter-seller" style="background:var(--bg);border:1.5px solid var(--border2);color:var(--text3);font-size:.65rem;padding:3px 10px" onclick="filterContacts('seller')">Sellers</button>
+      <button class="btn-sm" id="ctFilter-buyer" style="background:var(--bg);border:1.5px solid var(--border2);color:var(--text3);font-size:.65rem;padding:3px 10px" onclick="filterContacts('buyer')">Buyers</button>
+    </div>
+    <div class="listing-list" id="contactList" style="padding:8px 10px"></div>
+  </div>
+  <!-- Mid: contact detail + comm timeline -->
+  <div class="mid-panel">
+    <div class="mid-topbar">
+      <div>
+        <div class="mid-title" id="ctMidTitle">Contacts</div>
+        <div class="mid-sub" id="ctMidSub">Select a contact to view details</div>
+      </div>
+      <div id="ctMidActions" style="margin-left:auto;display:flex;gap:8px"></div>
+    </div>
+    <div class="mid-body" id="ctMidBody">
+      <div class="empty"><div class="empty-icon">👥</div><h3>Select a contact</h3><p>Click any contact to view their profile, communication history, and linked listings.</p></div>
+    </div>
+  </div>
+  <!-- Right: linked info -->
+  <div class="right-panel">
+    <div class="right-tabs">
+      <div class="rtab active" onclick="showCtTab('timeline')" data-ctab="timeline">💬 Timeline</div>
+      <div class="rtab" onclick="showCtTab('listings')" data-ctab="listings">🏠 Listings</div>
+      <div class="rtab" onclick="showCtTab('notes')" data-ctab="notes">📝 Notes</div>
+    </div>
+    <div class="right-body" id="ctRightBody">
+      <div class="empty" style="margin:auto"><div class="empty-icon" style="width:44px;height:44px;font-size:1.1rem">💬</div><p style="font-size:.73rem">Select a contact to see their communication history.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SHOWINGS SECTION ══ -->
+<div class="sec-panel" id="secShowings">
+  <!-- Left: showings list -->
+  <div class="left-panel">
+    <div class="panel-head">
+      <span class="panel-lbl">Showings</span>
+      <button class="btn-sm btn-sm-indigo" onclick="openAddShowing()">+ Request</button>
+    </div>
+    <div style="padding:8px 12px;border-bottom:1.5px solid var(--border);display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">
+      <button class="btn-sm" id="shFilter-all" style="background:var(--indigol);color:var(--indigo);border:1.5px solid var(--indigom);font-size:.65rem;padding:3px 9px" onclick="filterShowings('all')">All</button>
+      <button class="btn-sm" id="shFilter-requested" style="background:var(--amberl);color:var(--amber);border:1.5px solid rgba(245,158,11,.2);font-size:.65rem;padding:3px 9px" onclick="filterShowings('requested')">Requested</button>
+      <button class="btn-sm" id="shFilter-confirmed" style="background:var(--emeraldl);color:var(--emerald);border:1.5px solid rgba(5,150,105,.2);font-size:.65rem;padding:3px 9px" onclick="filterShowings('confirmed')">Confirmed</button>
+    </div>
+    <div class="listing-list" id="showingList" style="padding:8px 10px"></div>
+  </div>
+  <!-- Mid: showing detail -->
+  <div class="mid-panel">
+    <div class="mid-topbar">
+      <div>
+        <div class="mid-title" id="shMidTitle">Showings</div>
+        <div class="mid-sub" id="shMidSub">Select a showing to view details</div>
+      </div>
+      <div id="shMidActions" style="margin-left:auto;display:flex;gap:8px"></div>
+    </div>
+    <div class="mid-body" id="shMidBody">
+      <div class="empty"><div class="empty-icon">👁</div><h3>Select a showing</h3><p>View showing requests, confirm or deny with one click. Sellers are notified via SMS/WhatsApp.</p></div>
+    </div>
+  </div>
+  <!-- Right: showing summary + upcoming -->
+  <div class="right-panel">
+    <div class="right-tabs">
+      <div class="rtab active" data-shtab="stats">📊 Stats</div>
+      <div class="rtab" data-shtab="upcoming">🗓 Upcoming</div>
+    </div>
+    <div class="right-body" id="shRightBody" style="padding:14px"></div>
+  </div>
+</div>
+
+<!-- ══ CALENDAR SECTION ══ -->
+<div class="sec-panel" id="secCalendar">
+  <!-- Left: mini stats + upcoming list -->
+  <div class="left-panel">
+    <div class="panel-head">
+      <span class="panel-lbl">This Week</span>
+    </div>
+    <div class="right-body" id="calSideBody" style="padding:10px 12px;flex:1;overflow-y:auto"></div>
+  </div>
+  <!-- Mid: calendar grid -->
+  <div class="mid-panel">
+    <div class="mid-topbar">
+      <button class="btn-sm" style="background:var(--bg);border:1.5px solid var(--border2);color:var(--text2)" onclick="calNav(-1)">← Prev</button>
+      <div class="mid-title" id="calTitle" style="margin:0 auto">March 2026</div>
+      <button class="btn-sm" style="background:var(--bg);border:1.5px solid var(--border2);color:var(--text2)" onclick="calNav(1)">Next →</button>
+    </div>
+    <div class="mid-body" id="calBody" style="padding:12px 16px"></div>
+  </div>
+  <!-- Right: day detail -->
+  <div class="right-panel">
+    <div class="panel-head">
+      <span class="panel-lbl" id="calDayTitle">Select a day</span>
+    </div>
+    <div class="right-body" id="calDayBody" style="padding:12px 14px">
+      <div class="empty" style="margin:auto"><div class="empty-icon" style="width:44px;height:44px;font-size:1.1rem">📅</div><p style="font-size:.73rem">Click a day to see showings.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal-box wide">
+    <div class="modal-header">
+      <div class="modal-title">📥 Import from Excel</div>
+      <button class="modal-close" onclick="closeModal('importModal')">✕</button>
+    </div>
+    <div class="modal-body" id="importBody">
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('xlFile').click()"
+           ondragover="event.preventDefault();this.classList.add('over')"
+           ondragleave="this.classList.remove('over')"
+           ondrop="handleDrop(event)">
+        <div class="drop-zone-icon">📊</div>
+        <h3>Drop your Excel file here</h3>
+        <p>Supports .xlsx and .csv — one row per property<br>or <u>click to browse</u></p>
+        <input type="file" id="xlFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFile(this.files[0])">
+      </div>
+      <div id="colMapSection" style="display:none;margin-top:16px">
+        <div class="fsec-title">🔁 Column Mapping <span style="font-size:.65rem;font-weight:400;color:var(--text3);margin-left:8px" id="mapSubtitle"></span></div>
+        <div id="colMapContent"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('importModal')">Cancel</button>
+      <button class="btn-primary" id="importConfirmBtn" style="display:none" onclick="confirmImport()">Import Listings</button>
+      <a id="templateLink" href="#" onclick="downloadTemplate(event)" style="font-size:.75rem;color:var(--indigo);text-decoration:none;padding:9px 0;margin-right:auto">📥 Download Template</a>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">⚙️ Settings</div>
+      <button class="modal-close" onclick="closeModal('settingsModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fsec-title" style="margin-bottom:12px">🏢 Agent & Brokerage</div>
+      <div class="settings-grid">
+        <div class="fgrid" style="margin-bottom:0">
+          <div class="settings-row"><div class="settings-label">Agent First Name</div><input class="settings-input" id="stAgentFirst" value="Sarah"></div>
+          <div class="settings-row"><div class="settings-label">Agent Last Name</div><input class="settings-input" id="stAgentLast" value="Ahmadi"></div>
+          <div class="settings-row"><div class="settings-label">BCFSA License #</div><input class="settings-input" id="stAgentLicense" placeholder="BCREA 000000"></div>
+          <div class="settings-row"><div class="settings-label">Agent Phone</div><input class="settings-input" id="stAgentPhone" placeholder="+1 604 555 0200"></div>
+          <div class="settings-row ffull"><div class="settings-label">Agent Email</div><input class="settings-input" id="stAgentEmail" placeholder="you@brokerage.ca"></div>
+          <div class="settings-row ffull"><div class="settings-label">Brokerage Name</div><input class="settings-input" id="stBrokerage" placeholder="RE/MAX City Realty"></div>
+        </div>
+      </div>
+      <div class="fsec-title" style="margin-top:18px;margin-bottom:12px">✍️ DocuSign</div>
+      <div class="info-banner">⚠️ Get your Account ID and JWT Access Token from <strong>app.docusign.com → Settings → Apps & Keys</strong>. The token expires every 8 hours.</div>
+      <div class="settings-grid">
+        <div class="settings-row"><div class="settings-label">DocuSign Account ID</div><input class="settings-input" id="stDsAccountId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"><div class="settings-hint">Found in Apps & Keys → Account ID</div></div>
+        <div class="settings-row"><div class="settings-label">DocuSign Access Token</div><input class="settings-input" id="stDsToken" placeholder="eyJ0eXAiOiJKV1QiL..." type="password"><div class="settings-hint">JWT Bearer token — regenerate at developers.docusign.com</div></div>
+        <div class="settings-row"><div class="settings-label">DocuSign Base URL</div>
+          <select class="settings-input" id="stDsBase"><option value="https://demo.docusign.net/restapi/v2.1">Sandbox (demo.docusign.net)</option><option value="https://na4.docusign.net/restapi/v2.1">Production — NA4</option><option value="https://na2.docusign.net/restapi/v2.1">Production — NA2</option></select>
+        </div>
+        <div class="settings-row"><div class="settings-label">Claude API Key (for AI remarks)</div><input class="settings-input" id="stClaudeKey" placeholder="sk-ant-..." type="password"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('settingsModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- DOCUSIGN SEND MODAL -->
+<div class="modal-overlay" id="dsModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="dsModalTitle">✍️ Send for Signature</div>
+      <button class="modal-close" onclick="closeModal('dsModal')">✕</button>
+    </div>
+    <div class="modal-body" id="dsModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('dsModal')">Cancel</button>
+      <button class="btn-primary" id="dsSendBtn" onclick="confirmSendEnvelope()">Send via DocuSign</button>
+    </div>
+  </div>
+</div>
+
+<!-- FORM PREVIEW MODAL -->
+<div class="modal-overlay" id="previewModal">
+  <div class="modal-box wide">
+    <div class="modal-header">
+      <div class="modal-title" id="previewTitle">Form Preview</div>
+      <button class="modal-close" onclick="closeModal('previewModal')">✕</button>
+    </div>
+    <div class="modal-body" id="previewContent" style="font-family:'Bricolage Grotesque',sans-serif;font-size:.82rem;"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('previewModal')">Close</button>
+      <button class="btn-primary" onclick="window.print()">🖨 Print / PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD CONTACT MODAL -->
+<div class="modal-overlay" id="addContactModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">👥 Add Contact</div>
+      <button class="modal-close" onclick="closeModal('addContactModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fgrid">
+        <div class="ff ffull"><label class="fl">Full Name <span class="req">*</span></label><input class="fi" id="ctName" placeholder="John Smith"></div>
+        <div class="ff"><label class="fl">Phone <span class="req">*</span></label><input class="fi" id="ctPhone" placeholder="+1 604 555 0100" type="tel"></div>
+        <div class="ff"><label class="fl">Email</label><input class="fi" id="ctEmail" placeholder="john@email.com" type="email"></div>
+        <div class="ff"><label class="fl">Type</label><select class="fi" id="ctType"><option value="seller">Seller</option><option value="buyer">Buyer</option></select></div>
+        <div class="ff"><label class="fl">Preferred Channel</label><select class="fi" id="ctChannel"><option value="sms">SMS</option><option value="whatsapp">WhatsApp</option><option value="email">Email</option></select></div>
+        <div class="ff ffull"><label class="fl">Notes</label><textarea class="fi" id="ctNotes" rows="2" style="resize:vertical"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('addContactModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveContact()">Save Contact</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD SHOWING MODAL -->
+<div class="modal-overlay" id="addShowingModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">👁 Request Showing</div>
+      <button class="modal-close" onclick="closeModal('addShowingModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fgrid">
+        <div class="ff ffull"><label class="fl">Listing <span class="req">*</span></label><select class="fi" id="shListing"></select></div>
+        <div class="ff"><label class="fl">Date <span class="req">*</span></label><input class="fi" id="shDate" type="date"></div>
+        <div class="ff"><label class="fl">Start Time <span class="req">*</span></label><input class="fi" id="shStart" type="time" value="10:00"></div>
+        <div class="ff"><label class="fl">End Time</label><input class="fi" id="shEnd" type="time" value="10:30"></div>
+        <div class="ff ffull"><label class="fl">Buyer Agent Name <span class="req">*</span></label><input class="fi" id="shAgentName" placeholder="Agent Name"></div>
+        <div class="ff"><label class="fl">Buyer Agent Phone</label><input class="fi" id="shAgentPhone" type="tel" placeholder="+1 604 555 0200"></div>
+        <div class="ff"><label class="fl">Buyer Agent Email</label><input class="fi" id="shAgentEmail" type="email" placeholder="agent@brokerage.ca"></div>
+        <div class="ff ffull"><label class="fl">Notes</label><textarea class="fi" id="shNotes" rows="2" style="resize:vertical"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('addShowingModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveShowing()">Create Request</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// SETTINGS & STATE
+// ═══════════════════════════════════════════════════════════════
+let CFG = JSON.parse(localStorage.getItem('lf_cfg') || '{}');
+let LISTINGS = JSON.parse(localStorage.getItem('lf_listings') || '[]');
+let activeId = null;
+let activeRightTab = 'forms';
+let pendingImport = null; // { rows, mapping }
+
+function saveCfg() { localStorage.setItem('lf_cfg', JSON.stringify(CFG)); }
+function saveListings() { localStorage.setItem('lf_listings', JSON.stringify(LISTINGS)); }
+function getActive() { return LISTINGS.find(l => l.id === activeId) || null; }
+function agentName() { return ((CFG.agentFirst||'Sarah')+' '+(CFG.agentLast||'Ahmadi')).trim(); }
+function agentInitials() { const p=agentName().split(' '); return ((p[0]||'')[0]+(p[1]||'')[0]).toUpperCase(); }
+
+// ═══════════════════════════════════════════════════════════════
+// CANONICAL DATA MODEL
+// ═══════════════════════════════════════════════════════════════
+const BLANK = () => ({
+  id: 'LF-'+new Date().getFullYear()+'-'+String(LISTINGS.length+1).padStart(5,'0'),
+  createdAt: new Date().toISOString().slice(0,10),
+  phase: 1, // 1-8
+  // ── Seller ──
+  seller: [{
+    fullName:'', dob:'', citizenship:'canadian', idType:'drivers_license',
+    idNumber:'', idExpiry:'', phone:'', email:'', address:'', occupation:''
+  }],
+  // ── Property (seller input) ──
+  propAddress:'', propUnit:'', propType:'detached',
+  // ── Enriched (Phase 2) ──
+  geo: null, parcel: null, ltsa: null, assessment: null, strata: null,
+  enrichStatus: { geo:'pending', parcel:'pending', ltsa:'pending', assessment:'pending' },
+  // ── Disclosures (Category D) ──
+  knownDefects:[], unpermittedRenos:[], insuranceClaims:[],
+  environmentalIssues:[], growOpHistory:false, pendingLegal:false,
+  strataIssues:'', tenantStatus:'vacant', leaseDetails:{},
+  // ── Inclusions / Exclusions ──
+  inclusions:[], exclusions:[], rentalEquipment:[],
+  // ── Showing ──
+  showingInstructions:'', lockboxCode:'', showingNotes:'',
+  // ── Pricing (Phase 4) ──
+  listPrice:'', listDuration:'90', commissionSeller:'3.222',
+  commissionBuyer:'2.5', possessionDate:'', priceLocked:false,
+  // ── Stakeholders ──
+  buyerAgent:{ name:'', phone:'', email:'', brokerage:'' },
+  lawyer:{ name:'', phone:'', email:'', firm:'' },
+  lender:{ name:'', phone:'', email:'', institution:'' },
+  // ── Forms ──
+  forms: {
+    dorts:  { status:'pending', pdfUrl:null },
+    mlc:    { status:'pending', pdfUrl:null },
+    pds:    { status:'pending', pdfUrl:null },
+    fintrac:{ status:'pending', pdfUrl:null },
+    privacy:{ status:'pending', pdfUrl:null },
+    c3:     { status:'pending', pdfUrl:null },
+    drup:   { status:'pending', pdfUrl:null },
+    mls:    { status:'pending', pdfUrl:null },
+    mktauth:{ status:'pending', pdfUrl:null },
+    agency: { status:'pending', pdfUrl:null },
+    c3conf: { status:'pending', pdfUrl:null },
+    fairhsg:{ status:'pending', pdfUrl:null },
+  },
+  // ── Envelopes (Phase 6) ──
+  envelopes: {
+    seller_pkg: { id:'', status:'none', sentAt:'', signers:[] },
+    agent_pkg:  { id:'', status:'none', sentAt:'', signers:[] },
+  },
+  // ── MLS (Phase 7-8) ──
+  mlsRemarks:'', mlsRealtorRemarks:'', mlsPhotos:[],
+  mlsNumber:'', mlsStatus:'pending',
+  // ── CMA ──
+  cmaStatus:'pending', suggestedPrice:'',
+  // ── Audit ──
+  auditTrail:[],
+});
+
+const FORM_META = [
+  { key:'dorts',   name:'DORTS',      full:'Disclosure of Representation',        icon:'📋', signers:['agent','seller'] },
+  { key:'mlc',     name:'MLC',        full:'Multiple Listing Contract',            icon:'📝', signers:['seller','agent'] },
+  { key:'pds',     name:'PDS',        full:'Property Disclosure Statement',        icon:'⚠️', signers:['seller'] },
+  { key:'fintrac', name:'FINTRAC',    full:'Individual Identification Record',     icon:'🪪', signers:['agent'] },
+  { key:'privacy', name:'Privacy',    full:'Privacy Notice & Consent',             icon:'🔒', signers:['seller'] },
+  { key:'drup',    name:'DRUP',       full:'Disclosure — Unrepresented Parties',   icon:'📄', signers:['seller'] },
+  { key:'mls',     name:'MLS Input',  full:'MLS Data Input Form',                 icon:'🏷️', signers:['agent'] },
+  { key:'mktauth', name:'Mktg Auth',  full:'Seller Marketing Authorization',       icon:'📣', signers:['seller'] },
+  { key:'agency',  name:'Agency',     full:'Agency Agreement (Seller)',            icon:'🤝', signers:['seller','agent'] },
+  { key:'c3conf',  name:'C3',         full:'Confirmation of Cooperation & Compensation', icon:'💰', signers:['agent'] },
+  { key:'fairhsg', name:'Fair Housing',full:'Fair Housing Acknowledgment',         icon:'🏛️', signers:['seller'] },
+  { key:'strata',  name:'Form B',     full:'Strata Information Certificate',       icon:'🏢', signers:[], conditional:true },
+];
+
+const PHASES = [
+  { n:1, name:'Seller Intake',       desc:'Seller identity, property address, pricing & disclosures', icon:'👤' },
+  { n:2, name:'Data Enrichment',     desc:'Geocoder → ParcelMap → LTSA → BC Assessment', icon:'🔍' },
+  { n:3, name:'CMA',                 desc:'Comparable market analysis & suggested price range', icon:'📊' },
+  { n:4, name:'Pricing & Review',    desc:'Agent confirms list price & marketing strategy', icon:'💰' },
+  { n:5, name:'Form Generation',     desc:'12 standard + conditional BCREA forms auto-filled', icon:'📋' },
+  { n:6, name:'E-Signature',         desc:'DocuSign routing to seller & agent', icon:'✍️' },
+  { n:7, name:'MLS Preparation',     desc:'Data package, photos & AI-generated remarks', icon:'🏷️' },
+  { n:8, name:'MLS Submission',      desc:'Submit to Paragon MLS & go live', icon:'🚀' },
+];
+
+// ═══════════════════════════════════════════════════════════════
+// JARO-WINKLER  (fuzzy column matching per FR-1.2)
+// ═══════════════════════════════════════════════════════════════
+function jaroWinkler(s1, s2) {
+  s1 = s1.toLowerCase().trim(); s2 = s2.toLowerCase().trim();
+  if (s1 === s2) return 1;
+  const l1=s1.length, l2=s2.length;
+  if (!l1||!l2) return 0;
+  const match_dist = Math.max(Math.floor(Math.max(l1,l2)/2)-1, 0);
+  const s1m=new Array(l1).fill(false), s2m=new Array(l2).fill(false);
+  let matches=0, trans=0;
+  for(let i=0;i<l1;i++){
+    const lo=Math.max(0,i-match_dist), hi=Math.min(i+match_dist+1,l2);
+    for(let j=lo;j<hi;j++) if(!s2m[j]&&s1[i]===s2[j]){s1m[i]=s2m[j]=true;matches++;break;}
+  }
+  if(!matches) return 0;
+  const s1t=[],s2t=[];
+  for(let i=0;i<l1;i++) if(s1m[i]) s1t.push(s1[i]);
+  for(let j=0;j<l2;j++) if(s2m[j]) s2t.push(s2[j]);
+  for(let i=0;i<s1t.length;i++) if(s1t[i]!==s2t[i]) trans++;
+  const jaro=(matches/l1+matches/l2+(matches-trans/2)/matches)/3;
+  let prefix=0;
+  for(let i=0;i<Math.min(4,Math.min(l1,l2));i++){if(s1[i]===s2[i]) prefix++; else break;}
+  return jaro + prefix*0.1*(1-jaro);
+}
+
+// Column aliases → CDM path
+const COL_MAP = [
+  { aliases:['full legal name','full name','seller name','vendor name','owner name','name'], path:'seller.0.fullName' },
+  { aliases:['first name','seller first','given name'], path:'_sellerFirst' },
+  { aliases:['last name','seller last','surname','family name'], path:'_sellerLast' },
+  { aliases:['date of birth','dob','birth date','birthday'], path:'seller.0.dob' },
+  { aliases:['phone','telephone','mobile','cell','seller phone','contact phone'], path:'seller.0.phone' },
+  { aliases:['email','e-mail','seller email','email address'], path:'seller.0.email' },
+  { aliases:['occupation','job','profession'], path:'seller.0.occupation' },
+  { aliases:['citizenship','residency','citizen','resident'], path:'seller.0.citizenship' },
+  { aliases:['id type','government id','id document'], path:'seller.0.idType' },
+  { aliases:['id number','government id number','id #'], path:'seller.0.idNumber' },
+  { aliases:['id expiry','id expiry date','id expires'], path:'seller.0.idExpiry' },
+  { aliases:['mailing address','current address','seller address'], path:'seller.0.address' },
+  { aliases:['property address','civic address','street address','address'], path:'propAddress' },
+  { aliases:['unit','suite','unit number','suite number'], path:'propUnit' },
+  { aliases:['property type','type'], path:'propType' },
+  { aliases:['list price','listing price','asking price','price'], path:'listPrice' },
+  { aliases:['listing duration','duration','term'], path:'listDuration' },
+  { aliases:['commission seller','seller commission','commission %'], path:'commissionSeller' },
+  { aliases:['commission buyer','buyer commission','co-op commission'], path:'commissionBuyer' },
+  { aliases:['possession date','possession','completion date'], path:'possessionDate' },
+  { aliases:['showing instructions','showing','access'], path:'showingInstructions' },
+  { aliases:['inclusions','included','includes'], path:'_inclusions' },
+  { aliases:['exclusions','excluded','excludes'], path:'_exclusions' },
+  { aliases:['tenant status','tenanted','occupancy'], path:'tenantStatus' },
+  { aliases:['known defects','defects','issues'], path:'_defects' },
+];
+
+function bestMatch(colHeader) {
+  let best={score:0, entry:null};
+  for(const entry of COL_MAP){
+    for(const alias of entry.aliases){
+      const s = jaroWinkler(colHeader, alias);
+      if(s > best.score){ best={score:s, entry}; }
+    }
+  }
+  return best.score >= 0.80 ? best : null;
+}
+
+function mapSheetToListings(rows) {
+  if(!rows.length) return {mapping:[], listings:[]};
+  const headers = Object.keys(rows[0]);
+  const mapping = headers.map(h => {
+    const m = bestMatch(h);
+    return { excel: h, cdm: m ? m.entry.path : null, score: m ? m.score : 0,
+             preview: rows.slice(0,3).map(r=>r[h]).filter(Boolean).join(', ') };
+  });
+  return { mapping, rows };
+}
+
+function applyMapping(rows, mapping) {
+  return rows.map(row => {
+    const l = BLANK();
+    l.createdAt = new Date().toISOString().slice(0,10);
+    let first='', last='';
+    for(const m of mapping){
+      if(!m.cdm || !row[m.excel]) continue;
+      const v = String(row[m.excel]).trim();
+      if(m.cdm === '_sellerFirst') { first=v; }
+      else if(m.cdm === '_sellerLast') { last=v; }
+      else if(m.cdm === '_inclusions') { l.inclusions = v.split(/[,;]+/).map(s=>s.trim()).filter(Boolean); }
+      else if(m.cdm === '_exclusions') { l.exclusions = v.split(/[,;]+/).map(s=>s.trim()).filter(Boolean); }
+      else if(m.cdm === '_defects') { l.knownDefects = v.split(/[,;]+/).map(s=>s.trim()).filter(Boolean); }
+      else if(m.cdm.startsWith('seller.0.')) {
+        const k = m.cdm.replace('seller.0.','');
+        l.seller[0][k] = v;
+      } else { l[m.cdm] = v; }
+    }
+    if(first||last) l.seller[0].fullName = (first+' '+last).trim();
+    l.id = 'LF-'+new Date().getFullYear()+'-'+String(Date.now()).slice(-5);
+    addAudit(l, 'IMPORT', 'Imported from Excel');
+    return l;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXCEL IMPORT UI
+// ═══════════════════════════════════════════════════════════════
+function openImport() {
+  document.getElementById('colMapSection').style.display='none';
+  document.getElementById('importConfirmBtn').style.display='none';
+  document.getElementById('importBody').querySelector('.drop-zone').style.display='';
+  openModal('importModal');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('over');
+  const file = e.dataTransfer.files[0];
+  if(file) handleFile(file);
+}
+
+function handleFile(file) {
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+      if(!rows.length){ showToast('No data rows found in sheet'); return; }
+      const {mapping} = mapSheetToListings(rows);
+      pendingImport = {rows, mapping};
+      renderColMap(mapping, rows);
+    } catch(err){ showToast('Error reading file: '+err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderColMap(mapping, rows) {
+  document.getElementById('dropZone').style.display='none';
+  document.getElementById('mapSubtitle').textContent = rows.length+' rows · '+mapping.length+' columns';
+  const mapped = mapping.filter(m=>m.cdm).length;
+  const html = `
+    <div class="info-banner" style="margin-bottom:12px">
+      ✅ Auto-matched <strong>${mapped}/${mapping.length}</strong> columns using fuzzy matching (Jaro-Winkler ≥ 0.80).
+      Adjust any mappings below before importing.
+    </div>
+    <table class="col-map-table">
+      <thead><tr><th>Excel Column</th><th>Maps To</th><th>Match Score</th><th>Sample Values</th></tr></thead>
+      <tbody>
+        ${mapping.map((m,i)=>`
+          <tr>
+            <td><div class="col-map-excel">${m.excel}</div></td>
+            <td>
+              <select class="fs" style="width:100%;font-size:.72rem" onchange="pendingImport.mapping[${i}].cdm=this.value">
+                <option value="">(skip)</option>
+                ${COL_MAP.map(c=>`<option value="${c.path}" ${m.cdm===c.path?'selected':''}>${c.path.replace('seller.0.','seller.')}</option>`).join('')}
+              </select>
+            </td>
+            <td><span style="font-size:.72rem;color:${m.score>=0.9?'var(--emerald)':m.score>=0.8?'var(--amber)':'var(--text3)'}">${m.score?Math.round(m.score*100)+'%':'—'}</span></td>
+            <td><div class="col-map-preview">${m.preview||'—'}</div></td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+  document.getElementById('colMapContent').innerHTML = html;
+  document.getElementById('colMapSection').style.display='';
+  document.getElementById('importConfirmBtn').style.display='';
+}
+
+function confirmImport() {
+  if(!pendingImport) return;
+  const newListings = applyMapping(pendingImport.rows, pendingImport.mapping);
+  LISTINGS.push(...newListings);
+  saveListings();
+  renderList();
+  closeModal('importModal');
+  showToast(`✅ Imported ${newListings.length} listing${newListings.length>1?'s':''}`);
+  if(newListings.length) pick(newListings[0].id);
+}
+
+function downloadTemplate(e) {
+  e.preventDefault();
+  const headers = ['Full Legal Name','Date of Birth','Phone','Email','Occupation',
+    'Property Address','Unit','Property Type','List Price','Listing Duration',
+    'Commission Seller %','Commission Buyer %','Possession Date',
+    'Showing Instructions','Inclusions','Exclusions','Tenant Status','Known Defects'];
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headers,
+    ['Jane Smith','1975-04-15','+16045550100','jane@email.com','Engineer',
+     '2847 Arbutus St, Vancouver BC','','detached','1850000','90',
+     '3.222','2.5','2026-06-01','Appointment required','Fridge, Stove','Chandelier','vacant','']]);
+  XLSX.utils.book_append_sheet(wb, ws, 'Listings');
+  XLSX.writeFile(wb, 'ListingFlow_Template.xlsx');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════════════
+function openSettings() {
+  document.getElementById('stAgentFirst').value  = CFG.agentFirst||'Sarah';
+  document.getElementById('stAgentLast').value   = CFG.agentLast||'Ahmadi';
+  document.getElementById('stAgentLicense').value= CFG.agentLicense||'';
+  document.getElementById('stAgentPhone').value  = CFG.agentPhone||'';
+  document.getElementById('stAgentEmail').value  = CFG.agentEmail||'';
+  document.getElementById('stBrokerage').value   = CFG.brokerage||'';
+  document.getElementById('stDsAccountId').value = CFG.dsAccountId||'';
+  document.getElementById('stDsToken').value     = CFG.dsToken||'';
+  document.getElementById('stDsBase').value      = CFG.dsBase||'https://demo.docusign.net/restapi/v2.1';
+  document.getElementById('stClaudeKey').value   = CFG.claudeKey||'';
+  openModal('settingsModal');
+}
+
+function saveSettings() {
+  CFG.agentFirst   = document.getElementById('stAgentFirst').value.trim();
+  CFG.agentLast    = document.getElementById('stAgentLast').value.trim();
+  CFG.agentLicense = document.getElementById('stAgentLicense').value.trim();
+  CFG.agentPhone   = document.getElementById('stAgentPhone').value.trim();
+  CFG.agentEmail   = document.getElementById('stAgentEmail').value.trim();
+  CFG.brokerage    = document.getElementById('stBrokerage').value.trim();
+  CFG.dsAccountId  = document.getElementById('stDsAccountId').value.trim();
+  CFG.dsToken      = document.getElementById('stDsToken').value.trim();
+  CFG.dsBase       = document.getElementById('stDsBase').value;
+  CFG.claudeKey    = document.getElementById('stClaudeKey').value.trim();
+  saveCfg();
+  document.getElementById('agentAv').textContent = agentInitials();
+  document.getElementById('agentNm').textContent = agentName();
+  closeModal('settingsModal');
+  showToast('Settings saved');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LISTING LIST
+// ═══════════════════════════════════════════════════════════════
+function renderList() {
+  const el = document.getElementById('listingList');
+  if(!LISTINGS.length){
+    el.innerHTML=`<div class="empty" style="margin:auto;padding:28px 16px"><div class="empty-icon" style="width:44px;height:44px;font-size:1.1rem">🏠</div><p style="font-size:.73rem">Import an Excel file or click + New.</p></div>`;
+    return;
+  }
+  el.innerHTML = LISTINGS.map(l => {
+    const name = l.seller[0].fullName || 'New Listing';
+    const addr = l.propAddress || '—';
+    const price = l.listPrice ? '$'+Number(l.listPrice).toLocaleString() : '';
+    const meta = [addr.split(',')[0], price].filter(Boolean).join(' · ');
+    const dots = PHASES.map(p => {
+      const cls = l.phase > p.n ? 'ph-done' : l.phase === p.n ? 'ph-active' : 'ph-none';
+      return `<div class="phase-dot ${cls}" title="Phase ${p.n}: ${p.name}"></div>`;
+    }).join('');
+    return `<div class="lrow ${activeId===l.id?'active':''}" onclick="pick('${l.id}')">
+      <div class="lrow-addr">${name}</div>
+      <div class="lrow-meta">${meta}</div>
+      <div class="lrow-phase">${dots}</div>
+    </div>`;
+  }).join('');
+}
+
+function pick(id) {
+  activeId = id;
+  renderList();
+  renderMid();
+  renderRight();
+}
+
+function newListing() {
+  const l = BLANK();
+  LISTINGS.unshift(l);
+  saveListings();
+  pick(l.id);
+  showToast('New listing created');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MIDDLE PANEL — PHASE STEPPER
+// ═══════════════════════════════════════════════════════════════
+function renderMid() {
+  const l = getActive();
+  if(!l) return;
+  const name = l.seller[0].fullName || 'New Listing';
+  const addr = l.propAddress || 'No address yet';
+  document.getElementById('midTitle').textContent = name;
+  document.getElementById('midSub').textContent = addr + (l.mlsNumber ? ' · MLS® '+l.mlsNumber : '');
+
+  const acts = document.getElementById('midActions');
+  acts.innerHTML = `<button class="hbtn hbtn-ghost" style="font-size:.72rem" onclick="deleteListing('${l.id}')">🗑 Delete</button>`;
+
+  document.getElementById('midBody').innerHTML = `
+    <div class="phase-stepper" id="phaseStepper">
+      ${PHASES.map(p => renderPhaseItem(l, p)).join('')}
+    </div>`;
+}
+
+function phaseState(l, p) {
+  if(l.phase > p.n) return 'done';
+  if(l.phase === p.n) return 'active';
+  return 'pending';
+}
+
+function renderPhaseItem(l, p) {
+  const state = phaseState(l, p);
+  const statusLabel = state==='done'?'Complete':state==='active'?'In Progress':'Pending';
+  const statusCls = state==='done'?'ps-done':state==='active'?'ps-active':'ps-pending';
+  return `
+  <div class="phase-item ${state}" id="ph-${p.n}">
+    <div class="phase-num">${state==='done'?'✓':p.n}</div>
+    <div class="phase-card" onclick="togglePhaseDetail(${p.n})">
+      <div class="phase-card-head">
+        <div class="phase-name">${p.icon} ${p.name}</div>
+        <span class="phase-status ${statusCls}">${statusLabel}</span>
+      </div>
+      <div class="phase-desc">${p.desc}</div>
+      <div class="phase-detail" id="phd-${p.n}">
+        ${renderPhaseDetail(l, p)}
+      </div>
+    </div>
+  </div>`;
+}
+
+function togglePhaseDetail(n) {
+  const el = document.getElementById('phd-'+n);
+  el.style.display = el.style.display==='block' ? 'none' : 'block';
+}
+
+function renderPhaseDetail(l, p) {
+  switch(p.n) {
+    case 1: return renderPhase1(l);
+    case 2: return renderPhase2(l);
+    case 3: return renderPhase3(l);
+    case 4: return renderPhase4(l);
+    case 5: return renderPhase5(l);
+    case 6: return renderPhase6(l);
+    case 7: return renderPhase7(l);
+    case 8: return renderPhase8(l);
+    default: return '';
+  }
+}
+
+// ── PHASE 1: INTAKE ──
+function renderPhase1(l) {
+  const s = l.seller[0];
+  return `
+    <div class="fsec-title" style="font-size:.74rem">Seller Identity</div>
+    <div class="fgrid" style="gap:8px;margin-bottom:10px">
+      <div class="ff"><div class="fl">Full Legal Name <span class="req">*</span></div>
+        <input class="fi" value="${esc(s.fullName)}" placeholder="Jane Smith" onchange="updateSeller(0,'fullName',this.value)"></div>
+      <div class="ff"><div class="fl">Date of Birth <span class="req">*</span></div>
+        <input class="fi" type="date" value="${esc(s.dob)}" onchange="updateSeller(0,'dob',this.value)"></div>
+      <div class="ff"><div class="fl">Phone <span class="req">*</span></div>
+        <input class="fi" value="${esc(s.phone)}" placeholder="+16045550100" onchange="updateSeller(0,'phone',this.value)"></div>
+      <div class="ff"><div class="fl">Email <span class="req">*</span></div>
+        <input class="fi" value="${esc(s.email)}" placeholder="jane@email.com" onchange="updateSeller(0,'email',this.value)"></div>
+      <div class="ff ffull"><div class="fl">Mailing Address</div>
+        <input class="fi" value="${esc(s.address)}" placeholder="Current address if different from property" onchange="updateSeller(0,'address',this.value)"></div>
+      <div class="ff"><div class="fl">Occupation <span class="req">*</span></div>
+        <input class="fi" value="${esc(s.occupation)}" placeholder="Engineer" onchange="updateSeller(0,'occupation',this.value)"></div>
+      <div class="ff"><div class="fl">Citizenship</div>
+        <select class="fs" onchange="updateSeller(0,'citizenship',this.value)">
+          <option value="canadian" ${s.citizenship==='canadian'?'selected':''}>Canadian Citizen/PR</option>
+          <option value="non_resident" ${s.citizenship==='non_resident'?'selected':''}>Non-Resident ⚠️ S.116</option>
+        </select></div>
+    </div>
+    <div class="fsec-title" style="font-size:.74rem">Property</div>
+    <div class="fgrid" style="gap:8px;margin-bottom:10px">
+      <div class="ff ffull"><div class="fl">Civic Address <span class="req">*</span></div>
+        <input class="fi" value="${esc(l.propAddress)}" placeholder="2847 Arbutus St, Vancouver BC" onchange="updateField('propAddress',this.value)"></div>
+      <div class="ff"><div class="fl">Unit / Suite</div>
+        <input class="fi" value="${esc(l.propUnit)}" placeholder="301" onchange="updateField('propUnit',this.value)"></div>
+      <div class="ff"><div class="fl">Property Type <span class="req">*</span></div>
+        <select class="fs" onchange="updateField('propType',this.value)">
+          ${['detached','townhouse','condo','duplex','land'].map(t=>`<option value="${t}" ${l.propType===t?'selected':''}>${t.charAt(0).toUpperCase()+t.slice(1)}</option>`).join('')}
+        </select></div>
+    </div>
+    <div class="fsec-title" style="font-size:.74rem">Pricing & Terms</div>
+    <div class="fgrid" style="gap:8px;margin-bottom:10px">
+      <div class="ff"><div class="fl">Desired List Price <span class="req">*</span></div>
+        <input class="fi" value="${esc(l.listPrice)}" placeholder="1850000" onchange="updateField('listPrice',this.value)"></div>
+      <div class="ff"><div class="fl">Listing Duration</div>
+        <select class="fs" onchange="updateField('listDuration',this.value)">
+          ${['60','90','120','180'].map(d=>`<option value="${d}" ${l.listDuration===d?'selected':''}>${d} days</option>`).join('')}
+        </select></div>
+      <div class="ff"><div class="fl">Commission — Seller Side %</div>
+        <input class="fi" value="${esc(l.commissionSeller)}" placeholder="3.222" onchange="updateField('commissionSeller',this.value)"></div>
+      <div class="ff"><div class="fl">Commission — Buyer Side %</div>
+        <input class="fi" value="${esc(l.commissionBuyer)}" placeholder="2.5" onchange="updateField('commissionBuyer',this.value)"></div>
+      <div class="ff"><div class="fl">Possession Date</div>
+        <input class="fi" type="date" value="${esc(l.possessionDate)}" onchange="updateField('possessionDate',this.value)"></div>
+      <div class="ff"><div class="fl">Showing Instructions</div>
+        <input class="fi" value="${esc(l.showingInstructions)}" placeholder="Appointment required" onchange="updateField('showingInstructions',this.value)"></div>
+    </div>
+    ${l.seller[0].citizenship==='non_resident'?'<div class="info-banner">⚠️ Non-resident seller — Section 116 ITA certificate required. Form 14 will be generated.</div>':''}
+    <div class="phase-actions">
+      <button class="btn-sm btn-sm-indigo" onclick="advancePhase(1)">✓ Complete Intake → Enrich</button>
+    </div>`;
+}
+
+// ── PHASE 2: ENRICHMENT ──
+function renderPhase2(l) {
+  const steps = [
+    { key:'geo',        name:'BC Address Geocoder', icon:'🌐', cost:'Free',
+      val: l.geo ? l.geo.fullAddress : null },
+    { key:'parcel',     name:'ParcelMap BC → PID',  icon:'🗺️', cost:'Free',
+      val: l.parcel ? 'PID: '+l.parcel.pid : null },
+    { key:'ltsa',       name:'myLTSA Title Search', icon:'📜', cost:'$13.69',
+      val: l.ltsa ? l.ltsa.ownerName : null, manual:true },
+    { key:'assessment', name:'BC Assessment',       icon:'🏛️', cost:'Free',
+      val: l.assessment ? 'Assessed: $'+Number(l.assessment.totalValue||0).toLocaleString() : null },
+  ];
+  return `
+    <div class="enrich-grid">
+      ${steps.map(s => {
+        const st = l.enrichStatus[s.key]||'pending';
+        const badge = s.manual && st==='pending'
+          ? `<span class="enrich-badge eb-manual">Manual</span>`
+          : st==='done' ? `<span class="enrich-badge eb-ok">✓ Done</span>`
+          : st==='running' ? `<span class="enrich-badge eb-pending">Running…</span>`
+          : st==='fail' ? `<span class="enrich-badge eb-fail">Failed</span>`
+          : `<span class="enrich-badge eb-pending">Pending</span>`;
+        return `<div class="enrich-row">
+          <div class="enrich-icon" style="background:var(--indigol)">${s.icon}</div>
+          <div>
+            <div class="enrich-name">${s.name}</div>
+            <div style="font-size:.65rem;color:var(--text3)">${s.cost}</div>
+          </div>
+          <div class="enrich-val">${s.val||''}</div>
+          ${badge}
+        </div>`;
+      }).join('')}
+    </div>
+    ${l.enrichStatus.ltsa!=='done'?`<div class="info-banner" style="margin-top:10px">📜 myLTSA requires manual login at <strong>ltsa.ca</strong> (no public API). After searching PID ${l.parcel?.pid||'—'}, paste owner name below.</div>
+    <div class="fgrid" style="gap:8px;margin-top:8px">
+      <div class="ff ffull"><div class="fl">LTSA Registered Owner(s)</div>
+        <input class="fi" placeholder="As shown on title" onchange="setLTSA(this.value)"></div>
+    </div>`:''}
+    <div class="phase-actions" style="margin-top:10px">
+      <button class="btn-sm btn-sm-indigo" onclick="runEnrichment()">🔍 Run Auto-Enrichment</button>
+      ${l.enrichStatus.geo==='done'&&l.enrichStatus.assessment==='done'?`<button class="btn-sm btn-sm-indigo" style="background:linear-gradient(135deg,var(--emerald),#0d9488)" onclick="advancePhase(2)">→ Next: CMA</button>`:''}
+    </div>`;
+}
+
+// ── PHASE 3: CMA ──
+function renderPhase3(l) {
+  return `
+    <div class="info-banner">📊 CMA requires access to MLS historical data (RESO Web API or Paragon). Until REBGV vendor registration is complete, enter the suggested price range manually after your own CMA analysis.</div>
+    <div class="fgrid" style="gap:8px;margin-top:10px">
+      <div class="ff"><div class="fl">CMA Low Estimate</div>
+        <input class="fi" value="${esc(l.cmaLow||'')}" placeholder="1750000" onchange="updateField('cmaLow',this.value)"></div>
+      <div class="ff"><div class="fl">CMA High Estimate</div>
+        <input class="fi" value="${esc(l.cmaHigh||'')}" placeholder="1950000" onchange="updateField('cmaHigh',this.value)"></div>
+      <div class="ff ffull"><div class="fl">CMA Notes / Comparable Summary</div>
+        <textarea class="fi" rows="3" style="resize:vertical" placeholder="Summarize comps used…" onchange="updateField('cmaNotes',this.value)">${esc(l.cmaNotes||'')}</textarea></div>
+    </div>
+    <div class="phase-actions">
+      ${CFG.claudeKey?`<button class="btn-sm btn-sm-indigo" onclick="generateRemarks()">🤖 Generate AI Remarks</button>`:''}
+      <button class="btn-sm btn-sm-indigo" onclick="advancePhase(3)">→ Next: Pricing</button>
+    </div>`;
+}
+
+// ── PHASE 4: PRICING ──
+function renderPhase4(l) {
+  const gap = l.listPrice && l.suggestedPrice
+    ? ((Number(l.listPrice)-Number(l.suggestedPrice))/Number(l.suggestedPrice)*100).toFixed(1)
+    : null;
+  return `
+    <div class="fgrid" style="gap:8px">
+      <div class="ff"><div class="fl">Confirmed List Price <span class="req">*</span></div>
+        <input class="fi" value="${esc(l.listPrice)}" placeholder="1850000" onchange="updateField('listPrice',this.value)"></div>
+      <div class="ff"><div class="fl">CMA Suggested Price</div>
+        <input class="fi" value="${esc(l.suggestedPrice||'')}" placeholder="From CMA" onchange="updateField('suggestedPrice',this.value)"></div>
+      ${gap!==null?`<div class="ff ffull"><div class="info-banner" style="margin:0">${Number(gap)>10?'⚠️ Listing price is '+gap+'% above CMA — overpriced risk. Historical data shows longer DOM for listings >10% above CMA.':Number(gap)<-5?'ℹ️ Listing price is '+Math.abs(gap)+'% below CMA suggested.':'✅ Listing price within acceptable range of CMA ('+gap+'%).'}</div></div>`:''}
+      <div class="ff ffull"><div class="fl">Marketing Strategy</div>
+        <select class="fs" onchange="updateField('marketingTier',this.value)">
+          <option value="standard" ${l.marketingTier==='standard'?'selected':''}>Standard — MLS + Syndication</option>
+          <option value="enhanced" ${l.marketingTier==='enhanced'?'selected':''}>Enhanced — Photography + Virtual Tour</option>
+          <option value="premium" ${l.marketingTier==='premium'?'selected':''}>Premium — All Above + Social + Print</option>
+        </select></div>
+    </div>
+    <div class="phase-actions">
+      <button class="btn-sm btn-sm-indigo" onclick="lockPrice()">🔒 Lock Price → Generate Forms</button>
+    </div>`;
+}
+
+// ── PHASE 5: FORMS ──
+function renderPhase5(l) {
+  const rows = FORM_META.filter(f => !f.conditional || (f.key==='strata'&&l.propType==='condo'));
+  return `
+    <table class="forms-table" style="margin-bottom:10px">
+      <thead><tr><th>#</th><th>Form</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        ${rows.map((f,i)=>{
+          const st = l.forms[f.key]?.status||'pending';
+          const badge = st==='signed'   ? `<span class="enrich-badge eb-ok">✍ Signed</span>`
+                      : st==='ready'    ? `<span class="enrich-badge eb-ok" style="background:#d1fae5;color:#065f46">✏ Ready</span>`
+                      : st==='generated'? `<span class="enrich-badge eb-pending">Generated</span>`
+                      : st==='error'    ? `<span class="enrich-badge" style="background:#fee2e2;color:#991b1b">Error</span>`
+                      : `<span class="enrich-badge" style="background:var(--bg2);color:var(--text3)">Pending</span>`;
+          const previewBtn = st==='ready'
+            ? `<button class="btn-sm" style="background:#d1fae5;color:#065f46;border:1.5px solid #6ee7b7;font-size:.65rem;padding:4px 9px" onclick="previewForm('${f.key}')">✏ Open Form</button>
+               <button class="btn-sm" style="background:var(--indigol);color:var(--indigo);border:1.5px solid var(--indigom);font-size:.65rem;padding:4px 9px" onclick="previewForm('${f.key}')">↺ Refresh</button>`
+            : `<button class="btn-sm" style="background:var(--indigol);color:var(--indigo);border:1.5px solid var(--indigom);font-size:.65rem;padding:4px 9px" onclick="previewForm('${f.key}')">✏ Open Form</button>`;
+          return `<tr>
+            <td style="color:var(--text3);font-size:.68rem">${i+1}</td>
+            <td><div class="form-name-cell">${f.icon} ${f.name}</div><span class="form-num">${f.full}</span></td>
+            <td>${badge}</td>
+            <td style="white-space:nowrap;display:flex;gap:5px;flex-wrap:wrap">${previewBtn}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    <div class="phase-actions">
+      <button class="btn-sm btn-sm-indigo" onclick="generateAllForms()">✏ Pre-fill All Forms</button>
+      ${Object.values(l.forms).some(f=>f.status==='ready')
+        ?`<button class="btn-sm btn-sm-indigo" style="background:linear-gradient(135deg,var(--emerald),#0d9488)" onclick="advancePhase(5)">→ Next: e-Sign</button>`:''}
+    </div>`;
+}
+
+// ── PHASE 6: E-SIGN ──
+function renderPhase6(l) {
+  const pkgs = [
+    { key:'seller_pkg', label:'Seller Package',
+      forms:['mlc','pds','privacy','mktauth','agency','fairhsg','dorts'],
+      recipient: l.seller[0] },
+    { key:'agent_pkg', label:'Agent Package',
+      forms:['fintrac','mls','c3conf'],
+      recipient:{ fullName: agentName(), email: CFG.agentEmail||'' } },
+  ];
+  return pkgs.map(pkg => {
+    const env = l.envelopes[pkg.key];
+    const statusLabel = env.status==='complete'?'Fully Signed':env.status==='partial'?'Partially Signed':env.status==='sent'?'Sent — Awaiting':env.status==='declined'?'Declined':'Not Sent';
+    const statusCls = env.status==='complete'?'es-complete':env.status==='partial'?'es-partial':env.status==='sent'?'es-sent':env.status==='declined'?'es-declined':'es-none';
+    return `
+    <div class="env-card">
+      <div class="env-card-head">
+        <div class="env-form-name">📦 ${pkg.label}</div>
+        <span class="env-status ${statusCls}">${statusLabel}</span>
+      </div>
+      <div style="font-size:.71rem;color:var(--text3);margin-bottom:8px">Forms: ${pkg.forms.map(k=>FORM_META.find(f=>f.key===k)?.name||k).join(', ')}</div>
+      <div class="signer-row">
+        <div class="signer-av-sm" style="background:var(--indigo)">${(pkg.recipient.fullName||'?')[0]}</div>
+        <div class="signer-name">${pkg.recipient.fullName||'—'} &nbsp;·&nbsp; ${pkg.recipient.email||'no email'}</div>
+        <div class="signer-status" style="color:${env.status==='complete'?'var(--emerald)':'var(--text3)'}">${env.status==='complete'?'✓ Signed':env.status==='sent'?'Pending':'—'}</div>
+      </div>
+      ${env.id?`<div style="font-size:.67rem;color:var(--text3);margin-top:6px">Envelope ID: ${env.id}</div>`:''}
+      <div class="phase-actions" style="margin-top:8px">
+        ${env.status==='none'
+          ?`<button class="btn-sm btn-sm-indigo" onclick="openSendEnvelope('${pkg.key}')">✍️ Send via DocuSign</button>`
+          :`<button class="btn-sm" style="background:var(--indigol);color:var(--indigo);border:1.5px solid var(--indigom);font-size:.71rem;padding:5px 10px" onclick="checkEnvelopeStatus('${pkg.key}')">🔄 Refresh Status</button>`}
+        ${env.status==='complete'?`<button class="btn-sm btn-sm-indigo" style="background:linear-gradient(135deg,var(--emerald),#0d9488)" onclick="advancePhase(6)">→ Next: MLS Prep</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── PHASE 7: MLS PREP ──
+function renderPhase7(l) {
+  const g = l.geo||{}, a = l.assessment||{};
+  return `
+    <div class="fsec-title" style="font-size:.74rem">AI-Generated Remarks</div>
+    <div class="ff" style="margin-bottom:10px">
+      <div class="fl">Public Remarks (max 500 chars)</div>
+      <textarea class="fi" rows="4" style="resize:vertical" maxlength="500" placeholder="Click Generate to create AI remarks…" onchange="updateField('mlsRemarks',this.value)">${esc(l.mlsRemarks||'')}</textarea>
+      <div style="font-size:.65rem;color:var(--text3);text-align:right">${(l.mlsRemarks||'').length}/500</div>
+    </div>
+    <div class="ff" style="margin-bottom:14px">
+      <div class="fl">Realtor Remarks (max 500 chars)</div>
+      <textarea class="fi" rows="3" style="resize:vertical" maxlength="500" onchange="updateField('mlsRealtorRemarks',this.value)">${esc(l.mlsRealtorRemarks||'')}</textarea>
+    </div>
+    <div class="phase-actions">
+      ${CFG.claudeKey?`<button class="btn-sm btn-sm-indigo" onclick="generateRemarks()">🤖 AI Remarks</button>`:'<span style="font-size:.71rem;color:var(--text3)">Add Claude API key in Settings for AI remarks</span>'}
+      <button class="btn-sm btn-sm-indigo" style="background:linear-gradient(135deg,var(--emerald),#0d9488)" onclick="advancePhase(7)">→ Next: Submit</button>
+    </div>`;
+}
+
+// ── PHASE 8: SUBMIT ──
+function renderPhase8(l) {
+  return `
+    <div class="info-banner">🚀 Three submission tiers available. Tier 1 (RESO API) requires REBGV vendor registration (3–6 months). Tier 2 uses your existing Paragon login. Tier 3 exports a package for manual upload.</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin:12px 0">
+      ${[
+        {n:1,label:'Tier 1 — RESO Web API',desc:'Direct API submission (requires REBGV vendor approval)',avail:false},
+        {n:2,label:'Tier 2 — Paragon Browser',desc:'Automated via your Paragon login',avail:false},
+        {n:3,label:'Tier 3 — Export Package',desc:'Excel + PDF forms + photos ZIP for manual upload',avail:true},
+      ].map(t=>`
+        <div class="enrich-row" style="${t.avail?'':'opacity:.5'}">
+          <div class="enrich-icon" style="background:${t.avail?'var(--emeraldl)':'var(--bg2)'}">T${t.n}</div>
+          <div><div class="enrich-name">${t.label}</div><div style="font-size:.65rem;color:var(--text3)">${t.desc}</div></div>
+          ${t.avail
+            ?`<button class="btn-sm btn-sm-indigo" style="font-size:.65rem;padding:5px 10px" onclick="exportPackage()">Export</button>`
+            :`<span class="enrich-badge" style="background:var(--bg2);color:var(--text3)">Not Available</span>`}
+        </div>`).join('')}
+    </div>
+    ${l.mlsNumber?`<div class="info-banner" style="background:var(--emeraldl);border-color:rgba(5,150,105,.25)">✅ MLS® ${l.mlsNumber} — Listing is <strong>Live</strong></div>`:''}
+    <div class="phase-actions">
+      <input class="fi" placeholder="MLS® Number (once live)" value="${esc(l.mlsNumber||'')}" style="max-width:200px" onchange="updateField('mlsNumber',this.value)">
+      ${l.mlsNumber?`<button class="btn-sm btn-sm-indigo" style="background:linear-gradient(135deg,var(--emerald),#0d9488)" onclick="markLive()">🎉 Mark as Live</button>`:''}
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PHASE ACTIONS
+// ═══════════════════════════════════════════════════════════════
+function advancePhase(from) {
+  const l = getActive(); if(!l) return;
+  if(from===1 && !l.seller[0].fullName) { showToast('Enter seller name first'); return; }
+  if(from===1 && !l.propAddress) { showToast('Enter property address first'); return; }
+  l.phase = Math.max(l.phase, from+1);
+  addAudit(l,'PHASE','Advanced from Phase '+from+' to '+(from+1));
+  saveListings(); renderList(); renderMid(); renderRight();
+  showToast('Phase '+(from+1)+' started');
+}
+
+function lockPrice() {
+  const l = getActive(); if(!l) return;
+  if(!l.listPrice) { showToast('Enter a list price first'); return; }
+  l.priceLocked = true;
+  advancePhase(4);
+}
+
+function markLive() {
+  const l = getActive(); if(!l) return;
+  l.phase = 8; l.mlsStatus = 'active';
+  addAudit(l,'MLS_LIVE','Listing marked live');
+  saveListings(); renderList(); renderMid(); renderRight();
+  showToast('🎉 Listing is live!');
+}
+
+async function runEnrichment() {
+  const l = getActive(); if(!l) return;
+  if(!l.propAddress) { showToast('Enter property address first'); return; }
+  showToast('Running enrichment…');
+
+  // Step 1: BC Geocoder
+  try {
+    l.enrichStatus.geo='running'; renderMid();
+    const addr = encodeURIComponent(l.propAddress);
+    const r = await fetch(`https://geocoder.api.gov.bc.ca/addresses.json?addressString=${addr}&maxResults=1`);
+    const d = await r.json();
+    if(d.features && d.features.length) {
+      const f = d.features[0];
+      l.geo = {
+        fullAddress: f.properties.fullAddress,
+        lat: f.geometry.coordinates[1],
+        lng: f.geometry.coordinates[0],
+        locality: f.properties.localityName,
+        score: f.properties.score,
+      };
+      l.enrichStatus.geo = 'done';
+      addAudit(l,'ENRICH','BC Geocoder: '+l.geo.fullAddress);
+    } else { l.enrichStatus.geo='fail'; }
+  } catch(e) { l.enrichStatus.geo='fail'; }
+
+  // Step 2: ParcelMap BC
+  if(l.geo && l.enrichStatus.geo==='done') {
+    try {
+      l.enrichStatus.parcel='running'; renderMid();
+      const {lat,lng} = l.geo;
+      const d = 0.001;
+      const bbox = `${lng-d},${lat-d},${lng+d},${lat+d}`;
+      const url = `https://openmaps.gov.bc.ca/geo/pub/WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=pub:WHSE_CADASTRE.PMBC_PARCEL_FABRIC_POLY_SVW&outputFormat=application/json&srsName=EPSG:4326&bbox=${bbox},EPSG:4326&PropertyName=PID,PIN,PLAN_NUMBER,PARCEL_NAME,OWNER_TYPE,MUNICIPALITY,FEATURE_AREA_SQM`;
+      const r = await fetch(url);
+      const js = await r.json();
+      if(js.features && js.features.length) {
+        const p = js.features[0].properties;
+        l.parcel = {
+          pid: p.PID || p.PIN || '—',
+          planNumber: p.PLAN_NUMBER||'',
+          parcelName: p.PARCEL_NAME||'',
+          municipality: p.MUNICIPALITY||'',
+          areaSqm: p.FEATURE_AREA_SQM||0,
+        };
+        l.enrichStatus.parcel = 'done';
+        addAudit(l,'ENRICH','ParcelMap PID: '+l.parcel.pid);
+      } else { l.enrichStatus.parcel='fail'; }
+    } catch(e) { l.enrichStatus.parcel='fail'; }
+  }
+
+  // Step 3: BC Assessment (note: scraping not possible from browser — show as manual)
+  l.enrichStatus.assessment = 'manual';
+  l.enrichStatus.ltsa = 'manual';
+
+  saveListings(); renderMid(); renderRight();
+  showToast('✅ Free API enrichment complete — LTSA & BC Assessment require manual lookup');
+}
+
+function setLTSA(ownerName) {
+  const l = getActive(); if(!l) return;
+  l.ltsa = { ownerName };
+  l.enrichStatus.ltsa = 'done';
+  // fuzzy verify seller name
+  const sim = jaroWinkler(ownerName, l.seller[0].fullName||'');
+  if(sim < 0.85) showToast('⚠️ Owner name mismatch with seller — verify identity');
+  addAudit(l,'ENRICH','LTSA owner: '+ownerName+' (match: '+Math.round(sim*100)+'%)');
+  saveListings();
+}
+
+async function generateAllForms() {
+  const l = getActive(); if(!l) return;
+  const keys = FORM_META.filter(f => !f.conditional || (f.key==='strata' && l.propType==='condo')).map(f=>f.key);
+  showToast(`⏳ Pre-filling ${keys.length} BC standard forms…`);
+
+  let ok = 0, fail = 0;
+  await Promise.all(keys.map(async (key) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/form/html`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ form_key: key, listing: l, cfg: CFG }),
+      });
+      if (!res.ok) throw new Error(res.statusText);
+      // Just verify we can reach the server — actual HTML opens on click
+      l.forms[key] = { status:'ready', generatedAt: new Date().toISOString() };
+      ok++;
+    } catch(e) {
+      l.forms[key] = { status:'error' };
+      fail++;
+      console.warn(`Form ${key} failed:`, e);
+    }
+  }));
+
+  addAudit(l, 'FORMS', `Pre-filled ${ok} editable BC forms${fail ? ` (${fail} failed — is server running?)` : ''}`);
+  saveListings(); renderMid(); renderRight();
+  if (fail === 0) {
+    showToast(`✅ All ${ok} forms ready — click "Open Form" to edit & print any form`);
+  } else if (ok > 0) {
+    showToast(`⚠ ${ok} forms ready, ${fail} failed. Start server via ListingFlow.command`);
+  } else {
+    showToast('❌ Form generation failed — ensure server is running on port 8767');
+  }
+}
+
+async function generateRemarks() {
+  const l = getActive(); if(!l) return;
+  if(!CFG.claudeKey) { showToast('Add Claude API key in Settings'); return; }
+  showToast('🤖 Generating AI remarks…');
+  const prompt = `Generate professional MLS listing remarks for a BC real estate property.
+Property: ${l.propAddress}, ${l.propType}
+Assessed value: ${l.assessment?.totalValue ? '$'+Number(l.assessment.totalValue).toLocaleString() : 'N/A'}
+List price: $${Number(l.listPrice||0).toLocaleString()}
+Year built: ${l.assessment?.yearBuilt||'N/A'}
+Inclusions: ${l.inclusions.join(', ')||'standard'}
+Showing: ${l.showingInstructions||'Contact agent'}
+
+Respond with JSON: {"public":"<500 char public remarks>","realtor":"<500 char realtor remarks>"}`;
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':CFG.claudeKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,messages:[{role:'user',content:prompt}]})
+    });
+    const d = await r.json();
+    const text = d.content?.[0]?.text||'';
+    const match = text.match(/\{[\s\S]*\}/);
+    if(match) {
+      const obj = JSON.parse(match[0]);
+      updateField('mlsRemarks', obj.public||'');
+      updateField('mlsRealtorRemarks', obj.realtor||'');
+      renderMid();
+      showToast('✅ AI remarks generated');
+    }
+  } catch(e) { showToast('AI generation failed: '+e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DOCUSIGN
+// ═══════════════════════════════════════════════════════════════
+let pendingEnvelopeKey = null;
+
+function openSendEnvelope(pkgKey) {
+  const l = getActive(); if(!l) return;
+  pendingEnvelopeKey = pkgKey;
+  const pkg = pkgKey==='seller_pkg'
+    ? { label:'Seller Package', recipient: l.seller[0] }
+    : { label:'Agent Package', recipient:{ fullName:agentName(), email:CFG.agentEmail } };
+  document.getElementById('dsModalTitle').textContent = '✍️ Send: '+pkg.label;
+  document.getElementById('dsModalBody').innerHTML = `
+    <div class="info-banner" style="margin-bottom:14px">
+      This will create a DocuSign envelope and send it to the recipient for e-signature.
+      ${!CFG.dsToken?'<br><strong>⚠️ No DocuSign token found — configure in Settings.</strong>':''}
+    </div>
+    <div class="fgrid" style="gap:10px">
+      <div class="ff ffull"><div class="fl">Recipient Name</div>
+        <input class="fi" value="${esc(pkg.recipient.fullName||'')}" id="dsRecipName"></div>
+      <div class="ff ffull"><div class="fl">Recipient Email <span class="req">*</span></div>
+        <input class="fi" value="${esc(pkg.recipient.email||'')}" id="dsRecipEmail" placeholder="Required for DocuSign"></div>
+      <div class="ff ffull"><div class="fl">Email Subject</div>
+        <input class="fi" value="Please sign: ${pkg.label} — ${l.seller[0].fullName||l.propAddress}" id="dsSubject"></div>
+    </div>
+    <div style="font-size:.72rem;color:var(--text3);margin-top:10px">
+      Note: The form documents will be included as HTML. DocuSign anchor tags will place signature fields at appropriate positions.
+    </div>`;
+  openModal('dsModal');
+}
+
+async function confirmSendEnvelope() {
+  const l = getActive(); if(!l||!pendingEnvelopeKey) return;
+  const name = document.getElementById('dsRecipName').value.trim();
+  const email = document.getElementById('dsRecipEmail').value.trim();
+  const subject = document.getElementById('dsSubject').value.trim();
+  if(!email) { showToast('Recipient email required'); return; }
+  if(!CFG.dsToken||!CFG.dsAccountId) {
+    // fallback — manual workflow
+    l.envelopes[pendingEnvelopeKey] = { id:'MANUAL-'+Date.now(), status:'sent', sentAt:new Date().toISOString(), signers:[{name,email,status:'pending'}] };
+    addAudit(l,'ESIGN','Manual send recorded for '+pendingEnvelopeKey);
+    saveListings(); renderMid(); renderRight(); closeModal('dsModal');
+    showToast('📧 Sending recorded (manual workflow — no API token)');
+    return;
+  }
+  document.getElementById('dsSendBtn').disabled = true;
+  document.getElementById('dsSendBtn').textContent = 'Sending…';
+  try {
+    const formHtml = buildFormHtmlForDocuSign(l, pendingEnvelopeKey);
+    const b64 = btoa(unescape(encodeURIComponent(formHtml)));
+    const body = {
+      emailSubject: subject,
+      status: 'sent',
+      documents:[{ documentBase64:b64, name:subject, fileExtension:'html', documentId:'1' }],
+      recipients:{ signers:[{
+        email, name,
+        recipientId:'1', routingOrder:'1',
+        tabs:{ signHereTabs:[{ anchorString:'**SIGN_HERE**', anchorXOffset:'0', anchorYOffset:'0', documentId:'1' }] }
+      }]}
+    };
+    const r = await fetch(`${CFG.dsBase}/accounts/${CFG.dsAccountId}/envelopes`,{
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+CFG.dsToken },
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if(r.ok && d.envelopeId) {
+      l.envelopes[pendingEnvelopeKey] = { id:d.envelopeId, status:'sent', sentAt:new Date().toISOString(), signers:[{name,email,status:'pending'}] };
+      addAudit(l,'ESIGN','DocuSign envelope created: '+d.envelopeId);
+      saveListings(); renderMid(); renderRight(); closeModal('dsModal');
+      showToast('✅ Envelope sent via DocuSign: '+d.envelopeId);
+    } else {
+      throw new Error(d.message||'Unknown error');
+    }
+  } catch(e) {
+    showToast('DocuSign error: '+e.message+' — recording manual send');
+    l.envelopes[pendingEnvelopeKey] = { id:'ERR-'+Date.now(), status:'sent', sentAt:new Date().toISOString(), signers:[{name,email,status:'pending'}] };
+    saveListings(); renderMid(); renderRight(); closeModal('dsModal');
+  }
+  document.getElementById('dsSendBtn').disabled=false;
+  document.getElementById('dsSendBtn').textContent='Send via DocuSign';
+}
+
+async function checkEnvelopeStatus(pkgKey) {
+  const l = getActive(); if(!l) return;
+  const env = l.envelopes[pkgKey];
+  if(!env.id||!CFG.dsToken||!CFG.dsAccountId) { showToast('No API credentials — update status manually'); return; }
+  if(env.id.startsWith('MANUAL')||env.id.startsWith('ERR')) { showToast('Manual envelope — update status below'); return; }
+  showToast('Checking status…');
+  try {
+    const r = await fetch(`${CFG.dsBase}/accounts/${CFG.dsAccountId}/envelopes/${env.id}`,{
+      headers:{ 'Authorization':'Bearer '+CFG.dsToken }
+    });
+    const d = await r.json();
+    if(r.ok) {
+      env.status = d.status==='completed'?'complete':d.status==='declined'?'declined':d.status==='sent'||d.status==='delivered'?'sent':'sent';
+      addAudit(l,'ESIGN','Status check: '+pkgKey+' → '+env.status);
+      saveListings(); renderMid(); renderRight();
+      showToast('Status: '+env.status);
+    }
+  } catch(e) { showToast('Status check failed: '+e.message); }
+}
+
+function buildFormHtmlForDocuSign(l, pkgKey) {
+  const s = l.seller[0];
+  return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;padding:40px;max-width:800px">
+    <h1 style="color:#4f35d2">ListingFlow — ${pkgKey==='seller_pkg'?'Seller':'Agent'} Package</h1>
+    <p>Seller: <strong>${s.fullName||'—'}</strong> | Property: <strong>${l.propAddress||'—'}</strong></p>
+    <p>Listing Price: <strong>$${Number(l.listPrice||0).toLocaleString()}</strong> | Commission: ${l.commissionSeller}% / ${l.commissionBuyer}%</p>
+    <hr>
+    <p>By signing below, you acknowledge receipt and agreement to the terms of the listing package.</p>
+    <br><br>
+    <p><strong>**SIGN_HERE**</strong></p>
+    <p style="color:#888">Signature</p>
+    <p>Date: _______________</p>
+  </body></html>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FORM PREVIEW
+// ═══════════════════════════════════════════════════════════════
+// ── Form generation via local API ─────────────────────────────────────────────
+const API_BASE = 'http://127.0.0.1:8767';
+
+async function previewForm(formKey) {
+  const l = getActive(); if(!l) return;
+  const meta = FORM_META.find(f=>f.key===formKey);
+
+  // Open a blank window immediately (must be synchronous with user gesture)
+  const win = window.open('about:blank', '_blank');
+  if (win) {
+    win.document.write(`<!DOCTYPE html><html><head><title>Loading ${meta?.full||formKey}…</title>
+      <style>body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f0edff;color:#4f35d2}
+      .sp{display:flex;align-items:center;gap:14px;font-size:1rem;font-weight:600}
+      @keyframes spin{to{transform:rotate(360deg)}}
+      svg{animation:spin 1s linear infinite}</style></head>
+      <body><div class="sp">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+        </svg>
+        Loading ${meta?.full||formKey}…
+      </div></body></html>`);
+    win.document.close();
+  }
+
+  try {
+    const payload = { form_key: formKey, listing: l, cfg: CFG };
+    const res = await fetch(`${API_BASE}/api/form/html`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({error: res.statusText}));
+      throw new Error(err.error || res.statusText);
+    }
+
+    const html = await res.text();
+
+    // Write the fully editable HTML form into the already-open tab
+    if (win && !win.closed) {
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+    } else {
+      // Fallback: blob URL if popup was blocked
+      const blob = new Blob([html], {type: 'text/html'});
+      const url  = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    }
+
+    // Mark form as ready
+    l.forms[formKey] = l.forms[formKey] || {};
+    l.forms[formKey].status = 'ready';
+    l.forms[formKey].generatedAt = new Date().toISOString();
+    saveListings(); renderMid(); renderRight();
+    showToast(`✅ ${meta?.name||formKey} form opened — edit & print to save PDF`);
+
+  } catch(err) {
+    if (win && !win.closed) {
+      win.document.open();
+      win.document.write(`<!DOCTYPE html><html><head><title>Error</title>
+        <style>body{font-family:Arial,sans-serif;padding:40px;background:#fff5f5;color:#b91c1c}
+        h2{margin-top:0}code{background:#fee2e2;padding:2px 6px;border-radius:4px;font-size:.85rem}</style>
+        </head><body>
+        <h2>⚠ Could not generate form</h2>
+        <p>${err.message}</p>
+        <p style="font-size:.85rem;color:#6b6b6b">Make sure the ListingFlow server is running via <code>ListingFlow.command</code>.</p>
+        </body></html>`);
+      win.document.close();
+    }
+    showToast('❌ Form generation failed — is the server running?');
+  }
+}
+
+function addDays(dateStr, days) {
+  if(!dateStr) return '—';
+  const d = new Date(dateStr); d.setDate(d.getDate()+days);
+  return d.toISOString().slice(0,10);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORT PACKAGE
+// ═══════════════════════════════════════════════════════════════
+function exportPackage() {
+  const l = getActive(); if(!l) return;
+  const s = l.seller[0];
+  const data = [{
+    'Listing ID': l.id, 'Seller Name': s.fullName, 'Seller Phone': s.phone, 'Seller Email': s.email,
+    'Property Address': l.propAddress, 'PID': l.parcel?.pid||'', 'Legal Description': l.parcel?.parcelName||'',
+    'Property Type': l.propType, 'List Price': l.listPrice, 'Commission Seller %': l.commissionSeller,
+    'Commission Buyer %': l.commissionBuyer, 'Possession Date': l.possessionDate,
+    'Listing Duration (days)': l.listDuration, 'Inclusions': l.inclusions.join(', '),
+    'Exclusions': l.exclusions.join(', '), 'Showing Instructions': l.showingInstructions,
+    'Public Remarks': l.mlsRemarks, 'Realtor Remarks': l.mlsRealtorRemarks,
+    'Agent Name': agentName(), 'Agent License': CFG.agentLicense||'', 'Brokerage': CFG.brokerage||'',
+    'Forms Generated': Object.values(l.forms).filter(f=>f.status==='generated').length,
+    'Phase': l.phase,
+  }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'MLS Data Input');
+  XLSX.writeFile(wb, `ListingFlow_${l.id}_MLS_Package.xlsx`);
+  addAudit(l,'EXPORT','MLS package exported (Tier 3)');
+  saveListings();
+  showToast('📦 MLS package exported');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RIGHT PANEL
+// ═══════════════════════════════════════════════════════════════
+function showRightTab(tab) {
+  activeRightTab = tab;
+  document.querySelectorAll('.rtab').forEach(t => t.classList.toggle('active', t.dataset.rtab===tab));
+  renderRight();
+}
+
+function renderRight() {
+  const l = getActive();
+  const el = document.getElementById('rightBody');
+  if(!l){ el.innerHTML=`<div class="empty" style="margin:auto"><div class="empty-icon" style="width:44px;height:44px;font-size:1.1rem">📄</div><p style="font-size:.73rem">Select a listing.</p></div>`; return; }
+  switch(activeRightTab){
+    case 'forms':        el.innerHTML = renderRightForms(l); break;
+    case 'envelopes':    el.innerHTML = renderRightEnvelopes(l); break;
+    case 'stakeholders': el.innerHTML = renderRightStakeholders(l); break;
+    case 'checklist':    el.innerHTML = renderRightChecklist(l); break;
+  }
+}
+
+function renderRightForms(l) {
+  const forms = FORM_META.filter(f=>!f.conditional||(f.key==='strata'&&l.propType==='condo'));
+  return `<div class="rsec-title">Form Readiness</div>` +
+    forms.map(f => {
+      const st = l.forms[f.key]?.status||'pending';
+      const pct = st==='signed'?100:st==='generated'?65:0;
+      const col = pct===100?'var(--emerald)':pct>0?'var(--amber)':'var(--text3)';
+      return `<div class="fmini">
+        <div style="font-size:.85rem">${f.icon}</div>
+        <div class="fmini-name">${f.name}</div>
+        <div class="fmini-bar"><div class="fmini-fill" style="width:${pct}%;background:${col}"></div></div>
+        <div class="fmini-pct" style="color:${col}">${pct}%</div>
+      </div>`;
+    }).join('');
+}
+
+function renderRightEnvelopes(l) {
+  const pkgs = [
+    { key:'seller_pkg', label:'Seller Package', icon:'👤' },
+    { key:'agent_pkg',  label:'Agent Package',  icon:'🏢' },
+  ];
+  return `<div class="rsec-title">DocuSign Envelopes</div>` +
+    pkgs.map(pkg => {
+      const env = l.envelopes[pkg.key];
+      const col = env.status==='complete'?'var(--emerald)':env.status==='sent'?'var(--amber)':'var(--text3)';
+      return `<div class="env-card">
+        <div class="env-card-head">
+          <div class="env-form-name">${pkg.icon} ${pkg.label}</div>
+          <span class="env-status ${env.status==='complete'?'es-complete':env.status==='sent'?'es-sent':'es-none'}">${env.status==='complete'?'Signed':env.status==='sent'?'Sent':'Not Sent'}</span>
+        </div>
+        ${env.id?`<div style="font-size:.65rem;color:var(--text3)">ID: ${env.id.slice(0,20)}…</div>`:''}
+        ${env.sentAt?`<div style="font-size:.65rem;color:var(--text3)">Sent: ${env.sentAt.slice(0,10)}</div>`:''}
+        <div style="margin-top:8px;display:flex;gap:6px">
+          <button class="btn-sm" style="font-size:.65rem;padding:4px 9px;background:var(--indigol);color:var(--indigo);border:1.5px solid var(--indigom)" onclick="pick('${l.id}')">View Details</button>
+          ${env.status==='sent'?`<button class="btn-sm" style="font-size:.65rem;padding:4px 9px;background:var(--emeraldl);color:var(--emerald);border:1.5px solid rgba(5,150,105,.2)" onclick="markEnvelopeSigned('${pkg.key}')">Mark Signed ✓</button>`:''}
+        </div>
+      </div>`;
+    }).join('') +
+    `<div style="margin-top:10px">
+      <div class="rsec-title">Manual Status Override</div>
+      <div style="font-size:.72rem;color:var(--text3);margin-bottom:6px">If using DocuSign web interface, update status here:</div>
+      ${pkgs.map(pkg=>`
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:.72rem;flex:1">${pkg.label}</span>
+          <select class="fs" style="font-size:.68rem;padding:4px 22px 4px 8px" onchange="setEnvelopeStatus('${pkg.key}',this.value)">
+            ${['none','sent','partial','complete','declined'].map(s=>`<option value="${s}" ${l.envelopes[pkg.key].status===s?'selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
+          </select>
+        </div>`).join('')}
+    </div>`;
+}
+
+function renderRightStakeholders(l) {
+  const parties = [
+    { role:'Seller', icon:'👤', color:'#4f35d2', data:{ name:l.seller[0].fullName, phone:l.seller[0].phone, email:l.seller[0].email }, editable:false },
+    { role:'Listing Agent', icon:'🏢', color:'#ff5c3a', data:{ name:agentName(), phone:CFG.agentPhone, email:CFG.agentEmail, firm:CFG.brokerage }, editable:false },
+    { role:"Buyer's Agent", icon:'🤝', color:'#00bfa5', data: l.buyerAgent, dataKey:'buyerAgent' },
+    { role:'Lawyer / Notary', icon:'⚖️', color:'#f59e0b', data: l.lawyer, dataKey:'lawyer' },
+    { role:'Mortgage Broker', icon:'🏦', color:'#0284c7', data: l.lender, dataKey:'lender' },
+  ];
+  return `<div class="rsec-title">All Parties</div>` +
+    parties.map(p => {
+      const hasData = p.data.name || p.data.email || p.data.phone;
+      return `<div class="scard">
+        <div class="scard-head">
+          <div class="scard-av" style="background:${p.color}">${p.icon}</div>
+          <div>
+            <div class="scard-role">${p.role}</div>
+            <div class="scard-name">${p.data.name||'Not assigned'}</div>
+          </div>
+          <span class="scard-status" style="background:${hasData?'var(--emeraldl)':'var(--bg2)'};color:${hasData?'var(--emerald)':'var(--text3)'}">${hasData?'✓ Added':'Pending'}</span>
+        </div>
+        ${p.dataKey?`<div class="scard-body">
+          ${p.dataKey?`
+          <input class="fi" style="margin-bottom:4px;font-size:.73rem" placeholder="Full Name" value="${esc(p.data.name||'')}" onchange="updateStakeholder('${p.dataKey}','name',this.value)">
+          <input class="fi" style="margin-bottom:4px;font-size:.73rem" placeholder="Phone" value="${esc(p.data.phone||'')}" onchange="updateStakeholder('${p.dataKey}','phone',this.value)">
+          <input class="fi" style="margin-bottom:4px;font-size:.73rem" placeholder="Email" value="${esc(p.data.email||'')}" onchange="updateStakeholder('${p.dataKey}','email',this.value)">
+          <input class="fi" style="font-size:.73rem" placeholder="${p.role==='Lawyer / Notary'?'Law Firm':p.role==='Mortgage Broker'?'Institution':'Brokerage'}" value="${esc(p.data.brokerage||p.data.firm||p.data.institution||'')}" onchange="updateStakeholder('${p.dataKey}','${p.role==='Lawyer / Notary'?'firm':p.role==='Mortgage Broker'?'institution':'brokerage'}',this.value)">
+          `:''}
+        </div>`:`<div class="scard-body">
+          ${p.data.phone?`<div class="scard-row"><span class="scard-row-label">Phone</span><span class="scard-row-val">${p.data.phone}</span></div>`:''}
+          ${p.data.email?`<div class="scard-row"><span class="scard-row-label">Email</span><span class="scard-row-val">${p.data.email}</span></div>`:''}
+          ${p.data.firm||p.data.brokerage?`<div class="scard-row"><span class="scard-row-label">Firm</span><span class="scard-row-val">${p.data.firm||p.data.brokerage||''}</span></div>`:''}
+        </div>`}
+      </div>`;
+    }).join('');
+}
+
+function renderRightChecklist(l) {
+  const checks = [
+    { label:'Seller intake complete',        done: !!(l.seller[0].fullName && l.propAddress && l.listPrice) },
+    { label:'BC Geocoder enriched',          done: l.enrichStatus.geo==='done' },
+    { label:'PID resolved (ParcelMap)',       done: l.enrichStatus.parcel==='done' },
+    { label:'LTSA title confirmed',          done: l.enrichStatus.ltsa==='done' },
+    { label:'BC Assessment data obtained',   done: l.enrichStatus.assessment==='done' },
+    { label:'FINTRAC ID verified in person', done: l.forms.fintrac?.status==='signed' },
+    { label:'List price confirmed',          done: !!l.priceLocked },
+    { label:'All 12 forms generated',        done: Object.values(l.forms).filter(f=>f.status==='generated'||f.status==='signed').length >= 10 },
+    { label:'Seller package signed',         done: l.envelopes.seller_pkg?.status==='complete' },
+    { label:'Agent package signed',          done: l.envelopes.agent_pkg?.status==='complete' },
+    { label:'MLS remarks approved',          done: !!(l.mlsRemarks && l.mlsRemarks.length > 20) },
+    { label:'Photos uploaded (min 3)',       done: l.mlsPhotos?.length >= 3 },
+    { label:'MLS data package exported',     done: l.phase >= 8 },
+    { label:'MLS listing live',              done: !!l.mlsNumber },
+  ];
+  const done = checks.filter(c=>c.done).length;
+  const pct = Math.round(done/checks.length*100);
+  return `
+    <div class="rsec-title">MLS Readiness — ${pct}% Complete</div>
+    <div style="background:var(--border2);border-radius:99px;height:7px;margin-bottom:12px;overflow:hidden">
+      <div style="width:${pct}%;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--indigo),var(--coral));transition:width .4s"></div>
+    </div>
+    <div class="checklist">
+      ${checks.map(c=>`<div class="check-item ${c.done?'done':''}">
+        <span class="check-icon">${c.done?'✅':'⬜'}</span>
+        <span class="check-label">${c.label}</span>
+      </div>`).join('')}
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DATA HELPERS
+// ═══════════════════════════════════════════════════════════════
+function updateField(key, val) {
+  const l = getActive(); if(!l) return;
+  l[key] = val;
+  if(key==='propAddress') document.getElementById('midSub').textContent = val;
+  saveListings(); renderList();
+}
+
+function updateSeller(idx, key, val) {
+  const l = getActive(); if(!l) return;
+  l.seller[idx][key] = val;
+  saveListings(); renderList();
+}
+
+function updateStakeholder(stakeholder, key, val) {
+  const l = getActive(); if(!l) return;
+  l[stakeholder][key] = val;
+  saveListings();
+}
+
+function setEnvelopeStatus(pkgKey, status) {
+  const l = getActive(); if(!l) return;
+  l.envelopes[pkgKey].status = status;
+  addAudit(l,'ESIGN','Manual status update: '+pkgKey+' → '+status);
+  saveListings(); renderMid(); renderRight();
+}
+
+function markEnvelopeSigned(pkgKey) {
+  setEnvelopeStatus(pkgKey, 'complete');
+  showToast('✓ Marked as signed');
+}
+
+function deleteListing(id) {
+  if(!confirm('Delete this listing?')) return;
+  LISTINGS = LISTINGS.filter(l=>l.id!==id);
+  if(activeId===id) { activeId=null; document.getElementById('midBody').innerHTML='<div class="empty"><div class="empty-icon">🏡</div><h3>Select a listing</h3><p>Choose from the left panel.</p></div>'; document.getElementById('midTitle').textContent='ListingFlow'; document.getElementById('midSub').textContent='BC Real Estate MLS Automation'; document.getElementById('midActions').innerHTML=''; renderRight(); }
+  saveListings(); renderList();
+  showToast('Listing deleted');
+}
+
+function addAudit(l, type, detail) {
+  l.auditTrail = l.auditTrail||[];
+  l.auditTrail.push({ type, detail, at:new Date().toISOString(), user:agentName() });
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ═══════════════════════════════════════════════════════════════
+// MODAL HELPERS
+// ═══════════════════════════════════════════════════════════════
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.addEventListener('keydown', e => { if(e.key==='Escape') document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open')); });
+
+// ═══════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('on'),3200);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DEMO DATA — Surrey BC Property
+// ═══════════════════════════════════════════════════════════════
+function loadDemo() {
+  if(LISTINGS.some(l=>l.id==='DEMO-2026-SURREY')){
+    pick('DEMO-2026-SURREY');
+    showToast('Demo listing already loaded — selecting it');
+    return;
+  }
+
+  const demo = BLANK();
+  demo.id          = 'DEMO-2026-SURREY';
+  demo.createdAt   = '2026-03-10';
+  demo.phase       = 6;
+  demo.priceLocked = true;
+
+  // ── Seller ──────────────────────────────────────────────────
+  demo.seller = [{
+    fullName:  'David Patel',
+    dob:       '1971-08-14',
+    citizenship:'canadian',
+    idType:    'drivers_license',
+    idNumber:  'BC-8842017',
+    idExpiry:  '2028-08-13',
+    phone:     '+17788820341',
+    email:     'david.patel@gmail.com',
+    address:   '14532 108 Ave, Surrey, BC V3R 1V8',
+    occupation:'Software Engineer',
+  },{
+    fullName:  'Priya Patel',
+    dob:       '1974-03-22',
+    citizenship:'canadian',
+    idType:    'passport',
+    idNumber:  'CA-ZP882041',
+    idExpiry:  '2029-03-21',
+    phone:     '+17788820342',
+    email:     'priya.patel@gmail.com',
+    address:   '14532 108 Ave, Surrey, BC V3R 1V8',
+    occupation:'Registered Nurse',
+  }];
+
+  // ── Property ────────────────────────────────────────────────
+  demo.propAddress = '14532 108 Ave, Surrey, BC V3R 1V8';
+  demo.propUnit    = '';
+  demo.propType    = 'detached';
+
+  // ── Geocoder (Phase 2 — BC Geocoder result) ─────────────────
+  demo.geo = {
+    fullAddress: '14532 108 Avenue, Surrey, BC V3R 1V8',
+    lat: 49.1823,
+    lng: -122.8456,
+    locality: 'Surrey',
+    score: 99,
+  };
+
+  // ── ParcelMap (Phase 2) ─────────────────────────────────────
+  demo.parcel = {
+    pid:         '012-847-923',
+    planNumber:  'NWP 41820',
+    parcelName:  'LOT 24 SECTION 6 TOWNSHIP 8 NEW WESTMINSTER DISTRICT PLAN NWP41820',
+    municipality:'Surrey',
+    areaSqm:     669.0,
+  };
+
+  // ── LTSA (Phase 2 — manually obtained) ──────────────────────
+  demo.ltsa = {
+    ownerName:   'DAVID PATEL AND PRIYA PATEL',
+    titleNumber: 'BB321047',
+    charges:     'Mortgage — Royal Bank of Canada (registered 2018-04-02)',
+  };
+
+  // ── BC Assessment (Phase 2) ──────────────────────────────────
+  demo.assessment = {
+    totalValue:      1298000,
+    landValue:       780000,
+    improvementValue:518000,
+    yearBuilt:       1997,
+    lotSizeSqft:     7199,
+    buildingAreaSqft:2341,
+    bedrooms:        4,
+    bathrooms:       3,
+    zoning:          'RF',
+    neighbourhood:   'Fleetwood Tynehead',
+    rollNumber:      '92-820-15-0024-000',
+    taxYear:         2025,
+  };
+
+  // ── Enrichment status ────────────────────────────────────────
+  demo.enrichStatus = { geo:'done', parcel:'done', ltsa:'done', assessment:'done' };
+
+  // ── Disclosures ──────────────────────────────────────────────
+  demo.knownDefects       = ['Minor crack in basement foundation wall (repaired 2022)', 'Older hot water tank (2014)'];
+  demo.unpermittedRenos   = [];
+  demo.insuranceClaims    = ['Water damage to basement (2019, fully remediated, insurance claim settled)'];
+  demo.environmentalIssues= [];
+  demo.growOpHistory      = false;
+  demo.pendingLegal       = false;
+  demo.tenantStatus       = 'owner_occupied';
+
+  // ── Inclusions / Exclusions ─────────────────────────────────
+  demo.inclusions = ['Samsung French Door Refrigerator','Gas Range & Hood Fan','Bosch Dishwasher','LG Washer & Dryer','Central Vacuum & Attachments','All Window Coverings','Garage Door Opener (2 remotes)','Garden Shed'];
+  demo.exclusions = ['Dining Room Chandelier (family heirloom)','Tesla Wall Charger (Level 2)'];
+  demo.rentalEquipment = ['Hot water tank (Reliance Home Comfort — $42/mo)'];
+
+  // ── Showing ──────────────────────────────────────────────────
+  demo.showingInstructions = 'Appointment required — minimum 2 hours notice. Pets on premises (friendly dog). Alarm code: 4821#.';
+  demo.lockboxCode = '4821';
+
+  // ── Pricing ──────────────────────────────────────────────────
+  demo.listPrice        = '1385000';
+  demo.listDuration     = '90';
+  demo.commissionSeller = '3.222';
+  demo.commissionBuyer  = '2.5';
+  demo.possessionDate   = '2026-06-01';
+  demo.marketingTier    = 'enhanced';
+  demo.suggestedPrice   = '1350000';
+  demo.cmaLow           = '1320000';
+  demo.cmaHigh          = '1420000';
+  demo.cmaNotes         = 'Comparable sales: 14289 107A Ave sold Mar 2026 at $1,342,000 (2,180 sqft); 14688 109 Ave sold Jan 2026 at $1,398,000 (2,410 sqft); 14432 108A Ave sold Feb 2026 at $1,361,000 (2,290 sqft). Subject is slightly larger with updated kitchen — recommended range $1,350K–$1,420K.';
+
+  // ── Forms (all generated) ────────────────────────────────────
+  const genAt = '2026-03-10T14:30:00Z';
+  Object.keys(demo.forms).forEach(k => {
+    demo.forms[k] = { status: k==='dorts'||k==='mlc'||k==='pds'||k==='fintrac'?'signed':'generated', pdfUrl:null, generatedAt:genAt };
+  });
+
+  // ── DocuSign Envelopes ───────────────────────────────────────
+  demo.envelopes = {
+    seller_pkg: {
+      id: 'ds-env-a7f2-8b3c-4d91-bc72',
+      status: 'sent',
+      sentAt: '2026-03-10T16:45:00Z',
+      signers: [
+        { name:'David Patel',  email:'david.patel@gmail.com', status:'signed',  signedAt:'2026-03-10T19:22:00Z' },
+        { name:'Priya Patel',  email:'priya.patel@gmail.com',  status:'pending', signedAt:null },
+      ],
+    },
+    agent_pkg: {
+      id: 'ds-env-c1a9-3e7d-5f08-aa14',
+      status: 'complete',
+      sentAt: '2026-03-10T16:46:00Z',
+      signers: [
+        { name:'Sarah Ahmadi', email:'sarah@brokerage.ca', status:'signed', signedAt:'2026-03-10T17:01:00Z' },
+      ],
+    },
+  };
+
+  // ── Stakeholders ─────────────────────────────────────────────
+  demo.buyerAgent = { name:'', phone:'', email:'', brokerage:'' }; // TBD at offer stage
+  demo.lawyer     = { name:'Aarav Singh', phone:'+16045559102', email:'aarav@singhlaw.ca', firm:'Singh & Associates — Notaries Public' };
+  demo.lender     = { name:'Monica Tran', phone:'+16045557831', email:'monica.tran@rbc.com', institution:'Royal Bank of Canada — Mobile Mortgage Specialist' };
+
+  // ── MLS Remarks (AI-generated, pre-approved) ─────────────────
+  demo.mlsRemarks = 'Sun-filled 4-bed, 3-bath family home in sought-after Fleetwood! Featuring an updated kitchen w/ quartz counters, SS appliances & island, open-concept main floor, hardwood throughout, vaulted ceilings, and a large entertainers deck. Fully fenced private yard w/ mature landscaping. Steps to Fleetwood Park Secondary, transit & Surrey Sport/Leisure. Flexible possession. Must see!';
+  demo.mlsRealtorRemarks = 'Appointment required — 2 hr notice. Friendly dog on premises. Alarm: 4821#. Lockbox on front door. RBC mortgage (dischargeable at completion). Hot water tank is rental ($42/mo — Reliance). Seller prefers June 1 possession but negotiable. All measurements approx — buyer to verify. Info pkg available on request. LA: Sarah Ahmadi, RE/MAX City Realty — 604-555-0200.';
+
+  // ── Audit trail ──────────────────────────────────────────────
+  demo.auditTrail = [
+    { type:'IMPORT',  detail:'Listing created — Surrey demo property',            at:'2026-03-10T09:00:00Z', user:'Sarah Ahmadi' },
+    { type:'ENRICH',  detail:'BC Geocoder: 14532 108 Avenue, Surrey BC (score 99)',at:'2026-03-10T09:01:12Z', user:'System' },
+    { type:'ENRICH',  detail:'ParcelMap PID: 012-847-923',                        at:'2026-03-10T09:01:15Z', user:'System' },
+    { type:'ENRICH',  detail:'LTSA owner: DAVID PATEL AND PRIYA PATEL (match 97%)',at:'2026-03-10T09:15:00Z', user:'Sarah Ahmadi' },
+    { type:'PHASE',   detail:'Advanced from Phase 2 to 3',                        at:'2026-03-10T10:30:00Z', user:'Sarah Ahmadi' },
+    { type:'PHASE',   detail:'Advanced from Phase 4 to 5 — price locked $1,385,000',at:'2026-03-10T13:45:00Z', user:'Sarah Ahmadi' },
+    { type:'FORMS',   detail:'Generated all 12 standard forms',                   at:'2026-03-10T14:30:00Z', user:'System' },
+    { type:'ESIGN',   detail:'DocuSign seller_pkg sent → David & Priya Patel',    at:'2026-03-10T16:45:00Z', user:'Sarah Ahmadi' },
+    { type:'ESIGN',   detail:'DocuSign agent_pkg — Sarah Ahmadi signed',          at:'2026-03-10T17:01:00Z', user:'Sarah Ahmadi' },
+    { type:'ESIGN',   detail:'David Patel signed seller package',                 at:'2026-03-10T19:22:00Z', user:'DocuSign' },
+  ];
+
+  demo.mlsPhotos = ['photo1.jpg','photo2.jpg','photo3.jpg']; // placeholder
+
+  LISTINGS.unshift(demo);
+  saveListings();
+
+  // Pre-fill agent settings for demo
+  if(!CFG.agentFirst) {
+    CFG.agentFirst='Sarah'; CFG.agentLast='Ahmadi';
+    CFG.agentLicense='BCREA-204817'; CFG.agentPhone='+16045550200';
+    CFG.agentEmail='sarah@remaxcityrealty.ca'; CFG.brokerage='RE/MAX City Realty';
+    saveCfg();
+    document.getElementById('agentAv').textContent = agentInitials();
+    document.getElementById('agentNm').textContent = agentName();
+  }
+
+  renderList();
+  pick('DEMO-2026-SURREY');
+  showToast('🎭 Surrey demo loaded — Phase 6 in progress (awaiting Priya Patel signature)');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// SECTION NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+let activeSection = 'listings';
+
+function switchSection(sec) {
+  activeSection = sec;
+  // Update pills
+  document.querySelectorAll('.snav-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.sec === sec);
+  });
+  // Show/hide panels
+  document.querySelector('.app').style.display = sec === 'listings' ? 'grid' : 'none';
+  ['contacts','showings','calendar'].forEach(s => {
+    const el = document.getElementById('sec'+s.charAt(0).toUpperCase()+s.slice(1));
+    if(el) el.classList.toggle('active', s === sec);
+  });
+  // Render section
+  if(sec === 'contacts') { renderContacts(); updateSecBadge(); }
+  else if(sec === 'showings') { renderShowings(); renderShowingStats(); updateSecBadge(); }
+  else if(sec === 'calendar') { renderCalendar(); renderCalSide(); updateSecBadge(); }
+  else updateSecBadge();
+}
+
+function updateSecBadge() {
+  const el = document.getElementById('secBadge');
+  if(!el) return;
+  const labels = {
+    listings: `${LISTINGS.length} listing${LISTINGS.length !== 1 ? 's' : ''}`,
+    contacts: `${CONTACTS.length} contact${CONTACTS.length !== 1 ? 's' : ''}`,
+    showings: `${SHOWINGS.length} showing${SHOWINGS.length !== 1 ? 's' : ''}`,
+    calendar: `${SHOWINGS.filter(s => s.status === 'confirmed').length} confirmed`,
+  };
+  el.textContent = labels[activeSection] || '';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONTACTS STATE & PERSISTENCE
+// ═══════════════════════════════════════════════════════════════
+let CONTACTS = JSON.parse(localStorage.getItem('lf_contacts') || '[]');
+let activeContactId = null;
+let ctFilter = 'all';
+let activeCtTab = 'timeline';
+
+function saveContacts() { localStorage.setItem('lf_contacts', JSON.stringify(CONTACTS)); }
+function getActiveContact() { return CONTACTS.find(c => c.id === activeContactId) || null; }
+function genContactId() { return 'CT-' + Date.now() + '-' + Math.random().toString(36).slice(2,6); }
+
+function contactInitials(name) {
+  const p = (name||'?').split(' ');
+  return ((p[0]||'')[0] + (p[1]||'')[0]).toUpperCase();
+}
+
+// ─── Render contact list ───────────────────────────────────────
+function renderContacts() {
+  const list = document.getElementById('contactList');
+  if(!list) return;
+  const filtered = ctFilter === 'all' ? CONTACTS : CONTACTS.filter(c => c.type === ctFilter);
+  if(!filtered.length) {
+    list.innerHTML = `<div class="empty" style="padding:28px 10px"><div class="empty-icon" style="width:44px;height:44px;font-size:1.2rem">👥</div><p style="font-size:.73rem">No ${ctFilter === 'all' ? '' : ctFilter+' '}contacts yet.<br>Click + Add to get started.</p></div>`;
+    return;
+  }
+  list.innerHTML = filtered.map(c => `
+    <div class="ccard${c.id === activeContactId ? ' active' : ''}" onclick="pickContact('${c.id}')">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="contact-av ${c.type === 'buyer' ? 'av-buyer' : 'av-seller'}">${contactInitials(c.name)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.82rem;font-weight:600;display:flex;align-items:center;gap:6px">
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</span>
+            <span class="enrich-badge ${c.type === 'seller' ? 'eb-ok' : 'eb-manual'}" style="flex-shrink:0">${c.type}</span>
+          </div>
+          <div style="font-size:.67rem;color:var(--text3);margin-top:2px">📞 ${c.phone}</div>
+          ${c.email ? `<div style="font-size:.67rem;color:var(--text3)">✉ ${c.email}</div>` : ''}
+        </div>
+        <div style="font-size:.62rem;color:var(--text3);flex-shrink:0">
+          ${(c.communications||[]).length > 0 ? `💬 ${(c.communications||[]).length}` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function filterContacts(type) {
+  ctFilter = type;
+  ['all','seller','buyer'].forEach(t => {
+    const btn = document.getElementById('ctFilter-'+t);
+    if(btn) btn.style.cssText = t === type
+      ? 'background:var(--indigol);color:var(--indigo);border:1.5px solid var(--indigom);font-size:.65rem;padding:3px 10px'
+      : 'background:var(--bg);border:1.5px solid var(--border2);color:var(--text3);font-size:.65rem;padding:3px 10px';
+  });
+  renderContacts();
+}
+
+// ─── Pick contact ──────────────────────────────────────────────
+function pickContact(id) {
+  activeContactId = id;
+  renderContacts();
+  renderContactDetail();
+  renderContactRight();
+}
+
+function renderContactDetail() {
+  const c = getActiveContact();
+  const titleEl = document.getElementById('ctMidTitle');
+  const subEl = document.getElementById('ctMidSub');
+  const bodyEl = document.getElementById('ctMidBody');
+  const actEl = document.getElementById('ctMidActions');
+  if(!c) return;
+
+  if(titleEl) titleEl.textContent = c.name;
+  if(subEl) subEl.textContent = `${c.type.charAt(0).toUpperCase()+c.type.slice(1)} · ${c.phone}${c.email ? ' · '+c.email : ''}`;
+  if(actEl) actEl.innerHTML = `
+    <button class="btn-sm" style="background:var(--bg);border:1.5px solid var(--border2);color:var(--text2);font-size:.7rem" onclick="editContact('${c.id}')">✏ Edit</button>
+    <button class="btn-sm" style="background:var(--rosel);color:var(--rose);border:1.5px solid rgba(244,63,94,.2);font-size:.7rem" onclick="deleteContact('${c.id}')">🗑 Delete</button>`;
+
+  // Linked listings
+  const linked = LISTINGS.filter(l => (l.seller||[]).some(s => s.phone === c.phone || s.email === c.email));
+
+  if(bodyEl) bodyEl.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div class="sec-stat"><div class="sec-stat-val" style="color:var(--indigo)">${(c.communications||[]).length}</div><div class="sec-stat-lbl">Messages</div></div>
+      <div class="sec-stat"><div class="sec-stat-val" style="color:var(--emerald)">${linked.length}</div><div class="sec-stat-lbl">Listings</div></div>
+    </div>
+    <div style="background:#fff;border:1.5px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:14px">
+      <div class="fsec-title">Contact Info</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.77rem">
+        <div><span style="color:var(--text3)">Name:</span> <strong>${c.name}</strong></div>
+        <div><span style="color:var(--text3)">Type:</span> <span class="enrich-badge ${c.type==='seller'?'eb-ok':'eb-manual'}">${c.type}</span></div>
+        <div><span style="color:var(--text3)">Phone:</span> <strong>${c.phone}</strong></div>
+        <div><span style="color:var(--text3)">Channel:</span> ${c.prefChannel||'sms'}</div>
+        ${c.email ? `<div style="grid-column:span 2"><span style="color:var(--text3)">Email:</span> <strong>${c.email}</strong></div>` : ''}
+        ${c.notes ? `<div style="grid-column:span 2"><span style="color:var(--text3)">Notes:</span> ${c.notes}</div>` : ''}
+      </div>
+    </div>
+    ${linked.length ? `
+    <div style="background:#fff;border:1.5px solid var(--border);border-radius:var(--r);padding:14px 16px">
+      <div class="fsec-title">🏠 Linked Listings</div>
+      ${linked.map(l => `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:.78rem;display:flex;align-items:center;gap:8px;cursor:pointer" onclick="switchSection('listings');pick('${l.id}')">
+        <span style="flex:1;font-weight:600">${l.propAddress||l.id}</span>
+        <span class="phase-status ps-active">Ph ${l.phase}</span>
+      </div>`).join('')}
+    </div>` : ''}`;
+}
+
+function renderContactRight() {
+  const c = getActiveContact();
+  const body = document.getElementById('ctRightBody');
+  if(!body || !c) return;
+
+  if(activeCtTab === 'timeline') {
+    const comms = (c.communications||[]).slice().reverse();
+    body.innerHTML = `
+      <div class="rsec-title">Communication Timeline</div>
+      <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:0">
+        ${comms.length ? comms.map(m => `
+          <div class="comm-item">
+            <div class="comm-dir-icon ${m.direction==='inbound'?'comm-in':'comm-out'}">${m.direction==='inbound'?'↙':'↗'}</div>
+            <div style="flex:1;min-width:0">
+              <div class="comm-body-text">${m.body}</div>
+              <div class="comm-meta"><span class="ch-badge ch-${m.channel}">${m.channel}</span><span>${relTime(m.at)}</span></div>
+            </div>
+          </div>`).join('') : '<div style="text-align:center;padding:24px 0;color:var(--text3);font-size:.76rem">No messages yet.</div>'}
+      </div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1.5px solid var(--border)">
+        <div class="rsec-title">Add Note</div>
+        <div style="display:flex;gap:6px;align-items:flex-end">
+          <textarea class="note-ta" id="commNote" placeholder="Write a note…"></textarea>
+          <button class="btn-sm btn-sm-indigo" onclick="addCommNote('${c.id}')" style="flex-shrink:0;padding:6px 10px">↑</button>
+        </div>
+        <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">
+          <button class="btn-sm" style="font-size:.63rem;background:var(--skyl);color:var(--sky);border:1.5px solid rgba(2,132,199,.2);padding:3px 8px" onclick="addComm('${c.id}','outbound','sms','📞 Called — left voicemail')">📞 Called</button>
+          <button class="btn-sm" style="font-size:.63rem;background:var(--emeraldl);color:var(--emerald);border:1.5px solid rgba(5,150,105,.2);padding:3px 8px" onclick="addComm('${c.id}','outbound','sms','✅ Sent showing confirmation via SMS')">✅ SMS Sent</button>
+          <button class="btn-sm" style="font-size:.63rem;background:var(--amberl);color:var(--amber);border:1.5px solid rgba(245,158,11,.2);padding:3px 8px" onclick="addComm('${c.id}','outbound','whatsapp','💬 Sent WhatsApp message')">💬 WhatsApp</button>
+        </div>
+      </div>`;
+  } else if(activeCtTab === 'listings') {
+    renderContactRight_listings(c);
+  } else {
+    body.innerHTML = `<div class="rsec-title">Notes</div><textarea class="note-ta" style="width:100%;min-height:120px" onblur="saveContactNotes('${c.id}',this.value)">${c.notes||''}</textarea>`;
+  }
+}
+
+function renderContactRight_listings(c) {
+  const body = document.getElementById('ctRightBody');
+  const linked = LISTINGS.filter(l => (l.seller||[]).some(s => s.phone === c.phone || s.email === c.email));
+  const showings = SHOWINGS.filter(s => s.buyerAgentPhone === c.phone || s.buyerAgentEmail === c.email);
+  body.innerHTML = `
+    <div class="rsec-title">Linked Listings (${linked.length})</div>
+    ${linked.map(l => `<div class="fmini" style="cursor:pointer" onclick="switchSection('listings');pick('${l.id}')">
+      <span class="fmini-name">${l.propAddress||l.id}</span>
+      <span class="enrich-badge eb-pending">Ph ${l.phase}</span>
+    </div>`).join('')||'<div style="font-size:.73rem;color:var(--text3);margin-bottom:12px">No listings found.</div>'}
+    <div class="rsec-title" style="margin-top:10px">Showings (${showings.length})</div>
+    ${showings.map(s => `<div class="fmini"><span class="fmini-name">${s.listingAddress}</span><span class="ss-badge ss-${s.status}">${s.status}</span></div>`).join('')||'<div style="font-size:.73rem;color:var(--text3)">No showings found.</div>'}`;
+}
+
+function showCtTab(tab) {
+  activeCtTab = tab;
+  document.querySelectorAll('[data-ctab]').forEach(el => el.classList.toggle('active', el.dataset.ctab === tab));
+  renderContactRight();
+}
+
+// ─── CRUD ──────────────────────────────────────────────────────
+function openAddContact(prefill) {
+  const p = prefill||{};
+  ['ctName','ctPhone','ctEmail','ctNotes'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = p[id.replace('ct','').toLowerCase()]||'';
+  });
+  const typeEl = document.getElementById('ctType');
+  if(typeEl) typeEl.value = p.type||'seller';
+  document.getElementById('addContactModal').dataset.editId = '';
+  openModal('addContactModal');
+}
+
+function editContact(id) {
+  const c = CONTACTS.find(x => x.id === id);
+  if(!c) return;
+  document.getElementById('ctName').value = c.name;
+  document.getElementById('ctPhone').value = c.phone;
+  document.getElementById('ctEmail').value = c.email||'';
+  document.getElementById('ctNotes').value = c.notes||'';
+  document.getElementById('ctType').value = c.type;
+  document.getElementById('ctChannel').value = c.prefChannel||'sms';
+  document.getElementById('addContactModal').dataset.editId = id;
+  openModal('addContactModal');
+}
+
+function saveContact() {
+  const name = document.getElementById('ctName').value.trim();
+  const phone = document.getElementById('ctPhone').value.trim();
+  if(!name||!phone) { showToast('Name and phone are required'); return; }
+  const editId = document.getElementById('addContactModal').dataset.editId;
+  if(editId) {
+    const idx = CONTACTS.findIndex(c => c.id === editId);
+    if(idx >= 0) {
+      CONTACTS[idx] = { ...CONTACTS[idx], name, phone, email: document.getElementById('ctEmail').value.trim(), notes: document.getElementById('ctNotes').value.trim(), type: document.getElementById('ctType').value, prefChannel: document.getElementById('ctChannel').value };
+    }
+  } else {
+    CONTACTS.unshift({ id: genContactId(), name, phone, email: document.getElementById('ctEmail').value.trim(), type: document.getElementById('ctType').value, prefChannel: document.getElementById('ctChannel').value, notes: document.getElementById('ctNotes').value.trim(), communications: [], createdAt: new Date().toISOString() });
+    activeContactId = CONTACTS[0].id;
+  }
+  saveContacts(); closeModal('addContactModal'); renderContacts(); renderContactDetail(); renderContactRight(); updateSecBadge();
+  showToast(`✅ Contact ${editId ? 'updated' : 'added'}`);
+}
+
+function deleteContact(id) {
+  if(!confirm('Delete this contact?')) return;
+  CONTACTS = CONTACTS.filter(c => c.id !== id);
+  if(activeContactId === id) activeContactId = null;
+  saveContacts(); renderContacts();
+  document.getElementById('ctMidBody').innerHTML = `<div class="empty"><div class="empty-icon">👥</div><h3>Contact deleted</h3></div>`;
+  document.getElementById('ctRightBody').innerHTML = '';
+  updateSecBadge();
+}
+
+function addCommNote(contactId) {
+  const ta = document.getElementById('commNote');
+  const body = (ta?.value||'').trim();
+  if(!body) return;
+  addComm(contactId, 'outbound', 'note', body);
+  if(ta) ta.value = '';
+}
+
+function addComm(contactId, direction, channel, body) {
+  const c = CONTACTS.find(x => x.id === contactId);
+  if(!c) return;
+  if(!c.communications) c.communications = [];
+  c.communications.push({ id: Date.now().toString(), direction, channel, body, at: new Date().toISOString() });
+  saveContacts(); renderContactRight(); renderContactDetail();
+  showToast(`💬 ${channel} note added`);
+}
+
+function saveContactNotes(id, notes) {
+  const c = CONTACTS.find(x => x.id === id);
+  if(c) { c.notes = notes; saveContacts(); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SHOWINGS STATE & PERSISTENCE
+// ═══════════════════════════════════════════════════════════════
+let SHOWINGS = JSON.parse(localStorage.getItem('lf_showings') || '[]');
+let activeShowingId = null;
+let shFilter = 'all';
+
+function saveShowings() { localStorage.setItem('lf_showings', JSON.stringify(SHOWINGS)); }
+function getActiveShowing() { return SHOWINGS.find(s => s.id === activeShowingId) || null; }
+function genShowingId() { return 'SH-' + Date.now() + '-' + Math.random().toString(36).slice(2,6); }
+
+function renderShowings() {
+  const list = document.getElementById('showingList');
+  if(!list) return;
+  let filtered = shFilter === 'all' ? SHOWINGS : SHOWINGS.filter(s => s.status === shFilter);
+  filtered = filtered.slice().sort((a,b) => new Date(b.startTime) - new Date(a.startTime));
+  if(!filtered.length) {
+    list.innerHTML = `<div class="empty" style="padding:28px 10px"><div class="empty-icon" style="width:44px;height:44px;font-size:1.2rem">👁</div><p style="font-size:.73rem">No ${shFilter === 'all' ? '' : shFilter+' '}showings.<br>Click + Request to add one.</p></div>`;
+    return;
+  }
+  list.innerHTML = filtered.map(s => `
+    <div class="showing-row${s.id === activeShowingId ? ' active' : ''}" onclick="pickShowing('${s.id}')">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.8rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.listingAddress||'Listing'}</div>
+          <div style="font-size:.68rem;color:var(--text3);margin-top:2px">👤 ${s.buyerAgentName}</div>
+          <div style="font-size:.68rem;color:var(--text3);margin-top:1px">🗓 ${formatDT(s.startTime)}</div>
+        </div>
+        <span class="ss-badge ss-${s.status}">${s.status}</span>
+      </div>
+    </div>`).join('');
+}
+
+function filterShowings(status) {
+  shFilter = status;
+  ['all','requested','confirmed'].forEach(t => {
+    const btn = document.getElementById('shFilter-'+t);
+    if(!btn) return;
+    if(t === status) btn.style.opacity = '1'; else btn.style.opacity = '.6';
+  });
+  renderShowings();
+}
+
+function pickShowing(id) {
+  activeShowingId = id;
+  renderShowings();
+  renderShowingDetail();
+  renderShowingStats();
+}
+
+function renderShowingDetail() {
+  const s = getActiveShowing();
+  const titleEl = document.getElementById('shMidTitle');
+  const subEl = document.getElementById('shMidSub');
+  const bodyEl = document.getElementById('shMidBody');
+  const actEl = document.getElementById('shMidActions');
+  if(!s) return;
+  if(titleEl) titleEl.textContent = s.listingAddress||'Showing';
+  if(subEl) subEl.textContent = `${s.buyerAgentName} · ${formatDT(s.startTime)}`;
+  if(actEl) actEl.innerHTML = `
+    ${s.status === 'requested' ? `
+    <button class="btn-sm" style="background:var(--emeraldl);color:var(--emerald);border:1.5px solid rgba(5,150,105,.25)" onclick="updateShowingStatus('${s.id}','confirmed')">✅ Confirm</button>
+    <button class="btn-sm" style="background:var(--rosel);color:var(--rose);border:1.5px solid rgba(244,63,94,.2)" onclick="updateShowingStatus('${s.id}','denied')">✕ Deny</button>` : ''}
+    ${s.status === 'confirmed' ? `<button class="btn-sm" style="background:var(--bg);color:var(--text2);border:1.5px solid var(--border2)" onclick="updateShowingStatus('${s.id}','cancelled')">Cancel</button>` : ''}`;
+
+  if(bodyEl) bodyEl.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div class="sec-stat"><div class="sec-stat-val ss-badge ss-${s.status}" style="font-size:1rem;display:inline-block">${s.status}</div><div class="sec-stat-lbl">Status</div></div>
+      <div class="sec-stat"><div class="sec-stat-val" style="color:var(--sky)">${s.buyerAgentPhone||'—'}</div><div class="sec-stat-lbl">Agent Phone</div></div>
+    </div>
+    <div style="background:#fff;border:1.5px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:12px">
+      <div class="fsec-title">📅 Showing Details</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.77rem">
+        <div><span style="color:var(--text3)">Listing:</span><br><strong>${s.listingAddress}</strong></div>
+        <div><span style="color:var(--text3)">Status:</span><br><span class="ss-badge ss-${s.status}">${s.status}</span></div>
+        <div><span style="color:var(--text3)">Start:</span><br><strong>${formatDT(s.startTime)}</strong></div>
+        <div><span style="color:var(--text3)">End:</span><br><strong>${s.endTime ? formatDT(s.endTime) : '—'}</strong></div>
+        <div><span style="color:var(--text3)">Buyer Agent:</span><br><strong>${s.buyerAgentName}</strong></div>
+        <div><span style="color:var(--text3)">Phone:</span><br>${s.buyerAgentPhone||'—'}</div>
+        ${s.buyerAgentEmail ? `<div style="grid-column:span 2"><span style="color:var(--text3)">Email:</span> <strong>${s.buyerAgentEmail}</strong></div>` : ''}
+        ${s.status === 'confirmed' && s.lockboxCode ? `<div style="grid-column:span 2;background:var(--emeraldl);border:1.5px solid rgba(5,150,105,.25);border-radius:8px;padding:8px 10px;display:flex;align-items:center;gap:8px">🔑 <strong>Lockbox: ${s.lockboxCode}</strong> <span style="font-size:.68rem;color:var(--emerald)">Revealed on confirm</span></div>` : ''}
+        ${s.notes ? `<div style="grid-column:span 2"><span style="color:var(--text3)">Notes:</span> ${s.notes}</div>` : ''}
+      </div>
+    </div>
+    <div style="background:#fff;border:1.5px solid var(--border);border-radius:var(--r);padding:14px 16px">
+      <div class="fsec-title">🕐 History</div>
+      ${(s.history||[]).map(h => `<div style="font-size:.73rem;color:var(--text3);padding:4px 0;border-bottom:1px solid var(--border)">${h.at ? relTime(h.at) : ''} — ${h.note}</div>`).join('')||'<div style="font-size:.73rem;color:var(--text3)">No history yet.</div>'}
+    </div>`;
+}
+
+function renderShowingStats() {
+  const body = document.getElementById('shRightBody');
+  if(!body) return;
+  const req = SHOWINGS.filter(s => s.status === 'requested').length;
+  const conf = SHOWINGS.filter(s => s.status === 'confirmed').length;
+  const denied = SHOWINGS.filter(s => s.status === 'denied').length;
+  const total = SHOWINGS.length;
+  body.innerHTML = `
+    <div class="rsec-title">Statistics</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <div class="sec-stat"><div class="sec-stat-val" style="color:var(--indigo)">${total}</div><div class="sec-stat-lbl">Total</div></div>
+      <div class="sec-stat"><div class="sec-stat-val" style="color:var(--amber)">${req}</div><div class="sec-stat-lbl">Pending</div></div>
+      <div class="sec-stat"><div class="sec-stat-val" style="color:var(--emerald)">${conf}</div><div class="sec-stat-lbl">Confirmed</div></div>
+      <div class="sec-stat"><div class="sec-stat-val" style="color:var(--rose)">${denied}</div><div class="sec-stat-lbl">Denied</div></div>
+    </div>
+    <div class="rsec-title">Upcoming Confirmed</div>
+    ${SHOWINGS.filter(s => s.status === 'confirmed' && new Date(s.startTime) > new Date()).slice(0,5).map(s => `
+      <div class="fmini" style="cursor:pointer;margin-bottom:5px" onclick="pickShowing('${s.id}')">
+        <div style="flex:1;min-width:0"><div style="font-size:.73rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.listingAddress}</div><div style="font-size:.63rem;color:var(--text3)">${formatDT(s.startTime)}</div></div>
+        <span class="ss-badge ss-confirmed">✓</span>
+      </div>`).join('')||'<div style="font-size:.73rem;color:var(--text3)">None upcoming.</div>'}`;
+}
+
+function updateShowingStatus(id, status) {
+  const s = SHOWINGS.find(x => x.id === id);
+  if(!s) return;
+  if(!s.history) s.history = [];
+  s.history.push({ note: `Status changed to ${status}`, at: new Date().toISOString() });
+  s.status = status;
+  if(status === 'confirmed' && !s.lockboxCode) {
+    const listing = LISTINGS.find(l => l.id === s.listingId);
+    s.lockboxCode = listing?.lockboxCode||'';
+  }
+  saveShowings(); renderShowings(); renderShowingDetail(); renderShowingStats();
+  showToast(`✅ Showing ${status}`);
+}
+
+// ─── Add showing ───────────────────────────────────────────────
+function openAddShowing() {
+  const sel = document.getElementById('shListing');
+  if(sel) {
+    sel.innerHTML = LISTINGS.map(l => `<option value="${l.id}" data-addr="${l.propAddress||l.id}" data-lockbox="${l.lockboxCode||''}">${l.propAddress||l.id}</option>`).join('');
+  }
+  const dateEl = document.getElementById('shDate');
+  if(dateEl) dateEl.value = new Date().toISOString().slice(0,10);
+  openModal('addShowingModal');
+}
+
+function saveShowing() {
+  const listingId = document.getElementById('shListing').value;
+  const listingEl = document.getElementById('shListing');
+  const selectedOpt = listingEl?.options[listingEl.selectedIndex];
+  const listingAddress = selectedOpt?.dataset.addr || listingId;
+  const lockboxCode = selectedOpt?.dataset.lockbox || '';
+  const date = document.getElementById('shDate').value;
+  const start = document.getElementById('shStart').value;
+  const end = document.getElementById('shEnd').value;
+  const agentName = document.getElementById('shAgentName').value.trim();
+  if(!listingId||!date||!start||!agentName) { showToast('Please fill required fields'); return; }
+  const startTime = `${date}T${start}:00`;
+  const endTime = end ? `${date}T${end}:00` : '';
+  SHOWINGS.unshift({
+    id: genShowingId(), listingId, listingAddress, lockboxCode, startTime, endTime,
+    status: 'requested', buyerAgentName: agentName,
+    buyerAgentPhone: document.getElementById('shAgentPhone').value.trim(),
+    buyerAgentEmail: document.getElementById('shAgentEmail').value.trim(),
+    notes: document.getElementById('shNotes').value.trim(),
+    history: [{ note: 'Showing request created', at: new Date().toISOString() }],
+    createdAt: new Date().toISOString()
+  });
+  activeShowingId = SHOWINGS[0].id;
+  saveShowings(); closeModal('addShowingModal'); renderShowings(); renderShowingDetail(); renderShowingStats(); renderCalendar(); renderCalSide(); updateSecBadge();
+  showToast(`👁 Showing request created`);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CALENDAR
+// ═══════════════════════════════════════════════════════════════
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth(); // 0-indexed
+let calSelectedDay = null;
+
+function calNav(dir) {
+  calMonth += dir;
+  if(calMonth > 11) { calMonth = 0; calYear++; }
+  if(calMonth < 0)  { calMonth = 11; calYear--; }
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const titleEl = document.getElementById('calTitle');
+  const bodyEl = document.getElementById('calBody');
+  if(!bodyEl) return;
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  if(titleEl) titleEl.textContent = `${MONTHS[calMonth]} ${calYear}`;
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const daysInPrev = new Date(calYear, calMonth, 0).getDate();
+  const today = new Date();
+
+  // Build showings map: 'YYYY-MM-DD' → [showing, ...]
+  const showMap = {};
+  SHOWINGS.forEach(s => {
+    const d = s.startTime?.slice(0,10);
+    if(d) { if(!showMap[d]) showMap[d] = []; showMap[d].push(s); }
+  });
+
+  let cells = '';
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  cells += DAYS.map(d => `<div class="cal-day-hdr">${d}</div>`).join('');
+
+  // prev month padding
+  for(let i = firstDay-1; i >= 0; i--) {
+    cells += `<div class="cal-cell other-month"><div class="cal-num">${daysInPrev-i}</div></div>`;
+  }
+  // this month
+  for(let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
+    const evs = showMap[dateStr]||[];
+    const evHtml = evs.slice(0,2).map(e => `<div class="cal-ev ${e.status==='confirmed'?'cal-ev-conf':'cal-ev-req'}">${e.buyerAgentName||'Showing'}</div>`).join('');
+    const more = evs.length > 2 ? `<div style="font-size:.54rem;color:var(--text3)">+${evs.length-2} more</div>` : '';
+    cells += `<div class="cal-cell${isToday?' today':''}" onclick="calSelectDay('${dateStr}')">
+      <div class="cal-num">${d}</div>${evHtml}${more}
+    </div>`;
+  }
+  // next month padding
+  const totalCells = Math.ceil((firstDay + daysInMonth)/7)*7;
+  for(let d = 1; d <= totalCells - firstDay - daysInMonth; d++) {
+    cells += `<div class="cal-cell other-month"><div class="cal-num">${d}</div></div>`;
+  }
+  bodyEl.innerHTML = `<div class="cal-grid">${cells}</div>`;
+}
+
+function calSelectDay(dateStr) {
+  calSelectedDay = dateStr;
+  const dayEl = document.getElementById('calDayTitle');
+  const bodyEl = document.getElementById('calDayBody');
+  if(dayEl) dayEl.textContent = new Date(dateStr+'T12:00:00').toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric'});
+  const evs = SHOWINGS.filter(s => s.startTime?.slice(0,10) === dateStr);
+  if(bodyEl) bodyEl.innerHTML = evs.length ? evs.map(s => `
+    <div class="showing-row" onclick="switchSection('showings');pickShowing('${s.id}')">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div><div style="font-size:.78rem;font-weight:600">${s.listingAddress}</div>
+          <div style="font-size:.67rem;color:var(--text3)">👤 ${s.buyerAgentName}</div>
+          <div style="font-size:.67rem;color:var(--text3)">⏰ ${s.startTime?.slice(11,16)||''}${s.endTime?' – '+s.endTime.slice(11,16):''}</div>
+        </div>
+        <span class="ss-badge ss-${s.status}">${s.status}</span>
+      </div>
+    </div>`).join('') : `<div class="empty" style="margin:auto;padding:28px 10px"><div class="empty-icon" style="width:40px;height:40px;font-size:1rem">📅</div><p style="font-size:.73rem">No showings on this day.</p></div>`;
+}
+
+function renderCalSide() {
+  const body = document.getElementById('calSideBody');
+  if(!body) return;
+  const now = new Date();
+  const weekEnd = new Date(now); weekEnd.setDate(weekEnd.getDate()+7);
+  const upcoming = SHOWINGS.filter(s => {
+    const d = new Date(s.startTime);
+    return d >= now && d <= weekEnd;
+  }).sort((a,b) => new Date(a.startTime) - new Date(b.startTime));
+  const todayStr = now.toISOString().slice(0,10);
+  const todayCount = SHOWINGS.filter(s => s.startTime?.slice(0,10) === todayStr).length;
+  body.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px">
+      <div class="sec-stat"><div class="sec-stat-val" style="color:var(--indigo)">${todayCount}</div><div class="sec-stat-lbl">Today</div></div>
+      <div class="sec-stat"><div class="sec-stat-val" style="color:var(--amber)">${upcoming.length}</div><div class="sec-stat-lbl">This Week</div></div>
+    </div>
+    <div class="rsec-title">Next 7 Days</div>
+    ${upcoming.length ? upcoming.map(s => `
+      <div class="showing-row" style="padding:9px 11px;margin-bottom:5px;cursor:pointer" onclick="calSelectDay('${s.startTime?.slice(0,10)}')">
+        <div style="font-size:.73rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.listingAddress}</div>
+        <div style="font-size:.63rem;color:var(--text3);margin-top:2px">📅 ${formatDT(s.startTime)} · ${s.buyerAgentName}</div>
+        <span class="ss-badge ss-${s.status}" style="margin-top:4px;display:inline-block">${s.status}</span>
+      </div>`).join('') : '<div style="font-size:.73rem;color:var(--text3)">No showings this week.</div>'}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILITY HELPERS
+// ═══════════════════════════════════════════════════════════════
+function relTime(isoStr) {
+  if(!isoStr) return '';
+  const diff = Date.now() - new Date(isoStr).getTime();
+  const mins = Math.floor(diff/60000);
+  if(mins < 2) return 'just now';
+  if(mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins/60);
+  if(hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs/24)}d ago`;
+}
+function formatDT(isoStr) {
+  if(!isoStr) return '—';
+  try {
+    const d = new Date(isoStr);
+    return d.toLocaleString('en-CA',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/Vancouver'});
+  } catch(e) { return isoStr.slice(0,16).replace('T',' '); }
+}
+
+// INIT
+// ═══════════════════════════════════════════════════════════════
+(function init(){
+  document.getElementById('agentAv').textContent = agentInitials();
+  document.getElementById('agentNm').textContent = agentName();
+  renderList();
+  if(LISTINGS.length) pick(LISTINGS[0].id);
+})();
+</script>
+</body>
+</html>

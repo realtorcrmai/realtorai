@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fair Housing Statement — BC Human Rights Code</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   ListingFlow — BC Real Estate Forms  |  Editable Template
+   ══════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bcrea-red:   #BE0000;
+  --bcrea-navy:  #141e3c;
+  --bcfsa-teal:  #009DAE;
+  --govt-blue:   #003087;
+  --fintrac-red: #AF0014;
+  --dark:        #1a1a2e;
+  --mid:         #44445a;
+  --gray:        #7a7a8c;
+  --light:       #e8e8f0;
+  --bg:          #f5f5f8;
+  --field-focus: #f0edff;
+  --purple:      #4f35d2;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10pt;
+  color: var(--dark);
+  background: #e8e8e8;
+  padding-top: 54px;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────── */
+#toolbar {
+  position: fixed; top: 0; left: 0; right: 0; height: 54px;
+  background: #1e1c3a;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 18px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.35);
+  z-index: 9999;
+}
+#toolbar .t-title { flex: 1; }
+#toolbar .t-title strong { color: #c8beff; font-size: 10.5pt; }
+#toolbar .t-title span  { color: #6b6b9b; font-size: 8pt; margin-left: 8px; }
+#toolbar .t-badge {
+  padding: 3px 10px; border-radius: 12px;
+  font-size: 7.5pt; font-weight: 700; letter-spacing: .04em;
+  background: rgba(99,235,176,.15); color: #63ebb0; border: 1px solid rgba(99,235,176,.3);
+}
+.t-btn {
+  padding: 7px 16px; border-radius: 7px; border: none;
+  font-size: 9pt; font-weight: 700; cursor: pointer;
+  transition: opacity .15s, transform .1s;
+}
+.t-btn:hover { opacity: .88; transform: translateY(-1px); }
+.t-btn.print  { background: var(--purple); color: #fff; }
+.t-btn.reset  { background: #2d2d4e; color: #a0a0c8; border: 1px solid #3d3d6e; }
+
+/* ── Page ────────────────────────────────────────────────── */
+.page {
+  width: 8.5in;
+  min-height: 11in;
+  background: white;
+  margin: 18px auto;
+  padding: .65in .70in .55in;
+  box-shadow: 0 4px 24px rgba(0,0,0,.12);
+  position: relative;
+  page-break-after: always;
+}
+.page:last-child { page-break-after: auto; }
+
+/* ── Form header bars ────────────────────────────────────── */
+.form-hdr {
+  display: flex; align-items: center;
+  padding: 10px 14px;
+  margin: 0 -.70in .22in;
+  width: calc(100% + 1.4in);
+}
+.form-hdr .fh-left  { display: flex; align-items: baseline; gap: 10px; flex: 1; }
+.form-hdr .fh-org   { font-size: 20pt; font-weight: 900; color: white; letter-spacing: -.02em; }
+.form-hdr .fh-full  { font-size: 8pt; color: rgba(255,255,255,.7); }
+.form-hdr .fh-right { text-align: right; }
+.form-hdr .fh-name  { font-size: 13pt; font-weight: 800; color: white; letter-spacing: .02em; }
+.form-hdr .fh-num   { font-size: 8pt; color: rgba(255,255,255,.65); margin-top: 2px; }
+
+/* ── Continuation header ─────────────────────────────────── */
+.cont-hdr {
+  padding: 7px 12px;
+  margin: 0 -.70in .22in;
+  width: calc(100% + 1.4in);
+  font-size: 10pt; font-weight: 700; color: white;
+  letter-spacing: .04em;
+}
+
+/* ── Section headers ─────────────────────────────────────── */
+.sec {
+  padding: 5px 10px;
+  margin: 16px 0 10px;
+  font-size: 8.5pt; font-weight: 700;
+  color: white; letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+/* ── Field rows ──────────────────────────────────────────── */
+.field { margin-bottom: 12px; }
+.field label {
+  display: block;
+  font-size: 7pt; color: var(--gray);
+  margin-bottom: 2px;
+}
+.field input[type=text], .field input[type=date], .field select, .field textarea {
+  width: 100%;
+  border: none;
+  border-bottom: 1.2px solid #aaa;
+  background: transparent;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10.5pt;
+  color: var(--dark);
+  padding: 2px 3px 5px;
+  transition: border-color .15s, background .1s;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none;
+  border-bottom: 2px solid var(--purple);
+  background: var(--field-focus);
+}
+.field select {
+  border: 1px solid #bbb; border-radius: 4px; padding: 4px 6px;
+  cursor: pointer;
+}
+.field textarea {
+  border: 1.2px solid #bbb; border-radius: 3px;
+  padding: 5px 8px; resize: vertical; min-height: 48px;
+}
+.field textarea:focus { border: 2px solid var(--purple); }
+
+/* ── Columns ─────────────────────────────────────────────── */
+.cols    { display: flex; gap: 16px; margin-bottom: 12px; }
+.cols .field { margin-bottom: 0; }
+.col1 { flex: 1; }
+.col2 { flex: 2; }
+.col3 { flex: 3; }
+.col-half { flex: 1; }
+.col-third { flex: 1; }
+
+/* ── Checkbox / Radio ────────────────────────────────────── */
+.chk-row, .radio-row {
+  display: flex; align-items: flex-start;
+  gap: 9px; margin: 6px 0; cursor: pointer;
+}
+.chk-row input[type=checkbox] {
+  margin-top: 2px; width: 13px; height: 13px;
+  accent-color: var(--purple); flex-shrink: 0; cursor: pointer;
+}
+.radio-row input[type=radio] {
+  margin-top: 3px; width: 14px; height: 14px;
+  accent-color: var(--bcfsa-teal); flex-shrink: 0; cursor: pointer;
+}
+.chk-row label, .radio-row label {
+  font-size: 9.5pt; line-height: 1.45; cursor: pointer;
+}
+.chk-row label b, .radio-row label b { color: var(--dark); }
+
+/* ── Yes/No/Unknown question rows ─────────────────────────── */
+.ynu-table { width: 100%; border-collapse: collapse; margin: 4px 0; }
+.ynu-table tr { border-bottom: 1px solid #eee; }
+.ynu-table td { padding: 6px 4px; vertical-align: top; font-size: 8.5pt; }
+.ynu-table td.qnum { font-weight: 700; color: var(--bcrea-red); width: 24px; }
+.ynu-table td.qtext { line-height: 1.4; }
+.ynu-table td.ynu-opts { white-space: nowrap; width: 190px; }
+.ynu-opt-group { display: flex; gap: 12px; align-items: center; }
+.ynu-opt { display: flex; align-items: center; gap: 4px; font-size: 8pt; }
+.ynu-opt input[type=radio] { width: 12px; height: 12px; accent-color: var(--bcrea-red); }
+.ynu-detail { width: 100%; margin-top: 3px; font-size: 8.5pt; }
+.ynu-detail input {
+  width: 100%; border: none; border-bottom: 1px dashed #bbb;
+  background: transparent; font-size: 8.5pt; padding: 1px 2px;
+}
+.ynu-detail input:focus { outline: none; border-bottom: 1.5px solid var(--purple); }
+
+/* ── Signature blocks ────────────────────────────────────── */
+.sig-section { margin-top: 22px; }
+.sig-row { display: flex; gap: 16px; margin-bottom: 20px; }
+.sig-col { flex: 1; }
+.sig-line {
+  border-top: 1.3px solid #888;
+  padding-top: 5px;
+  margin-bottom: 0;
+}
+.sig-line .sig-label { font-size: 7pt; color: var(--gray); }
+.sig-name { font-size: 10pt; color: var(--dark); font-weight: 500; min-height: 18px; }
+.sig-input {
+  width: 100%; border: none;
+  background: transparent; font-size: 10pt;
+  font-family: 'Georgia', serif; color: var(--dark);
+  padding: 2px 0;
+}
+.sig-input:focus { outline: none; }
+.date-field {
+  width: 100%; border: none; border-bottom: 1.2px solid #aaa;
+  background: transparent; font-size: 10pt; color: var(--dark); padding: 2px 3px;
+}
+.date-field:focus { outline: none; border-bottom: 2px solid var(--purple); }
+
+/* ── Notice / Info boxes ─────────────────────────────────── */
+.notice {
+  border: 1px solid #e0d8f8; border-radius: 5px;
+  background: #faf9ff; padding: 10px 14px;
+  font-size: 8.5pt; line-height: 1.55;
+  margin: 10px 0;
+}
+.notice.warning { background: #fffbf0; border-color: #f0d58a; }
+.notice.legal   { background: #fff8f0; border-color: #f0c48a; }
+.notice.green   { background: #f0faf5; border-color: #6ee7b7; }
+
+/* ── Page footer ─────────────────────────────────────────── */
+.pg-footer {
+  position: absolute; bottom: .35in; left: .70in; right: .70in;
+  border-top: .5px solid #ccc;
+  padding-top: 6px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.pg-footer .pf-left  { font-size: 7pt; font-weight: 700; color: var(--dark); }
+.pg-footer .pf-right { font-size: 7pt; color: var(--gray); text-align: right; }
+.pg-footer .pf-center { font-size: 7pt; color: var(--gray); text-align: center; flex: 1; }
+
+/* ── Teal compliance box (DORTS) ─────────────────────────── */
+.compliance-box {
+  border: 1.5px solid var(--bcfsa-teal);
+  border-radius: 4px;
+  padding: 12px 16px;
+  background: #f0fafb;
+  margin: 12px 0;
+}
+.compliance-box .cb-hdr {
+  font-size: 11pt; font-weight: 800;
+  color: var(--bcfsa-teal); text-transform: uppercase;
+  letter-spacing: .06em; margin-bottom: 8px;
+}
+
+/* ── Badge ───────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 4px 12px; border-radius: 4px;
+  font-size: 8.5pt; font-weight: 700;
+  float: right; margin-top: -30px;
+}
+
+/* ═══ PRINT ═══════════════════════════════════════════════ */
+@media print {
+  body { background: white; padding: 0; }
+  #toolbar { display: none !important; }
+  .page {
+    width: 100%; margin: 0; box-shadow: none;
+    padding: .55in .60in .45in;
+    page-break-after: always;
+  }
+  .page:last-child { page-break-after: auto; }
+  .field input, .field select, .field textarea, .sig-input, .date-field, .ynu-detail input {
+    background: transparent !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    background: transparent !important;
+  }
+  .form-hdr, .cont-hdr, .sec, .compliance-box, .badge,
+  .notice, .notice.warning, .notice.legal, .notice.green {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <div class="t-title">
+    <strong>Fair Housing Statement — BC Human Rights Code</strong>
+    <span>BC Real Estate Standard Form — Editable</span>
+  </div>
+  <span class="t-badge">✏ EDITABLE</span>
+  <button class="t-btn reset" onclick="location.reload()">↺ Reset</button>
+  <button class="t-btn print" onclick="window.print()">🖨 Print / Save PDF</button>
+</div>
+
+<div class="page">
+  <div class="form-hdr" style="background:#145a16">
+  <div class="fh-left">
+    <span class="fh-org">BC FAIR HOUSING</span>
+    <span class="fh-full">British Columbia Human Rights Code  ·  Real Estate Services Act</span>
+  </div>
+  <div class="fh-right">
+    <div class="fh-name">FAIR HOUSING STATEMENT</div>
+    <div class="fh-num">Protected Grounds under the BC Human Rights Code</div>
+  </div>
+</div>
+
+  <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><span style="font-size:8pt;color:#666">Date: March 11, 2026</span></div>
+  <div class="field">
+  <label>Seller(s) Name(s)</label>
+  <input type="text"  value="David Patel, Priya Patel" placeholder="">
+</div>
+  <div class="field">
+  <label>Property Address</label>
+  <input type="text"  value="" placeholder="">
+</div>
+  <div class="cols"><div class="col-half"><div class="field">
+  <label>Listing Agent</label>
+  <input type="text"  value="" placeholder="">
+</div></div><div class="col-half"><div class="field">
+  <label>Brokerage</label>
+  <input type="text"  value="" placeholder="">
+</div></div></div>
+
+  <div class="sec" style="background:#145a16">FAIR HOUSING POLICY</div>
+
+  <p style="font-size:9.5pt;margin-bottom:12px">In British Columbia, the <strong>Human Rights Code</strong> prohibits discrimination in the purchase, sale, or lease of real property. Real estate professionals are legally prohibited from engaging in, facilitating, or allowing discriminatory practices based on:</p>
+
+  <table style="width:100%;border-collapse:collapse;font-size:9pt">
+    <tr style="border-bottom:1px solid #eee">
+  <td style="padding:6px 8px;width:34px"><input type="checkbox" checked style="width:13px;height:13px;accent-color:#145a16;cursor:pointer"></td>
+  <td style="padding:6px 8px;font-weight:700;color:#145a16;width:200px">Race</td>
+  <td style="padding:6px 8px;font-size:8.5pt;color:#333">No person shall be denied the opportunity to purchase, sell, rent, or lease real property based on race.</td>
+</tr><tr style="border-bottom:1px solid #eee">
+  <td style="padding:6px 8px;width:34px"><input type="checkbox" checked style="width:13px;height:13px;accent-color:#145a16;cursor:pointer"></td>
+  <td style="padding:6px 8px;font-weight:700;color:#145a16;width:200px">Colour / Ethnic Origin</td>
+  <td style="padding:6px 8px;font-size:8.5pt;color:#333">Discrimination based on skin colour, ethnicity, or ancestry is prohibited.</td>
+</tr><tr style="border-bottom:1px solid #eee">
+  <td style="padding:6px 8px;width:34px"><input type="checkbox" checked style="width:13px;height:13px;accent-color:#145a16;cursor:pointer"></td>
+  <td style="padding:6px 8px;font-weight:700;color:#145a16;width:200px">Religion</td>
+  <td style="padding:6px 8px;font-size:8.5pt;color:#333">Religious beliefs or practices cannot be used as a basis for housing decisions.</td>
+</tr><tr style="border-bottom:1px solid #eee">
+  <td style="padding:6px 8px;width:34px"><input type="checkbox" checked style="width:13px;height:13px;accent-color:#145a16;cursor:pointer"></td>
+  <td style="padding:6px 8px;font-weight:700;color:#145a16;width:200px">Marital Status</td>
+  <td style="padding:6px 8px;font-size:8.5pt;color:#333">Single, married, separated, divorced, or widowed status cannot restrict housing access.</td>
+</tr><tr style="border-bottom:1px solid #eee">
+  <td style="padding:6px 8px;width:34px"><input type="checkbox" checked style="width:13px;height:13px;accent-color:#145a16;cursor:pointer"></td>
+  <td style="padding:6px 8px;font-weight:700;color:#145a16;width:200px">Family Status</td>
+  <td style="padding:6px 8px;font-size:8.5pt;color:#333">The presence of children or family composition cannot be used to deny housing.</td>
+</tr><tr style="border-bottom:1px solid #eee">
+  <td style="padding:6px 8px;width:34px"><input type="checkbox" checked style="width:13px;height:13px;accent-color:#145a16;cursor:pointer"></td>
+  <td style="padding:6px 8px;font-weight:700;color:#145a16;width:200px">Physical or Mental Disability</td>
+  <td style="padding:6px 8px;font-size:8.5pt;color:#333">Disability (including the use of assistance animals) cannot restrict housing access.</td>
+</tr><tr style="border-bottom:1px solid #eee">
+  <td style="padding:6px 8px;width:34px"><input type="checkbox" checked style="width:13px;height:13px;accent-color:#145a16;cursor:pointer"></td>
+  <td style="padding:6px 8px;font-weight:700;color:#145a16;width:200px">Sex / Gender Identity</td>
+  <td style="padding:6px 8px;font-size:8.5pt;color:#333">Gender, gender identity, and sexual orientation are protected grounds.</td>
+</tr><tr style="border-bottom:1px solid #eee">
+  <td style="padding:6px 8px;width:34px"><input type="checkbox" checked style="width:13px;height:13px;accent-color:#145a16;cursor:pointer"></td>
+  <td style="padding:6px 8px;font-weight:700;color:#145a16;width:200px">Age</td>
+  <td style="padding:6px 8px;font-size:8.5pt;color:#333">Age cannot be used to restrict housing access (subject to lawful 55+ restrictions).</td>
+</tr><tr style="border-bottom:1px solid #eee">
+  <td style="padding:6px 8px;width:34px"><input type="checkbox" checked style="width:13px;height:13px;accent-color:#145a16;cursor:pointer"></td>
+  <td style="padding:6px 8px;font-weight:700;color:#145a16;width:200px">Political Belief</td>
+  <td style="padding:6px 8px;font-size:8.5pt;color:#333">Political affiliation or belief cannot affect housing rights.</td>
+</tr><tr style="border-bottom:1px solid #eee">
+  <td style="padding:6px 8px;width:34px"><input type="checkbox" checked style="width:13px;height:13px;accent-color:#145a16;cursor:pointer"></td>
+  <td style="padding:6px 8px;font-weight:700;color:#145a16;width:200px">Source of Income</td>
+  <td style="padding:6px 8px;font-size:8.5pt;color:#333">Income type (employment, disability, social assistance) cannot restrict tenancy rights.</td>
+</tr><tr style="border-bottom:1px solid #eee">
+  <td style="padding:6px 8px;width:34px"><input type="checkbox" checked style="width:13px;height:13px;accent-color:#145a16;cursor:pointer"></td>
+  <td style="padding:6px 8px;font-weight:700;color:#145a16;width:200px">Place of Origin</td>
+  <td style="padding:6px 8px;font-size:8.5pt;color:#333">National origin or place of origin cannot restrict housing access.</td>
+</tr>
+  </table>
+
+  <div class="sec" style="background:#145a16">SELLER ACKNOWLEDGMENT</div>
+
+  <div class="notice green">I/We, the Seller(s), acknowledge that I/we:
+  <ul style="margin-top:6px;padding-left:18px;line-height:1.7">
+    <li>Will not discriminate in the sale of my/our property on any protected ground under the BC Human Rights Code.</li>
+    <li>Understand that any instruction to my agent to discriminate is unlawful and will not be followed.</li>
+    <li>Will not instruct my agent to restrict who may view or make offers on my property based on any protected ground.</li>
+    <li>Have read and understand this Fair Housing Statement.</li>
+  </ul></div>
+
+  <div style="height:12px"></div>
+  
+  <p style="font-size:8pt;font-weight:700;color:#666;margin-bottom:6px">First Seller</p>
+  <div class="sig-section"><div class="sig-row"><div class="sig-col">
+  <div class="sig-line">
+    <div class="sig-label">Seller Signature — David Patel</div>
+    <input class="sig-input" type="text" placeholder="Sign here…" value="">
+  </div>
+</div>
+<div class="sig-col" style="max-width:200px">
+  <div class="sig-line">
+    <div class="sig-label">Date</div>
+    <input class="date-field" type="text" value="March 11, 2026">
+  </div>
+</div></div></div>
+  
+  <p style="font-size:8pt;font-weight:700;color:#666;margin-bottom:6px">Second Seller</p>
+  <div class="sig-section"><div class="sig-row"><div class="sig-col">
+  <div class="sig-line">
+    <div class="sig-label">Seller Signature — Priya Patel</div>
+    <input class="sig-input" type="text" placeholder="Sign here…" value="">
+  </div>
+</div>
+<div class="sig-col" style="max-width:200px">
+  <div class="sig-line">
+    <div class="sig-label">Date</div>
+    <input class="date-field" type="text" value="March 11, 2026">
+  </div>
+</div></div></div>
+  
+
+  <div class="pg-footer">
+  <span class="pf-left">PAGE 1 OF 1</span>
+  <span class="pf-center">Fair Housing Statement</span>
+  <span class="pf-right">BC Human Rights / BCREA</span>
+</div>
+</div>
+
+<script>
+// Auto-resize textareas
+document.querySelectorAll('textarea').forEach(t => {
+  t.addEventListener('input', () => {
+    t.style.height = 'auto';
+    t.style.height = t.scrollHeight + 'px';
+  });
+});
+// Date default helper
+document.querySelectorAll('input[data-today]').forEach(el => {
+  if (!el.value) el.value = new Date().toLocaleDateString('en-CA');
+});
+</script>
+</body>
+</html>
