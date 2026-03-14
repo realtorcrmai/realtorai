@@ -162,6 +162,8 @@ export default async function ListingDetailPage({
                 listing={{ ...listing, seller_name: seller.name }}
                 documents={(documents ?? []) as ListingDocument[]}
                 formStatuses={formStatuses}
+                seller={seller}
+                showingsCount={showings?.length ?? 0}
               />
             </CardContent>
           </Card>

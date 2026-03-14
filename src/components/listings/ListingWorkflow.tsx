@@ -550,12 +550,233 @@ function TypingDots() {
   );
 }
 
+// --- Step Data Panels (show actual data for completed steps) ---
+
+type FieldItem = { label: string; value: string };
+type DataSection = { title: string; fields: FieldItem[] };
+
+type StepDataContext = {
+  seller?: { name: string; phone: string; email: string | null; type?: string };
+  listing: {
+    status: string;
+    address?: string;
+    list_price?: number | null;
+    mls_number?: string | null;
+    lockbox_code?: string;
+    notes?: string | null;
+    showing_window_start?: string | null;
+    showing_window_end?: string | null;
+    created_at?: string;
+  };
+  documents: ListingDocument[];
+  formStatuses: Record<string, "draft" | "completed">;
+  showingsCount?: number;
+};
+
+function getStepDataSections(stepId: string, ctx: StepDataContext): DataSection[] | null {
+  const { seller, listing, documents, formStatuses } = ctx;
+  const price = listing.list_price
+    ? formatPrice(listing.list_price)
+    : "Not set";
+
+  switch (stepId) {
+    case "seller-intake":
+      return [
+        {
+          title: "Seller Identity",
+          fields: [
+            { label: "Full Name", value: seller?.name ?? "—" },
+            { label: "Phone", value: seller?.phone ?? "—" },
+            { label: "Email", value: seller?.email ?? "—" },
+            { label: "Type", value: seller?.type ? seller.type.charAt(0).toUpperCase() + seller.type.slice(1) : "—" },
+          ],
+        },
+        {
+          title: "Property",
+          fields: [
+            { label: "Address", value: listing.address ?? "—" },
+            { label: "Lockbox Code", value: listing.lockbox_code ?? "—" },
+          ],
+        },
+        {
+          title: "Pricing & Terms",
+          fields: [
+            { label: "List Price", value: price },
+            { label: "Status", value: listing.status.charAt(0).toUpperCase() + listing.status.slice(1) },
+            ...(listing.notes ? [{ label: "Notes", value: listing.notes }] : []),
+          ],
+        },
+      ];
+
+    case "data-enrichment":
+      return [
+        {
+          title: "Property Assessment",
+          fields: [
+            { label: "Address", value: listing.address ?? "—" },
+            { label: "Source", value: "BC Assessment" },
+            { label: "Status", value: "✓ Retrieved" },
+          ],
+        },
+        {
+          title: "Records & Search",
+          fields: [
+            { label: "Tax Records", value: "✓ Retrieved from municipality" },
+            { label: "Title Search", value: "✓ Complete via LTSA" },
+            { label: "Strata Docs", value: "Collected (if applicable)" },
+          ],
+        },
+      ];
+
+    case "cma":
+      return [
+        {
+          title: "Market Analysis",
+          fields: [
+            { label: "Area", value: listing.address ?? "—" },
+            { label: "Comparable Sales", value: "✓ Pulled from MLS" },
+            { label: "Market Trends", value: "✓ Analyzed" },
+            { label: "CMA Report", value: "✓ Generated" },
+            { label: "Presented To", value: seller?.name ?? "Seller" },
+          ],
+        },
+      ];
+
+    case "pricing-review":
+      return [
+        {
+          title: "Pricing",
+          fields: [
+            { label: "List Price", value: price },
+            { label: "Marketing Strategy", value: "✓ Defined" },
+          ],
+        },
+        {
+          title: "Review",
+          fields: [
+            { label: "Listing Details", value: "✓ Reviewed" },
+            { label: "Photos & Descriptions", value: "✓ Approved" },
+            ...(listing.showing_window_start
+              ? [{ label: "Showing Window", value: `${listing.showing_window_start} — ${listing.showing_window_end ?? "Open"}` }]
+              : []),
+          ],
+        },
+      ];
+
+    case "form-generation": {
+      const formNames: Record<string, string> = {
+        fintrac: "FINTRAC",
+        dorts: "DORTS",
+        pds: "PDS",
+        mlc: "MLC",
+      };
+      const fields: FieldItem[] = Object.entries(formNames).map(([key, name]) => {
+        const s = formStatuses[key];
+        return {
+          label: name,
+          value: s === "completed" ? "✓ Completed" : s === "draft" ? "◐ Draft" : "○ Pending",
+        };
+      });
+      return [{ title: "BC Standard Forms", fields }];
+    }
+
+    case "e-signature": {
+      const docCount = documents.length;
+      return [
+        {
+          title: "Document Signing",
+          fields: [
+            { label: "Documents Sent", value: `✓ Sent to ${seller?.name ?? "seller"}` },
+            { label: "Seller Signature", value: "✓ Signed" },
+            { label: "Agent Counter-Sign", value: "✓ Counter-signed" },
+            { label: "Archived", value: `✓ ${docCount} document${docCount !== 1 ? "s" : ""} archived` },
+          ],
+        },
+      ];
+    }
+
+    case "mls-prep":
+      return [
+        {
+          title: "Listing Media",
+          fields: [
+            { label: "Professional Photos", value: "✓ Uploaded" },
+            { label: "Property Description", value: "✓ Written" },
+            { label: "Feature Sheet", value: "✓ Created" },
+            { label: "Virtual Tour", value: "✓ Ready" },
+          ],
+        },
+      ];
+
+    case "mls-submission":
+      return [
+        {
+          title: "MLS Details",
+          fields: [
+            { label: "MLS Number", value: listing.mls_number ?? "—" },
+            { label: "Status", value: "✓ Live on MLS" },
+            { label: "Submitted To", value: "Real Estate Board" },
+            { label: "Listing Address", value: listing.address ?? "—" },
+          ],
+        },
+      ];
+
+    case "post-listing": {
+      const showings = ctx.showingsCount ?? 0;
+      const isSold = listing.status === "sold";
+      const isPending = listing.status === "pending";
+      return [
+        {
+          title: "Transaction Progress",
+          fields: [
+            { label: "Showings", value: showings > 0 ? `${showings} showing${showings !== 1 ? "s" : ""} managed` : "No showings yet" },
+            { label: "Offers", value: isSold || isPending ? "✓ Reviewed" : "Pending" },
+            { label: "Negotiation", value: isSold ? "✓ Accepted" : isPending ? "In progress" : "Pending" },
+            { label: "Closing", value: isSold ? "✓ Transaction closed" : "Pending" },
+          ],
+        },
+      ];
+    }
+
+    default:
+      return null;
+  }
+}
+
+function StepDataPanel({ sections }: { sections: DataSection[] }) {
+  return (
+    <div className="ml-7 mt-3 space-y-4">
+      {sections.map((section) => (
+        <div key={section.title}>
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+            {section.title}
+          </h4>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+            {section.fields.map((field) => (
+              <div key={field.label} className={field.value.length > 40 ? "col-span-2" : ""}>
+                <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
+                  {field.label}
+                </dt>
+                <dd className="text-sm text-foreground mt-0.5">
+                  {field.value}
+                </dd>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // --- Component ---
 
 export function ListingWorkflow({
   listing,
   documents,
   formStatuses = {},
+  seller,
+  showingsCount,
 }: {
   listing: {
     status: string;
@@ -563,9 +784,16 @@ export function ListingWorkflow({
     list_price?: number | null;
     address?: string;
     seller_name?: string;
+    lockbox_code?: string;
+    notes?: string | null;
+    showing_window_start?: string | null;
+    showing_window_end?: string | null;
+    created_at?: string;
   };
   documents: ListingDocument[];
   formStatuses?: Record<string, "draft" | "completed">;
+  seller?: { name: string; phone: string; email: string | null; type?: string };
+  showingsCount?: number;
 }) {
   const statuses = deriveStepStatuses(listing, documents);
   const substepStatuses = deriveSubstepStatuses(listing, documents, formStatuses, statuses);
@@ -573,14 +801,25 @@ export function ListingWorkflow({
   const messageCtx = useMemo<MessageContext>(
     () => ({
       address: listing.address,
-      sellerName: listing.seller_name,
+      sellerName: listing.seller_name ?? seller?.name,
       listPrice: listing.list_price,
       mlsNumber: listing.mls_number,
       status: listing.status,
       documentCount: documents.length,
       formStatuses,
     }),
-    [listing, documents.length, formStatuses]
+    [listing, documents.length, formStatuses, seller]
+  );
+
+  const stepDataCtx = useMemo<StepDataContext>(
+    () => ({
+      seller,
+      listing,
+      documents,
+      formStatuses,
+      showingsCount,
+    }),
+    [seller, listing, documents, formStatuses, showingsCount]
   );
 
   // Completed and in-progress steps start expanded to show activity messages
@@ -727,7 +966,7 @@ export function ListingWorkflow({
                   </p>
                 </button>
 
-                {/* Expandable substep list */}
+                {/* Expandable content: data panel for completed, substeps for in-progress/pending */}
                 {hasSubsteps && (
                   <div
                     className="grid transition-[grid-template-rows] duration-300 ease-in-out"
@@ -736,61 +975,71 @@ export function ListingWorkflow({
                     }}
                   >
                     <div className="overflow-hidden">
-                      <div className="ml-7 mt-3 space-y-1.5">
-                        {step.substeps.map((sub) => {
-                          const subStatus = substepStatuses[sub.id];
-                          const message = getSubstepMessage(sub.id, subStatus, messageCtx);
-                          return (
-                            <div
-                              key={sub.id}
-                              className="flex items-start gap-2.5 py-1.5"
-                            >
-                              {/* Substep indicator */}
-                              <div className="mt-0.5 shrink-0">
-                                {subStatus === "completed" ? (
-                                  <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center">
-                                    <Check className="h-3 w-3 text-white" />
-                                  </div>
-                                ) : subStatus === "in-progress" ? (
-                                  <div className="h-5 w-5 rounded-full border-2 border-orange-500 bg-orange-50 dark:bg-orange-950/50 flex items-center justify-center">
-                                    <div className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
-                                  </div>
-                                ) : (
-                                  <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/25 bg-muted/50" />
-                                )}
-                              </div>
-                              {/* Substep name + activity message */}
-                              <div className="min-w-0">
-                                <span
-                                  className={`text-sm ${
-                                    subStatus === "completed"
-                                      ? "text-foreground"
-                                      : subStatus === "in-progress"
-                                        ? "text-orange-600 dark:text-orange-400 font-medium"
-                                        : "text-muted-foreground"
-                                  }`}
-                                >
-                                  {sub.name}
-                                </span>
-                                {message && (
-                                  <p
-                                    className={`text-xs mt-0.5 ${
+                      {status === "completed" && (() => {
+                        const sections = getStepDataSections(step.id, stepDataCtx);
+                        return sections ? (
+                          <div className="border border-border/50 rounded-lg bg-muted/20 p-4 mt-3 ml-7">
+                            <StepDataPanel sections={sections} />
+                          </div>
+                        ) : null;
+                      })()}
+                      {status !== "completed" && (
+                        <div className="ml-7 mt-3 space-y-1.5">
+                          {step.substeps.map((sub) => {
+                            const subStatus = substepStatuses[sub.id];
+                            const message = getSubstepMessage(sub.id, subStatus, messageCtx);
+                            return (
+                              <div
+                                key={sub.id}
+                                className="flex items-start gap-2.5 py-1.5"
+                              >
+                                {/* Substep indicator */}
+                                <div className="mt-0.5 shrink-0">
+                                  {subStatus === "completed" ? (
+                                    <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center">
+                                      <Check className="h-3 w-3 text-white" />
+                                    </div>
+                                  ) : subStatus === "in-progress" ? (
+                                    <div className="h-5 w-5 rounded-full border-2 border-orange-500 bg-orange-50 dark:bg-orange-950/50 flex items-center justify-center">
+                                      <div className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
+                                    </div>
+                                  ) : (
+                                    <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/25 bg-muted/50" />
+                                  )}
+                                </div>
+                                {/* Substep name + activity message */}
+                                <div className="min-w-0">
+                                  <span
+                                    className={`text-sm ${
                                       subStatus === "completed"
-                                        ? "text-muted-foreground"
+                                        ? "text-foreground"
                                         : subStatus === "in-progress"
-                                          ? "text-orange-600/80 dark:text-orange-400/80"
-                                          : "text-muted-foreground/60"
+                                          ? "text-orange-600 dark:text-orange-400 font-medium"
+                                          : "text-muted-foreground"
                                     }`}
                                   >
-                                    {message}
-                                    {subStatus === "in-progress" && <TypingDots />}
-                                  </p>
-                                )}
+                                    {sub.name}
+                                  </span>
+                                  {message && (
+                                    <p
+                                      className={`text-xs mt-0.5 ${
+                                        subStatus === "completed"
+                                          ? "text-muted-foreground"
+                                          : subStatus === "in-progress"
+                                            ? "text-orange-600/80 dark:text-orange-400/80"
+                                            : "text-muted-foreground/60"
+                                      }`}
+                                    >
+                                      {message}
+                                      {subStatus === "in-progress" && <TypingDots />}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
