@@ -9,7 +9,9 @@ export default auth((req) => {
   // Allow auth and webhook routes without authentication
   if (
     pathname.startsWith("/api/auth") ||
-    pathname.startsWith("/api/webhooks")
+    pathname.startsWith("/api/webhooks") ||
+    pathname.startsWith("/api/voice-agent") ||
+    pathname.startsWith("/api/english-tutor")
   ) {
     return NextResponse.next();
   }
