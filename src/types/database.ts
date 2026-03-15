@@ -404,6 +404,224 @@ export interface Database {
           sort_order?: number;
         };
       };
+      mortgages: {
+        Row: {
+          id: string;
+          deal_id: string;
+          contact_id: string | null;
+          lender_name: string;
+          mortgage_amount: number | null;
+          interest_rate: number | null;
+          mortgage_type: "fixed" | "variable" | "arm";
+          term_months: number | null;
+          amortization_years: number | null;
+          start_date: string | null;
+          renewal_date: string | null;
+          monthly_payment: number | null;
+          lender_contact: string | null;
+          lender_phone: string | null;
+          lender_email: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          deal_id: string;
+          contact_id?: string | null;
+          lender_name: string;
+          mortgage_amount?: number | null;
+          interest_rate?: number | null;
+          mortgage_type?: "fixed" | "variable" | "arm";
+          term_months?: number | null;
+          amortization_years?: number | null;
+          start_date?: string | null;
+          renewal_date?: string | null;
+          monthly_payment?: number | null;
+          lender_contact?: string | null;
+          lender_phone?: string | null;
+          lender_email?: string | null;
+          notes?: string | null;
+        };
+        Update: {
+          deal_id?: string;
+          contact_id?: string | null;
+          lender_name?: string;
+          mortgage_amount?: number | null;
+          interest_rate?: number | null;
+          mortgage_type?: "fixed" | "variable" | "arm";
+          term_months?: number | null;
+          amortization_years?: number | null;
+          start_date?: string | null;
+          renewal_date?: string | null;
+          monthly_payment?: number | null;
+          lender_contact?: string | null;
+          lender_phone?: string | null;
+          lender_email?: string | null;
+          notes?: string | null;
+        };
+      };
+      contact_family_members: {
+        Row: {
+          id: string;
+          contact_id: string;
+          name: string;
+          relationship: "spouse" | "child" | "parent" | "sibling" | "other";
+          phone: string | null;
+          email: string | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_id: string;
+          name: string;
+          relationship: "spouse" | "child" | "parent" | "sibling" | "other";
+          phone?: string | null;
+          email?: string | null;
+          notes?: string | null;
+        };
+        Update: {
+          name?: string;
+          relationship?: "spouse" | "child" | "parent" | "sibling" | "other";
+          phone?: string | null;
+          email?: string | null;
+          notes?: string | null;
+        };
+      };
+      contact_important_dates: {
+        Row: {
+          id: string;
+          contact_id: string;
+          family_member_id: string | null;
+          date_type: "birthday" | "anniversary" | "closing_anniversary" | "move_in" | "custom";
+          date_value: string;
+          label: string | null;
+          recurring: boolean;
+          remind_days_before: number;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_id: string;
+          family_member_id?: string | null;
+          date_type: "birthday" | "anniversary" | "closing_anniversary" | "move_in" | "custom";
+          date_value: string;
+          label?: string | null;
+          recurring?: boolean;
+          remind_days_before?: number;
+          notes?: string | null;
+        };
+        Update: {
+          date_type?: "birthday" | "anniversary" | "closing_anniversary" | "move_in" | "custom";
+          date_value?: string;
+          label?: string | null;
+          recurring?: boolean;
+          remind_days_before?: number;
+          notes?: string | null;
+        };
+      };
+      open_houses: {
+        Row: {
+          id: string;
+          listing_id: string;
+          date: string;
+          start_time: string;
+          end_time: string;
+          type: "public" | "broker" | "private";
+          status: "scheduled" | "in_progress" | "completed" | "cancelled";
+          visitor_count: number;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          listing_id: string;
+          date: string;
+          start_time: string;
+          end_time: string;
+          type?: "public" | "broker" | "private";
+          status?: "scheduled" | "in_progress" | "completed" | "cancelled";
+          visitor_count?: number;
+          notes?: string | null;
+        };
+        Update: {
+          date?: string;
+          start_time?: string;
+          end_time?: string;
+          type?: "public" | "broker" | "private";
+          status?: "scheduled" | "in_progress" | "completed" | "cancelled";
+          visitor_count?: number;
+          notes?: string | null;
+        };
+      };
+      open_house_visitors: {
+        Row: {
+          id: string;
+          open_house_id: string;
+          name: string;
+          phone: string | null;
+          email: string | null;
+          agent_name: string | null;
+          interest_level: "hot" | "warm" | "cold" | null;
+          feedback: string | null;
+          wants_followup: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          open_house_id: string;
+          name: string;
+          phone?: string | null;
+          email?: string | null;
+          agent_name?: string | null;
+          interest_level?: "hot" | "warm" | "cold" | null;
+          feedback?: string | null;
+          wants_followup?: boolean;
+        };
+        Update: {
+          name?: string;
+          phone?: string | null;
+          email?: string | null;
+          agent_name?: string | null;
+          interest_level?: "hot" | "warm" | "cold" | null;
+          feedback?: string | null;
+          wants_followup?: boolean;
+        };
+      };
+      listing_activities: {
+        Row: {
+          id: string;
+          listing_id: string;
+          activity_type: "view" | "inquiry" | "showing" | "offer" | "price_change" | "open_house";
+          date: string;
+          count: number;
+          source: string | null;
+          amount: number | null;
+          description: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          listing_id: string;
+          activity_type: "view" | "inquiry" | "showing" | "offer" | "price_change" | "open_house";
+          date?: string;
+          count?: number;
+          source?: string | null;
+          amount?: number | null;
+          description?: string | null;
+        };
+        Update: {
+          activity_type?: "view" | "inquiry" | "showing" | "offer" | "price_change" | "open_house";
+          date?: string;
+          count?: number;
+          source?: string | null;
+          amount?: number | null;
+          description?: string | null;
+        };
+      };
       user_integrations: {
         Row: {
           id: string;

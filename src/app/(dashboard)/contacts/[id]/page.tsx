@@ -7,8 +7,10 @@ import { ContactForm } from "@/components/contacts/ContactForm";
 import { ContactWorkflow } from "@/components/contacts/ContactWorkflow";
 import { ContactContextPanel } from "@/components/contacts/ContactContextPanel";
 import { CommunicationTimeline } from "@/components/contacts/CommunicationTimeline";
+import { FamilySection } from "@/components/contacts/FamilySection";
+import { ImportantDatesSection } from "@/components/contacts/ImportantDatesSection";
 import { Button } from "@/components/ui/button";
-import type { Contact, Communication, Listing } from "@/types";
+import type { Contact, Communication, Listing, ContactFamilyMember, ContactImportantDate } from "@/types";
 import { CONTACT_TYPE_COLORS, type ContactType } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +31,7 @@ export default async function ContactDetailPage({
 
   if (!contact) notFound();
 
-  const [{ data: communications }, { data: listings }] = await Promise.all([
+  const [{ data: communications }, { data: listings }, { data: familyMembers }, { data: importantDates }] = await Promise.all([
     supabase
       .from("communications")
       .select("*")
@@ -40,6 +42,16 @@ export default async function ContactDetailPage({
       .select("*")
       .eq("seller_id", id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("contact_family_members")
+      .select("*")
+      .eq("contact_id", id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("contact_important_dates")
+      .select("*, contact_family_members(id, name)")
+      .eq("contact_id", id)
+      .order("date_value", { ascending: true }),
   ]);
 
   return (
@@ -116,6 +128,19 @@ export default async function ContactDetailPage({
               (communications ?? []) as Communication[]
             }
           />
+
+          {/* Family & Important Dates */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FamilySection
+              contactId={id}
+              members={(familyMembers ?? []) as ContactFamilyMember[]}
+            />
+            <ImportantDatesSection
+              contactId={id}
+              dates={(importantDates ?? []) as unknown as (ContactImportantDate & { contact_family_members: { id: string; name: string } | null })[]}
+              familyMembers={(familyMembers ?? []) as ContactFamilyMember[]}
+            />
+          </div>
         </div>
       </div>
 

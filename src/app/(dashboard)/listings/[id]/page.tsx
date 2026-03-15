@@ -10,9 +10,12 @@ import { ShowingRequestForm } from "@/components/showings/ShowingRequestForm";
 import { ShowingStatusBadge } from "@/components/showings/ShowingStatusBadge";
 import { AlertBanner } from "@/components/shared/AlertBanner";
 import { NeighborhoodButton } from "@/components/listings/NeighborhoodButton";
+import { OpenHouseSection } from "@/components/listings/OpenHouseSection";
+import { ListingStatsCard } from "@/components/listings/ListingStatsCard";
+import { ListingActivityFeed } from "@/components/listings/ListingActivityFeed";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
-import type { ListingDocument } from "@/types";
+import type { ListingDocument, OpenHouse, ListingActivity } from "@/types";
 import { LISTING_STATUS_COLORS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +50,8 @@ export default async function ListingDetailPage({
     { data: showings },
     { data: allListings },
     { data: formSubmissions },
+    { data: openHouses },
+    { data: activities },
   ] = await Promise.all([
     supabase
       .from("listing_documents")
@@ -65,7 +70,38 @@ export default async function ListingDetailPage({
       .from("form_submissions")
       .select("form_key, status, form_data")
       .eq("listing_id", id),
+    supabase
+      .from("open_houses")
+      .select("*")
+      .eq("listing_id", id)
+      .order("date", { ascending: false }),
+    supabase
+      .from("listing_activities")
+      .select("*")
+      .eq("listing_id", id)
+      .order("created_at", { ascending: false }),
   ]);
+
+  // Compute listing stats
+  const confirmedShowings = (showings ?? []).filter((s) => s.status === "confirmed").length;
+  const ohList = (openHouses ?? []) as OpenHouse[];
+  const completedOH = ohList.filter((o) => o.status === "completed").length;
+  const totalVisitors = ohList.reduce((sum, o) => sum + (o.visitor_count || 0), 0);
+  const actList = (activities ?? []) as ListingActivity[];
+  const daysOnMarket = listing.created_at
+    ? Math.max(0, Math.floor((Date.now() - new Date(listing.created_at).getTime()) / 86400000))
+    : 0;
+  const listingStats = {
+    days_on_market: daysOnMarket,
+    total_views: actList.filter((a) => a.activity_type === "view").length,
+    total_inquiries: actList.filter((a) => a.activity_type === "inquiry").length,
+    total_showings: (showings ?? []).length,
+    confirmed_showings: confirmedShowings,
+    total_offers: actList.filter((a) => a.activity_type === "offer").length,
+    total_open_houses: ohList.length,
+    completed_open_houses: completedOH,
+    total_visitors: totalVisitors,
+  };
 
   // Build form status map for the right panel
   const formStatuses = Object.fromEntries(
@@ -166,6 +202,15 @@ export default async function ListingDetailPage({
               stepFormData={stepFormData}
             />
 
+            {/* Listing Stats */}
+            <ListingStatsCard stats={listingStats} />
+
+            {/* Open Houses */}
+            <OpenHouseSection
+              listingId={id}
+              openHouses={ohList}
+            />
+
             {/* Showing History */}
             <Card>
               <CardHeader className="pb-3">
@@ -211,6 +256,9 @@ export default async function ListingDetailPage({
                 ))}
               </CardContent>
             </Card>
+
+            {/* Activity Feed */}
+            <ListingActivityFeed activities={actList} />
           </div>
         </div>
       </div>

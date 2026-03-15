@@ -16,6 +16,13 @@ export type DealParty = Database["public"]["Tables"]["deal_parties"]["Row"];
 export type DealPartyInsert = Database["public"]["Tables"]["deal_parties"]["Insert"];
 export type DealChecklist = Database["public"]["Tables"]["deal_checklist"]["Row"];
 export type DealChecklistInsert = Database["public"]["Tables"]["deal_checklist"]["Insert"];
+export type Mortgage = Database["public"]["Tables"]["mortgages"]["Row"];
+export type MortgageInsert = Database["public"]["Tables"]["mortgages"]["Insert"];
+export type ContactFamilyMember = Database["public"]["Tables"]["contact_family_members"]["Row"];
+export type ContactImportantDate = Database["public"]["Tables"]["contact_important_dates"]["Row"];
+export type OpenHouse = Database["public"]["Tables"]["open_houses"]["Row"];
+export type OpenHouseVisitor = Database["public"]["Tables"]["open_house_visitors"]["Row"];
+export type ListingActivity = Database["public"]["Tables"]["listing_activities"]["Row"];
 export type UserIntegration = Database["public"]["Tables"]["user_integrations"]["Row"];
 export type UserIntegrationInsert = Database["public"]["Tables"]["user_integrations"]["Insert"];
 

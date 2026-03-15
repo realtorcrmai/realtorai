@@ -12,7 +12,7 @@ export default async function DealDetailPage({
   const { id } = await params;
   const supabase = createAdminClient();
 
-  const [{ data: deal }, { data: parties }, { data: checklist }] =
+  const [{ data: deal }, { data: parties }, { data: checklist }, { data: mortgages }] =
     await Promise.all([
       supabase
         .from("deals")
@@ -31,6 +31,11 @@ export default async function DealDetailPage({
         .select("*")
         .eq("deal_id", id)
         .order("sort_order"),
+      supabase
+        .from("mortgages")
+        .select("*")
+        .eq("deal_id", id)
+        .order("created_at", { ascending: false }),
     ]);
 
   if (!deal) notFound();
@@ -46,6 +51,7 @@ export default async function DealDetailPage({
       deal={deal as any}
       parties={parties ?? []}
       checklist={checklist ?? []}
+      mortgages={mortgages ?? []}
       contacts={contacts ?? []}
       listings={listings ?? []}
     />

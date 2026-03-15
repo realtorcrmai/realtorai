@@ -29,12 +29,14 @@ import {
   PARTY_ROLE_LABELS,
   PARTY_ROLES,
 } from "@/lib/constants/pipeline";
-import type { DealWithRelations, DealParty, DealChecklist, Contact, Listing } from "@/types";
+import type { DealWithRelations, DealParty, DealChecklist, Mortgage, Contact, Listing } from "@/types";
+import { MortgageSection } from "./MortgageSection";
 
 interface DealDetailProps {
   deal: DealWithRelations;
   parties: DealParty[];
   checklist: DealChecklist[];
+  mortgages: Mortgage[];
   contacts: Contact[];
   listings: Listing[];
 }
@@ -43,6 +45,7 @@ export function DealDetail({
   deal: initialDeal,
   parties: initialParties,
   checklist: initialChecklist,
+  mortgages: initialMortgages,
   contacts,
   listings,
 }: DealDetailProps) {
@@ -375,6 +378,15 @@ export function DealDetail({
               <AddPartyForm onAdd={addParty} />
             </CardContent>
           </Card>
+
+          {/* Mortgage Details (buyer deals only) */}
+          {deal.type === "buyer" && (
+            <MortgageSection
+              dealId={deal.id}
+              contactId={deal.contact_id}
+              mortgages={initialMortgages}
+            />
+          )}
 
           {/* Notes */}
           {deal.notes && (
