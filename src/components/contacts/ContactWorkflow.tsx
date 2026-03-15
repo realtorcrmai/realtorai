@@ -722,9 +722,9 @@ export function ContactWorkflow({
                                   {section.title}
                                 </h4>
                                 <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5">
-                                  {section.fields.map((field) => (
+                                  {section.fields.map((field, idx) => (
                                     <div
-                                      key={field.label}
+                                      key={`${section.title}-${field.label}-${idx}`}
                                       className={
                                         field.label === "Notes" ||
                                         field.value.length > 40
