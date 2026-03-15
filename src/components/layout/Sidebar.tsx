@@ -16,6 +16,9 @@ import {
   ChevronRight,
   ListTodo,
   Search,
+  Kanban,
+  BarChart3,
+  Settings,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -31,9 +34,11 @@ const navSections = [
     label: "CRM",
     items: [
       { href: "/contacts", label: "Contacts", icon: Users },
+      { href: "/pipeline", label: "Pipeline", icon: Kanban },
       { href: "/tasks", label: "Tasks", icon: ListTodo },
       { href: "/showings", label: "Showings", icon: Clock },
       { href: "/calendar", label: "Calendar", icon: Calendar },
+      { href: "/reports", label: "Reports", icon: BarChart3 },
     ],
   },
   {
@@ -49,6 +54,12 @@ const navSections = [
     label: "BC Forms",
     items: [
       { href: "/forms", label: "Standard Forms", icon: FileText },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { href: "/settings", label: "Settings", icon: Settings },
     ],
   },
 ];

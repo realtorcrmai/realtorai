@@ -18,6 +18,9 @@ import {
   Home,
   ChevronDown,
   Menu,
+  Kanban,
+  BarChart3,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
@@ -32,16 +35,19 @@ import { Button } from "@/components/ui/button";
 const mainTabs = [
   { href: "/listings", label: "Listings", icon: Building2 },
   { href: "/contacts", label: "Contacts", icon: Users },
+  { href: "/pipeline", label: "Pipeline", icon: Kanban },
   { href: "/showings", label: "Showings", icon: Clock },
   { href: "/calendar", label: "Calendar", icon: Calendar },
 ];
 
 const moreItems = [
+  { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/search", label: "Property Search", icon: Search },
   { href: "/workflow", label: "MLS Workflow", icon: GitBranch },
   { href: "/import", label: "Excel Import", icon: Upload },
   { href: "/forms", label: "BC Forms", icon: FileText },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 const allNav = [

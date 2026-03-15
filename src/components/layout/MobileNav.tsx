@@ -7,14 +7,14 @@ import {
   Users,
   Building2,
   Calendar,
-  ListTodo,
+  Kanban,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Home", icon: LayoutDashboard },
   { href: "/contacts", label: "Contacts", icon: Users },
-  { href: "/tasks", label: "Tasks", icon: ListTodo },
+  { href: "/pipeline", label: "Pipeline", icon: Kanban },
   { href: "/listings", label: "Listings", icon: Building2 },
   { href: "/calendar", label: "Calendar", icon: Calendar },
 ];
