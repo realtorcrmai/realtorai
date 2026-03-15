@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, DollarSign, Key, Clock, User } from "lucide-react";
+import { DollarSign, Key, Clock, User } from "lucide-react";
 import { ListingWorkflow } from "@/components/listings/ListingWorkflow";
 import { FormReadinessPanel } from "@/components/listings/FormReadinessPanel";
 import { ConveyancingPackButton } from "@/components/listings/ConveyancingPackButton";
@@ -63,7 +63,7 @@ export default async function ListingDetailPage({
       .eq("status", "active"),
     supabase
       .from("form_submissions")
-      .select("form_key, status")
+      .select("form_key, status, form_data")
       .eq("listing_id", id),
   ]);
 
@@ -72,76 +72,68 @@ export default async function ListingDetailPage({
     (formSubmissions ?? []).map((s) => [s.form_key, s.status as "draft" | "completed"])
   );
 
+  // Build step form data map for workflow data panels
+  const stepFormData = Object.fromEntries(
+    (formSubmissions ?? [])
+      .filter((s) => s.form_key.startsWith("step-"))
+      .map((s) => [s.form_key, (s.form_data ?? {}) as Record<string, unknown>])
+  );
+
   const requiredTypes = ["FINTRAC", "DORTS", "PDS"];
   const docTypes = (documents ?? []).map((d) => d.doc_type);
   const hasMissingDocs = requiredTypes.some((t) => !docTypes.includes(t));
 
+  // Format price for subtitle
+  const formattedPrice =
+    listing.list_price != null
+      ? Number(listing.list_price).toLocaleString("en-CA", {
+          style: "currency",
+          currency: "CAD",
+          maximumFractionDigits: 0,
+        })
+      : null;
+
+  // Build subtitle parts
+  const subtitleParts: string[] = [];
+  if (formattedPrice) subtitleParts.push(formattedPrice);
+  if (listing.mls_number) subtitleParts.push(`MLS# ${listing.mls_number}`);
+  if (listing.showing_window_start && listing.showing_window_end)
+    subtitleParts.push(`${listing.showing_window_start} – ${listing.showing_window_end}`);
+
   return (
     <div className="flex h-full">
-      {/* CENTER — scrollable */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-        <div className="space-y-6">
-          {hasMissingDocs && (
-            <AlertBanner message="Missing Required Documents — Upload FINTRAC, DORTS, and PDS before creating showings or generating conveyancing packs." />
-          )}
-
-          {/* Listing Header — compact */}
-          <Card className="animate-float-in">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1.5 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-primary shrink-0" />
-                    <h1 className="text-2xl font-bold tracking-tight truncate">
-                      {listing.address}
-                    </h1>
-                    <Badge
-                      variant="secondary"
-                      className={`${LISTING_STATUS_COLORS[listing.status as keyof typeof LISTING_STATUS_COLORS]} text-xs shrink-0`}
-                    >
-                      {listing.status}
-                    </Badge>
-                  </div>
-                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                    {listing.list_price != null && (
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="h-4 w-4" />
-                        {Number(listing.list_price).toLocaleString("en-CA", {
-                          style: "currency",
-                          currency: "CAD",
-                          maximumFractionDigits: 0,
-                        })}
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1">
-                      <Key className="h-4 w-4" />
-                      Lockbox: {listing.lockbox_code}
-                    </span>
-                    {listing.mls_number && <span>MLS# {listing.mls_number}</span>}
-                    {listing.showing_window_start && listing.showing_window_end && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        {listing.showing_window_start} - {listing.showing_window_end}
-                      </span>
-                    )}
-                    <Link
-                      href={`/contacts/${seller.id}`}
-                      className="flex items-center gap-1 text-primary hover:underline"
-                    >
-                      <User className="h-4 w-4" />
-                      {seller.name}
-                    </Link>
-                  </div>
-                  {listing.notes && (
-                    <p className="text-sm text-muted-foreground">{listing.notes}</p>
-                  )}
-                </div>
+      {/* CENTER — topbar + scrollable content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Mid-topbar */}
+        <div className="shrink-0 bg-background/90 backdrop-blur-md border-b px-6 py-3">
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold tracking-tight truncate">
+                  {listing.address}
+                </h1>
+                <Badge
+                  variant="secondary"
+                  className={`${LISTING_STATUS_COLORS[listing.status as keyof typeof LISTING_STATUS_COLORS]} text-xs shrink-0 capitalize`}
+                >
+                  {listing.status}
+                </Badge>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Actions Row */}
-          <div className="flex flex-wrap gap-2">
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-0.5">
+                <span>{subtitleParts.join(" · ")}</span>
+                {subtitleParts.length > 0 && <span>&middot;</span>}
+                <Link
+                  href={`/contacts/${seller.id}`}
+                  className="text-primary hover:underline inline-flex items-center gap-0.5"
+                >
+                  <User className="h-3.5 w-3.5" />
+                  {seller.name}
+                </Link>
+              </div>
+            </div>
+          </div>
+          {/* Action buttons row */}
+          <div className="flex gap-2 mt-2.5">
             <ShowingRequestForm
               listings={allListings ?? []}
               preselectedListingId={id}
@@ -154,76 +146,84 @@ export default async function ListingDetailPage({
             />
             <NeighborhoodButton address={listing.address} />
           </div>
+        </div>
 
-          {/* Workflow */}
-          <Card>
-            <CardContent className="p-6">
-              <ListingWorkflow
-                listing={{ ...listing, seller_name: seller.name }}
-                documents={(documents ?? []) as ListingDocument[]}
-                formStatuses={formStatuses}
-                seller={seller}
-                showingsCount={showings?.length ?? 0}
-              />
-            </CardContent>
-          </Card>
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto p-5 md:p-6">
+          <div className="space-y-6">
+            {hasMissingDocs && (
+              <AlertBanner message="Missing Required Documents — Upload FINTRAC, DORTS, and PDS before creating showings or generating conveyancing packs." />
+            )}
 
-          {/* Showing History */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Showing History</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {(showings ?? []).length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No showings for this listing yet.
-                </p>
-              )}
-              {(showings ?? []).map((showing) => (
-                <div
-                  key={showing.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                >
-                  <div>
-                    <p className="text-sm font-medium">
-                      {showing.buyer_agent_name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(showing.start_time).toLocaleString("en-CA", {
-                        timeZone: "America/Vancouver",
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}{" "}
-                      &middot;{" "}
-                      {formatDistanceToNow(new Date(showing.created_at), {
-                        addSuffix: true,
-                      })}
-                    </p>
+            {/* Workflow — no Card wrapper */}
+            <ListingWorkflow
+              listingId={id}
+              listing={{ ...listing, seller_name: seller.name }}
+              documents={(documents ?? []) as ListingDocument[]}
+              formStatuses={formStatuses}
+              seller={seller}
+              showingsCount={showings?.length ?? 0}
+              stepFormData={stepFormData}
+            />
+
+            {/* Showing History */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Showing History</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {(showings ?? []).length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No showings for this listing yet.
+                  </p>
+                )}
+                {(showings ?? []).map((showing) => (
+                  <div
+                    key={showing.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">
+                        {showing.buyer_agent_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(showing.start_time).toLocaleString("en-CA", {
+                          timeZone: "America/Vancouver",
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}{" "}
+                        &middot;{" "}
+                        {formatDistanceToNow(new Date(showing.created_at), {
+                          addSuffix: true,
+                        })}
+                      </p>
+                    </div>
+                    <ShowingStatusBadge
+                      status={
+                        showing.status as
+                          | "requested"
+                          | "confirmed"
+                          | "denied"
+                          | "cancelled"
+                      }
+                    />
                   </div>
-                  <ShowingStatusBadge
-                    status={
-                      showing.status as
-                        | "requested"
-                        | "confirmed"
-                        | "denied"
-                        | "cancelled"
-                    }
-                  />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
 
       {/* RIGHT PANEL — fixed, own scroll */}
-      <aside className="hidden lg:block w-[340px] shrink-0 border-l overflow-y-auto p-6 bg-card/30">
+      <aside className="hidden lg:block w-[320px] shrink-0 border-l overflow-hidden backdrop-blur-2xl bg-white/80 flex flex-col">
         <FormReadinessPanel
           listingId={id}
           documents={(documents ?? []) as ListingDocument[]}
           listing={listing}
           seller={seller}
           formStatuses={formStatuses}
+          showings={showings ?? []}
         />
       </aside>
     </div>

@@ -3,6 +3,8 @@
 import { useState, useMemo } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import type { ListingDocument } from "@/types";
+import { StepDataPanel } from "./StepDataPanel";
+import { STEP_FIELDS } from "@/lib/constants/workflow-fields";
 
 type StepStatus = "completed" | "in-progress" | "pending";
 
@@ -571,10 +573,11 @@ type StepDataContext = {
   documents: ListingDocument[];
   formStatuses: Record<string, "draft" | "completed">;
   showingsCount?: number;
+  stepFormData?: Record<string, Record<string, unknown>>;
 };
 
 function getStepDataSections(stepId: string, ctx: StepDataContext): DataSection[] | null {
-  const { seller, listing, documents, formStatuses } = ctx;
+  const { seller, listing, documents, formStatuses, stepFormData } = ctx;
   const price = listing.list_price
     ? formatPrice(listing.list_price)
     : "Not set";
@@ -588,7 +591,7 @@ function getStepDataSections(stepId: string, ctx: StepDataContext): DataSection[
             { label: "Full Name", value: seller?.name ?? "—" },
             { label: "Phone", value: seller?.phone ?? "—" },
             { label: "Email", value: seller?.email ?? "—" },
-            { label: "Type", value: seller?.type ? seller.type.charAt(0).toUpperCase() + seller.type.slice(1) : "—" },
+            { label: "Seller Type", value: (stepFormData?.["step-seller-intake"]?.seller_type as string) ?? "—" },
           ],
         },
         {
@@ -743,41 +746,18 @@ function getStepDataSections(stepId: string, ctx: StepDataContext): DataSection[
   }
 }
 
-function StepDataPanel({ sections }: { sections: DataSection[] }) {
-  return (
-    <div className="ml-7 mt-3 space-y-4">
-      {sections.map((section) => (
-        <div key={section.title}>
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-            {section.title}
-          </h4>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-            {section.fields.map((field) => (
-              <div key={field.label} className={field.value.length > 40 ? "col-span-2" : ""}>
-                <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
-                  {field.label}
-                </dt>
-                <dd className="text-sm text-foreground mt-0.5">
-                  {field.value}
-                </dd>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // --- Component ---
 
 export function ListingWorkflow({
+  listingId,
   listing,
   documents,
   formStatuses = {},
   seller,
   showingsCount,
+  stepFormData = {},
 }: {
+  listingId: string;
   listing: {
     status: string;
     mls_number?: string | null;
@@ -794,6 +774,7 @@ export function ListingWorkflow({
   formStatuses?: Record<string, "draft" | "completed">;
   seller?: { name: string; phone: string; email: string | null; type?: string };
   showingsCount?: number;
+  stepFormData?: Record<string, Record<string, unknown>>;
 }) {
   const statuses = deriveStepStatuses(listing, documents);
   const substepStatuses = deriveSubstepStatuses(listing, documents, formStatuses, statuses);
@@ -818,15 +799,16 @@ export function ListingWorkflow({
       documents,
       formStatuses,
       showingsCount,
+      stepFormData,
     }),
-    [seller, listing, documents, formStatuses, showingsCount]
+    [seller, listing, documents, formStatuses, showingsCount, stepFormData]
   );
 
-  // Completed and in-progress steps start expanded to show activity messages
+  // Only the in-progress step starts expanded by default
   const initialExpanded = useMemo(() => {
     const expanded = new Set<string>();
     for (const step of WORKFLOW_STEPS) {
-      if (statuses[step.id] !== "pending") {
+      if (statuses[step.id] === "in-progress") {
         expanded.add(step.id);
       }
     }
@@ -975,14 +957,38 @@ export function ListingWorkflow({
                     }}
                   >
                     <div className="overflow-hidden">
-                      {status === "completed" && (() => {
+                      {/* Data panel with edit/upload/template for all statuses */}
+                      {(() => {
                         const sections = getStepDataSections(step.id, stepDataCtx);
+                        const fieldConfigs = STEP_FIELDS[step.id] ?? [];
+                        // For seller-intake, merge real DB values with form_submissions extras
+                        let savedData = stepFormData[`step-${step.id}`] ?? {};
+                        if (step.id === "seller-intake") {
+                          savedData = {
+                            full_name: seller?.name ?? "",
+                            phone: seller?.phone ?? "",
+                            email: seller?.email ?? "",
+                            address: listing.address ?? "",
+                            lockbox_code: listing.lockbox_code ?? "",
+                            list_price: listing.list_price != null ? String(listing.list_price) : "",
+                            notes: listing.notes ?? "",
+                            ...savedData, // form_submissions extras (seller_type) override
+                          };
+                        }
                         return sections ? (
                           <div className="border border-border/50 rounded-lg bg-muted/20 p-4 mt-3 ml-7">
-                            <StepDataPanel sections={sections} />
+                            <StepDataPanel
+                              listingId={listingId}
+                              stepId={step.id}
+                              sections={sections}
+                              fieldConfigs={fieldConfigs}
+                              savedData={savedData}
+                              documents={documents}
+                            />
                           </div>
                         ) : null;
                       })()}
+                      {/* Activity messages for non-completed steps */}
                       {status !== "completed" && (
                         <div className="ml-7 mt-3 space-y-1.5">
                           {step.substeps.map((sub) => {

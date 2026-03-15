@@ -26,7 +26,7 @@ export function SidebarLayout({
       <div className="hidden md:flex flex-col h-full">
         {sidebar}
         {sidebarFooter && (
-          <div className="p-3 border-r border-t bg-card/50">{sidebarFooter}</div>
+          <div className="p-3 border-r border-t backdrop-blur-2xl bg-white/78">{sidebarFooter}</div>
         )}
       </div>
       <div className={cn("flex-1 overflow-hidden", contentClassName)}>

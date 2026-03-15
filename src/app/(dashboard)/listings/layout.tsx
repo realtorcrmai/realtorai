@@ -23,14 +23,14 @@ export default async function ListingsLayout({
     <div className="flex h-full">
       {/* Left sidebar — listing list */}
       <div className="hidden md:flex flex-col h-full">
+        {/* Create button at top */}
+        <div className="p-3 border-r border-b backdrop-blur-2xl bg-white/78">
+          <ListingForm sellers={sellers ?? []} />
+        </div>
         <ListingSidebar
           listings={(listings ?? []) as (typeof listings extends (infer T)[] | null ? T : never)[]}
           sellers={sellers ?? []}
         />
-        {/* Add listing button at bottom of sidebar */}
-        <div className="p-3 border-r border-t bg-card/50">
-          <ListingForm sellers={sellers ?? []} />
-        </div>
       </div>
 
       {/* Center + Right content */}

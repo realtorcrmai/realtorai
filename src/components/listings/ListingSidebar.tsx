@@ -6,8 +6,32 @@ import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { MapPin, Search, DollarSign } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { Listing } from "@/types";
 import { LISTING_STATUS_COLORS } from "@/lib/constants";
+
+/**
+ * Derive 9 workflow phase dot statuses from listing-level data only.
+ * Returns an array of "done" | "active" | "pending" for each phase.
+ */
+function getPhaseDots(listing: Listing): ("done" | "active" | "pending")[] {
+  const hasPrice = listing.list_price != null;
+  const hasMls = !!listing.mls_number;
+  const isSold = listing.status === "sold";
+  const isPending = listing.status === "pending";
+
+  return [
+    "done", // 1. Seller Intake — always done (listing exists)
+    hasPrice ? "done" : "active", // 2. Data Enrichment
+    hasPrice ? "done" : "pending", // 3. CMA
+    hasPrice ? "done" : "pending", // 4. Pricing & Review
+    hasPrice ? "active" : "pending", // 5. Form Generation
+    "pending", // 6. E-Signature
+    hasMls ? "done" : "pending", // 7. MLS Prep
+    hasMls ? "done" : "pending", // 8. MLS Submission
+    isSold ? "done" : isPending || hasMls ? "active" : "pending", // 9. Post-Listing
+  ];
+}
 
 export function ListingSidebar({
   listings,
@@ -26,7 +50,7 @@ export function ListingSidebar({
   );
 
   return (
-    <aside className="w-[280px] shrink-0 border-r bg-card/50 flex flex-col h-full overflow-hidden">
+    <aside className="w-[270px] shrink-0 border-r backdrop-blur-2xl bg-white/78 flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b space-y-3">
         <div className="flex items-center justify-between">
@@ -106,6 +130,22 @@ export function ListingSidebar({
                             {listing.contacts.name}
                           </p>
                         )}
+                        {/* Workflow phase dots */}
+                        <div className="flex gap-1 mt-1.5 ml-[18px]">
+                          {getPhaseDots(listing).map((status, i) => (
+                            <div
+                              key={i}
+                              className={cn(
+                                "h-[7px] w-[7px] rounded-full",
+                                status === "done"
+                                  ? "bg-emerald-500"
+                                  : status === "active"
+                                    ? "bg-amber-500"
+                                    : "bg-muted-foreground/20"
+                              )}
+                            />
+                          ))}
+                        </div>
                       </div>
                       <Badge
                         variant="outline"

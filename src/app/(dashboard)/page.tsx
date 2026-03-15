@@ -178,22 +178,26 @@ export default async function DashboardPage() {
       label: "Active Listings",
       value: activeListings ?? 0,
       color: "text-indigo-600 dark:text-indigo-400",
+      href: "/listings",
     },
     {
       label: "Open Tasks",
       value: openTasksCount,
       color: "text-blue-600 dark:text-blue-400",
+      href: "/tasks",
     },
     {
       label: "Pending Showings",
       value: pendingShowings ?? 0,
       color: "text-teal-600 dark:text-teal-400",
+      href: "/showings",
     },
     {
       label: "Missing Docs",
       value: listingsWithMissing.length,
       color: "text-rose-600 dark:text-rose-400",
       icon: listingsWithMissing.length > 0 ? AlertTriangle : null,
+      href: "/listings",
     },
   ];
 
@@ -221,12 +225,13 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Stats Strip */}
+      {/* Quick Stats Strip — clickable links */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-float-in" style={{ animationDelay: "80ms" }}>
         {quickStats.map((stat) => (
-          <div
+          <Link
             key={stat.label}
-            className="glass rounded-xl px-4 py-3 elevation-2 transition-all duration-200 hover:elevation-4"
+            href={stat.href}
+            className="glass rounded-xl px-4 py-3 elevation-2 transition-all duration-200 hover:elevation-4 hover:ring-2 hover:ring-primary/20 cursor-pointer"
           >
             <div className="flex items-center gap-2">
               <p className={`text-2xl font-bold ${stat.color}`}>
@@ -239,7 +244,7 @@ export default async function DashboardPage() {
             <p className="text-xs text-muted-foreground mt-0.5">
               {stat.label}
             </p>
-          </div>
+          </Link>
         ))}
       </div>
 

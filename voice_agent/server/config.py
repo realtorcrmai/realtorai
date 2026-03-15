@@ -51,7 +51,7 @@ DATABASE_PATH = os.path.join(os.path.dirname(__file__), "data", "voice_agent.db"
 CURRENT_REALTOR_ID = os.getenv("REALTOR_ID", "R001")
 
 # ── ListingFlow integration ───────────────────────────────────────────────────
-LISTINGFLOW_API = os.getenv("LISTINGFLOW_API", "http://127.0.0.1:8767")
+LISTINGFLOW_API = os.getenv("LISTINGFLOW_API", "http://127.0.0.1:3000")
 
 # ── Conversation Memory ──────────────────────────────────────────────────────
 MAX_CONVERSATION_HISTORY = 50   # Max messages to keep in context

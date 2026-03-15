@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """
 Client Mode Tools
-Tool schemas and handler functions for the client-facing voice agent.
+Tool schemas and async handler functions for the client-facing voice agent.
 Only exposes public information — never internal notes or negotiation data.
+
+Tools that read listings, book tours, and log feedback call the Next.js
+API bridge (→ Supabase). Voice-agent-internal tools (playbooks, conversation
+history) stay in local SQLite.
 """
 
 import json
@@ -10,9 +14,8 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from database import (
-    find_listing, log_feedback, get_client_playbook, get_conversation_history
-)
+from api_client import api
+from database import get_client_playbook, get_conversation_history
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  TOOL SCHEMAS
@@ -150,42 +153,41 @@ CLIENT_TOOLS = [
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  TOOL HANDLER
+#  ASYNC TOOL HANDLER
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def _sanitize_listing(listing_dict):
-    """Remove internal/private fields from a listing before returning to client."""
-    if not listing_dict:
-        return None
-    safe = dict(listing_dict)
-    # Strip confidential fields
-    for key in ["internal_notes", "seller_phone", "realtor_id"]:
-        safe.pop(key, None)
-    return safe
-
-
-def handle_client_tool(tool_name: str, args: dict, realtor_id: str = "R001") -> str:
+async def handle_client_tool(tool_name: str, args: dict, realtor_id: str = "R001") -> str:
     """
     Dispatch a client tool call and return a JSON string result.
-    Ensures no internal data is ever exposed.
+    Listings, tours, and feedback go through the API bridge → Supabase.
+    Playbooks and conversation history stay in local SQLite.
     """
     try:
         if tool_name == "get_property_details":
-            listing = find_listing(
-                address=args.get("address"),
-                listing_id=args.get("listing_id"),
-                realtor_id=realtor_id,
-            )
-            if isinstance(listing, list):
-                result = [_sanitize_listing(l) for l in listing]
-            elif listing:
-                result = _sanitize_listing(listing)
+            if args.get("listing_id"):
+                result = await api.get(
+                    f"/api/voice-agent/listings/{args['listing_id']}",
+                    {"mode": "client"}
+                )
+            elif args.get("address"):
+                search = await api.get(
+                    "/api/voice-agent/listings",
+                    {"address": args["address"]}
+                )
+                if search.get("listings") and len(search["listings"]) > 0:
+                    # Strip internal fields for client mode
+                    listings = search["listings"]
+                    for lst in listings:
+                        lst.pop("notes", None)
+                        lst.pop("lockbox_code", None)
+                    result = listings if len(listings) > 1 else listings[0]
+                else:
+                    result = {"message": "Property not found."}
             else:
-                result = {"message": "Property not found."}
+                result = {"message": "Please provide a listing_id or address."}
 
         elif tool_name == "get_neighborhood_info":
-            # In production, this would call an external API or local knowledge base
-            # For now, return a structured placeholder
+            # Stub — future external API integration
             city = args.get("city", "")
             area = args.get("area", "")
             interests = args.get("interests", [])
@@ -198,43 +200,47 @@ def handle_client_tool(tool_name: str, args: dict, realtor_id: str = "R001") -> 
             }
 
         elif tool_name == "check_tour_availability":
-            # In production, this would check Google Calendar
-            # For now, return mock availability
-            result = {
-                "listing_id": args.get("listing_id"),
-                "available_slots": [
-                    {"date": args.get("preferred_date", "TBD"), "time": "10:00 AM"},
-                    {"date": args.get("preferred_date", "TBD"), "time": "2:00 PM"},
-                    {"date": args.get("preferred_date", "TBD"), "time": "4:30 PM"},
-                ],
-                "note": "Connect Google Calendar for real availability.",
-            }
+            listing_id = args.get("listing_id")
+            params = {"listing_id": listing_id} if listing_id else {}
+            if args.get("preferred_date"):
+                params["date"] = args["preferred_date"]
+
+            result = await api.get("/api/voice-agent/showings", params)
+            # Add the showing window info to help the LLM suggest times
+            if result.get("showing_window"):
+                result["note"] = "showing_window indicates the seller's preferred showing hours."
 
         elif tool_name == "book_tour":
-            # In production, this would create a Google Calendar event
-            result = {
-                "ok": True,
-                "booking": {
-                    "listing_id": args.get("listing_id"),
-                    "client_name": args.get("client_name"),
-                    "date": args.get("date"),
-                    "time": args.get("time"),
-                },
-                "message": f"Tour booked for {args.get('client_name')} on {args.get('date')} at {args.get('time')}.",
-            }
+            # Convert date + time into start_time/end_time for the appointments table
+            date = args.get("date", "")
+            time_str = args.get("time", "10:00")
+            start_time = f"{date}T{time_str}:00"
+            # Default 1-hour appointment
+            end_hour = int(time_str.split(":")[0]) + 1
+            end_time = f"{date}T{end_hour:02d}:{time_str.split(':')[1] if ':' in time_str else '00'}:00"
+
+            result = await api.post("/api/voice-agent/showings", {
+                "listing_id": args.get("listing_id"),
+                "buyer_agent_name": args.get("client_name", ""),
+                "buyer_agent_phone": args.get("client_phone", ""),
+                "start_time": start_time,
+                "end_time": end_time,
+                "notes": f"Booked via voice agent for {args.get('client_name', 'client')}",
+            })
 
         elif tool_name == "log_client_feedback":
-            log_feedback(
-                client_name=args["client_name"],
-                listing_id=args.get("listing_id"),
-                feedback=args["feedback"],
-                feedback_type=args.get("feedback_type", "general"),
-                sentiment=args.get("sentiment", "neutral"),
-                follow_up=args.get("follow_up", False),
-                realtor_id=realtor_id,
-                client_phone=args.get("client_phone"),
-            )
-            result = {"ok": True, "message": "Feedback recorded. Thank you!"}
+            result = await api.post("/api/voice-agent/feedback", {
+                "client_name": args["client_name"],
+                "client_phone": args.get("client_phone"),
+                "listing_id": args.get("listing_id"),
+                "feedback": args["feedback"],
+                "sentiment": args.get("sentiment", "neutral"),
+                "follow_up": args.get("follow_up", False),
+            })
+            if result.get("ok"):
+                result["message"] = "Feedback recorded. Thank you!"
+
+        # ── Voice-agent-internal tools (stay in SQLite) ──────────────────
 
         elif tool_name == "get_client_playbook":
             playbook = get_client_playbook(

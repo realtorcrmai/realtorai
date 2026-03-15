@@ -26,13 +26,13 @@ export default async function ShowingsLayout({
     <div className="flex h-full">
       {/* Left sidebar — showing list */}
       <div className="hidden md:flex flex-col h-full">
+        {/* Create button at top */}
+        <div className="p-3 border-r border-b backdrop-blur-2xl bg-white/78">
+          <ShowingRequestForm listings={activeListings ?? []} />
+        </div>
         <ShowingSidebar
           showings={(showings ?? []) as (typeof showings extends (infer T)[] | null ? T : never)[]}
         />
-        {/* Add showing button at bottom of sidebar */}
-        <div className="p-3 border-r border-t bg-card/50">
-          <ShowingRequestForm listings={activeListings ?? []} />
-        </div>
       </div>
 
       {/* Center + Right content */}

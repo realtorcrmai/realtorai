@@ -49,43 +49,42 @@
 }
 
 /* ─────────────────────────────────────────────
-   LIGHT THEME — Clean, Professional, High Contrast
-   Inspired by realtor.ca clarity.
+   LIGHT THEME — Clean, Professional, Vibrant
    Primary: Teal (real-estate industry standard).
-   Neutrals: True grays, zero purple tint.
-   Cards: Solid white (no transparency).
+   Background: Soft lavender tint with gradient blobs.
+   Cards: Semi-transparent white (glassmorphism).
    ───────────────────────────────────────────── */
 
 :root {
   /* ── Core surfaces ── */
-  --background: oklch(0.97 0 0);            /* #f5f5f5 — clean neutral */
+  --background: #f4f2ff;                      /* soft lavender — matches reference */
   --foreground: oklch(0.145 0 0);           /* #222 — near-black, high contrast */
 
-  --card: oklch(1 0 0);                     /* #fff — solid white */
+  --card: oklch(1 0 0 / 82%);              /* semi-transparent white — glassmorphism */
   --card-foreground: oklch(0.145 0 0);
 
-  --popover: oklch(1 0 0);                  /* solid white */
+  --popover: oklch(1 0 0);                  /* solid white for popovers */
   --popover-foreground: oklch(0.145 0 0);
 
   /* ── Primary: Professional Teal ── */
   --primary: oklch(0.50 0.11 220);          /* ≈ rgb(15, 118, 148) — trustworthy teal */
   --primary-foreground: oklch(0.99 0 0);
 
-  /* ── Secondary & Muted — true neutral grays ── */
-  --secondary: oklch(0.96 0 0);             /* #f0f0f0 */
+  /* ── Secondary & Muted — lavender tint ── */
+  --secondary: #eeeaff;                     /* lavender-tinted off-white */
   --secondary-foreground: oklch(0.20 0 0);
 
-  --muted: oklch(0.955 0 0);               /* #efefef */
+  --muted: #ece8ff;                         /* lavender-tinted muted */
   --muted-foreground: oklch(0.42 0 0);     /* #666 — clearly readable */
 
-  --accent: oklch(0.94 0.006 220);          /* barely-there teal tint */
+  --accent: #e8e3ff;                        /* soft purple accent */
   --accent-foreground: oklch(0.20 0 0);
 
   --destructive: oklch(0.577 0.245 27.325);
 
   /* ── Borders & inputs ── */
-  --border: oklch(0.90 0 0);               /* #e3e3e3 — clean gray */
-  --input: oklch(0.90 0 0);
+  --border: #e0daf0;                       /* lavender-tinted border */
+  --input: #e0daf0;
   --ring: oklch(0.50 0.11 220);            /* matches primary */
 
   /* ── Charts ── */
@@ -127,10 +126,10 @@
   --gradient-orange-start: oklch(0.60 0.17 50);
   --gradient-orange-end: oklch(0.67 0.14 40);
 
-  /* ── Glass tokens (mostly-opaque for clarity) ── */
-  --glass-bg: oklch(1 0 0 / 88%);
+  /* ── Glass tokens (translucent for glassmorphism) ── */
+  --glass-bg: oklch(1 0 0 / 78%);
   --glass-border: oklch(0 0 0 / 8%);
-  --glass-blur: 10px;
+  --glass-blur: 16px;
 
   /* ── Elevation shadows ── */
   --shadow-2: 0 1px 3px oklch(0 0 0 / 8%);
@@ -249,6 +248,29 @@
   .gradient-orange {
     background: linear-gradient(135deg, var(--gradient-orange-start), var(--gradient-orange-end));
   }
+}
+
+/* ─── Background Canvas (gradient blobs) ─── */
+
+.bg-canvas {
+  position: relative;
+}
+
+.bg-canvas::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 700px 600px at -8% -5%, #d4ccf8 0%, transparent 60%),
+    radial-gradient(ellipse 600px 520px at 108% 92%, #ffd4cc 0%, transparent 60%),
+    radial-gradient(ellipse 500px 450px at 95% 3%, #c8f5f0 0%, transparent 60%);
+}
+
+.bg-canvas > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* ─── Animations ─── */

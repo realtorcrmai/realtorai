@@ -15,7 +15,7 @@ export default function DashboardLayout({
 
       <div className="flex flex-1 overflow-hidden">
         {/* Main content area */}
-        <main className="flex-1 overflow-hidden bg-background">
+        <main className="flex-1 overflow-hidden bg-background bg-canvas">
           {children}
         </main>
       </div>

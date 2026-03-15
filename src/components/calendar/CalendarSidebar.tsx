@@ -63,7 +63,7 @@ export function CalendarSidebar() {
     .slice(0, 5);
 
   return (
-    <aside className="w-[280px] shrink-0 border-r bg-card/50 flex flex-col h-full overflow-hidden">
+    <aside className="w-[280px] shrink-0 border-r backdrop-blur-2xl bg-white/78 flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b space-y-4">
         <h2 className="text-base font-semibold">Schedule</h2>

@@ -39,6 +39,7 @@ from tools import (
     GENERIC_TOOLS, handle_generic_tool,
 )
 from llm_providers import get_active_provider, get_llm_provider
+from api_client import api as listingflow_api
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -104,14 +105,17 @@ class SessionState:
         else:
             return GENERIC_TOOLS
 
-    def handle_tool_call(self, tool_name: str, args: dict) -> str:
+    async def handle_tool_call(self, tool_name: str, args: dict) -> str:
         generic_names = {t["function"]["name"] for t in GENERIC_TOOLS}
         if tool_name in generic_names:
+            # Generic tools are sync (SQLite-only)
             result = handle_generic_tool(tool_name, args, self.realtor_id)
         elif self.mode == "realtor":
-            result = handle_realtor_tool(tool_name, args, self.realtor_id)
+            # Realtor tools are async (API bridge)
+            result = await handle_realtor_tool(tool_name, args, self.realtor_id)
         elif self.mode == "client":
-            result = handle_client_tool(tool_name, args, self.realtor_id)
+            # Client tools are async (API bridge)
+            result = await handle_client_tool(tool_name, args, self.realtor_id)
         else:
             result = handle_generic_tool(tool_name, args, self.realtor_id)
 
@@ -287,7 +291,7 @@ async def handle_chat(request):
                 tool_args = fn.get("arguments", {})
                 if isinstance(tool_args, str):
                     tool_args = json.loads(tool_args)
-                tool_result = session.handle_tool_call(tool_name, tool_args)
+                tool_result = await session.handle_tool_call(tool_name, tool_args)
                 session.messages.append({"role": "tool", "content": tool_result})
 
             result2 = await provider.chat(session.messages)
@@ -340,7 +344,7 @@ async def handle_chat_stream(request):
                     tool_args = fn.get("arguments", {})
                     if isinstance(tool_args, str):
                         tool_args = json.loads(tool_args)
-                    tool_result = session.handle_tool_call(tool_name, tool_args)
+                    tool_result = await session.handle_tool_call(tool_name, tool_args)
                     session.messages.append({"role": "tool", "content": tool_result})
                     await response.write(f"data: {json.dumps({'tool': tool_name, 'done': False})}\n\n".encode())
 
@@ -383,7 +387,7 @@ async def handle_tool(request):
     tool_args = body.get("args", {})
 
     if sid and sid in _sessions:
-        result = _sessions[sid].handle_tool_call(tool_name, tool_args)
+        result = await _sessions[sid].handle_tool_call(tool_name, tool_args)
     else:
         result = handle_generic_tool(tool_name, tool_args, CURRENT_REALTOR_ID)
 
@@ -397,8 +401,14 @@ async def handle_reminders(request):
     return web.json_response({"reminders": get_reminders(realtor_id=CURRENT_REALTOR_ID)}, headers=_cors_headers())
 
 
+async def on_shutdown(app):
+    """Clean up the API client session on server shutdown."""
+    await listingflow_api.close()
+
+
 def create_app():
     app = web.Application()
+    app.on_shutdown.append(on_shutdown)
     app.router.add_route("OPTIONS", "/{path:.*}", handle_options)
     app.router.add_get("/api/health", handle_health)
     app.router.add_get("/api/sessions", handle_sessions_list)

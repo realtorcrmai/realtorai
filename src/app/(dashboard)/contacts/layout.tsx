@@ -20,10 +20,11 @@ export default async function ContactsLayout({
     <div className="flex h-full">
       {/* Left sidebar — contact list */}
       <div className="hidden md:flex flex-col h-full">
-        <ContactSidebar contacts={contacts ?? []} />
-        <div className="p-3 border-r border-t bg-card/50">
+        {/* Create button at top */}
+        <div className="p-3 border-r border-b backdrop-blur-2xl bg-white/78">
           <ContactForm />
         </div>
+        <ContactSidebar contacts={contacts ?? []} />
       </div>
 
       {/* Center + Right content */}

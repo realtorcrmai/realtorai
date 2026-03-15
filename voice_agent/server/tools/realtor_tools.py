@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """
 Realtor Mode Tools
-Tool schemas (for Ollama function calling) and handler functions
+Tool schemas (for Ollama function calling) and async handler functions
 for the realtor-facing voice agent.
+
+Tools that read/write listings, contacts, and showings call the Next.js
+API bridge (→ Supabase). Voice-agent-internal tools (playbooks, conversation
+history) stay in local SQLite.
 """
 
 import json
@@ -10,11 +14,8 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from database import (
-    find_buyer, create_buyer, find_listing, search_properties,
-    update_listing_status, update_listing_price, add_listing_note,
-    configure_client_call, get_conversation_history
-)
+from api_client import api
+from database import configure_client_call, get_conversation_history
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  TOOL SCHEMAS (OpenAI-compatible function calling format for Ollama)
@@ -30,7 +31,7 @@ REALTOR_TOOLS = [
                 "type": "object",
                 "properties": {
                     "name": {"type": "string", "description": "Buyer name (partial match)"},
-                    "buyer_id": {"type": "string", "description": "Buyer ID (e.g. B12345678)"},
+                    "buyer_id": {"type": "string", "description": "Buyer ID"},
                 },
                 "required": [],
             },
@@ -79,11 +80,8 @@ REALTOR_TOOLS = [
                 "properties": {
                     "min_price": {"type": "number"},
                     "max_price": {"type": "number"},
-                    "beds": {"type": "integer"},
-                    "baths": {"type": "number"},
-                    "property_type": {"type": "string"},
-                    "city": {"type": "string"},
-                    "min_sqft": {"type": "integer"},
+                    "address": {"type": "string", "description": "Partial address to search"},
+                    "status": {"type": "string", "description": "Listing status (default: active)"},
                 },
                 "required": [],
             },
@@ -109,14 +107,14 @@ REALTOR_TOOLS = [
         "type": "function",
         "function": {
             "name": "update_listing_status",
-            "description": "Update a listing's pipeline status. Valid: Active, Conditional, Subject Removal, Sold, Expired, Cancelled.",
+            "description": "Update a listing's pipeline status. Valid: active, pending, sold.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "listing_id": {"type": "string"},
                     "new_status": {
                         "type": "string",
-                        "enum": ["Active", "Conditional", "Subject Removal", "Sold", "Expired", "Cancelled"],
+                        "enum": ["active", "pending", "sold"],
                     },
                 },
                 "required": ["listing_id", "new_status"],
@@ -201,66 +199,97 @@ REALTOR_TOOLS = [
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  TOOL HANDLER
+#  ASYNC TOOL HANDLER
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def handle_realtor_tool(tool_name: str, args: dict, realtor_id: str = "R001") -> str:
+async def handle_realtor_tool(tool_name: str, args: dict, realtor_id: str = "R001") -> str:
     """
     Dispatch a realtor tool call and return a JSON string result.
+    Listings/contacts go through the Next.js API bridge → Supabase.
+    Playbooks and conversation history stay in local SQLite.
     """
     try:
         if tool_name == "find_buyer":
-            result = find_buyer(
-                name=args.get("name"),
-                buyer_id=args.get("buyer_id"),
-                realtor_id=realtor_id,
-            )
-            if result is None:
+            params = {"type": "buyer"}
+            if args.get("buyer_id"):
+                params["id"] = args["buyer_id"]
+            elif args.get("name"):
+                params["name"] = args["name"]
+            result = await api.get("/api/voice-agent/contacts", params)
+            if result.get("count", 0) == 0:
                 result = {"message": "No buyer found matching that query."}
 
         elif tool_name == "create_buyer_profile":
-            bid = create_buyer(
-                name=args["name"],
-                criteria=args.get("criteria", {}),
-                realtor_id=realtor_id,
-                email=args.get("email"),
-                phone=args.get("phone"),
-                notes=args.get("notes"),
-            )
-            result = {"ok": True, "buyer_id": bid, "name": args["name"]}
+            criteria = args.get("criteria", {})
+            # Store criteria as JSON in the notes field
+            notes_parts = []
+            if args.get("notes"):
+                notes_parts.append(args["notes"])
+            if criteria:
+                notes_parts.append(f"Search criteria: {json.dumps(criteria)}")
+
+            result = await api.post("/api/voice-agent/contacts", {
+                "name": args["name"],
+                "phone": args.get("phone", ""),
+                "email": args.get("email"),
+                "type": "buyer",
+                "notes": "\n".join(notes_parts) if notes_parts else None,
+            })
 
         elif tool_name == "search_properties":
-            criteria = {k: v for k, v in args.items() if v is not None}
-            matches = search_properties(criteria, realtor_id=realtor_id)
-            result = {
-                "count": len(matches),
-                "properties": matches[:10],  # Return top 10
-            }
+            params = {}
+            if args.get("min_price"):
+                params["min_price"] = str(args["min_price"])
+            if args.get("max_price"):
+                params["max_price"] = str(args["max_price"])
+            if args.get("address"):
+                params["address"] = args["address"]
+            if args.get("status"):
+                params["status"] = args["status"]
+            else:
+                params["status"] = "active"
+            result = await api.get("/api/voice-agent/listings", params)
+            # Rename for backward compatibility with prompts
+            if "listings" in result:
+                result["properties"] = result.pop("listings")
 
         elif tool_name == "find_listing":
-            result = find_listing(
-                address=args.get("address"),
-                mls=args.get("mls"),
-                listing_id=args.get("listing_id"),
-                realtor_id=realtor_id,
-            )
-            if result is None:
-                result = {"message": "No listing found matching that query."}
+            if args.get("listing_id"):
+                result = await api.get(f"/api/voice-agent/listings/{args['listing_id']}")
+            elif args.get("mls"):
+                result = await api.get("/api/voice-agent/listings", {"mls_number": args["mls"]})
+                if result.get("listings") and len(result["listings"]) > 0:
+                    result = result["listings"][0]
+                else:
+                    result = {"message": "No listing found matching that MLS number."}
+            elif args.get("address"):
+                result = await api.get("/api/voice-agent/listings", {"address": args["address"]})
+                if result.get("listings") and len(result["listings"]) > 0:
+                    result = result["listings"] if len(result["listings"]) > 1 else result["listings"][0]
+                else:
+                    result = {"message": "No listing found matching that address."}
+            else:
+                result = {"message": "Please provide a listing_id, MLS number, or address."}
 
         elif tool_name == "update_listing_status":
-            result = update_listing_status(
-                args["listing_id"], args["new_status"], realtor_id=realtor_id
+            result = await api.patch(
+                f"/api/voice-agent/listings/{args['listing_id']}",
+                {"status": args["new_status"]}
             )
 
         elif tool_name == "update_listing_price":
-            result = update_listing_price(
-                args["listing_id"], args["new_price"], realtor_id=realtor_id
+            result = await api.patch(
+                f"/api/voice-agent/listings/{args['listing_id']}",
+                {"list_price": args["new_price"]}
             )
 
         elif tool_name == "add_listing_note":
-            result = add_listing_note(
-                args["listing_id"], args["note"], realtor_id=realtor_id
+            result = await api.patch(
+                f"/api/voice-agent/listings/{args['listing_id']}",
+                {"notes": args["note"]}
             )
+
+        # ── Voice-agent-internal tools (stay in SQLite) ──────────────────
 
         elif tool_name == "configure_client_call":
             result = configure_client_call(

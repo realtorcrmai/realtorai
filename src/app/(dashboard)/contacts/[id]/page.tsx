@@ -120,7 +120,7 @@ export default async function ContactDetailPage({
       </div>
 
       {/* RIGHT PANEL -- fixed, own scroll */}
-      <aside className="hidden lg:block w-[340px] shrink-0 border-l overflow-y-auto p-6 bg-card/30">
+      <aside className="hidden lg:block w-[320px] shrink-0 border-l overflow-y-auto p-6 backdrop-blur-2xl bg-white/80">
         <ContactContextPanel
           contact={contact}
           listings={(listings ?? []) as Listing[]}

@@ -26,7 +26,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
   );
 
   return (
-    <aside className="w-[280px] shrink-0 border-r bg-card/50 flex flex-col h-full overflow-hidden">
+    <aside className="w-[280px] shrink-0 border-r backdrop-blur-2xl bg-white/78 flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b space-y-3">
         <div className="flex items-center justify-between">
