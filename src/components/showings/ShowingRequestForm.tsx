@@ -42,11 +42,9 @@ type FormData = z.infer<typeof formSchema>;
 export function ShowingRequestForm({
   listings,
   preselectedListingId,
-  disabled,
 }: {
   listings: Array<{ id: string; address: string }>;
   preselectedListingId?: string;
-  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -104,7 +102,7 @@ export function ShowingRequestForm({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button disabled={disabled}>
+          <Button>
             <Plus className="h-4 w-4 mr-2" />
             New Showing Request
           </Button>

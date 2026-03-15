@@ -236,6 +236,60 @@ export function VoiceAgentWidget() {
     return null;
   }
 
+  // Offline fallback: handle basic commands locally when server is unavailable
+  function handleOfflineMessage(text: string): string {
+    const lower = text.toLowerCase();
+
+    // Navigation commands
+    const NAV_MAP: Record<string, { path: string; label: string }> = {
+      dashboard: { path: "/", label: "Dashboard" },
+      home: { path: "/", label: "Dashboard" },
+      contacts: { path: "/contacts", label: "Contacts" },
+      contact: { path: "/contacts", label: "Contacts" },
+      listings: { path: "/listings", label: "Listings" },
+      listing: { path: "/listings", label: "Listings" },
+      tasks: { path: "/tasks", label: "Tasks" },
+      task: { path: "/tasks", label: "Tasks" },
+      pipeline: { path: "/pipeline", label: "Pipeline" },
+      deals: { path: "/pipeline", label: "Pipeline" },
+      showings: { path: "/showings", label: "Showings" },
+      showing: { path: "/showings", label: "Showings" },
+      reports: { path: "/reports", label: "Reports" },
+      settings: { path: "/settings", label: "Settings" },
+    };
+
+    const navTriggers = ["go to", "open", "show me", "navigate to", "take me to", "show"];
+    for (const trigger of navTriggers) {
+      if (lower.includes(trigger)) {
+        for (const [keyword, { path, label }] of Object.entries(NAV_MAP)) {
+          if (lower.includes(keyword)) {
+            window.location.href = path;
+            return `Navigating to ${label}...`;
+          }
+        }
+      }
+    }
+
+    // Help responses
+    if (lower.includes("help") || lower === "?") {
+      return "I'm currently running in offline mode. Here's what I can do:\n\n" +
+        "**Navigation:** Say \"go to contacts\", \"open listings\", \"show pipeline\", etc.\n\n" +
+        "**Available pages:** Dashboard, Contacts, Listings, Tasks, Pipeline, Showings, Reports, Settings\n\n" +
+        "For full AI capabilities (property search, CMA, task management), the voice agent server needs to be running.";
+    }
+
+    if (lower.includes("hello") || lower.includes("hi") || lower.includes("hey")) {
+      return "Hi! I'm your Realtor AI assistant. I'm currently in offline mode, but I can help you navigate the app. Try saying \"go to contacts\" or \"show listings\". Type \"help\" for more options.";
+    }
+
+    return "I'm currently in offline mode and can only help with navigation. Try:\n\n" +
+      "\u2022 \"Go to contacts\" \u2014 open the contacts page\n" +
+      "\u2022 \"Show listings\" \u2014 open the listings page\n" +
+      "\u2022 \"Open pipeline\" \u2014 open the deals pipeline\n" +
+      "\u2022 \"Help\" \u2014 see all available commands\n\n" +
+      "For full AI capabilities, the voice agent server needs to be started.";
+  }
+
   async function sendMessage(overrideText?: string) {
     const text = (overrideText || input).trim();
     if (!text || sending) return;
@@ -243,6 +297,20 @@ export function VoiceAgentWidget() {
     setInput("");
     setSending(true);
     stopSpeaking();
+
+    setMessages((prev) => [...prev, { role: "user", content: text }]);
+
+    // Offline fallback mode
+    if (!connected) {
+      const response = handleOfflineMessage(text);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: response },
+      ]);
+      speak(response);
+      setSending(false);
+      return;
+    }
 
     let sid = sessionId;
     if (!sid) {
@@ -252,8 +320,6 @@ export function VoiceAgentWidget() {
         return;
       }
     }
-
-    setMessages((prev) => [...prev, { role: "user", content: text }]);
 
     try {
       const resp = await fetch(`${VOICE_AGENT_API}/api/chat/stream`, {
@@ -502,14 +568,28 @@ export function VoiceAgentWidget() {
                 <p className="text-sm font-medium">
                   Hi! I&apos;m your AI Realtor Assistant.
                 </p>
-                <p className="text-xs mt-2 opacity-70 leading-relaxed">
-                  Ask me anything &mdash; search properties for buyers, create listings
-                  from seller info, manage your daily tasks, check calendar, or get
-                  market insights.
-                </p>
-                <p className="text-xs mt-3 opacity-50">
-                  Tap the mic button to speak, or type your message
-                </p>
+                {connected ? (
+                  <>
+                    <p className="text-xs mt-2 opacity-70 leading-relaxed">
+                      Ask me anything &mdash; search properties for buyers, create listings
+                      from seller info, manage your daily tasks, check calendar, or get
+                      market insights.
+                    </p>
+                    <p className="text-xs mt-3 opacity-50">
+                      Tap the mic button to speak, or type your message
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs mt-2 opacity-70 leading-relaxed">
+                      I&apos;m in offline mode. I can help you navigate the app &mdash; try
+                      &quot;go to contacts&quot;, &quot;show listings&quot;, or &quot;open pipeline&quot;.
+                    </p>
+                    <p className="text-xs mt-3 opacity-50">
+                      Type &quot;help&quot; to see all available commands
+                    </p>
+                  </>
+                )}
               </div>
             )}
             {messages.map((msg, i) => (
@@ -640,14 +720,14 @@ export function VoiceAgentWidget() {
                     ? "Listening..."
                     : connected
                       ? "Ask anything or tap mic..."
-                      : "Voice agent offline"
+                      : "Offline mode \u2014 try \"help\" or \"go to contacts\""
                 }
-                disabled={!connected || sending}
+                disabled={sending}
                 className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary disabled:opacity-50 placeholder:text-muted-foreground"
               />
               <button
                 onClick={() => sendMessage()}
-                disabled={!connected || sending || !input.trim()}
+                disabled={sending || !input.trim()}
                 className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
               >
                 {sending ? (

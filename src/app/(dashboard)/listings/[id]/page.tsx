@@ -173,12 +173,10 @@ export default async function ListingDetailPage({
             <ShowingRequestForm
               listings={allListings ?? []}
               preselectedListingId={id}
-              disabled={hasMissingDocs}
             />
             <ConveyancingPackButton
               address={listing.address}
               documents={(documents ?? []) as ListingDocument[]}
-              disabled={hasMissingDocs}
             />
             <NeighborhoodButton address={listing.address} />
           </div>

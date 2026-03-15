@@ -30,6 +30,12 @@ export function PipelineBoard({ contacts, listings }: PipelineBoardProps) {
   const [deals, setDeals] = useState<DealWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewType, setViewType] = useState<ViewType>("all");
+  const [mounted, setMounted] = useState(false);
+
+  // DnD libraries need to wait for client-side hydration to complete
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const fetchDeals = useCallback(async () => {
     try {
@@ -167,7 +173,7 @@ export function PipelineBoard({ contacts, listings }: PipelineBoardProps) {
       </div>
 
       {/* Kanban Board */}
-      {loading ? (
+      {loading || !mounted ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
