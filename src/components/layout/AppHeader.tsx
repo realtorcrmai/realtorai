@@ -14,6 +14,7 @@ import {
   GitBranch,
   Upload,
   FileText,
+  Wand2,
   LogOut,
   Home,
   ChevronDown,
@@ -43,6 +44,7 @@ const mainTabs = [
 const moreItems = [
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/tasks", label: "Tasks", icon: ListTodo },
+  { href: "/content", label: "Content Engine", icon: Wand2 },
   { href: "/search", label: "Property Search", icon: Search },
   { href: "/workflow", label: "MLS Workflow", icon: GitBranch },
   { href: "/import", label: "Excel Import", icon: Upload },

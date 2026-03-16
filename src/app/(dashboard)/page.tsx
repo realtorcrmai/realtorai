@@ -11,6 +11,8 @@ import {
   Upload,
   FileText,
   Users,
+  Wand2,
+  Globe,
   ArrowRight,
   AlertTriangle,
 } from "lucide-react";
@@ -136,6 +138,15 @@ export default async function DashboardPage() {
       countLabel: "this week",
     },
     {
+      href: "/content",
+      title: "Content Engine",
+      description: "AI-powered MLS remarks, video & images",
+      icon: Wand2,
+      gradient: "gradient-violet",
+      count: null,
+      countLabel: null,
+    },
+    {
       href: "/search",
       title: "Property Search",
       description: "Find properties for your buyers",
@@ -170,6 +181,16 @@ export default async function DashboardPage() {
       gradient: "gradient-rose",
       count: null,
       countLabel: null,
+    },
+    {
+      href: "http://localhost:3001",
+      title: "Website Marketing",
+      description: "Build & manage your realtor website",
+      icon: Globe,
+      gradient: "gradient-pink",
+      count: null,
+      countLabel: null,
+      external: true,
     },
   ];
 
@@ -254,46 +275,56 @@ export default async function DashboardPage() {
           Your Workspace
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5 stagger-children">
-          {featureTiles.map((tile) => (
-            <Link
-              key={tile.href}
-              href={tile.href}
-              className="group relative overflow-hidden rounded-2xl p-6 text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_8px_30px_oklch(0_0_0/20%)] elevation-4"
-            >
-              {/* Gradient background */}
-              <div
-                className={`absolute inset-0 ${tile.gradient} transition-opacity`}
-              />
+          {featureTiles.map((tile) => {
+            const tileContent = (
+              <>
+                {/* Gradient background */}
+                <div
+                  className={`absolute inset-0 ${tile.gradient} transition-opacity`}
+                />
 
-              {/* Light overlay for depth */}
-              <div className="absolute inset-0 bg-gradient-to-br from-white/12 via-transparent to-black/8" />
+                {/* Light overlay for depth */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/12 via-transparent to-black/8" />
 
-              {/* Content */}
-              <div className="relative z-10">
-                <div className="flex items-start justify-between mb-5">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm ring-1 ring-white/20">
-                    <tile.icon className="h-6 w-6" />
+                {/* Content */}
+                <div className="relative z-10">
+                  <div className="flex items-start justify-between mb-5">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm ring-1 ring-white/20">
+                      <tile.icon className="h-6 w-6" />
+                    </div>
+                    {tile.count != null && tile.count > 0 && (
+                      <span className="flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-sm ring-1 ring-white/15 px-2.5 py-1 text-xs font-semibold">
+                        {tile.count} {tile.countLabel}
+                      </span>
+                    )}
                   </div>
-                  {tile.count != null && tile.count > 0 && (
-                    <span className="flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-sm ring-1 ring-white/15 px-2.5 py-1 text-xs font-semibold">
-                      {tile.count} {tile.countLabel}
-                    </span>
-                  )}
+                  <h3 className="text-lg font-bold mb-1 tracking-tight">
+                    {tile.title}
+                  </h3>
+                  <p className="text-sm text-white/75 leading-relaxed">
+                    {tile.description}
+                  </p>
                 </div>
-                <h3 className="text-lg font-bold mb-1 tracking-tight">
-                  {tile.title}
-                </h3>
-                <p className="text-sm text-white/75 leading-relaxed">
-                  {tile.description}
-                </p>
-              </div>
 
-              {/* Hover arrow */}
-              <div className="absolute bottom-5 right-5 opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                <ArrowRight className="h-5 w-5 text-white/70" />
-              </div>
-            </Link>
-          ))}
+                {/* Hover arrow */}
+                <div className="absolute bottom-5 right-5 opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                  <ArrowRight className="h-5 w-5 text-white/70" />
+                </div>
+              </>
+            );
+
+            const className = "group relative overflow-hidden rounded-2xl p-6 text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_8px_30px_oklch(0_0_0/20%)] elevation-4";
+
+            return "external" in tile ? (
+              <a key={tile.href} href={tile.href} target="_blank" rel="noopener noreferrer" className={className}>
+                {tileContent}
+              </a>
+            ) : (
+              <Link key={tile.href} href={tile.href} className={className}>
+                {tileContent}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </div>

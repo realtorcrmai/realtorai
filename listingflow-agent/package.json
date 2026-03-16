@@ -1,0 +1,27 @@
+{
+  "name": "listingflow-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "env $(grep -v '^#' .env | grep '=' | xargs) npx tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "env $(grep -v '^#' .env | grep '=' | xargs) node dist/index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
+    "@supabase/supabase-js": "^2.49.0",
+    "express": "^5.1.0",
+    "playwright": "^1.52.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -56,6 +56,8 @@ export interface Database {
           showing_window_start: string | null;
           showing_window_end: string | null;
           notes: string | null;
+          hero_image_url: string | null;
+          hero_image_storage_path: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -70,6 +72,8 @@ export interface Database {
           showing_window_start?: string | null;
           showing_window_end?: string | null;
           notes?: string | null;
+          hero_image_url?: string | null;
+          hero_image_storage_path?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -84,6 +88,8 @@ export interface Database {
           showing_window_start?: string | null;
           showing_window_end?: string | null;
           notes?: string | null;
+          hero_image_url?: string | null;
+          hero_image_storage_path?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -259,6 +265,79 @@ export interface Database {
           is_public?: boolean;
           source_url?: string | null;
           last_checked?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      prompts: {
+        Row: {
+          id: string;
+          listing_id: string;
+          video_prompt: string | null;
+          image_prompt: string | null;
+          mls_public: string | null;
+          mls_realtor: string | null;
+          ig_caption: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          listing_id: string;
+          video_prompt?: string | null;
+          image_prompt?: string | null;
+          mls_public?: string | null;
+          mls_realtor?: string | null;
+          ig_caption?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          listing_id?: string;
+          video_prompt?: string | null;
+          image_prompt?: string | null;
+          mls_public?: string | null;
+          mls_realtor?: string | null;
+          ig_caption?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      media_assets: {
+        Row: {
+          id: string;
+          listing_id: string;
+          prompt_id: string | null;
+          asset_type: "video" | "image";
+          kling_task_id: string | null;
+          status: "pending" | "processing" | "completed" | "failed";
+          output_url: string | null;
+          error_message: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          listing_id: string;
+          prompt_id?: string | null;
+          asset_type: "video" | "image";
+          kling_task_id?: string | null;
+          status?: "pending" | "processing" | "completed" | "failed";
+          output_url?: string | null;
+          error_message?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          listing_id?: string;
+          prompt_id?: string | null;
+          asset_type?: "video" | "image";
+          kling_task_id?: string | null;
+          status?: "pending" | "processing" | "completed" | "failed";
+          output_url?: string | null;
+          error_message?: string | null;
           created_at?: string;
           updated_at?: string;
         };

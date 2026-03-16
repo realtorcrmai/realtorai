@@ -25,6 +25,10 @@ export type OpenHouseVisitor = Database["public"]["Tables"]["open_house_visitors
 export type ListingActivity = Database["public"]["Tables"]["listing_activities"]["Row"];
 export type UserIntegration = Database["public"]["Tables"]["user_integrations"]["Row"];
 export type UserIntegrationInsert = Database["public"]["Tables"]["user_integrations"]["Insert"];
+export type Prompt = Database["public"]["Tables"]["prompts"]["Row"];
+export type PromptInsert = Database["public"]["Tables"]["prompts"]["Insert"];
+export type MediaAsset = Database["public"]["Tables"]["media_assets"]["Row"];
+export type MediaAssetInsert = Database["public"]["Tables"]["media_assets"]["Insert"];
 
 export type DealWithRelations = Deal & {
   contacts: Contact | null;
