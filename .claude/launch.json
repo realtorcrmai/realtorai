@@ -2,11 +2,24 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "nextjs",
+      "name": "listingflow",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["server.py"],
+      "port": 8767
+    },
+    {
+      "name": "realtorai",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
-      "cwd": "/Users/rahulmittal/Library/CloudStorage/OneDrive-Personal/CoWork/realtorai"
+      "cwd": "realtorai"
+    },
+    {
+      "name": "client-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5174,
+      "cwd": ".claude/worktrees/distracted-merkle/immigration-doc-manager/client"
     }
   ]
 }
