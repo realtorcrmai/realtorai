@@ -10,6 +10,10 @@ export type Communication = Database["public"]["Tables"]["communications"]["Row"
 export type ListingDocument = Database["public"]["Tables"]["listing_documents"]["Row"];
 export type FormTemplate = Database["public"]["Tables"]["form_templates"]["Row"];
 export type FormSubmission = Database["public"]["Tables"]["form_submissions"]["Row"];
+export type Prompt = Database["public"]["Tables"]["prompts"]["Row"];
+export type PromptInsert = Database["public"]["Tables"]["prompts"]["Insert"];
+export type MediaAsset = Database["public"]["Tables"]["media_assets"]["Row"];
+export type MediaAssetInsert = Database["public"]["Tables"]["media_assets"]["Insert"];
 
 export type AppointmentWithListing = Appointment & {
   listings: Listing;

@@ -126,6 +126,8 @@
   --gradient-cyan-end: oklch(0.61 0.09 200);
   --gradient-orange-start: oklch(0.60 0.17 50);
   --gradient-orange-end: oklch(0.67 0.14 40);
+  --gradient-pink-start: oklch(0.55 0.18 340);
+  --gradient-pink-end: oklch(0.62 0.15 320);
 
   /* ── Glass tokens (mostly-opaque for clarity) ── */
   --glass-bg: oklch(1 0 0 / 88%);
@@ -248,6 +250,9 @@
   }
   .gradient-orange {
     background: linear-gradient(135deg, var(--gradient-orange-start), var(--gradient-orange-end));
+  }
+  .gradient-pink {
+    background: linear-gradient(135deg, var(--gradient-pink-start), var(--gradient-pink-end));
   }
 }
 
