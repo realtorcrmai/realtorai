@@ -16,6 +16,8 @@ import {
   ChevronRight,
   ListTodo,
   Search,
+  Zap,
+  Inbox,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -31,7 +33,9 @@ const navSections = [
     label: "CRM",
     items: [
       { href: "/contacts", label: "Contacts", icon: Users },
+      { href: "/inbox", label: "Inbox", icon: Inbox },
       { href: "/tasks", label: "Tasks", icon: ListTodo },
+      { href: "/automations", label: "Automations", icon: Zap },
       { href: "/showings", label: "Showings", icon: Clock },
       { href: "/calendar", label: "Calendar", icon: Calendar },
     ],

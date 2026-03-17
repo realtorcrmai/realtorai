@@ -14,6 +14,39 @@ export type Prompt = Database["public"]["Tables"]["prompts"]["Row"];
 export type PromptInsert = Database["public"]["Tables"]["prompts"]["Insert"];
 export type MediaAsset = Database["public"]["Tables"]["media_assets"]["Row"];
 export type MediaAssetInsert = Database["public"]["Tables"]["media_assets"]["Insert"];
+export type ContactDate = Database["public"]["Tables"]["contact_dates"]["Row"];
+export type ContactDateInsert = Database["public"]["Tables"]["contact_dates"]["Insert"];
+export type ContactDocument = Database["public"]["Tables"]["contact_documents"]["Row"];
+export type ContactDocumentInsert = Database["public"]["Tables"]["contact_documents"]["Insert"];
+
+export type FamilyMember = {
+  name: string;
+  relationship: string;
+  phone?: string;
+  email?: string;
+};
+
+export type PropertyOfInterest = {
+  id: string;
+  listing_id?: string;
+  address: string;
+  price?: number;
+  notes?: string;
+  added_at: string;
+};
+
+export type BuyerPreferences = {
+  price_range_min?: number;
+  price_range_max?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  property_types?: string[];
+  preferred_areas?: string[];
+  move_in_timeline?: string;
+  notes?: string;
+  pre_approval_amount?: number;
+  properties_of_interest?: PropertyOfInterest[];
+};
 
 export type AppointmentWithListing = Appointment & {
   listings: Listing;
@@ -21,6 +54,28 @@ export type AppointmentWithListing = Appointment & {
 
 export type ListingWithSeller = Listing & {
   contacts: Contact;
+};
+
+// Workflow Automation types
+export type MessageTemplate = Database["public"]["Tables"]["message_templates"]["Row"];
+export type MessageTemplateInsert = Database["public"]["Tables"]["message_templates"]["Insert"];
+export type Workflow = Database["public"]["Tables"]["workflows"]["Row"];
+export type WorkflowInsert = Database["public"]["Tables"]["workflows"]["Insert"];
+export type WorkflowStep = Database["public"]["Tables"]["workflow_steps"]["Row"];
+export type WorkflowStepInsert = Database["public"]["Tables"]["workflow_steps"]["Insert"];
+export type WorkflowEnrollment = Database["public"]["Tables"]["workflow_enrollments"]["Row"];
+export type WorkflowEnrollmentInsert = Database["public"]["Tables"]["workflow_enrollments"]["Insert"];
+export type WorkflowStepLog = Database["public"]["Tables"]["workflow_step_logs"]["Row"];
+export type AgentNotification = Database["public"]["Tables"]["agent_notifications"]["Row"];
+export type ActivityLog = Database["public"]["Tables"]["activity_log"]["Row"];
+
+export type WorkflowWithSteps = Workflow & {
+  workflow_steps: WorkflowStep[];
+};
+
+export type EnrollmentWithWorkflow = WorkflowEnrollment & {
+  workflows: Workflow;
+  contacts: { id: string; name: string };
 };
 
 // NextAuth session augmentation

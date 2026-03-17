@@ -88,13 +88,18 @@ export default async function DashboardPage() {
   ).length;
   const openTasksCount = pendingTasks + inProgressTasks;
 
+  // Tile gradients follow a warm-cool alternating pattern across the 3-column grid:
+  // Row 1: teal (cool) — amber (warm) — indigo (cool)
+  // Row 2: orange (warm) — emerald (cool) — rose (warm)
+  // Row 3: blue (cool) — pink (warm) — cyan (cool)
+  // Row 4: violet (cool) — amber (warm)
   const featureTiles = [
     {
       href: "/listings",
       title: "Listings",
       description: "Manage property listings, photos & pricing",
       icon: Building2,
-      gradient: "gradient-indigo",
+      gradient: "gradient-teal",
       count: (activeListings ?? 0) > 0 ? activeListings : null,
       countLabel: "active",
     },
@@ -103,7 +108,7 @@ export default async function DashboardPage() {
       title: "Contacts",
       description: "Buyers, sellers & agent relationships",
       icon: Users,
-      gradient: "gradient-violet",
+      gradient: "gradient-amber",
       count: null,
       countLabel: null,
     },
@@ -112,7 +117,7 @@ export default async function DashboardPage() {
       title: "Tasks",
       description: "Daily to-do items & follow-ups",
       icon: ListTodo,
-      gradient: "gradient-blue",
+      gradient: "gradient-indigo",
       count: openTasksCount > 0 ? openTasksCount : null,
       countLabel: "open",
     },
@@ -121,7 +126,7 @@ export default async function DashboardPage() {
       title: "Showings",
       description: "Track & manage showing requests",
       icon: Clock,
-      gradient: "gradient-teal",
+      gradient: "gradient-orange",
       count: (pendingShowings ?? 0) > 0 ? pendingShowings : null,
       countLabel: "pending",
     },
@@ -142,7 +147,7 @@ export default async function DashboardPage() {
       title: "Content Engine",
       description: "AI-powered MLS remarks, video & images",
       icon: Wand2,
-      gradient: "gradient-violet",
+      gradient: "gradient-rose",
       count: null,
       countLabel: null,
     },
@@ -151,7 +156,7 @@ export default async function DashboardPage() {
       title: "Property Search",
       description: "Find properties for your buyers",
       icon: Search,
-      gradient: "gradient-cyan",
+      gradient: "gradient-blue",
       count: null,
       countLabel: null,
     },
@@ -160,7 +165,7 @@ export default async function DashboardPage() {
       title: "MLS Workflow",
       description: "7-phase listing pipeline tracker",
       icon: GitBranch,
-      gradient: "gradient-amber",
+      gradient: "gradient-pink",
       count: null,
       countLabel: null,
     },
@@ -169,7 +174,7 @@ export default async function DashboardPage() {
       title: "Excel Import",
       description: "Import listings from spreadsheets",
       icon: Upload,
-      gradient: "gradient-orange",
+      gradient: "gradient-cyan",
       count: null,
       countLabel: null,
     },
@@ -178,7 +183,7 @@ export default async function DashboardPage() {
       title: "BC Forms",
       description: "Standard BC real estate documents",
       icon: FileText,
-      gradient: "gradient-rose",
+      gradient: "gradient-violet",
       count: null,
       countLabel: null,
     },
@@ -187,7 +192,7 @@ export default async function DashboardPage() {
       title: "Website Marketing",
       description: "Build & manage your realtor website",
       icon: Globe,
-      gradient: "gradient-pink",
+      gradient: "gradient-amber",
       count: null,
       countLabel: null,
       external: true,

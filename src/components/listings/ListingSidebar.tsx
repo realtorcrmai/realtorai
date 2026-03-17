@@ -5,9 +5,59 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { MapPin, Search, DollarSign } from "lucide-react";
+import { Search, DollarSign } from "lucide-react";
 import type { Listing } from "@/types";
 import { LISTING_STATUS_COLORS } from "@/lib/constants";
+
+const STATUS_DOT_COLORS: Record<string, string> = {
+  active: "bg-emerald-500",
+  pending: "bg-amber-500",
+  sold: "bg-blue-500",
+};
+
+// Simplified workflow derivation for sidebar (no document data available)
+type StepStatus = "completed" | "in-progress" | "pending";
+
+function deriveSimpleWorkflow(listing: Listing): StepStatus[] {
+  const hasPrice = listing.list_price != null;
+  const hasMls = !!listing.mls_number;
+  const isSold = listing.status === "sold";
+  const isPending = listing.status === "pending";
+
+  // If sold, all phases are complete — the sale proves the workflow was done.
+  if (isSold) {
+    return Array(9).fill("completed") as StepStatus[];
+  }
+
+  // Raw statuses for 9 phases (same order as ListingWorkflow)
+  const raw: StepStatus[] = [
+    "completed", // 1. Seller Intake — always done
+    hasPrice ? "completed" : "in-progress", // 2. Data Enrichment
+    hasPrice ? "completed" : "pending", // 3. CMA
+    hasPrice ? "completed" : "pending", // 4. Pricing & Review
+    hasPrice ? "in-progress" : "pending", // 5. Form Generation (no doc data, assume in-progress if price set)
+    "pending", // 6. E-Signature
+    hasMls ? "completed" : "pending", // 7. MLS Prep
+    hasMls ? "completed" : "pending", // 8. MLS Submission
+    isPending ? "in-progress" : hasMls ? "in-progress" : "pending", // 9. Post-Listing
+  ];
+
+  // Sequential enforcement
+  for (let i = 1; i < raw.length; i++) {
+    if (raw[i - 1] !== "completed") {
+      if (raw[i] === "completed") raw[i] = "pending";
+      if (raw[i] === "in-progress" && raw[i - 1] === "pending") raw[i] = "pending";
+    }
+  }
+
+  return raw;
+}
+
+const STEP_DOT_STYLES: Record<StepStatus, string> = {
+  completed: "bg-green-500",
+  "in-progress": "bg-orange-400",
+  pending: "bg-gray-300 dark:bg-gray-600",
+};
 
 export function ListingSidebar({
   listings,
@@ -71,8 +121,19 @@ export function ListingSidebar({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`h-3 w-3 rounded-full shrink-0 ring-2 ring-offset-1 ring-offset-background ${
+                              STATUS_DOT_COLORS[listing.status] ?? "bg-gray-400"
+                            } ${
+                              listing.status === "active"
+                                ? "ring-emerald-500/30"
+                                : listing.status === "pending"
+                                  ? "ring-amber-500/30"
+                                  : "ring-blue-500/30"
+                            }`}
+                            title={listing.status}
+                          />
                           <p
                             className={`text-sm font-medium truncate ${
                               isActive ? "text-primary" : ""
@@ -106,6 +167,15 @@ export function ListingSidebar({
                             {listing.contacts.name}
                           </p>
                         )}
+                        {/* Workflow progress dots */}
+                        <div className="flex items-center gap-1 mt-2 ml-[18px]">
+                          {deriveSimpleWorkflow(listing).map((stepStatus, idx) => (
+                            <span
+                              key={idx}
+                              className={`h-2 w-2 rounded-full ${STEP_DOT_STYLES[stepStatus]}`}
+                            />
+                          ))}
+                        </div>
                       </div>
                       <Badge
                         variant="outline"
