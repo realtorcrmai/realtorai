@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
-import { startMediaGeneration } from "@/actions/content";
+import { startMediaGeneration, generateAll } from "@/actions/content";
 import { useKlingTask } from "@/hooks/useKlingTask";
 import { MEDIA_STATUS_COLORS } from "@/lib/constants";
 import {
@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Clock,
   Zap,
+  Sparkles,
 } from "lucide-react";
 import type { Prompt, MediaAsset } from "@/types";
 
@@ -34,7 +35,10 @@ export function GenerateStep({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [generatingType, setGeneratingType] = useState<"video" | "image" | null>(
+  const [generatingType, setGeneratingType] = useState<
+    "video" | "image" | "all" | null
+  >(null);
+  const [generateAllResult, setGenerateAllResult] = useState<string | null>(
     null
   );
   const taskState = useKlingTask(activeTaskId);
@@ -58,6 +62,33 @@ export function GenerateStep({
         setGeneratingType(null);
       } else if (result.klingTaskId) {
         setActiveTaskId(result.klingTaskId);
+      }
+    });
+  }
+
+  function handleGenerateAll() {
+    if (!prompt?.id) return;
+    setError(null);
+    setGeneratingType("all");
+    setGenerateAllResult(null);
+
+    startTransition(async () => {
+      const result = await generateAll({ listingId });
+      if (result.error) {
+        setError(result.error);
+        setGeneratingType(null);
+      } else {
+        const parts: string[] = [];
+        if (result.media?.video) parts.push("Video");
+        if (result.media?.image) parts.push("Image");
+        if (result.heroImageMissing) parts.push("(video skipped — no hero image)");
+        setGenerateAllResult(
+          parts.length > 0
+            ? `Started: ${parts.join(" + ")}. Server is polling — you can close this tab.`
+            : "Prompts generated. No media started."
+        );
+        setGeneratingType(null);
+        onGenerated();
       }
     });
   }
@@ -116,6 +147,50 @@ export function GenerateStep({
           {error}
         </div>
       )}
+
+      {/* Generate All */}
+      <div className="glass rounded-xl p-5 elevation-2 animate-float-in border border-indigo-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-cyan-500 text-white">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                Generate All Content
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Start video + image generation in parallel. Server polls
+                Kling AI in the background — you can close this tab.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleGenerateAll}
+            disabled={isPending || generatingType !== null}
+            className={cn(
+              "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
+              "bg-gradient-to-r from-violet-600 to-cyan-600 text-white hover:from-violet-700 hover:to-cyan-700 elevation-2",
+              (isPending || generatingType !== null) &&
+                "opacity-70 cursor-not-allowed"
+            )}
+          >
+            {generatingType === "all" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Zap className="h-4 w-4" />
+            )}
+            {generatingType === "all" ? "Generating..." : "Generate All"}
+          </button>
+        </div>
+        {generateAllResult && (
+          <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+            <p className="text-sm text-emerald-700 font-medium">
+              {generateAllResult}
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Video Generation */}
       <div className="glass rounded-xl p-6 elevation-2 animate-float-in">

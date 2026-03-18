@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
-import { getTaskStatus } from "@/lib/kling/client";
+
+const CONTENT_SERVICE_URL =
+  process.env.CONTENT_GENERATOR_URL ?? "http://localhost:8769";
 
 export async function GET(req: NextRequest) {
   const { unauthorized } = await requireAuth();
@@ -16,8 +18,11 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const status = await getTaskStatus(taskId);
-    return NextResponse.json(status);
+    const res = await fetch(
+      `${CONTENT_SERVICE_URL}/api/media/status?taskId=${encodeURIComponent(taskId)}`
+    );
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
   } catch (err) {
     return NextResponse.json(
       {
