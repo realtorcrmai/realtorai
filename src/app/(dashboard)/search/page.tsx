@@ -107,9 +107,16 @@ export default function PropertySearchPage() {
   return (
     <div className="h-full overflow-y-auto p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
     <div className="space-y-8">
-      <div className="animate-float-in space-y-1">
-        <p className="text-sm font-medium text-muted-foreground">Find properties</p>
-        <h1 className="text-3xl font-bold tracking-tight">Property Search</h1>
+      <div className="animate-float-in">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-blue elevation-4">
+            <Search className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Property Search</h1>
+            <p className="text-sm text-muted-foreground">Find properties for your buyers</p>
+          </div>
+        </div>
       </div>
 
       {/* Search bar */}

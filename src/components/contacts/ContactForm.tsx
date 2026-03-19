@@ -25,6 +25,7 @@ import {
 import { createContact, updateContact } from "@/actions/contacts";
 import { Plus } from "lucide-react";
 import type { Contact } from "@/types";
+import { LEAD_STATUSES, LEAD_STATUS_LABELS, LEAD_SOURCES } from "@/lib/constants";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -33,6 +34,10 @@ const formSchema = z.object({
   type: z.enum(["buyer", "seller"]),
   pref_channel: z.enum(["whatsapp", "sms"]),
   notes: z.string().optional(),
+  address: z.string().optional(),
+  referred_by_id: z.string().uuid().optional().or(z.literal("")),
+  source: z.string().optional(),
+  lead_status: z.enum(LEAD_STATUSES).optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -40,9 +45,15 @@ type FormData = z.infer<typeof formSchema>;
 export function ContactForm({
   contact,
   trigger,
+  allContacts = [],
+  defaultReferredById,
+  defaultType,
 }: {
   contact?: Contact;
   trigger?: React.ReactNode;
+  allContacts?: { id: string; name: string }[];
+  defaultReferredById?: string;
+  defaultType?: "buyer" | "seller";
 }) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -63,10 +74,17 @@ export function ContactForm({
           type: contact.type,
           pref_channel: contact.pref_channel,
           notes: contact.notes ?? "",
+          address: contact.address ?? "",
+          referred_by_id: contact.referred_by_id ?? "",
+          source: contact.source ?? "",
+          lead_status: (contact.lead_status ?? "new") as FormData["lead_status"],
         }
       : {
-          type: "buyer",
+          type: defaultType ?? "buyer",
           pref_channel: "sms",
+          referred_by_id: defaultReferredById ?? "",
+          source: "",
+          lead_status: "new",
         },
   });
 
@@ -168,6 +186,75 @@ export function ContactForm({
               </Select>
             </div>
           </div>
+
+          <div>
+            <Label htmlFor="address">Address (optional)</Label>
+            <Input {...register("address")} placeholder="123 Main St, Vancouver, BC" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Lead Status</Label>
+              <Select
+                defaultValue={contact?.lead_status ?? "new"}
+                onValueChange={(val) => setValue("lead_status", val as FormData["lead_status"])}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LEAD_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {LEAD_STATUS_LABELS[s]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Source (optional)</Label>
+              <Select
+                defaultValue={contact?.source ?? ""}
+                onValueChange={(val: string | null) => setValue("source", val ?? "")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select source..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {LEAD_SOURCES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {allContacts.length > 0 && (
+            <div>
+              <Label>Referred By (optional)</Label>
+              <Select
+                defaultValue={contact?.referred_by_id ?? defaultReferredById ?? ""}
+                onValueChange={(val: string | null) => setValue("referred_by_id", val ?? "")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select referrer..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {allContacts
+                    .filter((c) => c.id !== contact?.id)
+                    .map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div>
             <Label htmlFor="notes">Notes (optional)</Label>

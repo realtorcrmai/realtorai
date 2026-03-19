@@ -152,6 +152,36 @@ export async function updateShowingStatus(
     return { error: "Failed to update appointment status" };
   }
 
+  // Fire showing_completed trigger for buyer contacts when showing is confirmed
+  if (status === "confirmed") {
+    try {
+      const { data: appointment } = await supabase
+        .from("appointments")
+        .select("listing_id")
+        .eq("id", appointmentId)
+        .single();
+
+      if (appointment?.listing_id) {
+        const { data: listing } = await supabase
+          .from("listings")
+          .select("buyer_id")
+          .eq("id", appointment.listing_id)
+          .single();
+
+        if (listing?.buyer_id) {
+          const { fireTrigger } = await import("@/lib/workflow-triggers");
+          await fireTrigger({
+            type: "showing_completed",
+            contactId: listing.buyer_id,
+            data: { appointmentId, listingId: appointment.listing_id },
+          });
+        }
+      }
+    } catch {
+      // Don't fail status update if triggers fail
+    }
+  }
+
   revalidatePath("/showings");
   revalidatePath("/calendar");
   return { success: true };

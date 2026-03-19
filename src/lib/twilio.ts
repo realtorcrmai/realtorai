@@ -78,6 +78,27 @@ export async function sendLockboxCode(params: {
   });
 }
 
+export async function sendGenericMessage(params: {
+  to: string;
+  channel: Channel;
+  body: string;
+}) {
+  const { to, channel, body } = params;
+
+  const from =
+    channel === "whatsapp"
+      ? process.env.TWILIO_WHATSAPP_NUMBER!
+      : process.env.TWILIO_PHONE_NUMBER!;
+
+  const message = await client.messages.create({
+    body,
+    from,
+    to: formatNumber(to, channel),
+  });
+
+  return message.sid;
+}
+
 export async function sendShowingDenied(params: {
   to: string;
   address: string;

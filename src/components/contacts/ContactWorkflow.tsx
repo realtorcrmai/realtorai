@@ -1,36 +1,79 @@
-import { Check } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import type { Contact, Listing, Communication } from "@/types";
 
-const CONTACT_STEPS = [
+type StepDef = {
+  id: string;
+  name: string;
+  desc: string;
+  icon: string;
+};
+
+const SELLER_STEPS: StepDef[] = [
   {
-    id: "new-lead",
-    name: "New Lead",
-    desc: "Contact added, basic info captured",
+    id: "initial-contact",
+    name: "Initial Contact",
+    desc: "Seller onboarded, basic info captured",
     icon: "\u{1F464}",
   },
   {
-    id: "qualification",
-    name: "Qualification",
-    desc: "Needs assessment, budget determined",
-    icon: "\u{1F3AF}",
-  },
-  {
-    id: "active-search",
-    name: "Active Search",
-    desc: "Viewing properties, making offers",
-    icon: "\u{1F50D}",
-  },
-  {
-    id: "transaction",
-    name: "Transaction",
-    desc: "Under contract, conditions pending",
+    id: "listing-agreement",
+    name: "Listing Agreement",
+    desc: "Listing created, documents prepared",
     icon: "\u{1F4DD}",
   },
   {
-    id: "post-close",
-    name: "Post-Close",
-    desc: "Completed, follow-up & referrals",
+    id: "property-listed",
+    name: "Property Listed",
+    desc: "Active on MLS, showings scheduled",
     icon: "\u{1F3E0}",
+  },
+  {
+    id: "offer-accepted",
+    name: "Offer Accepted",
+    desc: "Pending sale, conditions in progress",
+    icon: "\u{1F91D}",
+  },
+  {
+    id: "closing-complete",
+    name: "Closing Complete",
+    desc: "Transaction closed, commission earned",
+    icon: "\u{1F3C6}",
+  },
+];
+
+const BUYER_STEPS: StepDef[] = [
+  {
+    id: "initial-contact",
+    name: "Initial Contact",
+    desc: "Buyer onboarded, basic info captured",
+    icon: "\u{1F464}",
+  },
+  {
+    id: "preferences-set",
+    name: "Preferences Set",
+    desc: "Budget, areas, property type defined",
+    icon: "\u{1F3AF}",
+  },
+  {
+    id: "property-showings",
+    name: "Property Showings",
+    desc: "Viewing properties, narrowing choices",
+    icon: "\u{1F50D}",
+  },
+  {
+    id: "offer-submitted",
+    name: "Offer Submitted",
+    desc: "Offer made, negotiation in progress",
+    icon: "\u{1F4DD}",
+  },
+  {
+    id: "closing-complete",
+    name: "Closing Complete",
+    desc: "Purchase closed, keys handed over",
+    icon: "\u{1F3C6}",
   },
 ];
 
@@ -63,60 +106,104 @@ const STATUS_STYLES = {
   },
 };
 
-function deriveStepStatuses(
+function deriveSellerStatuses(
+  contact: Contact,
+  listings: Listing[],
+): Record<string, StepStatus> {
+  const statuses: Record<string, StepStatus> = {};
+
+  // initial-contact: always completed (contact exists)
+  statuses["initial-contact"] = "completed";
+
+  // listing-agreement: completed if has any listing
+  const hasListings = listings.length > 0;
+  statuses["listing-agreement"] = hasListings ? "completed" : "in-progress";
+
+  // property-listed: completed if any listing is active/pending/sold
+  const hasActiveListing = listings.some((l) => l.status === "active");
+  const hasPendingOrSold = listings.some(
+    (l) => l.status === "pending" || l.status === "sold"
+  );
+  if (hasActiveListing || hasPendingOrSold) {
+    statuses["property-listed"] = "completed";
+  } else if (hasListings) {
+    statuses["property-listed"] = "in-progress";
+  } else {
+    statuses["property-listed"] = "pending";
+  }
+
+  // offer-accepted: completed if any listing pending or sold (has sold_price)
+  const hasAcceptedOffer = listings.some(
+    (l) => l.status === "pending" || l.status === "sold" || (l.sold_price && Number(l.sold_price) > 0)
+  );
+  if (hasAcceptedOffer) {
+    statuses["offer-accepted"] = "completed";
+  } else if (statuses["property-listed"] === "completed") {
+    statuses["offer-accepted"] = "in-progress";
+  } else {
+    statuses["offer-accepted"] = "pending";
+  }
+
+  // closing-complete: completed if any listing sold
+  const hasSold = listings.some((l) => l.status === "sold");
+  if (hasSold) {
+    statuses["closing-complete"] = "completed";
+  } else if (statuses["offer-accepted"] === "completed") {
+    statuses["closing-complete"] = "in-progress";
+  } else {
+    statuses["closing-complete"] = "pending";
+  }
+
+  return statuses;
+}
+
+function deriveBuyerStatuses(
   contact: Contact,
   listings: Listing[],
   communications: Communication[]
 ): Record<string, StepStatus> {
   const statuses: Record<string, StepStatus> = {};
 
-  // new-lead: always completed (contact exists)
-  statuses["new-lead"] = "completed";
+  // initial-contact: always completed
+  statuses["initial-contact"] = "completed";
 
-  // qualification: completed if contact has notes OR listings.length > 0
-  const hasNotes = !!contact.notes;
-  const hasListings = listings.length > 0;
-  statuses["qualification"] =
-    hasNotes || hasListings ? "completed" : "in-progress";
+  // preferences-set: completed if buyer_preferences is set
+  const hasPreferences =
+    contact.buyer_preferences &&
+    typeof contact.buyer_preferences === "object" &&
+    Object.keys(contact.buyer_preferences as Record<string, unknown>).length > 0;
+  statuses["preferences-set"] = hasPreferences ? "completed" : "in-progress";
 
-  // active-search: completed if listings have any showings (appointments),
-  // or seller with active listing; in-progress if has listings but no activity
-  const hasActiveListing = listings.some((l) => l.status === "active");
-  const hasPendingOrSold = listings.some(
+  // property-showings: completed if has communications or any linked listings
+  const hasActivity = communications.length > 0 || listings.length > 0;
+  if (hasActivity && hasPreferences) {
+    statuses["property-showings"] = "completed";
+  } else if (hasActivity) {
+    statuses["property-showings"] = "in-progress";
+  } else {
+    statuses["property-showings"] = "pending";
+  }
+
+  // offer-submitted: completed if linked to a listing with pending/sold
+  const hasOffer = listings.some(
     (l) => l.status === "pending" || l.status === "sold"
   );
-  const isSellerWithActive =
-    contact.type === "seller" && hasActiveListing;
-
-  if (hasPendingOrSold || isSellerWithActive) {
-    statuses["active-search"] = "completed";
-  } else if (hasListings) {
-    statuses["active-search"] = "in-progress";
+  if (hasOffer) {
+    statuses["offer-submitted"] = "completed";
+  } else if (statuses["property-showings"] === "completed") {
+    statuses["offer-submitted"] = "in-progress";
   } else {
-    statuses["active-search"] = "pending";
+    statuses["offer-submitted"] = "pending";
   }
 
-  // transaction: completed if any listing has status "pending" or "sold";
-  // in-progress if active-search is completed
-  if (hasPendingOrSold) {
-    statuses["transaction"] = "completed";
-  } else if (statuses["active-search"] === "completed") {
-    statuses["transaction"] = "in-progress";
+  // closing-complete: completed if linked listing is sold
+  const hasPurchased = listings.some((l) => l.status === "sold");
+  if (hasPurchased) {
+    statuses["closing-complete"] = "completed";
+  } else if (statuses["offer-submitted"] === "completed") {
+    statuses["closing-complete"] = "in-progress";
   } else {
-    statuses["transaction"] = "pending";
-  }
-
-  // post-close: completed if any listing has status "sold";
-  // in-progress if any listing status "pending"
-  const hasSold = listings.some((l) => l.status === "sold");
-  const hasPending = listings.some((l) => l.status === "pending");
-
-  if (hasSold) {
-    statuses["post-close"] = "completed";
-  } else if (hasPending) {
-    statuses["post-close"] = "in-progress";
-  } else {
-    statuses["post-close"] = "pending";
+    statuses["closing-complete"] = "pending";
   }
 
   return statuses;
@@ -126,24 +213,55 @@ export function ContactWorkflow({
   contact,
   listings,
   communications,
+  buyerListings = [],
 }: {
   contact: Contact;
   listings: Listing[];
   communications: Communication[];
+  buyerListings?: Listing[];
 }) {
-  const statuses = deriveStepStatuses(contact, listings, communications);
+  const isSeller = contact.type === "seller";
+  const steps = isSeller ? SELLER_STEPS : BUYER_STEPS;
+  const relevantListings = isSeller ? listings : buyerListings;
+
+  const statuses = isSeller
+    ? deriveSellerStatuses(contact, relevantListings)
+    : deriveBuyerStatuses(contact, relevantListings, communications);
 
   const completedCount = Object.values(statuses).filter(
     (s) => s === "completed"
   ).length;
+  const allComplete = completedCount === steps.length;
+
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Don't render if lifecycle is fully completed
+  if (allComplete) return null;
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Contact Lifecycle</h2>
-        <span className="text-sm text-muted-foreground">
-          {completedCount}/{CONTACT_STEPS.length} steps complete
-        </span>
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold">
+            {isSeller ? "Seller" : "Buyer"} Lifecycle
+          </h2>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">
+            {completedCount}/{steps.length} steps
+          </span>
+          <button
+            type="button"
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {collapsed ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronUp className="h-4 w-4" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Progress bar */}
@@ -151,78 +269,80 @@ export function ContactWorkflow({
         <div
           className="h-full rounded-full bg-green-500 transition-all duration-500"
           style={{
-            width: `${(completedCount / CONTACT_STEPS.length) * 100}%`,
+            width: `${(completedCount / steps.length) * 100}%`,
           }}
         />
       </div>
 
-      {/* Timeline */}
-      <div className="relative">
-        {CONTACT_STEPS.map((step, i) => {
-          const status = statuses[step.id];
-          const styles = STATUS_STYLES[status];
-          const isLast = i === CONTACT_STEPS.length - 1;
-          const stepNumber = i + 1;
+      {/* Timeline — collapsible */}
+      {!collapsed && (
+        <div className="relative">
+          {steps.map((step, i) => {
+            const status = statuses[step.id];
+            const styles = STATUS_STYLES[status];
+            const isLast = i === steps.length - 1;
+            const stepNumber = i + 1;
 
-          return (
-            <div key={step.id} className="flex gap-4 pb-6 last:pb-0">
-              {/* Timeline connector + circle */}
-              <div className="flex flex-col items-center">
-                {status === "completed" ? (
-                  <div
-                    className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${styles.circle}`}
-                  >
-                    <Check className="h-5 w-5 text-white" />
-                  </div>
-                ) : status === "in-progress" ? (
-                  <div
-                    className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${styles.circle}`}
-                  >
-                    <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
-                      {stepNumber}
-                    </span>
-                  </div>
-                ) : (
-                  <div
-                    className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${styles.circle}`}
-                  >
-                    <span className="text-sm font-medium text-muted-foreground/50">
-                      {stepNumber}
-                    </span>
-                  </div>
-                )}
-                {!isLast && (
-                  <div
-                    className={`w-0.5 flex-1 mt-1.5 ${styles.connector}`}
-                  />
-                )}
-              </div>
-
-              {/* Content: icon + name + badge + description */}
-              <div className="pb-2 min-w-0 pt-1.5 flex-1">
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <span className="text-base">{step.icon}</span>
-                  <p
-                    className={`text-base font-semibold leading-6 ${styles.text}`}
-                  >
-                    {step.name}
-                  </p>
-                  {styles.badgeLabel && (
-                    <span
-                      className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide ${styles.badge}`}
+            return (
+              <div key={step.id} className="flex gap-4 pb-6 last:pb-0">
+                {/* Timeline connector + circle */}
+                <div className="flex flex-col items-center">
+                  {status === "completed" ? (
+                    <div
+                      className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${styles.circle}`}
                     >
-                      {styles.badgeLabel}
-                    </span>
+                      <Check className="h-5 w-5 text-white" />
+                    </div>
+                  ) : status === "in-progress" ? (
+                    <div
+                      className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${styles.circle}`}
+                    >
+                      <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
+                        {stepNumber}
+                      </span>
+                    </div>
+                  ) : (
+                    <div
+                      className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${styles.circle}`}
+                    >
+                      <span className="text-sm font-medium text-muted-foreground/50">
+                        {stepNumber}
+                      </span>
+                    </div>
+                  )}
+                  {!isLast && (
+                    <div
+                      className={`w-0.5 flex-1 mt-1.5 ${styles.connector}`}
+                    />
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground mt-1 ml-7">
-                  {step.desc}
-                </p>
+
+                {/* Content */}
+                <div className="pb-2 min-w-0 pt-1.5 flex-1">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="text-base">{step.icon}</span>
+                    <p
+                      className={`text-base font-semibold leading-6 ${styles.text}`}
+                    >
+                      {step.name}
+                    </p>
+                    {styles.badgeLabel && (
+                      <span
+                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide ${styles.badge}`}
+                      >
+                        {styles.badgeLabel}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1 ml-7">
+                    {step.desc}
+                  </p>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

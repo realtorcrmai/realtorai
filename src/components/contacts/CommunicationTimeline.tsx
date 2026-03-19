@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { formatDistanceToNow } from "date-fns";
 import {
   ArrowUpRight,
@@ -24,6 +24,16 @@ const channelIcons = {
   note: StickyNote,
 };
 
+type FilterType = "all" | "sms" | "whatsapp" | "email" | "note";
+
+const FILTERS: { key: FilterType; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "sms", label: "SMS" },
+  { key: "whatsapp", label: "WhatsApp" },
+  { key: "email", label: "Email" },
+  { key: "note", label: "Notes" },
+];
+
 export function CommunicationTimeline({
   contactId,
   communications,
@@ -33,6 +43,23 @@ export function CommunicationTimeline({
 }) {
   const [noteBody, setNoteBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [filter, setFilter] = useState<FilterType>("all");
+
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { all: communications.length };
+    for (const comm of communications) {
+      c[comm.channel] = (c[comm.channel] || 0) + 1;
+    }
+    return c;
+  }, [communications]);
+
+  const filtered = useMemo(
+    () =>
+      filter === "all"
+        ? communications
+        : communications.filter((c) => c.channel === filter),
+    [communications, filter]
+  );
 
   async function handleAddNote() {
     if (!noteBody.trim()) return;
@@ -43,18 +70,48 @@ export function CommunicationTimeline({
   }
 
   return (
-    <Card>
+    <Card id="comm-timeline">
       <CardHeader>
         <CardTitle className="text-base">Communication Timeline</CardTitle>
+        {/* Filter tabs */}
+        <div className="flex gap-1 mt-2">
+          {FILTERS.map((f) => {
+            const count = counts[f.key] ?? 0;
+            const isActive = filter === f.key;
+            return (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setFilter(f.key)}
+                className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                  isActive
+                    ? "bg-primary text-white"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                {f.label}
+                {count > 0 && (
+                  <span
+                    className={`ml-1 ${isActive ? "opacity-80" : "opacity-60"}`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {communications.length === 0 && (
+        {filtered.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-4">
-            No communications yet.
+            {filter === "all"
+              ? "No communications yet."
+              : `No ${filter === "note" ? "notes" : filter.toUpperCase()} messages.`}
           </p>
         )}
         <div className="space-y-3 max-h-96 overflow-y-auto">
-          {communications.map((comm) => {
+          {filtered.map((comm) => {
             const ChannelIcon = channelIcons[comm.channel];
             const DirectionIcon =
               comm.direction === "inbound" ? ArrowDownLeft : ArrowUpRight;
