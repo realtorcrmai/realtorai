@@ -201,9 +201,9 @@ export default async function DashboardPage() {
     },
     {
       key: "website",
-      href: "http://localhost:3001",
+      href: "http://localhost:8768",
       title: "Website Marketing",
-      description: "Build & manage your realtor website",
+      description: "AI-powered realtor website generation",
       icon: Globe,
       gradient: "gradient-amber",
       count: null,
