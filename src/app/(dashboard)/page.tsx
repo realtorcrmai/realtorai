@@ -13,6 +13,7 @@ import {
   Users,
   Wand2,
   Globe,
+  Mail,
   ArrowRight,
   AlertTriangle,
 } from "lucide-react";
@@ -209,6 +210,16 @@ export default async function DashboardPage() {
       count: null,
       countLabel: null,
       external: true,
+    },
+    {
+      key: "newsletters",
+      href: "/newsletters",
+      title: "Newsletters",
+      description: "AI-powered email journeys & campaigns",
+      icon: Mail,
+      gradient: "gradient-violet",
+      count: null,
+      countLabel: null,
     },
   ];
 

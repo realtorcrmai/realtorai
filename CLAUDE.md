@@ -252,6 +252,11 @@ KLING_IMAGE_API_BASE_URL=
 # Demo Auth
 DEMO_EMAIL=
 DEMO_PASSWORD=
+
+# Resend (Newsletter Engine)
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=
+RESEND_WEBHOOK_SECRET=
 ```
 
 ---
@@ -313,11 +318,12 @@ Located in project root (`/Users/bigbear/reality crm/`):
 - No relationship mapping between contacts
 
 ### Communication System
-- No email integration (SMS/WhatsApp only)
+- Gmail API integration exists for 1:1 email (plain text only)
+- Resend integration for newsletters (AI-powered, HTML templates)
 - Flat timeline with no conversation threading or filtering
-- No message templates or canned responses
-- No scheduled messages or follow-up reminders
-- No unread message tracking or agent notifications
+- Message templates exist with variable substitution
+- Workflow engine handles scheduled messages
+- Agent notifications exist for workflow events
 - Showing messages to buyer agents hardcoded to SMS (ignores pref_channel)
 - Inbound webhook only processes YES/NO for showings
 
@@ -347,6 +353,76 @@ Located in project root (`/Users/bigbear/reality crm/`):
 - **Supabase admin client** (`supabase/admin.ts`) for server-side operations that bypass RLS
 - **force-dynamic** on pages that need real-time data
 - **Revalidate paths** after mutations: `revalidatePath('/route')`
+
+---
+
+## AI Newsletter & Journey Engine
+
+### Architecture
+
+```
+Contact Events (CRM) → Journey Engine → Claude AI → Resend API → Email
+                              ↑                                      │
+                              └── Click/Open Webhooks ←──────────────┘
+                                        │
+                                  Contact Intelligence
+```
+
+### Email Types (6)
+| Type | Trigger | Content |
+|------|---------|---------|
+| New Listing Alert | Listing matches buyer prefs | Property details, photos, showing CTA |
+| Market Update | Monthly schedule | Area stats, price trends, recent sales |
+| Just Sold | Listing status → sold | Sale price, days on market |
+| Open House Invite | Showing created | Date, time, address, RSVP |
+| Neighbourhood Guide | New lead enters CRM | Local spots, schools, lifestyle |
+| Home Anniversary | Annual close anniversary | Current value estimate, tips |
+
+### Contact Journeys (Lifecycle-Driven)
+Buyer: Lead → Active (showing) → Under Contract → Past Client → Dormant
+Seller: Lead → Active Listing → Under Contract → Past Client → Dormant
+
+Phase transitions are **event-driven** (showing booked, offer accepted, deal closed) — not time-based.
+
+### Click-Driven Adaptation
+Every link tracked via Resend webhooks. Clicks update `contacts.newsletter_intelligence` (JSONB):
+- Engagement score, click history, inferred interests (areas, property types, price range)
+- AI reads full profile before generating next email
+- High-intent clicks (book showing, CMA) → alert realtor immediately
+
+### Key Tables
+| Table | Purpose |
+|-------|---------|
+| `newsletters` | Email drafts, sends, AI context |
+| `newsletter_templates` | React Email template registry |
+| `newsletter_events` | Open/click/bounce tracking |
+| `contact_journeys` | Journey enrollment, phase tracking |
+
+### Pages
+| Route | Purpose |
+|-------|---------|
+| `/newsletters` | Dashboard (pipeline, brand reach, actions) |
+| `/newsletters/queue` | AI draft approval queue |
+| `/newsletters/analytics` | Performance + attribution |
+
+### Key Files
+| File | Purpose |
+|------|---------|
+| `src/actions/newsletters.ts` | Newsletter CRUD, AI generation, send |
+| `src/actions/journeys.ts` | Journey enrollment, phase advancement |
+| `src/lib/resend.ts` | Resend API wrapper |
+| `src/emails/*.tsx` | React Email templates (6 types) |
+| `src/app/api/webhooks/resend/route.ts` | Click/open/bounce webhook handler |
+
+### Environment Variables
+```
+RESEND_API_KEY=              # Resend API key
+RESEND_FROM_EMAIL=           # Verified sender (e.g. hello@listingflow.com)
+RESEND_WEBHOOK_SECRET=       # Webhook signature verification
+```
+
+### PRD
+Full specification: `/Users/bigbear/reality crm/PRD_Newsletter_Journey_Engine.md`
 
 ---
 
