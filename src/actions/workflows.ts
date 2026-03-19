@@ -342,6 +342,26 @@ export async function enrollContact(
     return { error: "Contact is already enrolled in this workflow" };
   }
 
+  // Enforce max_enrollments concurrency limit
+  const { data: workflow } = await supabase
+    .from("workflows")
+    .select("max_enrollments")
+    .eq("id", workflowId)
+    .single();
+
+  if (workflow?.max_enrollments) {
+    const { count } = await supabase
+      .from("workflow_enrollments")
+      .select("id", { count: "exact", head: true })
+      .eq("workflow_id", workflowId)
+      .eq("contact_id", contactId)
+      .in("status", ["active", "paused"]);
+
+    if (count && count >= workflow.max_enrollments) {
+      return { error: `Contact already has ${count} active enrollment(s) for this workflow (max: ${workflow.max_enrollments})` };
+    }
+  }
+
   // Get first step to calculate next_run_at
   const { data: firstStep } = await supabase
     .from("workflow_steps")
@@ -787,6 +807,42 @@ export async function backfillWorkflowEnrollments(): Promise<{
         const result = await tryEnroll(
           workflow.id, workflow.slug, contact.id, contact.name
         );
+        (result === "enrolled" ? enrolled : skipped).push(contact.name);
+      }
+    }
+
+    // ── seller_lifecycle: all seller contacts ──────────────────
+    if (workflow.slug === "seller_lifecycle") {
+      const sellers = allContacts.filter((c) => c.type === "seller");
+      for (const contact of sellers) {
+        const result = await tryEnroll(
+          workflow.id, workflow.slug, contact.id, contact.name
+        );
+        if (result === "enrolled") {
+          // Fast-forward milestones to current state
+          try {
+            const { advanceLifecycleForContact } = await import("@/lib/workflow-triggers");
+            await advanceLifecycleForContact(contact.id);
+          } catch { /* continue */ }
+        }
+        (result === "enrolled" ? enrolled : skipped).push(contact.name);
+      }
+    }
+
+    // ── buyer_lifecycle: all buyer contacts ───────────────────
+    if (workflow.slug === "buyer_lifecycle") {
+      const buyers = allContacts.filter((c) => c.type === "buyer");
+      for (const contact of buyers) {
+        const result = await tryEnroll(
+          workflow.id, workflow.slug, contact.id, contact.name
+        );
+        if (result === "enrolled") {
+          // Fast-forward milestones to current state
+          try {
+            const { advanceLifecycleForContact } = await import("@/lib/workflow-triggers");
+            await advanceLifecycleForContact(contact.id);
+          } catch { /* continue */ }
+        }
         (result === "enrolled" ? enrolled : skipped).push(contact.name);
       }
     }

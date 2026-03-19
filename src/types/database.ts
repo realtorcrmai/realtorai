@@ -15,7 +15,7 @@ export interface Database {
           name: string;
           phone: string;
           email: string | null;
-          type: "buyer" | "seller";
+          type: "buyer" | "seller" | "partner" | "other";
           pref_channel: "whatsapp" | "sms";
           notes: string | null;
           family_members: Json | null;
@@ -26,6 +26,12 @@ export interface Database {
           source: string | null;
           tags: Json;
           lead_status: string;
+          partner_type: string | null;
+          company_name: string | null;
+          job_title: string | null;
+          typical_client_profile: string | null;
+          referral_agreement_terms: string | null;
+          partner_active: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -34,7 +40,7 @@ export interface Database {
           name: string;
           phone: string;
           email?: string | null;
-          type: "buyer" | "seller";
+          type: "buyer" | "seller" | "partner" | "other";
           pref_channel?: "whatsapp" | "sms";
           notes?: string | null;
           family_members?: Json | null;
@@ -45,6 +51,12 @@ export interface Database {
           source?: string | null;
           tags?: Json;
           lead_status?: string;
+          partner_type?: string | null;
+          company_name?: string | null;
+          job_title?: string | null;
+          typical_client_profile?: string | null;
+          referral_agreement_terms?: string | null;
+          partner_active?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -53,7 +65,7 @@ export interface Database {
           name?: string;
           phone?: string;
           email?: string | null;
-          type?: "buyer" | "seller";
+          type?: "buyer" | "seller" | "partner" | "other";
           pref_channel?: "whatsapp" | "sms";
           notes?: string | null;
           family_members?: Json | null;
@@ -64,6 +76,12 @@ export interface Database {
           source?: string | null;
           tags?: Json;
           lead_status?: string;
+          partner_type?: string | null;
+          company_name?: string | null;
+          job_title?: string | null;
+          typical_client_profile?: string | null;
+          referral_agreement_terms?: string | null;
+          partner_active?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -741,6 +759,47 @@ export interface Database {
           action_url?: string | null;
           is_read?: boolean;
           created_at?: string;
+        };
+      };
+      referrals: {
+        Row: {
+          id: string;
+          referred_by_contact_id: string;
+          referred_client_contact_id: string;
+          referral_type: "buyer" | "seller" | "rental" | "other";
+          referral_date: string;
+          referral_fee_percent: number | null;
+          status: "open" | "accepted" | "closed" | "lost";
+          closed_deal_id: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          referred_by_contact_id: string;
+          referred_client_contact_id: string;
+          referral_type?: "buyer" | "seller" | "rental" | "other";
+          referral_date?: string;
+          referral_fee_percent?: number | null;
+          status?: "open" | "accepted" | "closed" | "lost";
+          closed_deal_id?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          referred_by_contact_id?: string;
+          referred_client_contact_id?: string;
+          referral_type?: "buyer" | "seller" | "rental" | "other";
+          referral_date?: string;
+          referral_fee_percent?: number | null;
+          status?: "open" | "accepted" | "closed" | "lost";
+          closed_deal_id?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
       };
       activity_log: {

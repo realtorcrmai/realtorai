@@ -1,9 +1,38 @@
-export const CONTACT_TYPES = ["buyer", "seller"] as const;
+export const CONTACT_TYPES = ["buyer", "seller", "partner", "other"] as const;
 export type ContactType = (typeof CONTACT_TYPES)[number];
 
 export const CONTACT_TYPE_COLORS: Record<ContactType, string> = {
   seller: "bg-purple-100 text-purple-800",
   buyer: "bg-blue-100 text-blue-800",
+  partner: "bg-teal-100 text-teal-800",
+  other: "bg-gray-100 text-gray-800",
+};
+
+export const CONTACT_TYPE_LABELS: Record<ContactType, string> = {
+  buyer: "Buyer",
+  seller: "Seller",
+  partner: "Partner",
+  other: "Other",
+};
+
+// ── Partner Types ─────────────────────────────────────────────
+export const PARTNER_TYPES = [
+  "mortgage_broker",
+  "lawyer",
+  "inspector",
+  "agent",
+  "financial_advisor",
+  "other",
+] as const;
+export type PartnerType = (typeof PARTNER_TYPES)[number];
+
+export const PARTNER_TYPE_LABELS: Record<PartnerType, string> = {
+  mortgage_broker: "Mortgage Broker",
+  lawyer: "Lawyer / Notary",
+  inspector: "Home Inspector",
+  agent: "Real Estate Agent",
+  financial_advisor: "Financial Advisor",
+  other: "Other",
 };
 
 export const PREF_CHANNELS = ["whatsapp", "sms"] as const;
@@ -60,6 +89,107 @@ export const LEAD_SOURCES = [
   "Other",
 ] as const;
 export type LeadSource = (typeof LEAD_SOURCES)[number];
+
+// ── Contact Tags (Predefined) ────────────────────────────────
+export const CONTACT_TAGS = [
+  // Priority / Temperature
+  "vip",
+  "hot lead",
+  "warm lead",
+  "cold lead",
+  // Buyer Tags
+  "first-time buyer",
+  "pre-approved",
+  "investor",
+  "downsizer",
+  "upsizer",
+  "relocating",
+  // Seller Tags
+  "listing active",
+  "listing expired",
+  "listing sold",
+  "fsbo",
+  // Relationship
+  "past client",
+  "referral",
+  "sphere of influence",
+  "repeat client",
+  // Status
+  "under contract",
+  "closing soon",
+  "on hold",
+  "do not contact",
+  // Source-based
+  "open house lead",
+  "online lead",
+  "sign call",
+] as const;
+export type ContactTag = (typeof CONTACT_TAGS)[number];
+
+export const CONTACT_TAG_GROUPS: Record<string, readonly string[]> = {
+  "Priority": ["vip", "hot lead", "warm lead", "cold lead"],
+  "Buyer": ["first-time buyer", "pre-approved", "investor", "downsizer", "upsizer", "relocating"],
+  "Seller": ["listing active", "listing expired", "listing sold", "fsbo"],
+  "Relationship": ["past client", "referral", "sphere of influence", "repeat client"],
+  "Status": ["under contract", "closing soon", "on hold", "do not contact"],
+  "Source": ["open house lead", "online lead", "sign call"],
+};
+
+// ── Stage Bar (Pipeline Stages) ──────────────────────────────
+
+export const BUYER_STAGES = [
+  "new",
+  "qualified",
+  "active_search",
+  "under_contract",
+  "closed",
+  "cold",
+] as const;
+export type BuyerStage = (typeof BUYER_STAGES)[number];
+
+export const SELLER_STAGES = [
+  "new",
+  "qualified",
+  "active_listing",
+  "under_contract",
+  "closed",
+  "cold",
+] as const;
+export type SellerStage = (typeof SELLER_STAGES)[number];
+
+export const STAGE_LABELS: Record<string, string> = {
+  new: "New",
+  qualified: "Qualified",
+  active_search: "Active Search",
+  active_listing: "Active Listing",
+  under_contract: "Under Contract",
+  closed: "Closed",
+  cold: "Cold",
+};
+
+export const STAGE_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
+  new: { bg: "bg-sky-100", text: "text-sky-800", dot: "bg-sky-500" },
+  qualified: { bg: "bg-amber-100", text: "text-amber-800", dot: "bg-amber-500" },
+  active_search: { bg: "bg-green-100", text: "text-green-800", dot: "bg-green-500" },
+  active_listing: { bg: "bg-green-100", text: "text-green-800", dot: "bg-green-500" },
+  under_contract: { bg: "bg-orange-100", text: "text-orange-800", dot: "bg-orange-500" },
+  closed: { bg: "bg-emerald-100", text: "text-emerald-800", dot: "bg-emerald-600" },
+  cold: { bg: "bg-gray-100", text: "text-gray-600", dot: "bg-gray-400" },
+};
+
+// ── Financing Statuses ───────────────────────────────────────
+export const FINANCING_STATUSES = [
+  "not_started",
+  "in_progress",
+  "preapproved",
+] as const;
+export type FinancingStatus = (typeof FINANCING_STATUSES)[number];
+
+export const FINANCING_STATUS_LABELS: Record<FinancingStatus, string> = {
+  not_started: "Not Started",
+  in_progress: "In Progress",
+  preapproved: "Pre-Approved",
+};
 
 // ── Contact Document Types ───────────────────────────────────
 export const CONTACT_DOC_TYPES = [

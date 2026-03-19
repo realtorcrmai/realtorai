@@ -24,20 +24,23 @@ export default async function ShowingsLayout({
 
   return (
     <div className="flex h-full">
-      {/* Left sidebar — showing list */}
-      <div className="hidden md:flex flex-col h-full">
+      {/* Left sidebar — showing list + add button at top */}
+      <div className="hidden md:flex flex-col h-full w-[280px] shrink-0 border-r bg-card/50">
+        <div className="p-3 border-b bg-card/50 shrink-0">
+          <ShowingRequestForm listings={activeListings ?? []} />
+        </div>
         <ShowingSidebar
           showings={(showings ?? []) as (typeof showings extends (infer T)[] | null ? T : never)[]}
         />
-        {/* Add showing button at bottom of sidebar */}
-        <div className="p-3 border-r border-t bg-card/50">
-          <ShowingRequestForm listings={activeListings ?? []} />
-        </div>
       </div>
 
       {/* Center + Right content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
         {children}
+        {/* Mobile FAB for creating showings */}
+        <div className="md:hidden fixed bottom-20 right-4 z-50">
+          <ShowingRequestForm listings={activeListings ?? []} />
+        </div>
       </div>
     </div>
   );

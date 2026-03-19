@@ -13,6 +13,7 @@ import {
 import { updateContact } from "@/actions/contacts";
 import type { BuyerPreferences } from "@/types";
 import type { Json } from "@/types/database";
+import { FINANCING_STATUSES, FINANCING_STATUS_LABELS } from "@/lib/constants/contacts";
 
 const PROPERTY_TYPES = ["Detached", "Townhouse", "Condo", "Duplex"];
 const TIMELINE_OPTIONS = [
@@ -35,6 +36,8 @@ export function BuyerPreferencesPanel({
     preferences ?? {}
   );
   const [areaInput, setAreaInput] = useState("");
+  const [mustHaveInput, setMustHaveInput] = useState("");
+  const [niceToHaveInput, setNiceToHaveInput] = useState("");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -70,6 +73,40 @@ export function BuyerPreferencesPanel({
     setForm((f) => ({
       ...f,
       preferred_areas: (f.preferred_areas ?? []).filter((a) => a !== area),
+    }));
+  }
+
+  function addMustHave() {
+    const item = mustHaveInput.trim();
+    if (!item) return;
+    const current = form.must_haves ?? [];
+    if (!current.includes(item)) {
+      setForm((f) => ({ ...f, must_haves: [...current, item] }));
+    }
+    setMustHaveInput("");
+  }
+
+  function removeMustHave(item: string) {
+    setForm((f) => ({
+      ...f,
+      must_haves: (f.must_haves ?? []).filter((i) => i !== item),
+    }));
+  }
+
+  function addNiceToHave() {
+    const item = niceToHaveInput.trim();
+    if (!item) return;
+    const current = form.nice_to_haves ?? [];
+    if (!current.includes(item)) {
+      setForm((f) => ({ ...f, nice_to_haves: [...current, item] }));
+    }
+    setNiceToHaveInput("");
+  }
+
+  function removeNiceToHave(item: string) {
+    setForm((f) => ({
+      ...f,
+      nice_to_haves: (f.nice_to_haves ?? []).filter((i) => i !== item),
     }));
   }
 
@@ -232,6 +269,53 @@ export function BuyerPreferencesPanel({
           </div>
         )}
 
+        {preferences?.financing_status && (
+          <div className="p-3 rounded-lg bg-muted/30">
+            <p className="text-xs text-muted-foreground uppercase font-medium">
+              Financing Status
+            </p>
+            <p className="text-sm font-medium mt-1">
+              {FINANCING_STATUS_LABELS[preferences.financing_status]}
+            </p>
+          </div>
+        )}
+
+        {preferences?.must_haves && preferences.must_haves.length > 0 && (
+          <div>
+            <p className="text-xs text-muted-foreground uppercase font-medium mb-2">
+              Must-Haves
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {preferences.must_haves.map((item) => (
+                <span
+                  key={item}
+                  className="px-2.5 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {preferences?.nice_to_haves && preferences.nice_to_haves.length > 0 && (
+          <div>
+            <p className="text-xs text-muted-foreground uppercase font-medium mb-2">
+              Nice-to-Haves
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {preferences.nice_to_haves.map((item) => (
+                <span
+                  key={item}
+                  className="px-2.5 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {preferences?.notes && (
           <div>
             <p className="text-xs text-muted-foreground uppercase font-medium mb-1">
@@ -313,6 +397,31 @@ export function BuyerPreferencesPanel({
             className="w-full mt-1 px-2.5 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
             disabled={isPending}
           />
+        </div>
+
+        {/* Financing Status */}
+        <div>
+          <label className="text-xs text-muted-foreground font-medium">
+            Financing Status
+          </label>
+          <select
+            value={form.financing_status ?? ""}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                financing_status: (e.target.value || undefined) as BuyerPreferences["financing_status"],
+              }))
+            }
+            className="w-full mt-1 px-2.5 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+            disabled={isPending}
+          >
+            <option value="">Select status...</option>
+            {FINANCING_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {FINANCING_STATUS_LABELS[s]}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Beds / Baths */}
@@ -424,6 +533,108 @@ export function BuyerPreferencesPanel({
                   <button
                     type="button"
                     onClick={() => removeArea(area)}
+                    className="hover:text-red-500 transition-colors"
+                    disabled={isPending}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Must-Haves */}
+        <div>
+          <label className="text-xs text-muted-foreground font-medium">
+            Must-Haves
+          </label>
+          <div className="flex gap-2 mt-1.5">
+            <input
+              type="text"
+              placeholder="e.g. garage, backyard..."
+              value={mustHaveInput}
+              onChange={(e) => setMustHaveInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addMustHave();
+                }
+              }}
+              className="flex-1 px-2.5 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+              disabled={isPending}
+            />
+            <button
+              type="button"
+              onClick={addMustHave}
+              disabled={isPending}
+              className="px-3 py-1.5 text-xs font-medium bg-muted rounded-md hover:bg-muted/80 transition-colors"
+            >
+              Add
+            </button>
+          </div>
+          {(form.must_haves ?? []).length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {(form.must_haves ?? []).map((item) => (
+                <span
+                  key={item}
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                >
+                  {item}
+                  <button
+                    type="button"
+                    onClick={() => removeMustHave(item)}
+                    className="hover:text-red-500 transition-colors"
+                    disabled={isPending}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Nice-to-Haves */}
+        <div>
+          <label className="text-xs text-muted-foreground font-medium">
+            Nice-to-Haves
+          </label>
+          <div className="flex gap-2 mt-1.5">
+            <input
+              type="text"
+              placeholder="e.g. pool, home office..."
+              value={niceToHaveInput}
+              onChange={(e) => setNiceToHaveInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addNiceToHave();
+                }
+              }}
+              className="flex-1 px-2.5 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+              disabled={isPending}
+            />
+            <button
+              type="button"
+              onClick={addNiceToHave}
+              disabled={isPending}
+              className="px-3 py-1.5 text-xs font-medium bg-muted rounded-md hover:bg-muted/80 transition-colors"
+            >
+              Add
+            </button>
+          </div>
+          {(form.nice_to_haves ?? []).length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {(form.nice_to_haves ?? []).map((item) => (
+                <span
+                  key={item}
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                >
+                  {item}
+                  <button
+                    type="button"
+                    onClick={() => removeNiceToHave(item)}
                     className="hover:text-red-500 transition-colors"
                     disabled={isPending}
                   >

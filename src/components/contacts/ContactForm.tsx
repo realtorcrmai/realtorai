@@ -25,19 +25,33 @@ import {
 import { createContact, updateContact } from "@/actions/contacts";
 import { Plus } from "lucide-react";
 import type { Contact } from "@/types";
-import { LEAD_STATUSES, LEAD_STATUS_LABELS, LEAD_SOURCES } from "@/lib/constants";
+import {
+  LEAD_STATUSES,
+  LEAD_STATUS_LABELS,
+  LEAD_SOURCES,
+  CONTACT_TYPES,
+  CONTACT_TYPE_LABELS,
+  PARTNER_TYPES,
+  PARTNER_TYPE_LABELS,
+} from "@/lib/constants";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name is required"),
   phone: z.string().min(10, "Valid phone number required"),
   email: z.string().email().optional().or(z.literal("")),
-  type: z.enum(["buyer", "seller"]),
+  type: z.enum(CONTACT_TYPES),
   pref_channel: z.enum(["whatsapp", "sms"]),
   notes: z.string().optional(),
   address: z.string().optional(),
   referred_by_id: z.string().uuid().optional().or(z.literal("")),
   source: z.string().optional(),
   lead_status: z.enum(LEAD_STATUSES).optional(),
+  // Partner-specific fields
+  partner_type: z.enum(PARTNER_TYPES).optional().or(z.literal("")),
+  company_name: z.string().optional(),
+  job_title: z.string().optional(),
+  typical_client_profile: z.string().optional(),
+  referral_agreement_terms: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -62,6 +76,7 @@ export function ContactForm({
     register,
     handleSubmit,
     setValue,
+    watch,
     reset,
     formState: { errors },
   } = useForm<FormData>({
@@ -78,6 +93,11 @@ export function ContactForm({
           referred_by_id: contact.referred_by_id ?? "",
           source: contact.source ?? "",
           lead_status: (contact.lead_status ?? "new") as FormData["lead_status"],
+          partner_type: (contact.partner_type ?? "") as FormData["partner_type"],
+          company_name: contact.company_name ?? "",
+          job_title: contact.job_title ?? "",
+          typical_client_profile: contact.typical_client_profile ?? "",
+          referral_agreement_terms: contact.referral_agreement_terms ?? "",
         }
       : {
           type: defaultType ?? "buyer",
@@ -85,15 +105,33 @@ export function ContactForm({
           referred_by_id: defaultReferredById ?? "",
           source: "",
           lead_status: "new",
+          partner_type: "",
+          company_name: "",
+          job_title: "",
+          typical_client_profile: "",
+          referral_agreement_terms: "",
         },
   });
 
+  const selectedType = watch("type");
+
   async function onSubmit(data: FormData) {
     setSubmitting(true);
+    // Clear partner fields if type is not partner
+    const payload = {
+      ...data,
+      ...(data.type !== "partner" && {
+        partner_type: undefined,
+        company_name: undefined,
+        job_title: undefined,
+        typical_client_profile: undefined,
+        referral_agreement_terms: undefined,
+      }),
+    };
     if (contact) {
-      await updateContact(contact.id, data);
+      await updateContact(contact.id, payload);
     } else {
-      await createContact(data);
+      await createContact(payload);
     }
     setSubmitting(false);
     reset();
@@ -114,7 +152,7 @@ export function ContactForm({
           )
         }
       />
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {contact ? "Edit Contact" : "New Contact"}
@@ -154,17 +192,20 @@ export function ContactForm({
             <div>
               <Label>Type</Label>
               <Select
-                defaultValue={contact?.type ?? "buyer"}
+                defaultValue={contact?.type ?? defaultType ?? "buyer"}
                 onValueChange={(val) =>
-                  setValue("type", val as "buyer" | "seller")
+                  setValue("type", val as FormData["type"])
                 }
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="buyer">Buyer</SelectItem>
-                  <SelectItem value="seller">Seller</SelectItem>
+                  {CONTACT_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {CONTACT_TYPE_LABELS[t]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -186,6 +227,74 @@ export function ContactForm({
               </Select>
             </div>
           </div>
+
+          {/* ── Partner-specific Fields ───────────────────────── */}
+          {selectedType === "partner" && (
+            <div className="space-y-4 rounded-lg border border-teal-200 bg-teal-50/50 p-4">
+              <p className="text-sm font-semibold text-teal-800">Partner Details</p>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Partner Type</Label>
+                  <Select
+                    defaultValue={contact?.partner_type ?? ""}
+                    onValueChange={(val) =>
+                      setValue("partner_type", val as FormData["partner_type"])
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {PARTNER_TYPES.map((pt) => (
+                        <SelectItem key={pt} value={pt}>
+                          {PARTNER_TYPE_LABELS[pt]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="company_name">Company</Label>
+                  <Input
+                    {...register("company_name")}
+                    placeholder="ABC Mortgages Inc."
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="job_title">Job Title (optional)</Label>
+                <Input
+                  {...register("job_title")}
+                  placeholder="Senior Mortgage Advisor"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="typical_client_profile">
+                  Typical Client Profile (optional)
+                </Label>
+                <Textarea
+                  {...register("typical_client_profile")}
+                  placeholder="First-time buyers, pre-approvals up to $800K..."
+                  rows={2}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="referral_agreement_terms">
+                  Referral Agreement Terms (optional)
+                </Label>
+                <Textarea
+                  {...register("referral_agreement_terms")}
+                  placeholder="20% referral fee on closed deals..."
+                  rows={2}
+                />
+              </div>
+            </div>
+          )}
 
           <div>
             <Label htmlFor="address">Address (optional)</Label>

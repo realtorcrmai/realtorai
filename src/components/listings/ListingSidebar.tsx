@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, DollarSign } from "lucide-react";
+import { Search, DollarSign, Filter, X } from "lucide-react";
 import type { Listing } from "@/types";
 import { LISTING_STATUS_COLORS } from "@/lib/constants";
 
@@ -15,7 +15,6 @@ const STATUS_DOT_COLORS: Record<string, string> = {
   sold: "bg-blue-500",
 };
 
-// Simplified workflow derivation for sidebar (no document data available)
 type StepStatus = "completed" | "in-progress" | "pending";
 
 function deriveSimpleWorkflow(listing: Listing): StepStatus[] {
@@ -24,25 +23,22 @@ function deriveSimpleWorkflow(listing: Listing): StepStatus[] {
   const isSold = listing.status === "sold";
   const isPending = listing.status === "pending";
 
-  // If sold, all phases are complete — the sale proves the workflow was done.
   if (isSold) {
     return Array(9).fill("completed") as StepStatus[];
   }
 
-  // Raw statuses for 9 phases (same order as ListingWorkflow)
   const raw: StepStatus[] = [
-    "completed", // 1. Seller Intake — always done
-    hasPrice ? "completed" : "in-progress", // 2. Data Enrichment
-    hasPrice ? "completed" : "pending", // 3. CMA
-    hasPrice ? "completed" : "pending", // 4. Pricing & Review
-    hasPrice ? "in-progress" : "pending", // 5. Form Generation (no doc data, assume in-progress if price set)
-    "pending", // 6. E-Signature
-    hasMls ? "completed" : "pending", // 7. MLS Prep
-    hasMls ? "completed" : "pending", // 8. MLS Submission
-    isPending ? "in-progress" : hasMls ? "in-progress" : "pending", // 9. Post-Listing
+    "completed",
+    hasPrice ? "completed" : "in-progress",
+    hasPrice ? "completed" : "pending",
+    hasPrice ? "completed" : "pending",
+    hasPrice ? "in-progress" : "pending",
+    "pending",
+    hasMls ? "completed" : "pending",
+    hasMls ? "completed" : "pending",
+    isPending ? "in-progress" : hasMls ? "in-progress" : "pending",
   ];
 
-  // Sequential enforcement
   for (let i = 1; i < raw.length; i++) {
     if (raw[i - 1] !== "completed") {
       if (raw[i] === "completed") raw[i] = "pending";
@@ -59,6 +55,15 @@ const STEP_DOT_STYLES: Record<StepStatus, string> = {
   pending: "bg-gray-300 dark:bg-gray-600",
 };
 
+type StatusFilter = "all" | "active" | "pending" | "sold";
+
+const STATUS_FILTERS: { value: StatusFilter; label: string; dot: string }[] = [
+  { value: "all", label: "All", dot: "bg-gray-400" },
+  { value: "active", label: "Active", dot: "bg-emerald-500" },
+  { value: "pending", label: "Pending", dot: "bg-amber-500" },
+  { value: "sold", label: "Sold", dot: "bg-blue-500" },
+];
+
 export function ListingSidebar({
   listings,
   sellers,
@@ -68,24 +73,43 @@ export function ListingSidebar({
 }) {
   const pathname = usePathname();
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [showFilters, setShowFilters] = useState(false);
 
-  const filtered = listings.filter(
-    (l) =>
+  const hasActiveFilter = statusFilter !== "all";
+
+  const filtered = listings.filter((l) => {
+    const matchesSearch =
+      !search ||
       l.address.toLowerCase().includes(search.toLowerCase()) ||
-      (l.mls_number ?? "").toLowerCase().includes(search.toLowerCase())
-  );
+      (l.mls_number ?? "").toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === "all" || l.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
-    <aside className="w-[280px] shrink-0 border-r bg-card/50 flex flex-col h-full overflow-hidden">
+    <aside className="flex flex-col flex-1 min-h-0 overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b space-y-3">
+      <div className="p-4 border-b space-y-2.5">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold">
             Listings{" "}
             <span className="text-muted-foreground font-normal">
-              ({listings.length})
+              ({filtered.length})
             </span>
           </h2>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`p-1.5 rounded-md transition-colors relative ${
+              showFilters || hasActiveFilter ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
+            }`}
+            title="Filter listings"
+          >
+            <Filter className="h-4 w-4" />
+            {hasActiveFilter && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />
+            )}
+          </button>
         </div>
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -96,6 +120,35 @@ export function ListingSidebar({
             className="pl-8 h-9 text-sm"
           />
         </div>
+
+        {showFilters && (
+          <div className="space-y-2 pt-1 animate-in slide-in-from-top-2 duration-150">
+            <div className="flex flex-wrap gap-1">
+              {STATUS_FILTERS.map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setStatusFilter(f.value)}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all ${
+                    statusFilter === f.value
+                      ? "bg-white ring-1 ring-gray-300 shadow-sm text-foreground"
+                      : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${f.dot}`} />
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            {hasActiveFilter && (
+              <button
+                onClick={() => setStatusFilter("all")}
+                className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-3 h-3" /> Clear filters
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Listing items */}
@@ -103,7 +156,7 @@ export function ListingSidebar({
         {filtered.length === 0 ? (
           <div className="p-4 text-center">
             <p className="text-sm text-muted-foreground">
-              {search ? "No matching listings" : "No listings yet"}
+              {search || hasActiveFilter ? "No matching listings" : "No listings yet"}
             </p>
           </div>
         ) : (

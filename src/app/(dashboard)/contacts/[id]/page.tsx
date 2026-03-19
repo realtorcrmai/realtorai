@@ -8,12 +8,14 @@ import { ContactWorkflow } from "@/components/contacts/ContactWorkflow";
 import { ContactContextPanel } from "@/components/contacts/ContactContextPanel";
 import { CommunicationTimeline } from "@/components/contacts/CommunicationTimeline";
 import { PropertyHistoryPanel } from "@/components/contacts/PropertyHistoryPanel";
-import { ReferralsPanel } from "@/components/contacts/ReferralsPanel";
+import { ReferralsPanel, type ReferralRow } from "@/components/contacts/ReferralsPanel";
 import { FamilyMembersPanel } from "@/components/contacts/FamilyMembersPanel";
 import { SellerEarningsSummary } from "@/components/contacts/SellerEarningsSummary";
 import { BuyerPreferencesPanel } from "@/components/contacts/BuyerPreferencesPanel";
+import { SellerPreferencesPanel } from "@/components/contacts/SellerPreferencesPanel";
 import { QuickActionBar } from "@/components/contacts/QuickActionBar";
 import { TagEditor } from "@/components/contacts/TagEditor";
+import { StageBar, type StageData } from "@/components/contacts/StageBar";
 import { ContactTasksPanel } from "@/components/contacts/ContactTasksPanel";
 import { ContactDocumentsPanel } from "@/components/contacts/ContactDocumentsPanel";
 import { PropertiesOfInterestPanel } from "@/components/contacts/PropertiesOfInterestPanel";
@@ -21,7 +23,7 @@ import { WorkflowStepperCard } from "@/components/contacts/WorkflowStepperCard";
 import EmailComposer from "@/components/contacts/EmailComposer";
 import ActivityTimeline from "@/components/contacts/ActivityTimeline";
 import { Button } from "@/components/ui/button";
-import type { Contact, Communication, Listing, ContactDate, ContactDocument, FamilyMember, BuyerPreferences } from "@/types";
+import type { Contact, Communication, Listing, ContactDate, ContactDocument, FamilyMember, BuyerPreferences, SellerPreferences } from "@/types";
 import {
   CONTACT_TYPE_COLORS,
   LEAD_STATUS_LABELS,
@@ -50,73 +52,119 @@ export default async function ContactDetailPage({
 
   const isSeller = contact.type === "seller";
 
+  // ── Single parallel batch: ALL queries at once ─────────────
+  // No waterfalls — everything fetched in one round-trip
   const [
     { data: communications },
     { data: listings },
     { data: contactDates },
-    { data: referrals },
     { data: allContacts },
     { data: buyerListings },
     { data: tasks },
     { data: contactDocuments },
+    { data: referralsAsReferrer },
+    { data: referralsAsReferred },
+    { data: workflowEnrollments },
+    { data: availableWorkflows },
+    { data: activityLog },
+    { data: allListings },
+    { data: referredByContact },
   ] = await Promise.all([
+    // 1. Communications — limit to recent 50
     supabase
       .from("communications")
-      .select("*")
+      .select("id, contact_id, direction, channel, body, related_id, created_at")
       .eq("contact_id", id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("listings")
-      .select("*")
-      .eq("seller_id", id)
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .limit(50),
+    // 2. Seller listings (skip for buyers)
+    isSeller
+      ? supabase
+          .from("listings")
+          .select("*")
+          .eq("seller_id", id)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    // 3. Contact dates
     supabase
       .from("contact_dates")
-      .select("*")
+      .select("id, contact_id, label, date, notes")
       .eq("contact_id", id)
       .order("date", { ascending: true }),
-    supabase
-      .from("contacts")
-      .select("id, name, type")
-      .eq("referred_by_id", id),
+    // 4. All contacts (id, name only — for referral selectors)
     supabase
       .from("contacts")
       .select("id, name"),
-    // Fetch listings where this contact is the buyer
-    supabase
-      .from("listings")
-      .select("*")
-      .eq("buyer_id", id)
-      .order("created_at", { ascending: false }),
-    // Fetch tasks for this contact
+    // 5. Buyer listings (skip for sellers)
+    !isSeller
+      ? supabase
+          .from("listings")
+          .select("*")
+          .eq("buyer_id", id)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    // 6. Tasks
     supabase
       .from("tasks")
-      .select("*")
+      .select("id, contact_id, title, status, priority, category, due_date, notes, completed_at, created_at")
       .eq("contact_id", id)
       .order("due_date", { ascending: true }),
-    // Fetch contact documents
+    // 7. Contact documents
     supabase
       .from("contact_documents")
-      .select("*")
+      .select("id, contact_id, doc_type, file_name, file_url, uploaded_at, notes")
       .eq("contact_id", id)
       .order("uploaded_at", { ascending: false }),
+    // 8. Referrals as referrer
+    supabase
+      .from("referrals")
+      .select("*, referred_client:contacts!referred_client_contact_id(id, name, type), closed_deal:listings!closed_deal_id(id, address)")
+      .eq("referred_by_contact_id", id)
+      .order("referral_date", { ascending: false }),
+    // 9. Referrals as referred
+    supabase
+      .from("referrals")
+      .select("*, referrer:contacts!referred_by_contact_id(id, name, type), closed_deal:listings!closed_deal_id(id, address)")
+      .eq("referred_client_contact_id", id)
+      .order("referral_date", { ascending: false }),
+    // 10. Workflow enrollments (was waterfall 2)
+    supabase
+      .from("workflow_enrollments")
+      .select("*, workflows(id, name, slug)")
+      .eq("contact_id", id)
+      .order("created_at", { ascending: false }),
+    // 11. Available workflows (was waterfall 2)
+    supabase
+      .from("workflows")
+      .select("id, slug, name, is_active")
+      .order("name", { ascending: true }),
+    // 12. Activity log (was waterfall 3)
+    supabase
+      .from("activity_log")
+      .select("id, contact_id, listing_id, activity_type, description, metadata, created_at")
+      .eq("contact_id", id)
+      .order("created_at", { ascending: false })
+      .limit(30),
+    // 13. All listings for properties of interest (was waterfall 4)
+    !isSeller
+      ? supabase
+          .from("listings")
+          .select("id, address, list_price")
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    // 14. Referred-by contact name (was waterfall 5)
+    contact.referred_by_id
+      ? supabase
+          .from("contacts")
+          .select("name")
+          .eq("id", contact.referred_by_id)
+          .single()
+      : Promise.resolve({ data: null }),
   ]);
 
-  // Fetch workflow enrollments and available workflows
-  const [{ data: workflowEnrollments }, { data: availableWorkflows }] =
-    await Promise.all([
-      supabase
-        .from("workflow_enrollments")
-        .select("*, workflows(id, name, slug)")
-        .eq("contact_id", id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("workflows")
-        .select("id, slug, name, is_active")
-        .order("name", { ascending: true }),
-    ]);
+  const referredByName = referredByContact?.name ?? null;
 
-  // Fetch workflow steps for active enrollments (for stepper display)
+  // ── Workflow steps — only sequential query (depends on enrollment IDs) ──
   const activeEnrollmentWorkflowIds = (workflowEnrollments ?? [])
     .filter((e: { status: string }) => e.status === "active" || e.status === "paused")
     .map((e: { workflow_id: string }) => e.workflow_id);
@@ -147,31 +195,6 @@ export default async function ContactDetailPage({
     stepsByWorkflow[step.workflow_id].push(step);
   }
 
-  // Fetch activity log for this contact
-  const { data: activityLog } = await supabase
-    .from("activity_log")
-    .select("*")
-    .eq("contact_id", id)
-    .order("created_at", { ascending: false })
-    .limit(30);
-
-  // Fetch all listings for properties of interest selector
-  const { data: allListings } = await supabase
-    .from("listings")
-    .select("id, address, list_price")
-    .order("created_at", { ascending: false });
-
-  // Fetch referred-by contact name if set
-  let referredByName: string | null = null;
-  if (contact.referred_by_id) {
-    const { data: referrer } = await supabase
-      .from("contacts")
-      .select("name")
-      .eq("id", contact.referred_by_id)
-      .single();
-    referredByName = referrer?.name ?? null;
-  }
-
   const typedListings = (listings ?? []) as Listing[];
   const typedBuyerListings = (buyerListings ?? []) as Listing[];
   const typedCommunications = (communications ?? []) as Communication[];
@@ -191,6 +214,11 @@ export default async function ContactDetailPage({
   // Parse buyer preferences from JSONB
   const buyerPreferences = contact.buyer_preferences
     ? (contact.buyer_preferences as unknown as BuyerPreferences)
+    : null;
+
+  // Parse seller preferences from JSONB
+  const sellerPreferences = contact.seller_preferences
+    ? (contact.seller_preferences as unknown as SellerPreferences)
     : null;
 
   // Parse tags from JSONB
@@ -243,13 +271,107 @@ export default async function ContactDetailPage({
     ? sortedEnrollments[0].workflow_id
     : null;
 
+  // ── Build stage data for StageBar ──────────────────────────
+  const fmt = (v: number | null | undefined) =>
+    v ? Number(v).toLocaleString("en-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }) : null;
+
+  const stageData: Record<string, StageData> = isSeller
+    ? {
+        new: {
+          sectionId: "section-contact-info",
+          items: [
+            { label: "Name", value: contact.name, filled: !!contact.name },
+            { label: "Phone", value: contact.phone, filled: !!contact.phone },
+            { label: "Email", value: contact.email, filled: !!contact.email },
+            { label: "Pref Channel", value: contact.pref_channel, filled: !!contact.pref_channel },
+          ],
+        },
+        qualified: {
+          sectionId: "section-seller-preferences",
+          items: [
+            { label: "Motivation", value: sellerPreferences?.motivation || null, filled: !!sellerPreferences?.motivation },
+            { label: "Desired Price", value: fmt(sellerPreferences?.desired_list_price as number), filled: !!sellerPreferences?.desired_list_price },
+            { label: "Earliest List Date", value: sellerPreferences?.earliest_list_date || null, filled: !!sellerPreferences?.earliest_list_date },
+            { label: "Occupancy", value: sellerPreferences?.occupancy || null, filled: !!sellerPreferences?.occupancy },
+          ],
+        },
+        active_listing: {
+          sectionId: "section-property-history",
+          items: [
+            { label: "Listings", value: typedListings.length > 0 ? `${typedListings.length} listing(s)` : null, filled: typedListings.length > 0 },
+            { label: "Active Listing", value: typedListings.find((l) => l.status === "active")?.address || null, filled: typedListings.some((l) => l.status === "active") },
+            { label: "List Price", value: fmt(typedListings[0]?.list_price), filled: !!typedListings[0]?.list_price },
+            { label: "Showings", value: null, filled: false }, // placeholder
+          ],
+        },
+        under_contract: {
+          sectionId: "section-property-history",
+          items: [
+            { label: "Pending Listing", value: typedListings.find((l) => l.status === "pending")?.address || null, filled: typedListings.some((l) => l.status === "pending" || l.status === "sold") },
+            { label: "Sale Price", value: fmt(typedListings.find((l) => l.status === "pending" || l.status === "sold")?.sale_price), filled: !!typedListings.find((l) => l.status === "pending" || l.status === "sold")?.sale_price },
+          ],
+        },
+        closed: {
+          sectionId: "section-property-history",
+          items: [
+            { label: "Sold Listing", value: typedListings.find((l) => l.status === "sold")?.address || null, filled: typedListings.some((l) => l.status === "sold") },
+            { label: "Sale Price", value: fmt(typedListings.find((l) => l.status === "sold")?.sale_price), filled: !!typedListings.find((l) => l.status === "sold")?.sale_price },
+            { label: "Closing Date", value: typedListings.find((l) => l.status === "sold")?.closing_date || null, filled: !!typedListings.find((l) => l.status === "sold")?.closing_date },
+          ],
+        },
+      }
+    : {
+        new: {
+          sectionId: "section-contact-info",
+          items: [
+            { label: "Name", value: contact.name, filled: !!contact.name },
+            { label: "Phone", value: contact.phone, filled: !!contact.phone },
+            { label: "Email", value: contact.email, filled: !!contact.email },
+            { label: "Pref Channel", value: contact.pref_channel, filled: !!contact.pref_channel },
+          ],
+        },
+        qualified: {
+          sectionId: "section-buyer-preferences",
+          items: [
+            { label: "Budget", value: buyerPreferences?.max_price ? `Up to ${fmt(buyerPreferences.max_price)}` : null, filled: !!buyerPreferences?.max_price },
+            { label: "Areas", value: buyerPreferences?.preferred_areas?.join(", ") || null, filled: (buyerPreferences?.preferred_areas?.length ?? 0) > 0 },
+            { label: "Property Type", value: buyerPreferences?.property_type || null, filled: !!buyerPreferences?.property_type },
+            { label: "Financing", value: buyerPreferences?.financing_status || null, filled: !!buyerPreferences?.financing_status },
+            { label: "Pre-Approval", value: fmt(buyerPreferences?.pre_approval_amount as number), filled: !!buyerPreferences?.pre_approval_amount },
+            { label: "Must-Haves", value: buyerPreferences?.must_haves?.join(", ") || null, filled: (buyerPreferences?.must_haves?.length ?? 0) > 0 },
+          ],
+        },
+        active_search: {
+          sectionId: "section-properties-interest",
+          items: [
+            { label: "Properties Viewed", value: typedBuyerListings.length > 0 ? `${typedBuyerListings.length} property(ies)` : null, filled: typedBuyerListings.length > 0 },
+            { label: "Communications", value: typedCommunications.length > 0 ? `${typedCommunications.length} message(s)` : null, filled: typedCommunications.length > 0 },
+          ],
+        },
+        under_contract: {
+          sectionId: "section-property-history",
+          items: [
+            { label: "Property", value: typedBuyerListings.find((l) => l.status === "pending" || l.status === "sold")?.address || null, filled: typedBuyerListings.some((l) => l.status === "pending" || l.status === "sold") },
+            { label: "Purchase Price", value: fmt(typedBuyerListings.find((l) => l.status === "pending" || l.status === "sold")?.sale_price), filled: !!typedBuyerListings.find((l) => l.status === "pending" || l.status === "sold")?.sale_price },
+          ],
+        },
+        closed: {
+          sectionId: "section-property-history",
+          items: [
+            { label: "Purchased", value: typedBuyerListings.find((l) => l.status === "sold")?.address || null, filled: typedBuyerListings.some((l) => l.status === "sold") },
+            { label: "Purchase Price", value: fmt(typedBuyerListings.find((l) => l.status === "sold")?.sale_price), filled: !!typedBuyerListings.find((l) => l.status === "sold")?.sale_price },
+            { label: "Closing Date", value: typedBuyerListings.find((l) => l.status === "sold")?.closing_date || null, filled: !!typedBuyerListings.find((l) => l.status === "sold")?.closing_date },
+          ],
+        },
+      };
+
   return (
     <div className="flex h-full">
       {/* CENTER -- scrollable */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-background to-teal-50/20 dark:from-background dark:via-background dark:to-teal-950/10">
         <div className="space-y-5">
           {/* Header Card — gradient accent strip */}
-          <Card className="animate-float-in overflow-hidden shadow-md border-0">
+          <Card id="section-contact-info" className="animate-float-in overflow-hidden shadow-md border-0">
             <div className="h-1.5 bg-gradient-to-r from-teal-500 via-indigo-500 to-violet-500" />
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
@@ -307,6 +429,13 @@ export default async function ContactDetailPage({
                   <div className="mt-2">
                     <TagEditor contactId={id} tags={contactTags} />
                   </div>
+                  {/* Stage Bar */}
+                  <StageBar
+                    contactId={id}
+                    contactType={contact.type as "buyer" | "seller"}
+                    currentStage={contact.stage_bar as string | null}
+                    stageData={stageData}
+                  />
                   {contact.notes && (
                     <p className="text-sm text-muted-foreground mt-2">
                       {contact.notes}
@@ -372,17 +501,28 @@ export default async function ContactDetailPage({
 
           {/* Post-lifecycle content */}
           {isSeller ? (
-            /* Seller Earnings Summary */
-            typedListings.some((l) => l.status === "sold") ? (
-              <Card className="border-l-4 border-l-amber-400 bg-amber-50/20 dark:bg-amber-950/10">
+            <>
+              {/* Seller Preferences */}
+              <Card id="section-seller-preferences" className="border-l-4 border-l-indigo-400 bg-indigo-50/20 dark:bg-indigo-950/10">
                 <CardContent className="p-6">
-                  <SellerEarningsSummary listings={typedListings} />
+                  <SellerPreferencesPanel
+                    contactId={id}
+                    preferences={sellerPreferences}
+                  />
                 </CardContent>
               </Card>
-            ) : null
+              {/* Seller Earnings Summary */}
+              {typedListings.some((l) => l.status === "sold") && (
+                <Card className="border-l-4 border-l-amber-400 bg-amber-50/20 dark:bg-amber-950/10">
+                  <CardContent className="p-6">
+                    <SellerEarningsSummary listings={typedListings} />
+                  </CardContent>
+                </Card>
+              )}
+            </>
           ) : (
             /* Buyer Preferences */
-            <Card className="border-l-4 border-l-teal-400 bg-teal-50/20 dark:bg-teal-950/10">
+            <Card id="section-buyer-preferences" className="border-l-4 border-l-teal-400 bg-teal-50/20 dark:bg-teal-950/10">
               <CardContent className="p-6">
                 <BuyerPreferencesPanel
                   contactId={id}
@@ -394,7 +534,7 @@ export default async function ContactDetailPage({
 
           {/* Properties of Interest (buyers only) */}
           {!isSeller && (
-            <Card className="bg-sky-50/20 dark:bg-sky-950/10">
+            <Card id="section-properties-interest" className="bg-sky-50/20 dark:bg-sky-950/10">
               <CardContent className="p-6">
                 <PropertiesOfInterestPanel
                   contactId={id}
@@ -407,7 +547,7 @@ export default async function ContactDetailPage({
 
           {/* Property History */}
           {(isSeller ? typedListings.length > 0 : typedBuyerListings.length > 0) && (
-            <Card className="bg-violet-50/15 dark:bg-violet-950/10">
+            <Card id="section-property-history" className="bg-violet-50/15 dark:bg-violet-950/10">
               <CardContent className="p-6">
                 <PropertyHistoryPanel
                   listings={isSeller ? typedListings : typedBuyerListings}
@@ -476,7 +616,8 @@ export default async function ContactDetailPage({
           <ReferralsPanel
             contact={contact}
             referredByName={referredByName}
-            referrals={(referrals ?? []) as { id: string; name: string; type: string }[]}
+            referralsAsReferrer={(referralsAsReferrer ?? []) as ReferralRow[]}
+            referralsAsReferred={(referralsAsReferred ?? []) as ReferralRow[]}
             allContacts={(allContacts ?? []) as { id: string; name: string }[]}
           />
         </div>

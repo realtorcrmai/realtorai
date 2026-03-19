@@ -8,6 +8,7 @@ export const WORKFLOW_ACTION_TYPES = [
   "system_action",
   "wait",
   "condition",
+  "milestone",
 ] as const;
 export type WorkflowActionType = (typeof WORKFLOW_ACTION_TYPES)[number];
 
@@ -20,6 +21,7 @@ export const ACTION_TYPE_LABELS: Record<WorkflowActionType, string> = {
   system_action: "System Action",
   wait: "Wait / Delay",
   condition: "Condition",
+  milestone: "Milestone",
 };
 
 export const ACTION_TYPE_ICONS: Record<WorkflowActionType, string> = {
@@ -31,6 +33,7 @@ export const ACTION_TYPE_ICONS: Record<WorkflowActionType, string> = {
   system_action: "⚙️",
   wait: "⏳",
   condition: "🔀",
+  milestone: "🏁",
 };
 
 export const ACTION_TYPE_COLORS: Record<WorkflowActionType, { bg: string; text: string }> = {
@@ -42,6 +45,7 @@ export const ACTION_TYPE_COLORS: Record<WorkflowActionType, { bg: string; text: 
   system_action: { bg: "bg-purple-50 dark:bg-purple-950", text: "text-purple-600 dark:text-purple-400" },
   wait: { bg: "bg-gray-50 dark:bg-gray-900", text: "text-gray-500 dark:text-gray-400" },
   condition: { bg: "bg-indigo-50 dark:bg-indigo-950", text: "text-indigo-600 dark:text-indigo-400" },
+  milestone: { bg: "bg-teal-50 dark:bg-teal-950", text: "text-teal-600 dark:text-teal-400" },
 };
 
 // ── Workflow Trigger Types ────────────────────────────────────
@@ -153,6 +157,8 @@ export type WorkflowStepBlueprint = {
   template_category?: string;
   task_config?: Record<string, unknown>;
   action_config?: Record<string, unknown>;
+  /** When set, AI generates the message body instead of using a static template */
+  ai_template_intent?: string;
 };
 
 export type WorkflowBlueprint = {
@@ -335,7 +341,65 @@ export const WORKFLOW_BLUEPRINTS: WorkflowBlueprint[] = [
       { name: "Email: annual recap + thank you", action_type: "auto_email", delay_value: 0, delay_unit: "minutes" },
     ],
   },
+  {
+    slug: "seller_lifecycle",
+    name: "Seller Lifecycle",
+    icon: "📊",
+    description: "Milestone-based seller journey from intake to closing",
+    steps: [
+      { name: "Initial Contact", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "contact_exists", description: "Seller onboarded, basic info captured" } },
+      { name: "Listing Agreement", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "has_listing", description: "Listing created, documents prepared" } },
+      { name: "Property Listed", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "listing_active", description: "Active on MLS, showings scheduled" } },
+      { name: "Offer Accepted", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "listing_pending_or_sold", description: "Pending sale, conditions in progress" } },
+      { name: "Closing Complete", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "listing_sold", description: "Transaction closed, commission earned" } },
+    ],
+  },
+  {
+    slug: "buyer_lifecycle",
+    name: "Buyer Lifecycle",
+    icon: "🔑",
+    description: "Milestone-based buyer journey from contact to purchase",
+    steps: [
+      { name: "Initial Contact", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "contact_exists", description: "Buyer onboarded, basic info captured" } },
+      { name: "Preferences Set", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "has_buyer_preferences", description: "Budget, areas, property type defined" } },
+      { name: "Property Showings", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "has_showings_or_activity", description: "Viewing properties, narrowing choices" } },
+      { name: "Offer Submitted", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "listing_pending_or_sold", description: "Offer made, negotiation in progress" } },
+      { name: "Closing Complete", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "listing_sold", description: "Purchase closed, keys handed over" } },
+    ],
+  },
 ];
+
+// ── Workflow → Stage Bar Mapping ─────────────────────────────
+// When a contact is enrolled in a workflow, their stage_bar should
+// automatically reflect the implied stage. This prevents data inconsistency
+// (e.g. stage_bar = "new" while enrolled in post_close_buyer).
+export const WORKFLOW_STAGE_MAP: Record<string, {
+  buyer: string;
+  seller: string;
+}> = {
+  speed_to_contact: { buyer: "new", seller: "new" },
+  buyer_nurture: { buyer: "qualified", seller: "qualified" },
+  post_close_buyer: { buyer: "closed", seller: "closed" },
+  post_close_seller: { buyer: "closed", seller: "closed" },
+  lead_reengagement: { buyer: "cold", seller: "cold" },
+  open_house_followup: { buyer: "active_search", seller: "active_listing" },
+  referral_partner: { buyer: "new", seller: "new" }, // partners don't have a pipeline stage, keep as-is
+};
+
+// Lifecycle milestone → stage mapping (by step name)
+export const LIFECYCLE_MILESTONE_STAGE_MAP: Record<string, {
+  buyer: string;
+  seller: string;
+}> = {
+  "Initial Contact": { buyer: "new", seller: "new" },
+  "Preferences Set": { buyer: "qualified", seller: "qualified" },
+  "Listing Agreement": { buyer: "qualified", seller: "qualified" },
+  "Property Showings": { buyer: "active_search", seller: "active_listing" },
+  "Property Listed": { buyer: "active_search", seller: "active_listing" },
+  "Offer Submitted": { buyer: "under_contract", seller: "under_contract" },
+  "Offer Accepted": { buyer: "under_contract", seller: "under_contract" },
+  "Closing Complete": { buyer: "closed", seller: "closed" },
+};
 
 // Helper: find blueprint by slug
 export function getWorkflowBlueprint(slug: string): WorkflowBlueprint | undefined {
