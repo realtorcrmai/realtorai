@@ -342,6 +342,41 @@ export interface Database {
           updated_at?: string;
         };
       };
+      users: {
+        Row: {
+          id: string;
+          email: string;
+          name: string | null;
+          image: string | null;
+          role: "admin" | "realtor";
+          enabled_features: string[];
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          name?: string | null;
+          image?: string | null;
+          role?: "admin" | "realtor";
+          enabled_features?: string[];
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          name?: string | null;
+          image?: string | null;
+          role?: "admin" | "realtor";
+          enabled_features?: string[];
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       form_submissions: {
         Row: {
           id: string;

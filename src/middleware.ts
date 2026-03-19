@@ -22,6 +22,11 @@ export default auth((req) => {
     );
   }
 
+  // Block non-admins from /admin routes
+  if (pathname.startsWith("/admin") && req.auth?.user?.role !== "admin") {
+    return NextResponse.redirect(new URL("/", req.url));
+  }
+
   if (isOnLogin && isLoggedIn) {
     return NextResponse.redirect(new URL("/", req.url));
   }

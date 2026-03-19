@@ -19,6 +19,7 @@ import {
   Home,
   ChevronDown,
   Menu,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
@@ -30,26 +31,22 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
-const mainTabs = [
-  { href: "/listings", label: "Listings", icon: Building2 },
-  { href: "/contacts", label: "Contacts", icon: Users },
-  { href: "/showings", label: "Showings", icon: Clock },
-  { href: "/calendar", label: "Calendar", icon: Calendar },
+import type { FeatureKey } from "@/lib/features";
+
+const mainTabs: { href: string; label: string; icon: typeof Building2; featureKey: FeatureKey }[] = [
+  { href: "/listings", label: "Listings", icon: Building2, featureKey: "listings" },
+  { href: "/contacts", label: "Contacts", icon: Users, featureKey: "contacts" },
+  { href: "/showings", label: "Showings", icon: Clock, featureKey: "showings" },
+  { href: "/calendar", label: "Calendar", icon: Calendar, featureKey: "calendar" },
 ];
 
-const moreItems = [
-  { href: "/tasks", label: "Tasks", icon: ListTodo },
-  { href: "/content", label: "Content Engine", icon: Wand2 },
-  { href: "/search", label: "Property Search", icon: Search },
-  { href: "/workflow", label: "MLS Workflow", icon: GitBranch },
-  { href: "/import", label: "Excel Import", icon: Upload },
-  { href: "/forms", label: "BC Forms", icon: FileText },
-];
-
-const allNav = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  ...mainTabs,
-  ...moreItems,
+const moreItems: { href: string; label: string; icon: typeof Building2; featureKey: FeatureKey }[] = [
+  { href: "/tasks", label: "Tasks", icon: ListTodo, featureKey: "tasks" },
+  { href: "/content", label: "Content Engine", icon: Wand2, featureKey: "content" },
+  { href: "/search", label: "Property Search", icon: Search, featureKey: "search" },
+  { href: "/workflow", label: "MLS Workflow", icon: GitBranch, featureKey: "workflow" },
+  { href: "/import", label: "Excel Import", icon: Upload, featureKey: "import" },
+  { href: "/forms", label: "BC Forms", icon: FileText, featureKey: "forms" },
 ];
 
 export function AppHeader() {
@@ -57,6 +54,22 @@ export function AppHeader() {
   const { data: session } = useSession();
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
+
+  const enabledFeatures = session?.user?.enabledFeatures ?? [];
+  const isAdmin = session?.user?.role === "admin";
+
+  const filteredMainTabs = enabledFeatures.length > 0
+    ? mainTabs.filter((tab) => enabledFeatures.includes(tab.featureKey))
+    : mainTabs;
+  const filteredMoreItems = enabledFeatures.length > 0
+    ? moreItems.filter((item) => enabledFeatures.includes(item.featureKey))
+    : moreItems;
+  const allNav = [
+    { href: "/", label: "Dashboard", icon: LayoutDashboard, featureKey: undefined as FeatureKey | undefined },
+    ...filteredMainTabs,
+    ...filteredMoreItems,
+    ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: Shield, featureKey: undefined as FeatureKey | undefined }] : []),
+  ];
 
   const initials = session?.user?.name
     ? session.user.name
@@ -83,7 +96,7 @@ export function AppHeader() {
   }
 
   // Check if any "more" item is active
-  const moreActive = moreItems.some((item) => isActive(item.href));
+  const moreActive = filteredMoreItems.some((item) => isActive(item.href));
 
   return (
     <>
@@ -109,7 +122,7 @@ export function AppHeader() {
 
         {/* Nav Tabs */}
         <nav className="flex items-center gap-1 flex-1">
-          {mainTabs.map((tab) => (
+          {filteredMainTabs.map((tab) => (
             <Link
               key={tab.href}
               href={tab.href}
@@ -148,7 +161,7 @@ export function AppHeader() {
 
             {moreOpen && (
               <div className="absolute top-full left-0 mt-2 w-56 bg-card rounded-xl shadow-lg border border-border py-2 z-50 animate-in fade-in-0 zoom-in-95 duration-100">
-                {moreItems.map((item) => (
+                {filteredMoreItems.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
@@ -168,6 +181,22 @@ export function AppHeader() {
             )}
           </div>
         </nav>
+
+        {/* Admin Link */}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 shrink-0",
+              isActive("/admin")
+                ? "bg-amber-100 text-amber-700"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            )}
+          >
+            <Shield className="h-4 w-4" />
+            <span className="hidden lg:inline">Admin</span>
+          </Link>
+        )}
 
         {/* Separator */}
         <div className="h-6 w-px bg-border/60 shrink-0" />

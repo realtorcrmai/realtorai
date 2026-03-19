@@ -14,6 +14,8 @@ export type Prompt = Database["public"]["Tables"]["prompts"]["Row"];
 export type PromptInsert = Database["public"]["Tables"]["prompts"]["Insert"];
 export type MediaAsset = Database["public"]["Tables"]["media_assets"]["Row"];
 export type MediaAssetInsert = Database["public"]["Tables"]["media_assets"]["Insert"];
+export type User = Database["public"]["Tables"]["users"]["Row"];
+export type UserInsert = Database["public"]["Tables"]["users"]["Insert"];
 
 export type AppointmentWithListing = Appointment & {
   listings: Listing;
@@ -32,6 +34,8 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       accessToken?: string;
+      role?: "admin" | "realtor";
+      enabledFeatures?: string[];
     };
   }
 }

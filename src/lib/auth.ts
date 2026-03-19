@@ -2,12 +2,14 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ALL_FEATURES } from "@/lib/features";
 
 const DEMO_EMAIL = process.env.DEMO_EMAIL || "demo@realestatecrm.com";
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD || "demo1234";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 60 * 60 /* 1 hour */ },
   providers: [
     CredentialsProvider({
       name: "Demo Account",
@@ -47,9 +49,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, account }) {
+    async jwt({ token, account, trigger }) {
+      const supabase = createAdminClient();
+
+      // Store Google tokens on sign-in
       if (account && account.provider === "google" && account.refresh_token) {
-        const supabase = createAdminClient();
         await supabase.from("google_tokens").upsert(
           {
             user_email: token.email as string,
@@ -66,10 +70,44 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
       }
+
+      // Upsert user record and fetch role/features
+      if (token.email) {
+        const { data: existingUser } = await supabase
+          .from("users")
+          .select("id, role, enabled_features, is_active")
+          .eq("email", token.email)
+          .single();
+
+        if (existingUser) {
+          token.role = existingUser.role;
+          token.enabledFeatures = existingUser.enabled_features;
+          token.userId = existingUser.id;
+        } else if (trigger === "signIn" || account) {
+          // New user — insert with defaults
+          const isAdmin = ADMIN_EMAIL && token.email === ADMIN_EMAIL;
+          const { data: newUser } = await supabase
+            .from("users")
+            .insert({
+              email: token.email,
+              name: token.name as string | undefined,
+              role: isAdmin ? "admin" : "realtor",
+            })
+            .select("id, role, enabled_features")
+            .single();
+
+          token.role = newUser?.role ?? "realtor";
+          token.enabledFeatures = newUser?.enabled_features ?? ALL_FEATURES;
+          token.userId = newUser?.id;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
       session.user.accessToken = token.accessToken as string;
+      session.user.role = token.role as "admin" | "realtor" | undefined;
+      session.user.enabledFeatures = token.enabledFeatures as string[] | undefined;
       return session;
     },
   },

@@ -88,8 +88,11 @@ export default async function DashboardPage() {
   ).length;
   const openTasksCount = pendingTasks + inProgressTasks;
 
-  const featureTiles = [
+  const enabledFeatures = session?.user?.enabledFeatures ?? [];
+
+  const allFeatureTiles = [
     {
+      key: "listings",
       href: "/listings",
       title: "Listings",
       description: "Manage property listings, photos & pricing",
@@ -99,6 +102,7 @@ export default async function DashboardPage() {
       countLabel: "active",
     },
     {
+      key: "contacts",
       href: "/contacts",
       title: "Contacts",
       description: "Buyers, sellers & agent relationships",
@@ -108,6 +112,7 @@ export default async function DashboardPage() {
       countLabel: null,
     },
     {
+      key: "tasks",
       href: "/tasks",
       title: "Tasks",
       description: "Daily to-do items & follow-ups",
@@ -117,6 +122,7 @@ export default async function DashboardPage() {
       countLabel: "open",
     },
     {
+      key: "showings",
       href: "/showings",
       title: "Showings",
       description: "Track & manage showing requests",
@@ -126,6 +132,7 @@ export default async function DashboardPage() {
       countLabel: "pending",
     },
     {
+      key: "calendar",
       href: "/calendar",
       title: "Calendar",
       description: "View your schedule at a glance",
@@ -138,6 +145,7 @@ export default async function DashboardPage() {
       countLabel: "this week",
     },
     {
+      key: "content",
       href: "/content",
       title: "Content Engine",
       description: "AI-powered MLS remarks, video & images",
@@ -147,6 +155,7 @@ export default async function DashboardPage() {
       countLabel: null,
     },
     {
+      key: "search",
       href: "/search",
       title: "Property Search",
       description: "Find properties for your buyers",
@@ -156,6 +165,7 @@ export default async function DashboardPage() {
       countLabel: null,
     },
     {
+      key: "workflow",
       href: "/workflow",
       title: "MLS Workflow",
       description: "7-phase listing pipeline tracker",
@@ -165,6 +175,7 @@ export default async function DashboardPage() {
       countLabel: null,
     },
     {
+      key: "import",
       href: "/import",
       title: "Excel Import",
       description: "Import listings from spreadsheets",
@@ -174,6 +185,7 @@ export default async function DashboardPage() {
       countLabel: null,
     },
     {
+      key: "forms",
       href: "/forms",
       title: "BC Forms",
       description: "Standard BC real estate documents",
@@ -183,6 +195,7 @@ export default async function DashboardPage() {
       countLabel: null,
     },
     {
+      key: "website",
       href: "http://localhost:3001",
       title: "Website Marketing",
       description: "Build & manage your realtor website",
@@ -193,6 +206,11 @@ export default async function DashboardPage() {
       external: true,
     },
   ];
+
+  // Filter tiles based on user's enabled features
+  const featureTiles = enabledFeatures.length > 0
+    ? allFeatureTiles.filter((tile) => enabledFeatures.includes(tile.key))
+    : allFeatureTiles;
 
   const quickStats = [
     {
