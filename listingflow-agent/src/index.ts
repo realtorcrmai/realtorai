@@ -42,7 +42,7 @@ app.get("/api/sites", async (_req, res) => {
  */
 app.post("/api/generate", async (req, res) => {
   try {
-    const { site_id, listing_ids, testimonial_ids, reference_url } = req.body;
+    const { site_id, listing_ids, testimonial_ids, reference_url, design_prompt } = req.body;
     if (!site_id) {
       return res.status(400).json({ error: "site_id is required" });
     }
@@ -61,7 +61,7 @@ app.post("/api/generate", async (req, res) => {
     }
 
     // Start generation in background (don't await)
-    runGeneration(generation.id, { site_id, listing_ids, testimonial_ids, reference_url }).catch(
+    runGeneration(generation.id, { site_id, listing_ids, testimonial_ids, reference_url, design_prompt }).catch(
       (e) => console.error("Background generation error:", e)
     );
 

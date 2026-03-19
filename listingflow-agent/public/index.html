@@ -346,6 +346,12 @@
           <div class="form-hint">Provide a website you like for design inspiration.</div>
         </div>
 
+        <div class="form-group">
+          <label for="design-prompt">Design Preferences</label>
+          <textarea id="design-prompt" rows="4" style="width:100%;padding:10px 14px;border:1.5px solid rgba(79,53,210,0.15);border-radius:var(--lf-r);font-family:inherit;font-size:15px;background:rgba(255,255,255,0.9);color:var(--lf-text);outline:none;resize:vertical;transition:border-color 0.2s;" placeholder="Describe the look and feel you want. E.g., &quot;Modern and luxurious with dark tones, gold accents. Focus on my downtown Vancouver condos. I want a bold hero section with my headshot.&quot;"></textarea>
+          <div class="form-hint">Tell us about the style, tone, colors, or features you'd like on your website.</div>
+        </div>
+
         <div class="text-center mt-24">
           <button id="btn-generate" class="btn btn-primary" disabled>
             Generate My Website
@@ -475,6 +481,7 @@
       if (!siteId) return;
 
       const refUrl = document.getElementById('ref-url').value.trim();
+      const designPrompt = document.getElementById('design-prompt').value.trim();
       const btn = document.getElementById('btn-generate');
       const errEl = document.getElementById('generate-error');
 
@@ -488,7 +495,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             site_id: siteId,
-            ...(refUrl ? { reference_url: refUrl } : {})
+            ...(refUrl ? { reference_url: refUrl } : {}),
+            ...(designPrompt ? { design_prompt: designPrompt } : {})
           })
         });
 
