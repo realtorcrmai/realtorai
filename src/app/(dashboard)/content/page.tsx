@@ -22,7 +22,7 @@ export default async function ContentPage() {
     await Promise.all([
       supabase
         .from("listings")
-        .select("id, address, list_price, status, hero_image_url, contacts(name)")
+        .select("id, address, list_price, status, hero_image_url, contacts!listings_seller_id_fkey(name)")
         .order("created_at", { ascending: false }),
       supabase.from("prompts").select("*"),
       supabase.from("media_assets").select("*"),

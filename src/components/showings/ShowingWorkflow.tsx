@@ -105,6 +105,28 @@ function deriveStepStatuses(showing: {
       ? "in-progress"
       : "pending";
 
+  // Sequential enforcement — a step cannot be "completed" or "in-progress"
+  // if its predecessor is not "completed"
+  const stepOrder = [
+    "request-submitted",
+    "seller-notified",
+    "response-received",
+    "showing-completed",
+    "feedback",
+  ];
+  for (let i = 1; i < stepOrder.length; i++) {
+    const prevStatus = statuses[stepOrder[i - 1]];
+    const currStatus = statuses[stepOrder[i]];
+    if (prevStatus !== "completed") {
+      if (currStatus === "completed") {
+        statuses[stepOrder[i]] = "pending";
+      }
+      if (currStatus === "in-progress" && prevStatus === "pending") {
+        statuses[stepOrder[i]] = "pending";
+      }
+    }
+  }
+
   return statuses;
 }
 

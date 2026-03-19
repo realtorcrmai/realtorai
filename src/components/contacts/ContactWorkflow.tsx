@@ -154,6 +154,17 @@ function deriveSellerStatuses(
     statuses["closing-complete"] = "pending";
   }
 
+  // Sequential enforcement
+  const sellerStepOrder = ["initial-contact", "listing-agreement", "property-listed", "offer-accepted", "closing-complete"];
+  for (let i = 1; i < sellerStepOrder.length; i++) {
+    const prev = statuses[sellerStepOrder[i - 1]];
+    const curr = statuses[sellerStepOrder[i]];
+    if (prev !== "completed") {
+      if (curr === "completed") statuses[sellerStepOrder[i]] = "pending";
+      if (curr === "in-progress" && prev === "pending") statuses[sellerStepOrder[i]] = "pending";
+    }
+  }
+
   return statuses;
 }
 
@@ -204,6 +215,17 @@ function deriveBuyerStatuses(
     statuses["closing-complete"] = "in-progress";
   } else {
     statuses["closing-complete"] = "pending";
+  }
+
+  // Sequential enforcement
+  const buyerStepOrder = ["initial-contact", "preferences-set", "property-showings", "offer-submitted", "closing-complete"];
+  for (let i = 1; i < buyerStepOrder.length; i++) {
+    const prev = statuses[buyerStepOrder[i - 1]];
+    const curr = statuses[buyerStepOrder[i]];
+    if (prev !== "completed") {
+      if (curr === "completed") statuses[buyerStepOrder[i]] = "pending";
+      if (curr === "in-progress" && prev === "pending") statuses[buyerStepOrder[i]] = "pending";
+    }
   }
 
   return statuses;

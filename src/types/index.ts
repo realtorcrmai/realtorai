@@ -48,7 +48,19 @@ export type BuyerPreferences = {
   notes?: string;
   pre_approval_amount?: number;
   properties_of_interest?: PropertyOfInterest[];
+  must_haves?: string[];
+  nice_to_haves?: string[];
+  financing_status?: 'not_started' | 'in_progress' | 'preapproved';
 };
+
+export interface SellerPreferences {
+  motivation?: string; // relocating, upsizing, downsizing, investment, estate, other
+  desired_list_price?: number;
+  earliest_list_date?: string; // ISO date
+  occupancy?: string; // owner_occupied, tenant, vacant
+  has_purchase_plan_after_sale?: boolean;
+  notes?: string;
+}
 
 export type AppointmentWithListing = Appointment & {
   listings: Listing;
@@ -70,6 +82,8 @@ export type WorkflowEnrollmentInsert = Database["public"]["Tables"]["workflow_en
 export type WorkflowStepLog = Database["public"]["Tables"]["workflow_step_logs"]["Row"];
 export type AgentNotification = Database["public"]["Tables"]["agent_notifications"]["Row"];
 export type ActivityLog = Database["public"]["Tables"]["activity_log"]["Row"];
+export type Referral = Database["public"]["Tables"]["referrals"]["Row"];
+export type ReferralInsert = Database["public"]["Tables"]["referrals"]["Insert"];
 
 export type WorkflowWithSteps = Workflow & {
   workflow_steps: WorkflowStep[];

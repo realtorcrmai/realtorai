@@ -18,17 +18,21 @@ export default async function ContactsLayout({
 
   return (
     <div className="flex h-full">
-      {/* Left sidebar — contact list */}
-      <div className="hidden md:flex flex-col h-full">
-        <ContactSidebar contacts={contacts ?? []} />
-        <div className="p-3 border-r border-t bg-card/50">
+      {/* Left sidebar — contact list + add button at top */}
+      <div className="hidden md:flex flex-col h-full w-[280px] shrink-0 border-r bg-card/50">
+        <div className="p-3 border-b bg-card/50 shrink-0">
           <ContactForm />
         </div>
+        <ContactSidebar contacts={contacts ?? []} />
       </div>
 
       {/* Center + Right content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
         {children}
+        {/* Mobile FAB for creating contacts */}
+        <div className="md:hidden fixed bottom-20 right-4 z-50">
+          <ContactForm />
+        </div>
       </div>
     </div>
   );

@@ -288,15 +288,25 @@ export default async function AutomationsPage() {
                           Paused
                         </Badge>
                       )}
-                      {workflow.contact_type &&
-                        workflow.contact_type !== "any" && (
+                      <div className="flex items-center gap-1.5">
+                        {workflow.slug?.endsWith("_lifecycle") && (
                           <Badge
                             variant="outline"
-                            className="text-[11px] capitalize"
+                            className="text-[10px] border-teal-300 text-teal-700 bg-teal-50"
                           >
-                            {workflow.contact_type}
+                            Lifecycle
                           </Badge>
                         )}
+                        {workflow.contact_type &&
+                          workflow.contact_type !== "any" && (
+                            <Badge
+                              variant="outline"
+                              className="text-[11px] capitalize"
+                            >
+                              {workflow.contact_type}
+                            </Badge>
+                          )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

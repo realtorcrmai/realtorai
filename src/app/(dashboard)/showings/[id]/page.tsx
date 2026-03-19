@@ -19,7 +19,7 @@ export default async function ShowingDetailPage({
 
   const { data: showing } = await supabase
     .from("appointments")
-    .select("*, listings(*, contacts(id, name, phone, email))")
+    .select("*, listings(*, contacts!listings_seller_id_fkey(id, name, phone, email))")
     .eq("id", id)
     .single();
 

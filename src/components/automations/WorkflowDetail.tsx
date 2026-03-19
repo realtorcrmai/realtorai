@@ -511,6 +511,7 @@ export default function WorkflowDetail({
                     step.delay_unit || "minutes"
                   );
                   const isWait = step.action_type === "wait";
+                  const isMilestone = step.action_type === "milestone";
 
                   return (
                     <div key={step.id} className="relative group">
@@ -528,11 +529,15 @@ export default function WorkflowDetail({
                           className={`relative z-10 flex-shrink-0 w-[46px] h-[46px] rounded-full flex items-center justify-center text-sm font-bold shadow-sm border-2 ${
                             isWait
                               ? "bg-gray-50 border-gray-200 text-gray-500"
+                              : isMilestone
+                              ? "bg-teal-50 border-teal-300 text-teal-600"
                               : "bg-white border-[var(--lf-indigo)]/30 text-[var(--lf-indigo)]"
                           }`}
                         >
                           {isWait ? (
                             <span className="text-lg">⏳</span>
+                          ) : isMilestone ? (
+                            <span className="text-lg">🏁</span>
                           ) : (
                             idx + 1
                           )}
@@ -607,6 +612,16 @@ export default function WorkflowDetail({
                                 {String(
                                   (step.action_config as Record<string, unknown>)
                                     .value
+                                )}
+                              </p>
+                            )}
+
+                          {step.action_type === "milestone" &&
+                            Boolean((step.action_config as Record<string, unknown>)?.description) && (
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {String(
+                                  (step.action_config as Record<string, unknown>)
+                                    .description
                                 )}
                               </p>
                             )}

@@ -29,7 +29,7 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="antialiased">
 
-        <SessionProvider>
+        <SessionProvider refetchOnWindowFocus={false} refetchInterval={300}>
           <TooltipProvider>{children}</TooltipProvider>
         </SessionProvider>
       </body>

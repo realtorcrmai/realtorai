@@ -29,6 +29,17 @@ export async function createListing(formData: ListingFormData) {
   }
 
   revalidatePath("/listings");
+
+  // Advance seller lifecycle milestones (listing created → "has_listing" milestone)
+  if (data?.seller_id) {
+    try {
+      const { advanceLifecycleForContact } = await import("@/lib/workflow-triggers");
+      await advanceLifecycleForContact(data.seller_id);
+    } catch {
+      // Don't fail listing creation if lifecycle advancement fails
+    }
+  }
+
   return { success: true, listing: data };
 }
 
@@ -109,6 +120,28 @@ export async function updateListingStatus(
   revalidatePath(`/listings/${id}`);
   revalidatePath("/contacts");
 
+  // Advance lifecycle milestones on any status change (active, pending, sold)
+  try {
+    const supabaseLife = createAdminClient();
+    const { data: lifeListing } = await supabaseLife
+      .from("listings")
+      .select("seller_id, buyer_id")
+      .eq("id", id)
+      .single();
+
+    if (lifeListing) {
+      const { advanceLifecycleForContact } = await import("@/lib/workflow-triggers");
+      if (lifeListing.seller_id) {
+        await advanceLifecycleForContact(lifeListing.seller_id);
+      }
+      if (lifeListing.buyer_id) {
+        await advanceLifecycleForContact(lifeListing.buyer_id);
+      }
+    }
+  } catch {
+    // Don't fail status update if lifecycle advancement fails
+  }
+
   // Fire listing_status_change trigger for workflow auto-enrollment (e.g., post-close workflows)
   if (newStatus === "sold") {
     try {
@@ -139,6 +172,7 @@ export async function updateListingStatus(
             data: { newStatus, listingId: id },
           });
         }
+
       }
     } catch {
       // Don't fail status update if triggers fail

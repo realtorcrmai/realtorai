@@ -13,6 +13,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { generateMessageContent } from "@/lib/anthropic/message-generator";
 import type { Json } from "@/types/database";
 
 type Contact = {
@@ -56,6 +57,36 @@ type EnrollmentRow = {
 // ── Template Variable Resolution ──────────────────────────────
 
 export function resolveTemplateVariables(
+  template: string,
+  contact: { name: string; phone: string; email?: string | null },
+  listing?: { address?: string; list_price?: number; closing_date?: string | null } | null,
+  agent?: { name?: string; phone?: string; email?: string } | null,
+): string {
+  const firstName = contact.name.split(/\s+/)[0] || contact.name;
+
+  const vars: Record<string, string> = {
+    contact_name: contact.name,
+    contact_first_name: firstName,
+    contact_phone: contact.phone,
+    contact_email: contact.email || '',
+    agent_name: agent?.name || process.env.AGENT_NAME || 'Your Agent',
+    agent_phone: agent?.phone || process.env.AGENT_PHONE || '',
+    agent_email: agent?.email || process.env.AGENT_EMAIL || '',
+    listing_address: listing?.address || '',
+    listing_price: listing?.list_price
+      ? Number(listing.list_price).toLocaleString('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 0 })
+      : '',
+    closing_date: listing?.closing_date || '',
+    today_date: new Date().toLocaleDateString('en-CA', { year: 'numeric', month: 'long', day: 'numeric' }),
+  };
+
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? `{{${key}}}`);
+}
+
+/**
+ * Overload for backward compatibility: accepts a pre-built variables record.
+ */
+export function resolveTemplateVariablesFromMap(
   body: string,
   variables: Record<string, string>
 ): string {
@@ -66,13 +97,14 @@ export function resolveTemplateVariables(
 
 export function buildVariableContext(
   contact: Contact,
-  listing?: { address: string; list_price: number | null; closing_date: string | null } | null
+  listing?: { address: string; list_price: number | null; closing_date: string | null } | null,
+  agent?: { name?: string; phone?: string; email?: string } | null,
 ): Record<string, string> {
-  const firstName = contact.name.split(" ")[0] || contact.name;
+  const firstName = contact.name.split(/\s+/)[0] || contact.name;
   const today = new Date().toLocaleDateString("en-CA", {
-    month: "short",
-    day: "numeric",
     year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 
   const vars: Record<string, string> = {
@@ -80,8 +112,9 @@ export function buildVariableContext(
     contact_first_name: firstName,
     contact_phone: contact.phone,
     contact_email: contact.email || "",
-    agent_name: process.env.AGENT_NAME || "Your Agent",
-    agent_phone: process.env.AGENT_PHONE || "",
+    agent_name: agent?.name || process.env.AGENT_NAME || "Your Agent",
+    agent_phone: agent?.phone || process.env.AGENT_PHONE || "",
+    agent_email: agent?.email || process.env.AGENT_EMAIL || "",
     today_date: today,
   };
 
@@ -96,9 +129,9 @@ export function buildVariableContext(
       : "";
     vars.closing_date = listing.closing_date
       ? new Date(listing.closing_date).toLocaleDateString("en-CA", {
-          month: "short",
-          day: "numeric",
           year: "numeric",
+          month: "long",
+          day: "numeric",
         })
       : "";
   }
@@ -112,14 +145,42 @@ async function executeAutoMessage(
   step: StepRow,
   contact: Contact,
   variables: Record<string, string>,
-  channel: "sms" | "whatsapp" | "email"
+  channel: "sms" | "whatsapp" | "email",
+  listing?: { address?: string; list_price?: number } | null,
 ): Promise<{ success: boolean; result?: Record<string, unknown>; error?: string }> {
   const supabase = createAdminClient();
 
-  // Get template if linked
+  // Check for AI-generated content via action_config.ai_template_intent
+  const actionConfig = step.action_config as Record<string, unknown> | null;
+  const aiIntent = actionConfig?.ai_template_intent as string | undefined;
+
   let body = "";
   let subject = "";
-  if (step.template_id) {
+
+  if (aiIntent) {
+    // AI-powered message generation takes priority
+    try {
+      const aiResult = await generateMessageContent(
+        aiIntent,
+        channel,
+        {
+          name: contact.name,
+          type: contact.type,
+          stage_bar: contact.lead_status,
+        },
+        listing,
+        variables.agent_name,
+      );
+      body = aiResult.body;
+      subject = aiResult.subject || "";
+    } catch (aiErr) {
+      // Fall through to template/fallback on AI failure
+      console.error("[workflow-engine] AI message generation failed, falling back to template:", aiErr);
+    }
+  }
+
+  // Fall back to linked template if AI didn't produce content
+  if (!body && step.template_id) {
     const { data: template } = await supabase
       .from("message_templates")
       .select("body, subject")
@@ -127,14 +188,14 @@ async function executeAutoMessage(
       .single();
 
     if (template) {
-      body = resolveTemplateVariables(template.body, variables);
-      subject = template.subject ? resolveTemplateVariables(template.subject, variables) : "";
+      body = resolveTemplateVariablesFromMap(template.body, variables);
+      subject = template.subject ? resolveTemplateVariablesFromMap(template.subject, variables) : "";
     }
   }
 
   if (!body) {
     // Use step name as fallback message
-    body = resolveTemplateVariables(step.name, variables);
+    body = resolveTemplateVariablesFromMap(step.name, variables);
   }
 
   if (channel === "email") {
@@ -269,6 +330,14 @@ async function executeSystemAction(
       }
       return { success: true, result: { action: "add_tag", value } };
     }
+    case "change_stage": {
+      const { error } = await supabase
+        .from("contacts")
+        .update({ stage_bar: value })
+        .eq("id", contact.id);
+      if (error) return { success: false, error: error.message };
+      return { success: true, result: { action: "change_stage", value } };
+    }
     case "remove_tag": {
       const tags = Array.isArray(contact.tags) ? (contact.tags as string[]) : [];
       const { error } = await supabase
@@ -316,11 +385,11 @@ export async function executeStep(
   // Execute based on action type
   switch (step.action_type) {
     case "auto_sms":
-      return executeAutoMessage(step, contact as Contact, variables, "sms");
+      return executeAutoMessage(step, contact as Contact, variables, "sms", listing);
     case "auto_whatsapp":
-      return executeAutoMessage(step, contact as Contact, variables, "whatsapp");
+      return executeAutoMessage(step, contact as Contact, variables, "whatsapp", listing);
     case "auto_email":
-      return executeAutoMessage(step, contact as Contact, variables, "email");
+      return executeAutoMessage(step, contact as Contact, variables, "email", listing);
     case "manual_task":
       return executeManualTask(step, contact as Contact, enrollment.id);
     case "auto_alert":
