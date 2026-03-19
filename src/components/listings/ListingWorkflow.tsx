@@ -653,7 +653,7 @@ function getStepDataSections(stepId: string, ctx: StepDataContext): DataSection[
           fields: [
             { label: "List Price", value: price, editKey: "list_price", editTarget: "listing", inputType: "number" },
             { label: "Status", value: listing.status.charAt(0).toUpperCase() + listing.status.slice(1) },
-            ...(listing.notes ? [{ label: "Notes", value: listing.notes, editKey: "notes", editTarget: "listing" }] : [{ label: "Notes", value: "—", editKey: "notes", editTarget: "listing" }]),
+            ...(listing.notes ? [{ label: "Notes", value: listing.notes, editKey: "notes", editTarget: "listing" as const }] : [{ label: "Notes", value: "—", editKey: "notes", editTarget: "listing" as const }]),
           ],
         },
       ];
