@@ -535,26 +535,29 @@ export default async function ContactDetailPage({
               </CardContent>
             </Card>
 
-            {/* Row 3: Tags + Stats — separate clean row below card */}
-            <div className="flex items-center gap-2 mt-2.5 px-2 flex-wrap">
-              <TagEditor contactId={id} tags={contactTags} />
-              {household && (
-                <>
-                  <span className="text-muted-foreground/30 mx-1">|</span>
-                  <span className="text-xs text-muted-foreground">🏡 {household.name}</span>
-                </>
-              )}
-              {buyerPreferences?.pre_approval_amount && !isSeller && (
-                <>
-                  <span className="text-muted-foreground/30 mx-1">|</span>
-                  <span className="text-xs"><strong className="text-emerald-600">{Number(buyerPreferences.pre_approval_amount).toLocaleString("en-CA",{style:"currency",currency:"CAD",maximumFractionDigits:0})}</strong> <span className="text-muted-foreground">pre-approved</span></span>
-                </>
-              )}
-              <div className="ml-auto flex items-center gap-3 text-xs">
-                <span><strong className="text-indigo-600">{relationships.length}</strong> <span className="text-muted-foreground">connections</span></span>
-                <span><strong className="text-teal-600">{allReferrals.length}</strong> <span className="text-muted-foreground">referrals</span></span>
-                <span><strong className="text-amber-600">{typedTasks.filter((t: { status: string }) => t.status !== "completed").length}</strong> <span className="text-muted-foreground">tasks</span></span>
-                <span><strong className="text-emerald-600">{dataScore}%</strong> <span className="text-muted-foreground">data</span></span>
+            {/* Quick info bar below card */}
+            <div className="flex items-center gap-2 mt-2 px-1">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <TagEditor contactId={id} tags={contactTags} />
+                {household && (
+                  <span className="text-xs text-muted-foreground bg-white/70 px-2.5 py-1 rounded-full border border-indigo-100/50 shrink-0">🏡 {household.name}</span>
+                )}
+                {buyerPreferences?.pre_approval_amount && !isSeller && (
+                  <span className="text-xs bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full border border-emerald-100 shrink-0 font-medium">{Number(buyerPreferences.pre_approval_amount).toLocaleString("en-CA",{style:"currency",currency:"CAD",maximumFractionDigits:0})} pre-approved</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {[
+                  { value: relationships.length, label: "conn", color: "text-indigo-600" },
+                  { value: allReferrals.length, label: "ref", color: "text-teal-600" },
+                  { value: typedTasks.filter((t: { status: string }) => t.status !== "completed").length, label: "tasks", color: "text-amber-600" },
+                  { value: `${dataScore}%`, label: "data", color: "text-emerald-600" },
+                ].map((s) => (
+                  <span key={s.label} className="text-xs bg-white/80 px-2 py-1 rounded-md border border-slate-100">
+                    <strong className={s.color}>{s.value}</strong>{" "}
+                    <span className="text-muted-foreground">{s.label}</span>
+                  </span>
+                ))}
               </div>
             </div>
 
