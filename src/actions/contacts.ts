@@ -61,9 +61,11 @@ export async function updateContact(
     family_members?: Json;
     buyer_preferences?: Json;
     seller_preferences?: Json;
+    demographics?: Json;
     lifecycle_stage?: string;
     tags?: Json;
     stage_bar?: string;
+    household_id?: string | null;
   }
 ) {
   const supabase = createAdminClient();
@@ -92,11 +94,13 @@ export async function updateContact(
   if (formData.family_members !== undefined) updatePayload.family_members = formData.family_members;
   if (formData.buyer_preferences !== undefined) updatePayload.buyer_preferences = formData.buyer_preferences;
   if (formData.seller_preferences !== undefined) updatePayload.seller_preferences = formData.seller_preferences;
+  if (formData.demographics !== undefined) updatePayload.demographics = formData.demographics;
   if (formData.lifecycle_stage !== undefined) updatePayload.lifecycle_stage = formData.lifecycle_stage;
   if (formData.source !== undefined) updatePayload.source = formData.source || null;
   if (formData.lead_status !== undefined) updatePayload.lead_status = formData.lead_status;
   if (formData.tags !== undefined) updatePayload.tags = formData.tags;
   if (formData.stage_bar !== undefined) updatePayload.stage_bar = formData.stage_bar;
+  if (formData.household_id !== undefined) updatePayload.household_id = formData.household_id;
   if (formData.partner_type !== undefined) updatePayload.partner_type = formData.partner_type || null;
   if (formData.company_name !== undefined) updatePayload.company_name = formData.company_name || null;
   if (formData.job_title !== undefined) updatePayload.job_title = formData.job_title || null;

@@ -32,6 +32,11 @@ export interface Database {
           typical_client_profile: string | null;
           referral_agreement_terms: string | null;
           partner_active: boolean;
+          seller_preferences: Json | null;
+          demographics: Json | null;
+          household_id: string | null;
+          stage_bar: string | null;
+          last_activity_date: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -57,6 +62,11 @@ export interface Database {
           typical_client_profile?: string | null;
           referral_agreement_terms?: string | null;
           partner_active?: boolean;
+          seller_preferences?: Json | null;
+          demographics?: Json | null;
+          household_id?: string | null;
+          stage_bar?: string | null;
+          last_activity_date?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -82,6 +92,69 @@ export interface Database {
           typical_client_profile?: string | null;
           referral_agreement_terms?: string | null;
           partner_active?: boolean;
+          seller_preferences?: Json | null;
+          demographics?: Json | null;
+          household_id?: string | null;
+          stage_bar?: string | null;
+          last_activity_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      households: {
+        Row: {
+          id: string;
+          name: string;
+          address: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          address?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          address?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      contact_relationships: {
+        Row: {
+          id: string;
+          contact_a_id: string;
+          contact_b_id: string;
+          relationship_type: string;
+          relationship_label: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_a_id: string;
+          contact_b_id: string;
+          relationship_type: string;
+          relationship_label?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          contact_a_id?: string;
+          contact_b_id?: string;
+          relationship_type?: string;
+          relationship_label?: string | null;
+          notes?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -500,6 +573,8 @@ export interface Database {
           date: string;
           recurring: boolean;
           notes: string | null;
+          event_type: string;
+          auto_workflow: boolean;
           created_at: string;
         };
         Insert: {
@@ -509,6 +584,8 @@ export interface Database {
           date: string;
           recurring?: boolean;
           notes?: string | null;
+          event_type?: string;
+          auto_workflow?: boolean;
           created_at?: string;
         };
         Update: {
@@ -518,6 +595,8 @@ export interface Database {
           date?: string;
           recurring?: boolean;
           notes?: string | null;
+          event_type?: string;
+          auto_workflow?: boolean;
           created_at?: string;
         };
       };

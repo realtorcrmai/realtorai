@@ -9,7 +9,12 @@ import { ContactContextPanel } from "@/components/contacts/ContactContextPanel";
 import { CommunicationTimeline } from "@/components/contacts/CommunicationTimeline";
 import { PropertyHistoryPanel } from "@/components/contacts/PropertyHistoryPanel";
 import { ReferralsPanel, type ReferralRow } from "@/components/contacts/ReferralsPanel";
-import { FamilyMembersPanel } from "@/components/contacts/FamilyMembersPanel";
+import { DemographicsPanel } from "@/components/contacts/DemographicsPanel";
+import { HouseholdBanner } from "@/components/contacts/HouseholdBanner";
+import { RelationshipManager } from "@/components/contacts/RelationshipManager";
+import RelationshipGraph from "@/components/contacts/RelationshipGraph";
+import { NetworkStatsCard } from "@/components/contacts/NetworkStatsCard";
+import { UpcomingEventsCard } from "@/components/contacts/UpcomingEventsCard";
 import { SellerEarningsSummary } from "@/components/contacts/SellerEarningsSummary";
 import { BuyerPreferencesPanel } from "@/components/contacts/BuyerPreferencesPanel";
 import { SellerPreferencesPanel } from "@/components/contacts/SellerPreferencesPanel";
@@ -23,7 +28,7 @@ import { WorkflowStepperCard } from "@/components/contacts/WorkflowStepperCard";
 import EmailComposer from "@/components/contacts/EmailComposer";
 import ActivityTimeline from "@/components/contacts/ActivityTimeline";
 import { Button } from "@/components/ui/button";
-import type { Contact, Communication, Listing, ContactDate, ContactDocument, FamilyMember, BuyerPreferences, SellerPreferences } from "@/types";
+import type { Contact, Communication, Listing, ContactDate, ContactDocument, BuyerPreferences, SellerPreferences, Demographics } from "@/types";
 import {
   CONTACT_TYPE_COLORS,
   LEAD_STATUS_LABELS,
@@ -69,6 +74,8 @@ export default async function ContactDetailPage({
     { data: activityLog },
     { data: allListings },
     { data: referredByContact },
+    { data: relationshipsData },
+    { data: allHouseholds },
   ] = await Promise.all([
     // 1. Communications — limit to recent 50
     supabase
@@ -160,9 +167,28 @@ export default async function ContactDetailPage({
           .eq("id", contact.referred_by_id)
           .single()
       : Promise.resolve({ data: null }),
+    // 15. Relationships (both directions)
+    supabase
+      .from("contact_relationships")
+      .select("*, contact_a:contacts!contact_a_id(id, name, type), contact_b:contacts!contact_b_id(id, name, type)")
+      .or(`contact_a_id.eq.${id},contact_b_id.eq.${id}`),
+    // 16. All households (for selector)
+    supabase
+      .from("households")
+      .select("id, name")
+      .order("name"),
   ]);
 
   const referredByName = referredByContact?.name ?? null;
+
+  // ── Household + members (only if contact has household_id) ──
+  const household = (contact as Record<string, unknown>).household_id
+    ? (await supabase.from("households").select("*").eq("id", (contact as Record<string, unknown>).household_id as string).single()).data
+    : null;
+
+  const householdMembers = (contact as Record<string, unknown>).household_id
+    ? (await supabase.from("contacts").select("id, name, type").eq("household_id", (contact as Record<string, unknown>).household_id as string)).data ?? []
+    : [];
 
   // ── Workflow steps — only sequential query (depends on enrollment IDs) ──
   const activeEnrollmentWorkflowIds = (workflowEnrollments ?? [])
@@ -225,6 +251,9 @@ export default async function ContactDetailPage({
   const contactTags: string[] = Array.isArray(contact.tags)
     ? (contact.tags as string[])
     : [];
+
+  // Parse demographics from JSONB
+  const demographics = ((contact as Record<string, unknown>).demographics || null) as Demographics | null;
 
   const leadStatus = (contact.lead_status ?? "new") as LeadStatus;
 
@@ -308,14 +337,14 @@ export default async function ContactDetailPage({
           sectionId: "section-property-history",
           items: [
             { label: "Pending Listing", value: typedListings.find((l) => l.status === "pending")?.address || null, filled: typedListings.some((l) => l.status === "pending" || l.status === "sold") },
-            { label: "Sale Price", value: fmt(typedListings.find((l) => l.status === "pending" || l.status === "sold")?.sale_price), filled: !!typedListings.find((l) => l.status === "pending" || l.status === "sold")?.sale_price },
+            { label: "Sale Price", value: fmt(typedListings.find((l) => l.status === "pending" || l.status === "sold")?.sold_price), filled: !!typedListings.find((l) => l.status === "pending" || l.status === "sold")?.sold_price },
           ],
         },
         closed: {
           sectionId: "section-property-history",
           items: [
             { label: "Sold Listing", value: typedListings.find((l) => l.status === "sold")?.address || null, filled: typedListings.some((l) => l.status === "sold") },
-            { label: "Sale Price", value: fmt(typedListings.find((l) => l.status === "sold")?.sale_price), filled: !!typedListings.find((l) => l.status === "sold")?.sale_price },
+            { label: "Sale Price", value: fmt(typedListings.find((l) => l.status === "sold")?.sold_price), filled: !!typedListings.find((l) => l.status === "sold")?.sold_price },
             { label: "Closing Date", value: typedListings.find((l) => l.status === "sold")?.closing_date || null, filled: !!typedListings.find((l) => l.status === "sold")?.closing_date },
           ],
         },
@@ -333,9 +362,9 @@ export default async function ContactDetailPage({
         qualified: {
           sectionId: "section-buyer-preferences",
           items: [
-            { label: "Budget", value: buyerPreferences?.max_price ? `Up to ${fmt(buyerPreferences.max_price)}` : null, filled: !!buyerPreferences?.max_price },
+            { label: "Budget", value: buyerPreferences?.price_range_max ? `Up to ${fmt(buyerPreferences.price_range_max)}` : null, filled: !!buyerPreferences?.price_range_max },
             { label: "Areas", value: buyerPreferences?.preferred_areas?.join(", ") || null, filled: (buyerPreferences?.preferred_areas?.length ?? 0) > 0 },
-            { label: "Property Type", value: buyerPreferences?.property_type || null, filled: !!buyerPreferences?.property_type },
+            { label: "Property Type", value: buyerPreferences?.property_types?.join(", ") || null, filled: !!buyerPreferences?.property_types?.join(", ") },
             { label: "Financing", value: buyerPreferences?.financing_status || null, filled: !!buyerPreferences?.financing_status },
             { label: "Pre-Approval", value: fmt(buyerPreferences?.pre_approval_amount as number), filled: !!buyerPreferences?.pre_approval_amount },
             { label: "Must-Haves", value: buyerPreferences?.must_haves?.join(", ") || null, filled: (buyerPreferences?.must_haves?.length ?? 0) > 0 },
@@ -352,18 +381,121 @@ export default async function ContactDetailPage({
           sectionId: "section-property-history",
           items: [
             { label: "Property", value: typedBuyerListings.find((l) => l.status === "pending" || l.status === "sold")?.address || null, filled: typedBuyerListings.some((l) => l.status === "pending" || l.status === "sold") },
-            { label: "Purchase Price", value: fmt(typedBuyerListings.find((l) => l.status === "pending" || l.status === "sold")?.sale_price), filled: !!typedBuyerListings.find((l) => l.status === "pending" || l.status === "sold")?.sale_price },
+            { label: "Purchase Price", value: fmt(typedBuyerListings.find((l) => l.status === "pending" || l.status === "sold")?.sold_price), filled: !!typedBuyerListings.find((l) => l.status === "pending" || l.status === "sold")?.sold_price },
           ],
         },
         closed: {
           sectionId: "section-property-history",
           items: [
             { label: "Purchased", value: typedBuyerListings.find((l) => l.status === "sold")?.address || null, filled: typedBuyerListings.some((l) => l.status === "sold") },
-            { label: "Purchase Price", value: fmt(typedBuyerListings.find((l) => l.status === "sold")?.sale_price), filled: !!typedBuyerListings.find((l) => l.status === "sold")?.sale_price },
+            { label: "Purchase Price", value: fmt(typedBuyerListings.find((l) => l.status === "sold")?.sold_price), filled: !!typedBuyerListings.find((l) => l.status === "sold")?.sold_price },
             { label: "Closing Date", value: typedBuyerListings.find((l) => l.status === "sold")?.closing_date || null, filled: !!typedBuyerListings.find((l) => l.status === "sold")?.closing_date },
           ],
         },
       };
+
+  // ── Build graph data for RelationshipGraph ──────────────────
+  const graphNodes: Array<{ id: string; name: string; initials: string; type: string; isCentral: boolean; color: string }> = [];
+  const graphEdges: Array<{ source: string; target: string; label: string; color: string; dashed?: boolean }> = [];
+
+  const typeColors: Record<string, string> = {
+    buyer: "#2563eb",
+    seller: "#a855f7",
+    partner: "#0891b2",
+    other: "#6b7280",
+    child: "#059669",
+  };
+
+  const getInitials = (name: string) => name.split(/\s+/).map(w => w[0]).join("").substring(0, 2).toUpperCase();
+  graphNodes.push({
+    id: contact.id,
+    name: contact.name,
+    initials: getInitials(contact.name),
+    type: contact.type,
+    isCentral: true,
+    color: typeColors[contact.type] || "#4f35d2",
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const relationships = (relationshipsData ?? []) as any[];
+  const seenIds = new Set<string>([contact.id]);
+
+  for (const rel of relationships) {
+    const otherId = rel.contact_a_id === id ? rel.contact_b_id : rel.contact_a_id;
+    const other = rel.contact_a_id === id ? rel.contact_b : rel.contact_a;
+    if (!seenIds.has(otherId) && other) {
+      seenIds.add(otherId);
+      graphNodes.push({
+        id: otherId,
+        name: other.name,
+        initials: getInitials(other.name),
+        type: other.type,
+        isCentral: false,
+        color: typeColors[other.type] || "#6b7280",
+      });
+    }
+    graphEdges.push({
+      source: rel.contact_a_id,
+      target: rel.contact_b_id,
+      label: rel.relationship_label || rel.relationship_type.charAt(0).toUpperCase() + rel.relationship_type.slice(1),
+      color: typeColors[other?.type ?? "other"] || "#6b7280",
+    });
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allReferrals = [...(referralsAsReferrer ?? []), ...(referralsAsReferred ?? [])] as any[];
+  for (const ref of allReferrals) {
+    const otherId = ref.referred_by_contact_id === id ? ref.referred_client_contact_id : ref.referred_by_contact_id;
+    const otherContact = ref.referred_by_contact_id === id ? ref.referred_client : ref.referrer;
+    if (!seenIds.has(otherId) && otherContact) {
+      seenIds.add(otherId);
+      graphNodes.push({
+        id: otherId,
+        name: otherContact.name,
+        initials: getInitials(otherContact.name),
+        type: otherContact.type || "other",
+        isCentral: false,
+        color: "#d97706",
+      });
+    }
+    if (otherContact) {
+      graphEdges.push({
+        source: ref.referred_by_contact_id,
+        target: ref.referred_client_contact_id,
+        label: "Referred",
+        color: "#d97706",
+        dashed: true,
+      });
+    }
+  }
+
+  for (const member of householdMembers) {
+    if (!seenIds.has(member.id)) {
+      seenIds.add(member.id);
+      graphNodes.push({
+        id: member.id,
+        name: member.name,
+        initials: getInitials(member.name),
+        type: member.type,
+        isCentral: false,
+        color: typeColors[member.type] || "#6b7280",
+      });
+      graphEdges.push({
+        source: contact.id,
+        target: member.id,
+        label: "Household",
+        color: "#4f35d2",
+        dashed: true,
+      });
+    }
+  }
+
+  // Calculate network stats
+  const networkValue = allReferrals.reduce((sum: number) => sum, 0);
+
+  const totalDemoFields = 9;
+  const filledDemoFields = demographics ? Object.values(demographics).filter(v => v !== undefined && v !== null && v !== "" && !(Array.isArray(v) && v.length === 0)).length : 0;
+  const dataScore = Math.round(((filledDemoFields / totalDemoFields) * 50) + (relationships.length > 0 ? 25 : 0) + ((contactDates?.length ?? 0) > 0 ? 25 : 0));
 
   return (
     <div className="flex h-full">
@@ -456,6 +588,14 @@ export default async function ContactDetailPage({
             </CardContent>
           </Card>
 
+          {/* Household Banner */}
+          <HouseholdBanner
+            contactId={contact.id}
+            household={household}
+            householdMembers={householdMembers as { id: string; name: string; type: string }[]}
+            allHouseholds={(allHouseholds ?? []) as { id: string; name: string }[]}
+          />
+
           {/* Quick Action Bar — colored icon buttons */}
           <div className="flex items-center gap-2 px-1">
             <QuickActionBar
@@ -545,6 +685,36 @@ export default async function ContactDetailPage({
             </Card>
           )}
 
+          {/* Demographics Panel */}
+          <DemographicsPanel
+            contactId={contact.id}
+            demographics={demographics}
+          />
+
+          {/* Relationship Graph */}
+          {graphNodes.length > 1 && (
+            <RelationshipGraph
+              nodes={graphNodes as any}
+              edges={graphEdges as any}
+              onNodeClick={() => {}}
+            />
+          )}
+
+          {/* Network Stats + Upcoming Events */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <NetworkStatsCard
+              connectionCount={relationships.length}
+              referralCount={allReferrals.length}
+              networkValue={networkValue}
+              dataScore={dataScore}
+            />
+            <UpcomingEventsCard
+              contactDates={(contactDates ?? []) as ContactDate[]}
+              demographics={demographics}
+              contactName={contact.name}
+            />
+          </div>
+
           {/* Property History */}
           {(isSeller ? typedListings.length > 0 : typedBuyerListings.length > 0) && (
             <Card id="section-property-history" className="bg-violet-50/15 dark:bg-violet-950/10">
@@ -599,15 +769,12 @@ export default async function ContactDetailPage({
           contactDates={(contactDates ?? []) as ContactDate[]}
         />
 
-        {/* Family Members */}
+        {/* Relationships */}
         <div className="border-t pt-5">
-          <FamilyMembersPanel
+          <RelationshipManager
             contactId={contact.id}
-            familyMembers={
-              (Array.isArray(contact.family_members)
-                ? contact.family_members
-                : []) as FamilyMember[]
-            }
+            relationships={relationships}
+            allContacts={allContacts?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })) ?? []}
           />
         </div>
 

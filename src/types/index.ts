@@ -84,6 +84,22 @@ export type AgentNotification = Database["public"]["Tables"]["agent_notification
 export type ActivityLog = Database["public"]["Tables"]["activity_log"]["Row"];
 export type Referral = Database["public"]["Tables"]["referrals"]["Row"];
 export type ReferralInsert = Database["public"]["Tables"]["referrals"]["Insert"];
+export type Household = Database["public"]["Tables"]["households"]["Row"];
+export type HouseholdInsert = Database["public"]["Tables"]["households"]["Insert"];
+export type ContactRelationship = Database["public"]["Tables"]["contact_relationships"]["Row"];
+export type ContactRelationshipInsert = Database["public"]["Tables"]["contact_relationships"]["Insert"];
+
+export type Demographics = {
+  birthday?: string;
+  anniversary?: string;
+  occupation?: string;
+  employer?: string;
+  income_range?: string;
+  languages?: string[];
+  hobbies_interests?: string[];
+  family_size?: number;
+  bio_notes?: string;
+};
 
 export type WorkflowWithSteps = Workflow & {
   workflow_steps: WorkflowStep[];
