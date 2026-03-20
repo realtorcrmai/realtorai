@@ -243,10 +243,18 @@ export default async function ContactDetailPage({
 
   const leadStatus = (contact.lead_status ?? "new") as LeadStatus;
 
-  // Check if lifecycle is completed (all steps done) — used to hide the lifecycle card
-  const lifecycleComplete = isSeller
-    ? typedListings.some((l) => l.status === "sold")
-    : typedBuyerListings.some((l) => l.status === "sold");
+  // Check if lifecycle should be hidden:
+  // - completed (sold listing exists)
+  // - contact is type "other" or "partner" (not a buyer/seller)
+  // - contact is cold/lost
+  const lifecycleComplete =
+    contact.type === "other" ||
+    contact.type === "partner" ||
+    contact.stage_bar === "cold" ||
+    contact.lead_status === "lost" ||
+    (isSeller
+      ? typedListings.some((l) => l.status === "sold")
+      : typedBuyerListings.some((l) => l.status === "sold"));
 
   // Filter to only active/paused enrollments (no completed/exited/failed)
   type EnrollmentRow = {
@@ -498,7 +506,7 @@ export default async function ContactDetailPage({
                     {contact.name.split(/\s+/).map((w: string) => w[0]).join("").substring(0, 2).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2.5 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h1 className="text-xl font-bold tracking-tight">{contact.name}</h1>
                       <Badge variant="secondary" className={`text-xs ${LEAD_STATUS_COLORS[leadStatus] ?? ""}`}>
                         {LEAD_STATUS_LABELS[leadStatus] ?? leadStatus}
@@ -506,6 +514,7 @@ export default async function ContactDetailPage({
                       <Badge variant="secondary" className={CONTACT_TYPE_COLORS[contact.type as ContactType]}>
                         {contact.type}
                       </Badge>
+                      <TagEditor contactId={id} tags={contactTags} />
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
                       <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{contact.phone}</span>
@@ -520,19 +529,14 @@ export default async function ContactDetailPage({
                   />
                 </div>
 
-                {/* Row 2: Pipeline bar + Tags */}
-                <div className="mt-4 pt-3 border-t border-indigo-50 dark:border-indigo-900/20 flex items-end gap-4">
-                  <div className="flex-1">
-                    <StageBar
-                      contactId={id}
-                      contactType={contact.type as "buyer" | "seller"}
-                      currentStage={contact.stage_bar as string | null}
-                      stageData={stageData}
-                    />
-                  </div>
-                  <div className="shrink-0 pb-1">
-                    <TagEditor contactId={id} tags={contactTags} />
-                  </div>
+                {/* Row 2: Pipeline bar */}
+                <div className="mt-4 pt-3 border-t border-indigo-50 dark:border-indigo-900/20">
+                  <StageBar
+                    contactId={id}
+                    contactType={contact.type as "buyer" | "seller"}
+                    currentStage={contact.stage_bar as string | null}
+                    stageData={stageData}
+                  />
                 </div>
                 {contact.notes && (
                   <p className="text-xs text-muted-foreground mt-2">{contact.notes}</p>
