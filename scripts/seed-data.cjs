@@ -255,8 +255,8 @@ async function seed() {
     },
     {
       id: ids.tomPark, name: "Tom & Maya Park", phone: "+16045557001", email: "tpark@shaw.ca",
-      type: "seller", pref_channel: "sms", source: "Cold Call", lead_status: "qualified",
-      stage_bar: "qualified", tags: ["warm lead"],
+      type: "seller", pref_channel: "sms", source: "Cold Call", lead_status: "active",
+      stage_bar: "active_listing", tags: ["warm lead"],
       address: "3847 W 16th Ave, Vancouver, BC",
       seller_preferences: {
         motivation: "upsizing", desired_list_price: 1500000,
