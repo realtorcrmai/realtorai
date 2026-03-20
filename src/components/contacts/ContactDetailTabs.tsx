@@ -189,7 +189,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
   };
 
   return (
-    <Tabs value={currentTab} onValueChange={setTab}>
+    <Tabs defaultValue={currentTab} value={currentTab} onValueChange={setTab}>
       <TabsList className="w-full justify-start bg-white/60 backdrop-blur border rounded-xl p-1 mb-4">
         <TabsTrigger value="overview" className="rounded-lg">
           📋 Overview
