@@ -211,6 +211,9 @@ export default function RelationshipGraph({ nodes, edges, onNodeClick }: Props) 
 
       ctx.clearRect(0, 0, W(), H());
 
+      // Collect edge labels to draw after nodes
+      const edgeLabels: { label: string; x: number; y: number; color: string }[] = [];
+
       // Draw edges
       simEdges.forEach((e) => {
         const a = simNodes.find((n) => n.id === e.source);
@@ -232,7 +235,7 @@ export default function RelationshipGraph({ nodes, edges, onNodeClick }: Props) 
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Edge label on hover
+        // Store edge label info to draw AFTER nodes (so labels appear on top)
         if (isHighlighted) {
           const mx = (a.x + b.x) / 2;
           const my = (a.y + b.y) / 2;
@@ -241,25 +244,15 @@ export default function RelationshipGraph({ nodes, edges, onNodeClick }: Props) 
           const edgeDx = b.x - a.x;
           const edgeDy = b.y - a.y;
           const edgeLen = Math.sqrt(edgeDx * edgeDx + edgeDy * edgeDy) || 1;
-          const offsetX = (-edgeDy / edgeLen) * 12;
-          const offsetY = (edgeDx / edgeLen) * 12;
-          const labelX = mx + offsetX;
-          const labelY = my + offsetY;
+          const offsetX = (-edgeDy / edgeLen) * 16;
+          const offsetY = (edgeDx / edgeLen) * 16;
 
-          const label = e.label;
-          ctx.font = "500 10px system-ui, sans-serif";
-          ctx.textAlign = "center";
-
-          // Background pill behind edge label
-          const textWidth = ctx.measureText(label).width;
-          const padding = 4;
-          ctx.fillStyle = "rgba(255,255,255,0.9)";
-          ctx.beginPath();
-          ctx.roundRect(labelX - textWidth / 2 - padding, labelY - 12, textWidth + padding * 2, 16, 4);
-          ctx.fill();
-
-          ctx.fillStyle = e.color;
-          ctx.fillText(label, labelX, labelY - 2);
+          edgeLabels.push({
+            label: e.label,
+            x: mx + offsetX,
+            y: my + offsetY,
+            color: e.color,
+          });
         }
       });
 
@@ -325,6 +318,22 @@ export default function RelationshipGraph({ nodes, edges, onNodeClick }: Props) 
         ctx.fill();
         ctx.fillStyle = dimmed ? "#1a153540" : "#1a1535";
         ctx.fillText(displayName, n.x, n.y + n.radius + 16);
+      });
+
+      // Draw edge labels ON TOP of everything (so they're never hidden)
+      edgeLabels.forEach(({ label, x, y, color }) => {
+        ctx.font = "600 10px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        const textWidth = ctx.measureText(label).width;
+        const padding = 5;
+        // Dark background pill for maximum contrast
+        ctx.fillStyle = "rgba(30, 25, 60, 0.85)";
+        ctx.beginPath();
+        ctx.roundRect(x - textWidth / 2 - padding, y - 8, textWidth + padding * 2, 18, 6);
+        ctx.fill();
+        // White text on dark background
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(label, x, y + 4);
       });
     }
 
