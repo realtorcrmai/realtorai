@@ -513,14 +513,11 @@ export default async function ContactDetailPage({
                       <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" />{contact.pref_channel}</span>
                     </div>
                   </div>
-                  <div className="flex gap-2 shrink-0">
-                    <ContactForm
-                      contact={contact}
-                      allContacts={(allContacts ?? []) as { id: string; name: string }[]}
-                      trigger={<Button variant="outline" size="sm"><Edit className="h-3.5 w-3.5 mr-1" />Edit</Button>}
-                    />
-                    <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white">✉ Email</Button>
-                  </div>
+                  <ContactForm
+                    contact={contact}
+                    allContacts={(allContacts ?? []) as { id: string; name: string }[]}
+                    trigger={<Button variant="outline" size="sm"><Edit className="h-3.5 w-3.5 mr-1" />Edit</Button>}
+                  />
                 </div>
 
                 {/* Row 2: Pipeline bar + Tags */}
