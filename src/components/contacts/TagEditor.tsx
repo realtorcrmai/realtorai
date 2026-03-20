@@ -100,8 +100,10 @@ export function TagEditor({
   function addTag(tag: string) {
     const normalized = tag.trim().toLowerCase();
     if (!normalized || tags.includes(normalized)) return;
-    saveTags([...tags, normalized]);
+    // Only one tag at a time — replace existing
+    saveTags([normalized]);
     setSearch("");
+    setIsOpen(false);
   }
 
   function removeTag(tag: string) {
