@@ -400,7 +400,6 @@ async function seed() {
   console.log("🔗 Creating relationships...");
   await supabase.from("contact_relationships").insert([
     { contact_a_id: ids.marcus, contact_b_id: ids.leah, relationship_type: "spouse" },
-    { contact_a_id: ids.marcus, contact_b_id: ids.bobChen, relationship_type: "referral", notes: "Bob referred Marcus for the Georgia St purchase" },
     { contact_a_id: ids.marcus, contact_b_id: ids.david, relationship_type: "colleague", notes: "Both work in tech" },
     { contact_a_id: ids.leah, contact_b_id: ids.priya, relationship_type: "friend", notes: "Met through yoga class" },
     { contact_a_id: ids.bobChen, contact_b_id: ids.raj, relationship_type: "colleague", notes: "Work together on real estate transactions" },
@@ -408,7 +407,7 @@ async function seed() {
     { contact_a_id: ids.sarah, contact_b_id: ids.tomPark, relationship_type: "neighbour", notes: "Live on nearby streets" },
     { contact_a_id: ids.aisha, contact_b_id: ids.david, relationship_type: "friend", notes: "UBC friends" },
   ]);
-  console.log("  ✅ 8 relationships created");
+  console.log("  ✅ 7 relationships created");
 
   // ─── 7. REFERRALS ─────────────────────────────────────
   console.log("🤝 Creating referrals...");
