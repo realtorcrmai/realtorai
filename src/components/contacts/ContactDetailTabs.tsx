@@ -314,32 +314,48 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
       <TabsContent value="intelligence">
         <div className="space-y-5">
           {/* Demographics Panel */}
-          <DemographicsPanel
-            contactId={contactId}
-            demographics={demographics}
-          />
+          <Card className="border-l-4 border-l-violet-400 bg-violet-50/20 dark:bg-violet-950/10">
+            <CardContent className="p-6">
+              <DemographicsPanel
+                contactId={contactId}
+                demographics={demographics}
+              />
+            </CardContent>
+          </Card>
 
           {/* Relationship Graph */}
           {graphNodes.length > 1 && (
-            <RelationshipGraph
-              nodes={graphNodes as any}
-              edges={graphEdges as any}
-            />
+            <Card className="border-l-4 border-l-indigo-400 bg-indigo-50/15 dark:bg-indigo-950/10">
+              <CardContent className="p-6">
+                <RelationshipGraph
+                  nodes={graphNodes as any}
+                  edges={graphEdges as any}
+                />
+              </CardContent>
+            </Card>
           )}
 
           {/* Network Stats + Upcoming Events */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <NetworkStatsCard
-              connectionCount={connectionCount}
-              referralCount={referralCount}
-              networkValue={networkValue}
-              dataScore={dataScore}
-            />
-            <UpcomingEventsCard
-              contactDates={contactDates}
-              demographics={demographics}
-              contactName={contactName}
-            />
+            <Card className="border-l-4 border-l-teal-400 bg-teal-50/15 dark:bg-teal-950/10">
+              <CardContent className="p-6">
+                <NetworkStatsCard
+                  connectionCount={connectionCount}
+                  referralCount={referralCount}
+                  networkValue={networkValue}
+                  dataScore={dataScore}
+                />
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-amber-400 bg-amber-50/15 dark:bg-amber-950/10">
+              <CardContent className="p-6">
+                <UpcomingEventsCard
+                  contactDates={contactDates}
+                  demographics={demographics}
+                  contactName={contactName}
+                />
+              </CardContent>
+            </Card>
           </div>
         </div>
       </TabsContent>
