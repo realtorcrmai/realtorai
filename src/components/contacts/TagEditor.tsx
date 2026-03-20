@@ -132,47 +132,49 @@ export function TagEditor({
     !tags.includes(search.trim().toLowerCase());
 
   return (
-    <div className="space-y-2">
-      {/* Existing tags */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        {tags.map((tag) => (
-          <span
-            key={tag}
-            className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-medium rounded-full ${getTagColor(tag)}`}
-          >
-            {tag}
-            <button
-              type="button"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeTag(tag); }}
-              disabled={isPending}
-              className="hover:opacity-70 transition-opacity p-0.5 -mr-0.5 rounded-full hover:bg-black/10"
+    <div className="inline-flex items-center gap-1.5" ref={dropdownRef}>
+      {/* Show tag or add button — single element, inline */}
+      {tags.length > 0 ? (
+        <>
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-medium rounded-full cursor-pointer ${getTagColor(tag)}`}
+              onClick={() => {
+                setIsOpen(!isOpen);
+                setTimeout(() => inputRef.current?.focus(), 50);
+              }}
             >
-              <X className="h-3 w-3" />
-            </button>
-          </span>
-        ))}
-        {isPending && (
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-        )}
-      </div>
-
-      {/* Dropdown trigger */}
-      <div className="relative" ref={dropdownRef}>
+              {tag}
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeTag(tag); }}
+                disabled={isPending}
+                className="hover:opacity-70 transition-opacity p-0.5 -mr-0.5 rounded-full hover:bg-black/10"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </>
+      ) : (
         <button
           type="button"
           onClick={() => {
             setIsOpen(!isOpen);
             setTimeout(() => inputRef.current?.focus(), 50);
           }}
-          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-muted-foreground rounded-md border border-dashed border-border hover:border-primary hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          + Add tag
+          + tag
           <ChevronDown className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
         </button>
+      )}
+      {isPending && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
 
-        {/* Dropdown */}
-        {isOpen && (
-          <div className="absolute z-[200] mt-1 w-64 bg-white rounded-lg border border-border shadow-xl overflow-hidden">
+      {/* Dropdown */}
+      {isOpen && (
+        <div className="absolute left-0 top-full z-[200] mt-1 w-64 bg-white rounded-lg border border-border shadow-xl overflow-hidden">
             {/* Search input */}
             <div className="p-2 border-b border-border">
               <input
@@ -249,7 +251,6 @@ export function TagEditor({
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 }
