@@ -204,7 +204,7 @@ export type ContactDocType = (typeof CONTACT_DOC_TYPES)[number];
 // ── Relationship Types ──────────────────────────────────────
 export const RELATIONSHIP_TYPES = [
   "spouse", "parent", "child", "sibling", "friend",
-  "colleague", "neighbour", "referral", "other",
+  "colleague", "neighbour", "other",
 ] as const;
 export type RelationshipType = (typeof RELATIONSHIP_TYPES)[number];
 
@@ -216,7 +216,6 @@ export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, string> = {
   friend: "Friend",
   colleague: "Colleague",
   neighbour: "Neighbour",
-  referral: "Referral",
   other: "Other",
 };
 
@@ -228,7 +227,6 @@ export const RELATIONSHIP_TYPE_EMOJI: Record<RelationshipType, string> = {
   friend: "🤝",
   colleague: "👔",
   neighbour: "🏘️",
-  referral: "🤝",
   other: "👤",
 };
 
@@ -240,7 +238,6 @@ export const RELATIONSHIP_INVERSE: Record<RelationshipType, RelationshipType> = 
   friend: "friend",
   colleague: "colleague",
   neighbour: "neighbour",
-  referral: "referral",
   other: "other",
 };
 
