@@ -486,121 +486,82 @@ export default async function ContactDetailPage({
   return (
     <div className="flex h-full">
       {/* CENTER -- scrollable */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-gradient-to-br from-slate-50 via-background to-teal-50/20 dark:from-background dark:via-background dark:to-teal-950/10">
-        <div className="space-y-5">
-          {/* Header Card — gradient accent strip */}
-          <Card id="section-contact-info" className="animate-float-in overflow-hidden shadow-md border-0">
-            <div className="h-1.5 bg-gradient-to-r from-teal-500 via-indigo-500 to-violet-500" />
-            <CardContent className="p-6">
-              {/* Row 1: Name + Edit */}
-              <div className="flex items-start justify-between">
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h1 className="text-2xl font-bold tracking-tight">
-                      {contact.name}
-                    </h1>
-                    <Badge
-                      variant="secondary"
-                      className={`text-xs ${LEAD_STATUS_COLORS[leadStatus] ?? ""}`}
-                    >
-                      {LEAD_STATUS_LABELS[leadStatus] ?? leadStatus}
-                    </Badge>
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-[#f8f7fd] dark:bg-background">
+        <div className="space-y-4">
+          {/* B3 Floating Card Header */}
+          <div id="section-contact-info" className="animate-float-in">
+            <Card className="shadow-md border border-indigo-100/50 dark:border-indigo-900/30">
+              <CardContent className="p-5">
+                {/* Row 1: Avatar + Name + Badges + Actions */}
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-rose-500 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                    {contact.name.split(/\s+/).map((w: string) => w[0]).join("").substring(0, 2).toUpperCase()}
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <Phone className="h-3.5 w-3.5" />
-                      <span>{contact.phone}</span>
-                    </div>
-                    {contact.email && (
-                      <div className="flex items-center gap-1.5">
-                        <Mail className="h-3.5 w-3.5" />
-                        <span>{contact.email}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    <Badge
-                      variant="secondary"
-                      className={CONTACT_TYPE_COLORS[contact.type as ContactType]}
-                    >
-                      {contact.type}
-                    </Badge>
-                    <Badge variant="outline">
-                      <MessageSquare className="h-3 w-3 mr-1" />
-                      {contact.pref_channel}
-                    </Badge>
-                    {buyerPreferences?.pre_approval_amount && !isSeller && (
-                      <Badge
-                        variant="secondary"
-                        className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs"
-                      >
-                        Pre-Approved{" "}
-                        {Number(buyerPreferences.pre_approval_amount).toLocaleString(
-                          "en-CA",
-                          {
-                            style: "currency",
-                            currency: "CAD",
-                            maximumFractionDigits: 0,
-                          }
-                        )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h1 className="text-xl font-bold tracking-tight">{contact.name}</h1>
+                      <Badge variant="secondary" className={`text-xs ${LEAD_STATUS_COLORS[leadStatus] ?? ""}`}>
+                        {LEAD_STATUS_LABELS[leadStatus] ?? leadStatus}
                       </Badge>
-                    )}
+                      <Badge variant="secondary" className={CONTACT_TYPE_COLORS[contact.type as ContactType]}>
+                        {contact.type}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                      <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{contact.phone}</span>
+                      {contact.email && <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{contact.email}</span>}
+                      <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" />{contact.pref_channel}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <ContactForm
+                      contact={contact}
+                      allContacts={(allContacts ?? []) as { id: string; name: string }[]}
+                      trigger={<Button variant="outline" size="sm"><Edit className="h-3.5 w-3.5 mr-1" />Edit</Button>}
+                    />
+                    <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white">✉ Email</Button>
                   </div>
                 </div>
-                <ContactForm
-                  contact={contact}
-                  allContacts={(allContacts ?? []) as { id: string; name: string }[]}
-                  trigger={
-                    <Button variant="outline" size="sm">
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                  }
-                />
-              </div>
 
-              {/* Row 2: Inline stats strip */}
-              <div className="flex items-center gap-3 mt-3 pt-3 border-t">
-                <div className="flex items-center gap-1.5 text-sm">
-                  <span className="font-semibold text-indigo-600">{relationships.length}</span>
-                  <span className="text-muted-foreground">connections</span>
+                {/* Row 2: Pipeline bar inside card */}
+                <div className="mt-4 pt-3 border-t border-indigo-50 dark:border-indigo-900/20">
+                  <StageBar
+                    contactId={id}
+                    contactType={contact.type as "buyer" | "seller"}
+                    currentStage={contact.stage_bar as string | null}
+                    stageData={stageData}
+                  />
                 </div>
-                <span className="text-muted-foreground/30">•</span>
-                <div className="flex items-center gap-1.5 text-sm">
-                  <span className="font-semibold text-teal-600">{allReferrals.length}</span>
-                  <span className="text-muted-foreground">referrals</span>
-                </div>
-                <span className="text-muted-foreground/30">•</span>
-                <div className="flex items-center gap-1.5 text-sm">
-                  <span className="font-semibold text-amber-600">{typedTasks.filter((t: { status: string }) => t.status !== "completed").length}</span>
-                  <span className="text-muted-foreground">open tasks</span>
-                </div>
-                <span className="text-muted-foreground/30">•</span>
-                <div className="flex items-center gap-1.5 text-sm">
-                  <span className="font-semibold text-emerald-600">{dataScore}%</span>
-                  <span className="text-muted-foreground">data</span>
-                </div>
-                <div className="ml-auto">
-                  <TagEditor contactId={id} tags={contactTags} />
-                </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              {/* Row 3: Stage Bar */}
-              <div className="mt-3 pt-3 border-t">
-                <StageBar
-                  contactId={id}
-                  contactType={contact.type as "buyer" | "seller"}
-                  currentStage={contact.stage_bar as string | null}
-                  stageData={stageData}
-                />
-              </div>
-              {contact.notes && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  {contact.notes}
-                </p>
+            {/* Row 3: Tags + Stats — separate clean row below card */}
+            <div className="flex items-center gap-2 mt-2.5 px-2 flex-wrap">
+              <TagEditor contactId={id} tags={contactTags} />
+              {household && (
+                <>
+                  <span className="text-muted-foreground/30 mx-1">|</span>
+                  <span className="text-xs text-muted-foreground">🏡 {household.name}</span>
+                </>
               )}
-            </CardContent>
-          </Card>
+              {buyerPreferences?.pre_approval_amount && !isSeller && (
+                <>
+                  <span className="text-muted-foreground/30 mx-1">|</span>
+                  <span className="text-xs"><strong className="text-emerald-600">{Number(buyerPreferences.pre_approval_amount).toLocaleString("en-CA",{style:"currency",currency:"CAD",maximumFractionDigits:0})}</strong> <span className="text-muted-foreground">pre-approved</span></span>
+                </>
+              )}
+              <div className="ml-auto flex items-center gap-3 text-xs">
+                <span><strong className="text-indigo-600">{relationships.length}</strong> <span className="text-muted-foreground">connections</span></span>
+                <span><strong className="text-teal-600">{allReferrals.length}</strong> <span className="text-muted-foreground">referrals</span></span>
+                <span><strong className="text-amber-600">{typedTasks.filter((t: { status: string }) => t.status !== "completed").length}</strong> <span className="text-muted-foreground">tasks</span></span>
+                <span><strong className="text-emerald-600">{dataScore}%</strong> <span className="text-muted-foreground">data</span></span>
+              </div>
+            </div>
+
+            {contact.notes && (
+              <p className="text-xs text-muted-foreground mt-2 px-2">{contact.notes}</p>
+            )}
+          </div>
 
           {/* Household Banner — only show when assigned */}
           {household && (
