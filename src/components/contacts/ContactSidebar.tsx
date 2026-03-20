@@ -35,7 +35,7 @@ function MiniStageDots({
       : BUYER_STAGES.filter((s) => s !== "cold");
   const stage = currentStage ?? "new";
   const isCold = stage === "cold";
-  const currentIndex = stages.indexOf(stage as (typeof stages)[number]);
+  const currentIndex = stages.indexOf(stage as any);
 
   return (
     <div className="flex items-center gap-0.5 mt-1">

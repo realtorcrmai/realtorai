@@ -33,6 +33,9 @@ export default async function NewsletterDashboard() {
             Newsletter & Journeys
           </h1>
           <div style={{ display: "flex", gap: 8 }}>
+            <Link href="/newsletters/guide" className="lf-btn-sm lf-btn-ghost" style={{ textDecoration: "none" }}>
+              {"\u{1F4D6}"} Guide
+            </Link>
             <Link href="/newsletters/queue" className="lf-btn-sm lf-btn-ghost" style={{ textDecoration: "none" }}>
               {"\u{1F4EC}"} Queue ({queue.length})
             </Link>

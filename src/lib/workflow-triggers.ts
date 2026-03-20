@@ -373,7 +373,7 @@ export async function advanceLifecycleForContact(
       if (!isMet) break;
 
       // Sync stage_bar based on the milestone reached
-      const milestoneStage = LIFECYCLE_MILESTONE_STAGE_MAP[step.name];
+      const milestoneStage = LIFECYCLE_MILESTONE_STAGE_MAP[(step as any).name];
       if (milestoneStage) {
         const newStage = milestoneStage[cType] || milestoneStage.buyer;
         await supabase
