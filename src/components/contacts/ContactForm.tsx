@@ -56,20 +56,21 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-export function ContactForm({
-  contact,
-  trigger,
-  allContacts = [],
-  defaultReferredById,
-  defaultType,
-}: {
+export interface ContactFormContentProps {
+  onSuccess?: () => void;
   contact?: Contact;
-  trigger?: React.ReactNode;
   allContacts?: { id: string; name: string }[];
-  defaultReferredById?: string;
   defaultType?: "buyer" | "seller";
-}) {
-  const [open, setOpen] = useState(false);
+  defaultReferredById?: string;
+}
+
+export function ContactFormContent({
+  onSuccess,
+  contact,
+  allContacts = [],
+  defaultType,
+  defaultReferredById,
+}: ContactFormContentProps) {
   const [submitting, setSubmitting] = useState(false);
 
   const {
@@ -117,7 +118,6 @@ export function ContactForm({
 
   async function onSubmit(data: FormData) {
     setSubmitting(true);
-    // Clear partner fields if type is not partner
     const payload = {
       ...data,
       ...(data.type !== "partner" && {
@@ -135,8 +135,247 @@ export function ContactForm({
     }
     setSubmitting(false);
     reset();
-    setOpen(false);
+    onSuccess?.();
   }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div>
+        <Label htmlFor="name">Name</Label>
+        <Input {...register("name")} placeholder="John Doe" />
+        {errors.name && (
+          <p className="text-sm text-red-600 mt-1">
+            {errors.name.message}
+          </p>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="phone">Phone</Label>
+        <Input {...register("phone")} placeholder="604-555-0123" />
+        {errors.phone && (
+          <p className="text-sm text-red-600 mt-1">
+            {errors.phone.message}
+          </p>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="email">Email (optional)</Label>
+        <Input
+          {...register("email")}
+          placeholder="john@example.com"
+          type="email"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Type</Label>
+          <Select
+            defaultValue={contact?.type ?? defaultType ?? "buyer"}
+            onValueChange={(val) =>
+              setValue("type", val as FormData["type"])
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CONTACT_TYPES.map((t) => (
+                <SelectItem key={t} value={t}>
+                  {CONTACT_TYPE_LABELS[t]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Preferred Channel</Label>
+          <Select
+            defaultValue={contact?.pref_channel ?? "sms"}
+            onValueChange={(val) =>
+              setValue("pref_channel", val as "whatsapp" | "sms")
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sms">SMS</SelectItem>
+              <SelectItem value="whatsapp">WhatsApp</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* ── Partner-specific Fields ───────────────────────── */}
+      {selectedType === "partner" && (
+        <div className="space-y-4 rounded-lg border border-teal-200 bg-teal-50/50 p-4">
+          <p className="text-sm font-semibold text-teal-800">Partner Details</p>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Partner Type</Label>
+              <Select
+                defaultValue={contact?.partner_type ?? ""}
+                onValueChange={(val) =>
+                  setValue("partner_type", val as FormData["partner_type"])
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {PARTNER_TYPES.map((pt) => (
+                    <SelectItem key={pt} value={pt}>
+                      {PARTNER_TYPE_LABELS[pt]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="company_name">Company</Label>
+              <Input
+                {...register("company_name")}
+                placeholder="ABC Mortgages Inc."
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="job_title">Job Title (optional)</Label>
+            <Input
+              {...register("job_title")}
+              placeholder="Senior Mortgage Advisor"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="typical_client_profile">
+              Typical Client Profile (optional)
+            </Label>
+            <Textarea
+              {...register("typical_client_profile")}
+              placeholder="First-time buyers, pre-approvals up to $800K..."
+              rows={2}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="referral_agreement_terms">
+              Referral Agreement Terms (optional)
+            </Label>
+            <Textarea
+              {...register("referral_agreement_terms")}
+              placeholder="20% referral fee on closed deals..."
+              rows={2}
+            />
+          </div>
+        </div>
+      )}
+
+      <div>
+        <Label htmlFor="address">Address (optional)</Label>
+        <Input {...register("address")} placeholder="123 Main St, Vancouver, BC" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Lead Status</Label>
+          <Select
+            defaultValue={contact?.lead_status ?? "new"}
+            onValueChange={(val) => setValue("lead_status", val as FormData["lead_status"])}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LEAD_STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {LEAD_STATUS_LABELS[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Source (optional)</Label>
+          <Select
+            defaultValue={contact?.source ?? ""}
+            onValueChange={(val: string | null) => setValue("source", val ?? "")}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select source..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">None</SelectItem>
+              {LEAD_SOURCES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {allContacts.length > 0 && (
+        <div>
+          <Label>Referred By (optional)</Label>
+          <Select
+            defaultValue={contact?.referred_by_id ?? defaultReferredById ?? ""}
+            onValueChange={(val: string | null) => setValue("referred_by_id", val ?? "")}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select referrer..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">None</SelectItem>
+              {allContacts
+                .filter((c) => c.id !== contact?.id)
+                .map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <div>
+        <Label htmlFor="notes">Notes (optional)</Label>
+        <Textarea {...register("notes")} placeholder="Additional notes..." />
+      </div>
+
+      <Button type="submit" className="w-full" disabled={submitting}>
+        {submitting
+          ? "Saving..."
+          : contact
+            ? "Update Contact"
+            : "Create Contact"}
+      </Button>
+    </form>
+  );
+}
+
+export function ContactForm({
+  contact,
+  trigger,
+  allContacts = [],
+  defaultReferredById,
+  defaultType,
+}: {
+  contact?: Contact;
+  trigger?: React.ReactNode;
+  allContacts?: { id: string; name: string }[];
+  defaultReferredById?: string;
+  defaultType?: "buyer" | "seller";
+}) {
+  const [open, setOpen] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -158,226 +397,13 @@ export function ContactForm({
             {contact ? "Edit Contact" : "New Contact"}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <Label htmlFor="name">Name</Label>
-            <Input {...register("name")} placeholder="John Doe" />
-            {errors.name && (
-              <p className="text-sm text-red-600 mt-1">
-                {errors.name.message}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="phone">Phone</Label>
-            <Input {...register("phone")} placeholder="604-555-0123" />
-            {errors.phone && (
-              <p className="text-sm text-red-600 mt-1">
-                {errors.phone.message}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="email">Email (optional)</Label>
-            <Input
-              {...register("email")}
-              placeholder="john@example.com"
-              type="email"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Type</Label>
-              <Select
-                defaultValue={contact?.type ?? defaultType ?? "buyer"}
-                onValueChange={(val) =>
-                  setValue("type", val as FormData["type"])
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CONTACT_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {CONTACT_TYPE_LABELS[t]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Preferred Channel</Label>
-              <Select
-                defaultValue={contact?.pref_channel ?? "sms"}
-                onValueChange={(val) =>
-                  setValue("pref_channel", val as "whatsapp" | "sms")
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sms">SMS</SelectItem>
-                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* ── Partner-specific Fields ───────────────────────── */}
-          {selectedType === "partner" && (
-            <div className="space-y-4 rounded-lg border border-teal-200 bg-teal-50/50 p-4">
-              <p className="text-sm font-semibold text-teal-800">Partner Details</p>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Partner Type</Label>
-                  <Select
-                    defaultValue={contact?.partner_type ?? ""}
-                    onValueChange={(val) =>
-                      setValue("partner_type", val as FormData["partner_type"])
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">None</SelectItem>
-                      {PARTNER_TYPES.map((pt) => (
-                        <SelectItem key={pt} value={pt}>
-                          {PARTNER_TYPE_LABELS[pt]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="company_name">Company</Label>
-                  <Input
-                    {...register("company_name")}
-                    placeholder="ABC Mortgages Inc."
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="job_title">Job Title (optional)</Label>
-                <Input
-                  {...register("job_title")}
-                  placeholder="Senior Mortgage Advisor"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="typical_client_profile">
-                  Typical Client Profile (optional)
-                </Label>
-                <Textarea
-                  {...register("typical_client_profile")}
-                  placeholder="First-time buyers, pre-approvals up to $800K..."
-                  rows={2}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="referral_agreement_terms">
-                  Referral Agreement Terms (optional)
-                </Label>
-                <Textarea
-                  {...register("referral_agreement_terms")}
-                  placeholder="20% referral fee on closed deals..."
-                  rows={2}
-                />
-              </div>
-            </div>
-          )}
-
-          <div>
-            <Label htmlFor="address">Address (optional)</Label>
-            <Input {...register("address")} placeholder="123 Main St, Vancouver, BC" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Lead Status</Label>
-              <Select
-                defaultValue={contact?.lead_status ?? "new"}
-                onValueChange={(val) => setValue("lead_status", val as FormData["lead_status"])}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {LEAD_STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {LEAD_STATUS_LABELS[s]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Source (optional)</Label>
-              <Select
-                defaultValue={contact?.source ?? ""}
-                onValueChange={(val: string | null) => setValue("source", val ?? "")}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select source..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">None</SelectItem>
-                  {LEAD_SOURCES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {allContacts.length > 0 && (
-            <div>
-              <Label>Referred By (optional)</Label>
-              <Select
-                defaultValue={contact?.referred_by_id ?? defaultReferredById ?? ""}
-                onValueChange={(val: string | null) => setValue("referred_by_id", val ?? "")}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select referrer..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">None</SelectItem>
-                  {allContacts
-                    .filter((c) => c.id !== contact?.id)
-                    .map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <div>
-            <Label htmlFor="notes">Notes (optional)</Label>
-            <Textarea {...register("notes")} placeholder="Additional notes..." />
-          </div>
-
-          <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting
-              ? "Saving..."
-              : contact
-                ? "Update Contact"
-                : "Create Contact"}
-          </Button>
-        </form>
+        <ContactFormContent
+          onSuccess={() => setOpen(false)}
+          contact={contact}
+          allContacts={allContacts}
+          defaultType={defaultType}
+          defaultReferredById={defaultReferredById}
+        />
       </DialogContent>
     </Dialog>
   );

@@ -1,0 +1,93 @@
+interface PipelineStage {
+  key: string;
+  label: string;
+  count: number;
+  value: number;
+  color: string;
+}
+
+interface PipelineSnapshotProps {
+  stages: PipelineStage[];
+  totalGCI: number;
+}
+
+const currencyFmt = new Intl.NumberFormat("en-CA", {
+  style: "currency",
+  currency: "CAD",
+  maximumFractionDigits: 0,
+});
+
+function formatGCI(amount: number): string {
+  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
+  if (amount >= 1_000) return `$${Math.round(amount / 1_000)}K`;
+  return `$${Math.round(amount)}`;
+}
+
+export default function PipelineSnapshot({
+  stages,
+  totalGCI,
+}: PipelineSnapshotProps) {
+  const totalCount = stages.reduce((sum, s) => sum + s.count, 0);
+
+  return (
+    <div className="glass rounded-xl p-5 elevation-2">
+      {/* Header row */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">
+          Pipeline
+        </h2>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+          GCI {formatGCI(totalGCI)}
+        </span>
+      </div>
+
+      {/* Segmented bar */}
+      <div className="flex h-10 rounded-lg overflow-hidden mb-4">
+        {stages.map((stage) => {
+          const pct = totalCount > 0 ? (stage.count / totalCount) * 100 : 0;
+          if (pct === 0) return null;
+          return (
+            <div
+              key={stage.key}
+              className={`${stage.color} flex items-center justify-center transition-all duration-300`}
+              style={{ width: `${pct}%` }}
+            >
+              {pct > 15 && (
+                <span className="text-xs font-bold text-white drop-shadow-sm">
+                  {stage.count}
+                </span>
+              )}
+            </div>
+          );
+        })}
+        {totalCount === 0 && (
+          <div className="w-full bg-muted flex items-center justify-center">
+            <span className="text-xs text-muted-foreground">No contacts yet</span>
+          </div>
+        )}
+      </div>
+
+      {/* Labels row */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        {stages.map((stage) => (
+          <div key={stage.key} className="flex items-start gap-2 min-w-0">
+            <span
+              className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${stage.color}`}
+            />
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-foreground truncate">
+                {stage.label}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {stage.count} contact{stage.count !== 1 ? "s" : ""}
+              </p>
+              <p className="text-xs font-semibold text-foreground">
+                {currencyFmt.format(stage.value)}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
