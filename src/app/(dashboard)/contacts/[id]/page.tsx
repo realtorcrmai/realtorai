@@ -4,29 +4,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, MessageSquare, Edit } from "lucide-react";
 import { ContactForm } from "@/components/contacts/ContactForm";
-import { ContactWorkflow } from "@/components/contacts/ContactWorkflow";
 import { ContactContextPanel } from "@/components/contacts/ContactContextPanel";
-import { CommunicationTimeline } from "@/components/contacts/CommunicationTimeline";
-import { PropertyHistoryPanel } from "@/components/contacts/PropertyHistoryPanel";
-import { ReferralsPanel, type ReferralRow } from "@/components/contacts/ReferralsPanel";
-import { DemographicsPanel } from "@/components/contacts/DemographicsPanel";
+import { type ReferralRow } from "@/components/contacts/ReferralsPanel";
 import { HouseholdBanner } from "@/components/contacts/HouseholdBanner";
 import { RelationshipManager } from "@/components/contacts/RelationshipManager";
-import RelationshipGraph from "@/components/contacts/RelationshipGraph";
-import { NetworkStatsCard } from "@/components/contacts/NetworkStatsCard";
-import { UpcomingEventsCard } from "@/components/contacts/UpcomingEventsCard";
-import { SellerEarningsSummary } from "@/components/contacts/SellerEarningsSummary";
-import { BuyerPreferencesPanel } from "@/components/contacts/BuyerPreferencesPanel";
-import { SellerPreferencesPanel } from "@/components/contacts/SellerPreferencesPanel";
 import { QuickActionBar } from "@/components/contacts/QuickActionBar";
 import { TagEditor } from "@/components/contacts/TagEditor";
 import { StageBar, type StageData } from "@/components/contacts/StageBar";
-import { ContactTasksPanel } from "@/components/contacts/ContactTasksPanel";
-import { ContactDocumentsPanel } from "@/components/contacts/ContactDocumentsPanel";
-import { PropertiesOfInterestPanel } from "@/components/contacts/PropertiesOfInterestPanel";
-import { WorkflowStepperCard } from "@/components/contacts/WorkflowStepperCard";
 import EmailComposer from "@/components/contacts/EmailComposer";
-import ActivityTimeline from "@/components/contacts/ActivityTimeline";
+import { ContactDetailTabs } from "@/components/contacts/ContactDetailTabs";
 import { Button } from "@/components/ui/button";
 import type { Contact, Communication, Listing, ContactDate, ContactDocument, BuyerPreferences, SellerPreferences, Demographics } from "@/types";
 import {
@@ -609,153 +595,45 @@ export default async function ContactDetailPage({
             />
           </div>
 
-          {/* Active workflow enrollments — highest priority expanded, rest collapsed */}
-          {sortedEnrollments.map((enrollment) => (
-            <Card
-              key={enrollment.id}
-              className="border-l-4 border-l-indigo-400 bg-indigo-50/30 dark:bg-indigo-950/10"
-            >
-              <CardContent className="p-6">
-                <WorkflowStepperCard
-                  enrollment={enrollment}
-                  steps={stepsByWorkflow[enrollment.workflow_id] ?? []}
-                  defaultCollapsed={enrollment.workflow_id !== expandedWorkflowId}
-                />
-              </CardContent>
-            </Card>
-          ))}
-
-          {/* Contact Lifecycle Workflow — hidden when fully completed */}
-          {!lifecycleComplete && (
-            <Card className="border-l-4 border-l-emerald-400 bg-emerald-50/20 dark:bg-emerald-950/10">
-              <CardContent className="p-6">
-                <ContactWorkflow
-                  contact={contact}
-                  listings={typedListings}
-                  communications={typedCommunications}
-                  buyerListings={typedBuyerListings}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Post-lifecycle content */}
-          {isSeller ? (
-            <>
-              {/* Seller Preferences */}
-              <Card id="section-seller-preferences" className="border-l-4 border-l-indigo-400 bg-indigo-50/20 dark:bg-indigo-950/10">
-                <CardContent className="p-6">
-                  <SellerPreferencesPanel
-                    contactId={id}
-                    preferences={sellerPreferences}
-                  />
-                </CardContent>
-              </Card>
-              {/* Seller Earnings Summary */}
-              {typedListings.some((l) => l.status === "sold") && (
-                <Card className="border-l-4 border-l-amber-400 bg-amber-50/20 dark:bg-amber-950/10">
-                  <CardContent className="p-6">
-                    <SellerEarningsSummary listings={typedListings} />
-                  </CardContent>
-                </Card>
-              )}
-            </>
-          ) : (
-            /* Buyer Preferences */
-            <Card id="section-buyer-preferences" className="border-l-4 border-l-teal-400 bg-teal-50/20 dark:bg-teal-950/10">
-              <CardContent className="p-6">
-                <BuyerPreferencesPanel
-                  contactId={id}
-                  preferences={buyerPreferences}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Properties of Interest (buyers only) */}
-          {!isSeller && (
-            <Card id="section-properties-interest" className="bg-sky-50/20 dark:bg-sky-950/10">
-              <CardContent className="p-6">
-                <PropertiesOfInterestPanel
-                  contactId={id}
-                  preferences={buyerPreferences}
-                  listings={(allListings ?? []) as { id: string; address: string; list_price: number | null }[]}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Demographics Panel */}
-          <DemographicsPanel
-            contactId={contact.id}
-            demographics={demographics}
-          />
-
-          {/* Relationship Graph */}
-          {graphNodes.length > 1 && (
-            <RelationshipGraph
-              nodes={graphNodes as any}
-              edges={graphEdges as any}
-            />
-          )}
-
-          {/* Network Stats + Upcoming Events */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <NetworkStatsCard
-              connectionCount={relationships.length}
-              referralCount={allReferrals.length}
-              networkValue={networkValue}
-              dataScore={dataScore}
-            />
-            <UpcomingEventsCard
-              contactDates={(contactDates ?? []) as ContactDate[]}
-              demographics={demographics}
-              contactName={contact.name}
-            />
-          </div>
-
-          {/* Property History */}
-          {(isSeller ? typedListings.length > 0 : typedBuyerListings.length > 0) && (
-            <Card id="section-property-history" className="bg-violet-50/15 dark:bg-violet-950/10">
-              <CardContent className="p-6">
-                <PropertyHistoryPanel
-                  listings={isSeller ? typedListings : typedBuyerListings}
-                  contactType={contact.type}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Tasks & Follow-ups */}
-          <Card className="border-l-4 border-l-orange-400 bg-orange-50/15 dark:bg-orange-950/10">
-            <CardContent className="p-6">
-              <ContactTasksPanel contactId={id} tasks={typedTasks} />
-            </CardContent>
-          </Card>
-
-          {/* Activity Log */}
-          {(activityLog ?? []).length > 0 && (
-            <Card className="bg-slate-50/40 dark:bg-slate-950/10">
-              <CardContent className="p-6">
-                <ActivityTimeline
-                  activities={
-                    (activityLog ?? []) as {
-                      id: string;
-                      activity_type: string;
-                      description: string | null;
-                      metadata: Record<string, unknown> | null;
-                      created_at: string;
-                    }[]
-                  }
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Communication Timeline (with filter tabs) */}
-          <CommunicationTimeline
+          {/* Tabbed Content */}
+          <ContactDetailTabs
             contactId={id}
+            contact={contact}
+            isSeller={isSeller}
+            sortedEnrollments={sortedEnrollments}
+            stepsByWorkflow={stepsByWorkflow}
+            expandedWorkflowId={expandedWorkflowId}
+            lifecycleComplete={lifecycleComplete}
+            listings={typedListings}
+            buyerListings={typedBuyerListings}
             communications={typedCommunications}
+            buyerPreferences={buyerPreferences}
+            sellerPreferences={sellerPreferences}
+            allListings={(allListings ?? []) as { id: string; address: string; list_price: number | null }[]}
+            tasks={typedTasks}
+            demographics={demographics}
+            graphNodes={graphNodes}
+            graphEdges={graphEdges}
+            connectionCount={relationships.length}
+            referralCount={allReferrals.length}
+            networkValue={networkValue}
+            dataScore={dataScore}
+            contactDates={(contactDates ?? []) as ContactDate[]}
+            contactName={contact.name}
+            activities={
+              (activityLog ?? []) as {
+                id: string;
+                activity_type: string;
+                description: string | null;
+                metadata: Record<string, unknown> | null;
+                created_at: string;
+              }[]
+            }
+            referredByName={referredByName}
+            referralsAsReferrer={(referralsAsReferrer ?? []) as ReferralRow[]}
+            referralsAsReferred={(referralsAsReferred ?? []) as ReferralRow[]}
+            allContacts={(allContacts ?? []) as { id: string; name: string }[]}
+            documents={typedDocuments}
           />
         </div>
       </div>
@@ -774,25 +652,6 @@ export default async function ContactDetailPage({
             contactId={contact.id}
             relationships={relationships}
             allContacts={allContacts?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })) ?? []}
-          />
-        </div>
-
-        {/* Referrals */}
-        <div className="border-t pt-5">
-          <ReferralsPanel
-            contact={contact}
-            referredByName={referredByName}
-            referralsAsReferrer={(referralsAsReferrer ?? []) as ReferralRow[]}
-            referralsAsReferred={(referralsAsReferred ?? []) as ReferralRow[]}
-            allContacts={(allContacts ?? []) as { id: string; name: string }[]}
-          />
-        </div>
-
-        {/* Contact Documents */}
-        <div className="border-t pt-5">
-          <ContactDocumentsPanel
-            contactId={id}
-            documents={typedDocuments}
           />
         </div>
       </aside>
