@@ -236,10 +236,30 @@ export default function RelationshipGraph({ nodes, edges, onNodeClick }: Props) 
         if (isHighlighted) {
           const mx = (a.x + b.x) / 2;
           const my = (a.y + b.y) / 2;
+
+          // Perpendicular offset so label doesn't sit on the line
+          const edgeDx = b.x - a.x;
+          const edgeDy = b.y - a.y;
+          const edgeLen = Math.sqrt(edgeDx * edgeDx + edgeDy * edgeDy) || 1;
+          const offsetX = (-edgeDy / edgeLen) * 12;
+          const offsetY = (edgeDx / edgeLen) * 12;
+          const labelX = mx + offsetX;
+          const labelY = my + offsetY;
+
+          const label = e.label;
           ctx.font = "500 10px system-ui, sans-serif";
-          ctx.fillStyle = e.color;
           ctx.textAlign = "center";
-          ctx.fillText(e.label, mx, my - 6);
+
+          // Background pill behind edge label
+          const textWidth = ctx.measureText(label).width;
+          const padding = 4;
+          ctx.fillStyle = "rgba(255,255,255,0.9)";
+          ctx.beginPath();
+          ctx.roundRect(labelX - textWidth / 2 - padding, labelY - 12, textWidth + padding * 2, 16, 4);
+          ctx.fill();
+
+          ctx.fillStyle = e.color;
+          ctx.fillText(label, labelX, labelY - 2);
         }
       });
 
@@ -294,21 +314,17 @@ export default function RelationshipGraph({ nodes, edges, onNodeClick }: Props) 
         ctx.textBaseline = "middle";
         ctx.fillText(n.initials, n.x, n.y);
 
-        // Name label below
+        // Name label below (truncated + background pill)
+        const displayName = n.label.length > 14 ? n.label.substring(0, 13) + "\u2026" : n.label;
         ctx.font = "600 11px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        const nameWidth = ctx.measureText(displayName).width;
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        ctx.beginPath();
+        ctx.roundRect(n.x - nameWidth / 2 - 4, n.y + n.radius + 6, nameWidth + 8, 16, 4);
+        ctx.fill();
         ctx.fillStyle = dimmed ? "#1a153540" : "#1a1535";
-        ctx.fillText(n.label, n.x, n.y + n.radius + 14);
-
-        // Type badge on hover
-        if (isHovered) {
-          ctx.font = "500 10px system-ui, sans-serif";
-          ctx.fillStyle = n.color;
-          ctx.fillText(
-            n.central ? "Central" : "",
-            n.x,
-            n.y + n.radius + 28
-          );
-        }
+        ctx.fillText(displayName, n.x, n.y + n.radius + 16);
       });
     }
 
