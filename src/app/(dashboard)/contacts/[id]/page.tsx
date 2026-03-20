@@ -696,7 +696,6 @@ export default async function ContactDetailPage({
             <RelationshipGraph
               nodes={graphNodes as any}
               edges={graphEdges as any}
-              onNodeClick={() => {}}
             />
           )}
 
