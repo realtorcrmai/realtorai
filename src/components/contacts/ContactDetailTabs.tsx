@@ -284,6 +284,29 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
               <ContactTasksPanel contactId={contactId} tasks={tasks} />
             </CardContent>
           </Card>
+
+          {/* Referrals */}
+          <Card className="bg-white/60 dark:bg-card/40">
+            <CardContent className="p-6">
+              <ReferralsPanel
+                contact={contact}
+                referredByName={referredByName}
+                referralsAsReferrer={referralsAsReferrer}
+                referralsAsReferred={referralsAsReferred}
+                allContacts={allContacts}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Contact Documents */}
+          <Card className="bg-white/60 dark:bg-card/40">
+            <CardContent className="p-6">
+              <ContactDocumentsPanel
+                contactId={contactId}
+                documents={documents}
+              />
+            </CardContent>
+          </Card>
         </div>
       </TabsContent>
 
@@ -365,28 +388,6 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             </Card>
           )}
 
-          {/* Referrals */}
-          <Card className="bg-white/60 dark:bg-card/40">
-            <CardContent className="p-6">
-              <ReferralsPanel
-                contact={contact}
-                referredByName={referredByName}
-                referralsAsReferrer={referralsAsReferrer}
-                referralsAsReferred={referralsAsReferred}
-                allContacts={allContacts}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Contact Documents */}
-          <Card className="bg-white/60 dark:bg-card/40">
-            <CardContent className="p-6">
-              <ContactDocumentsPanel
-                contactId={contactId}
-                documents={documents}
-              />
-            </CardContent>
-          </Card>
         </div>
       </TabsContent>
     </Tabs>
