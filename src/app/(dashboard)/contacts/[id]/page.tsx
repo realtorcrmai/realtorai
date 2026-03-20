@@ -492,11 +492,11 @@ export default async function ContactDetailPage({
           <Card id="section-contact-info" className="animate-float-in overflow-hidden shadow-md border-0">
             <div className="h-1.5 bg-gradient-to-r from-teal-500 via-indigo-500 to-violet-500" />
             <CardContent className="p-6">
-              <div className="flex items-start justify-between gap-6">
-                {/* Left: Contact Info */}
-                <div className="space-y-2 flex-1 min-w-0">
+              {/* Row 1: Name + Edit */}
+              <div className="flex items-start justify-between">
+                <div className="space-y-1.5">
                   <div className="flex items-center gap-3 flex-wrap">
-                    <h1 className="text-3xl font-bold tracking-tight">
+                    <h1 className="text-2xl font-bold tracking-tight">
                       {contact.name}
                     </h1>
                     <Badge
@@ -506,14 +506,14 @@ export default async function ContactDetailPage({
                       {LEAD_STATUS_LABELS[leadStatus] ?? leadStatus}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-4 text-muted-foreground">
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1.5">
-                      <Phone className="h-4 w-4" />
+                      <Phone className="h-3.5 w-3.5" />
                       <span>{contact.phone}</span>
                     </div>
                     {contact.email && (
                       <div className="flex items-center gap-1.5">
-                        <Mail className="h-4 w-4" />
+                        <Mail className="h-3.5 w-3.5" />
                         <span>{contact.email}</span>
                       </div>
                     )}
@@ -546,44 +546,47 @@ export default async function ContactDetailPage({
                       </Badge>
                     )}
                   </div>
-                  <div className="mt-1">
-                    <TagEditor contactId={id} tags={contactTags} />
-                  </div>
                 </div>
-                {/* Right: Quick Stats + Edit */}
-                <div className="flex flex-col items-end gap-3 shrink-0">
-                  <ContactForm
-                    contact={contact}
-                    allContacts={(allContacts ?? []) as { id: string; name: string }[]}
-                    trigger={
-                      <Button variant="outline" size="sm">
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                    }
-                  />
-                  <div className="grid grid-cols-2 gap-2 text-center">
-                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg px-4 py-2">
-                      <div className="text-lg font-bold text-indigo-600">{relationships.length}</div>
-                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Connections</div>
-                    </div>
-                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg px-4 py-2">
-                      <div className="text-lg font-bold text-teal-600">{allReferrals.length}</div>
-                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Referrals</div>
-                    </div>
-                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg px-4 py-2">
-                      <div className="text-lg font-bold text-amber-600">{typedTasks.filter((t: { status: string }) => t.status !== "completed").length}</div>
-                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Open Tasks</div>
-                    </div>
-                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg px-4 py-2">
-                      <div className="text-lg font-bold text-emerald-600">{dataScore}%</div>
-                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Data Score</div>
-                    </div>
-                  </div>
+                <ContactForm
+                  contact={contact}
+                  allContacts={(allContacts ?? []) as { id: string; name: string }[]}
+                  trigger={
+                    <Button variant="outline" size="sm">
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                  }
+                />
+              </div>
+
+              {/* Row 2: Inline stats strip */}
+              <div className="flex items-center gap-3 mt-3 pt-3 border-t">
+                <div className="flex items-center gap-1.5 text-sm">
+                  <span className="font-semibold text-indigo-600">{relationships.length}</span>
+                  <span className="text-muted-foreground">connections</span>
+                </div>
+                <span className="text-muted-foreground/30">•</span>
+                <div className="flex items-center gap-1.5 text-sm">
+                  <span className="font-semibold text-teal-600">{allReferrals.length}</span>
+                  <span className="text-muted-foreground">referrals</span>
+                </div>
+                <span className="text-muted-foreground/30">•</span>
+                <div className="flex items-center gap-1.5 text-sm">
+                  <span className="font-semibold text-amber-600">{typedTasks.filter((t: { status: string }) => t.status !== "completed").length}</span>
+                  <span className="text-muted-foreground">open tasks</span>
+                </div>
+                <span className="text-muted-foreground/30">•</span>
+                <div className="flex items-center gap-1.5 text-sm">
+                  <span className="font-semibold text-emerald-600">{dataScore}%</span>
+                  <span className="text-muted-foreground">data</span>
+                </div>
+                <div className="ml-auto">
+                  <TagEditor contactId={id} tags={contactTags} />
                 </div>
               </div>
-              {/* Stage Bar — full width below header */}
-              <div className="mt-4 pt-4 border-t">
+
+              {/* Row 3: Stage Bar */}
+              <div className="mt-3 pt-3 border-t">
                 <StageBar
                   contactId={id}
                   contactType={contact.type as "buyer" | "seller"}
@@ -592,20 +595,22 @@ export default async function ContactDetailPage({
                 />
               </div>
               {contact.notes && (
-                <p className="text-sm text-muted-foreground mt-3">
+                <p className="text-sm text-muted-foreground mt-2">
                   {contact.notes}
                 </p>
               )}
             </CardContent>
           </Card>
 
-          {/* Household Banner */}
-          <HouseholdBanner
-            contactId={contact.id}
-            household={household}
-            householdMembers={householdMembers as { id: string; name: string; type: string }[]}
-            allHouseholds={(allHouseholds ?? []) as { id: string; name: string }[]}
-          />
+          {/* Household Banner — only show when assigned */}
+          {household && (
+            <HouseholdBanner
+              contactId={contact.id}
+              household={household}
+              householdMembers={householdMembers as { id: string; name: string; type: string }[]}
+              allHouseholds={(allHouseholds ?? []) as { id: string; name: string }[]}
+            />
+          )}
 
           {/* Quick Action Bar — colored icon buttons */}
           <div className="flex items-center gap-2 px-1">
