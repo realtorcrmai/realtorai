@@ -344,6 +344,9 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
                   referralCount={referralCount}
                   networkValue={networkValue}
                   dataScore={dataScore}
+                  demographics={demographics}
+                  dateCount={contactDates.length}
+                  hasPreferences={!!(buyerPreferences || sellerPreferences)}
                 />
               </CardContent>
             </Card>
