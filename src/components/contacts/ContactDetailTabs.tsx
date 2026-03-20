@@ -364,14 +364,18 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
       <TabsContent value="activity">
         <div className="space-y-5">
           {/* Communication Timeline */}
-          <CommunicationTimeline
-            contactId={contactId}
-            communications={communications}
-          />
+          <Card className="border-l-4 border-l-sky-400 bg-sky-50/15 dark:bg-sky-950/10">
+            <CardContent className="p-6">
+              <CommunicationTimeline
+                contactId={contactId}
+                communications={communications}
+              />
+            </CardContent>
+          </Card>
 
           {/* Activity Log */}
           {activities.length > 0 && (
-            <Card className="bg-slate-50/40 dark:bg-slate-950/10">
+            <Card className="border-l-4 border-l-slate-400 bg-slate-50/15 dark:bg-slate-950/10">
               <CardContent className="p-6">
                 <ActivityTimeline activities={activities} />
               </CardContent>
@@ -385,7 +389,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
         <div className="space-y-5">
           {/* Seller Earnings Summary */}
           {isSeller && listings.some((l) => l.status === "sold") && (
-            <Card className="border-l-4 border-l-amber-400 bg-amber-50/20 dark:bg-amber-950/10">
+            <Card className="border-l-4 border-l-emerald-400 bg-emerald-50/15 dark:bg-emerald-950/10">
               <CardContent className="p-6">
                 <SellerEarningsSummary listings={listings} />
               </CardContent>
@@ -394,7 +398,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
 
           {/* Property History */}
           {(isSeller ? listings.length > 0 : buyerListings.length > 0) && (
-            <Card id="section-property-history" className="bg-violet-50/15 dark:bg-violet-950/10">
+            <Card id="section-property-history" className="border-l-4 border-l-violet-400 bg-violet-50/15 dark:bg-violet-950/10">
               <CardContent className="p-6">
                 <PropertyHistoryPanel
                   listings={isSeller ? listings : buyerListings}
@@ -403,7 +407,6 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
               </CardContent>
             </Card>
           )}
-
         </div>
       </TabsContent>
     </Tabs>
