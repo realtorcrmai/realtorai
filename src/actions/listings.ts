@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { listingSchema, type ListingFormData } from "@/lib/schemas";
+import { validateStageForType } from "@/lib/contact-consistency";
 
 export async function createListing(formData: ListingFormData) {
   const parsed = listingSchema.safeParse(formData);
@@ -119,6 +120,52 @@ export async function updateListingStatus(
   revalidatePath("/listings");
   revalidatePath(`/listings/${id}`);
   revalidatePath("/contacts");
+
+  // Auto-sync seller's stage_bar when listing status changes
+  const stageMap: Record<string, string> = {
+    active: "active_listing",
+    pending: "under_contract",
+    sold: "closed",
+  };
+  const newSellerStage = stageMap[newStatus];
+  if (newSellerStage) {
+    try {
+      const supabaseStage = createAdminClient();
+      const { data: stageListing } = await supabaseStage
+        .from("listings")
+        .select("seller_id")
+        .eq("id", id)
+        .single();
+
+      if (stageListing?.seller_id) {
+        const { data: seller } = await supabaseStage
+          .from("contacts")
+          .select("stage_bar, type, lead_status")
+          .eq("id", stageListing.seller_id)
+          .single();
+
+        if (seller && seller.type === "seller") {
+          const stageOrder = ["new", "qualified", "active_listing", "under_contract", "closed"];
+          const currentIdx = stageOrder.indexOf(seller.stage_bar || "new");
+          const newIdx = stageOrder.indexOf(newSellerStage);
+
+          // Only advance, never go backwards
+          if (newIdx > currentIdx) {
+            const validStage = validateStageForType("seller", newSellerStage);
+            const stageUpdates: Record<string, unknown> = { stage_bar: validStage };
+            if (newSellerStage === "closed") stageUpdates.lead_status = "closed";
+            if (newSellerStage === "under_contract") stageUpdates.lead_status = "under_contract";
+            await supabaseStage
+              .from("contacts")
+              .update(stageUpdates)
+              .eq("id", stageListing.seller_id);
+          }
+        }
+      }
+    } catch {
+      // Don't fail status update if seller stage sync fails
+    }
+  }
 
   // Advance lifecycle milestones on any status change (active, pending, sold)
   try {

@@ -14,6 +14,11 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateMessageContent } from "@/lib/anthropic/message-generator";
+import {
+  validateStageForType,
+  syncLeadStatusAndStage,
+  filterInvalidTags,
+} from "@/lib/contact-consistency";
 import type { Json } from "@/types/database";
 
 type Contact = {
@@ -25,6 +30,7 @@ type Contact = {
   pref_channel: string;
   lead_status: string;
   tags: Json;
+  stage_bar: string | null;
 };
 
 type StepRow = {
@@ -312,31 +318,42 @@ async function executeSystemAction(
 
   switch (action) {
     case "change_lead_status": {
+      // Sync stage_bar when lead_status changes
+      const contactType = contact.type as "buyer" | "seller" | "partner" | "other";
+      const stageBar = contact.stage_bar ?? null;
+      const synced = syncLeadStatusAndStage(value, stageBar, contactType);
       const { error } = await supabase
         .from("contacts")
-        .update({ lead_status: value })
+        .update({ lead_status: synced.lead_status, stage_bar: synced.stage_bar })
         .eq("id", contact.id);
       if (error) return { success: false, error: error.message };
-      return { success: true, result: { action: "change_lead_status", value } };
+      return { success: true, result: { action: "change_lead_status", value: synced.lead_status, stage_bar: synced.stage_bar } };
     }
     case "add_tag": {
       const currentTags = Array.isArray(contact.tags) ? (contact.tags as string[]) : [];
       if (!currentTags.includes(value)) {
+        const newTags = [...currentTags, value];
+        const contactTypeForTag = contact.type as "buyer" | "seller" | "partner" | "other";
+        const cleanTags = filterInvalidTags(newTags, contactTypeForTag, contact.lead_status);
         const { error } = await supabase
           .from("contacts")
-          .update({ tags: [...currentTags, value] })
+          .update({ tags: cleanTags })
           .eq("id", contact.id);
         if (error) return { success: false, error: error.message };
       }
       return { success: true, result: { action: "add_tag", value } };
     }
     case "change_stage": {
+      // Validate stage for contact type and sync lead_status
+      const stageContactType = contact.type as "buyer" | "seller" | "partner" | "other";
+      const validStage = validateStageForType(stageContactType, value);
+      const stageSynced = syncLeadStatusAndStage(contact.lead_status, validStage, stageContactType);
       const { error } = await supabase
         .from("contacts")
-        .update({ stage_bar: value })
+        .update({ stage_bar: stageSynced.stage_bar, lead_status: stageSynced.lead_status })
         .eq("id", contact.id);
       if (error) return { success: false, error: error.message };
-      return { success: true, result: { action: "change_stage", value } };
+      return { success: true, result: { action: "change_stage", value: stageSynced.stage_bar, lead_status: stageSynced.lead_status } };
     }
     case "remove_tag": {
       const tags = Array.isArray(contact.tags) ? (contact.tags as string[]) : [];
@@ -363,7 +380,7 @@ export async function executeStep(
   // Fetch contact
   const { data: contact } = await supabase
     .from("contacts")
-    .select("id, name, phone, email, type, pref_channel, lead_status, tags")
+    .select("id, name, phone, email, type, pref_channel, lead_status, tags, stage_bar")
     .eq("id", enrollment.contact_id)
     .single();
 

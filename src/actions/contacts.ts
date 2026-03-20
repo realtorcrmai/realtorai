@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { contactSchema, type ContactFormData } from "@/lib/schemas";
 import type { Json } from "@/types/database";
+import { enforceConsistency } from "@/lib/contact-consistency";
 
 export async function createContact(formData: ContactFormData) {
   const parsed = contactSchema.safeParse(formData);
@@ -70,12 +71,24 @@ export async function updateContact(
 ) {
   const supabase = createAdminClient();
 
-  // Fetch current contact for trigger comparison
-  let oldContact: { lead_status: string | null; tags: Json } | null = null;
-  if (formData.lead_status !== undefined || formData.tags !== undefined) {
+  // Fetch current contact for trigger comparison and consistency enforcement
+  const needsConsistency =
+    formData.type !== undefined ||
+    formData.lead_status !== undefined ||
+    formData.stage_bar !== undefined ||
+    formData.tags !== undefined;
+
+  let oldContact: {
+    type: string;
+    lead_status: string;
+    stage_bar: string | null;
+    tags: Json;
+  } | null = null;
+
+  if (needsConsistency) {
     const { data } = await supabase
       .from("contacts")
-      .select("lead_status, tags")
+      .select("type, lead_status, stage_bar, tags")
       .eq("id", id)
       .single();
     oldContact = data;
@@ -106,6 +119,20 @@ export async function updateContact(
   if (formData.job_title !== undefined) updatePayload.job_title = formData.job_title || null;
   if (formData.typical_client_profile !== undefined) updatePayload.typical_client_profile = formData.typical_client_profile || null;
   if (formData.referral_agreement_terms !== undefined) updatePayload.referral_agreement_terms = formData.referral_agreement_terms || null;
+
+  // Enforce cross-field consistency (stage↔status, type↔stage, tags)
+  if (oldContact && needsConsistency) {
+    const cleanPayload = enforceConsistency(
+      {
+        type: oldContact.type,
+        lead_status: oldContact.lead_status,
+        stage_bar: oldContact.stage_bar,
+        tags: oldContact.tags,
+      },
+      updatePayload
+    );
+    Object.assign(updatePayload, cleanPayload);
+  }
 
   const { error } = await supabase
     .from("contacts")
