@@ -523,47 +523,25 @@ export default async function ContactDetailPage({
                   </div>
                 </div>
 
-                {/* Row 2: Pipeline bar inside card */}
-                <div className="mt-4 pt-3 border-t border-indigo-50 dark:border-indigo-900/20">
-                  <StageBar
-                    contactId={id}
-                    contactType={contact.type as "buyer" | "seller"}
-                    currentStage={contact.stage_bar as string | null}
-                    stageData={stageData}
-                  />
+                {/* Row 2: Pipeline bar + Tags */}
+                <div className="mt-4 pt-3 border-t border-indigo-50 dark:border-indigo-900/20 flex items-end gap-4">
+                  <div className="flex-1">
+                    <StageBar
+                      contactId={id}
+                      contactType={contact.type as "buyer" | "seller"}
+                      currentStage={contact.stage_bar as string | null}
+                      stageData={stageData}
+                    />
+                  </div>
+                  <div className="shrink-0 pb-1">
+                    <TagEditor contactId={id} tags={contactTags} />
+                  </div>
                 </div>
+                {contact.notes && (
+                  <p className="text-xs text-muted-foreground mt-2">{contact.notes}</p>
+                )}
               </CardContent>
             </Card>
-
-            {/* Quick info bar below card */}
-            <div className="flex items-center gap-2 mt-2 px-1">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <TagEditor contactId={id} tags={contactTags} />
-                {household && (
-                  <span className="text-xs text-muted-foreground bg-white/70 px-2.5 py-1 rounded-full border border-indigo-100/50 shrink-0">🏡 {household.name}</span>
-                )}
-                {buyerPreferences?.pre_approval_amount && !isSeller && (
-                  <span className="text-xs bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full border border-emerald-100 shrink-0 font-medium">{Number(buyerPreferences.pre_approval_amount).toLocaleString("en-CA",{style:"currency",currency:"CAD",maximumFractionDigits:0})} pre-approved</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {[
-                  { value: relationships.length, label: "conn", color: "text-indigo-600" },
-                  { value: allReferrals.length, label: "ref", color: "text-teal-600" },
-                  { value: typedTasks.filter((t: { status: string }) => t.status !== "completed").length, label: "tasks", color: "text-amber-600" },
-                  { value: `${dataScore}%`, label: "data", color: "text-emerald-600" },
-                ].map((s) => (
-                  <span key={s.label} className="text-xs bg-white/80 px-2 py-1 rounded-md border border-slate-100">
-                    <strong className={s.color}>{s.value}</strong>{" "}
-                    <span className="text-muted-foreground">{s.label}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {contact.notes && (
-              <p className="text-xs text-muted-foreground mt-2 px-2">{contact.notes}</p>
-            )}
           </div>
 
           {/* Household Banner — only show when assigned */}
