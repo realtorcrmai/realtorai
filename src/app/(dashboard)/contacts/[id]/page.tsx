@@ -490,7 +490,7 @@ export default async function ContactDetailPage({
         <div className="space-y-4">
           {/* B3 Floating Card Header */}
           <div id="section-contact-info" className="animate-float-in">
-            <Card className="shadow-md border border-indigo-100/50 dark:border-indigo-900/30">
+            <Card className="shadow-md border border-indigo-100/50 dark:border-indigo-900/30 overflow-visible">
               <CardContent className="p-5">
                 {/* Row 1: Avatar + Name + Badges + Actions */}
                 <div className="flex items-center gap-4">
