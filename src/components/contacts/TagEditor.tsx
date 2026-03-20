@@ -170,7 +170,7 @@ export function TagEditor({
 
         {/* Dropdown */}
         {isOpen && (
-          <div className="absolute z-50 mt-1 w-64 bg-white rounded-lg border border-border shadow-lg overflow-hidden">
+          <div className="absolute z-[200] mt-1 w-64 bg-white rounded-lg border border-border shadow-xl overflow-hidden">
             {/* Search input */}
             <div className="p-2 border-b border-border">
               <input
