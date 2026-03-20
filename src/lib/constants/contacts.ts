@@ -200,3 +200,82 @@ export const CONTACT_DOC_TYPES = [
   "Other",
 ] as const;
 export type ContactDocType = (typeof CONTACT_DOC_TYPES)[number];
+
+// ── Relationship Types ──────────────────────────────────────
+export const RELATIONSHIP_TYPES = [
+  "spouse", "parent", "child", "sibling", "friend",
+  "colleague", "neighbour", "referral", "other",
+] as const;
+export type RelationshipType = (typeof RELATIONSHIP_TYPES)[number];
+
+export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, string> = {
+  spouse: "Spouse",
+  parent: "Parent",
+  child: "Child",
+  sibling: "Sibling",
+  friend: "Friend",
+  colleague: "Colleague",
+  neighbour: "Neighbour",
+  referral: "Referral",
+  other: "Other",
+};
+
+export const RELATIONSHIP_TYPE_EMOJI: Record<RelationshipType, string> = {
+  spouse: "👫",
+  parent: "👨‍👧",
+  child: "👧",
+  sibling: "👨‍👦",
+  friend: "🤝",
+  colleague: "👔",
+  neighbour: "🏘️",
+  referral: "🤝",
+  other: "👤",
+};
+
+export const RELATIONSHIP_INVERSE: Record<RelationshipType, RelationshipType> = {
+  parent: "child",
+  child: "parent",
+  spouse: "spouse",
+  sibling: "sibling",
+  friend: "friend",
+  colleague: "colleague",
+  neighbour: "neighbour",
+  referral: "referral",
+  other: "other",
+};
+
+// ── Event Types ─────────────────────────────────────────────
+export const EVENT_TYPES = [
+  "birthday", "anniversary", "move_in", "closing", "renewal", "custom",
+] as const;
+export type EventType = (typeof EVENT_TYPES)[number];
+
+export const EVENT_TYPE_LABELS: Record<EventType, string> = {
+  birthday: "Birthday",
+  anniversary: "Anniversary",
+  move_in: "Move-in Date",
+  closing: "Closing Date",
+  renewal: "Renewal Date",
+  custom: "Custom",
+};
+
+export const EVENT_TYPE_EMOJI: Record<EventType, string> = {
+  birthday: "🎂",
+  anniversary: "💍",
+  move_in: "🏠",
+  closing: "🔑",
+  renewal: "📋",
+  custom: "📅",
+};
+
+// ── Income Ranges ───────────────────────────────────────────
+export const INCOME_RANGES = [
+  "Under $50K",
+  "$50K - $100K",
+  "$100K - $150K",
+  "$150K - $250K",
+  "$250K - $500K",
+  "$500K+",
+  "Prefer not to say",
+] as const;
+export type IncomeRange = (typeof INCOME_RANGES)[number];
