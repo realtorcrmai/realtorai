@@ -262,33 +262,38 @@ export async function processJourneyQueue() {
 
     const emailConfig = schedule[emailIndex];
 
-    // Import dynamically to avoid circular deps
-    const { generateAndQueueNewsletter } = await import("@/actions/newsletters");
+    try {
+      // Import dynamically to avoid circular deps
+      const { generateAndQueueNewsletter } = await import("@/actions/newsletters");
 
-    await generateAndQueueNewsletter(
-      contact.id,
-      emailConfig.emailType,
-      journey.current_phase,
-      journey.id,
-      journey.send_mode
-    );
+      await generateAndQueueNewsletter(
+        contact.id,
+        emailConfig.emailType,
+        journey.current_phase,
+        journey.id,
+        journey.send_mode || "review"
+      );
 
-    // Schedule next email
-    const nextIndex = emailIndex + 1;
-    const nextEmailAt = nextIndex < schedule.length
-      ? new Date(Date.now() + schedule[nextIndex].delayHours * 3600000).toISOString()
-      : null;
+      // Schedule next email
+      const nextIndex = emailIndex + 1;
+      const nextEmailAt = nextIndex < schedule.length
+        ? new Date(Date.now() + schedule[nextIndex].delayHours * 3600000).toISOString()
+        : null;
 
-    await supabase
-      .from("contact_journeys")
-      .update({
-        emails_sent_in_phase: nextIndex,
-        next_email_at: nextEmailAt,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", journey.id);
+      await supabase
+        .from("contact_journeys")
+        .update({
+          emails_sent_in_phase: nextIndex,
+          next_email_at: nextEmailAt,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", journey.id);
 
-    processed++;
+      processed++;
+    } catch (e) {
+      console.error(`Journey queue error for contact ${contact.id}:`, e);
+      // Don't stop processing other journeys
+    }
   }
 
   return { processed };

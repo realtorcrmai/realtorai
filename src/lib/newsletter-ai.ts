@@ -1,8 +1,36 @@
 "use server";
 
 import Anthropic from "@anthropic-ai/sdk";
+import { z } from "zod";
 
 const anthropic = new Anthropic();
+
+const GeneratedContentSchema = z.object({
+  subject: z.string().min(1).max(120),
+  intro: z.string().min(1),
+  body: z.string().min(1),
+  ctaText: z.string().default("Learn More"),
+  highlights: z.array(z.string()).optional(),
+  stats: z.array(z.object({
+    label: z.string(),
+    value: z.string(),
+    change: z.string().optional(),
+  })).optional(),
+  tips: z.array(z.string()).optional(),
+  funFact: z.string().optional(),
+  area: z.string().optional(),
+  address: z.string().optional(),
+  salePrice: z.string().optional(),
+  daysOnMarket: z.number().optional(),
+  estimatedValue: z.string().optional(),
+  appreciation: z.string().optional(),
+  years: z.number().optional(),
+  recentSales: z.array(z.object({
+    address: z.string(),
+    price: z.string(),
+    daysOnMarket: z.number(),
+  })).optional(),
+});
 
 export interface NewsletterContext {
   contact: {
@@ -62,30 +90,41 @@ export async function generateNewsletterContent(
   const systemPrompt = buildSystemPrompt(context);
   const userPrompt = buildUserPrompt(context);
 
+  const model = process.env.NEWSLETTER_AI_MODEL || "claude-sonnet-4-20250514";
+
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 1500,
+    model,
+    max_tokens: 2000,
     system: systemPrompt,
     messages: [{ role: "user", content: userPrompt }],
   });
 
   const text = message.content[0].type === "text" ? message.content[0].text : "";
 
+  // Parse and validate JSON response
   try {
-    // Try to parse as JSON
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]) as GeneratedContent;
+    // Extract JSON — handle markdown code fences
+    let jsonStr = text;
+    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenceMatch) {
+      jsonStr = fenceMatch[1].trim();
+    } else {
+      const braceMatch = text.match(/\{[\s\S]*\}/);
+      if (braceMatch) jsonStr = braceMatch[0];
     }
-  } catch {
-    // Fall through to fallback
+
+    const parsed = JSON.parse(jsonStr);
+    const validated = GeneratedContentSchema.parse(parsed);
+    return validated as GeneratedContent;
+  } catch (e) {
+    console.warn("AI content parsing failed, using fallback:", e instanceof Error ? e.message : e);
   }
 
-  // Fallback: extract what we can
+  // Fallback: construct from raw text
   return {
     subject: `Update for ${context.contact.firstName}`,
-    intro: text.slice(0, 200),
-    body: text,
+    intro: text.slice(0, 300).replace(/[{}"\[\]]/g, "").trim(),
+    body: text.slice(0, 800).replace(/[{}"\[\]]/g, "").trim(),
     ctaText: "Learn More",
   };
 }

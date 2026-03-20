@@ -106,6 +106,12 @@ CREATE INDEX IF NOT EXISTS idx_newsletter_events_type ON newsletter_events(event
 CREATE INDEX IF NOT EXISTS idx_contact_journeys_contact ON contact_journeys(contact_id);
 CREATE INDEX IF NOT EXISTS idx_contact_journeys_next_email ON contact_journeys(next_email_at)
   WHERE is_paused = false AND next_email_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_newsletters_journey ON newsletters(journey_id);
+CREATE INDEX IF NOT EXISTS idx_newsletters_contact_type_phase ON newsletters(contact_id, email_type, journey_phase);
+CREATE INDEX IF NOT EXISTS idx_newsletters_created ON newsletters(created_at);
+CREATE INDEX IF NOT EXISTS idx_contact_journeys_type ON contact_journeys(journey_type);
+CREATE INDEX IF NOT EXISTS idx_newsletter_events_created ON newsletter_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_contacts_unsubscribed ON contacts(newsletter_unsubscribed) WHERE newsletter_unsubscribed = true;
 
 -- RLS policies (single-tenant, all authenticated users)
 ALTER TABLE newsletter_templates ENABLE ROW LEVEL SECURITY;

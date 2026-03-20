@@ -35,39 +35,57 @@ export function BaseLayout({ previewText, branding, children, unsubscribeUrl }: 
 
   return (
     <Html>
-      <Head />
+      <Head>
+        <meta name="color-scheme" content="light dark" />
+        <meta name="supported-color-schemes" content="light dark" />
+        <style>{`
+          @media (prefers-color-scheme: dark) {
+            .email-body { background-color: #1a1535 !important; }
+            .email-container { background-color: #2a2555 !important; }
+            .email-text { color: #e8e5f5 !important; }
+            .email-muted { color: #a0a0c0 !important; }
+            .email-footer-bg { background-color: #2a2555 !important; }
+          }
+          @media only screen and (max-width: 600px) {
+            .email-container { width: 100% !important; border-radius: 0 !important; }
+            .email-content { padding: 0 16px 16px !important; }
+            .email-header { padding: 20px 16px 12px !important; }
+            .email-footer { padding: 16px !important; }
+          }
+        `}</style>
+      </Head>
       <Preview>{previewText}</Preview>
-      <Body style={main}>
-        <Container style={container}>
+      <Body style={main} className="email-body">
+        <Container style={container} className="email-container">
           {/* Header */}
-          <Section style={header}>
+          <Section style={header} className="email-header">
             {branding.logoUrl ? (
-              <Img src={branding.logoUrl} width="140" alt={branding.name} style={{ margin: "0 auto" }} />
+              <Img src={branding.logoUrl} width="140" alt={`${branding.name} logo`} style={{ margin: "0 auto" }} />
             ) : (
               <Text style={{ ...headerText, color: accent }}>{branding.name}</Text>
             )}
           </Section>
 
           {/* Content */}
-          <Section style={content}>
+          <Section style={content} className="email-content">
             {children}
           </Section>
 
           {/* Footer */}
           <Hr style={hr} />
-          <Section style={footer}>
+          <Section style={footer} className="email-footer email-footer-bg">
             {branding.headshotUrl && (
               <Img
                 src={branding.headshotUrl}
                 width="60"
                 height="60"
-                alt={branding.name}
+                alt={`Photo of ${branding.name}`}
                 style={avatar}
               />
             )}
-            <Text style={footerName}>{branding.name}</Text>
-            {branding.title && <Text style={footerDetail}>{branding.title}</Text>}
-            {branding.brokerage && <Text style={footerDetail}>{branding.brokerage}</Text>}
+            <Text style={footerName} className="email-text">{branding.name}</Text>
+            {branding.title && <Text style={footerDetail} className="email-muted">{branding.title}</Text>}
+            {branding.brokerage && <Text style={footerDetail} className="email-muted">{branding.brokerage}</Text>}
             {branding.phone && (
               <Text style={footerDetail}>
                 <Link href={`tel:${branding.phone}`} style={{ color: accent }}>{branding.phone}</Link>
@@ -78,8 +96,8 @@ export function BaseLayout({ previewText, branding, children, unsubscribeUrl }: 
                 <Link href={`mailto:${branding.email}`} style={{ color: accent }}>{branding.email}</Link>
               </Text>
             )}
-            <Text style={unsubscribeText}>
-              <Link href={unsubscribeUrl} style={unsubscribeLink}>Unsubscribe</Link>
+            <Text style={unsubscribeTextStyle}>
+              <Link href={unsubscribeUrl} style={unsubscribeLinkStyle}>Unsubscribe</Link>
               {" "}from these emails
             </Text>
           </Section>
@@ -89,10 +107,10 @@ export function BaseLayout({ previewText, branding, children, unsubscribeUrl }: 
   );
 }
 
-// Styles
 const main = {
   backgroundColor: "#f6f5ff",
-  fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+  fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+  padding: "20px 0",
 };
 
 const container = {
@@ -148,13 +166,13 @@ const footerDetail = {
   margin: "0 0 2px",
 };
 
-const unsubscribeText = {
+const unsubscribeTextStyle = {
   fontSize: "11px",
   color: "#a0a0b0",
   marginTop: "16px",
 };
 
-const unsubscribeLink = {
+const unsubscribeLinkStyle = {
   color: "#a0a0b0",
   textDecoration: "underline",
 };

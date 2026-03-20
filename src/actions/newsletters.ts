@@ -150,6 +150,34 @@ export async function generateAndQueueNewsletter(
 ) {
   const supabase = createAdminClient();
 
+  // Frequency cap: max 1 email per 24 hours per contact
+  const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
+  const { count: recentCount } = await supabase
+    .from("newsletters")
+    .select("id", { count: "exact", head: true })
+    .eq("contact_id", contactId)
+    .in("status", ["sent", "sending", "draft", "approved"])
+    .gte("created_at", oneDayAgo);
+
+  if ((recentCount || 0) >= 2) {
+    return { error: "Frequency cap: contact already has 2+ emails in last 24h" };
+  }
+
+  // Deduplication: don't send same email type to same contact in same phase within 7 days
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+  const { count: dupeCount } = await supabase
+    .from("newsletters")
+    .select("id", { count: "exact", head: true })
+    .eq("contact_id", contactId)
+    .eq("email_type", emailType)
+    .eq("journey_phase", journeyPhase)
+    .in("status", ["sent", "sending", "draft", "approved"])
+    .gte("created_at", sevenDaysAgo);
+
+  if ((dupeCount || 0) > 0) {
+    return { error: "Duplicate: same email type already sent/queued in last 7 days" };
+  }
+
   // Fetch contact data
   const { data: contact } = await supabase
     .from("contacts")
@@ -165,11 +193,12 @@ export async function generateAndQueueNewsletter(
     return { error: "Contact is unsubscribed" };
   }
 
-  // Fetch relevant listings for the contact's area
+  // Fetch relevant listings with full data
   const { data: listings } = await supabase
     .from("listings")
-    .select("address, list_price, status, hero_image_url")
+    .select("id, address, list_price, status, hero_image_url, bedrooms, bathrooms, square_footage")
     .eq("status", "active")
+    .order("created_at", { ascending: false })
     .limit(5);
 
   const branding = await getRealtorBranding();
@@ -196,8 +225,8 @@ export async function generateAndQueueNewsletter(
     listings: listings?.map(l => ({
       address: l.address,
       price: l.list_price || 0,
-      beds: 0,
-      baths: 0,
+      beds: (l as any).bedrooms || 0,
+      baths: (l as any).bathrooms || 0,
       status: l.status,
       heroImageUrl: l.hero_image_url,
     })),

@@ -24,23 +24,48 @@ interface SendEmailParams {
   headers?: Record<string, string>;
 }
 
+async function sendWithRetry(
+  fn: () => Promise<any>,
+  maxRetries: number = 3
+): Promise<any> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (e: any) {
+      const isRetryable = e?.statusCode === 429 || e?.statusCode === 503 || e?.statusCode >= 500;
+      if (!isRetryable || attempt === maxRetries) throw e;
+      const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+}
+
 export async function sendEmail(params: SendEmailParams) {
+  // Basic email validation
+  if (!params.to || !params.to.includes("@")) {
+    throw new Error(`Invalid email address: ${params.to}`);
+  }
+
   const resend = getResend();
   const fromEmail = params.from || process.env.RESEND_FROM_EMAIL || "newsletters@listingflow.com";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-  const { data, error } = await resend.emails.send({
-    from: fromEmail,
-    to: params.to,
-    subject: params.subject,
-    html: params.html,
-    text: params.text,
-    replyTo: params.replyTo,
-    tags: params.tags,
-    headers: {
-      "List-Unsubscribe": `<${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/newsletters/unsubscribe>`,
-      ...params.headers,
-    },
-  });
+  const { data, error } = await sendWithRetry(() =>
+    resend.emails.send({
+      from: fromEmail,
+      to: params.to,
+      subject: params.subject,
+      html: params.html,
+      text: params.text,
+      replyTo: params.replyTo,
+      tags: params.tags?.filter(t => t.value != null && t.value !== ""),
+      headers: {
+        "List-Unsubscribe": `<${appUrl}/api/newsletters/unsubscribe>, <mailto:unsubscribe@listingflow.com>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        ...params.headers,
+      },
+    })
+  );
 
   if (error) {
     throw new Error(`Resend error: ${error.message}`);
@@ -56,7 +81,6 @@ export async function sendBatchEmails(
   let failed = 0;
   const errors: string[] = [];
 
-  // Send in batches of 10 to respect rate limits
   const batchSize = 10;
   for (let i = 0; i < emails.length; i += batchSize) {
     const batch = emails.slice(i, i + batchSize);
@@ -69,13 +93,15 @@ export async function sendBatchEmails(
         sent++;
       } else {
         failed++;
-        errors.push(result.reason?.message || "Unknown error");
+        const msg = result.reason?.message || "Unknown error";
+        errors.push(msg);
+        console.error("Batch email send error:", msg);
       }
     }
 
-    // Small delay between batches
+    // Rate limit between batches
     if (i + batchSize < emails.length) {
-      await new Promise((r) => setTimeout(r, 200));
+      await new Promise((r) => setTimeout(r, 500));
     }
   }
 
