@@ -30,6 +30,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { QuickAddButton } from "@/components/layout/QuickAddButton";
 
 import type { FeatureKey } from "@/lib/features";
 
@@ -197,6 +198,9 @@ export function AppHeader() {
             <span className="hidden lg:inline">Admin</span>
           </Link>
         )}
+
+        {/* Quick Add */}
+        <QuickAddButton />
 
         {/* Separator */}
         <div className="h-6 w-px bg-border/60 shrink-0" />

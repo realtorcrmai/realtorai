@@ -11,6 +11,7 @@ import {
   ListTodo,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { QuickAddButton } from "@/components/layout/QuickAddButton";
 import type { FeatureKey } from "@/lib/features";
 
 const navItems: { href: string; label: string; icon: typeof Building2; featureKey?: FeatureKey }[] = [
@@ -30,29 +31,48 @@ export function MobileNav() {
     ? navItems.filter((item) => !item.featureKey || enabledFeatures.includes(item.featureKey))
     : navItems;
 
+  // Split items: first 2 on left, rest on right, with center + button
+  const leftItems = filteredItems.slice(0, 2);
+  const rightItems = filteredItems.slice(2);
+
+  function NavLink({ item }: { item: typeof filteredItems[number] }) {
+    const isActive =
+      pathname === item.href ||
+      (item.href !== "/" && pathname.startsWith(item.href));
+    return (
+      <Link
+        href={item.href}
+        className={cn(
+          "flex flex-col items-center gap-1 py-2.5 px-2 min-w-[44px] min-h-[44px] text-[10px] font-medium transition-colors",
+          isActive
+            ? "text-primary"
+            : "text-muted-foreground"
+        )}
+      >
+        <item.icon className={cn("h-5 w-5", isActive && "stroke-[2.5]")} />
+        <span>{item.label}</span>
+      </Link>
+    );
+  }
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/95 backdrop-blur-sm md:hidden">
-      <div className="flex items-center justify-around">
-        {filteredItems.map((item) => {
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/" && pathname.startsWith(item.href));
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex flex-col items-center gap-1 py-2.5 px-2 min-w-[44px] min-h-[44px] text-[10px] font-medium transition-colors",
-                isActive
-                  ? "text-primary"
-                  : "text-muted-foreground"
-              )}
-            >
-              <item.icon className={cn("h-5 w-5", isActive && "stroke-[2.5]")} />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+      <div className="flex items-end justify-around">
+        {leftItems.map((item) => (
+          <NavLink key={item.href} item={item} />
+        ))}
+
+        {/* Raised center Quick Add button */}
+        <div className="flex flex-col items-center -mt-4">
+          <div className="rounded-full bg-card p-1 shadow-lg border border-border/50">
+            <QuickAddButton />
+          </div>
+          <span className="text-[10px] font-medium text-muted-foreground mt-0.5">Add</span>
+        </div>
+
+        {rightItems.map((item) => (
+          <NavLink key={item.href} item={item} />
+        ))}
       </div>
     </nav>
   );
