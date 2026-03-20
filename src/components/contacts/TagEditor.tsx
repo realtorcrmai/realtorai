@@ -143,9 +143,9 @@ export function TagEditor({
             {tag}
             <button
               type="button"
-              onClick={() => removeTag(tag)}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeTag(tag); }}
               disabled={isPending}
-              className="hover:opacity-70 transition-opacity"
+              className="hover:opacity-70 transition-opacity p-0.5 -mr-0.5 rounded-full hover:bg-black/10"
             >
               <X className="h-3 w-3" />
             </button>
