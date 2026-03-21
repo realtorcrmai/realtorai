@@ -1,8 +1,9 @@
 # ListingFlow CRM — Comprehensive Evaluation Tests
 
 **Last Updated:** March 2026
-**Total Test Cases:** 142
-**Coverage:** All 12 feature areas, 54 pages, 28 API routes, 45+ server actions
+**Total Test Cases:** 200
+**Coverage:** All 15 feature areas, 54 pages, 28 API routes, 45+ server actions
+**Newsletter Engine:** 80 tests (expanded from 22) covering generation, queue, frequency caps, webhooks, intelligence, journeys, AI content, unsubscribe, analytics
 
 ---
 
@@ -115,32 +116,132 @@ Each test is a manual verification. Navigate to the URL, perform the action, ver
 
 ---
 
-## 6. Newsletter & Journey Engine (22 tests)
+## 6. Newsletter & Journey Engine (68 tests)
+
+### 6A. Newsletter Generation & Sending (12 tests)
 
 | # | Test | Steps | Expected Result | Status |
 |---|------|-------|----------------|--------|
-| 6.1 | Newsletter dashboard | Navigate to `/newsletters` | Pipeline health, stats, recent activity render | |
-| 6.2 | Buyer pipeline counts | Dashboard → Buyer Pipeline | Shows correct counts per phase (lead/active/etc) | |
-| 6.3 | Seller pipeline counts | Dashboard → Seller Pipeline | Shows correct counts per phase | |
-| 6.4 | Guide button | Dashboard → click "Guide" | Navigates to `/newsletters/guide` | |
-| 6.5 | Walkthrough wizard | `/newsletters/guide` | 8-step wizard with Next/Previous buttons working | |
-| 6.6 | Walkthrough navigation | Click step dots | Jumps to correct step | |
-| 6.7 | Approval queue empty | `/newsletters/queue` (no drafts) | "All caught up!" message | |
-| 6.8 | Generate newsletter | Create contact → auto-enroll → trigger journey | Newsletter draft appears in queue | |
-| 6.9 | Preview email | Queue → click email card | Preview iframe shows rendered HTML | |
-| 6.10 | Approve & send | Queue → click "Send" | Email sent via Resend, removed from queue | |
-| 6.11 | Skip email | Queue → click "Skip" | Email skipped, removed from queue | |
-| 6.12 | Bulk approve | Queue → click "Approve All" | All emails sent, queue cleared | |
-| 6.13 | Analytics page | `/newsletters/analytics` | Shows sent/opens/clicks/bounces, brand score | |
-| 6.14 | Performance by type | Analytics → table | Per-email-type breakdown (sent, opens, clicks, CTR) | |
-| 6.15 | Unsubscribe | `GET /api/newsletters/unsubscribe?id=<contactId>` | Confirmation page, contact flagged | |
-| 6.16 | Resend webhook: open | `POST /api/webhooks/resend` with email.opened | Event logged, contact intelligence updated | |
-| 6.17 | Resend webhook: click | Webhook with email.clicked + link URL | Click logged, link classified, intelligence updated | |
-| 6.18 | Hot lead alert | Click on "showing" or "cma" link | Agent notification created with "Hot Lead" | |
-| 6.19 | Frequency capping | Try to send 3 emails to same contact in 24h | 3rd email blocked: "Frequency cap" | |
-| 6.20 | Deduplication | Same email_type + phase within 7 days | Duplicate blocked | |
-| 6.21 | Journey cron | `GET /api/newsletters/process` with auth | Processes due journey emails, returns count | |
-| 6.22 | Webhook signature | POST without valid signature | Returns 401 Unauthorized | |
+| 6.1 | Generate draft (review mode) | `generateAndQueueNewsletter(contactId, "market_update", "lead", null, "review")` | Newsletter status="draft", html_body populated, ai_context saved | |
+| 6.2 | Generate auto-send | Same with sendMode="auto" | Status="approved"→"sent", sent_at set, resend_message_id set | |
+| 6.3 | Send via Resend | `sendNewsletter(id)` | Status="sending"→"sent", communications logged, messageId returned | |
+| 6.4 | Send failure handling | Resend API returns error | Status="failed", error_message saved, no crash | |
+| 6.5 | Email validation | `sendEmail({ to: "not-an-email" })` | Error "Invalid email address" thrown | |
+| 6.6 | Retry on 429 | Resend returns 429, then succeeds | Retry with backoff (1s→2s→4s), eventual success | |
+| 6.7 | Retry exhaustion | Resend returns 503 on all 3 attempts | Error thrown after final attempt | |
+| 6.8 | Batch send (10 per batch) | `sendBatchEmails(25 emails)` | 3 batches, 500ms delay between, returns {sent, failed} | |
+| 6.9 | Contact no email | Generate for contact with email=null | Error "Contact not found or has no email" | |
+| 6.10 | Unsubscribed contact | Generate for unsubscribed contact | Error "Contact is unsubscribed" | |
+| 6.11 | No active listings | Generate listing_alert with 0 listings in DB | listings=[] in context, email still generated | |
+| 6.12 | List-Unsubscribe header | Check sent email headers | `List-Unsubscribe` and `List-Unsubscribe-Post` present | |
+
+### 6B. Approval Queue (8 tests)
+
+| # | Test | Steps | Expected Result | Status |
+|---|------|-------|----------------|--------|
+| 6.13 | Queue empty state | `/newsletters/queue` with no drafts | "All caught up!" message | |
+| 6.14 | Queue shows drafts | Queue with 5 drafts | All 5 shown with contact name, subject, type badge | |
+| 6.15 | Preview email | Click email card in queue | Preview iframe opens with rendered HTML | |
+| 6.16 | Approve & send | Click "Send" button | Email sent, removed from queue, loading state shown | |
+| 6.17 | Skip email | Click "Skip" button | Status="skipped", removed from queue | |
+| 6.18 | Bulk approve all | Click "Approve All" (5 items) | All 5 sent, queue empty | |
+| 6.19 | Loading state prevents double-click | Click "Send", rapidly click again | Button disabled during send, no duplicate | |
+| 6.20 | Close preview | Click X on preview panel | Preview panel dismissed | |
+
+### 6C. Frequency & Deduplication (6 tests)
+
+| # | Test | Steps | Expected Result | Status |
+|---|------|-------|----------------|--------|
+| 6.21 | Frequency cap (2 per 24h) | Send 2 emails, try 3rd within 24h | 3rd blocked: "Frequency cap" | |
+| 6.22 | Frequency cap counts drafts | 1 draft + 1 sent in 24h, try 3rd | Blocked (drafts count toward cap) | |
+| 6.23 | Dedup same type+phase (7 days) | Send market_update/lead, try again in 3 days | Blocked: "Duplicate" | |
+| 6.24 | Dedup allows different type | Send market_update, then new_listing_alert (same phase) | Both succeed | |
+| 6.25 | Frequency cap expires after 24h | Email 24h 1min ago → send new | Allowed (outside window) | |
+| 6.26 | Dedup expires after 7 days | Same type 7 days 1min ago → send | Allowed (outside window) | |
+
+### 6D. Webhook Processing (14 tests)
+
+| # | Test | Steps | Expected Result | Status |
+|---|------|-------|----------------|--------|
+| 6.27 | Signature verification (valid) | POST with correct Svix HMAC-SHA256 | Event processed, 200 OK | |
+| 6.28 | Signature verification (invalid) | POST with tampered body | 401 Unauthorized | |
+| 6.29 | Signature skip (no secret configured) | RESEND_WEBHOOK_SECRET unset | Event still processed | |
+| 6.30 | email.delivered event | Webhook type=email.delivered | newsletter_events row created, event_type="delivered" | |
+| 6.31 | email.opened event | Webhook type=email.opened | Event logged, total_opens++, last_opened set | |
+| 6.32 | email.clicked event | Webhook with click.link URL | Event logged, link classified, total_clicks++ | |
+| 6.33 | Link classification: listing | URL contains "/listings/" | link_type="listing" | |
+| 6.34 | Link classification: showing | URL contains "book" or "showing" | link_type="showing" | |
+| 6.35 | Link classification: cma | URL contains "valuation" or "cma" | link_type="cma" | |
+| 6.36 | email.bounced event | Webhook type=email.bounced | Contact marked unsubscribed, journeys paused reason="bounced" | |
+| 6.37 | email.complained event | Webhook type=email.complained | Contact unsubscribed, journeys paused reason="complained" | |
+| 6.38 | Dedup (same event within 60s) | Send same click event twice in 60s | Second ignored, only 1 row created | |
+| 6.39 | Hot lead alert: showing click | Click link_type="showing" | agent_notifications row with type="urgent" | |
+| 6.40 | Hot lead alert: cma click | Click link_type="cma" | agent_notifications row created | |
+
+### 6E. Contact Intelligence (10 tests)
+
+| # | Test | Steps | Expected Result | Status |
+|---|------|-------|----------------|--------|
+| 6.41 | Engagement score calculation | 10 opens, 5 clicks, clicked 3 days ago | Score = min(100, 20+15+15) = 50 | |
+| 6.42 | Click history truncation | 51 clicks → add 1 more | Only last 50 retained | |
+| 6.43 | Inferred interest: family | Click school_info link | lifestyle_tags includes "family" | |
+| 6.44 | Inferred interest: active_searcher | Click listing link | lifestyle_tags includes "active_searcher" | |
+| 6.45 | Content preference: data_driven | Click market_report link | content_preference = "data_driven" | |
+| 6.46 | Content preference: lifestyle | Click neighbourhood link | content_preference = "lifestyle" | |
+| 6.47 | Area extraction from URL | Click /listings/kitsilano-abc | inferred_interests.areas includes URL slug | |
+| 6.48 | Score recency bonus (7 days) | Clicked within last 7 days | +15 recency bonus | |
+| 6.49 | Score recency bonus (30 days) | Last click 15 days ago | +10 recency bonus | |
+| 6.50 | Score recency (no clicks) | Never clicked | +0 recency bonus | |
+
+### 6F. Journey Enrollment & Phases (12 tests)
+
+| # | Test | Steps | Expected Result | Status |
+|---|------|-------|----------------|--------|
+| 6.51 | Enroll buyer in journey | `enrollContactInJourney(id, "buyer")` | Phase="lead", next_email_at=now (welcome at 0h) | |
+| 6.52 | Enroll seller in journey | `enrollContactInJourney(id, "seller")` | Phase="lead", next_email_at=now | |
+| 6.53 | Duplicate enrollment blocked | Enroll same contact twice | Error "already enrolled" | |
+| 6.54 | Advance to active | `advanceJourneyPhase(id, "buyer", "active")` | Phase="active", emails_sent_in_phase reset to 0 | |
+| 6.55 | Advance to past_client | Advance to past_client | Next email = home_anniversary at 720h | |
+| 6.56 | Advance to dormant | Advance to dormant | Next email = reengagement at 0h | |
+| 6.57 | Empty phase (seller under_contract) | Advance seller to under_contract | next_email_at=null (no emails for this phase) | |
+| 6.58 | Pause journey | `pauseJourney(id, "buyer", "taking a break")` | is_paused=true, pause_reason set | |
+| 6.59 | Resume journey | `resumeJourney(id, "buyer")` | is_paused=false, next_email_at=now | |
+| 6.60 | Cron processes due emails | Set next_email_at to past, run cron | Newsletter generated, emails_sent_in_phase++ | |
+| 6.61 | Cron skips paused journeys | Pause journey, run cron | Paused contact skipped | |
+| 6.62 | Cron skips unsubscribed | Unsubscribe contact, run cron | Unsubscribed contact skipped | |
+
+### 6G. AI Content Generation (8 tests)
+
+| # | Test | Steps | Expected Result | Status |
+|---|------|-------|----------------|--------|
+| 6.63 | Valid JSON parsed | Claude returns clean JSON | GeneratedContentSchema validates, content used | |
+| 6.64 | JSON in markdown fences | Claude returns ```json {...} ``` | Fences stripped, JSON extracted | |
+| 6.65 | Invalid JSON fallback | Claude returns plain text | Fallback: generic subject, raw text as body | |
+| 6.66 | AI hints in prompt | Contact has ai_lead_score.personalization_hints | Hints block appears in system prompt | |
+| 6.67 | No AI hints | ai_lead_score is null | Email generated without hints block | |
+| 6.68 | Buyer preferences in context | Contact has price_range, bedrooms | Preferences included in user prompt | |
+| 6.69 | Click history in context | Contact has 5 recent clicks | Last 5 clicks included in prompt | |
+| 6.70 | Model override | Set NEWSLETTER_AI_MODEL env var | Custom model used for generation | |
+
+### 6H. Unsubscribe (4 tests)
+
+| # | Test | Steps | Expected Result | Status |
+|---|------|-------|----------------|--------|
+| 6.71 | Unsubscribe via link | `GET /api/newsletters/unsubscribe?id=<contactId>` | HTML confirmation, contact flagged, journeys paused, activity logged | |
+| 6.72 | Unsubscribe without ID | `GET /api/newsletters/unsubscribe` (no ?id=) | 400 Bad Request | |
+| 6.73 | Unsubscribe invalid ID | `GET /api/newsletters/unsubscribe?id=fake-uuid` | 404 Not Found | |
+| 6.74 | Unsubscribed blocks sends | After unsubscribe, try generateAndQueueNewsletter | Error "Contact is unsubscribed" | |
+
+### 6I. Dashboard & Analytics (8 tests)
+
+| # | Test | Steps | Expected Result | Status |
+|---|------|-------|----------------|--------|
+| 6.75 | Dashboard loads | Navigate to `/newsletters` | Pipeline, stats, recent activity render | |
+| 6.76 | Guide link | Click "Guide" button | Navigates to `/newsletters/guide` | |
+| 6.77 | Walkthrough navigation | `/newsletters/guide` → Next/Previous/dots | All 8 steps accessible, progress bar updates | |
+| 6.78 | Analytics page | `/newsletters/analytics` | Sent, opens, clicks, bounces, brand score displayed | |
+| 6.79 | Open rate calculation | 100 sent, 45 opened | openRate = 45% | |
+| 6.80 | Click rate calculation | 100 sent, 12 clicked | clickRate = 12% | |
 
 ---
 
@@ -290,7 +391,15 @@ Each test is a manual verification. Navigate to the URL, perform the action, ver
 | 3. Contacts | 16 | | | |
 | 4. Listings | 12 | | | |
 | 5. Showings | 8 | | | |
-| 6. Newsletter Engine | 22 | | | |
+| 6A. Newsletter Generation | 12 | | | |
+| 6B. Approval Queue | 8 | | | |
+| 6C. Frequency & Dedup | 6 | | | |
+| 6D. Webhook Processing | 14 | | | |
+| 6E. Contact Intelligence | 10 | | | |
+| 6F. Journey Enrollment | 12 | | | |
+| 6G. AI Content Generation | 8 | | | |
+| 6H. Unsubscribe | 4 | | | |
+| 6I. Dashboard & Analytics | 8 | | | |
 | 7. AI Agent | 10 | | | |
 | 8. Workflow Engine | 12 | | | |
 | 9. Template Builder | 8 | | | |
@@ -300,7 +409,7 @@ Each test is a manual verification. Navigate to the URL, perform the action, ver
 | 13. API Security | 8 | | | |
 | 14. Data Integrity | 8 | | | |
 | 15. UI/UX Quality | 8 | | | |
-| **TOTAL** | **142** | | | |
+| **TOTAL** | **200** | | | |
 
 ---
 
