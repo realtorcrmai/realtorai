@@ -10,6 +10,7 @@ export const FEATURE_KEYS = [
   "import",
   "forms",
   "website",
+  "newsletters",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -64,6 +65,10 @@ export const FEATURE_META: Record<
     label: "Website Marketing",
     description: "Build & manage your realtor website",
   },
+  newsletters: {
+    label: "Newsletters",
+    description: "AI-powered email journeys & campaigns",
+  },
 };
 
 /** Map feature keys to their nav href */
@@ -78,5 +83,6 @@ export const FEATURE_HREF: Record<FeatureKey, string> = {
   workflow: "/workflow",
   import: "/import",
   forms: "/forms",
-  website: "http://localhost:3001",
+  website: "http://localhost:8768",
+  newsletters: "/newsletters",
 };

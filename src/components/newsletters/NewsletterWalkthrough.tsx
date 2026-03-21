@@ -104,24 +104,57 @@ export function NewsletterWalkthrough() {
       </div>
 
       {/* Navigation */}
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16, padding: "0 4px" }}>
         <button
-          className="lf-btn-ghost"
           onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
           disabled={currentStep === 0}
-          style={{ opacity: currentStep === 0 ? 0.4 : 1 }}
+          style={{
+            padding: "12px 24px",
+            borderRadius: 10,
+            border: "1.5px solid rgba(79,53,210,0.2)",
+            background: "white",
+            color: "#4f35d2",
+            fontSize: 15,
+            fontWeight: 600,
+            cursor: currentStep === 0 ? "not-allowed" : "pointer",
+            opacity: currentStep === 0 ? 0.4 : 1,
+            fontFamily: "inherit",
+          }}
         >
           {"\u2190"} Previous
         </button>
         {currentStep < STEPS.length - 1 ? (
           <button
-            className="lf-btn"
             onClick={() => setCurrentStep(currentStep + 1)}
+            style={{
+              padding: "12px 24px",
+              borderRadius: 10,
+              border: "none",
+              background: "linear-gradient(135deg, #4f35d2, #6c4fe6)",
+              color: "white",
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              boxShadow: "0 4px 12px rgba(79,53,210,0.25)",
+            }}
           >
             Next {"\u2192"}
           </button>
         ) : (
-          <Link href="/newsletters" className="lf-btn" style={{ textDecoration: "none" }}>
+          <Link
+            href="/newsletters"
+            style={{
+              padding: "12px 24px",
+              borderRadius: 10,
+              background: "linear-gradient(135deg, #4f35d2, #6c4fe6)",
+              color: "white",
+              fontSize: 15,
+              fontWeight: 600,
+              textDecoration: "none",
+              boxShadow: "0 4px 12px rgba(79,53,210,0.25)",
+            }}
+          >
             Go to Dashboard {"\u2192"}
           </Link>
         )}
