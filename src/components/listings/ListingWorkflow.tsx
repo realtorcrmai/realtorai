@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Trophy, Lock, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { toast } from "sonner";
 import type { ListingDocument } from "@/types";
 import { StepDataPanel } from "./StepDataPanel";
 import { STEP_FIELDS } from "@/lib/constants/workflow-fields";
@@ -611,25 +613,59 @@ function getStepDataSections(stepId: string, ctx: StepDataContext): DataSection[
         },
       ];
 
-    case "data-enrichment":
+    case "data-enrichment": {
+      const de = stepFormData?.["step-data-enrichment"] ?? {};
+      const val = (key: string) => {
+        const v = de[key];
+        return v != null && v !== "" ? String(v) : "—";
+      };
       return [
         {
           title: "Property Assessment",
           fields: [
-            { label: "Address", value: listing.address ?? "—" },
-            { label: "Source", value: "BC Assessment" },
-            { label: "Status", value: "✓ Retrieved" },
+            { label: "Assessed Value", value: val("assessed_value") },
+            { label: "Assessment Year", value: val("assessment_year") },
+            { label: "Lot Size", value: val("lot_size") },
+            { label: "Year Built", value: val("year_built") },
           ],
         },
         {
-          title: "Records & Search",
+          title: "Tax & Title",
           fields: [
-            { label: "Tax Records", value: "✓ Retrieved from municipality" },
-            { label: "Title Search", value: "✓ Complete via LTSA" },
-            { label: "Strata Docs", value: "Collected (if applicable)" },
+            { label: "Annual Taxes", value: val("annual_taxes") },
+            { label: "PID", value: val("pid") },
+            { label: "Title Number", value: val("title_number") },
+          ],
+        },
+        {
+          title: "Dwelling Classification",
+          fields: [
+            { label: "Type", value: val("dwelling_type") },
+            { label: "Style", value: val("dwelling_style") },
+            { label: "Bedrooms", value: val("bedrooms") },
+            { label: "Bathrooms", value: val("bathrooms") },
+          ],
+        },
+        {
+          title: "Floor Area",
+          fields: [
+            { label: "Total", value: val("total_floor_area") },
+            { label: "Main", value: val("main_floor_area") },
+            { label: "Upper", value: val("upper_floor_area") },
+            { label: "Basement", value: val("basement_area") },
+          ],
+        },
+        {
+          title: "Construction & Systems",
+          fields: [
+            { label: "Foundation", value: val("foundation_type") },
+            { label: "Roof", value: val("roof_type") },
+            { label: "Heating", value: val("heating_type") },
+            { label: "Fuel", value: val("fuel_type") },
           ],
         },
       ];
+    }
 
     case "cma":
       return [
@@ -756,6 +792,7 @@ export function ListingWorkflow({
   seller,
   showingsCount,
   stepFormData = {},
+  relatedDealId,
 }: {
   listingId: string;
   listing: {
@@ -775,6 +812,7 @@ export function ListingWorkflow({
   seller?: { name: string; phone: string; email: string | null; type?: string };
   showingsCount?: number;
   stepFormData?: Record<string, Record<string, unknown>>;
+  relatedDealId?: string;
 }) {
   const statuses = deriveStepStatuses(listing, documents);
   const substepStatuses = deriveSubstepStatuses(listing, documents, formStatuses, statuses);
@@ -818,7 +856,16 @@ export function ListingWorkflow({
 
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(initialExpanded);
 
+  // For sold listings, start with workflow collapsed
+  const isSold = listing.status === "sold";
+  const [workflowCollapsed, setWorkflowCollapsed] = useState(isSold);
+
   function toggleStep(stepId: string) {
+    // Prevent expanding locked (pending) steps
+    if (statuses[stepId] === "pending") {
+      toast.info("Complete the previous step first");
+      return;
+    }
     setExpandedSteps((prev) => {
       const next = new Set(prev);
       if (next.has(stepId)) {
@@ -836,8 +883,69 @@ export function ListingWorkflow({
 
   return (
     <div className="space-y-5">
+      {/* Sold banner */}
+      {isSold && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-5 py-4">
+            <Trophy className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                Listing Completed — Sold
+                {listing.list_price
+                  ? ` for ${formatPrice(listing.list_price)}`
+                  : ""}
+              </p>
+              <p className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-0.5">
+                All {WORKFLOW_STEPS.length} workflow steps completed
+              </p>
+            </div>
+          </div>
+
+          {/* Post-completion navigation */}
+          <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-muted/20 px-5 py-3">
+            <span className="text-xs font-medium text-muted-foreground">Next Actions:</span>
+            <div className="flex items-center gap-2">
+              {relatedDealId ? (
+                <Link
+                  href={`/pipeline/${relatedDealId}`}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 bg-primary/5 hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  View Deal <ArrowRight className="h-3 w-3" />
+                </Link>
+              ) : (
+                <Link
+                  href="/pipeline"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 bg-primary/5 hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  Go to Pipeline <ArrowRight className="h-3 w-3" />
+                </Link>
+              )}
+              <Link
+                href="/listings"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Back to Listings
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Listing Workflow</h2>
+        <button
+          type="button"
+          onClick={() => isSold && setWorkflowCollapsed((p) => !p)}
+          className={`flex items-center gap-2 ${isSold ? "cursor-pointer" : ""}`}
+        >
+          {isSold && (
+            <ChevronRight
+              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                !workflowCollapsed ? "rotate-90" : ""
+              }`}
+            />
+          )}
+          <h2 className="text-lg font-semibold">Listing Workflow</h2>
+        </button>
         <span className="text-sm text-muted-foreground">
           {completedCount}/{WORKFLOW_STEPS.length} steps complete
         </span>
@@ -853,14 +961,20 @@ export function ListingWorkflow({
         />
       </div>
 
-      {/* Timeline */}
+      {/* Timeline — collapsible for sold listings */}
+      <div
+        className="grid transition-[grid-template-rows] duration-300 ease-in-out"
+        style={{ gridTemplateRows: workflowCollapsed ? "0fr" : "1fr" }}
+      >
+      <div className="overflow-hidden">
       <div className="relative">
         {WORKFLOW_STEPS.map((step, i) => {
           const status = statuses[step.id];
           const styles = STATUS_STYLES[status];
           const isLast = i === WORKFLOW_STEPS.length - 1;
           const stepNumber = i + 1;
-          const isExpanded = expandedSteps.has(step.id);
+          const isLocked = status === "pending";
+          const isExpanded = expandedSteps.has(step.id) && !isLocked;
           const hasSubsteps = step.substeps.length > 0;
 
           const completedSubsteps = step.substeps.filter(
@@ -890,47 +1004,46 @@ export function ListingWorkflow({
                     </span>
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => hasSubsteps && toggleStep(step.id)}
-                    className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-transform hover:scale-110 ${styles.circle}`}
+                  <div
+                    className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 opacity-50 cursor-not-allowed ${styles.circle}`}
                   >
-                    <span className="text-sm font-medium text-muted-foreground/50">
-                      {stepNumber}
-                    </span>
-                  </button>
+                    <Lock className="h-4 w-4 text-muted-foreground/50" />
+                  </div>
                 )}
                 {!isLast && (
                   <div
-                    className={`w-0.5 flex-1 mt-1.5 ${styles.connector}`}
+                    className={`w-0.5 flex-1 mt-1.5 ${isLocked ? "border-l-2 border-dashed border-muted-foreground/15 w-0" : styles.connector}`}
                   />
                 )}
               </div>
 
               {/* Content: clickable header + expandable substeps */}
               <div className="pb-2 min-w-0 pt-1.5 flex-1">
-                {/* Step header — clickable */}
+                {/* Step header — clickable (locked steps show toast) */}
                 <button
                   type="button"
                   onClick={() => hasSubsteps && toggleStep(step.id)}
-                  className={`w-full text-left ${hasSubsteps ? "cursor-pointer" : "cursor-default"}`}
+                  className={`w-full text-left ${isLocked ? "cursor-not-allowed opacity-60" : hasSubsteps ? "cursor-pointer" : "cursor-default"}`}
                 >
                   <div className="flex items-center gap-2.5 flex-wrap">
-                    <span className="text-base">{step.icon}</span>
+                    <span className={`text-base ${isLocked ? "grayscale" : ""}`}>{step.icon}</span>
                     <p
                       className={`text-base font-semibold leading-6 ${styles.text}`}
                     >
                       {step.name}
                     </p>
-                    {styles.badgeLabel && (
+                    {isLocked && (
+                      <span className="text-[10px] text-muted-foreground/60 font-medium">(Locked)</span>
+                    )}
+                    {styles.badgeLabel && !isLocked && (
                       <span
                         className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide ${styles.badge}`}
                       >
                         {styles.badgeLabel}
                       </span>
                     )}
-                    {/* Substep progress + chevron */}
-                    {hasSubsteps && (
+                    {/* Substep progress + chevron (hidden for locked steps) */}
+                    {hasSubsteps && !isLocked && (
                       <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1.5">
                         <span className="tabular-nums">
                           {completedSubsteps}/{step.substeps.length}
@@ -943,7 +1056,7 @@ export function ListingWorkflow({
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground mt-1 ml-7">
+                  <p className={`text-sm text-muted-foreground mt-1 ml-7 ${isLocked ? "opacity-60" : ""}`}>
                     {step.desc}
                   </p>
                 </button>
@@ -984,6 +1097,8 @@ export function ListingWorkflow({
                               fieldConfigs={fieldConfigs}
                               savedData={savedData}
                               documents={documents}
+                              address={listing.address}
+                              hasEnrichmentData={Object.keys(stepFormData["step-data-enrichment"] ?? {}).length > 0}
                             />
                           </div>
                         ) : null;
@@ -1053,6 +1168,8 @@ export function ListingWorkflow({
             </div>
           );
         })}
+      </div>
+      </div>
       </div>
     </div>
   );

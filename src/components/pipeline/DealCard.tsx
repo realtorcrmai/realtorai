@@ -18,9 +18,39 @@ export function DealCard({ deal }: DealCardProps) {
 
   return (
     <Link href={`/pipeline/${deal.id}`}>
-      <div className="rounded-xl border border-border/50 bg-white p-3.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200 cursor-grab active:cursor-grabbing group">
+      <div className="relative rounded-xl border border-border/50 bg-white p-3.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200 cursor-grab active:cursor-grabbing group">
+        {/* Quick-link icons — visible on hover */}
+        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+          {deal.contacts && (
+            <span
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.location.href = `/contacts/${deal.contacts!.id}`;
+              }}
+              className="h-6 w-6 rounded-md bg-muted/80 hover:bg-primary/10 flex items-center justify-center cursor-pointer transition-colors"
+              title={`Contact: ${deal.contacts.name}`}
+            >
+              <User className="h-3 w-3 text-muted-foreground" />
+            </span>
+          )}
+          {deal.listings && (
+            <span
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.location.href = `/listings/${deal.listings!.id}`;
+              }}
+              className="h-6 w-6 rounded-md bg-muted/80 hover:bg-primary/10 flex items-center justify-center cursor-pointer transition-colors"
+              title={`Listing: ${deal.listings.address}`}
+            >
+              <Building2 className="h-3 w-3 text-muted-foreground" />
+            </span>
+          )}
+        </div>
+
         {/* Title */}
-        <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+        <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors pr-14">
           {deal.title}
         </p>
 

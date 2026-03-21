@@ -1,4 +1,5 @@
 import { IntegrationSettings } from "@/components/settings/IntegrationSettings";
+import { FeatureFlagsPanel } from "@/components/settings/FeatureFlagsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -8,11 +9,11 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground mt-1">
-          Connect your external services to unlock e-signatures, MLS data, email
-          campaigns, and SMS automation.
+          Manage integrations, feature flags, and application preferences.
         </p>
       </div>
 
+      <FeatureFlagsPanel />
       <IntegrationSettings />
     </div>
   );

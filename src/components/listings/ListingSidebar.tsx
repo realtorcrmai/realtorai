@@ -33,6 +33,89 @@ function getPhaseDots(listing: Listing): ("done" | "active" | "pending")[] {
   ];
 }
 
+function ListingItem({
+  listing,
+  isActive,
+  isSold,
+}: {
+  listing: Listing & { contacts?: { name: string; phone: string } | null };
+  isActive: boolean;
+  isSold?: boolean;
+}) {
+  return (
+    <Link href={`/listings/${listing.id}`}>
+      <div
+        className={cn(
+          "px-4 py-3 border-b border-border/40 cursor-pointer transition-colors",
+          isActive
+            ? "bg-primary/10 border-l-2 border-l-primary shadow-sm"
+            : "hover:bg-muted/50",
+          isSold && !isActive && "opacity-60"
+        )}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+              <p
+                className={`text-sm font-medium truncate ${
+                  isActive ? "text-primary" : ""
+                }`}
+              >
+                {listing.address}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 mt-1.5 ml-[18px]">
+              {listing.list_price != null && (
+                <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                  <DollarSign className="h-3 w-3" />
+                  {Number(listing.list_price).toLocaleString("en-CA", {
+                    style: "currency",
+                    currency: "CAD",
+                    maximumFractionDigits: 0,
+                  })}
+                </span>
+              )}
+              {listing.mls_number && (
+                <span className="text-xs text-muted-foreground">
+                  MLS# {listing.mls_number}
+                </span>
+              )}
+            </div>
+            {listing.contacts && (
+              <p className="text-xs text-muted-foreground mt-1 ml-[18px]">
+                {listing.contacts.name}
+              </p>
+            )}
+            {/* Workflow phase dots */}
+            <div className="flex gap-1 mt-1.5 ml-[18px]">
+              {getPhaseDots(listing).map((status, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "h-[7px] w-[7px] rounded-full",
+                    status === "done"
+                      ? "bg-emerald-500"
+                      : status === "active"
+                        ? "bg-amber-500"
+                        : "bg-muted-foreground/20"
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+          <Badge
+            variant="outline"
+            className={`${LISTING_STATUS_COLORS[listing.status as keyof typeof LISTING_STATUS_COLORS] ?? ""} text-[11px] px-1.5 py-0 shrink-0 capitalize`}
+          >
+            {listing.status}
+          </Badge>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 export function ListingSidebar({
   listings,
   sellers,
@@ -48,6 +131,9 @@ export function ListingSidebar({
       l.address.toLowerCase().includes(search.toLowerCase()) ||
       (l.mls_number ?? "").toLowerCase().includes(search.toLowerCase())
   );
+
+  const activeListings = filtered.filter((l) => l.status !== "sold");
+  const soldListings = filtered.filter((l) => l.status === "sold");
 
   return (
     <aside className="w-[270px] shrink-0 border-r backdrop-blur-2xl bg-white/78 flex flex-col h-full overflow-hidden">
@@ -82,82 +168,33 @@ export function ListingSidebar({
           </div>
         ) : (
           <div className="py-1">
-            {filtered.map((listing) => {
-              const isActive = pathname === `/listings/${listing.id}`;
-              return (
-                <Link key={listing.id} href={`/listings/${listing.id}`}>
-                  <div
-                    className={`px-4 py-3 border-b border-border/40 cursor-pointer transition-colors ${
-                      isActive
-                        ? "bg-primary/10 border-l-2 border-l-primary shadow-sm"
-                        : "hover:bg-muted/50"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
-                          <p
-                            className={`text-sm font-medium truncate ${
-                              isActive ? "text-primary" : ""
-                            }`}
-                          >
-                            {listing.address}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 mt-1.5 ml-[18px]">
-                          {listing.list_price != null && (
-                            <span className="text-xs text-muted-foreground flex items-center gap-0.5">
-                              <DollarSign className="h-3 w-3" />
-                              {Number(listing.list_price).toLocaleString(
-                                "en-CA",
-                                {
-                                  style: "currency",
-                                  currency: "CAD",
-                                  maximumFractionDigits: 0,
-                                }
-                              )}
-                            </span>
-                          )}
-                          {listing.mls_number && (
-                            <span className="text-xs text-muted-foreground">
-                              MLS# {listing.mls_number}
-                            </span>
-                          )}
-                        </div>
-                        {listing.contacts && (
-                          <p className="text-xs text-muted-foreground mt-1 ml-[18px]">
-                            {listing.contacts.name}
-                          </p>
-                        )}
-                        {/* Workflow phase dots */}
-                        <div className="flex gap-1 mt-1.5 ml-[18px]">
-                          {getPhaseDots(listing).map((status, i) => (
-                            <div
-                              key={i}
-                              className={cn(
-                                "h-[7px] w-[7px] rounded-full",
-                                status === "done"
-                                  ? "bg-emerald-500"
-                                  : status === "active"
-                                    ? "bg-amber-500"
-                                    : "bg-muted-foreground/20"
-                              )}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={`${LISTING_STATUS_COLORS[listing.status as keyof typeof LISTING_STATUS_COLORS] ?? ""} text-[11px] px-1.5 py-0 shrink-0 capitalize`}
-                      >
-                        {listing.status}
-                      </Badge>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+            {/* Active & pending listings */}
+            {activeListings.map((listing) => (
+              <ListingItem
+                key={listing.id}
+                listing={listing}
+                isActive={pathname === `/listings/${listing.id}`}
+              />
+            ))}
+
+            {/* Sold listings section */}
+            {soldListings.length > 0 && (
+              <>
+                <div className="px-4 py-2 bg-muted/30 border-y border-border/30">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Sold ({soldListings.length})
+                  </p>
+                </div>
+                {soldListings.map((listing) => (
+                  <ListingItem
+                    key={listing.id}
+                    listing={listing}
+                    isActive={pathname === `/listings/${listing.id}`}
+                    isSold
+                  />
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>

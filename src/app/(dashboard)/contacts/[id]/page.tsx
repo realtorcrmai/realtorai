@@ -9,8 +9,10 @@ import { ContactContextPanel } from "@/components/contacts/ContactContextPanel";
 import { CommunicationTimeline } from "@/components/contacts/CommunicationTimeline";
 import { FamilySection } from "@/components/contacts/FamilySection";
 import { ImportantDatesSection } from "@/components/contacts/ImportantDatesSection";
+import { BuyerPurchasesSection } from "@/components/contacts/BuyerPurchasesSection";
+import { SellerSalesSection } from "@/components/contacts/SellerSalesSection";
 import { Button } from "@/components/ui/button";
-import type { Contact, Communication, Listing, ContactFamilyMember, ContactImportantDate } from "@/types";
+import type { Contact, Communication, Listing, Mortgage, ContactFamilyMember, ContactImportantDate } from "@/types";
 import { CONTACT_TYPE_COLORS, type ContactType } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +33,7 @@ export default async function ContactDetailPage({
 
   if (!contact) notFound();
 
-  const [{ data: communications }, { data: listings }, { data: familyMembers }, { data: importantDates }] = await Promise.all([
+  const [{ data: communications }, { data: listings }, { data: familyMembers }, { data: importantDates }, { data: buyerDeals }, { data: buyerMortgages }, { data: sellerDeals }] = await Promise.all([
     supabase
       .from("communications")
       .select("*")
@@ -52,6 +54,23 @@ export default async function ContactDetailPage({
       .select("*, contact_family_members(id, name)")
       .eq("contact_id", id)
       .order("date_value", { ascending: true }),
+    supabase
+      .from("deals")
+      .select("id, title, stage, status, value, commission_pct, commission_amount, close_date, possession_date, subject_removal_date, notes, created_at, listings(id, address, mls_number, list_price, status, notes)")
+      .eq("contact_id", id)
+      .eq("type", "buyer")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("mortgages")
+      .select("*")
+      .eq("contact_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("deals")
+      .select("id, title, stage, status, value, commission_pct, commission_amount, close_date, possession_date, subject_removal_date, notes, created_at, listings(id, address, mls_number, list_price, status, notes)")
+      .eq("contact_id", id)
+      .eq("type", "seller")
+      .order("created_at", { ascending: false }),
   ]);
 
   return (
@@ -117,9 +136,23 @@ export default async function ContactDetailPage({
                 communications={
                   (communications ?? []) as Communication[]
                 }
+                deals={(buyerDeals ?? []) as any[]}
               />
             </CardContent>
           </Card>
+
+          {/* Buyer Properties & Purchases */}
+          {contact.type === "buyer" && (buyerDeals ?? []).length > 0 && (
+            <BuyerPurchasesSection
+              deals={buyerDeals as any[]}
+              mortgages={(buyerMortgages ?? []) as Mortgage[]}
+            />
+          )}
+
+          {/* Seller Sales & Transactions */}
+          {contact.type === "seller" && (sellerDeals ?? []).length > 0 && (
+            <SellerSalesSection deals={sellerDeals as any[]} />
+          )}
 
           {/* Communication Timeline */}
           <CommunicationTimeline

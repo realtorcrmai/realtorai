@@ -1,7 +1,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
+import { requireAuth } from "@/lib/api-auth";
 
 export async function GET() {
+  const { unauthorized } = await requireAuth();
+  if (unauthorized) return unauthorized;
+
   const supabase = createAdminClient();
 
   const [
@@ -44,6 +48,10 @@ export async function GET() {
   const dealValueByStage: Record<string, number> = {};
   let totalPipelineValue = 0;
   let totalCommission = 0;
+  let earnedCommission = 0;
+  let pipelineCommission = 0;
+  let wonValue = 0;
+  let pipelineValue = 0;
   let wonDeals = 0;
   let lostDeals = 0;
   let activeDeals = 0;
@@ -51,12 +59,21 @@ export async function GET() {
   for (const d of allDeals) {
     dealsByStage[d.stage] = (dealsByStage[d.stage] || 0) + 1;
     const val = Number(d.value) || 0;
+    const comm = Number(d.commission_amount) || 0;
     dealValueByStage[d.stage] = (dealValueByStage[d.stage] || 0) + val;
     totalPipelineValue += val;
-    totalCommission += Number(d.commission_amount) || 0;
-    if (d.status === "won") wonDeals++;
-    else if (d.status === "lost") lostDeals++;
-    else activeDeals++;
+    totalCommission += comm;
+    if (d.status === "won") {
+      wonDeals++;
+      earnedCommission += comm;
+      wonValue += val;
+    } else if (d.status === "lost") {
+      lostDeals++;
+    } else {
+      activeDeals++;
+      pipelineCommission += comm;
+      pipelineValue += val;
+    }
   }
 
   // --- Showing metrics ---
@@ -111,6 +128,10 @@ export async function GET() {
       lostDeals,
       totalPipelineValue,
       totalCommission,
+      earnedCommission,
+      pipelineCommission,
+      wonValue,
+      pipelineValue,
       totalShowings: allAppointments.length,
       totalTasks: allTasks.length,
       totalCommunications: allComms.length,

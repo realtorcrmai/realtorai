@@ -1,7 +1,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/api-auth";
 
 export async function GET(req: NextRequest) {
+  const { unauthorized } = await requireAuth();
+  if (unauthorized) return unauthorized;
+
   const supabase = createAdminClient();
   const url = new URL(req.url);
   const status = url.searchParams.get("status");
@@ -21,6 +25,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const { unauthorized } = await requireAuth();
+  if (unauthorized) return unauthorized;
+
   const supabase = createAdminClient();
   const body = await req.json();
 

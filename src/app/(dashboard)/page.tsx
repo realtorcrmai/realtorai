@@ -15,7 +15,13 @@ import {
   Globe,
   ArrowRight,
   AlertTriangle,
+  Target,
+  Trophy,
+  DollarSign,
+  Landmark,
+  Calendar,
 } from "lucide-react";
+import { RemindersWidget } from "@/components/dashboard/RemindersWidget";
 
 export const dynamic = "force-dynamic";
 
@@ -32,11 +38,20 @@ export default async function DashboardPage() {
 
   const supabase = createAdminClient();
 
+  // Current month boundaries for "closed this month"
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+  const today = now.toISOString().slice(0, 10);
+  const in90Days = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
   const [
     { count: activeListings },
     { count: pendingShowings },
     { data: confirmedThisWeek },
     { data: tasks },
+    { count: activeDealsCount },
+    { data: wonDeals },
+    { data: upcomingMortgages },
   ] = await Promise.all([
     supabase
       .from("listings")
@@ -62,6 +77,20 @@ export default async function DashboardPage() {
       .neq("status", "completed")
       .order("created_at", { ascending: false })
       .limit(5),
+    supabase
+      .from("deals")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "active"),
+    supabase
+      .from("deals")
+      .select("id, status, value, commission_amount, close_date")
+      .eq("status", "won"),
+    supabase
+      .from("mortgages")
+      .select("id, lender_name, renewal_date, mortgage_amount, interest_rate, mortgage_type, contact_id, deal_id, contacts(id, name), deals(id, title)")
+      .gte("renewal_date", today)
+      .lte("renewal_date", in90Days)
+      .order("renewal_date", { ascending: true }),
   ]);
 
   const { data: allListings } = await supabase
@@ -88,6 +117,16 @@ export default async function DashboardPage() {
   ).length;
   const openTasksCount = pendingTasks + inProgressTasks;
 
+  // Deal stats
+  const allWonDeals = wonDeals ?? [];
+  const closedThisMonth = allWonDeals.filter(
+    (d) => d.close_date && d.close_date >= monthStart
+  ).length;
+  const earnedGCI = allWonDeals.reduce(
+    (sum, d) => sum + (Number(d.commission_amount) || 0),
+    0
+  );
+
   const featureTiles = [
     {
       href: "/listings",
@@ -106,6 +145,15 @@ export default async function DashboardPage() {
       gradient: "gradient-violet",
       count: null,
       countLabel: null,
+    },
+    {
+      href: "/pipeline",
+      title: "Pipeline",
+      description: "Track buyer & seller deals",
+      icon: Target,
+      gradient: "gradient-emerald",
+      count: (activeDealsCount ?? 0) > 0 ? activeDealsCount : null,
+      countLabel: "active",
     },
     {
       href: "/tasks",
@@ -130,7 +178,7 @@ export default async function DashboardPage() {
       title: "Calendar",
       description: "View your schedule at a glance",
       icon: CalendarCheck,
-      gradient: "gradient-emerald",
+      gradient: "gradient-teal",
       count:
         (confirmedThisWeek?.length ?? 0) > 0
           ? confirmedThisWeek?.length
@@ -196,29 +244,40 @@ export default async function DashboardPage() {
 
   const quickStats = [
     {
-      label: "Active Listings",
-      value: activeListings ?? 0,
+      label: "Active Deals",
+      value: activeDealsCount ?? 0,
       color: "text-indigo-600 dark:text-indigo-400",
-      href: "/listings",
+      bg: "bg-indigo-50/60 border-indigo-100 dark:bg-indigo-950/30 dark:border-indigo-900",
+      icon: Target,
+      iconColor: "text-indigo-500",
+      href: "/pipeline",
+    },
+    {
+      label: "Closed This Month",
+      value: closedThisMonth,
+      color: "text-emerald-600 dark:text-emerald-400",
+      bg: "bg-emerald-50/60 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900",
+      icon: Trophy,
+      iconColor: "text-emerald-500",
+      href: "/pipeline",
+    },
+    {
+      label: "Earned GCI",
+      value: earnedGCI > 0 ? `$${earnedGCI.toLocaleString("en-CA")}` : "$0",
+      color: "text-green-600 dark:text-green-400",
+      bg: "bg-green-50/60 border-green-100 dark:bg-green-950/30 dark:border-green-900",
+      icon: DollarSign,
+      iconColor: "text-green-500",
+      href: "/pipeline",
     },
     {
       label: "Open Tasks",
       value: openTasksCount,
-      color: "text-blue-600 dark:text-blue-400",
+      color: "text-amber-600 dark:text-amber-400",
+      bg: "bg-amber-50/60 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900",
+      icon: ListTodo,
+      iconColor: "text-amber-500",
       href: "/tasks",
-    },
-    {
-      label: "Pending Showings",
-      value: pendingShowings ?? 0,
-      color: "text-teal-600 dark:text-teal-400",
-      href: "/showings",
-    },
-    {
-      label: "Missing Docs",
-      value: listingsWithMissing.length,
-      color: "text-rose-600 dark:text-rose-400",
-      icon: listingsWithMissing.length > 0 ? AlertTriangle : null,
-      href: "/listings",
     },
   ];
 
@@ -252,22 +311,79 @@ export default async function DashboardPage() {
           <Link
             key={stat.label}
             href={stat.href}
-            className="glass rounded-xl px-4 py-3 elevation-2 transition-all duration-200 hover:elevation-4 hover:ring-2 hover:ring-primary/20 cursor-pointer"
+            className={`rounded-xl px-4 py-3.5 border transition-all duration-200 hover:shadow-md hover:ring-2 hover:ring-primary/20 cursor-pointer ${stat.bg}`}
           >
-            <div className="flex items-center gap-2">
-              <p className={`text-2xl font-bold ${stat.color}`}>
-                {stat.value}
-              </p>
-              {stat.icon && (
-                <stat.icon className="h-4 w-4 text-rose-500" />
-              )}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`text-2xl font-bold ${stat.color}`}>
+                  {stat.value}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 font-medium">
+                  {stat.label}
+                </p>
+              </div>
+              <div className={`h-10 w-10 rounded-lg flex items-center justify-center bg-white/60 dark:bg-white/10 ${stat.iconColor}`}>
+                <stat.icon className="h-5 w-5" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {stat.label}
-            </p>
           </Link>
         ))}
       </div>
+
+      {/* Mortgage Renewal Alerts */}
+      {(upcomingMortgages ?? []).length > 0 && (
+        <div className="animate-float-in rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 p-5" style={{ animationDelay: "120ms" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <Landmark className="h-4.5 w-4.5 text-amber-600" />
+            <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              Upcoming Mortgage Renewals
+            </h3>
+            <span className="ml-auto text-xs bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium">
+              {(upcomingMortgages ?? []).length} within 90 days
+            </span>
+          </div>
+          <div className="space-y-2.5">
+            {(upcomingMortgages ?? []).map((m: Record<string, unknown>) => {
+              const contact = m.contacts as { id: string; name: string } | null;
+              const deal = m.deals as { id: string; title: string } | null;
+              const renewalDate = new Date(m.renewal_date as string);
+              const daysUntil = Math.ceil((renewalDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+              const isUrgent = daysUntil <= 30;
+              return (
+                <div key={m.id as string} className="flex items-center gap-3 rounded-lg bg-white/70 dark:bg-white/5 border border-amber-100 dark:border-amber-800/50 px-4 py-3">
+                  <div className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold ${isUrgent ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+                    {daysUntil}d
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {contact && (
+                        <Link href={`/contacts/${contact.id}`} className="text-sm font-semibold hover:text-primary transition-colors">
+                          {contact.name}
+                        </Link>
+                      )}
+                      <span className="text-xs text-muted-foreground">·</span>
+                      <span className="text-xs text-muted-foreground">{m.lender_name as string}</span>
+                      <span className={`text-[10px] px-1.5 py-0 rounded-full font-medium ${isUrgent ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+                        {isUrgent ? "Urgent" : "Upcoming"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Renewal: {renewalDate.toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })}
+                      {m.mortgage_amount && ` · $${Number(m.mortgage_amount).toLocaleString("en-CA")}`}
+                      {m.interest_rate && ` · ${m.interest_rate}% ${m.mortgage_type}`}
+                    </p>
+                  </div>
+                  {deal && (
+                    <Link href={`/pipeline/${deal.id}`} className="shrink-0 text-xs text-primary hover:text-primary/80 font-medium flex items-center gap-1">
+                      Deal <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Feature Hub */}
       <div>
@@ -326,6 +442,11 @@ export default async function DashboardPage() {
             );
           })}
         </div>
+      </div>
+
+      {/* Reminders Widget */}
+      <div className="animate-float-in" style={{ animationDelay: "300ms" }}>
+        <RemindersWidget />
       </div>
     </div>
     </div>

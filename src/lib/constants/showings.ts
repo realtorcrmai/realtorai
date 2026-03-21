@@ -1,3 +1,5 @@
+import { getStatusColor } from "./theme";
+
 export const SHOWING_STATUSES = ["requested", "confirmed", "denied", "cancelled"] as const;
 export type ShowingStatus = (typeof SHOWING_STATUSES)[number];
 
@@ -7,18 +9,18 @@ export const SHOWING_STATUS_CONFIG: Record<
 > = {
   requested: {
     label: "Requested",
-    className: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50",
+    className: `${getStatusColor("showing", "requested").badge} ${getStatusColor("showing", "requested").hoverBg}`,
   },
   confirmed: {
     label: "Confirmed",
-    className: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50",
+    className: `${getStatusColor("showing", "confirmed").badge} ${getStatusColor("showing", "confirmed").hoverBg}`,
   },
   denied: {
     label: "Denied",
-    className: "bg-red-50 text-red-700 border-red-200 hover:bg-red-50",
+    className: `${getStatusColor("showing", "denied").badge} ${getStatusColor("showing", "denied").hoverBg}`,
   },
   cancelled: {
     label: "Cancelled",
-    className: "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-50",
+    className: `${getStatusColor("showing", "cancelled").badge} ${getStatusColor("showing", "cancelled").hoverBg}`,
   },
 };

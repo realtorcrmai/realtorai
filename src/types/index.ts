@@ -43,6 +43,22 @@ export type ListingWithSeller = Listing & {
   contacts: Contact;
 };
 
+export type AppointmentWithDetails = Appointment & {
+  listings: (Listing & { contacts: Contact | null }) | null;
+};
+
+export type ContactWithCounts = Contact & {
+  listings: { id: string }[];
+  deals: { id: string }[];
+  communications: { id: string }[];
+};
+
+export type ListingWithDetails = Listing & {
+  contacts: Contact;
+  prompts?: Prompt | null;
+  media_assets?: MediaAsset[];
+};
+
 // NextAuth session augmentation
 declare module "next-auth" {
   interface Session {

@@ -98,8 +98,8 @@ function deriveStepStatuses(showing: {
       ? "in-progress"
       : "pending";
 
-  // Step 5: Feedback — completed if notes exist; in-progress if showing completed but no notes
-  statuses["feedback"] = hasNotes
+  // Step 5: Feedback — completed only if showing is completed AND notes exist
+  statuses["feedback"] = showingCompleted && hasNotes
     ? "completed"
     : showingCompleted
       ? "in-progress"

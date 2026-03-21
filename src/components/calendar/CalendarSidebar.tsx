@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { format, addDays, subDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin } from "lucide-react";
+import { getStatusColor } from "@/lib/constants/theme";
 
 interface ShowingEvent {
   id: string;
@@ -17,10 +18,10 @@ interface ShowingEvent {
 }
 
 const statusBadgeStyles: Record<string, string> = {
-  confirmed: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  requested: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-  denied: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  cancelled: "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
+  confirmed: getStatusColor("showing", "confirmed").badge,
+  requested: getStatusColor("showing", "requested").badge,
+  denied: getStatusColor("showing", "denied").badge,
+  cancelled: getStatusColor("showing", "cancelled").badge,
 };
 
 export function CalendarSidebar() {

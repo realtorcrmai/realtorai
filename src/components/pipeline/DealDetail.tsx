@@ -136,14 +136,23 @@ export function DealDetail({
       {/* Center Content */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
         <div className="space-y-6 max-w-4xl">
-          {/* Back Link */}
-          <Link
-            href="/pipeline"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Pipeline
-          </Link>
+          {/* Breadcrumb Navigation */}
+          <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Link href="/pipeline" className="hover:text-foreground transition-colors flex items-center gap-1.5">
+              <ArrowLeft className="h-4 w-4" />
+              Pipeline
+            </Link>
+            {deal.contacts && (
+              <>
+                <span className="text-muted-foreground/40">/</span>
+                <Link href={`/contacts/${deal.contacts.id}`} className="hover:text-foreground transition-colors">
+                  {deal.contacts.name}
+                </Link>
+              </>
+            )}
+            <span className="text-muted-foreground/40">/</span>
+            <span className="text-foreground font-medium">{deal.title}</span>
+          </nav>
 
           {/* Header Card */}
           <Card className="animate-float-in">
@@ -173,7 +182,9 @@ export function DealDetail({
                   {deal.contacts && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <User className="h-4 w-4" />
-                      <span>{deal.contacts.name}</span>
+                      <Link href={`/contacts/${deal.contacts.id}`} className="hover:text-primary hover:underline transition-colors">
+                        {deal.contacts.name}
+                      </Link>
                       {deal.contacts.phone && (
                         <>
                           <Phone className="h-3.5 w-3.5 ml-2" />
@@ -185,7 +196,9 @@ export function DealDetail({
                   {deal.listings && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Building2 className="h-4 w-4" />
-                      <span>{deal.listings.address}</span>
+                      <Link href={`/listings/${deal.listings.id}`} className="hover:text-primary hover:underline transition-colors">
+                        {deal.listings.address}
+                      </Link>
                     </div>
                   )}
                 </div>
@@ -396,6 +409,41 @@ export function DealDetail({
               </CardHeader>
               <CardContent>
                 <p className="text-sm whitespace-pre-wrap">{deal.notes}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* What's Next — for closed deals */}
+          {(deal.status === "won" || deal.status === "lost") && (
+            <Card className="border-blue-100 bg-blue-50/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-blue-700">What&apos;s Next?</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap items-center gap-2">
+                  {deal.contacts && (
+                    <Link
+                      href={`/contacts/${deal.contacts.id}`}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/5 hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      <User className="h-3 w-3" /> View Contact
+                    </Link>
+                  )}
+                  {deal.listings && (
+                    <Link
+                      href={`/listings/${deal.listings.id}`}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/5 hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      <Building2 className="h-3 w-3" /> View Listing
+                    </Link>
+                  )}
+                  <Link
+                    href="/pipeline"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    Back to Pipeline
+                  </Link>
+                </div>
               </CardContent>
             </Card>
           )}

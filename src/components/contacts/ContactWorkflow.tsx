@@ -19,6 +19,27 @@ type ContactStep = {
   substeps: SubStep[];
 };
 
+// Deal shape passed from the contact page
+type BuyerDeal = {
+  id: string;
+  title: string;
+  stage: string;
+  status: string;
+  value: number | null;
+  close_date: string | null;
+  possession_date: string | null;
+  subject_removal_date: string | null;
+  notes: string | null;
+  listings: {
+    id: string;
+    address: string;
+    mls_number: string | null;
+    list_price: number | null;
+    status: string;
+    notes: string | null;
+  } | null;
+};
+
 const CONTACT_STEPS: ContactStep[] = [
   {
     id: "new-lead",
@@ -109,57 +130,125 @@ const STATUS_STYLES = {
   },
 };
 
+// Buyer pipeline stage ordering for comparison
+const BUYER_STAGE_ORDER: Record<string, number> = {
+  new_lead: 0,
+  qualified: 1,
+  showing: 2,
+  offer: 3,
+  conditional: 4,
+  subject_removal: 5,
+  closing: 6,
+  closed: 7,
+};
+
+function getBestBuyerDeal(deals: BuyerDeal[]): BuyerDeal | null {
+  if (deals.length === 0) return null;
+  // Prefer won deals, then highest stage active deals, then any deal
+  const won = deals.find((d) => d.status === "won");
+  if (won) return won;
+  const active = deals
+    .filter((d) => d.status === "active")
+    .sort(
+      (a, b) =>
+        (BUYER_STAGE_ORDER[b.stage] ?? 0) - (BUYER_STAGE_ORDER[a.stage] ?? 0)
+    );
+  return active[0] ?? deals[0];
+}
+
+function buyerStageAtLeast(deal: BuyerDeal, minStage: string): boolean {
+  return (
+    (BUYER_STAGE_ORDER[deal.stage] ?? 0) >=
+    (BUYER_STAGE_ORDER[minStage] ?? 0)
+  );
+}
+
 function deriveStepStatuses(
   contact: Contact,
   listings: Listing[],
-  communications: Communication[]
+  communications: Communication[],
+  deals: BuyerDeal[]
 ): Record<string, StepStatus> {
   const statuses: Record<string, StepStatus> = {};
+  const isBuyer = contact.type === "buyer";
+  const bestDeal = isBuyer ? getBestBuyerDeal(deals) : null;
+  const hasDeals = deals.length > 0;
 
   // new-lead: always completed (contact exists)
   statuses["new-lead"] = "completed";
 
-  // qualification: completed if contact has notes OR listings.length > 0
-  const hasNotes = !!contact.notes;
-  const hasListings = listings.length > 0;
-  statuses["qualification"] =
-    hasNotes || hasListings ? "completed" : "in-progress";
+  if (isBuyer && hasDeals) {
+    // --- BUYER with deals: derive from deal stage/status ---
 
-  // active-search
-  const hasActiveListing = listings.some((l) => l.status === "active");
-  const hasPendingOrSold = listings.some(
-    (l) => l.status === "pending" || l.status === "sold"
-  );
-  const isSellerWithActive =
-    contact.type === "seller" && hasActiveListing;
+    // qualification: completed if we have a deal (means buyer is qualified)
+    statuses["qualification"] = "completed";
 
-  if (hasPendingOrSold || isSellerWithActive) {
-    statuses["active-search"] = "completed";
-  } else if (hasListings) {
-    statuses["active-search"] = "in-progress";
+    // active-search: completed if any deal is past qualified stage
+    if (bestDeal && buyerStageAtLeast(bestDeal, "showing")) {
+      statuses["active-search"] = "completed";
+    } else if (bestDeal && buyerStageAtLeast(bestDeal, "qualified")) {
+      statuses["active-search"] = "in-progress";
+    } else {
+      statuses["active-search"] = hasDeals ? "in-progress" : "pending";
+    }
+
+    // transaction: completed if deal is past offer stage
+    if (bestDeal && (bestDeal.status === "won" || buyerStageAtLeast(bestDeal, "closing"))) {
+      statuses["transaction"] = "completed";
+    } else if (bestDeal && buyerStageAtLeast(bestDeal, "offer")) {
+      statuses["transaction"] = "in-progress";
+    } else {
+      statuses["transaction"] = "pending";
+    }
+
+    // post-close: completed if deal status is won
+    if (bestDeal && bestDeal.status === "won") {
+      statuses["post-close"] = "completed";
+    } else if (bestDeal && buyerStageAtLeast(bestDeal, "closing")) {
+      statuses["post-close"] = "in-progress";
+    } else {
+      statuses["post-close"] = "pending";
+    }
   } else {
-    statuses["active-search"] = "pending";
-  }
+    // --- SELLER logic (or buyer without deals) ---
+    const hasNotes = !!contact.notes;
+    const hasListings = listings.length > 0;
+    statuses["qualification"] =
+      hasNotes || hasListings || hasDeals ? "completed" : "in-progress";
 
-  // transaction
-  if (hasPendingOrSold) {
-    statuses["transaction"] = "completed";
-  } else if (statuses["active-search"] === "completed") {
-    statuses["transaction"] = "in-progress";
-  } else {
-    statuses["transaction"] = "pending";
-  }
+    const hasActiveListing = listings.some((l) => l.status === "active");
+    const hasPendingOrSold = listings.some(
+      (l) => l.status === "pending" || l.status === "sold"
+    );
+    const isSellerWithActive =
+      contact.type === "seller" && hasActiveListing;
 
-  // post-close
-  const hasSold = listings.some((l) => l.status === "sold");
-  const hasPending = listings.some((l) => l.status === "pending");
+    if (hasPendingOrSold || isSellerWithActive) {
+      statuses["active-search"] = "completed";
+    } else if (hasListings) {
+      statuses["active-search"] = "in-progress";
+    } else {
+      statuses["active-search"] = "pending";
+    }
 
-  if (hasSold) {
-    statuses["post-close"] = "completed";
-  } else if (hasPending) {
-    statuses["post-close"] = "in-progress";
-  } else {
-    statuses["post-close"] = "pending";
+    if (hasPendingOrSold) {
+      statuses["transaction"] = "completed";
+    } else if (statuses["active-search"] === "completed") {
+      statuses["transaction"] = "in-progress";
+    } else {
+      statuses["transaction"] = "pending";
+    }
+
+    const hasSold = listings.some((l) => l.status === "sold");
+    const hasPending = listings.some((l) => l.status === "pending");
+
+    if (hasSold) {
+      statuses["post-close"] = "completed";
+    } else if (hasPending) {
+      statuses["post-close"] = "in-progress";
+    } else {
+      statuses["post-close"] = "pending";
+    }
   }
 
   return statuses;
@@ -169,9 +258,12 @@ function deriveSubstepStatuses(
   contact: Contact,
   listings: Listing[],
   communications: Communication[],
-  stepStatuses: Record<string, StepStatus>
+  stepStatuses: Record<string, StepStatus>,
+  deals: BuyerDeal[]
 ): Record<string, StepStatus> {
   const sub: Record<string, StepStatus> = {};
+  const isBuyer = contact.type === "buyer";
+  const bestDeal = isBuyer ? getBestBuyerDeal(deals) : null;
 
   function deriveFromParent(parentId: string, substepIds: string[]) {
     const parentStatus = stepStatuses[parentId];
@@ -192,47 +284,121 @@ function deriveSubstepStatuses(
   sub["capture-email"] = contact.email ? "completed" : "pending";
   sub["set-channel"] = contact.pref_channel ? "completed" : "pending";
 
-  // Qualification — granular
-  const hasNotes = !!contact.notes;
-  const hasListings = listings.length > 0;
-  if (stepStatuses["qualification"] === "completed") {
-    sub["assess-needs"] = "completed";
-    sub["determine-budget"] = "completed";
-    sub["identify-timeline"] = "completed";
-    sub["capture-notes"] = "completed";
+  if (isBuyer && bestDeal) {
+    // --- BUYER sub-step logic ---
+
+    // Qualification
+    if (stepStatuses["qualification"] === "completed") {
+      sub["assess-needs"] = "completed";
+      sub["determine-budget"] = "completed";
+      sub["identify-timeline"] = "completed";
+      sub["capture-notes"] = "completed";
+    } else {
+      sub["assess-needs"] = deals.length > 0 ? "completed" : "in-progress";
+      sub["determine-budget"] = bestDeal.value ? "completed" : "pending";
+      sub["identify-timeline"] = "pending";
+      sub["capture-notes"] = contact.notes ? "completed" : "pending";
+    }
+
+    // Active Search — based on deal stage
+    const pastShowing = buyerStageAtLeast(bestDeal, "showing");
+    const pastOffer = buyerStageAtLeast(bestDeal, "offer");
+
+    if (stepStatuses["active-search"] === "completed") {
+      sub["link-listings"] = "completed";
+      sub["schedule-viewings"] = "completed";
+      sub["gather-feedback"] = "completed";
+      sub["prepare-offers"] = "completed";
+    } else if (stepStatuses["active-search"] === "in-progress") {
+      sub["link-listings"] = bestDeal.listings ? "completed" : "in-progress";
+      sub["schedule-viewings"] = pastShowing ? "completed" : "in-progress";
+      sub["gather-feedback"] = pastShowing ? "completed" : "pending";
+      sub["prepare-offers"] = pastOffer ? "completed" : "pending";
+    } else {
+      sub["link-listings"] = "pending";
+      sub["schedule-viewings"] = "pending";
+      sub["gather-feedback"] = "pending";
+      sub["prepare-offers"] = "pending";
+    }
+
+    // Transaction — based on deal stage
+    const pastConditional = buyerStageAtLeast(bestDeal, "conditional");
+    const pastSubjectRemoval = buyerStageAtLeast(bestDeal, "subject_removal");
+    const isWon = bestDeal.status === "won";
+
+    if (stepStatuses["transaction"] === "completed") {
+      sub["accept-offer"] = "completed";
+      sub["manage-conditions"] = "completed";
+      sub["coordinate-inspection"] = "completed";
+      sub["finalize-financing"] = "completed";
+    } else if (stepStatuses["transaction"] === "in-progress") {
+      sub["accept-offer"] = pastOffer ? "completed" : "in-progress";
+      sub["manage-conditions"] = pastConditional ? "completed" : pastOffer ? "in-progress" : "pending";
+      sub["coordinate-inspection"] = pastSubjectRemoval ? "completed" : pastConditional ? "in-progress" : "pending";
+      sub["finalize-financing"] = pastSubjectRemoval ? "completed" : "pending";
+    } else {
+      sub["accept-offer"] = "pending";
+      sub["manage-conditions"] = "pending";
+      sub["coordinate-inspection"] = "pending";
+      sub["finalize-financing"] = "pending";
+    }
+
+    // Post-Close
+    if (isWon) {
+      sub["confirm-closing"] = "completed";
+      sub["send-followup"] = "completed";
+      sub["request-review"] = "completed";
+      sub["add-referral-network"] = "completed";
+    } else if (stepStatuses["post-close"] === "in-progress") {
+      sub["confirm-closing"] = "in-progress";
+      sub["send-followup"] = "pending";
+      sub["request-review"] = "pending";
+      sub["add-referral-network"] = "pending";
+    } else {
+      sub["confirm-closing"] = "pending";
+      sub["send-followup"] = "pending";
+      sub["request-review"] = "pending";
+      sub["add-referral-network"] = "pending";
+    }
   } else {
-    // in-progress
-    sub["assess-needs"] = hasNotes || hasListings ? "completed" : "in-progress";
-    sub["determine-budget"] = hasNotes ? "completed" : "pending";
-    sub["identify-timeline"] = "pending";
-    sub["capture-notes"] = hasNotes ? "completed" : "pending";
+    // --- SELLER sub-step logic (original) ---
+    const hasNotes = !!contact.notes;
+    const hasListings = listings.length > 0;
+
+    if (stepStatuses["qualification"] === "completed") {
+      sub["assess-needs"] = "completed";
+      sub["determine-budget"] = "completed";
+      sub["identify-timeline"] = "completed";
+      sub["capture-notes"] = "completed";
+    } else {
+      sub["assess-needs"] = hasNotes || hasListings ? "completed" : "in-progress";
+      sub["determine-budget"] = hasNotes ? "completed" : "pending";
+      sub["identify-timeline"] = "pending";
+      sub["capture-notes"] = hasNotes ? "completed" : "pending";
+    }
+
+    deriveFromParent("active-search", [
+      "link-listings",
+      "schedule-viewings",
+      "gather-feedback",
+      "prepare-offers",
+    ]);
+    if (hasListings) sub["link-listings"] = "completed";
+
+    deriveFromParent("transaction", [
+      "accept-offer",
+      "manage-conditions",
+      "coordinate-inspection",
+      "finalize-financing",
+    ]);
+
+    deriveFromParent("post-close", [
+      "confirm-closing",
+      "send-followup",
+      "request-review",
+      "add-referral-network",
+    ]);
   }
-
-  // Active Search
-  deriveFromParent("active-search", [
-    "link-listings",
-    "schedule-viewings",
-    "gather-feedback",
-    "prepare-offers",
-  ]);
-  // Override link-listings if we know they have listings
-  if (hasListings) sub["link-listings"] = "completed";
-
-  // Transaction
-  deriveFromParent("transaction", [
-    "accept-offer",
-    "manage-conditions",
-    "coordinate-inspection",
-    "finalize-financing",
-  ]);
-
-  // Post-Close
-  deriveFromParent("post-close", [
-    "confirm-closing",
-    "send-followup",
-    "request-review",
-    "add-referral-network",
-  ]);
 
   return sub;
 }
@@ -247,6 +413,12 @@ type MessageContext = {
   hasNotes: boolean;
   hasEmail: boolean;
   listingAddresses: string[];
+  // Buyer deal context
+  bestDealAddress: string | null;
+  bestDealValue: number | null;
+  bestDealCloseDate: string | null;
+  bestDealStatus: string | null;
+  dealsCount: number;
 };
 
 function getSubstepMessage(
@@ -258,6 +430,11 @@ function getSubstepMessage(
   const type = ctx.contactType;
   const listingCount = ctx.listingsCount;
   const firstAddr = ctx.listingAddresses[0] ?? "property";
+  const dealAddr = ctx.bestDealAddress ?? "property";
+  const dealValue = ctx.bestDealValue
+    ? `$${ctx.bestDealValue.toLocaleString("en-CA")}`
+    : "";
+  const isBuyerWithDeal = type === "buyer" && ctx.dealsCount > 0;
 
   const messages: Record<string, Record<StepStatus, string>> = {
     // New Lead
@@ -283,12 +460,16 @@ function getSubstepMessage(
     },
     // Qualification
     "assess-needs": {
-      completed: `${type === "seller" ? "Selling" : "Buying"} needs assessed for ${name}`,
+      completed: isBuyerWithDeal
+        ? `Buying needs assessed for ${name}`
+        : `${type === "seller" ? "Selling" : "Buying"} needs assessed for ${name}`,
       "in-progress": `Assessing ${name}'s needs...`,
       pending: "Will assess client needs",
     },
     "determine-budget": {
-      completed: "Budget range determined",
+      completed: isBuyerWithDeal && dealValue
+        ? `Budget established — ${dealValue}`
+        : "Budget range determined",
       "in-progress": "Determining budget range...",
       pending: "Will determine budget range",
     },
@@ -304,14 +485,20 @@ function getSubstepMessage(
     },
     // Active Search
     "link-listings": {
-      completed: listingCount > 0
-        ? `${listingCount} listing${listingCount !== 1 ? "s" : ""} linked`
-        : "Listings linked",
-      "in-progress": "Linking to listings...",
+      completed: isBuyerWithDeal
+        ? `Linked to ${dealAddr}`
+        : listingCount > 0
+          ? `${listingCount} listing${listingCount !== 1 ? "s" : ""} linked`
+          : "Listings linked",
+      "in-progress": isBuyerWithDeal
+        ? "Searching for properties..."
+        : "Linking to listings...",
       pending: "Will link to listings",
     },
     "schedule-viewings": {
-      completed: "Property viewings scheduled",
+      completed: isBuyerWithDeal
+        ? `Property viewings completed for ${dealAddr}`
+        : "Property viewings scheduled",
       "in-progress": "Scheduling property viewings...",
       pending: "Will schedule viewings",
     },
@@ -321,34 +508,42 @@ function getSubstepMessage(
       pending: "Will gather feedback",
     },
     "prepare-offers": {
-      completed: "Offers prepared",
-      "in-progress": `Preparing offers for ${firstAddr}...`,
+      completed: isBuyerWithDeal
+        ? `Offer prepared for ${dealAddr}`
+        : "Offers prepared",
+      "in-progress": isBuyerWithDeal
+        ? `Preparing offer for ${dealAddr}...`
+        : `Preparing offers for ${firstAddr}...`,
       pending: "Will prepare offers",
     },
     // Transaction
     "accept-offer": {
-      completed: "Offer accepted",
+      completed: isBuyerWithDeal && dealValue
+        ? `Offer accepted at ${dealValue}`
+        : "Offer accepted",
       "in-progress": "Awaiting offer acceptance...",
       pending: "Will finalize offer acceptance",
     },
     "manage-conditions": {
-      completed: "Conditions managed",
+      completed: "Conditions managed — subjects cleared",
       "in-progress": "Managing subject conditions...",
       pending: "Will manage conditions",
     },
     "coordinate-inspection": {
-      completed: "Inspections coordinated",
+      completed: "Inspections coordinated & completed",
       "in-progress": "Coordinating inspections...",
       pending: "Will coordinate inspections",
     },
     "finalize-financing": {
-      completed: "Financing finalized",
+      completed: "Financing finalized — mortgage approved",
       "in-progress": "Finalizing financing...",
       pending: "Will finalize financing",
     },
     // Post-Close
     "confirm-closing": {
-      completed: "Closing confirmed",
+      completed: isBuyerWithDeal && ctx.bestDealCloseDate
+        ? `Closing confirmed — ${new Date(ctx.bestDealCloseDate).toLocaleDateString("en-CA")}`
+        : "Closing confirmed",
       "in-progress": "Confirming closing...",
       pending: "Will confirm closing",
     },
@@ -391,9 +586,12 @@ function getStepDataSections(
   stepId: string,
   contact: Contact,
   listings: Listing[],
-  communications: Communication[]
+  communications: Communication[],
+  deals: BuyerDeal[]
 ): DataSection[] | null {
   const commCount = communications.length;
+  const isBuyer = contact.type === "buyer";
+  const bestDeal = isBuyer ? getBestBuyerDeal(deals) : null;
 
   switch (stepId) {
     case "new-lead":
@@ -418,7 +616,39 @@ function getStepDataSections(
         },
       ];
 
-    case "qualification":
+    case "qualification": {
+      if (isBuyer && bestDeal) {
+        return [
+          {
+            title: "Buyer Assessment",
+            fields: [
+              { label: "Client Type", value: "Buyer — looking to purchase" },
+              { label: "Deal", value: bestDeal.title },
+              {
+                label: "Budget",
+                value: bestDeal.value
+                  ? `$${Number(bestDeal.value).toLocaleString("en-CA")}`
+                  : "Not determined",
+              },
+              {
+                label: "Active Deals",
+                value: `${deals.filter((d) => d.status === "active").length} active, ${deals.filter((d) => d.status === "won").length} won`,
+              },
+              {
+                label: "Communications",
+                value:
+                  commCount > 0
+                    ? `${commCount} message${commCount !== 1 ? "s" : ""}`
+                    : "None yet",
+              },
+              {
+                label: "Notes",
+                value: contact.notes ?? "No notes captured",
+              },
+            ],
+          },
+        ];
+      }
       return [
         {
           title: "Assessment",
@@ -451,8 +681,26 @@ function getStepDataSections(
           ],
         },
       ];
+    }
 
     case "active-search": {
+      if (isBuyer && deals.length > 0) {
+        const dealFields: FieldItem[] = deals.slice(0, 5).map((d) => ({
+          label: d.status === "won" ? "Purchased" : d.stage.charAt(0).toUpperCase() + d.stage.slice(1).replace(/_/g, " "),
+          value: d.listings?.address ?? d.title,
+        }));
+        return [
+          {
+            title: "Property Search",
+            fields: [
+              { label: "Total Deals", value: String(deals.length) },
+              { label: "Won", value: String(deals.filter((d) => d.status === "won").length) },
+              ...dealFields,
+            ],
+          },
+        ];
+      }
+
       const activeListings = listings.filter((l) => l.status === "active");
       const listingFields: FieldItem[] =
         listings.length > 0
@@ -466,14 +714,8 @@ function getStepDataSections(
         {
           title: "Properties",
           fields: [
-            {
-              label: "Total Listings",
-              value: String(listings.length),
-            },
-            {
-              label: "Active",
-              value: String(activeListings.length),
-            },
+            { label: "Total Listings", value: String(listings.length) },
+            { label: "Active", value: String(activeListings.length) },
             ...listingFields,
           ],
         },
@@ -481,6 +723,44 @@ function getStepDataSections(
     }
 
     case "transaction": {
+      if (isBuyer && bestDeal) {
+        const fields: FieldItem[] = [
+          {
+            label: "Deal",
+            value: bestDeal.title,
+          },
+          {
+            label: "Status",
+            value: bestDeal.status === "won" ? "Completed" : bestDeal.stage.charAt(0).toUpperCase() + bestDeal.stage.slice(1).replace(/_/g, " "),
+          },
+        ];
+        if (bestDeal.value) {
+          fields.push({
+            label: "Purchase Price",
+            value: `$${Number(bestDeal.value).toLocaleString("en-CA")}`,
+          });
+        }
+        if (bestDeal.close_date) {
+          fields.push({
+            label: "Close Date",
+            value: new Date(bestDeal.close_date).toLocaleDateString("en-CA"),
+          });
+        }
+        if (bestDeal.possession_date) {
+          fields.push({
+            label: "Possession Date",
+            value: new Date(bestDeal.possession_date).toLocaleDateString("en-CA"),
+          });
+        }
+        if (bestDeal.listings) {
+          fields.push({
+            label: "Property",
+            value: bestDeal.listings.address,
+          });
+        }
+        return [{ title: "Transaction Status", fields }];
+      }
+
       const pendingListings = listings.filter(
         (l) => l.status === "pending" || l.status === "sold"
       );
@@ -499,6 +779,22 @@ function getStepDataSections(
     }
 
     case "post-close": {
+      if (isBuyer && deals.length > 0) {
+        const wonDeals = deals.filter((d) => d.status === "won");
+        return [
+          {
+            title: "Completed Purchases",
+            fields:
+              wonDeals.length > 0
+                ? wonDeals.map((d) => ({
+                    label: "Purchased",
+                    value: d.listings?.address ?? d.title,
+                  }))
+                : [{ label: "Status", value: "No completed purchases yet" }],
+          },
+        ];
+      }
+
       const soldListings = listings.filter((l) => l.status === "sold");
       return [
         {
@@ -525,18 +821,23 @@ export function ContactWorkflow({
   contact,
   listings,
   communications,
+  deals = [],
 }: {
   contact: Contact;
   listings: Listing[];
   communications: Communication[];
+  deals?: BuyerDeal[];
 }) {
-  const statuses = deriveStepStatuses(contact, listings, communications);
+  const statuses = deriveStepStatuses(contact, listings, communications, deals);
   const substepStatuses = deriveSubstepStatuses(
     contact,
     listings,
     communications,
-    statuses
+    statuses,
+    deals
   );
+
+  const bestDeal = contact.type === "buyer" ? getBestBuyerDeal(deals) : null;
 
   const messageCtx = useMemo<MessageContext>(
     () => ({
@@ -547,8 +848,13 @@ export function ContactWorkflow({
       hasNotes: !!contact.notes,
       hasEmail: !!contact.email,
       listingAddresses: listings.map((l) => l.address),
+      bestDealAddress: bestDeal?.listings?.address ?? null,
+      bestDealValue: bestDeal?.value ?? null,
+      bestDealCloseDate: bestDeal?.close_date ?? null,
+      bestDealStatus: bestDeal?.status ?? null,
+      dealsCount: deals.length,
     }),
-    [contact, listings, communications]
+    [contact, listings, communications, bestDeal, deals.length]
   );
 
   // Only the in-progress step starts expanded by default
@@ -619,7 +925,8 @@ export function ContactWorkflow({
             step.id,
             contact,
             listings,
-            communications
+            communications,
+            deals
           );
 
           return (

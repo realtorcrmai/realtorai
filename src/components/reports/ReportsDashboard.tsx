@@ -49,6 +49,10 @@ interface ReportData {
     lostDeals: number;
     totalPipelineValue: number;
     totalCommission: number;
+    earnedCommission: number;
+    pipelineCommission: number;
+    wonValue: number;
+    pipelineValue: number;
     totalShowings: number;
     totalTasks: number;
     totalCommunications: number;
@@ -129,17 +133,31 @@ export function ReportsDashboard() {
           />
           <StatCard
             icon={DollarSign}
-            label="Pipeline Value"
-            value={`$${summary.totalPipelineValue.toLocaleString("en-CA")}`}
+            label="Sales Volume"
+            value={`$${summary.wonValue.toLocaleString("en-CA")}`}
             color="text-emerald-600"
             bg="bg-emerald-50"
           />
           <StatCard
             icon={TrendingUp}
-            label="GCI (Commission)"
-            value={`$${summary.totalCommission.toLocaleString("en-CA")}`}
+            label="Earned GCI"
+            value={`$${summary.earnedCommission.toLocaleString("en-CA")}`}
             color="text-green-600"
             bg="bg-green-50"
+          />
+          <StatCard
+            icon={DollarSign}
+            label="Pipeline Value"
+            value={`$${summary.pipelineValue.toLocaleString("en-CA")}`}
+            color="text-amber-600"
+            bg="bg-amber-50"
+          />
+          <StatCard
+            icon={TrendingUp}
+            label="Pipeline GCI"
+            value={`$${summary.pipelineCommission.toLocaleString("en-CA")}`}
+            color="text-orange-600"
+            bg="bg-orange-50"
           />
           <StatCard
             icon={Calendar}

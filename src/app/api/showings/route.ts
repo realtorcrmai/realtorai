@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from("appointments")
-    .select("*, listings(address, lockbox_code)")
+    .select("*, listings(id, address, lockbox_code, seller_id, contacts(id, name))")
     .order("start_time", { ascending: false });
 
   if (

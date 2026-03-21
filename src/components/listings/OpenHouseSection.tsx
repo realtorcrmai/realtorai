@@ -9,13 +9,14 @@ import {
   UserPlus, Flame, ThermometerSun, Snowflake,
 } from "lucide-react";
 import type { OpenHouse, OpenHouseVisitor } from "@/types";
+import { SEMANTIC_TOKENS } from "@/lib/constants/theme";
 
 const TYPE_LABELS: Record<string, string> = { public: "Public", broker: "Broker", private: "Private" };
 const STATUS_COLORS: Record<string, string> = {
-  scheduled: "bg-blue-50 text-blue-700",
-  in_progress: "bg-amber-50 text-amber-700",
-  completed: "bg-emerald-50 text-emerald-700",
-  cancelled: "bg-red-50 text-red-700",
+  scheduled: SEMANTIC_TOKENS.info.badge,
+  in_progress: SEMANTIC_TOKENS.warning.badge,
+  completed: SEMANTIC_TOKENS.success.badge,
+  cancelled: SEMANTIC_TOKENS.danger.badge,
 };
 const INTEREST_CONFIG: Record<string, { icon: typeof Flame; color: string }> = {
   hot: { icon: Flame, color: "text-red-500" },

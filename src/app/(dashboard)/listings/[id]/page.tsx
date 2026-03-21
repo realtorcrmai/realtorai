@@ -2,7 +2,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Key, Clock, User } from "lucide-react";
+import { DollarSign, Key, Clock, User, ArrowRight, Target, Wand2, Video, Image, FileText, ExternalLink } from "lucide-react";
+import { STAGE_COLORS, STAGE_LABELS, DEAL_STATUS_COLORS } from "@/lib/constants/pipeline";
 import { ListingWorkflow } from "@/components/listings/ListingWorkflow";
 import { FormReadinessPanel } from "@/components/listings/FormReadinessPanel";
 import { ConveyancingPackButton } from "@/components/listings/ConveyancingPackButton";
@@ -15,7 +16,7 @@ import { ListingStatsCard } from "@/components/listings/ListingStatsCard";
 import { ListingActivityFeed } from "@/components/listings/ListingActivityFeed";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
-import type { ListingDocument, OpenHouse, ListingActivity } from "@/types";
+import type { ListingDocument, OpenHouse, ListingActivity, Prompt, MediaAsset } from "@/types";
 import { LISTING_STATUS_COLORS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -52,6 +53,9 @@ export default async function ListingDetailPage({
     { data: formSubmissions },
     { data: openHouses },
     { data: activities },
+    { data: relatedDeals },
+    { data: prompts },
+    { data: mediaAssets },
   ] = await Promise.all([
     supabase
       .from("listing_documents")
@@ -77,6 +81,22 @@ export default async function ListingDetailPage({
       .order("date", { ascending: false }),
     supabase
       .from("listing_activities")
+      .select("*")
+      .eq("listing_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("deals")
+      .select("id, title, stage, status, type, value")
+      .eq("listing_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("prompts")
+      .select("*")
+      .eq("listing_id", id)
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("media_assets")
       .select("*")
       .eq("listing_id", id)
       .order("created_at", { ascending: false }),
@@ -189,7 +209,17 @@ export default async function ListingDetailPage({
               <AlertBanner message="Missing Required Documents — Upload FINTRAC, DORTS, and PDS before creating showings or generating conveyancing packs." />
             )}
 
-            {/* Workflow — no Card wrapper */}
+            {/* For sold listings: stats first (featured), then collapsed workflow */}
+            {listing.status === "sold" && (
+              <ListingStatsCard
+                stats={listingStats}
+                featured
+                salePrice={listing.sale_price ?? listing.list_price}
+                listPrice={listing.list_price}
+              />
+            )}
+
+            {/* Workflow — auto-collapses for sold listings */}
             <ListingWorkflow
               listingId={id}
               listing={{ ...listing, seller_name: seller.name }}
@@ -198,10 +228,103 @@ export default async function ListingDetailPage({
               seller={seller}
               showingsCount={showings?.length ?? 0}
               stepFormData={stepFormData}
+              relatedDealId={(relatedDeals ?? [])[0]?.id}
             />
 
-            {/* Listing Stats */}
-            <ListingStatsCard stats={listingStats} />
+            {/* Listing Stats (standard mode for non-sold) */}
+            {listing.status !== "sold" && (
+              <ListingStatsCard stats={listingStats} />
+            )}
+
+            {/* AI Content — Prompts & Media */}
+            {(prompts || (mediaAssets ?? []).length > 0) && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Wand2 className="h-4 w-4" />
+                    AI Content
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* MLS Remarks */}
+                  {prompts?.mls_public && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                        <FileText className="h-3 w-3" /> MLS Public Remarks
+                      </p>
+                      <p className="text-sm bg-muted/50 rounded-lg p-3">{prompts.mls_public}</p>
+                    </div>
+                  )}
+                  {prompts?.mls_realtor && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                        <FileText className="h-3 w-3" /> MLS Realtor Remarks
+                      </p>
+                      <p className="text-sm bg-muted/50 rounded-lg p-3">{prompts.mls_realtor}</p>
+                    </div>
+                  )}
+                  {prompts?.ig_caption && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                        <FileText className="h-3 w-3" /> Instagram Caption
+                      </p>
+                      <p className="text-sm bg-muted/50 rounded-lg p-3">{prompts.ig_caption}</p>
+                    </div>
+                  )}
+
+                  {/* Generated Media */}
+                  {(mediaAssets ?? []).length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Generated Media</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {(mediaAssets ?? []).map((asset) => (
+                          <div
+                            key={asset.id}
+                            className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/30"
+                          >
+                            {asset.asset_type === "video" ? (
+                              <Video className="h-4 w-4 text-primary shrink-0" />
+                            ) : (
+                              <Image className="h-4 w-4 text-primary shrink-0" />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium capitalize">{asset.asset_type}</p>
+                              <p className="text-xs text-muted-foreground capitalize">{asset.status}</p>
+                            </div>
+                            {asset.output_url && (
+                              <a
+                                href={asset.output_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline shrink-0"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </a>
+                            )}
+                            {asset.status === "completed" && (
+                              <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] shrink-0">Ready</Badge>
+                            )}
+                            {asset.status === "processing" && (
+                              <Badge variant="secondary" className="bg-amber-100 text-amber-700 text-[10px] shrink-0">Processing</Badge>
+                            )}
+                            {asset.status === "failed" && (
+                              <Badge variant="secondary" className="bg-red-100 text-red-700 text-[10px] shrink-0">Failed</Badge>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* No content yet */}
+                  {!prompts && (mediaAssets ?? []).length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-2">
+                      No AI content generated yet. Use the Content Engine to create MLS remarks, social media captions, and marketing videos.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Open Houses */}
             <OpenHouseSection
@@ -254,6 +377,42 @@ export default async function ListingDetailPage({
                 ))}
               </CardContent>
             </Card>
+
+            {/* Related Deals */}
+            {(relatedDeals ?? []).length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Target className="h-4 w-4" />
+                    Related Deals
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {(relatedDeals ?? []).map((deal) => (
+                    <Link key={deal.id} href={`/pipeline/${deal.id}`}>
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors border border-border/30">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <p className="text-sm font-semibold truncate">{deal.title}</p>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 capitalize shrink-0">{deal.type}</Badge>
+                          <Badge variant="outline" className={`${STAGE_COLORS[deal.stage] ?? ""} text-[10px] px-1.5 py-0 border-0 shrink-0`}>
+                            {STAGE_LABELS[deal.stage] ?? deal.stage}
+                          </Badge>
+                          <Badge variant="outline" className={`${DEAL_STATUS_COLORS[deal.status] ?? ""} text-[10px] px-1.5 py-0 border-0 capitalize shrink-0`}>
+                            {deal.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-3">
+                          {deal.value && (
+                            <span className="text-sm font-semibold">${Number(deal.value).toLocaleString("en-CA")}</span>
+                          )}
+                          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Activity Feed */}
             <ListingActivityFeed activities={actList} />

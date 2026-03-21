@@ -1,10 +1,14 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/api-auth";
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { unauthorized } = await requireAuth();
+  if (unauthorized) return unauthorized;
+
   const { id } = await params;
   const supabase = createAdminClient();
 
@@ -37,6 +41,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { unauthorized } = await requireAuth();
+  if (unauthorized) return unauthorized;
+
   const { id } = await params;
   const supabase = createAdminClient();
   const body = await req.json();
@@ -62,6 +69,9 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { unauthorized } = await requireAuth();
+  if (unauthorized) return unauthorized;
+
   const { id } = await params;
   const supabase = createAdminClient();
 

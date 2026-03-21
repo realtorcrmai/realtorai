@@ -21,6 +21,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { saveStepData, deleteStepFile } from "@/actions/workflow";
 import type { StepFieldConfig, FieldType } from "@/lib/constants/workflow-fields";
+import { FetchPreviousListingButton } from "./FetchPreviousListingButton";
+import { FormPreviewDialog } from "./FormPreviewDialog";
+import { MLSIntegrationButtons } from "./MLSIntegrationButtons";
 import type { ListingDocument } from "@/types";
 
 type DataSection = { title: string; fields: { label: string; value: string }[] };
@@ -34,6 +37,8 @@ type StepDataPanelProps = {
   documents: ListingDocument[];
   autoEditMode?: boolean;
   onEditModeChange?: (editing: boolean) => void;
+  address?: string;
+  hasEnrichmentData?: boolean;
 };
 
 // --- Field input renderer ---
@@ -123,6 +128,8 @@ export function StepDataPanel({
   documents,
   autoEditMode = false,
   onEditModeChange,
+  address,
+  hasEnrichmentData,
 }: StepDataPanelProps) {
   const [isEditing, setIsEditing] = useState(autoEditMode);
   const [formValues, setFormValues] = useState<Record<string, string>>(() => {
@@ -310,6 +317,22 @@ export function StepDataPanel({
     }
   };
 
+  const handlePreviousDataFetched = (data: Record<string, string>) => {
+    // Merge fetched data into form values, only filling empty fields
+    setFormValues((prev) => {
+      const merged = { ...prev };
+      for (const [key, value] of Object.entries(data)) {
+        if (!merged[key]) {
+          merged[key] = value;
+        }
+      }
+      return merged;
+    });
+    if (!isEditing) {
+      setIsEditing(true);
+    }
+  };
+
   const downloadTemplate = () => {
     const allFields = fieldConfigs.flatMap((s) => s.fields);
     const headers = allFields.map((f) => f.label).join(",");
@@ -331,15 +354,43 @@ export function StepDataPanel({
       {/* Action buttons */}
       <div className="flex items-center gap-2 justify-end">
         {!isEditing && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 text-xs px-2.5 gap-1.5"
-            onClick={startEditing}
-          >
-            <Pencil className="h-3 w-3" />
-            Edit
-          </Button>
+          <>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs px-2.5 gap-1.5"
+              onClick={startEditing}
+            >
+              <Pencil className="h-3 w-3" />
+              Edit
+            </Button>
+            {fieldConfigs.length > 0 && (
+              <FormPreviewDialog
+                stepId={stepId}
+                stepName={fieldConfigs[0]?.sectionTitle ? stepId.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : stepId}
+                fieldConfigs={fieldConfigs}
+                formValues={savedData}
+                onSave={async (data) => {
+                  const result = await saveStepData(listingId, stepId, data);
+                  if (result.success) router.refresh();
+                }}
+              />
+            )}
+          </>
+        )}
+        {stepId === "data-enrichment" && address && (
+          <FetchPreviousListingButton
+            address={address}
+            listingId={listingId}
+            onDataFetched={handlePreviousDataFetched}
+          />
+        )}
+        {(stepId === "mls-prep" || stepId === "mls-submission") && (
+          <MLSIntegrationButtons
+            listingId={listingId}
+            stepId={stepId}
+            hasEnrichmentData={hasEnrichmentData}
+          />
         )}
         <Button
           size="sm"

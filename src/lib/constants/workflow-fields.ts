@@ -68,6 +68,75 @@ export const STEP_FIELDS: Record<string, StepFieldConfig[]> = {
         { key: "strata_mgmt", label: "Management Company", type: "text" },
       ],
     },
+    {
+      sectionTitle: "Dwelling Classification",
+      fields: [
+        { key: "dwelling_type", label: "Dwelling Type", type: "select", options: ["Detached", "Semi-Detached", "Townhouse", "Condo/Apartment", "Duplex", "Triplex", "Manufactured", "Other"] },
+        { key: "dwelling_style", label: "Style", type: "select", options: ["1 Storey", "1.5 Storey", "2 Storey", "2.5 Storey", "3 Storey", "Bi-Level", "Split Level"] },
+        { key: "bedrooms", label: "Bedrooms", type: "text" },
+        { key: "bathrooms", label: "Bathrooms", type: "text" },
+      ],
+    },
+    {
+      sectionTitle: "Floor Area (sq ft)",
+      fields: [
+        { key: "total_floor_area", label: "Total Floor Area", type: "text" },
+        { key: "main_floor_area", label: "Main Floor", type: "text" },
+        { key: "upper_floor_area", label: "Upper Floor", type: "text" },
+        { key: "lower_floor_area", label: "Lower/Basement Finished", type: "text" },
+        { key: "basement_area", label: "Basement Total", type: "text" },
+      ],
+    },
+    {
+      sectionTitle: "Property Size",
+      fields: [
+        { key: "lot_frontage", label: "Lot Frontage (ft)", type: "text" },
+        { key: "lot_depth", label: "Lot Depth (ft)", type: "text" },
+        { key: "lot_area_sqft", label: "Lot Area (sq ft)", type: "text" },
+        { key: "lot_area_acres", label: "Lot Area (acres)", type: "text" },
+      ],
+    },
+    {
+      sectionTitle: "Construction & Systems",
+      fields: [
+        { key: "foundation_type", label: "Foundation", type: "select", options: ["Concrete Perimeter", "Slab", "Crawl Space", "Piling", "Other"] },
+        { key: "roof_type", label: "Roof", type: "select", options: ["Asphalt Shingle", "Metal", "Tile", "Flat/Built-Up", "Cedar Shake", "Other"] },
+        { key: "exterior_finish", label: "Exterior Finish", type: "select", options: ["Vinyl Siding", "Wood", "Stucco", "Brick", "Stone", "Cement/Fibre", "Mixed", "Other"] },
+        { key: "heating_type", label: "Heating", type: "select", options: ["Forced Air", "Baseboard", "Radiant/In-Floor", "Heat Pump", "Fireplace Only", "Other"] },
+        { key: "fuel_type", label: "Fuel", type: "select", options: ["Natural Gas", "Electric", "Oil", "Propane", "Wood", "Other"] },
+        { key: "hot_water", label: "Hot Water", type: "select", options: ["Natural Gas", "Electric", "Tankless", "Solar", "Other"] },
+      ],
+    },
+    {
+      sectionTitle: "Fireplaces",
+      fields: [
+        { key: "num_fireplaces", label: "Number of Fireplaces", type: "text" },
+        { key: "fireplace_type", label: "Fireplace Type", type: "select", options: ["Gas", "Wood Burning", "Electric", "Pellet", "None"] },
+      ],
+    },
+    {
+      sectionTitle: "Rooms & Finishes",
+      fields: [
+        { key: "kitchen_finish", label: "Kitchen Finish", type: "select", options: ["Basic", "Standard", "Updated", "Gourmet/Custom"] },
+        { key: "floor_finish", label: "Floor Finish", type: "text" },
+        { key: "total_rooms", label: "Total Rooms", type: "text" },
+        { key: "total_parking", label: "Parking (spaces/type)", type: "text" },
+      ],
+    },
+    {
+      sectionTitle: "Outdoor & Views",
+      fields: [
+        { key: "outdoor_area", label: "Outdoor Features", type: "textarea", colSpan: 2 },
+        { key: "view_type", label: "View", type: "select", options: ["Mountain", "Water", "City", "Park/Garden", "Street", "None", "Other"] },
+      ],
+    },
+    {
+      sectionTitle: "Restrictions",
+      fields: [
+        { key: "bylaws_restrictions", label: "Bylaws & Restrictions", type: "textarea", colSpan: 2 },
+        { key: "easements", label: "Easements & Rights of Way", type: "textarea", colSpan: 2 },
+      ],
+    },
   ],
 
   "cma": [
