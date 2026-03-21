@@ -6,10 +6,13 @@ export default auth((req) => {
   const pathname = req.nextUrl.pathname;
   const isOnLogin = pathname === "/login";
 
-  // Allow auth and webhook routes without authentication
+  // Allow routes that handle their own auth
   if (
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/webhooks") ||
+    pathname.startsWith("/api/cron") ||
+    pathname.startsWith("/api/newsletters/unsubscribe") ||
+    pathname.startsWith("/api/newsletters/process") ||
     pathname.startsWith("/api/voice-agent") ||
     pathname.startsWith("/api/english-tutor")
   ) {
