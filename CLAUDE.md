@@ -65,12 +65,29 @@ realestate-crm/
 │   │   ├── enrichment.ts          # BC Geocoder, ParcelMap, LTSA, Assessment
 │   │   ├── listings.ts            # Listing CRUD
 │   │   ├── showings.ts            # Showing workflow + Twilio messaging
-│   │   └── workflow.ts            # 8-phase workflow advancement
+│   │   ├── workflow.ts            # 8-phase workflow advancement
+│   │   ├── newsletters.ts         # Newsletter CRUD, AI generation, send, analytics
+│   │   ├── journeys.ts            # Journey enrollment, phase advancement, cron
+│   │   ├── recommendations.ts     # AI recommendations CRUD + execute
+│   │   ├── templates.ts           # Email template CRUD, preview, duplicate
+│   │   └── segments.ts            # Contact segment builder + bulk enroll
+│   ├── emails/                    # React Email templates
+│   │   ├── BaseLayout.tsx         # Shared wrapper (branding, dark mode, unsubscribe)
+│   │   ├── NewListingAlert.tsx    # Property listing cards
+│   │   ├── MarketUpdate.tsx       # Stats + recent sales
+│   │   ├── JustSold.tsx           # Sale celebration
+│   │   ├── OpenHouseInvite.tsx    # Event invitation
+│   │   ├── NeighbourhoodGuide.tsx # Area lifestyle content
+│   │   └── HomeAnniversary.tsx    # Annual homeowner milestone
 │   ├── components/
-│   │   ├── contacts/              # ContactCard, ContactForm, CommunicationTimeline
+│   │   ├── contacts/              # ContactCard, ContactForm, CommunicationTimeline, SegmentBuilder
 │   │   ├── content/               # ContentStepper, PromptsStep, GenerateStep, GalleryStep
 │   │   ├── listings/              # ListingCard, ListingForm, DocumentStatusTracker, etc.
 │   │   ├── showings/              # ShowingRequestForm, StatusBadge, StatusActions, Communication
+│   │   ├── newsletters/           # ApprovalQueueClient, NewsletterWalkthrough
+│   │   ├── dashboard/             # PipelineSnapshot, AIRecommendations, RemindersWidget
+│   │   ├── email-builder/         # EmailEditorClient (template editor)
+│   │   ├── workflow-builder/      # WorkflowCanvas, WorkflowEditorClient (React Flow)
 │   │   ├── workflow/              # WorkflowStepper, PhaseCard, Phase1-8 components
 │   │   ├── layout/                # Sidebar, TopBar, MobileNav
 │   │   └── ui/                    # shadcn primitives
@@ -78,9 +95,15 @@ realestate-crm/
 │   ├── lib/
 │   │   ├── supabase/              # client.ts, server.ts, admin.ts
 │   │   ├── anthropic/             # creative-director.ts (Claude AI)
+│   │   ├── ai-agent/              # lead-scorer.ts, send-advisor.ts, next-best-action.ts
 │   │   ├── kling/                 # Video/image generation API
 │   │   ├── auth.ts                # NextAuth config (demo + Google OAuth)
 │   │   ├── twilio.ts              # SMS/WhatsApp wrapper
+│   │   ├── resend.ts              # Resend email API wrapper with retry
+│   │   ├── newsletter-ai.ts       # Claude content generation for newsletters
+│   │   ├── workflow-engine.ts     # Unified step executor (ai_email + auto_email via Resend)
+│   │   ├── flow-converter.ts      # React Flow ↔ workflow_steps converter
+│   │   ├── email-renderer.ts      # Template-to-HTML renderer
 │   │   ├── google-calendar.ts     # Calendar API wrapper
 │   │   ├── cdm-mapper.ts          # Listing → Common Data Model for forms
 │   │   └── fuzzy-match.ts         # Jaro-Winkler string matching
@@ -88,9 +111,16 @@ realestate-crm/
 │       ├── database.ts            # Supabase table types
 │       └── index.ts               # Exported type aliases
 ├── supabase/migrations/
-│   ├── 001_initial_schema.sql     # contacts, listings, appointments, communications, documents, google_tokens
-│   ├── 002_content_engine.sql     # prompts, media_assets, hero image fields
-│   └── 003_listing_workflow.sql   # 8-phase workflow, seller_identities, listing_enrichment
+│   ├── 001_initial_schema.sql     # contacts, listings, appointments, communications, documents
+│   ├── 002-009_*.sql              # tasks, forms, content engine, contacts, workflows
+│   ├── 010_newsletter_journey_engine.sql  # newsletters, newsletter_events, contact_journeys
+│   ├── 011_unify_email_engine.sql # merge journey into workflow_enrollments
+│   ├── 012_email_template_builder.sql # builder_json, is_ai_template columns
+│   ├── 013_visual_workflow_builder.sql # flow_json for React Flow editor
+│   ├── 014_segments_ab_testing.sql # contact_segments table
+│   └── 015_ai_agent.sql          # ai_lead_score, agent_recommendations, ai_decision
+├── scripts/
+│   └── qa-test-email-engine.mjs   # Automated QA test runner (27 tests)
 └── package.json
 ```
 
@@ -299,12 +329,30 @@ Located in project root (`/Users/bigbear/reality crm/`):
 | `ListingFlow_Realtor_Workflow_Design_Document.docx` | Complete 12-phase BC realtor listing lifecycle specification |
 | `ListingFlow_Gap_Analysis_Report.docx` | Comparative analysis: design doc vs current implementation |
 | `ListingFlow_Gap_Analysis_Report.md` | Same gap analysis in Markdown format |
+| `PRD_Newsletter_Journey_Engine.md` | Full PRD for AI newsletter & journey engine |
+| `PLAN_Email_Marketing_Engine.md` | 12-deliverable implementation plan (4 phases) |
+| `PLAN_AI_Agent.md` | AI agent layer plan (lead scoring, send advisor, recommendations) |
+| `SPEC_AI_Agent_Email_Marketing.md` | Technical specification for AI agent layer |
+
+### Functional Specs & Guides
+| Document | Location |
+|----------|----------|
+| `Email_Marketing_Engine.md` | `docs/functional-specs/` and `functional-specs/` |
+| `Email_Marketing_User_Guide.html` | `guides/` — customer-facing HTML guide |
+| `evals.md` | `realestate-crm/` — 200 QA test cases |
+
+### QA Test Runner
+```bash
+# Run automated QA tests for the email marketing engine
+RESEND_API_KEY=<key> ANTHROPIC_API_KEY=<key> CRON_SECRET=<secret> \
+  node scripts/qa-test-email-engine.mjs
+```
 
 ### Gap Analysis Summary (March 2026)
 - **Overall coverage: ~40%** (34 built, 13 partial, 38 missing)
 - **Strongest areas:** Data Enrichment (90%), Form Preparation (85%), Listing Intake (75%)
 - **Major gaps:** Offer Management (0%), Contract-to-Close (0%), Post-Closing (10%)
-- **Bonus features not in doc:** Content Engine (Claude + Kling AI), WhatsApp integration
+- **Bonus features not in doc:** Content Engine (Claude + Kling AI), WhatsApp integration, AI Newsletter Engine
 
 ---
 
