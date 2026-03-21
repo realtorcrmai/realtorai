@@ -1,0 +1,313 @@
+# ListingFlow — Local Deployment Guide
+
+**For developers pulling the latest changes and setting up locally.**
+
+---
+
+## Quick Start (5 minutes)
+
+```bash
+# 1. Clone or pull latest
+git clone https://github.com/realtorcrmai/realtorai.git
+cd realtorai
+
+# 2. Install dependencies
+npm install
+
+# 3. Copy environment file
+cp .env.example .env.local   # Then fill in the values below
+
+# 4. Run database migrations
+# See "Database Setup" section below
+
+# 5. Start dev server
+npm run dev
+# → http://localhost:3000
+```
+
+---
+
+## Environment Variables
+
+Create `.env.local` in the project root with these values:
+
+```bash
+# ═══════════════════════════════════════
+# REQUIRED — App won't start without these
+# ═══════════════════════════════════════
+
+# Supabase (get from: supabase.com/dashboard → Settings → API)
+NEXT_PUBLIC_SUPABASE_URL=https://ybgiljuclpsuhbmdhust.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+
+# NextAuth
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=<random-string>   # Generate: openssl rand -base64 32
+
+# Demo Login
+DEMO_EMAIL=demo@realestatecrm.com
+DEMO_PASSWORD=demo1234
+
+# App URL
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# ═══════════════════════════════════════
+# EMAIL MARKETING (required for newsletters)
+# ═══════════════════════════════════════
+
+# Resend (get from: resend.com/api-keys)
+RESEND_API_KEY=<your-resend-api-key>
+RESEND_FROM_EMAIL=onboarding@resend.dev    # Use resend.dev for testing
+
+# Anthropic Claude AI (get from: console.anthropic.com)
+ANTHROPIC_API_KEY=<your-anthropic-key>
+
+# Cron Protection
+CRON_SECRET=<random-string>   # Protects /api/cron/* endpoints
+
+# AI Agent (optional)
+AI_SEND_ADVISOR=true           # Enable send/skip/swap advisor
+
+# ═══════════════════════════════════════
+# OPTIONAL — Features work without these
+# ═══════════════════════════════════════
+
+# Google OAuth (for Google login + Calendar)
+GOOGLE_CLIENT_ID=<google-client-id>
+GOOGLE_CLIENT_SECRET=<google-client-secret>
+
+# Twilio (for SMS/WhatsApp showing notifications)
+TWILIO_ACCOUNT_SID=<twilio-sid>
+TWILIO_AUTH_TOKEN=<twilio-token>
+TWILIO_PHONE_NUMBER=<twilio-phone>
+TWILIO_WHATSAPP_NUMBER=whatsapp:<twilio-whatsapp>
+
+# Resend Webhook (for click/open tracking)
+RESEND_WEBHOOK_SECRET=<webhook-secret>   # From Resend dashboard → Webhooks
+
+# Admin
+ADMIN_EMAIL=demo@realestatecrm.com   # This email gets admin role on first login
+```
+
+---
+
+## Database Setup
+
+### Option 1: Supabase CLI (Recommended)
+
+```bash
+# Install Supabase CLI (if not installed)
+npx supabase --version
+
+# Generate an access token at: supabase.com/dashboard/account/tokens
+
+# Link your project
+SUPABASE_ACCESS_TOKEN=<your-token> npx supabase link --project-ref ybgiljuclpsuhbmdhust
+
+# Run ALL migrations
+for f in supabase/migrations/*.sql; do
+  echo "Running $(basename $f)..."
+  SUPABASE_ACCESS_TOKEN=<your-token> npx supabase db query --linked -f "$f"
+done
+```
+
+### Option 2: Supabase SQL Editor
+
+1. Go to https://supabase.com/dashboard/project/ybgiljuclpsuhbmdhust/sql
+2. Open each migration file in `supabase/migrations/` (in numerical order)
+3. Paste the SQL and click "Run"
+
+### Migration Order
+
+Run these in order (later ones depend on earlier ones):
+
+```
+001_initial_schema.sql          ← Core tables (contacts, listings, etc.)
+002_add_tasks.sql               ← Tasks table
+003_allow_anon_role.sql
+004_form_templates_and_submissions.sql
+005_content_engine.sql
+005_english_tutor.sql
+006_contact_enhancements.sql
+006_deals_pipeline.sql
+006_users_and_features.sql
+007_contact_lifecycle.sql
+007_user_integrations.sql
+008_contact_detail_features.sql
+008_seed_sample_data.sql        ← Sample data
+009_mortgages.sql
+009_workflow_automation.sql     ← Workflow engine tables
+010_newsletter_journey_engine.sql  ← Newsletter tables
+010_lifecycle_workflows.sql
+010_seed_mortgage_data.sql
+011_family_openhouse_stats.sql
+011_stage_bar.sql
+011_unify_email_engine.sql      ← Merge journey into workflows
+012_email_template_builder.sql
+012_partner_contact_type.sql
+012_seed_family_openhouse_data.sql
+013_feature_overrides.sql
+013_referrals_table.sql
+013_visual_workflow_builder.sql
+014_extension_tasks.sql
+014_segments_ab_testing.sql     ← Contact segments
+014_seller_preferences.sql
+015_ai_agent.sql                ← AI scoring + recommendations
+015_last_activity_date.sql
+015_seed_buyer_completed_purchases.sql
+016-019_*.sql                   ← Remaining migrations
+```
+
+---
+
+## Verify Setup
+
+### 1. Start the server
+```bash
+npm run dev
+# Should see: ✓ Ready in ~1500ms
+# Open: http://localhost:3000
+```
+
+### 2. Login
+- Go to http://localhost:3000/login
+- Email: `demo@realestatecrm.com`
+- Password: `demo1234`
+
+### 3. Check features
+- Dashboard: http://localhost:3000
+- Newsletters: http://localhost:3000/newsletters
+- Newsletter Guide: http://localhost:3000/newsletters/guide
+- Approval Queue: http://localhost:3000/newsletters/queue
+- Templates: http://localhost:3000/automations/templates
+- Segments: http://localhost:3000/contacts/segments
+
+### 4. Run QA tests (optional)
+```bash
+RESEND_API_KEY=<key> \
+ANTHROPIC_API_KEY=<key> \
+CRON_SECRET=<secret> \
+node scripts/qa-test-email-engine.mjs
+```
+Expected: 27/28 pass
+
+---
+
+## Services
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| CRM (Next.js) | 3000 | Main application |
+| Website Agent | 8768 | AI website generator (optional) |
+| Form Server | 8767 | BCREA form generation (Python, optional) |
+
+### Start Website Agent (optional)
+```bash
+cd ../listingflow-agent
+npm install
+npm run dev
+# → http://localhost:8768
+```
+
+---
+
+## Cron Jobs
+
+These endpoints need to be called periodically (via Vercel Crons, external scheduler, or manual curl):
+
+| Endpoint | Frequency | Purpose |
+|----------|-----------|---------|
+| `GET /api/cron/process-workflows` | Every 5 min | Execute due workflow steps |
+| `GET /api/cron/agent-scoring` | Every 15 min | AI lead scoring |
+| `GET /api/cron/agent-recommendations` | Every 1 hour | AI recommendations |
+
+All require `Authorization: Bearer <CRON_SECRET>` header.
+
+```bash
+# Test manually
+curl -H "Authorization: Bearer <CRON_SECRET>" http://localhost:3000/api/cron/process-workflows
+```
+
+---
+
+## Resend Webhook Setup
+
+To enable click/open tracking for newsletters:
+
+1. Go to https://resend.com/webhooks
+2. Add webhook URL: `https://<your-domain>/api/webhooks/resend`
+3. Select events: `email.delivered`, `email.opened`, `email.clicked`, `email.bounced`, `email.complained`
+4. Copy the signing secret → set as `RESEND_WEBHOOK_SECRET` in `.env.local`
+
+For local testing, use [ngrok](https://ngrok.com) or [localtunnel](https://localtunnel.me):
+```bash
+npx localtunnel --port 3000
+# Use the generated URL as webhook endpoint
+```
+
+---
+
+## Project Structure
+
+```
+realtorai/                      ← Git repo root
+├── src/
+│   ├── app/                    ← Next.js pages (App Router)
+│   ├── actions/                ← Server actions (mutations)
+│   ├── emails/                 ← React Email templates (6 types)
+│   ├── components/             ← React components
+│   ├── lib/                    ← Utilities, API wrappers, AI agent
+│   ├── hooks/                  ← React hooks
+│   └── types/                  ← TypeScript types
+├── supabase/migrations/        ← Database migrations (40 files)
+├── scripts/                    ← QA test runner
+├── docs/functional-specs/      ← Technical documentation
+├── listingflow-agent/          ← Website generator service
+├── CLAUDE.md                   ← AI assistant instructions
+├── deploy.md                   ← This file
+├── evals.md                    ← 200 QA test cases
+└── Plan.md                     ← Product roadmap
+```
+
+---
+
+## Troubleshooting
+
+### "newsletters table missing"
+Run migration `010_newsletter_journey_engine.sql` in Supabase.
+
+### Cron endpoints return 401
+Add `/api/cron` to middleware exemptions in `src/middleware.ts` (already done in latest code).
+
+### "RESEND_API_KEY is not set"
+Add `RESEND_API_KEY` to `.env.local`. Get a free key at resend.com.
+
+### Build fails with type errors
+```bash
+npm run build
+```
+If you see errors from `listingflow-agent/` code, sync the agent files:
+```bash
+cp ../listingflow-agent/src/tools/screenshot.ts listingflow-agent/src/tools/screenshot.ts
+```
+
+### Turbopack workspace root warning
+Harmless warning caused by `/Users/bigbear/package-lock.json`. Can be ignored.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 16 (App Router, Turbopack) |
+| Database | Supabase (PostgreSQL + RLS) |
+| Auth | NextAuth v5 (JWT sessions) |
+| Styling | Tailwind CSS v4 + ListingFlow design system |
+| Email | Resend API + React Email templates |
+| AI | Anthropic Claude SDK (content generation + lead scoring) |
+| SMS/WhatsApp | Twilio |
+| Calendar | Google Calendar API |
+| Workflow Editor | React Flow (@xyflow/react) |
+| Charts | Recharts |
