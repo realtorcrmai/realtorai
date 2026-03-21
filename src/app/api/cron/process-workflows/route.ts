@@ -1,0 +1,34 @@
+import { NextRequest, NextResponse } from "next/server";
+import { processWorkflowQueue } from "@/lib/workflow-engine";
+
+/**
+ * GET /api/cron/process-workflows
+ * Unified cron processor for ALL workflow enrollments (including ai_email steps).
+ * Replaces both the old workflow processor and processJourneyQueue().
+ * Protected by CRON_SECRET bearer token.
+ * Call every 2-5 minutes via Vercel Crons or external scheduler.
+ */
+export async function GET(request: NextRequest) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const auth = request.headers.get("authorization");
+    if (auth !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
+  try {
+    const result = await processWorkflowQueue();
+    return NextResponse.json({
+      ok: true,
+      ...result,
+      processedAt: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.error("Workflow cron error:", e);
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Processing failed" },
+      { status: 500 }
+    );
+  }
+}

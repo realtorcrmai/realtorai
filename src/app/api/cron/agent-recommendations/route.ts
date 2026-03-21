@@ -1,0 +1,35 @@
+import { NextRequest, NextResponse } from "next/server";
+import { generateRecommendations, saveRecommendations } from "@/lib/ai-agent/next-best-action";
+
+/**
+ * GET /api/cron/agent-recommendations
+ * Runs hourly. Generates AI-powered next-best-action recommendations.
+ * Protected by CRON_SECRET.
+ */
+export async function GET(request: NextRequest) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const auth = request.headers.get("authorization");
+    if (auth !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
+  try {
+    const recs = await generateRecommendations();
+    const saved = await saveRecommendations(recs);
+
+    return NextResponse.json({
+      ok: true,
+      generated: recs.length,
+      saved,
+      processedAt: new Date().toISOString(),
+    });
+  } catch (e) {
+    console.error("Agent recommendations error:", e);
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Failed" },
+      { status: 500 }
+    );
+  }
+}

@@ -51,6 +51,15 @@ export interface NewsletterContext {
       area?: string;
       date: string;
     }>;
+    aiHints?: {
+      tone?: string;
+      interests?: string[];
+      price_anchor?: string;
+      hot_topic?: string;
+      avoid?: string;
+      relationship_stage?: string;
+      note?: string;
+    };
   };
   realtor: {
     name: string;
@@ -130,15 +139,36 @@ export async function generateNewsletterContent(
 }
 
 function buildSystemPrompt(context: NewsletterContext): string {
+  const hints = context.contact.aiHints;
+  const hintsBlock = hints ? `
+
+AI PERSONALIZATION HINTS (from lead scoring):
+${hints.tone ? `- Tone: ${hints.tone}` : ""}
+${hints.interests?.length ? `- Interests: ${hints.interests.join(", ")}` : ""}
+${hints.price_anchor ? `- Price anchor: ${hints.price_anchor}` : ""}
+${hints.hot_topic ? `- Hot topic: ${hints.hot_topic}` : ""}
+${hints.avoid ? `- Avoid: ${hints.avoid}` : ""}
+${hints.relationship_stage ? `- Relationship: ${hints.relationship_stage}` : ""}
+${hints.note ? `- Note: ${hints.note}` : ""}
+Use these hints to personalize the content. They are based on the contact's actual click behavior and engagement patterns.` : "";
+
   return `You are a real estate email copywriter for ${context.realtor.name}${context.realtor.brokerage ? ` at ${context.realtor.brokerage}` : ""}.
 
 Write warm, professional, personal emails that feel like they're from a trusted advisor — NOT a marketing machine.
+
+CONTENT BEST PRACTICES (BC real estate):
+- Subject: Use [Area] + specific detail. E.g., "3 New Burnaby Townhouses Under $800K"
+- Hook: Open with a relevant stat, question, or local event — never "I hope you're well"
+- Body: Lead with value (listings, data, tips), then personal note, then CTA
+- CTA: One clear action per email. "Book a Showing" not "Learn More"
+- Local flavor: Reference specific BC neighborhoods, schools, parks, transit by name
+- Length: 150-300 words for market updates, 100-200 for listing alerts
+${hintsBlock}
 
 Rules:
 - Keep it concise (150-250 words for the body)
 - Use the contact's first name naturally
 - Reference specific areas, prices, and details from the data
-- No generic filler like "I hope this email finds you well"
 - Sound like a knowledgeable local expert, not a salesperson
 - Match the tone to the relationship stage: new leads get more informative, past clients get more casual/warm
 - Always respond with valid JSON matching this structure:

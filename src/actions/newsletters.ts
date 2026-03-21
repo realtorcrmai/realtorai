@@ -205,6 +205,7 @@ export async function generateAndQueueNewsletter(
 
   // Build AI context
   const intelligence = (contact.newsletter_intelligence as any) || {};
+  const aiLeadScore = (contact as any).ai_lead_score as Record<string, any> | null;
   const aiContext: NewsletterContext = {
     contact: {
       name: contact.name,
@@ -215,6 +216,7 @@ export async function generateAndQueueNewsletter(
       preferences: contact.buyer_preferences as any,
       engagementScore: intelligence.engagement_score,
       clickHistory: intelligence.click_history?.slice(-5),
+      aiHints: aiLeadScore?.personalization_hints,
     },
     realtor: {
       name: branding.name,

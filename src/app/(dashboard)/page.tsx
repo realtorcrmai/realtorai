@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { RemindersWidget } from "@/components/dashboard/RemindersWidget";
 import PipelineSnapshot from "@/components/dashboard/PipelineSnapshot";
+import AIRecommendations from "@/components/dashboard/AIRecommendations";
+import { getRecommendations } from "@/actions/recommendations";
 
 export const dynamic = "force-dynamic";
 
@@ -437,6 +439,9 @@ export default async function DashboardPage() {
         <PipelineSnapshot stages={pipelineStages} totalGCI={totalGCI} />
       </div>
 
+      {/* AI Recommendations */}
+      <AIRecommendationsSection />
+
       {/* To-Do Banner */}
       {(tasks ?? []).length > 0 && (
         <div className="animate-float-in" style={{ animationDelay: "120ms" }}>
@@ -600,4 +605,18 @@ export default async function DashboardPage() {
     </div>
     </div>
   );
+}
+
+async function AIRecommendationsSection() {
+  try {
+    const recommendations = await getRecommendations();
+    if (!recommendations.length) return null;
+    return (
+      <div className="animate-float-in" style={{ animationDelay: "100ms" }}>
+        <AIRecommendations recommendations={recommendations as any} />
+      </div>
+    );
+  } catch {
+    return null; // Silently fail if agent_recommendations table doesn't exist yet
+  }
 }

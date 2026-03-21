@@ -7,7 +7,7 @@ CREATE TABLE users (
   name            TEXT,
   image           TEXT,
   role            TEXT NOT NULL DEFAULT 'realtor' CHECK (role IN ('admin', 'realtor')),
-  enabled_features JSONB NOT NULL DEFAULT '["listings","contacts","tasks","showings","calendar","content","search","workflow","import","forms","website"]'::jsonb,
+  enabled_features JSONB NOT NULL DEFAULT '["listings","contacts","tasks","showings","calendar","content","search","workflow","import","forms","website","newsletters"]'::jsonb,
   is_active       BOOLEAN NOT NULL DEFAULT true,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
