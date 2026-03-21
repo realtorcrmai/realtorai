@@ -1032,8 +1032,8 @@ export function ListingWorkflow({
             (s) => substepStatuses[s.id] === "completed"
           ).length;
 
-          // Determine if this step is locked (pending because previous step isn't done)
-          const isLocked =
+          // Determine if truly locked (previous step not done)
+          const isFullyLocked =
             status === "pending" &&
             i > 0 &&
             statuses[WORKFLOW_STEPS[i - 1].id] !== "completed";

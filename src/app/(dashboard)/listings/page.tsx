@@ -138,12 +138,12 @@ export default async function ListingsPage({
             {filteredListings.length} listing{filteredListings.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <Button asChild className="gap-2">
-          <Link href="/listings/new">
+        <Link href="/listings/new">
+          <Button className="gap-2">
             <Plus className="h-4 w-4" />
             Add Listing
-          </Link>
-        </Button>
+          </Button>
+        </Link>
       </div>
 
       {/* Search and Filter Bar */}

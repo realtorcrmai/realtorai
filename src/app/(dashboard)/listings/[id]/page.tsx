@@ -159,7 +159,6 @@ export default async function ListingDetailPage({
             <ConveyancingPackButton
               address={listing.address}
               documents={(documents ?? []) as ListingDocument[]}
-              disabled={hasMissingDocs}
             />
             <NeighborhoodButton address={listing.address} />
           </div>

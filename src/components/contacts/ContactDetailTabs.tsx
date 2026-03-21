@@ -232,7 +232,6 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
                   contact={contact}
                   listings={listings}
                   communications={communications}
-                  buyerListings={buyerListings}
                 />
               </CardContent>
             </Card>

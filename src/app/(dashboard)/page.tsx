@@ -523,8 +523,8 @@ export default async function DashboardPage() {
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       Renewal: {renewalDate.toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })}
-                      {m.mortgage_amount && ` · $${Number(m.mortgage_amount).toLocaleString("en-CA")}`}
-                      {m.interest_rate && ` · ${m.interest_rate}% ${m.mortgage_type}`}
+                      {m.mortgage_amount ? ` · $${Number(m.mortgage_amount).toLocaleString("en-CA")}` : ""}
+                      {m.interest_rate ? ` · ${String(m.interest_rate)}% ${String(m.mortgage_type || "")}` : ""}
                     </p>
                   </div>
                   {deal && (
