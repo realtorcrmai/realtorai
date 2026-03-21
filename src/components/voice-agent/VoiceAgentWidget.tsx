@@ -59,23 +59,39 @@ export function VoiceAgentWidget() {
     }
   }, [open]);
 
-  // Health check on mount
+  // Health check — only poll when connected or on first mount
   useEffect(() => {
+    let stopped = false;
+    let interval: ReturnType<typeof setInterval> | null = null;
+
     async function check() {
       try {
-        const resp = await fetch(`${VOICE_AGENT_API}/api/health`);
+        const resp = await fetch(`${VOICE_AGENT_API}/api/health`, {
+          signal: AbortSignal.timeout(3000),
+        });
         const data = await resp.json();
         if (data.ok) {
           setConnected(true);
           setProvider(data.llm_provider);
+          // Continue polling while connected
+          if (!stopped && !interval) {
+            interval = setInterval(check, 30000);
+          }
         }
       } catch {
         setConnected(false);
+        // Stop polling if agent is offline — avoid console noise
+        if (interval) {
+          clearInterval(interval);
+          interval = null;
+        }
       }
     }
     check();
-    const interval = setInterval(check, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      stopped = true;
+      if (interval) clearInterval(interval);
+    };
   }, []);
 
   // Initialize speech recognition

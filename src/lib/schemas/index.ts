@@ -9,4 +9,6 @@ export {
   type UpdatePromptData,
   generateMediaSchema,
   type GenerateMediaData,
+  generateAllSchema,
+  type GenerateAllData,
 } from "./content";

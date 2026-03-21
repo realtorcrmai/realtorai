@@ -15,9 +15,28 @@ export interface Database {
           name: string;
           phone: string;
           email: string | null;
-          type: "buyer" | "seller";
+          type: "buyer" | "seller" | "partner" | "other";
           pref_channel: "whatsapp" | "sms";
           notes: string | null;
+          family_members: Json | null;
+          referred_by_id: string | null;
+          address: string | null;
+          buyer_preferences: Json | null;
+          lifecycle_stage: string;
+          source: string | null;
+          tags: Json;
+          lead_status: string;
+          partner_type: string | null;
+          company_name: string | null;
+          job_title: string | null;
+          typical_client_profile: string | null;
+          referral_agreement_terms: string | null;
+          partner_active: boolean;
+          seller_preferences: Json | null;
+          demographics: Json | null;
+          household_id: string | null;
+          stage_bar: string | null;
+          last_activity_date: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -26,9 +45,28 @@ export interface Database {
           name: string;
           phone: string;
           email?: string | null;
-          type: "buyer" | "seller";
+          type: "buyer" | "seller" | "partner" | "other";
           pref_channel?: "whatsapp" | "sms";
           notes?: string | null;
+          family_members?: Json | null;
+          referred_by_id?: string | null;
+          address?: string | null;
+          buyer_preferences?: Json | null;
+          lifecycle_stage?: string;
+          source?: string | null;
+          tags?: Json;
+          lead_status?: string;
+          partner_type?: string | null;
+          company_name?: string | null;
+          job_title?: string | null;
+          typical_client_profile?: string | null;
+          referral_agreement_terms?: string | null;
+          partner_active?: boolean;
+          seller_preferences?: Json | null;
+          demographics?: Json | null;
+          household_id?: string | null;
+          stage_bar?: string | null;
+          last_activity_date?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -37,8 +75,85 @@ export interface Database {
           name?: string;
           phone?: string;
           email?: string | null;
-          type?: "buyer" | "seller";
+          type?: "buyer" | "seller" | "partner" | "other";
           pref_channel?: "whatsapp" | "sms";
+          notes?: string | null;
+          family_members?: Json | null;
+          referred_by_id?: string | null;
+          address?: string | null;
+          buyer_preferences?: Json | null;
+          lifecycle_stage?: string;
+          source?: string | null;
+          tags?: Json;
+          lead_status?: string;
+          partner_type?: string | null;
+          company_name?: string | null;
+          job_title?: string | null;
+          typical_client_profile?: string | null;
+          referral_agreement_terms?: string | null;
+          partner_active?: boolean;
+          seller_preferences?: Json | null;
+          demographics?: Json | null;
+          household_id?: string | null;
+          stage_bar?: string | null;
+          last_activity_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      households: {
+        Row: {
+          id: string;
+          name: string;
+          address: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          address?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          address?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      contact_relationships: {
+        Row: {
+          id: string;
+          contact_a_id: string;
+          contact_b_id: string;
+          relationship_type: string;
+          relationship_label: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_a_id: string;
+          contact_b_id: string;
+          relationship_type: string;
+          relationship_label?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          contact_a_id?: string;
+          contact_b_id?: string;
+          relationship_type?: string;
+          relationship_label?: string | null;
           notes?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -58,6 +173,11 @@ export interface Database {
           notes: string | null;
           hero_image_url: string | null;
           hero_image_storage_path: string | null;
+          sold_price: number | null;
+          buyer_id: string | null;
+          closing_date: string | null;
+          commission_rate: number | null;
+          commission_amount: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -74,6 +194,11 @@ export interface Database {
           notes?: string | null;
           hero_image_url?: string | null;
           hero_image_storage_path?: string | null;
+          sold_price?: number | null;
+          buyer_id?: string | null;
+          closing_date?: string | null;
+          commission_rate?: number | null;
+          commission_amount?: number | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -90,6 +215,11 @@ export interface Database {
           notes?: string | null;
           hero_image_url?: string | null;
           hero_image_storage_path?: string | null;
+          sold_price?: number | null;
+          buyer_id?: string | null;
+          closing_date?: string | null;
+          commission_rate?: number | null;
+          commission_amount?: number | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -342,6 +472,41 @@ export interface Database {
           updated_at?: string;
         };
       };
+      users: {
+        Row: {
+          id: string;
+          email: string;
+          name: string | null;
+          image: string | null;
+          role: "admin" | "realtor";
+          enabled_features: string[];
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          name?: string | null;
+          image?: string | null;
+          role?: "admin" | "realtor";
+          enabled_features?: string[];
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          name?: string | null;
+          image?: string | null;
+          role?: "admin" | "realtor";
+          enabled_features?: string[];
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       form_submissions: {
         Row: {
           id: string;
@@ -372,6 +537,377 @@ export interface Database {
           status?: "draft" | "completed";
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      contact_documents: {
+        Row: {
+          id: string;
+          contact_id: string;
+          doc_type: string;
+          file_name: string;
+          file_url: string;
+          uploaded_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_id: string;
+          doc_type: string;
+          file_name: string;
+          file_url: string;
+          uploaded_at?: string;
+        };
+        Update: {
+          id?: string;
+          contact_id?: string;
+          doc_type?: string;
+          file_name?: string;
+          file_url?: string;
+          uploaded_at?: string;
+        };
+      };
+      contact_dates: {
+        Row: {
+          id: string;
+          contact_id: string;
+          label: string;
+          date: string;
+          recurring: boolean;
+          notes: string | null;
+          event_type: string;
+          auto_workflow: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_id: string;
+          label: string;
+          date: string;
+          recurring?: boolean;
+          notes?: string | null;
+          event_type?: string;
+          auto_workflow?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          contact_id?: string;
+          label?: string;
+          date?: string;
+          recurring?: boolean;
+          notes?: string | null;
+          event_type?: string;
+          auto_workflow?: boolean;
+          created_at?: string;
+        };
+      };
+      message_templates: {
+        Row: {
+          id: string;
+          name: string;
+          channel: "sms" | "whatsapp" | "email";
+          subject: string | null;
+          body: string;
+          variables: Json;
+          category: string;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          channel?: "sms" | "whatsapp" | "email";
+          subject?: string | null;
+          body: string;
+          variables?: Json;
+          category?: string;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          channel?: "sms" | "whatsapp" | "email";
+          subject?: string | null;
+          body?: string;
+          variables?: Json;
+          category?: string;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      workflows: {
+        Row: {
+          id: string;
+          slug: string;
+          name: string;
+          description: string | null;
+          trigger_type: string;
+          trigger_config: Json;
+          contact_type: "buyer" | "seller" | "any" | null;
+          is_active: boolean;
+          max_enrollments: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          name: string;
+          description?: string | null;
+          trigger_type: string;
+          trigger_config?: Json;
+          contact_type?: "buyer" | "seller" | "any" | null;
+          is_active?: boolean;
+          max_enrollments?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          slug?: string;
+          name?: string;
+          description?: string | null;
+          trigger_type?: string;
+          trigger_config?: Json;
+          contact_type?: "buyer" | "seller" | "any" | null;
+          is_active?: boolean;
+          max_enrollments?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      workflow_steps: {
+        Row: {
+          id: string;
+          workflow_id: string;
+          step_order: number;
+          name: string;
+          action_type: string;
+          delay_minutes: number;
+          delay_unit: string;
+          delay_value: number;
+          template_id: string | null;
+          task_config: Json;
+          action_config: Json;
+          condition_config: Json;
+          exit_on_reply: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          workflow_id: string;
+          step_order: number;
+          name: string;
+          action_type: string;
+          delay_minutes?: number;
+          delay_unit?: string;
+          delay_value?: number;
+          template_id?: string | null;
+          task_config?: Json;
+          action_config?: Json;
+          condition_config?: Json;
+          exit_on_reply?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          workflow_id?: string;
+          step_order?: number;
+          name?: string;
+          action_type?: string;
+          delay_minutes?: number;
+          delay_unit?: string;
+          delay_value?: number;
+          template_id?: string | null;
+          task_config?: Json;
+          action_config?: Json;
+          condition_config?: Json;
+          exit_on_reply?: boolean;
+          created_at?: string;
+        };
+      };
+      workflow_enrollments: {
+        Row: {
+          id: string;
+          workflow_id: string;
+          contact_id: string;
+          listing_id: string | null;
+          status: "active" | "paused" | "completed" | "exited" | "failed";
+          current_step: number;
+          next_run_at: string | null;
+          started_at: string;
+          completed_at: string | null;
+          exit_reason: string | null;
+          metadata: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workflow_id: string;
+          contact_id: string;
+          listing_id?: string | null;
+          status?: "active" | "paused" | "completed" | "exited" | "failed";
+          current_step?: number;
+          next_run_at?: string | null;
+          started_at?: string;
+          completed_at?: string | null;
+          exit_reason?: string | null;
+          metadata?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          workflow_id?: string;
+          contact_id?: string;
+          listing_id?: string | null;
+          status?: "active" | "paused" | "completed" | "exited" | "failed";
+          current_step?: number;
+          next_run_at?: string | null;
+          started_at?: string;
+          completed_at?: string | null;
+          exit_reason?: string | null;
+          metadata?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      workflow_step_logs: {
+        Row: {
+          id: string;
+          enrollment_id: string;
+          step_id: string;
+          status: "pending" | "sent" | "failed" | "skipped";
+          result: Json;
+          error_message: string | null;
+          executed_at: string;
+        };
+        Insert: {
+          id?: string;
+          enrollment_id: string;
+          step_id: string;
+          status?: "pending" | "sent" | "failed" | "skipped";
+          result?: Json;
+          error_message?: string | null;
+          executed_at?: string;
+        };
+        Update: {
+          id?: string;
+          enrollment_id?: string;
+          step_id?: string;
+          status?: "pending" | "sent" | "failed" | "skipped";
+          result?: Json;
+          error_message?: string | null;
+          executed_at?: string;
+        };
+      };
+      agent_notifications: {
+        Row: {
+          id: string;
+          title: string;
+          body: string | null;
+          type: "info" | "warning" | "urgent" | "task" | "workflow";
+          contact_id: string | null;
+          listing_id: string | null;
+          action_url: string | null;
+          is_read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          body?: string | null;
+          type?: "info" | "warning" | "urgent" | "task" | "workflow";
+          contact_id?: string | null;
+          listing_id?: string | null;
+          action_url?: string | null;
+          is_read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          body?: string | null;
+          type?: "info" | "warning" | "urgent" | "task" | "workflow";
+          contact_id?: string | null;
+          listing_id?: string | null;
+          action_url?: string | null;
+          is_read?: boolean;
+          created_at?: string;
+        };
+      };
+      referrals: {
+        Row: {
+          id: string;
+          referred_by_contact_id: string;
+          referred_client_contact_id: string;
+          referral_type: "buyer" | "seller" | "rental" | "other";
+          referral_date: string;
+          referral_fee_percent: number | null;
+          status: "open" | "accepted" | "closed" | "lost";
+          closed_deal_id: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          referred_by_contact_id: string;
+          referred_client_contact_id: string;
+          referral_type?: "buyer" | "seller" | "rental" | "other";
+          referral_date?: string;
+          referral_fee_percent?: number | null;
+          status?: "open" | "accepted" | "closed" | "lost";
+          closed_deal_id?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          referred_by_contact_id?: string;
+          referred_client_contact_id?: string;
+          referral_type?: "buyer" | "seller" | "rental" | "other";
+          referral_date?: string;
+          referral_fee_percent?: number | null;
+          status?: "open" | "accepted" | "closed" | "lost";
+          closed_deal_id?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      activity_log: {
+        Row: {
+          id: string;
+          contact_id: string | null;
+          listing_id: string | null;
+          activity_type: string;
+          description: string | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_id?: string | null;
+          listing_id?: string | null;
+          activity_type: string;
+          description?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          contact_id?: string | null;
+          listing_id?: string | null;
+          activity_type?: string;
+          description?: string | null;
+          metadata?: Json;
+          created_at?: string;
         };
       };
       deals: {

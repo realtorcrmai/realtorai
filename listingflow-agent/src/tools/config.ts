@@ -29,7 +29,8 @@ const STYLE_PRESETS = {
  */
 export async function generateConfigs(
   crmData: CRMData,
-  referencePatterns: DesignPatterns[]
+  referencePatterns: DesignPatterns[],
+  designPrompt?: string
 ): Promise<{ style_name: string; config: SiteConfig }[]> {
   const results: { style_name: string; config: SiteConfig }[] = [];
 
@@ -38,8 +39,8 @@ export async function generateConfigs(
     photo: l.hero_image_url || undefined,
     address: l.address,
     price: l.list_price ? `$${l.list_price.toLocaleString()}` : "Contact for Price",
-    beds: 3,
-    baths: 2,
+    beds: 0,
+    baths: 0,
     status: l.status,
   }));
 
@@ -66,7 +67,8 @@ export async function generateConfigs(
         listingItems,
         testimonialItems,
         heroImages,
-        leadEndpoint
+        leadEndpoint,
+        designPrompt
       );
       results.push({ style_name: styleKey, config });
     } catch (e) {
@@ -90,7 +92,8 @@ async function generateSingleConfig(
   listingItems: SiteConfig["listings"]["items"],
   testimonialItems: SiteConfig["testimonials"]["items"],
   heroImages: string[],
-  leadEndpoint: string
+  leadEndpoint: string,
+  designPrompt?: string
 ): Promise<SiteConfig> {
   const { profile } = crmData;
 
@@ -124,7 +127,8 @@ Rules:
 - Write a compelling headline and subheadline for a ${profile.service_areas[0] || "luxury"} real estate agent
 - Generate 3 impressive stats based on the agent's profile
 - The bio should be polished, professional, 2-3 sentences
-- CTA should drive contact form submissions`,
+- CTA should drive contact form submissions
+${designPrompt ? `\nIMPORTANT — The realtor has provided these design preferences. Incorporate them into your design choices:\n"${designPrompt}"` : ""}`,
     messages: [
       {
         role: "user",

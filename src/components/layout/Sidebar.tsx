@@ -19,6 +19,8 @@ import {
   Kanban,
   BarChart3,
   Settings,
+  Zap,
+  Inbox,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -35,7 +37,9 @@ const navSections = [
     items: [
       { href: "/contacts", label: "Contacts", icon: Users },
       { href: "/pipeline", label: "Pipeline", icon: Kanban },
+      { href: "/inbox", label: "Inbox", icon: Inbox },
       { href: "/tasks", label: "Tasks", icon: ListTodo },
+      { href: "/automations", label: "Automations", icon: Zap },
       { href: "/showings", label: "Showings", icon: Clock },
       { href: "/calendar", label: "Calendar", icon: Calendar },
       { href: "/reports", label: "Reports", icon: BarChart3 },

@@ -13,6 +13,7 @@ import {
   Users,
   Wand2,
   Globe,
+  Mail,
   ArrowRight,
   AlertTriangle,
   Target,
@@ -22,6 +23,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { RemindersWidget } from "@/components/dashboard/RemindersWidget";
+import PipelineSnapshot from "@/components/dashboard/PipelineSnapshot";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +54,8 @@ export default async function DashboardPage() {
     { count: activeDealsCount },
     { data: wonDeals },
     { data: upcomingMortgages },
+    { data: pipelineContacts },
+    { data: pipelineListings },
   ] = await Promise.all([
     supabase
       .from("listings")
@@ -91,6 +95,8 @@ export default async function DashboardPage() {
       .gte("renewal_date", today)
       .lte("renewal_date", in90Days)
       .order("renewal_date", { ascending: true }),
+    supabase.from("contacts").select("id, stage_bar, type"),
+    supabase.from("listings").select("id, seller_id, buyer_id, list_price, sold_price, commission_rate, commission_amount, status"),
   ]);
 
   const { data: allListings } = await supabase
@@ -127,26 +133,98 @@ export default async function DashboardPage() {
     0
   );
 
-  const featureTiles = [
+  const enabledFeatures = session?.user?.enabledFeatures ?? [];
+
+  // ── Pipeline Snapshot computation ──────────────────────────
+  const PIPELINE_STAGES = [
+    { key: "new", label: "New Leads", color: "bg-sky-500" },
+    { key: "qualified", label: "Qualified", color: "bg-amber-500" },
+    { key: "active", label: "Active", color: "bg-green-500" },
+    { key: "under_contract", label: "Under Contract", color: "bg-orange-500" },
+    { key: "closed", label: "Closed", color: "bg-emerald-600" },
+  ];
+
+  const contacts = pipelineContacts ?? [];
+  const listings = pipelineListings ?? [];
+
+  // Map stage_bar values to pipeline keys (merge active_search + active_listing into "active")
+  function toPipelineKey(stageBar: string | null): string {
+    if (!stageBar) return "new";
+    if (stageBar === "active_search" || stageBar === "active_listing") return "active";
+    if (["new", "qualified", "under_contract", "closed"].includes(stageBar)) return stageBar;
+    return "new"; // cold, contacted, nurturing, etc. map to "new"
+  }
+
+  // Group contacts by pipeline stage
+  const contactsByStage: Record<string, typeof contacts> = {};
+  for (const stage of PIPELINE_STAGES) {
+    contactsByStage[stage.key] = [];
+  }
+  for (const c of contacts) {
+    const key = toPipelineKey(c.stage_bar);
+    if (contactsByStage[key]) contactsByStage[key].push(c);
+  }
+
+  // For each contact, find their deal value from listings
+  function getDealValueForContact(contactId: string): number {
+    let total = 0;
+    for (const l of listings) {
+      if (l.seller_id === contactId || l.buyer_id === contactId) {
+        if (l.status === "sold" && l.sold_price) {
+          total += l.sold_price;
+        } else if (l.list_price) {
+          total += l.list_price;
+        }
+      }
+    }
+    return total;
+  }
+
+  const pipelineStages = PIPELINE_STAGES.map((stage) => {
+    const stageContacts = contactsByStage[stage.key];
+    let value = 0;
+    for (const c of stageContacts) {
+      value += getDealValueForContact(c.id);
+    }
+    return { ...stage, count: stageContacts.length, value };
+  });
+
+  // GCI = sum of (commission_amount ?? (list_price * (commission_rate ?? 2.5) / 100))
+  // for active + pending listings
+  let totalGCI = 0;
+  for (const l of listings) {
+    if (l.status === "active" || l.status === "pending") {
+      if (l.commission_amount) {
+        totalGCI += l.commission_amount;
+      } else if (l.list_price) {
+        totalGCI += l.list_price * ((l.commission_rate ?? 2.5) / 100);
+      }
+    }
+  }
+
+  const allFeatureTiles = [
     {
+      key: "listings",
       href: "/listings",
       title: "Listings",
       description: "Manage property listings, photos & pricing",
       icon: Building2,
-      gradient: "gradient-indigo",
+      gradient: "gradient-teal",
       count: (activeListings ?? 0) > 0 ? activeListings : null,
       countLabel: "active",
     },
     {
+      key: "contacts",
       href: "/contacts",
       title: "Contacts",
       description: "Buyers, sellers & agent relationships",
       icon: Users,
-      gradient: "gradient-violet",
+      gradient: "gradient-amber",
       count: null,
       countLabel: null,
     },
     {
+      key: "pipeline",
       href: "/pipeline",
       title: "Pipeline",
       description: "Track buyer & seller deals",
@@ -156,24 +234,27 @@ export default async function DashboardPage() {
       countLabel: "active",
     },
     {
+      key: "tasks",
       href: "/tasks",
       title: "Tasks",
       description: "Daily to-do items & follow-ups",
       icon: ListTodo,
-      gradient: "gradient-blue",
+      gradient: "gradient-indigo",
       count: openTasksCount > 0 ? openTasksCount : null,
       countLabel: "open",
     },
     {
+      key: "showings",
       href: "/showings",
       title: "Showings",
       description: "Track & manage showing requests",
       icon: Clock,
-      gradient: "gradient-teal",
+      gradient: "gradient-orange",
       count: (pendingShowings ?? 0) > 0 ? pendingShowings : null,
       countLabel: "pending",
     },
     {
+      key: "calendar",
       href: "/calendar",
       title: "Calendar",
       description: "View your schedule at a glance",
@@ -186,61 +267,82 @@ export default async function DashboardPage() {
       countLabel: "this week",
     },
     {
+      key: "content",
       href: "/content",
       title: "Content Engine",
       description: "AI-powered MLS remarks, video & images",
       icon: Wand2,
-      gradient: "gradient-violet",
-      count: null,
-      countLabel: null,
-    },
-    {
-      href: "/search",
-      title: "Property Search",
-      description: "Find properties for your buyers",
-      icon: Search,
-      gradient: "gradient-cyan",
-      count: null,
-      countLabel: null,
-    },
-    {
-      href: "/workflow",
-      title: "MLS Workflow",
-      description: "7-phase listing pipeline tracker",
-      icon: GitBranch,
-      gradient: "gradient-amber",
-      count: null,
-      countLabel: null,
-    },
-    {
-      href: "/import",
-      title: "Excel Import",
-      description: "Import listings from spreadsheets",
-      icon: Upload,
-      gradient: "gradient-orange",
-      count: null,
-      countLabel: null,
-    },
-    {
-      href: "/forms",
-      title: "BC Forms",
-      description: "Standard BC real estate documents",
-      icon: FileText,
       gradient: "gradient-rose",
       count: null,
       countLabel: null,
     },
     {
-      href: "http://localhost:3001",
-      title: "Website Marketing",
-      description: "Build & manage your realtor website",
-      icon: Globe,
+      key: "search",
+      href: "/search",
+      title: "Property Search",
+      description: "Find properties for your buyers",
+      icon: Search,
+      gradient: "gradient-blue",
+      count: null,
+      countLabel: null,
+    },
+    {
+      key: "workflow",
+      href: "/workflow",
+      title: "MLS Workflow",
+      description: "7-phase listing pipeline tracker",
+      icon: GitBranch,
       gradient: "gradient-pink",
+      count: null,
+      countLabel: null,
+    },
+    {
+      key: "import",
+      href: "/import",
+      title: "Excel Import",
+      description: "Import listings from spreadsheets",
+      icon: Upload,
+      gradient: "gradient-cyan",
+      count: null,
+      countLabel: null,
+    },
+    {
+      key: "forms",
+      href: "/forms",
+      title: "BC Forms",
+      description: "Standard BC real estate documents",
+      icon: FileText,
+      gradient: "gradient-violet",
+      count: null,
+      countLabel: null,
+    },
+    {
+      key: "website",
+      href: "http://localhost:8768",
+      title: "Website Marketing",
+      description: "AI-powered realtor website generation",
+      icon: Globe,
+      gradient: "gradient-amber",
       count: null,
       countLabel: null,
       external: true,
     },
+    {
+      key: "newsletters",
+      href: "/newsletters",
+      title: "Newsletters",
+      description: "AI-powered email journeys & campaigns",
+      icon: Mail,
+      gradient: "gradient-violet",
+      count: null,
+      countLabel: null,
+    },
   ];
+
+  // Filter tiles based on user's enabled features
+  const featureTiles = enabledFeatures.length > 0
+    ? allFeatureTiles.filter((tile) => enabledFeatures.includes(tile.key))
+    : allFeatureTiles;
 
   const quickStats = [
     {
@@ -329,6 +431,53 @@ export default async function DashboardPage() {
           </Link>
         ))}
       </div>
+
+      {/* Pipeline Snapshot — primary dashboard visual */}
+      <div className="animate-float-in" style={{ animationDelay: "80ms" }}>
+        <PipelineSnapshot stages={pipelineStages} totalGCI={totalGCI} />
+      </div>
+
+      {/* To-Do Banner */}
+      {(tasks ?? []).length > 0 && (
+        <div className="animate-float-in" style={{ animationDelay: "120ms" }}>
+          <Link href="/tasks" className="block glass rounded-xl p-4 elevation-2 hover:elevation-4 transition-all group">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <ListTodo className="h-4 w-4 text-indigo-600" />
+                <h2 className="text-sm font-semibold text-foreground">
+                  Today&apos;s Tasks
+                </h2>
+                <span className="text-xs font-bold text-white bg-indigo-600 rounded-full px-2 py-0.5">
+                  {openTasksCount}
+                </span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+            </div>
+            <div className="space-y-2">
+              {(tasks ?? []).slice(0, 3).map((task) => (
+                <div key={task.id} className="flex items-center gap-3">
+                  <span className={`h-2 w-2 rounded-full shrink-0 ${
+                    task.priority === "urgent" ? "bg-red-500" :
+                    task.priority === "high" ? "bg-orange-500" :
+                    task.priority === "medium" ? "bg-amber-500" : "bg-gray-400"
+                  }`} />
+                  <span className="text-sm text-foreground truncate">{task.title}</span>
+                  {task.due_date && (
+                    <span className="text-xs text-muted-foreground shrink-0 ml-auto">
+                      {new Date(task.due_date).toLocaleDateString("en-CA", { month: "short", day: "numeric" })}
+                    </span>
+                  )}
+                </div>
+              ))}
+              {(tasks ?? []).length > 3 && (
+                <p className="text-xs text-muted-foreground">
+                  +{(tasks ?? []).length - 3} more tasks
+                </p>
+              )}
+            </div>
+          </Link>
+        </div>
+      )}
 
       {/* Mortgage Renewal Alerts */}
       {(upcomingMortgages ?? []).length > 0 && (

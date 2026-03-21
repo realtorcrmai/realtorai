@@ -89,6 +89,14 @@ export async function POST(req: NextRequest) {
     related_id: appointment.id,
   });
 
+  // Check workflow exit-on-reply conditions
+  try {
+    const { checkExitOnReply } = await import("@/lib/workflow-engine");
+    await checkExitOnReply(contact.id);
+  } catch {
+    // Don't fail webhook if exit check fails
+  }
+
   if (inboundBody === "YES" || inboundBody === "Y") {
     // Confirm the showing
     await supabase
@@ -140,6 +148,26 @@ export async function POST(req: NextRequest) {
       body: `Confirmed showing at ${listing.address}. Lockbox code sent to ${appointment.buyer_agent_name}.`,
       related_id: appointment.id,
     });
+
+    // Fire showing_completed trigger for buyer follow-up workflows
+    try {
+      const { fireTrigger } = await import("@/lib/workflow-triggers");
+      const { data: buyerContact } = await supabase
+        .from("contacts")
+        .select("id")
+        .ilike("phone", `%${appointment.buyer_agent_phone.replace(/\D/g, "").slice(-10)}%`)
+        .single();
+
+      if (buyerContact) {
+        await fireTrigger({
+          type: "showing_completed",
+          contactId: buyerContact.id,
+          data: { appointmentId: appointment.id, address: listing.address },
+        });
+      }
+    } catch {
+      // Don't fail if trigger lookup fails
+    }
   } else if (inboundBody === "NO" || inboundBody === "N") {
     // Deny the showing
     await supabase

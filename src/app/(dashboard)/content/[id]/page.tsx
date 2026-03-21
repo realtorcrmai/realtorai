@@ -21,7 +21,7 @@ export default async function ContentDetailPage({
   ] = await Promise.all([
     supabase
       .from("listings")
-      .select("*, contacts(name)")
+      .select("*, contacts!listings_seller_id_fkey(name)")
       .eq("id", id)
       .single(),
     supabase.from("prompts").select("*").eq("listing_id", id).maybeSingle(),

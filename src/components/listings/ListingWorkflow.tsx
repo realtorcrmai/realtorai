@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Check, ChevronDown, ChevronRight, Trophy, Lock, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { EditableStepDataPanel } from "@/components/listings/EditableStepDataPanel";
 import type { ListingDocument } from "@/types";
 import { StepDataPanel } from "./StepDataPanel";
 import { STEP_FIELDS } from "@/lib/constants/workflow-fields";
@@ -160,7 +161,8 @@ const STATUS_STYLES = {
 
 function deriveStepStatuses(
   listing: { status: string; mls_number?: string | null; list_price?: number | null },
-  documents: ListingDocument[]
+  documents: ListingDocument[],
+  formStatuses: Record<string, "draft" | "completed"> = {}
 ): Record<string, StepStatus> {
   const docTypes = new Set(documents.map((d) => d.doc_type));
   const hasRequiredDocs =
@@ -170,27 +172,69 @@ function deriveStepStatuses(
   const isSold = listing.status === "sold";
   const isPending = listing.status === "pending";
 
+  // Check form statuses — forms are complete only when ALL required forms are "completed"
+  const requiredFormKeys = ["fintrac", "dorts", "pds", "mlc"];
+  const allFormsCompleted = requiredFormKeys.every(
+    (key) => formStatuses[key] === "completed"
+  );
+  const anyFormStarted = requiredFormKeys.some(
+    (key) => formStatuses[key] === "draft" || formStatuses[key] === "completed"
+  );
+
+  // Form generation is complete only when ALL required forms are completed
+  // OR required documents are uploaded (legacy check)
+  const formsComplete = allFormsCompleted || hasRequiredDocs;
+
   const statuses: Record<string, StepStatus> = {};
+
+  // If listing is sold, ALL phases are complete — the sale proves the workflow was done.
+  if (isSold) {
+    const allSteps = [
+      "seller-intake", "data-enrichment", "cma", "pricing-review",
+      "form-generation", "e-signature", "mls-prep", "mls-submission", "post-listing",
+    ];
+    allSteps.forEach((s) => (statuses[s] = "completed"));
+    return statuses;
+  }
 
   statuses["seller-intake"] = "completed";
   statuses["data-enrichment"] = hasPrice ? "completed" : "in-progress";
   statuses["cma"] = hasPrice ? "completed" : "pending";
   statuses["pricing-review"] = hasPrice ? "completed" : "pending";
-  statuses["form-generation"] = hasRequiredDocs
+  statuses["form-generation"] = formsComplete
     ? "completed"
-    : hasPrice
+    : hasPrice && anyFormStarted
       ? "in-progress"
-      : "pending";
-  statuses["e-signature"] = hasRequiredDocs ? "completed" : "pending";
-  statuses["mls-prep"] = hasMls ? "completed" : hasRequiredDocs ? "in-progress" : "pending";
-  statuses["mls-submission"] = hasMls ? "completed" : "pending";
-  statuses["post-listing"] = isSold
-    ? "completed"
-    : isPending
-      ? "in-progress"
-      : hasMls
+      : hasPrice
         ? "in-progress"
         : "pending";
+  statuses["e-signature"] = formsComplete ? "completed" : "pending";
+  statuses["mls-prep"] = hasMls ? "completed" : formsComplete ? "in-progress" : "pending";
+  statuses["mls-submission"] = hasMls ? "completed" : "pending";
+  statuses["post-listing"] = isPending
+    ? "in-progress"
+    : hasMls
+      ? "in-progress"
+      : "pending";
+
+  // Sequential enforcement: a phase can only be "completed" if the previous phase is "completed",
+  // and can only be "in-progress" if the previous phase is at least "in-progress".
+  const stepOrder = [
+    "seller-intake", "data-enrichment", "cma", "pricing-review",
+    "form-generation", "e-signature", "mls-prep", "mls-submission", "post-listing",
+  ];
+  for (let i = 1; i < stepOrder.length; i++) {
+    const prevStatus = statuses[stepOrder[i - 1]];
+    const currStatus = statuses[stepOrder[i]];
+    if (prevStatus !== "completed") {
+      if (currStatus === "completed") {
+        statuses[stepOrder[i]] = "pending";
+      }
+      if (currStatus === "in-progress" && prevStatus === "pending") {
+        statuses[stepOrder[i]] = "pending";
+      }
+    }
+  }
 
   return statuses;
 }
@@ -556,7 +600,13 @@ function TypingDots() {
 
 // --- Step Data Panels (show actual data for completed steps) ---
 
-type FieldItem = { label: string; value: string };
+type FieldItem = {
+  label: string;
+  value: string;
+  editKey?: string;
+  editTarget?: "listing" | "contact";
+  inputType?: "text" | "number" | "time";
+};
 type DataSection = { title: string; fields: FieldItem[] };
 
 type StepDataContext = {
@@ -590,25 +640,25 @@ function getStepDataSections(stepId: string, ctx: StepDataContext): DataSection[
         {
           title: "Seller Identity",
           fields: [
-            { label: "Full Name", value: seller?.name ?? "—" },
-            { label: "Phone", value: seller?.phone ?? "—" },
-            { label: "Email", value: seller?.email ?? "—" },
-            { label: "Seller Type", value: (stepFormData?.["step-seller-intake"]?.seller_type as string) ?? "—" },
+            { label: "Full Name", value: seller?.name ?? "—", editKey: "name", editTarget: "contact" },
+            { label: "Phone", value: seller?.phone ?? "—", editKey: "phone", editTarget: "contact" },
+            { label: "Email", value: seller?.email ?? "—", editKey: "email", editTarget: "contact" },
+            { label: "Seller Type", value: (stepFormData?.["step-seller-intake"]?.seller_type as string) ?? (seller?.type ? seller.type.charAt(0).toUpperCase() + seller.type.slice(1) : "—") },
           ],
         },
         {
           title: "Property",
           fields: [
-            { label: "Address", value: listing.address ?? "—" },
-            { label: "Lockbox Code", value: listing.lockbox_code ?? "—" },
+            { label: "Address", value: listing.address ?? "—", editKey: "address", editTarget: "listing" },
+            { label: "Lockbox Code", value: listing.lockbox_code ?? "—", editKey: "lockbox_code", editTarget: "listing" },
           ],
         },
         {
           title: "Pricing & Terms",
           fields: [
-            { label: "List Price", value: price },
+            { label: "List Price", value: price, editKey: "list_price", editTarget: "listing", inputType: "number" },
             { label: "Status", value: listing.status.charAt(0).toUpperCase() + listing.status.slice(1) },
-            ...(listing.notes ? [{ label: "Notes", value: listing.notes }] : []),
+            ...(listing.notes ? [{ label: "Notes", value: listing.notes, editKey: "notes", editTarget: "listing" as const }] : [{ label: "Notes", value: "—", editKey: "notes", editTarget: "listing" as const }]),
           ],
         },
       ];
@@ -686,7 +736,7 @@ function getStepDataSections(stepId: string, ctx: StepDataContext): DataSection[
         {
           title: "Pricing",
           fields: [
-            { label: "List Price", value: price },
+            { label: "List Price", value: price, editKey: "list_price", editTarget: "listing", inputType: "number" },
             { label: "Marketing Strategy", value: "✓ Defined" },
           ],
         },
@@ -695,9 +745,8 @@ function getStepDataSections(stepId: string, ctx: StepDataContext): DataSection[
           fields: [
             { label: "Listing Details", value: "✓ Reviewed" },
             { label: "Photos & Descriptions", value: "✓ Approved" },
-            ...(listing.showing_window_start
-              ? [{ label: "Showing Window", value: `${listing.showing_window_start} — ${listing.showing_window_end ?? "Open"}` }]
-              : []),
+            { label: "Showing Start", value: listing.showing_window_start ?? "Not set", editKey: "showing_window_start", editTarget: "listing", inputType: "time" },
+            { label: "Showing End", value: listing.showing_window_end ?? "Not set", editKey: "showing_window_end", editTarget: "listing", inputType: "time" },
           ],
         },
       ];
@@ -752,7 +801,7 @@ function getStepDataSections(stepId: string, ctx: StepDataContext): DataSection[
         {
           title: "MLS Details",
           fields: [
-            { label: "MLS Number", value: listing.mls_number ?? "—" },
+            { label: "MLS Number", value: listing.mls_number ?? "—", editKey: "mls_number", editTarget: "listing" },
             { label: "Status", value: "✓ Live on MLS" },
             { label: "Submitted To", value: "Real Estate Board" },
             { label: "Listing Address", value: listing.address ?? "—" },
@@ -793,6 +842,7 @@ export function ListingWorkflow({
   showingsCount,
   stepFormData = {},
   relatedDealId,
+  contactId,
 }: {
   listingId: string;
   listing: {
@@ -813,8 +863,9 @@ export function ListingWorkflow({
   showingsCount?: number;
   stepFormData?: Record<string, Record<string, unknown>>;
   relatedDealId?: string;
+  contactId?: string;
 }) {
-  const statuses = deriveStepStatuses(listing, documents);
+  const statuses = deriveStepStatuses(listing, documents, formStatuses);
   const substepStatuses = deriveSubstepStatuses(listing, documents, formStatuses, statuses);
 
   const messageCtx = useMemo<MessageContext>(
@@ -981,8 +1032,14 @@ export function ListingWorkflow({
             (s) => substepStatuses[s.id] === "completed"
           ).length;
 
+          // Determine if this step is locked (pending because previous step isn't done)
+          const isLocked =
+            status === "pending" &&
+            i > 0 &&
+            statuses[WORKFLOW_STEPS[i - 1].id] !== "completed";
+
           return (
-            <div key={step.id} className="flex gap-4 pb-6 last:pb-0">
+            <div key={step.id} className={`flex gap-4 pb-6 last:pb-0 ${isLocked ? "opacity-50" : ""}`}>
               {/* Timeline connector + circle */}
               <div className="flex flex-col items-center">
                 {status === "completed" ? (
@@ -1002,6 +1059,15 @@ export function ListingWorkflow({
                     <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
                       {stepNumber}
                     </span>
+                  </button>
+                ) : isLocked ? (
+                  <button
+                    type="button"
+                    onClick={() => hasSubsteps && toggleStep(step.id)}
+                    className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 cursor-pointer ${styles.circle}`}
+                    title="Complete previous steps first"
+                  >
+                    <span className="text-sm">🔒</span>
                   </button>
                 ) : (
                   <div

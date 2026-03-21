@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, CheckCircle2, Circle, ArrowRight } from "lucide-react";
+import { Building2, CheckCircle2, Circle, ArrowRight, GitBranch } from "lucide-react";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -48,9 +48,16 @@ export default async function WorkflowPage() {
   return (
     <div className="h-full overflow-y-auto p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
     <div className="space-y-8">
-      <div className="animate-float-in space-y-1">
-        <p className="text-sm font-medium text-muted-foreground">7-phase listing pipeline</p>
-        <h1 className="text-3xl font-bold tracking-tight">MLS Workflow</h1>
+      <div className="animate-float-in">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-pink elevation-4">
+            <GitBranch className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">MLS Workflow</h1>
+            <p className="text-sm text-muted-foreground">7-phase listing pipeline</p>
+          </div>
+        </div>
       </div>
 
       {/* Phase pipeline overview */}

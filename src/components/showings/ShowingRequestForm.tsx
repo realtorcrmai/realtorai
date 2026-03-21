@@ -39,14 +39,17 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-export function ShowingRequestForm({
-  listings,
-  preselectedListingId,
-}: {
+export interface ShowingFormContentProps {
+  onSuccess?: () => void;
   listings: Array<{ id: string; address: string }>;
   preselectedListingId?: string;
-}) {
-  const [open, setOpen] = useState(false);
+}
+
+export function ShowingFormContent({
+  onSuccess,
+  listings,
+  preselectedListingId,
+}: ShowingFormContentProps) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,9 +97,123 @@ export function ShowingRequestForm({
         toast.warning(result.calendarWarning);
       }
       reset();
-      setOpen(false);
+      onSuccess?.();
     }
   }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div>
+        <Label htmlFor="listingId">Listing</Label>
+        <Select
+          onValueChange={(val) => setValue("listingId", val as string)}
+          defaultValue={preselectedListingId}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a listing" />
+          </SelectTrigger>
+          <SelectContent>
+            {listings.map((l) => (
+              <SelectItem key={l.id} value={l.id}>
+                {l.address}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {errors.listingId && (
+          <p className="text-sm text-red-600 mt-1">
+            {errors.listingId.message}
+          </p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="startTime">Start Time</Label>
+          <Input
+            type="datetime-local"
+            {...register("startTime")}
+          />
+          {errors.startTime && (
+            <p className="text-sm text-red-600 mt-1">
+              {errors.startTime.message}
+            </p>
+          )}
+        </div>
+        <div>
+          <Label htmlFor="endTime">End Time</Label>
+          <Input
+            type="datetime-local"
+            {...register("endTime")}
+          />
+          {errors.endTime && (
+            <p className="text-sm text-red-600 mt-1">
+              {errors.endTime.message}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="buyerAgentName">Buyer&apos;s Agent Name</Label>
+        <Input
+          {...register("buyerAgentName")}
+          placeholder="Jane Smith"
+        />
+        {errors.buyerAgentName && (
+          <p className="text-sm text-red-600 mt-1">
+            {errors.buyerAgentName.message}
+          </p>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="buyerAgentPhone">Buyer&apos;s Agent Phone</Label>
+        <Input
+          {...register("buyerAgentPhone")}
+          placeholder="604-555-0123"
+        />
+        {errors.buyerAgentPhone && (
+          <p className="text-sm text-red-600 mt-1">
+            {errors.buyerAgentPhone.message}
+          </p>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="buyerAgentEmail">
+          Buyer&apos;s Agent Email (optional)
+        </Label>
+        <Input
+          {...register("buyerAgentEmail")}
+          placeholder="agent@example.com"
+          type="email"
+        />
+      </div>
+
+      {error && (
+        <p className="text-sm text-red-600 bg-red-50 p-2 rounded">
+          {error}
+        </p>
+      )}
+
+      <Button type="submit" className="w-full" disabled={submitting}>
+        {submitting ? "Sending Request..." : "Send Showing Request"}
+      </Button>
+    </form>
+  );
+}
+
+export function ShowingRequestForm({
+  listings,
+  preselectedListingId,
+  disabled,
+}: {
+  listings: Array<{ id: string; address: string }>;
+  preselectedListingId?: string;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -112,105 +229,11 @@ export function ShowingRequestForm({
         <DialogHeader>
           <DialogTitle>Request a Showing</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <Label htmlFor="listingId">Listing</Label>
-            <Select
-              onValueChange={(val) => setValue("listingId", val as string)}
-              defaultValue={preselectedListingId}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a listing" />
-              </SelectTrigger>
-              <SelectContent>
-                {listings.map((l) => (
-                  <SelectItem key={l.id} value={l.id}>
-                    {l.address}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.listingId && (
-              <p className="text-sm text-red-600 mt-1">
-                {errors.listingId.message}
-              </p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="startTime">Start Time</Label>
-              <Input
-                type="datetime-local"
-                {...register("startTime")}
-              />
-              {errors.startTime && (
-                <p className="text-sm text-red-600 mt-1">
-                  {errors.startTime.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="endTime">End Time</Label>
-              <Input
-                type="datetime-local"
-                {...register("endTime")}
-              />
-              {errors.endTime && (
-                <p className="text-sm text-red-600 mt-1">
-                  {errors.endTime.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="buyerAgentName">Buyer&apos;s Agent Name</Label>
-            <Input
-              {...register("buyerAgentName")}
-              placeholder="Jane Smith"
-            />
-            {errors.buyerAgentName && (
-              <p className="text-sm text-red-600 mt-1">
-                {errors.buyerAgentName.message}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="buyerAgentPhone">Buyer&apos;s Agent Phone</Label>
-            <Input
-              {...register("buyerAgentPhone")}
-              placeholder="604-555-0123"
-            />
-            {errors.buyerAgentPhone && (
-              <p className="text-sm text-red-600 mt-1">
-                {errors.buyerAgentPhone.message}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="buyerAgentEmail">
-              Buyer&apos;s Agent Email (optional)
-            </Label>
-            <Input
-              {...register("buyerAgentEmail")}
-              placeholder="agent@example.com"
-              type="email"
-            />
-          </div>
-
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 p-2 rounded">
-              {error}
-            </p>
-          )}
-
-          <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? "Sending Request..." : "Send Showing Request"}
-          </Button>
-        </form>
+        <ShowingFormContent
+          onSuccess={() => setOpen(false)}
+          listings={listings}
+          preselectedListingId={preselectedListingId}
+        />
       </DialogContent>
     </Dialog>
   );

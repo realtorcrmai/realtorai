@@ -25,32 +25,59 @@ import {
 import { createContact, updateContact } from "@/actions/contacts";
 import { Plus } from "lucide-react";
 import type { Contact } from "@/types";
+import {
+  LEAD_STATUSES,
+  LEAD_STATUS_LABELS,
+  LEAD_SOURCES,
+  CONTACT_TYPES,
+  CONTACT_TYPE_LABELS,
+  PARTNER_TYPES,
+  PARTNER_TYPE_LABELS,
+} from "@/lib/constants";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name is required"),
   phone: z.string().min(10, "Valid phone number required"),
   email: z.string().email().optional().or(z.literal("")),
-  type: z.enum(["buyer", "seller"]),
+  type: z.enum(CONTACT_TYPES),
   pref_channel: z.enum(["whatsapp", "sms"]),
   notes: z.string().optional(),
+  address: z.string().optional(),
+  referred_by_id: z.string().uuid().optional().or(z.literal("")),
+  source: z.string().optional(),
+  lead_status: z.enum(LEAD_STATUSES).optional(),
+  // Partner-specific fields
+  partner_type: z.enum(PARTNER_TYPES).optional().or(z.literal("")),
+  company_name: z.string().optional(),
+  job_title: z.string().optional(),
+  typical_client_profile: z.string().optional(),
+  referral_agreement_terms: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
 
-export function ContactForm({
-  contact,
-  trigger,
-}: {
+export interface ContactFormContentProps {
+  onSuccess?: () => void;
   contact?: Contact;
-  trigger?: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
+  allContacts?: { id: string; name: string }[];
+  defaultType?: "buyer" | "seller";
+  defaultReferredById?: string;
+}
+
+export function ContactFormContent({
+  onSuccess,
+  contact,
+  allContacts = [],
+  defaultType,
+  defaultReferredById,
+}: ContactFormContentProps) {
   const [submitting, setSubmitting] = useState(false);
 
   const {
     register,
     handleSubmit,
     setValue,
+    watch,
     reset,
     formState: { errors },
   } = useForm<FormData>({
@@ -63,24 +90,292 @@ export function ContactForm({
           type: contact.type,
           pref_channel: contact.pref_channel,
           notes: contact.notes ?? "",
+          address: contact.address ?? "",
+          referred_by_id: contact.referred_by_id ?? "",
+          source: contact.source ?? "",
+          lead_status: (contact.lead_status ?? "new") as FormData["lead_status"],
+          partner_type: (contact.partner_type ?? "") as FormData["partner_type"],
+          company_name: contact.company_name ?? "",
+          job_title: contact.job_title ?? "",
+          typical_client_profile: contact.typical_client_profile ?? "",
+          referral_agreement_terms: contact.referral_agreement_terms ?? "",
         }
       : {
-          type: "buyer",
+          type: defaultType ?? "buyer",
           pref_channel: "sms",
+          referred_by_id: defaultReferredById ?? "",
+          source: "",
+          lead_status: "new",
+          partner_type: "",
+          company_name: "",
+          job_title: "",
+          typical_client_profile: "",
+          referral_agreement_terms: "",
         },
   });
 
+  const selectedType = watch("type");
+
   async function onSubmit(data: FormData) {
     setSubmitting(true);
+    const payload = {
+      ...data,
+      ...(data.type !== "partner" && {
+        partner_type: undefined,
+        company_name: undefined,
+        job_title: undefined,
+        typical_client_profile: undefined,
+        referral_agreement_terms: undefined,
+      }),
+    };
     if (contact) {
-      await updateContact(contact.id, data);
+      await updateContact(contact.id, payload);
     } else {
-      await createContact(data);
+      await createContact(payload);
     }
     setSubmitting(false);
     reset();
-    setOpen(false);
+    onSuccess?.();
   }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div>
+        <Label htmlFor="name">Name</Label>
+        <Input {...register("name")} placeholder="John Doe" />
+        {errors.name && (
+          <p className="text-sm text-red-600 mt-1">
+            {errors.name.message}
+          </p>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="phone">Phone</Label>
+        <Input {...register("phone")} placeholder="604-555-0123" />
+        {errors.phone && (
+          <p className="text-sm text-red-600 mt-1">
+            {errors.phone.message}
+          </p>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="email">Email (optional)</Label>
+        <Input
+          {...register("email")}
+          placeholder="john@example.com"
+          type="email"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Type</Label>
+          <Select
+            defaultValue={contact?.type ?? defaultType ?? "buyer"}
+            onValueChange={(val) =>
+              setValue("type", val as FormData["type"])
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CONTACT_TYPES.map((t) => (
+                <SelectItem key={t} value={t}>
+                  {CONTACT_TYPE_LABELS[t]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Preferred Channel</Label>
+          <Select
+            defaultValue={contact?.pref_channel ?? "sms"}
+            onValueChange={(val) =>
+              setValue("pref_channel", val as "whatsapp" | "sms")
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sms">SMS</SelectItem>
+              <SelectItem value="whatsapp">WhatsApp</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* ── Partner-specific Fields ───────────────────────── */}
+      {selectedType === "partner" && (
+        <div className="space-y-4 rounded-lg border border-teal-200 bg-teal-50/50 p-4">
+          <p className="text-sm font-semibold text-teal-800">Partner Details</p>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Partner Type</Label>
+              <Select
+                defaultValue={contact?.partner_type ?? ""}
+                onValueChange={(val) =>
+                  setValue("partner_type", val as FormData["partner_type"])
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {PARTNER_TYPES.map((pt) => (
+                    <SelectItem key={pt} value={pt}>
+                      {PARTNER_TYPE_LABELS[pt]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="company_name">Company</Label>
+              <Input
+                {...register("company_name")}
+                placeholder="ABC Mortgages Inc."
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="job_title">Job Title (optional)</Label>
+            <Input
+              {...register("job_title")}
+              placeholder="Senior Mortgage Advisor"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="typical_client_profile">
+              Typical Client Profile (optional)
+            </Label>
+            <Textarea
+              {...register("typical_client_profile")}
+              placeholder="First-time buyers, pre-approvals up to $800K..."
+              rows={2}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="referral_agreement_terms">
+              Referral Agreement Terms (optional)
+            </Label>
+            <Textarea
+              {...register("referral_agreement_terms")}
+              placeholder="20% referral fee on closed deals..."
+              rows={2}
+            />
+          </div>
+        </div>
+      )}
+
+      <div>
+        <Label htmlFor="address">Address (optional)</Label>
+        <Input {...register("address")} placeholder="123 Main St, Vancouver, BC" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Lead Status</Label>
+          <Select
+            defaultValue={contact?.lead_status ?? "new"}
+            onValueChange={(val) => setValue("lead_status", val as FormData["lead_status"])}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LEAD_STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {LEAD_STATUS_LABELS[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Source (optional)</Label>
+          <Select
+            defaultValue={contact?.source ?? ""}
+            onValueChange={(val: string | null) => setValue("source", val ?? "")}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select source..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">None</SelectItem>
+              {LEAD_SOURCES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {allContacts.length > 0 && (
+        <div>
+          <Label>Referred By (optional)</Label>
+          <Select
+            defaultValue={contact?.referred_by_id ?? defaultReferredById ?? ""}
+            onValueChange={(val: string | null) => setValue("referred_by_id", val ?? "")}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select referrer..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">None</SelectItem>
+              {allContacts
+                .filter((c) => c.id !== contact?.id)
+                .map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <div>
+        <Label htmlFor="notes">Notes (optional)</Label>
+        <Textarea {...register("notes")} placeholder="Additional notes..." />
+      </div>
+
+      <Button type="submit" className="w-full" disabled={submitting}>
+        {submitting
+          ? "Saving..."
+          : contact
+            ? "Update Contact"
+            : "Create Contact"}
+      </Button>
+    </form>
+  );
+}
+
+export function ContactForm({
+  contact,
+  trigger,
+  allContacts = [],
+  defaultReferredById,
+  defaultType,
+}: {
+  contact?: Contact;
+  trigger?: React.ReactNode;
+  allContacts?: { id: string; name: string }[];
+  defaultReferredById?: string;
+  defaultType?: "buyer" | "seller";
+}) {
+  const [open, setOpen] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -96,92 +391,19 @@ export function ContactForm({
           )
         }
       />
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {contact ? "Edit Contact" : "New Contact"}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <Label htmlFor="name">Name</Label>
-            <Input {...register("name")} placeholder="John Doe" />
-            {errors.name && (
-              <p className="text-sm text-red-600 mt-1">
-                {errors.name.message}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="phone">Phone</Label>
-            <Input {...register("phone")} placeholder="604-555-0123" />
-            {errors.phone && (
-              <p className="text-sm text-red-600 mt-1">
-                {errors.phone.message}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="email">Email (optional)</Label>
-            <Input
-              {...register("email")}
-              placeholder="john@example.com"
-              type="email"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Type</Label>
-              <Select
-                defaultValue={contact?.type ?? "buyer"}
-                onValueChange={(val) =>
-                  setValue("type", val as "buyer" | "seller")
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="buyer">Buyer</SelectItem>
-                  <SelectItem value="seller">Seller</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Preferred Channel</Label>
-              <Select
-                defaultValue={contact?.pref_channel ?? "sms"}
-                onValueChange={(val) =>
-                  setValue("pref_channel", val as "whatsapp" | "sms")
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sms">SMS</SelectItem>
-                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="notes">Notes (optional)</Label>
-            <Textarea {...register("notes")} placeholder="Additional notes..." />
-          </div>
-
-          <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting
-              ? "Saving..."
-              : contact
-                ? "Update Contact"
-                : "Create Contact"}
-          </Button>
-        </form>
+        <ContactFormContent
+          onSuccess={() => setOpen(false)}
+          contact={contact}
+          allContacts={allContacts}
+          defaultType={defaultType}
+          defaultReferredById={defaultReferredById}
+        />
       </DialogContent>
     </Dialog>
   );

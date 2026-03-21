@@ -19,6 +19,11 @@ export const generateMediaSchema = z.object({
   assetType: z.enum(["video", "image"]),
 });
 
+export const generateAllSchema = z.object({
+  listingId: z.string().uuid(),
+});
+
 export type GeneratePromptsData = z.infer<typeof generatePromptsSchema>;
 export type UpdatePromptData = z.infer<typeof updatePromptSchema>;
 export type GenerateMediaData = z.infer<typeof generateMediaSchema>;
+export type GenerateAllData = z.infer<typeof generateAllSchema>;

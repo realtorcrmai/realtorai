@@ -2,8 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Key, Clock, User, ArrowRight, Target, Wand2, Video, Image, FileText, ExternalLink } from "lucide-react";
-import { STAGE_COLORS, STAGE_LABELS, DEAL_STATUS_COLORS } from "@/lib/constants/pipeline";
+import { MapPin, DollarSign, Key, Clock, User } from "lucide-react";
 import { ListingWorkflow } from "@/components/listings/ListingWorkflow";
 import { FormReadinessPanel } from "@/components/listings/FormReadinessPanel";
 import { ConveyancingPackButton } from "@/components/listings/ConveyancingPackButton";
@@ -11,12 +10,9 @@ import { ShowingRequestForm } from "@/components/showings/ShowingRequestForm";
 import { ShowingStatusBadge } from "@/components/showings/ShowingStatusBadge";
 import { AlertBanner } from "@/components/shared/AlertBanner";
 import { NeighborhoodButton } from "@/components/listings/NeighborhoodButton";
-import { OpenHouseSection } from "@/components/listings/OpenHouseSection";
-import { ListingStatsCard } from "@/components/listings/ListingStatsCard";
-import { ListingActivityFeed } from "@/components/listings/ListingActivityFeed";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
-import type { ListingDocument, OpenHouse, ListingActivity, Prompt, MediaAsset } from "@/types";
+import type { ListingDocument } from "@/types";
 import { LISTING_STATUS_COLORS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +27,7 @@ export default async function ListingDetailPage({
 
   const { data: listing } = await supabase
     .from("listings")
-    .select("*, contacts(id, name, phone, email)")
+    .select("*, contacts!listings_seller_id_fkey(id, name, phone, email)")
     .eq("id", id)
     .single();
 
@@ -51,11 +47,6 @@ export default async function ListingDetailPage({
     { data: showings },
     { data: allListings },
     { data: formSubmissions },
-    { data: openHouses },
-    { data: activities },
-    { data: relatedDeals },
-    { data: prompts },
-    { data: mediaAssets },
   ] = await Promise.all([
     supabase
       .from("listing_documents")
@@ -72,363 +63,178 @@ export default async function ListingDetailPage({
       .eq("status", "active"),
     supabase
       .from("form_submissions")
-      .select("form_key, status, form_data")
+      .select("form_key, status")
       .eq("listing_id", id),
-    supabase
-      .from("open_houses")
-      .select("*")
-      .eq("listing_id", id)
-      .order("date", { ascending: false }),
-    supabase
-      .from("listing_activities")
-      .select("*")
-      .eq("listing_id", id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("deals")
-      .select("id, title, stage, status, type, value")
-      .eq("listing_id", id)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("prompts")
-      .select("*")
-      .eq("listing_id", id)
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("media_assets")
-      .select("*")
-      .eq("listing_id", id)
-      .order("created_at", { ascending: false }),
   ]);
-
-  // Compute listing stats
-  const confirmedShowings = (showings ?? []).filter((s) => s.status === "confirmed").length;
-  const ohList = (openHouses ?? []) as OpenHouse[];
-  const completedOH = ohList.filter((o) => o.status === "completed").length;
-  const totalVisitors = ohList.reduce((sum, o) => sum + (o.visitor_count || 0), 0);
-  const actList = (activities ?? []) as ListingActivity[];
-  const daysOnMarket = listing.created_at
-    ? Math.max(0, Math.floor((Date.now() - new Date(listing.created_at).getTime()) / 86400000))
-    : 0;
-  const listingStats = {
-    days_on_market: daysOnMarket,
-    total_views: actList.filter((a) => a.activity_type === "view").length,
-    total_inquiries: actList.filter((a) => a.activity_type === "inquiry").length,
-    total_showings: (showings ?? []).length,
-    confirmed_showings: confirmedShowings,
-    total_offers: actList.filter((a) => a.activity_type === "offer").length,
-    total_open_houses: ohList.length,
-    completed_open_houses: completedOH,
-    total_visitors: totalVisitors,
-  };
 
   // Build form status map for the right panel
   const formStatuses = Object.fromEntries(
     (formSubmissions ?? []).map((s) => [s.form_key, s.status as "draft" | "completed"])
   );
 
-  // Build step form data map for workflow data panels
-  const stepFormData = Object.fromEntries(
-    (formSubmissions ?? [])
-      .filter((s) => s.form_key.startsWith("step-"))
-      .map((s) => [s.form_key, (s.form_data ?? {}) as Record<string, unknown>])
-  );
-
   const requiredTypes = ["FINTRAC", "DORTS", "PDS"];
   const docTypes = (documents ?? []).map((d) => d.doc_type);
   const hasMissingDocs = requiredTypes.some((t) => !docTypes.includes(t));
 
-  // Format price for subtitle
-  const formattedPrice =
-    listing.list_price != null
-      ? Number(listing.list_price).toLocaleString("en-CA", {
-          style: "currency",
-          currency: "CAD",
-          maximumFractionDigits: 0,
-        })
-      : null;
-
-  // Build subtitle parts
-  const subtitleParts: string[] = [];
-  if (formattedPrice) subtitleParts.push(formattedPrice);
-  if (listing.mls_number) subtitleParts.push(`MLS# ${listing.mls_number}`);
-  if (listing.showing_window_start && listing.showing_window_end)
-    subtitleParts.push(`${listing.showing_window_start} – ${listing.showing_window_end}`);
-
   return (
     <div className="flex h-full">
-      {/* CENTER — topbar + scrollable content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Mid-topbar */}
-        <div className="shrink-0 bg-background/90 backdrop-blur-md border-b px-6 py-3">
-          <div className="flex items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold tracking-tight truncate">
-                  {listing.address}
-                </h1>
-                <Badge
-                  variant="secondary"
-                  className={`${LISTING_STATUS_COLORS[listing.status as keyof typeof LISTING_STATUS_COLORS]} text-xs shrink-0 capitalize`}
-                >
-                  {listing.status}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-0.5">
-                <span>{subtitleParts.join(" · ")}</span>
-                {subtitleParts.length > 0 && <span>&middot;</span>}
+      {/* CENTER — scrollable */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+        <div className="space-y-6">
+          {hasMissingDocs && (
+            <AlertBanner message="Missing Required Documents — Upload FINTRAC, DORTS, and PDS before creating showings or generating conveyancing packs." />
+          )}
+
+          {/* Listing Header — compact */}
+          <Card className="animate-float-in overflow-hidden border-0 shadow-md">
+            <div className="h-1.5 bg-gradient-to-r from-teal-500 via-blue-500 to-indigo-500" />
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1.5 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-primary shrink-0" />
+                    <h1 className="text-2xl font-bold tracking-tight truncate">
+                      {listing.address}
+                    </h1>
+                    <Badge
+                      variant="secondary"
+                      className={`${LISTING_STATUS_COLORS[listing.status as keyof typeof LISTING_STATUS_COLORS]} text-xs shrink-0`}
+                    >
+                      {listing.status}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                    {listing.list_price != null && (
+                      <span className="flex items-center gap-1">
+                        <DollarSign className="h-4 w-4" />
+                        {Number(listing.list_price).toLocaleString("en-CA", {
+                          style: "currency",
+                          currency: "CAD",
+                          maximumFractionDigits: 0,
+                        })}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <Key className="h-4 w-4" />
+                      Lockbox: {listing.lockbox_code}
+                    </span>
+                    {listing.mls_number && <span>MLS# {listing.mls_number}</span>}
+                    {listing.showing_window_start && listing.showing_window_end && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        {listing.showing_window_start} - {listing.showing_window_end}
+                      </span>
+                    )}
+                    <Link
+                      href={`/contacts/${seller.id}`}
+                      className="flex items-center gap-1 text-primary hover:underline"
+                    >
+                      <User className="h-4 w-4" />
+                      {seller.name}
+                    </Link>
+                  </div>
+                  {listing.notes && (
+                    <p className="text-sm text-muted-foreground">{listing.notes}</p>
+                  )}
+                </div>
+                {/* Seller Profile Button */}
                 <Link
                   href={`/contacts/${seller.id}`}
-                  className="text-primary hover:underline inline-flex items-center gap-0.5"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/20 bg-primary/5 text-primary text-sm font-medium hover:bg-primary/10 transition-colors shrink-0"
                 >
-                  <User className="h-3.5 w-3.5" />
-                  {seller.name}
+                  <User className="h-4 w-4" />
+                  View Seller
                 </Link>
               </div>
-            </div>
-          </div>
-          {/* Action buttons row */}
-          <div className="flex gap-2 mt-2.5">
+            </CardContent>
+          </Card>
+
+          {/* Actions Row */}
+          <div className="flex flex-wrap gap-2">
             <ShowingRequestForm
               listings={allListings ?? []}
               preselectedListingId={id}
+              disabled={hasMissingDocs}
             />
             <ConveyancingPackButton
               address={listing.address}
               documents={(documents ?? []) as ListingDocument[]}
+              disabled={hasMissingDocs}
             />
             <NeighborhoodButton address={listing.address} />
           </div>
-        </div>
 
-        {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto p-5 md:p-6">
-          <div className="space-y-6">
-            {hasMissingDocs && (
-              <AlertBanner message="Missing Required Documents — Upload FINTRAC, DORTS, and PDS before creating showings or generating conveyancing packs." />
-            )}
-
-            {/* For sold listings: stats first (featured), then collapsed workflow */}
-            {listing.status === "sold" && (
-              <ListingStatsCard
-                stats={listingStats}
-                featured
-                salePrice={listing.sale_price ?? listing.list_price}
-                listPrice={listing.list_price}
+          {/* Workflow */}
+          <Card>
+            <CardContent className="p-6">
+              <ListingWorkflow
+                listing={{ ...listing, seller_name: seller.name }}
+                documents={(documents ?? []) as ListingDocument[]}
+                formStatuses={formStatuses}
+                seller={seller}
+                showingsCount={showings?.length ?? 0}
+                listingId={id}
+                contactId={seller.id}
               />
-            )}
+            </CardContent>
+          </Card>
 
-            {/* Workflow — auto-collapses for sold listings */}
-            <ListingWorkflow
-              listingId={id}
-              listing={{ ...listing, seller_name: seller.name }}
-              documents={(documents ?? []) as ListingDocument[]}
-              formStatuses={formStatuses}
-              seller={seller}
-              showingsCount={showings?.length ?? 0}
-              stepFormData={stepFormData}
-              relatedDealId={(relatedDeals ?? [])[0]?.id}
-            />
-
-            {/* Listing Stats (standard mode for non-sold) */}
-            {listing.status !== "sold" && (
-              <ListingStatsCard stats={listingStats} />
-            )}
-
-            {/* AI Content — Prompts & Media */}
-            {(prompts || (mediaAssets ?? []).length > 0) && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Wand2 className="h-4 w-4" />
-                    AI Content
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* MLS Remarks */}
-                  {prompts?.mls_public && (
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                        <FileText className="h-3 w-3" /> MLS Public Remarks
-                      </p>
-                      <p className="text-sm bg-muted/50 rounded-lg p-3">{prompts.mls_public}</p>
-                    </div>
-                  )}
-                  {prompts?.mls_realtor && (
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                        <FileText className="h-3 w-3" /> MLS Realtor Remarks
-                      </p>
-                      <p className="text-sm bg-muted/50 rounded-lg p-3">{prompts.mls_realtor}</p>
-                    </div>
-                  )}
-                  {prompts?.ig_caption && (
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                        <FileText className="h-3 w-3" /> Instagram Caption
-                      </p>
-                      <p className="text-sm bg-muted/50 rounded-lg p-3">{prompts.ig_caption}</p>
-                    </div>
-                  )}
-
-                  {/* Generated Media */}
-                  {(mediaAssets ?? []).length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Generated Media</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {(mediaAssets ?? []).map((asset) => (
-                          <div
-                            key={asset.id}
-                            className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/30"
-                          >
-                            {asset.asset_type === "video" ? (
-                              <Video className="h-4 w-4 text-primary shrink-0" />
-                            ) : (
-                              <Image className="h-4 w-4 text-primary shrink-0" />
-                            )}
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium capitalize">{asset.asset_type}</p>
-                              <p className="text-xs text-muted-foreground capitalize">{asset.status}</p>
-                            </div>
-                            {asset.output_url && (
-                              <a
-                                href={asset.output_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary hover:underline shrink-0"
-                              >
-                                <ExternalLink className="h-3.5 w-3.5" />
-                              </a>
-                            )}
-                            {asset.status === "completed" && (
-                              <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] shrink-0">Ready</Badge>
-                            )}
-                            {asset.status === "processing" && (
-                              <Badge variant="secondary" className="bg-amber-100 text-amber-700 text-[10px] shrink-0">Processing</Badge>
-                            )}
-                            {asset.status === "failed" && (
-                              <Badge variant="secondary" className="bg-red-100 text-red-700 text-[10px] shrink-0">Failed</Badge>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* No content yet */}
-                  {!prompts && (mediaAssets ?? []).length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-2">
-                      No AI content generated yet. Use the Content Engine to create MLS remarks, social media captions, and marketing videos.
+          {/* Showing History */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Showing History</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {(showings ?? []).length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No showings for this listing yet.
+                </p>
+              )}
+              {(showings ?? []).map((showing) => (
+                <div
+                  key={showing.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                >
+                  <div>
+                    <p className="text-sm font-medium">
+                      {showing.buyer_agent_name}
                     </p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Open Houses */}
-            <OpenHouseSection
-              listingId={id}
-              openHouses={ohList}
-            />
-
-            {/* Showing History */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Showing History</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {(showings ?? []).length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No showings for this listing yet.
-                  </p>
-                )}
-                {(showings ?? []).map((showing) => (
-                  <div
-                    key={showing.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                  >
-                    <div>
-                      <p className="text-sm font-medium">
-                        {showing.buyer_agent_name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(showing.start_time).toLocaleString("en-CA", {
-                          timeZone: "America/Vancouver",
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}{" "}
-                        &middot;{" "}
-                        {formatDistanceToNow(new Date(showing.created_at), {
-                          addSuffix: true,
-                        })}
-                      </p>
-                    </div>
-                    <ShowingStatusBadge
-                      status={
-                        showing.status as
-                          | "requested"
-                          | "confirmed"
-                          | "denied"
-                          | "cancelled"
-                      }
-                    />
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(showing.start_time).toLocaleString("en-CA", {
+                        timeZone: "America/Vancouver",
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}{" "}
+                      &middot;{" "}
+                      {formatDistanceToNow(new Date(showing.created_at), {
+                        addSuffix: true,
+                      })}
+                    </p>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Related Deals */}
-            {(relatedDeals ?? []).length > 0 && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Target className="h-4 w-4" />
-                    Related Deals
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {(relatedDeals ?? []).map((deal) => (
-                    <Link key={deal.id} href={`/pipeline/${deal.id}`}>
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors border border-border/30">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <p className="text-sm font-semibold truncate">{deal.title}</p>
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 capitalize shrink-0">{deal.type}</Badge>
-                          <Badge variant="outline" className={`${STAGE_COLORS[deal.stage] ?? ""} text-[10px] px-1.5 py-0 border-0 shrink-0`}>
-                            {STAGE_LABELS[deal.stage] ?? deal.stage}
-                          </Badge>
-                          <Badge variant="outline" className={`${DEAL_STATUS_COLORS[deal.status] ?? ""} text-[10px] px-1.5 py-0 border-0 capitalize shrink-0`}>
-                            {deal.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0 ml-3">
-                          {deal.value && (
-                            <span className="text-sm font-semibold">${Number(deal.value).toLocaleString("en-CA")}</span>
-                          )}
-                          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Activity Feed */}
-            <ListingActivityFeed activities={actList} />
-          </div>
+                  <ShowingStatusBadge
+                    status={
+                      showing.status as
+                        | "requested"
+                        | "confirmed"
+                        | "denied"
+                        | "cancelled"
+                    }
+                  />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
       {/* RIGHT PANEL — fixed, own scroll */}
-      <aside className="hidden lg:block w-[320px] shrink-0 border-l overflow-hidden backdrop-blur-2xl bg-white/80 flex flex-col">
+      <aside className="hidden lg:block w-[340px] shrink-0 border-l overflow-y-auto p-6 bg-card/30">
         <FormReadinessPanel
           listingId={id}
           documents={(documents ?? []) as ListingDocument[]}
           listing={listing}
           seller={seller}
           formStatuses={formStatuses}
-          showings={showings ?? []}
         />
       </aside>
     </div>

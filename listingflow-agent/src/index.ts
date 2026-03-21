@@ -1,9 +1,14 @@
 import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
 import { runGeneration, approveVariant } from "./agent.js";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 const app = express();
 app.use(express.json());
+app.use(express.static(path.join(__dirname, "../public")));
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
@@ -12,13 +17,32 @@ function getSupabase() {
 }
 
 /**
+ * GET /api/sites
+ * List available realtor site profiles.
+ */
+app.get("/api/sites", async (_req, res) => {
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from("realtor_sites")
+      .select("id, agent_name, brokerage_name")
+      .order("agent_name");
+    if (error) return res.status(500).json({ error: "Failed to fetch sites" });
+    return res.json(data || []);
+  } catch (e) {
+    console.error("Sites endpoint error:", e);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
  * POST /api/generate
  * Start a new website generation.
  * Body: { site_id, listing_ids?, testimonial_ids? }
  */
 app.post("/api/generate", async (req, res) => {
   try {
-    const { site_id, listing_ids, testimonial_ids, reference_url } = req.body;
+    const { site_id, listing_ids, testimonial_ids, reference_url, design_prompt } = req.body;
     if (!site_id) {
       return res.status(400).json({ error: "site_id is required" });
     }
@@ -37,7 +61,7 @@ app.post("/api/generate", async (req, res) => {
     }
 
     // Start generation in background (don't await)
-    runGeneration(generation.id, { site_id, listing_ids, testimonial_ids, reference_url }).catch(
+    runGeneration(generation.id, { site_id, listing_ids, testimonial_ids, reference_url, design_prompt }).catch(
       (e) => console.error("Background generation error:", e)
     );
 
@@ -97,13 +121,43 @@ app.get("/api/generations/:id", async (req, res) => {
  */
 app.post("/api/variants/:id/approve", async (req, res) => {
   try {
-    const liveUrl = await approveVariant(req.params.id);
-    return res.json({ live_url: liveUrl });
+    const variantId = await approveVariant(req.params.id);
+    return res.json({ approved: true, variant_id: variantId });
   } catch (e) {
     console.error("Approve endpoint error:", e);
     return res.status(500).json({
       error: e instanceof Error ? e.message : "Internal server error",
     });
+  }
+});
+
+/**
+ * GET /api/variants/:id/preview
+ * Serve the rendered HTML for a variant in the browser.
+ */
+app.get("/api/variants/:id/preview", async (req, res) => {
+  try {
+    const supabase = getSupabase();
+    const { data: variant } = await supabase
+      .from("site_variants")
+      .select("site_config, style_name")
+      .eq("id", req.params.id)
+      .single();
+
+    if (!variant) {
+      return res.status(404).send("Variant not found");
+    }
+
+    const html = variant.site_config?.rendered_html;
+    if (!html) {
+      return res.status(404).send("No rendered HTML available for this variant");
+    }
+
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.send(html);
+  } catch (e) {
+    console.error("Preview endpoint error:", e);
+    return res.status(500).send("Internal server error");
   }
 });
 

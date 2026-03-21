@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from("listings")
-    .select("*, contacts(name, phone)")
+    .select("*, contacts!listings_seller_id_fkey(name, phone)")
     .order("created_at", { ascending: false });
 
   if (status && ["active", "pending", "sold"].includes(status)) {

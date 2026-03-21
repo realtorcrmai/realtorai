@@ -95,6 +95,7 @@ export interface GenerationRequest {
   listing_ids?: string[];
   testimonial_ids?: string[];
   reference_url?: string; // User-provided favorite website URL
+  design_prompt?: string; // Realtor's description of desired website style/tone
 }
 
 export type GenerationStatus =

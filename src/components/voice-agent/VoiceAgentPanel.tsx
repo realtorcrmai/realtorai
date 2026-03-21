@@ -114,20 +114,33 @@ export function VoiceAgentPanel() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Health check
+  // Health check — stop polling if agent is offline
   useEffect(() => {
+    let stopped = false;
+    let interval: ReturnType<typeof setInterval> | null = null;
+
     async function check() {
       try {
-        const resp = await fetch(`${VOICE_AGENT_API}/api/health`);
+        const resp = await fetch(`${VOICE_AGENT_API}/api/health`, {
+          signal: AbortSignal.timeout(3000),
+        });
         const data = await resp.json();
-        if (data.ok) setConnected(true);
+        if (data.ok) {
+          setConnected(true);
+          if (!stopped && !interval) {
+            interval = setInterval(check, 30000);
+          }
+        }
       } catch {
         setConnected(false);
+        if (interval) { clearInterval(interval); interval = null; }
       }
     }
     check();
-    const interval = setInterval(check, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      stopped = true;
+      if (interval) clearInterval(interval);
+    };
   }, []);
 
   // Speech recognition
