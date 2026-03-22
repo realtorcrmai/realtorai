@@ -41,6 +41,21 @@ export async function createListing(formData: ListingFormData) {
     }
   }
 
+  // Emit agent event for listing creation
+  try {
+    const { emitListingEvent } = await import("@/lib/ai-agent/event-emitter");
+    await emitListingEvent(data.id, "listing_created", {
+      address: data.address,
+      list_price: data.list_price,
+      bedrooms: data.bedrooms,
+      bathrooms: data.bathrooms,
+      property_type: data.property_type,
+      seller_id: data.seller_id,
+    });
+  } catch {
+    // Don't fail listing creation if event emission fails
+  }
+
   return { success: true, listing: data };
 }
 

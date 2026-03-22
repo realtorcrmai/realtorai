@@ -119,6 +119,29 @@ export async function POST(request: NextRequest) {
     // Update contact intelligence on engagement events
     if (eventType === "opened" || eventType === "clicked") {
       await updateContactIntelligence(supabase, contactId, eventType, linkType, linkUrl);
+
+      // Emit agent events for AI evaluation
+      try {
+        const { emitEngagementEvent } = await import("@/lib/ai-agent/event-emitter");
+        const agentEventType = eventType === "clicked" ? "email_clicked" : "email_opened";
+        await emitEngagementEvent(contactId, agentEventType, {
+          newsletterId: newsletterId,
+          emailType: newsletter.email_type,
+          linkType,
+          linkUrl,
+        });
+
+        // Detect high-intent clicks
+        if (linkType && ["showing", "cma", "contact_agent"].includes(linkType)) {
+          await emitEngagementEvent(contactId, "high_intent_click", {
+            newsletterId: newsletterId,
+            linkType,
+            linkUrl,
+          });
+        }
+      } catch {
+        // Don't fail webhook processing if event emission fails
+      }
     }
 
     // Handle bounce — mark as unsubscribed
