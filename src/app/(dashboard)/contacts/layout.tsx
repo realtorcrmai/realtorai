@@ -11,10 +11,30 @@ export default async function ContactsLayout({
 }) {
   const supabase = createAdminClient();
 
-  const { data: contacts } = await supabase
-    .from("contacts")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const [{ data: contacts }, { data: enrollments }] = await Promise.all([
+    supabase
+      .from("contacts")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("workflow_enrollments")
+      .select("contact_id, status, workflows(name)")
+      .in("status", ["active", "paused"]),
+  ]);
+
+  // Build array of contact IDs with active workflows
+  const contactsWithWorkflow = [...new Set(
+    (enrollments ?? []).map((e) => e.contact_id)
+  )];
+
+  // Build workflow name map for sidebar display
+  const workflowNames: Record<string, string> = {};
+  for (const e of enrollments ?? []) {
+    if (e.contact_id && !workflowNames[e.contact_id]) {
+      const wf = e.workflows as { name: string } | null;
+      if (wf) workflowNames[e.contact_id] = wf.name;
+    }
+  }
 
   return (
     <div className="flex h-full">
@@ -23,7 +43,11 @@ export default async function ContactsLayout({
         <div className="p-3 border-b bg-card/50 shrink-0">
           <ContactForm />
         </div>
-        <ContactSidebar contacts={contacts ?? []} />
+        <ContactSidebar
+          contacts={contacts ?? []}
+          contactsWithWorkflow={contactsWithWorkflow}
+          workflowNames={workflowNames}
+        />
       </div>
 
       {/* Center + Right content */}

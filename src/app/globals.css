@@ -295,6 +295,20 @@
   animation: float-in 0.4s cubic-bezier(0.33, 1, 0.68, 1) both;
 }
 
+/* Ticker scroll animation for task banner */
+@keyframes ticker {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-ticker {
+  animation: ticker 20s linear infinite;
+}
+
 /* Stagger children animation for tile grids */
 .stagger-children > * {
   animation: float-in 0.4s cubic-bezier(0.33, 1, 0.68, 1) both;

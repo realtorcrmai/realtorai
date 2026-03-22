@@ -4,7 +4,6 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Suspense } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { ContactWorkflow } from "@/components/contacts/ContactWorkflow";
 import { CommunicationTimeline } from "@/components/contacts/CommunicationTimeline";
 import { PropertyHistoryPanel } from "@/components/contacts/PropertyHistoryPanel";
 import { ReferralsPanel, type ReferralRow } from "@/components/contacts/ReferralsPanel";
@@ -223,19 +222,6 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
               </CardContent>
             </Card>
           ))}
-
-          {/* Contact Lifecycle Workflow */}
-          {!lifecycleComplete && (
-            <Card className="border-l-4 border-l-emerald-400 bg-emerald-50/20 dark:bg-emerald-950/10">
-              <CardContent className="p-6">
-                <ContactWorkflow
-                  contact={contact}
-                  listings={listings}
-                  communications={communications}
-                />
-              </CardContent>
-            </Card>
-          )}
 
           {/* Seller / Buyer Preferences */}
           {isSeller ? (

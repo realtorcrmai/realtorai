@@ -16,13 +16,12 @@ import {
   Mail,
   ArrowRight,
   Target,
-  Trophy,
-  DollarSign,
-  Landmark,
+  Zap,
 } from "lucide-react";
 import { RemindersWidget } from "@/components/dashboard/RemindersWidget";
 import PipelineSnapshot from "@/components/dashboard/PipelineSnapshot";
 import AIRecommendations from "@/components/dashboard/AIRecommendations";
+import { FloatingTaskBanner } from "@/components/dashboard/FloatingTaskBanner";
 import { getRecommendations } from "@/actions/recommendations";
 import { getOvernightSummary } from "@/actions/agent-settings";
 import OvernightSummary from "@/components/dashboard/OvernightSummary";
@@ -42,20 +41,12 @@ export default async function DashboardPage() {
 
   const supabase = createAdminClient();
 
-  // Current month boundaries for "closed this month"
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-  const today = now.toISOString().slice(0, 10);
-  const in90Days = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-
   const [
     { count: activeListings },
     { count: pendingShowings },
     { data: confirmedThisWeek },
     { data: tasks },
     { count: activeDealsCount },
-    { data: wonDeals },
-    { data: upcomingMortgages },
     { data: pipelineContacts },
     { data: pipelineListings },
   ] = await Promise.all([
@@ -87,16 +78,6 @@ export default async function DashboardPage() {
       .from("deals")
       .select("*", { count: "exact", head: true })
       .eq("status", "active"),
-    supabase
-      .from("deals")
-      .select("id, status, value, commission_amount, close_date")
-      .eq("status", "won"),
-    supabase
-      .from("mortgages")
-      .select("id, lender_name, renewal_date, mortgage_amount, interest_rate, mortgage_type, contact_id, deal_id, contacts(id, name), deals(id, title)")
-      .gte("renewal_date", today)
-      .lte("renewal_date", in90Days)
-      .order("renewal_date", { ascending: true }),
     supabase.from("contacts").select("id, stage_bar, type"),
     supabase.from("listings").select("id, seller_id, buyer_id, list_price, sold_price, commission_rate, commission_amount, status"),
   ]);
@@ -133,16 +114,6 @@ export default async function DashboardPage() {
   ).length;
   const openTasksCount = pendingTasks + inProgressTasks;
 
-  // Deal stats
-  const allWonDeals = wonDeals ?? [];
-  const closedThisMonth = allWonDeals.filter(
-    (d) => d.close_date && d.close_date >= monthStart
-  ).length;
-  const earnedGCI = allWonDeals.reduce(
-    (sum, d) => sum + (Number(d.commission_amount) || 0),
-    0
-  );
-
   const enabledFeatures = session?.user?.enabledFeatures ?? [];
 
   // ── Pipeline Snapshot computation ──────────────────────────
@@ -157,15 +128,13 @@ export default async function DashboardPage() {
   const contacts = pipelineContacts ?? [];
   const listings = pipelineListings ?? [];
 
-  // Map stage_bar values to pipeline keys (merge active_search + active_listing into "active")
   function toPipelineKey(stageBar: string | null): string {
     if (!stageBar) return "new";
     if (stageBar === "active_search" || stageBar === "active_listing") return "active";
     if (["new", "qualified", "under_contract", "closed"].includes(stageBar)) return stageBar;
-    return "new"; // cold, contacted, nurturing, etc. map to "new"
+    return "new";
   }
 
-  // Group contacts by pipeline stage
   const contactsByStage: Record<string, typeof contacts> = {};
   for (const stage of PIPELINE_STAGES) {
     contactsByStage[stage.key] = [];
@@ -175,7 +144,6 @@ export default async function DashboardPage() {
     if (contactsByStage[key]) contactsByStage[key].push(c);
   }
 
-  // For each contact, find their deal value from listings
   function getDealValueForContact(contactId: string): number {
     let total = 0;
     for (const l of listings) {
@@ -199,8 +167,6 @@ export default async function DashboardPage() {
     return { ...stage, count: stageContacts.length, value };
   });
 
-  // GCI = sum of (commission_amount ?? (list_price * (commission_rate ?? 2.5) / 100))
-  // for active + pending listings
   let totalGCI = 0;
   for (const l of listings) {
     if (l.status === "active" || l.status === "pending") {
@@ -347,51 +313,22 @@ export default async function DashboardPage() {
       count: (pendingNewsletters ?? 0) > 0 ? pendingNewsletters : (sentNewsletters ?? 0) > 0 ? sentNewsletters : null,
       countLabel: (pendingNewsletters ?? 0) > 0 ? "drafts" : "sent",
     },
+    {
+      key: "automations",
+      href: "/automations",
+      title: "Automations",
+      description: "AI-powered workflow automations & triggers",
+      icon: Zap,
+      gradient: "gradient-amber",
+      count: null,
+      countLabel: null,
+    },
   ];
 
   // Filter tiles based on user's enabled features
   const featureTiles = enabledFeatures.length > 0
     ? allFeatureTiles.filter((tile) => enabledFeatures.includes(tile.key))
     : allFeatureTiles;
-
-  const quickStats = [
-    {
-      label: "Active Deals",
-      value: activeDealsCount ?? 0,
-      color: "text-indigo-600 dark:text-indigo-400",
-      bg: "bg-indigo-50/60 border-indigo-100 dark:bg-indigo-950/30 dark:border-indigo-900",
-      icon: Target,
-      iconColor: "text-indigo-500",
-      href: "/pipeline",
-    },
-    {
-      label: "Closed This Month",
-      value: closedThisMonth,
-      color: "text-emerald-600 dark:text-emerald-400",
-      bg: "bg-emerald-50/60 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900",
-      icon: Trophy,
-      iconColor: "text-emerald-500",
-      href: "/pipeline",
-    },
-    {
-      label: "Earned GCI",
-      value: earnedGCI > 0 ? `$${earnedGCI.toLocaleString("en-CA")}` : "$0",
-      color: "text-green-600 dark:text-green-400",
-      bg: "bg-green-50/60 border-green-100 dark:bg-green-950/30 dark:border-green-900",
-      icon: DollarSign,
-      iconColor: "text-green-500",
-      href: "/pipeline",
-    },
-    {
-      label: "Open Tasks",
-      value: openTasksCount,
-      color: "text-amber-600 dark:text-amber-400",
-      bg: "bg-amber-50/60 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900",
-      icon: ListTodo,
-      iconColor: "text-amber-500",
-      href: "/tasks",
-    },
-  ];
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
@@ -417,138 +354,19 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Stats Strip — clickable links */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-float-in" style={{ animationDelay: "80ms" }}>
-        {quickStats.map((stat) => (
-          <Link
-            key={stat.label}
-            href={stat.href}
-            className={`rounded-xl px-4 py-3.5 border transition-all duration-200 hover:shadow-md hover:ring-2 hover:ring-primary/20 cursor-pointer ${stat.bg}`}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`text-2xl font-bold ${stat.color}`}>
-                  {stat.value}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1 font-medium">
-                  {stat.label}
-                </p>
-              </div>
-              <div className={`h-10 w-10 rounded-lg flex items-center justify-center bg-white/60 dark:bg-white/10 ${stat.iconColor}`}>
-                <stat.icon className="h-5 w-5" />
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
+      {/* Task Ticker Banner */}
+      <FloatingTaskBanner tasks={tasks ?? []} openTasksCount={openTasksCount} />
 
       {/* AI Overnight Summary */}
       <OvernightSummarySection />
 
-      {/* Pipeline Snapshot — primary dashboard visual */}
+      {/* Pipeline Snapshot */}
       <div className="animate-float-in" style={{ animationDelay: "80ms" }}>
         <PipelineSnapshot stages={pipelineStages} totalGCI={totalGCI} />
       </div>
 
       {/* AI Recommendations */}
       <AIRecommendationsSection />
-
-      {/* To-Do Banner */}
-      {(tasks ?? []).length > 0 && (
-        <div className="animate-float-in" style={{ animationDelay: "120ms" }}>
-          <Link href="/tasks" className="block glass rounded-xl p-4 elevation-2 hover:elevation-4 transition-all group">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <ListTodo className="h-4 w-4 text-indigo-600" />
-                <h2 className="text-sm font-semibold text-foreground">
-                  Today&apos;s Tasks
-                </h2>
-                <span className="text-xs font-bold text-white bg-indigo-600 rounded-full px-2 py-0.5">
-                  {openTasksCount}
-                </span>
-              </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-            </div>
-            <div className="space-y-2">
-              {(tasks ?? []).slice(0, 3).map((task) => (
-                <div key={task.id} className="flex items-center gap-3">
-                  <span className={`h-2 w-2 rounded-full shrink-0 ${
-                    task.priority === "urgent" ? "bg-red-500" :
-                    task.priority === "high" ? "bg-orange-500" :
-                    task.priority === "medium" ? "bg-amber-500" : "bg-gray-400"
-                  }`} />
-                  <span className="text-sm text-foreground truncate">{task.title}</span>
-                  {task.due_date && (
-                    <span className="text-xs text-muted-foreground shrink-0 ml-auto">
-                      {new Date(task.due_date).toLocaleDateString("en-CA", { month: "short", day: "numeric" })}
-                    </span>
-                  )}
-                </div>
-              ))}
-              {(tasks ?? []).length > 3 && (
-                <p className="text-xs text-muted-foreground">
-                  +{(tasks ?? []).length - 3} more tasks
-                </p>
-              )}
-            </div>
-          </Link>
-        </div>
-      )}
-
-      {/* Mortgage Renewal Alerts */}
-      {(upcomingMortgages ?? []).length > 0 && (
-        <div className="animate-float-in rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 p-5" style={{ animationDelay: "120ms" }}>
-          <div className="flex items-center gap-2 mb-3">
-            <Landmark className="h-4.5 w-4.5 text-amber-600" />
-            <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-              Upcoming Mortgage Renewals
-            </h3>
-            <span className="ml-auto text-xs bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium">
-              {(upcomingMortgages ?? []).length} within 90 days
-            </span>
-          </div>
-          <div className="space-y-2.5">
-            {(upcomingMortgages ?? []).map((m: Record<string, unknown>) => {
-              const contact = m.contacts as { id: string; name: string } | null;
-              const deal = m.deals as { id: string; title: string } | null;
-              const renewalDate = new Date(m.renewal_date as string);
-              const daysUntil = Math.ceil((renewalDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-              const isUrgent = daysUntil <= 30;
-              return (
-                <div key={m.id as string} className="flex items-center gap-3 rounded-lg bg-white/70 dark:bg-white/5 border border-amber-100 dark:border-amber-800/50 px-4 py-3">
-                  <div className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold ${isUrgent ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
-                    {daysUntil}d
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {contact && (
-                        <Link href={`/contacts/${contact.id}`} className="text-sm font-semibold hover:text-primary transition-colors">
-                          {contact.name}
-                        </Link>
-                      )}
-                      <span className="text-xs text-muted-foreground">·</span>
-                      <span className="text-xs text-muted-foreground">{m.lender_name as string}</span>
-                      <span className={`text-[10px] px-1.5 py-0 rounded-full font-medium ${isUrgent ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
-                        {isUrgent ? "Urgent" : "Upcoming"}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Renewal: {renewalDate.toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })}
-                      {m.mortgage_amount ? ` · $${Number(m.mortgage_amount).toLocaleString("en-CA")}` : ""}
-                      {m.interest_rate ? ` · ${String(m.interest_rate)}% ${String(m.mortgage_type || "")}` : ""}
-                    </p>
-                  </div>
-                  {deal && (
-                    <Link href={`/pipeline/${deal.id}`} className="shrink-0 text-xs text-primary hover:text-primary/80 font-medium flex items-center gap-1">
-                      Deal <ArrowRight className="h-3 w-3" />
-                    </Link>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Feature Hub */}
       <div>
@@ -614,6 +432,7 @@ export default async function DashboardPage() {
         <RemindersWidget />
       </div>
     </div>
+
     </div>
   );
 }

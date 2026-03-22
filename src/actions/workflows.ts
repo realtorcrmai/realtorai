@@ -811,6 +811,35 @@ export async function backfillWorkflowEnrollments(): Promise<{
       }
     }
 
+    // ── under_contract: contacts linked to pending listings ────
+    if (workflow.slug === "under_contract") {
+      const { data: pendingListings } = await supabase
+        .from("listings")
+        .select("id, seller_id, buyer_id")
+        .eq("status", "pending");
+
+      for (const listing of pendingListings ?? []) {
+        // Enroll the seller
+        const seller = allContacts.find((c) => c.id === listing.seller_id);
+        if (seller) {
+          const result = await tryEnroll(
+            workflow.id, workflow.slug, seller.id, seller.name, listing.id
+          );
+          (result === "enrolled" ? enrolled : skipped).push(seller.name);
+        }
+        // Enroll the buyer if linked
+        if (listing.buyer_id) {
+          const buyer = allContacts.find((c) => c.id === listing.buyer_id);
+          if (buyer) {
+            const result = await tryEnroll(
+              workflow.id, workflow.slug, buyer.id, buyer.name, listing.id
+            );
+            (result === "enrolled" ? enrolled : skipped).push(buyer.name);
+          }
+        }
+      }
+    }
+
     // ── seller_lifecycle: all seller contacts ──────────────────
     if (workflow.slug === "seller_lifecycle") {
       const sellers = allContacts.filter((c) => c.type === "seller");

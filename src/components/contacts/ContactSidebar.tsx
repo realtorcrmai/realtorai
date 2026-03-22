@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, X, Zap } from "lucide-react";
 import type { Contact } from "@/types";
 import { CONTACT_TYPE_COLORS, type ContactType } from "@/lib/constants";
 import {
@@ -92,7 +92,13 @@ const STAGE_FILTERS: { value: StageFilter; label: string; dot: string }[] = [
   { value: "cold", label: "Cold", dot: "bg-gray-400" },
 ];
 
-export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
+interface ContactSidebarProps {
+  contacts: Contact[];
+  contactsWithWorkflow?: string[];
+  workflowNames?: Record<string, string>;
+}
+
+export function ContactSidebar({ contacts, contactsWithWorkflow, workflowNames }: ContactSidebarProps) {
   const pathname = usePathname();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
@@ -118,6 +124,15 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
       (contactStage ?? "new") === stageFilter;
 
     return matchesSearch && matchesType && matchesStage;
+  });
+
+  // Sort: contacts with active workflows first, then by name
+  const hasWorkflow = new Set(contactsWithWorkflow ?? []);
+  filtered.sort((a, b) => {
+    const aHas = hasWorkflow.has(a.id) ? 0 : 1;
+    const bHas = hasWorkflow.has(b.id) ? 0 : 1;
+    if (aHas !== bHas) return aHas - bHas;
+    return a.name.localeCompare(b.name);
   });
 
   return (
@@ -277,6 +292,14 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                           contactType={contact.type}
                           currentStage={contactStage}
                         />
+                        {hasWorkflow.has(contact.id) && workflowNames?.[contact.id] && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <Zap className="h-2.5 w-2.5 text-amber-500" />
+                            <span className="text-[9px] text-amber-600 dark:text-amber-400 font-medium truncate">
+                              {workflowNames[contact.id]}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Type badge */}
