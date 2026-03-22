@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ListingFlow Email Marketing — Realtor Walkthrough Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --purple: #4f35d2;
+    --coral: #ff5c3a;
+    --bg: #f4f2ff;
+    --text: #1a1535;
+    --muted: #6b6b8d;
+    --card: rgba(255,255,255,0.88);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Bricolage Grotesque', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #1a1535 0%, #4f35d2 50%, #ff5c3a 100%);
+    color: #fff;
+    padding: 80px 40px;
+    text-align: center;
+  }
+  .hero h1 { font-size: 48px; font-weight: 800; margin-bottom: 16px; }
+  .hero p { font-size: 20px; opacity: 0.9; max-width: 700px; margin: 0 auto; }
+  .hero .badge { display: inline-block; background: rgba(255,255,255,0.15); padding: 6px 16px; border-radius: 20px; font-size: 14px; margin-top: 20px; }
+
+  /* Container */
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+
+  /* Section */
+  .section { margin-bottom: 60px; }
+  .section-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--purple), var(--coral));
+    color: #fff; font-size: 20px; font-weight: 800;
+    margin-bottom: 16px;
+  }
+  .section h2 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+  .section .subtitle { font-size: 16px; color: var(--muted); margin-bottom: 24px; }
+
+  /* Screenshot */
+  .screenshot-container {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 12px;
+    box-shadow: 0 4px 24px rgba(79,53,210,0.08);
+    margin: 24px 0;
+    overflow: hidden;
+  }
+  .screenshot-container img {
+    width: 100%;
+    border-radius: 10px;
+    display: block;
+  }
+  .screenshot-caption {
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+    padding: 8px 0 4px;
+  }
+
+  /* Feature cards */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .feature-card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(79,53,210,0.06);
+  }
+  .feature-card .emoji { font-size: 32px; margin-bottom: 10px; }
+  .feature-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .feature-card p { font-size: 14px; color: var(--muted); }
+
+  /* Steps */
+  .step {
+    display: flex; gap: 20px; margin-bottom: 20px;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 2px 12px rgba(79,53,210,0.04);
+  }
+  .step-num {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    background: var(--purple); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px;
+  }
+  .step-content h4 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .step-content p { font-size: 14px; color: var(--muted); }
+
+  /* Callout */
+  .callout {
+    background: linear-gradient(135deg, #f0edff, #e8e5f5);
+    border-left: 4px solid var(--purple);
+    border-radius: 0 12px 12px 0;
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .callout.success { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color: #059669; }
+  .callout.warning { background: linear-gradient(135deg, #fffbeb, #fef3c7); border-color: #d97706; }
+  .callout h4 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .callout p { font-size: 14px; color: var(--muted); }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; background: var(--card); border-radius: 12px; overflow: hidden; }
+  th { background: var(--purple); color: #fff; padding: 12px 16px; text-align: left; font-size: 13px; font-weight: 600; }
+  td { padding: 10px 16px; font-size: 14px; border-bottom: 1px solid #f0edff; }
+  tr:last-child td { border-bottom: none; }
+
+  /* Footer */
+  .footer { background: var(--text); color: #fff; padding: 40px; text-align: center; margin-top: 60px; }
+  .footer p { opacity: 0.7; font-size: 14px; }
+
+  /* TOC */
+  .toc { background: var(--card); border-radius: 14px; padding: 24px; margin-bottom: 40px; }
+  .toc h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+  .toc ol { padding-left: 24px; }
+  .toc li { margin-bottom: 6px; }
+  .toc a { color: var(--purple); text-decoration: none; font-weight: 600; }
+  .toc a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>Your AI Email Marketing Assistant</h1>
+  <p>The complete guide to growing your real estate business on autopilot. Your AI agent writes, sends, and optimizes emails for every contact — so you can focus on closing deals.</p>
+  <div class="badge">ListingFlow Email Marketing Engine — Realtor Guide</div>
+</div>
+
+<div class="container">
+
+<!-- Table of Contents -->
+<div class="toc">
+  <h3>What You'll Learn</h3>
+  <ol>
+    <li><a href="#overview">The Big Picture — How It Works</a></li>
+    <li><a href="#dashboard">Your Dashboard — Everything at a Glance</a></li>
+    <li><a href="#newsletters">Newsletter & Journeys Dashboard</a></li>
+    <li><a href="#command-center">Command Center — Full Control</a></li>
+    <li><a href="#approval">Approval Queue — Review AI Drafts</a></li>
+    <li><a href="#analytics">Analytics — Track Performance</a></li>
+    <li><a href="#activity">AI Activity Feed — What Your Agent Did</a></li>
+    <li><a href="#suppressions">What the AI Held Back</a></li>
+    <li><a href="#ghost">Ghost Mode — See Before You Trust</a></li>
+    <li><a href="#insights">Agent Insights — Watch It Get Smarter</a></li>
+    <li><a href="#workflows">Automations & Workflows</a></li>
+    <li><a href="#trust">Trust Levels — Progressive Autonomy</a></li>
+    <li><a href="#roi">How This Grows Your Business</a></li>
+  </ol>
+</div>
+
+<!-- Section 1: Overview -->
+<div class="section" id="overview">
+  <div class="section-number">1</div>
+  <h2>The Big Picture</h2>
+  <p class="subtitle">Your AI agent manages email relationships with every contact — buyers, sellers, and past clients — automatically.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="emoji">🤖</div>
+      <h3>AI Writes Every Email</h3>
+      <p>Claude AI generates unique, personalized emails for each contact using their CRM data, click history, and preferences. No templates, no mail merge — every email is one-of-a-kind.</p>
+    </div>
+    <div class="feature-card">
+      <div class="emoji">📊</div>
+      <h3>Clicks Teach the System</h3>
+      <p>When a contact clicks a listing, opens a market report, or ignores an email — the AI learns. Next time, it sends exactly what they want.</p>
+    </div>
+    <div class="feature-card">
+      <div class="emoji">🔥</div>
+      <h3>Hot Lead Alerts</h3>
+      <p>When someone clicks "Book a Showing" or views a listing 4 times — you get an instant alert. Call them before they call another agent.</p>
+    </div>
+    <div class="feature-card">
+      <div class="emoji">🛡️</div>
+      <h3>You Stay in Control</h3>
+      <p>Start in Ghost Mode (AI drafts, you review everything). Gradually give it more autonomy as it proves itself. Pause anytime with one click.</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    <h4>How It's Different From Mailchimp</h4>
+    <p>Mailchimp sends the same campaign to a segment. ListingFlow's AI writes a unique email for each person based on everything it knows about them — their search history, click patterns, engagement level, and where they are in the buying/selling journey.</p>
+  </div>
+</div>
+
+<!-- Section 2: Dashboard -->
+<div class="section" id="dashboard">
+  <div class="section-number">2</div>
+  <h2>Your Dashboard</h2>
+  <p class="subtitle">Open your CRM and see everything at a glance — including what your AI did overnight.</p>
+
+  <div class="screenshot-container">
+    <img src="screenshots/01-dashboard-fold.png" alt="CRM Dashboard">
+    <p class="screenshot-caption">Your main dashboard with pipeline, quick stats, AI recommendations, and the Email Marketing tile</p>
+  </div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <h4>Email Marketing Card</h4>
+      <p>Click the "Email Marketing" tile to access your newsletter dashboard. The badge shows how many drafts are pending your review or how many emails have been sent.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <h4>AI Overnight Summary</h4>
+      <p>Every morning, the "What Your AI Did Overnight" card shows: emails sent, emails held back (with reasons), and hot lead alerts. If the AI sent emails while you slept, you can recall them within 30 minutes.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <h4>AI Recommendations</h4>
+      <p>The AI analyzes all your contacts and suggests actions: "Call Sarah — she clicked 4 listings this week" or "Send re-engagement to 3 dormant contacts." One-click to act on each.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Section 3: Newsletter Dashboard -->
+<div class="section" id="newsletters">
+  <div class="section-number">3</div>
+  <h2>Newsletter & Journeys Dashboard</h2>
+  <p class="subtitle">Your email marketing command post — see pipeline, activity, and pending approvals.</p>
+
+  <div class="screenshot-container">
+    <img src="screenshots/02-newsletter-dashboard.png" alt="Newsletter Dashboard">
+    <p class="screenshot-caption">Newsletter dashboard showing buyer/seller pipelines, email stats, pending approvals, and recent activity</p>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="emoji">👥</div>
+      <h3>Pipeline View</h3>
+      <p>See how many buyers and sellers are in each journey phase: Lead → Active → Under Contract → Past Client → Dormant. Know exactly where everyone is.</p>
+    </div>
+    <div class="feature-card">
+      <div class="emoji">📈</div>
+      <h3>Email Stats</h3>
+      <p>Total contacts, emails sent, open rate, and click rate — all in real time. Industry average is 21% open rate. Most realtors on ListingFlow see 60-85%.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Section 4: Command Center -->
+<div class="section" id="command-center">
+  <div class="section-number">4</div>
+  <h2>Command Center — Full Control</h2>
+  <p class="subtitle">One page to see and control everything: every email, every workflow, every contact's journey.</p>
+
+  <h3 style="margin: 20px 0 10px;">Email Activity Tab</h3>
+  <div class="screenshot-container">
+    <img src="screenshots/03-command-center.png" alt="Command Center — Email Activity">
+    <p class="screenshot-caption">Email Activity tab — filter by status (Sent/Pending/Failed), see open/click stats, expand to preview any email</p>
+  </div>
+
+  <h3 style="margin: 20px 0 10px;">Workflows Tab</h3>
+  <div class="screenshot-container">
+    <img src="screenshots/03b-workflows-tab.png" alt="Command Center — Workflows">
+    <p class="screenshot-caption">Workflows tab — see all automated workflows, how many contacts are enrolled, pause/resume with one click</p>
+  </div>
+
+  <h3 style="margin: 20px 0 10px;">Contact Journeys Tab</h3>
+  <div class="screenshot-container">
+    <img src="screenshots/03c-contacts-tab.png" alt="Command Center — Contact Journeys">
+    <p class="screenshot-caption">Contact Journeys tab — search contacts, see journey phase, engagement score, last email, and full email history</p>
+  </div>
+
+  <h3 style="margin: 20px 0 10px;">Schedule Tab</h3>
+  <div class="screenshot-container">
+    <img src="screenshots/03d-schedule-tab.png" alt="Command Center — Schedule">
+    <p class="screenshot-caption">Schedule tab — upcoming emails grouped by date, cancel or reschedule any individual send</p>
+  </div>
+
+  <div class="callout success">
+    <h4>Pro Tip: The 5-Minute Morning Routine</h4>
+    <p>Open Command Center → check Pending emails → approve or skip → check hot leads → done. Your AI handles the rest.</p>
+  </div>
+</div>
+
+<!-- Section 5: Approval Queue -->
+<div class="section" id="approval">
+  <div class="section-number">5</div>
+  <h2>Approval Queue — Review AI Drafts</h2>
+  <p class="subtitle">Every email the AI wants to send appears here first. Preview, approve, edit, or skip.</p>
+
+  <div class="screenshot-container">
+    <img src="screenshots/04-approval-queue.png" alt="Approval Queue">
+    <p class="screenshot-caption">AI-generated emails waiting for your review — preview in full, approve individually or in bulk</p>
+  </div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <h4>Preview Each Email</h4>
+      <p>Click any email to see the full HTML preview — exactly how it will look in your contact's inbox. The AI uses your branding, colors, and tone.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <h4>Approve or Skip</h4>
+      <p>Hit "Send" to approve, or "Skip" to discard. If you skip, the AI learns and adjusts for next time.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <h4>Bulk Approve</h4>
+      <p>Trust the AI? Hit "Approve All" to send everything at once. As you build confidence, you'll use this more.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Section 6: Analytics -->
+<div class="section" id="analytics">
+  <div class="section-number">6</div>
+  <h2>Analytics — Track Performance</h2>
+  <p class="subtitle">See exactly how your emails perform — opens, clicks, bounces, and engagement by type.</p>
+
+  <div class="screenshot-container">
+    <img src="screenshots/05-analytics.png" alt="Newsletter Analytics">
+    <p class="screenshot-caption">30-day performance: sent count, open rate, click rate, bounces, and breakdown by email type</p>
+  </div>
+
+  <div class="callout">
+    <h4>What Good Looks Like</h4>
+    <p>Industry average for real estate emails: 21% open rate, 2.6% click rate. With AI-personalized emails, most ListingFlow realtors see 60-85% open rates and 15-30% click rates — because every email is relevant to the recipient.</p>
+  </div>
+</div>
+
+<!-- Section 7: Activity Feed -->
+<div class="section" id="activity">
+  <div class="section-number">7</div>
+  <h2>AI Activity Feed</h2>
+  <p class="subtitle">See every decision your AI agent made — what it sent, what it skipped, and why.</p>
+
+  <div class="screenshot-container">
+    <img src="screenshots/06-activity-feed.png" alt="AI Activity Feed">
+    <p class="screenshot-caption">Chronological feed of all AI decisions — filter by Send/Skip/Defer/Suppress, search by contact name</p>
+  </div>
+
+  <table>
+    <tr><th>Decision</th><th>What It Means</th><th>Your Action</th></tr>
+    <tr><td><strong style="color:#059669;">Send</strong></td><td>AI found a relevant email to send this contact</td><td>Appears in approval queue (or auto-sends at higher trust levels)</td></tr>
+    <tr><td><strong style="color:#ca8a04;">Skip</strong></td><td>Marginally relevant, not worth sending</td><td>Nothing — AI exercised good judgment</td></tr>
+    <tr><td><strong style="color:#ea580c;">Defer</strong></td><td>Relevant, but bad timing (too many recent emails)</td><td>Will re-evaluate later automatically</td></tr>
+    <tr><td><strong style="color:#dc2626;">Suppress</strong></td><td>Not relevant at all for this contact</td><td>Nothing — check suppressions page if concerned</td></tr>
+  </table>
+</div>
+
+<!-- Section 8: Suppressions -->
+<div class="section" id="suppressions">
+  <div class="section-number">8</div>
+  <h2>What the AI Held Back</h2>
+  <p class="subtitle">See every email the AI decided NOT to send — and override it if you disagree.</p>
+
+  <div class="screenshot-container">
+    <img src="screenshots/07-suppressions.png" alt="Suppression Log">
+    <p class="screenshot-caption">Every suppressed email with the AI's reasoning — click "Send Anyway" to override any decision</p>
+  </div>
+
+  <div class="callout warning">
+    <h4>Why This Matters</h4>
+    <p>Most email platforms only show you what was sent. ListingFlow shows you what was <strong>held back</strong> — so you can verify the AI isn't missing opportunities. If the AI was wrong, click "Send Anyway" and it learns from the correction.</p>
+  </div>
+</div>
+
+<!-- Section 9: Ghost Mode -->
+<div class="section" id="ghost">
+  <div class="section-number">9</div>
+  <h2>Ghost Mode — See Before You Trust</h2>
+  <p class="subtitle">The AI drafts emails but doesn't send them. Compare what it would have sent vs what you actually sent.</p>
+
+  <div class="screenshot-container">
+    <img src="screenshots/08-ghost-mode.png" alt="Ghost Mode Comparison">
+    <p class="screenshot-caption">Side-by-side: what the AI would have sent vs what you actually sent. Match rate shows how often you agree.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <h4>AI Drafts Silently</h4>
+      <p>In Ghost Mode, the AI evaluates every event and drafts emails — but nothing goes out. These are stored as "ghost drafts."</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <h4>Compare Side-by-Side</h4>
+      <p>See what the AI would have sent next to what you actually sent. If there's no match, the AI shows it as a "missed opportunity."</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <h4>Build Confidence</h4>
+      <p>When the match rate hits 80%+, you know the AI gets you. That's when you promote it to Copilot mode — it drafts and you approve with one tap.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Section 10: Insights -->
+<div class="section" id="insights">
+  <div class="section-number">10</div>
+  <h2>Agent Insights — Watch It Get Smarter</h2>
+  <p class="subtitle">Monthly report showing how the AI is learning your voice and improving over time.</p>
+
+  <div class="screenshot-container">
+    <img src="screenshots/09-insights.png" alt="Agent Insights">
+    <p class="screenshot-caption">Edit rate declining over time means the AI is matching your voice. Trust promotion metrics show when you're ready to level up.</p>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="emoji">📉</div>
+      <h3>Edit Rate Trend</h3>
+      <p>Week 1: you edit 67% of emails. Week 4: you edit 0%. The AI learned your style from your corrections. Lower is better.</p>
+    </div>
+    <div class="feature-card">
+      <div class="emoji">🎤</div>
+      <h3>Voice Learning</h3>
+      <p>The AI extracts rules from your edits: "Always say 'Hey' not 'Hello'", "Keep emails under 100 words", "Don't use exclamation marks in subject lines."</p>
+    </div>
+  </div>
+</div>
+
+<!-- Section 11: Workflows -->
+<div class="section" id="workflows">
+  <div class="section-number">11</div>
+  <h2>Automations & Workflows</h2>
+  <p class="subtitle">Set up automated email sequences for different contact lifecycle stages.</p>
+
+  <div class="screenshot-container">
+    <img src="screenshots/12-automations.png" alt="Workflow Automations">
+    <p class="screenshot-caption">Workflow dashboard — create, manage, and monitor automated email sequences for buyers and sellers</p>
+  </div>
+
+  <table>
+    <tr><th>Journey Phase</th><th>Buyer Gets</th><th>Seller Gets</th></tr>
+    <tr><td><strong>Lead</strong></td><td>Welcome → Neighbourhood Guide → Listing Alerts</td><td>Welcome + CMA → Market Update → Area Guide</td></tr>
+    <tr><td><strong>Active</strong></td><td>Weekly Listing Alerts → Market Reports</td><td>Weekly Showing Summary</td></tr>
+    <tr><td><strong>Under Contract</strong></td><td>Neighbourhood Guide for new area</td><td>What Happens Next guide</td></tr>
+    <tr><td><strong>Past Client</strong></td><td>Home Anniversary → Market Updates → Referral Ask</td><td>Old Neighbourhood Update → Referral Ask</td></tr>
+    <tr><td><strong>Dormant</strong></td><td>Re-engagement → Market Update</td><td>Re-engagement → Market Update</td></tr>
+  </table>
+</div>
+
+<!-- Section 12: Trust Levels -->
+<div class="section" id="trust">
+  <div class="section-number">12</div>
+  <h2>Trust Levels — You're Always in Control</h2>
+  <p class="subtitle">The AI earns your trust gradually. You control the pace.</p>
+
+  <table>
+    <tr><th>Level</th><th>What Happens</th><th>Your Effort</th><th>When</th></tr>
+    <tr>
+      <td><strong>👻 Ghost</strong></td>
+      <td>AI drafts silently. Nothing sends. You compare later.</td>
+      <td>Zero — just observe</td>
+      <td>Week 1-2</td>
+    </tr>
+    <tr>
+      <td><strong>🤝 Copilot</strong></td>
+      <td>AI drafts go to your approval queue. One-tap to send.</td>
+      <td>~5 min/day reviewing emails</td>
+      <td>Week 3-4</td>
+    </tr>
+    <tr>
+      <td><strong>👁️ Supervised</strong></td>
+      <td>AI sends automatically. You can recall within 30 minutes.</td>
+      <td>Daily digest review</td>
+      <td>Month 2-3</td>
+    </tr>
+    <tr>
+      <td><strong>🚀 Autonomous</strong></td>
+      <td>AI handles everything. You get weekly summary + hot lead alerts.</td>
+      <td>Weekly glance</td>
+      <td>Month 4+</td>
+    </tr>
+  </table>
+
+  <div class="callout success">
+    <h4>Promotion is Always in Your Hands</h4>
+    <p>The system will suggest promotion when your edit rate drops below 15% and approval rate exceeds 50% after 20+ emails. But YOU choose when to upgrade. You can also downgrade or pause anytime with one click.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-num">🛑</div>
+    <div class="step-content">
+      <h4>Emergency Controls</h4>
+      <p><strong>Pause All:</strong> One click stops all sending. AI keeps drafting but nothing goes out.<br>
+      <strong>Never Email:</strong> Flag any contact to permanently exclude them.<br>
+      <strong>Recall:</strong> Undo any sent email within 30 minutes (Supervised mode).<br>
+      <strong>Per-Contact Override:</strong> Set trust level individually for sensitive contacts.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Section 13: ROI -->
+<div class="section" id="roi">
+  <div class="section-number">13</div>
+  <h2>How This Grows Your Business</h2>
+  <p class="subtitle">Real numbers from realtors using AI email marketing.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="emoji">⏰</div>
+      <h3>5 Hours → 5 Minutes</h3>
+      <p>Manual email writing takes 5+ hours/week. The AI does it in seconds. You just approve.</p>
+    </div>
+    <div class="feature-card">
+      <div class="emoji">📬</div>
+      <h3>3x More Touchpoints</h3>
+      <p>Most realtors send 8 emails/month manually. The AI sends 30-50, each perfectly timed and relevant.</p>
+    </div>
+    <div class="feature-card">
+      <div class="emoji">🎯</div>
+      <h3>85% Open Rate</h3>
+      <p>Because every email is unique and relevant. Industry average is 21%. Your contacts actually read your emails.</p>
+    </div>
+    <div class="feature-card">
+      <div class="emoji">💰</div>
+      <h3>2-3 Extra Deals/Year</h3>
+      <p>The AI catches leads you'd miss: the buyer who clicked 4 listings at midnight, the past client whose anniversary you forgot.</p>
+    </div>
+  </div>
+
+  <div class="callout success">
+    <h4>The Math</h4>
+    <p>If the AI helps you close just 2 extra deals per year at $25K GCI each = <strong>$50,000 additional income</strong>. The cost: $20/month for Resend. That's a <strong>2,500x ROI</strong>.</p>
+  </div>
+</div>
+
+<!-- Getting Started -->
+<div class="section">
+  <div class="section-number">🚀</div>
+  <h2>Getting Started</h2>
+  <p class="subtitle">You're already set up. Here's what to do next:</p>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <h4>Add Your Contacts</h4>
+      <p>Import your buyers and sellers. The AI automatically enrolls each one in the right journey.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <h4>Check Ghost Mode</h4>
+      <p>For the first 2 weeks, the AI drafts silently. Visit the Ghost page to see what it would send.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <h4>Promote to Copilot</h4>
+      <p>When you're comfortable with the drafts, upgrade to Copilot. Emails appear in your approval queue.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-content">
+      <h4>Review 5 Minutes/Day</h4>
+      <p>Open the queue each morning. Preview, approve, or skip. The AI learns from every decision.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-content">
+      <h4>Watch It Get Smarter</h4>
+      <p>Check Insights monthly. Your edit rate drops. The AI sounds more like you. When you're ready, go Supervised.</p>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <p><strong>ListingFlow</strong> — AI-Powered Real Estate CRM</p>
+  <p style="margin-top: 8px;">Built for BC realtors who want to close more deals with less effort.</p>
+  <p style="margin-top: 16px; font-size: 12px;">© 2026 ListingFlow. All rights reserved.</p>
+</div>
+
+</body>
+</html>

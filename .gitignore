@@ -47,3 +47,4 @@ listingflow-agent/.previews/
 
 # playwright
 **/playwright-report/
+guides/screenshots/*.png
