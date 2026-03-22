@@ -42,6 +42,9 @@ export default async function NewsletterDashboard() {
             <Link href="/newsletters/analytics" className="lf-btn-sm lf-btn-ghost" style={{ textDecoration: "none" }}>
               {"\u{1F4CA}"} Analytics
             </Link>
+            <Link href="/newsletters/control" className="lf-btn-sm" style={{ textDecoration: "none", background: "linear-gradient(135deg, #4f35d2, #6c4fe6)", color: "#fff", border: "none" }}>
+              {"\u{1F39B}\uFE0F"} Command Center
+            </Link>
           </div>
         </div>
       </div>

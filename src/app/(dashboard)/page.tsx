@@ -15,12 +15,10 @@ import {
   Globe,
   Mail,
   ArrowRight,
-  AlertTriangle,
   Target,
   Trophy,
   DollarSign,
   Landmark,
-  Calendar,
 } from "lucide-react";
 import { RemindersWidget } from "@/components/dashboard/RemindersWidget";
 import PipelineSnapshot from "@/components/dashboard/PipelineSnapshot";
@@ -99,6 +97,14 @@ export default async function DashboardPage() {
       .order("renewal_date", { ascending: true }),
     supabase.from("contacts").select("id, stage_bar, type"),
     supabase.from("listings").select("id, seller_id, buyer_id, list_price, sold_price, commission_rate, commission_amount, status"),
+  ]);
+
+  const [
+    { count: pendingNewsletters },
+    { count: sentNewsletters },
+  ] = await Promise.all([
+    supabase.from("newsletters").select("*", { count: "exact", head: true }).eq("status", "draft"),
+    supabase.from("newsletters").select("*", { count: "exact", head: true }).eq("status", "sent"),
   ]);
 
   const { data: allListings } = await supabase
@@ -332,12 +338,12 @@ export default async function DashboardPage() {
     {
       key: "newsletters",
       href: "/newsletters",
-      title: "Newsletters",
-      description: "AI-powered email journeys & campaigns",
+      title: "Email Marketing",
+      description: "AI newsletters, journeys & click intelligence",
       icon: Mail,
-      gradient: "gradient-violet",
-      count: null,
-      countLabel: null,
+      gradient: "gradient-rose",
+      count: (pendingNewsletters ?? 0) > 0 ? pendingNewsletters : (sentNewsletters ?? 0) > 0 ? sentNewsletters : null,
+      countLabel: (pendingNewsletters ?? 0) > 0 ? "drafts" : "sent",
     },
   ];
 
