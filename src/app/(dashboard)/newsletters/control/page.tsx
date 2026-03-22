@@ -33,12 +33,21 @@ export default async function ControlPanelPage() {
               {"🎛️"} Command Center
             </h1>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <Link href="/newsletters/queue" className="lf-btn-sm lf-btn-ghost" style={{ textDecoration: "none", fontSize: 13 }}>
-              {"📬"} Queue
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <Link href="/newsletters/activity" className="lf-btn-sm lf-btn-ghost" style={{ textDecoration: "none", fontSize: 12 }}>
+              {"🤖"} Activity
             </Link>
-            <Link href="/newsletters/analytics" className="lf-btn-sm lf-btn-ghost" style={{ textDecoration: "none", fontSize: 13 }}>
-              {"📊"} Analytics
+            <Link href="/newsletters/suppressions" className="lf-btn-sm lf-btn-ghost" style={{ textDecoration: "none", fontSize: 12 }}>
+              {"🤚"} Held Back
+            </Link>
+            <Link href="/newsletters/ghost" className="lf-btn-sm lf-btn-ghost" style={{ textDecoration: "none", fontSize: 12 }}>
+              {"👻"} Ghost
+            </Link>
+            <Link href="/newsletters/insights" className="lf-btn-sm lf-btn-ghost" style={{ textDecoration: "none", fontSize: 12 }}>
+              {"📊"} Insights
+            </Link>
+            <Link href="/newsletters/queue" className="lf-btn-sm lf-btn-ghost" style={{ textDecoration: "none", fontSize: 12 }}>
+              {"📬"} Queue
             </Link>
           </div>
         </div>

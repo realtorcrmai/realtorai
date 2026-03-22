@@ -24,6 +24,8 @@ import { RemindersWidget } from "@/components/dashboard/RemindersWidget";
 import PipelineSnapshot from "@/components/dashboard/PipelineSnapshot";
 import AIRecommendations from "@/components/dashboard/AIRecommendations";
 import { getRecommendations } from "@/actions/recommendations";
+import { getOvernightSummary } from "@/actions/agent-settings";
+import OvernightSummary from "@/components/dashboard/OvernightSummary";
 
 export const dynamic = "force-dynamic";
 
@@ -440,6 +442,9 @@ export default async function DashboardPage() {
         ))}
       </div>
 
+      {/* AI Overnight Summary */}
+      <OvernightSummarySection />
+
       {/* Pipeline Snapshot — primary dashboard visual */}
       <div className="animate-float-in" style={{ animationDelay: "80ms" }}>
         <PipelineSnapshot stages={pipelineStages} totalGCI={totalGCI} />
@@ -611,6 +616,15 @@ export default async function DashboardPage() {
     </div>
     </div>
   );
+}
+
+async function OvernightSummarySection() {
+  try {
+    const data = await getOvernightSummary();
+    return <OvernightSummary data={data} />;
+  } catch {
+    return null;
+  }
 }
 
 async function AIRecommendationsSection() {
