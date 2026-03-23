@@ -16,8 +16,6 @@ import {
   ACTION_TYPE_LABELS,
   ACTION_TYPE_ICONS,
   ACTION_TYPE_COLORS,
-  WORKFLOW_ACTION_TYPES,
-  ENROLLMENT_STATUS_COLORS,
   formatDelay,
   getWorkflowBlueprint,
 } from "@/lib/constants";
@@ -32,14 +30,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -57,9 +47,15 @@ import {
   Loader2,
   Check,
   Clock,
-  Users,
   Zap,
 } from "lucide-react";
+
+import {
+  StepEditorDialog,
+  defaultStepForm,
+  type StepFormData,
+} from "./StepEditorDialog";
+import { EnrollmentsSidebar } from "./EnrollmentsSidebar";
 
 type WorkflowWithSteps = Workflow & { workflow_steps: WorkflowStep[] };
 type EnrollmentWithContact = WorkflowEnrollment & {
@@ -72,40 +68,6 @@ interface WorkflowDetailProps {
   templates: MessageTemplate[];
   contacts: { id: string; name: string; type: string }[];
 }
-
-const DELAY_UNITS = [
-  { value: "minutes", label: "Minutes" },
-  { value: "hours", label: "Hours" },
-  { value: "days", label: "Days" },
-];
-
-type StepFormData = {
-  name: string;
-  action_type: string;
-  delay_value: number;
-  delay_unit: string;
-  template_id: string;
-  exit_on_reply: boolean;
-  task_title: string;
-  task_priority: string;
-  task_category: string;
-  action_action: string;
-  action_value: string;
-};
-
-const defaultStepForm: StepFormData = {
-  name: "",
-  action_type: "auto_sms",
-  delay_value: 0,
-  delay_unit: "minutes",
-  template_id: "",
-  exit_on_reply: false,
-  task_title: "",
-  task_priority: "medium",
-  task_category: "follow_up",
-  action_action: "",
-  action_value: "",
-};
 
 export default function WorkflowDetail({
   workflow,
@@ -546,7 +508,6 @@ export default function WorkflowDetail({
                         {/* Step content */}
                         <div className="flex-1 min-w-0 pt-0.5">
                           <div className="flex items-center gap-2 flex-wrap">
-                            {/* Action type badge */}
                             <Badge
                               variant="secondary"
                               className={`${colors.bg} ${colors.text} text-xs font-medium px-2 py-0.5`}
@@ -679,450 +640,32 @@ export default function WorkflowDetail({
         </div>
 
         {/* ── Enrollments Sidebar (1/3 width) ──────────────────── */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Users className="w-5 h-5 text-[var(--lf-indigo)]" />
-              Enrollments
-              <Badge variant="secondary" className="ml-1">
-                {enrollments.length}
-              </Badge>
-            </h2>
-            <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
-              <DialogTrigger
-                render={
-                  <Button size="sm" variant="outline">
-                    <Plus className="w-4 h-4 mr-1" />
-                    Enroll
-                  </Button>
-                }
-              />
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Enroll Contact</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 pt-2">
-                  <div>
-                    <Label>Select Contact</Label>
-                    <Select
-                      value={selectedContactId || undefined}
-                      onValueChange={(val) => setSelectedContactId(val ?? "")}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {contacts.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}{" "}
-                            <span className="text-muted-foreground text-xs ml-1">
-                              ({c.type})
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setEnrollDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleEnroll}
-                      disabled={!selectedContactId || isPending}
-                    >
-                      {isPending ? (
-                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                      ) : (
-                        <Plus className="w-4 h-4 mr-1" />
-                      )}
-                      Enroll
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {enrollments.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <div className="text-3xl mb-2">👥</div>
-                <p className="text-sm text-muted-foreground">
-                  No contacts enrolled yet.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-2">
-              {enrollments.map((enrollment) => {
-                const statusColor =
-                  ENROLLMENT_STATUS_COLORS[
-                    enrollment.status as keyof typeof ENROLLMENT_STATUS_COLORS
-                  ] || "bg-gray-100 text-gray-800";
-
-                return (
-                  <Card key={enrollment.id} className="overflow-hidden">
-                    <CardContent className="p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <Link
-                            href={`/contacts/${enrollment.contact_id}`}
-                            className="text-sm font-medium text-[var(--lf-indigo)] hover:underline block truncate"
-                          >
-                            {enrollment.contacts?.name || "Unknown Contact"}
-                          </Link>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge
-                              className={`${statusColor} text-xs px-1.5 py-0`}
-                            >
-                              {enrollment.status}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              Step {enrollment.current_step} of {steps.length}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Started{" "}
-                            {new Date(enrollment.started_at).toLocaleDateString(
-                              "en-CA",
-                              {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              }
-                            )}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          {(enrollment.status === "active" ||
-                            enrollment.status === "paused") && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 w-7 p-0"
-                                onClick={() =>
-                                  handleToggleEnrollment(
-                                    enrollment.id,
-                                    enrollment.status
-                                  )
-                                }
-                                disabled={isPending}
-                                title={
-                                  enrollment.status === "active"
-                                    ? "Pause"
-                                    : "Resume"
-                                }
-                              >
-                                {enrollment.status === "active" ? (
-                                  <Pause className="w-3.5 h-3.5" />
-                                ) : (
-                                  <Play className="w-3.5 h-3.5" />
-                                )}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 w-7 p-0 text-red-500 hover:text-red-600"
-                                onClick={() =>
-                                  handleExitEnrollment(enrollment.id)
-                                }
-                                disabled={isPending}
-                                title="Exit workflow"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <EnrollmentsSidebar
+          enrollments={enrollments}
+          contacts={contacts}
+          stepsCount={steps.length}
+          enrollDialogOpen={enrollDialogOpen}
+          onEnrollDialogOpenChange={setEnrollDialogOpen}
+          selectedContactId={selectedContactId}
+          onSelectedContactChange={setSelectedContactId}
+          onEnroll={handleEnroll}
+          onToggleEnrollment={handleToggleEnrollment}
+          onExitEnrollment={handleExitEnrollment}
+          isPending={isPending}
+        />
       </div>
 
       {/* ── Step Editor Dialog ──────────────────────────────────── */}
-      <Dialog open={stepDialogOpen} onOpenChange={setStepDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {editingStep ? "Edit Step" : "Add Step"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-2">
-            {/* Step Name */}
-            <div>
-              <Label>Step Name</Label>
-              <Input
-                value={stepForm.name}
-                onChange={(e) =>
-                  setStepForm({ ...stepForm, name: e.target.value })
-                }
-                placeholder="e.g. Send welcome email"
-                className="mt-1"
-              />
-            </div>
-
-            {/* Action Type */}
-            <div>
-              <Label>Action Type</Label>
-              <Select
-                value={stepForm.action_type}
-                onValueChange={(val) =>
-                  setStepForm({ ...stepForm, action_type: val ?? "auto_sms" })
-                }
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {WORKFLOW_ACTION_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      <span className="mr-2">
-                        {ACTION_TYPE_ICONS[type]}
-                      </span>
-                      {ACTION_TYPE_LABELS[type]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Delay */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Delay Value</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={stepForm.delay_value}
-                  onChange={(e) =>
-                    setStepForm({
-                      ...stepForm,
-                      delay_value: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label>Delay Unit</Label>
-                <Select
-                  value={stepForm.delay_unit}
-                  onValueChange={(val) =>
-                    setStepForm({ ...stepForm, delay_unit: val ?? "minutes" })
-                  }
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DELAY_UNITS.map((u) => (
-                      <SelectItem key={u.value} value={u.value}>
-                        {u.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Template (for message types) */}
-            {["auto_email", "auto_sms", "auto_whatsapp"].includes(
-              stepForm.action_type
-            ) && (
-              <div>
-                <Label>Message Template</Label>
-                <Select
-                  value={stepForm.template_id || "none"}
-                  onValueChange={(val) =>
-                    setStepForm({
-                      ...stepForm,
-                      template_id: val === "none" || !val ? "" : val,
-                    })
-                  }
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No template</SelectItem>
-                    {templates.map((tpl) => (
-                      <SelectItem key={tpl.id} value={tpl.id}>
-                        {tpl.name}{" "}
-                        <span className="text-muted-foreground">
-                          ({tpl.channel})
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Exit on reply checkbox */}
-            {["auto_email", "auto_sms", "auto_whatsapp"].includes(
-              stepForm.action_type
-            ) && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="exit_on_reply"
-                  checked={stepForm.exit_on_reply}
-                  onChange={(e) =>
-                    setStepForm({
-                      ...stepForm,
-                      exit_on_reply: e.target.checked,
-                    })
-                  }
-                  className="rounded border-gray-300 text-[var(--lf-indigo)] focus:ring-[var(--lf-indigo)]"
-                />
-                <Label htmlFor="exit_on_reply" className="text-sm font-normal">
-                  Exit workflow if contact replies
-                </Label>
-              </div>
-            )}
-
-            {/* Manual Task fields */}
-            {stepForm.action_type === "manual_task" && (
-              <div className="space-y-3 border-t pt-3">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Task Configuration
-                </p>
-                <div>
-                  <Label>Task Title</Label>
-                  <Input
-                    value={stepForm.task_title}
-                    onChange={(e) =>
-                      setStepForm({ ...stepForm, task_title: e.target.value })
-                    }
-                    placeholder="e.g. Call new lead"
-                    className="mt-1"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Priority</Label>
-                    <Select
-                      value={stepForm.task_priority}
-                      onValueChange={(val) =>
-                        setStepForm({ ...stepForm, task_priority: val ?? "medium" })
-                      }
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="urgent">Urgent</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Category</Label>
-                    <Select
-                      value={stepForm.task_category}
-                      onValueChange={(val) =>
-                        setStepForm({ ...stepForm, task_category: val ?? "follow_up" })
-                      }
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="follow_up">Follow Up</SelectItem>
-                        <SelectItem value="showing">Showing</SelectItem>
-                        <SelectItem value="closing">Closing</SelectItem>
-                        <SelectItem value="marketing">Marketing</SelectItem>
-                        <SelectItem value="general">General</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* System Action fields */}
-            {stepForm.action_type === "system_action" && (
-              <div className="space-y-3 border-t pt-3">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  System Action Configuration
-                </p>
-                <div>
-                  <Label>Action Type</Label>
-                  <Select
-                    value={stepForm.action_action || undefined}
-                    onValueChange={(val) =>
-                      setStepForm({ ...stepForm, action_action: val ?? "" })
-                    }
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="change_lead_status">
-                        Change Lead Status
-                      </SelectItem>
-                      <SelectItem value="add_tag">Add Tag</SelectItem>
-                      <SelectItem value="remove_tag">Remove Tag</SelectItem>
-                      <SelectItem value="change_lifecycle_stage">
-                        Change Lifecycle Stage
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Value</Label>
-                  <Input
-                    value={stepForm.action_value}
-                    onChange={(e) =>
-                      setStepForm({
-                        ...stepForm,
-                        action_value: e.target.value,
-                      })
-                    }
-                    placeholder="e.g. nurturing, cold_lead"
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Save / Cancel */}
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => setStepDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSaveStep}
-                disabled={!stepForm.name || isPending}
-              >
-                {isPending ? (
-                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                ) : editingStep ? (
-                  <Check className="w-4 h-4 mr-1" />
-                ) : (
-                  <Plus className="w-4 h-4 mr-1" />
-                )}
-                {editingStep ? "Update Step" : "Add Step"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <StepEditorDialog
+        open={stepDialogOpen}
+        onOpenChange={setStepDialogOpen}
+        editingStep={editingStep}
+        stepForm={stepForm}
+        onStepFormChange={setStepForm}
+        onSave={handleSaveStep}
+        isPending={isPending}
+        templates={templates}
+      />
     </div>
   );
 }
