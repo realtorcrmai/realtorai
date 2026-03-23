@@ -1,175 +1,228 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ============================================================
 # ListingFlow Secret Vault
-# Encrypts/decrypts .env.local for team sharing via git
+# Encrypts/decrypts .env.local using OpenSSL AES-256-CBC
+#
 # Usage:
-#   ./scripts/vault.sh encrypt    # .env.local → .env.vault (commit this)
-#   ./scripts/vault.sh decrypt    # .env.vault → .env.local (run after pull)
-#   ./scripts/vault.sh status     # show what's stored
+#   ./scripts/vault.sh encrypt    # .env.local → .env.vault
+#   ./scripts/vault.sh decrypt    # .env.vault → .env.local
+#   ./scripts/vault.sh status     # Show loaded secrets count
+#   ./scripts/vault.sh diff       # Compare vault vs local
+#
+# The .env.vault file is safe to commit to git.
+# The .env.local file must NEVER be committed.
 # ============================================================
 
-set -e
+set -euo pipefail
 
-VAULT_FILE=".env.vault"
-ENV_FILE=".env.local"
-VAULT_PASS_FILE=".vault-pass"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+ENV_FILE="$PROJECT_ROOT/.env.local"
+VAULT_FILE="$PROJECT_ROOT/.env.vault"
+CIPHER="aes-256-cbc"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-get_passphrase() {
-  # Check for passphrase file first (for CI/automation)
-  if [ -f "$VAULT_PASS_FILE" ]; then
-    cat "$VAULT_PASS_FILE"
-    return
-  fi
+usage() {
+  echo "Usage: $0 {encrypt|decrypt|status|diff}"
+  echo ""
+  echo "  encrypt   Encrypt .env.local → .env.vault"
+  echo "  decrypt   Decrypt .env.vault → .env.local"
+  echo "  status    Show count of secrets in .env.local"
+  echo "  diff      Compare vault contents vs .env.local"
+  exit 1
+}
 
-  # Check env var
-  if [ -n "$VAULT_PASSPHRASE" ]; then
+get_passphrase() {
+  if [ -n "${VAULT_PASSPHRASE:-}" ]; then
     echo "$VAULT_PASSPHRASE"
     return
   fi
 
-  # Prompt
-  read -s -p "Vault passphrase: " pass
-  echo >&2
-  echo "$pass"
+  if [ -t 0 ]; then
+    read -s -p "Vault passphrase: " PASS
+    echo "" >&2
+    echo "$PASS"
+  else
+    # Non-interactive — read from stdin
+    read -r PASS
+    echo "$PASS"
+  fi
 }
 
-case "${1:-help}" in
+count_secrets() {
+  local file="$1"
+  grep -c '^[A-Z_]\+=' "$file" 2>/dev/null || echo "0"
+}
 
-  encrypt)
-    if [ ! -f "$ENV_FILE" ]; then
-      echo -e "${RED}Error: $ENV_FILE not found${NC}"
-      exit 1
-    fi
+cmd_encrypt() {
+  if [ ! -f "$ENV_FILE" ]; then
+    echo -e "${RED}Error: $ENV_FILE not found${NC}"
+    exit 1
+  fi
 
-    PASS=$(get_passphrase)
-    if [ -z "$PASS" ]; then
-      echo -e "${RED}Error: passphrase cannot be empty${NC}"
-      exit 1
-    fi
+  PASS=$(get_passphrase)
 
-    # Encrypt with AES-256-CBC
-    openssl enc -aes-256-cbc -salt -pbkdf2 -iter 100000 \
-      -in "$ENV_FILE" -out "$VAULT_FILE" -pass "pass:$PASS"
+  openssl enc -$CIPHER -salt -pbkdf2 -iter 100000 \
+    -in "$ENV_FILE" -out "$VAULT_FILE" \
+    -pass "pass:$PASS"
 
-    # Count secrets
-    SECRET_COUNT=$(grep -c "=" "$ENV_FILE" 2>/dev/null || echo "0")
-    VAULT_SIZE=$(wc -c < "$VAULT_FILE" | tr -d ' ')
+  local count=$(count_secrets "$ENV_FILE")
+  echo -e "${GREEN}✅ Encrypted $count secrets → .env.vault${NC}"
+  echo "  Commit .env.vault to git (never commit .env.local)"
+}
 
-    echo -e "${GREEN}✓ Encrypted $SECRET_COUNT secrets → $VAULT_FILE ($VAULT_SIZE bytes)${NC}"
-    echo -e "${YELLOW}  Commit $VAULT_FILE to git. Share the passphrase with your team securely.${NC}"
-    echo -e "  Never commit $ENV_FILE directly."
-    ;;
+cmd_decrypt() {
+  if [ ! -f "$VAULT_FILE" ]; then
+    echo -e "${RED}Error: .env.vault not found${NC}"
+    echo "  Ask a teammate for the vault file or passphrase"
+    exit 1
+  fi
 
-  decrypt)
-    if [ ! -f "$VAULT_FILE" ]; then
-      echo -e "${RED}Error: $VAULT_FILE not found. Pull latest code first.${NC}"
-      exit 1
-    fi
-
-    if [ -f "$ENV_FILE" ]; then
-      echo -e "${YELLOW}Warning: $ENV_FILE already exists.${NC}"
-      read -p "Overwrite? (y/N) " confirm
-      if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
+  if [ -f "$ENV_FILE" ]; then
+    local existing=$(count_secrets "$ENV_FILE")
+    echo -e "${YELLOW}⚠️  .env.local exists ($existing secrets). Overwrite? [y/N]${NC}"
+    if [ -t 0 ]; then
+      read -r CONFIRM
+      if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
         echo "Aborted."
         exit 0
       fi
-    fi
-
-    PASS=$(get_passphrase)
-    if [ -z "$PASS" ]; then
-      echo -e "${RED}Error: passphrase cannot be empty${NC}"
-      exit 1
-    fi
-
-    # Decrypt
-    if openssl enc -aes-256-cbc -d -salt -pbkdf2 -iter 100000 \
-      -in "$VAULT_FILE" -out "$ENV_FILE" -pass "pass:$PASS" 2>/dev/null; then
-
-      SECRET_COUNT=$(grep -c "=" "$ENV_FILE" 2>/dev/null || echo "0")
-      echo -e "${GREEN}✓ Decrypted $SECRET_COUNT secrets → $ENV_FILE${NC}"
     else
-      echo -e "${RED}✗ Decryption failed — wrong passphrase?${NC}"
-      rm -f "$ENV_FILE"
-      exit 1
+      echo "  Non-interactive mode — overwriting"
     fi
-    ;;
+  fi
 
-  status)
-    echo "=== Vault Status ==="
-    if [ -f "$VAULT_FILE" ]; then
-      VAULT_SIZE=$(wc -c < "$VAULT_FILE" | tr -d ' ')
-      VAULT_DATE=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M" "$VAULT_FILE" 2>/dev/null || stat -c "%y" "$VAULT_FILE" 2>/dev/null | cut -d. -f1)
-      echo -e "${GREEN}✓ $VAULT_FILE exists ($VAULT_SIZE bytes, updated $VAULT_DATE)${NC}"
-    else
-      echo -e "${RED}✗ $VAULT_FILE not found${NC}"
+  PASS=$(get_passphrase)
+
+  if ! openssl enc -$CIPHER -d -salt -pbkdf2 -iter 100000 \
+    -in "$VAULT_FILE" -out "$ENV_FILE" \
+    -pass "pass:$PASS" 2>/dev/null; then
+    echo -e "${RED}❌ Decryption failed — wrong passphrase?${NC}"
+    rm -f "$ENV_FILE.tmp" 2>/dev/null
+    exit 1
+  fi
+
+  local count=$(count_secrets "$ENV_FILE")
+  echo -e "${GREEN}✅ Decrypted $count secrets → .env.local${NC}"
+
+  # Verify .env.local is gitignored
+  if ! grep -q "^\.env\.local$" "$PROJECT_ROOT/.gitignore" 2>/dev/null; then
+    echo ".env.local" >> "$PROJECT_ROOT/.gitignore"
+    echo -e "${YELLOW}  Added .env.local to .gitignore${NC}"
+  fi
+  echo "  .env.local is NOT tracked by git ✓"
+}
+
+cmd_status() {
+  echo "━━━ Vault Status ━━━"
+
+  if [ -f "$VAULT_FILE" ]; then
+    local vsize=$(wc -c < "$VAULT_FILE" | tr -d ' ')
+    local vdate=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M" "$VAULT_FILE" 2>/dev/null || stat -c "%y" "$VAULT_FILE" 2>/dev/null | cut -d. -f1)
+    echo -e "  ${GREEN}✅ .env.vault${NC} ($vsize bytes, modified $vdate)"
+  else
+    echo -e "  ${RED}❌ .env.vault not found${NC}"
+  fi
+
+  if [ -f "$ENV_FILE" ]; then
+    local count=$(count_secrets "$ENV_FILE")
+    local ldate=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M" "$ENV_FILE" 2>/dev/null || stat -c "%y" "$ENV_FILE" 2>/dev/null | cut -d. -f1)
+    echo -e "  ${GREEN}✅ .env.local${NC} ($count secrets, modified $ldate)"
+    echo ""
+    echo "  Secrets loaded:"
+    grep '^[A-Z_]\+=' "$ENV_FILE" | while IFS='=' read -r key value; do
+      if [ -n "$value" ]; then
+        local masked="${value:0:4}***"
+        echo -e "    ${GREEN}✓${NC} $key = $masked"
+      else
+        echo -e "    ${RED}✗${NC} $key = (empty)"
+      fi
+    done
+  else
+    echo -e "  ${RED}❌ .env.local not found — run: ./scripts/vault.sh decrypt${NC}"
+  fi
+
+  # Git tracking check
+  echo ""
+  if git ls-files --error-unmatch .env.local &>/dev/null; then
+    echo -e "  ${RED}⚠️  WARNING: .env.local IS tracked by git! Remove it:${NC}"
+    echo "    git rm --cached .env.local"
+  else
+    echo -e "  ${GREEN}✓${NC} .env.local is NOT tracked by git"
+  fi
+}
+
+cmd_diff() {
+  if [ ! -f "$VAULT_FILE" ]; then
+    echo -e "${RED}No .env.vault to compare${NC}"
+    exit 1
+  fi
+  if [ ! -f "$ENV_FILE" ]; then
+    echo -e "${RED}No .env.local to compare${NC}"
+    exit 1
+  fi
+
+  PASS=$(get_passphrase)
+
+  local tmp=$(mktemp)
+  if ! openssl enc -$CIPHER -d -salt -pbkdf2 -iter 100000 \
+    -in "$VAULT_FILE" -out "$tmp" \
+    -pass "pass:$PASS" 2>/dev/null; then
+    echo -e "${RED}❌ Decryption failed${NC}"
+    rm -f "$tmp"
+    exit 1
+  fi
+
+  # Compare keys only (not values for security)
+  local vault_keys=$(grep '^[A-Z_]\+=' "$tmp" | cut -d= -f1 | sort)
+  local local_keys=$(grep '^[A-Z_]\+=' "$ENV_FILE" | cut -d= -f1 | sort)
+
+  echo "━━━ Vault vs Local ━━━"
+
+  local only_vault=$(comm -23 <(echo "$vault_keys") <(echo "$local_keys"))
+  local only_local=$(comm -13 <(echo "$vault_keys") <(echo "$local_keys"))
+  local in_both=$(comm -12 <(echo "$vault_keys") <(echo "$local_keys"))
+
+  if [ -n "$only_vault" ]; then
+    echo -e "${RED}  In vault but NOT in local:${NC}"
+    echo "$only_vault" | sed 's/^/    /'
+  fi
+
+  if [ -n "$only_local" ]; then
+    echo -e "${YELLOW}  In local but NOT in vault (re-encrypt needed):${NC}"
+    echo "$only_local" | sed 's/^/    /'
+  fi
+
+  local both_count=$(echo "$in_both" | wc -l | tr -d ' ')
+  echo -e "  ${GREEN}$both_count keys in both${NC}"
+
+  # Check for value differences
+  local changed=0
+  while IFS= read -r key; do
+    local v1=$(grep "^${key}=" "$tmp" | cut -d= -f2-)
+    local v2=$(grep "^${key}=" "$ENV_FILE" | cut -d= -f2-)
+    if [ "$v1" != "$v2" ]; then
+      echo -e "  ${YELLOW}↔ $key has different values${NC}"
+      changed=$((changed+1))
     fi
+  done <<< "$in_both"
 
-    if [ -f "$ENV_FILE" ]; then
-      SECRET_COUNT=$(grep -c "=" "$ENV_FILE" 2>/dev/null || echo "0")
-      echo -e "${GREEN}✓ $ENV_FILE exists ($SECRET_COUNT secrets)${NC}"
+  if [ "$changed" -eq 0 ]; then
+    echo -e "  ${GREEN}All shared keys have matching values${NC}"
+  fi
 
-      # Show which keys are set (not values)
-      echo ""
-      echo "Keys in $ENV_FILE:"
-      grep "=" "$ENV_FILE" | grep -v "^#" | cut -d= -f1 | while read key; do
-        val=$(grep "^$key=" "$ENV_FILE" | cut -d= -f2-)
-        if [ -z "$val" ]; then
-          echo -e "  ${RED}○ $key (empty)${NC}"
-        else
-          masked="${val:0:4}****"
-          echo -e "  ${GREEN}● $key${NC} = $masked"
-        fi
-      done
-    else
-      echo -e "${YELLOW}✗ $ENV_FILE not found — run './scripts/vault.sh decrypt'${NC}"
-    fi
-    ;;
+  rm -f "$tmp"
+}
 
-  rotate)
-    if [ ! -f "$ENV_FILE" ]; then
-      echo -e "${RED}Error: $ENV_FILE not found. Decrypt first.${NC}"
-      exit 1
-    fi
-
-    echo "Enter OLD passphrase:"
-    read -s OLD_PASS
-    echo ""
-    echo "Enter NEW passphrase:"
-    read -s NEW_PASS
-    echo ""
-    echo "Confirm NEW passphrase:"
-    read -s CONFIRM_PASS
-    echo ""
-
-    if [ "$NEW_PASS" != "$CONFIRM_PASS" ]; then
-      echo -e "${RED}Passphrases don't match${NC}"
-      exit 1
-    fi
-
-    # Re-encrypt with new passphrase
-    openssl enc -aes-256-cbc -salt -pbkdf2 -iter 100000 \
-      -in "$ENV_FILE" -out "$VAULT_FILE" -pass "pass:$NEW_PASS"
-
-    echo -e "${GREEN}✓ Vault re-encrypted with new passphrase${NC}"
-    echo -e "${YELLOW}  Share the new passphrase with your team.${NC}"
-    ;;
-
-  *)
-    echo "ListingFlow Secret Vault"
-    echo ""
-    echo "Usage:"
-    echo "  ./scripts/vault.sh encrypt   Encrypt .env.local → .env.vault"
-    echo "  ./scripts/vault.sh decrypt   Decrypt .env.vault → .env.local"
-    echo "  ./scripts/vault.sh status    Show vault status and keys"
-    echo "  ./scripts/vault.sh rotate    Change vault passphrase"
-    echo ""
-    echo "Set VAULT_PASSPHRASE env var or create .vault-pass file to skip prompt."
-    echo "The .vault-pass file is gitignored."
-    ;;
-
+# ── Main ────────────────────────────────────────
+case "${1:-}" in
+  encrypt) cmd_encrypt ;;
+  decrypt) cmd_decrypt ;;
+  status)  cmd_status ;;
+  diff)    cmd_diff ;;
+  *)       usage ;;
 esac
