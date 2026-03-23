@@ -21,6 +21,10 @@ export const contactSchema = z.object({
   job_title: z.string().optional(),
   typical_client_profile: z.string().optional(),
   referral_agreement_terms: z.string().optional(),
+  // JSONB preference fields
+  buyer_preferences: z.record(z.string(), z.unknown()).optional(),
+  seller_preferences: z.record(z.string(), z.unknown()).optional(),
+  demographics: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type ContactFormData = z.infer<typeof contactSchema>;

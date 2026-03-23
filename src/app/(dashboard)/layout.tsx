@@ -13,10 +13,12 @@ export default function DashboardLayout({
       {/* Header with horizontal nav (desktop) / mobile top bar */}
       <AppHeader />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Main content area */}
-        <main className="flex-1 overflow-hidden bg-background bg-canvas">
-          {children}
+        <main className="flex-1 min-h-0 overflow-y-auto bg-background bg-canvas">
+          <div className="p-4 md:p-6 pb-24">
+            {children}
+          </div>
         </main>
       </div>
 

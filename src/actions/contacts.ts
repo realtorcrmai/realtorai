@@ -6,6 +6,24 @@ import { contactSchema, type ContactFormData } from "@/lib/schemas";
 import type { Json } from "@/types/database";
 import { enforceConsistency } from "@/lib/contact-consistency";
 
+export async function checkDuplicateContact(phone: string, email?: string) {
+  const supabase = createAdminClient();
+  const normalizedPhone = phone.replace(/[\s\-\(\)\.]/g, "");
+  const last10 = normalizedPhone.slice(-10);
+
+  const { data: matches } = await supabase
+    .from("contacts")
+    .select("id, name, phone, email")
+    .or(`phone.ilike.%${last10},email.ilike.${email || "NOMATCH"}`)
+    .limit(1);
+
+  if (matches?.length) {
+    const matchedOn = matches[0].phone?.includes(last10) ? "phone" : "email";
+    return { duplicate: true, existing: matches[0], matchedOn };
+  }
+  return { duplicate: false };
+}
+
 export async function createContact(formData: ContactFormData) {
   const parsed = contactSchema.safeParse(formData);
   if (!parsed.success) {
@@ -13,6 +31,16 @@ export async function createContact(formData: ContactFormData) {
   }
 
   const supabase = createAdminClient();
+
+  // Duplicate check
+  const dupCheck = await checkDuplicateContact(parsed.data.phone, parsed.data.email || undefined);
+  if (dupCheck.duplicate) {
+    return {
+      error: `Contact already exists: ${dupCheck.existing?.name} (matched by ${dupCheck.matchedOn})`,
+      duplicate: dupCheck.existing,
+    };
+  }
+
   const { data, error } = await supabase
     .from("contacts")
     .insert({
@@ -31,6 +59,9 @@ export async function createContact(formData: ContactFormData) {
       job_title: parsed.data.job_title || null,
       typical_client_profile: parsed.data.typical_client_profile || null,
       referral_agreement_terms: parsed.data.referral_agreement_terms || null,
+      buyer_preferences: (parsed.data.buyer_preferences as Json) ?? null,
+      seller_preferences: (parsed.data.seller_preferences as Json) ?? null,
+      demographics: (parsed.data.demographics as Json) ?? null,
     })
     .select()
     .single();
@@ -40,6 +71,60 @@ export async function createContact(formData: ContactFormData) {
   }
 
   revalidatePath("/contacts");
+
+  // Auto-enroll in journey (buyer or seller track, starting at "lead" phase)
+  try {
+    const journeyType = data.type === "seller" ? "seller" : "buyer";
+    const nextEmailAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(); // next email in 3 days
+    await supabase.from("contact_journeys").insert({
+      contact_id: data.id,
+      journey_type: journeyType,
+      current_phase: "lead",
+      is_paused: false,
+      next_email_at: nextEmailAt,
+      send_mode: "review",
+    });
+
+    // Generate and queue welcome email immediately
+    if (data.email) {
+      const welcomeSubject = journeyType === "buyer"
+        ? `Welcome! Let's Find Your Dream Home`
+        : `What's Your Home Worth? Let's Find Out`;
+      const firstName = data.name?.split(" ")[0] || "there";
+      const welcomeHtml = `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f6f5ff;padding:20px;margin:0;">
+<div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(79,53,210,0.06);">
+<div style="padding:28px 32px 20px;text-align:center;"><h1 style="font-size:22px;font-weight:700;color:#4f35d2;margin:0;">ListingFlow</h1></div>
+<div style="padding:0 32px 24px;">
+<p style="font-size:16px;color:#1a1535;margin:0 0 12px;">Hi ${firstName},</p>
+<p style="font-size:15px;color:#3a3a5c;line-height:1.6;margin:0 0 16px;">${journeyType === "buyer"
+  ? "Welcome! I'm excited to help you find your perfect home. I'll be sending you personalized property matches based on your preferences, market updates for your areas of interest, and neighbourhood guides to help you make the best decision."
+  : "Welcome! I'd love to help you get the best value for your property. I'll be sharing recent comparable sales in your area, market trends, and expert tips to make your selling experience smooth and successful."}</p>
+<p style="font-size:15px;color:#3a3a5c;line-height:1.6;margin:0 0 16px;">Here's what you can expect from me:</p>
+<div style="background:#f6f5ff;border-radius:10px;padding:16px 20px;margin:0 0 20px;">
+<div style="font-size:14px;color:#1a1535;margin:0 0 8px;">✅ <strong>${journeyType === "buyer" ? "New listing alerts" : "Comparable sales data"}</strong> tailored to you</div>
+<div style="font-size:14px;color:#1a1535;margin:0 0 8px;">✅ <strong>Market updates</strong> for your area</div>
+<div style="font-size:14px;color:#1a1535;margin:0;">✅ <strong>${journeyType === "buyer" ? "Neighbourhood guides" : "Selling tips & strategies"}</strong></div>
+</div>
+<p style="font-size:15px;color:#3a3a5c;line-height:1.6;margin:0 0 16px;">Feel free to reply to this email anytime — I'm here to help!</p>
+<p style="font-size:15px;color:#3a3a5c;margin:0;">Best regards,<br><strong>Your Realtor</strong></p>
+</div>
+<hr style="border-color:#e8e5f5;margin:0;">
+<div style="padding:20px 32px;text-align:center;">
+<p style="font-size:11px;color:#a0a0b0;margin:0;"><a href="#" style="color:#a0a0b0;text-decoration:underline;">Unsubscribe</a></p>
+</div></div></body></html>`;
+
+      await supabase.from("newsletters").insert({
+        contact_id: data.id,
+        subject: welcomeSubject,
+        email_type: "welcome",
+        status: "draft",
+        html_body: welcomeHtml,
+        ai_context: { journey_phase: "lead", contact_type: data.type, auto_generated: true },
+      });
+    }
+  } catch {
+    // Don't fail contact creation if journey enrollment fails
+  }
 
   // Fire new_lead trigger for workflow auto-enrollment
   try {
@@ -52,6 +137,8 @@ export async function createContact(formData: ContactFormData) {
   } catch {
     // Don't fail contact creation if trigger fails
   }
+
+  revalidatePath("/newsletters");
 
   return { success: true, contact: data };
 }

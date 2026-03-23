@@ -48,7 +48,8 @@ export function BuyerPreferencesPanel({
     setError(null);
     startTransition(async () => {
       const result = await updateContact(contactId, {
-        buyer_preferences: form as unknown as Json,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        buyer_preferences: form as any,
       });
       if (result.error) {
         setError(result.error);
@@ -136,7 +137,7 @@ export function BuyerPreferencesPanel({
         </div>
         <div className="text-center py-6">
           <p className="text-sm text-muted-foreground mb-3">
-            No preferences set yet.
+            No preferences set — Edit to add buyer criteria
           </p>
           <button
             type="button"

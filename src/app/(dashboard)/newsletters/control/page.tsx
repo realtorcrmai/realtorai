@@ -8,6 +8,15 @@ import {
   getScheduleOverview,
 } from "@/actions/control-panel";
 import ControlPanelClient from "@/components/newsletters/ControlPanelClient";
+import { Button } from "@/components/ui/button";
+import {
+  ArrowLeft,
+  Bot,
+  HandMetal,
+  Ghost,
+  BarChart3,
+  MailOpen,
+} from "lucide-react";
 
 export default async function ControlPanelPage() {
   const [emailActivity, workflows, journeys, schedule] = await Promise.all([
@@ -18,38 +27,54 @@ export default async function ControlPanelPage() {
   ]);
 
   return (
-    <div>
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="lf-glass" style={{ padding: "16px 20px", marginBottom: 18, borderRadius: 13 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <Link
-              href="/newsletters"
-              style={{ fontSize: 14, color: "#6b6b8d", textDecoration: "none" }}
-            >
-              ← Back
-            </Link>
-            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, background: "linear-gradient(135deg, #4f35d2, #ff5c3a)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              {"🎛️"} Command Center
-            </h1>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <Link href="/newsletters">
+            <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Command Center</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Monitor and manage email activity, workflows, and contact journeys
+            </p>
           </div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <Link href="/newsletters/activity" className="lf-btn-sm lf-btn-ghost" style={{ textDecoration: "none", fontSize: 12 }}>
-              {"🤖"} Activity
-            </Link>
-            <Link href="/newsletters/suppressions" className="lf-btn-sm lf-btn-ghost" style={{ textDecoration: "none", fontSize: 12 }}>
-              {"🤚"} Held Back
-            </Link>
-            <Link href="/newsletters/ghost" className="lf-btn-sm lf-btn-ghost" style={{ textDecoration: "none", fontSize: 12 }}>
-              {"👻"} Ghost
-            </Link>
-            <Link href="/newsletters/insights" className="lf-btn-sm lf-btn-ghost" style={{ textDecoration: "none", fontSize: 12 }}>
-              {"📊"} Insights
-            </Link>
-            <Link href="/newsletters/queue" className="lf-btn-sm lf-btn-ghost" style={{ textDecoration: "none", fontSize: 12 }}>
-              {"📬"} Queue
-            </Link>
-          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link href="/newsletters/activity">
+            <Button variant="outline" size="sm" className="gap-2">
+              <Bot className="h-4 w-4" />
+              Activity
+            </Button>
+          </Link>
+          <Link href="/newsletters/suppressions">
+            <Button variant="outline" size="sm" className="gap-2">
+              <HandMetal className="h-4 w-4" />
+              Held Back
+            </Button>
+          </Link>
+          <Link href="/newsletters/ghost">
+            <Button variant="outline" size="sm" className="gap-2">
+              <Ghost className="h-4 w-4" />
+              Ghost
+            </Button>
+          </Link>
+          <Link href="/newsletters/insights">
+            <Button variant="outline" size="sm" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Insights
+            </Button>
+          </Link>
+          <Link href="/newsletters/queue">
+            <Button variant="outline" size="sm" className="gap-2">
+              <MailOpen className="h-4 w-4" />
+              Queue
+            </Button>
+          </Link>
         </div>
       </div>
 

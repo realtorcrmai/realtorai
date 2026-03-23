@@ -61,7 +61,7 @@ export function NewsletterWalkthrough() {
   const progress = ((currentStep + 1) / STEPS.length) * 100;
 
   return (
-    <div>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 120px)" }}>
       {/* Header */}
       <div className="lf-glass" style={{ padding: "16px 20px", marginBottom: 18, borderRadius: 13 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -99,12 +99,12 @@ export function NewsletterWalkthrough() {
       </div>
 
       {/* Step content */}
-      <div className="lf-card" style={{ padding: 0, overflow: "hidden", minHeight: 500 }}>
+      <div className="lf-card" style={{ padding: 0, overflow: "hidden", flex: 1 }}>
         <StepContent />
       </div>
 
       {/* Navigation */}
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16, padding: "0 4px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16, padding: "12px 4px", position: "sticky", bottom: 0, background: "linear-gradient(transparent, var(--lf-bg, #f4f2ff) 20%)", paddingTop: 24, zIndex: 10 }}>
         <button
           onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
           disabled={currentStep === 0}

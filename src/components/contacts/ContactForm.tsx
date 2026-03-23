@@ -61,14 +61,28 @@ const formSchema = z.object({
   bathrooms: z.string().optional(),
   timeline: z.string().optional(),
   must_haves: z.string().optional(),
+  buyer_type: z.string().optional(),
+  pre_approval: z.string().optional(),
+  pre_approval_amount: z.string().optional(),
+  preferred_showing_times: z.string().optional(),
   // Seller preference fields
   property_address: z.string().optional(),
   asking_price: z.string().optional(),
   sell_timeline: z.string().optional(),
   property_condition: z.string().optional(),
+  sell_reason: z.string().optional(),
+  property_bedrooms: z.string().optional(),
+  property_type_selling: z.string().optional(),
   // Demographics
   birthday: z.string().optional(),
+  languages: z.string().optional(),
 });
+
+const BUYER_TYPES = ["First-time", "Upsizing", "Downsizing", "Investor", "Relocating", "Vacation home"];
+const PREAPPROVAL_OPTIONS = ["Yes", "No", "In progress"];
+const LANGUAGES = ["English", "Mandarin", "Cantonese", "Punjabi", "Korean", "Tagalog", "Hindi", "French", "Farsi", "Arabic"];
+const SHOWING_TIMES = ["Weekday mornings", "Weekday afternoons", "Weekday evenings", "Weekends only", "Anytime"];
+const SELL_REASONS = ["Upsizing", "Downsizing", "Relocating", "Divorce", "Estate sale", "Investment", "Retirement"];
 
 const BC_AREAS = [
   "Kitsilano", "Point Grey", "Dunbar", "Kerrisdale", "Marpole",
@@ -102,6 +116,7 @@ export function ContactFormContent({
   defaultReferredById,
 }: ContactFormContentProps) {
   const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const {
     register,
@@ -141,7 +156,15 @@ export function ContactFormContent({
           asking_price: (contact.seller_preferences as Record<string, string>)?.asking_price ?? "",
           sell_timeline: (contact.seller_preferences as Record<string, string>)?.sell_timeline ?? "",
           property_condition: (contact.seller_preferences as Record<string, string>)?.property_condition ?? "",
+          buyer_type: (contact.buyer_preferences as Record<string, string>)?.buyer_type ?? "",
+          pre_approval: (contact.buyer_preferences as Record<string, string>)?.pre_approval ?? "",
+          pre_approval_amount: (contact.buyer_preferences as Record<string, string>)?.pre_approval_amount ?? "",
+          preferred_showing_times: (contact.buyer_preferences as Record<string, string>)?.preferred_showing_times ?? "",
+          sell_reason: (contact.seller_preferences as Record<string, string>)?.sell_reason ?? "",
+          property_bedrooms: (contact.seller_preferences as Record<string, string>)?.property_bedrooms ?? "",
+          property_type_selling: (contact.seller_preferences as Record<string, string>)?.property_type_selling ?? "",
           birthday: (contact.demographics as Record<string, string>)?.birthday ?? "",
+          languages: (contact.demographics as Record<string, string>)?.languages ?? "",
         }
       : {
           type: defaultType ?? "buyer",
@@ -162,11 +185,19 @@ export function ContactFormContent({
           bathrooms: "",
           timeline: "",
           must_haves: "",
+          buyer_type: "",
+          pre_approval: "",
+          pre_approval_amount: "",
+          preferred_showing_times: "",
           property_address: "",
           asking_price: "",
           sell_timeline: "",
           property_condition: "",
+          sell_reason: "",
+          property_bedrooms: "",
+          property_type_selling: "",
           birthday: "",
+          languages: "",
         },
   });
 
@@ -185,6 +216,10 @@ export function ContactFormContent({
       bathrooms: data.bathrooms || undefined,
       timeline: data.timeline || undefined,
       must_haves: data.must_haves || undefined,
+      buyer_type: data.buyer_type || undefined,
+      pre_approval: data.pre_approval || undefined,
+      pre_approval_amount: data.pre_approval_amount || undefined,
+      preferred_showing_times: data.preferred_showing_times || undefined,
     } : undefined;
 
     // Pack seller preferences into JSONB
@@ -193,21 +228,28 @@ export function ContactFormContent({
       asking_price: data.asking_price || undefined,
       sell_timeline: data.sell_timeline || undefined,
       property_condition: data.property_condition || undefined,
+      sell_reason: data.sell_reason || undefined,
+      property_bedrooms: data.property_bedrooms || undefined,
+      property_type_selling: data.property_type_selling || undefined,
     } : undefined;
 
     // Pack demographics
-    const demographics = data.birthday ? { birthday: data.birthday } : undefined;
+    const demographics: Record<string, string> = {};
+    if (data.birthday) demographics.birthday = data.birthday;
+    if (data.languages) demographics.languages = data.languages;
+    const demographicsPayload = Object.keys(demographics).length > 0 ? demographics : undefined;
 
     // Remove preference fields from flat payload
     const { budget_min, budget_max, preferred_areas, property_types, bedrooms, bathrooms,
-      timeline, must_haves, property_address, asking_price, sell_timeline, property_condition,
-      birthday, ...rest } = data;
+      timeline, must_haves, buyer_type, pre_approval, pre_approval_amount, preferred_showing_times,
+      property_address, asking_price, sell_timeline, property_condition, sell_reason,
+      property_bedrooms, property_type_selling, birthday, languages, ...rest } = data;
 
     const payload = {
       ...rest,
       buyer_preferences,
       seller_preferences,
-      demographics,
+      demographics: demographicsPayload,
       ...(data.type !== "partner" && {
         partner_type: undefined,
         company_name: undefined,
@@ -216,10 +258,21 @@ export function ContactFormContent({
         referral_agreement_terms: undefined,
       }),
     };
+    setServerError(null);
     if (contact) {
-      await updateContact(contact.id, payload);
+      const result = await updateContact(contact.id, payload);
+      if (result?.error) {
+        setServerError(result.error);
+        setSubmitting(false);
+        return;
+      }
     } else {
-      await createContact(payload);
+      const result = await createContact(payload);
+      if (result?.error) {
+        setServerError(result.error);
+        setSubmitting(false);
+        return;
+      }
     }
     setSubmitting(false);
     reset();
@@ -457,6 +510,66 @@ export function ContactFormContent({
             <Label className="text-xs">Must-Haves (optional)</Label>
             <Input {...register("must_haves")} placeholder="Parking, in-suite laundry, near schools..." />
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Buyer Type</Label>
+              <Select
+                defaultValue={(contact?.buyer_preferences as Record<string, string>)?.buyer_type ?? ""}
+                onValueChange={(val) => setValue("buyer_type", val ?? "")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Not specified</SelectItem>
+                  {BUYER_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Pre-Approved?</Label>
+              <Select
+                defaultValue={(contact?.buyer_preferences as Record<string, string>)?.pre_approval ?? ""}
+                onValueChange={(val) => setValue("pre_approval", val ?? "")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Unknown</SelectItem>
+                  {PREAPPROVAL_OPTIONS.map((o) => (
+                    <SelectItem key={o} value={o}>{o}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Pre-Approval Amount</Label>
+              <Input {...register("pre_approval_amount")} placeholder="$900,000" />
+            </div>
+            <div>
+              <Label className="text-xs">Showing Availability</Label>
+              <Select
+                defaultValue={(contact?.buyer_preferences as Record<string, string>)?.preferred_showing_times ?? ""}
+                onValueChange={(val) => setValue("preferred_showing_times", val ?? "")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="When?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SHOWING_TIMES.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
       )}
 
@@ -509,6 +622,60 @@ export function ContactFormContent({
               </SelectContent>
             </Select>
           </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label className="text-xs">Property Type</Label>
+              <Select
+                defaultValue={(contact?.seller_preferences as Record<string, string>)?.property_type_selling ?? ""}
+                onValueChange={(val) => setValue("property_type_selling", val ?? "")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Type..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Any</SelectItem>
+                  {PROPERTY_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Bedrooms</Label>
+              <Select
+                defaultValue={(contact?.seller_preferences as Record<string, string>)?.property_bedrooms ?? ""}
+                onValueChange={(val) => setValue("property_bedrooms", val ?? "")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Beds..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Any</SelectItem>
+                  {BEDROOM_OPTIONS.map((b) => (
+                    <SelectItem key={b} value={b}>{b}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Reason</Label>
+              <Select
+                defaultValue={(contact?.seller_preferences as Record<string, string>)?.sell_reason ?? ""}
+                onValueChange={(val) => setValue("sell_reason", val ?? "")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Why?" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Not specified</SelectItem>
+                  {SELL_REASONS.map((r) => (
+                    <SelectItem key={r} value={r}>{r}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
       )}
 
@@ -517,10 +684,29 @@ export function ContactFormContent({
         <Input {...register("address")} placeholder="123 Main St, Vancouver, BC" />
       </div>
 
-      {/* ── Birthday ───────────────────────── */}
-      <div>
-        <Label htmlFor="birthday">Birthday (optional)</Label>
-        <Input {...register("birthday")} type="date" />
+      {/* ── Personal Details ───────────────────────── */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="birthday">Birthday (optional)</Label>
+          <Input {...register("birthday")} type="date" />
+        </div>
+        <div>
+          <Label>Languages</Label>
+          <Select
+            defaultValue={(contact?.demographics as Record<string, string>)?.languages ?? ""}
+            onValueChange={(val) => setValue("languages", val ?? "")}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Primary language..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Not specified</SelectItem>
+              {LANGUAGES.map((l) => (
+                <SelectItem key={l} value={l}>{l}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -592,13 +778,21 @@ export function ContactFormContent({
         <Textarea {...register("notes")} placeholder="Additional notes..." />
       </div>
 
-      <Button type="submit" className="w-full" disabled={submitting}>
-        {submitting
-          ? "Saving..."
-          : contact
-            ? "Update Contact"
-            : "Create Contact"}
-      </Button>
+      {serverError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {serverError}
+        </div>
+      )}
+
+      <div className="sticky bottom-0 bg-white pt-2 pb-1">
+        <Button type="submit" className="w-full" disabled={submitting}>
+          {submitting
+            ? "Saving..."
+            : contact
+              ? "Update Contact"
+              : "Create Contact"}
+        </Button>
+      </div>
     </form>
   );
 }
@@ -632,7 +826,7 @@ export function ContactForm({
           )
         }
       />
-      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {contact ? "Edit Contact" : "New Contact"}

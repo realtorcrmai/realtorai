@@ -31,8 +31,8 @@ export default async function ContactsLayout({
   const workflowNames: Record<string, string> = {};
   for (const e of enrollments ?? []) {
     if (e.contact_id && !workflowNames[e.contact_id]) {
-      const wf = e.workflows as { name: string } | null;
-      if (wf) workflowNames[e.contact_id] = wf.name;
+      const wf = e.workflows as unknown as { name: string } | { name: string }[] | null;
+      if (wf) workflowNames[e.contact_id] = Array.isArray(wf) ? wf[0]?.name : wf.name;
     }
   }
 

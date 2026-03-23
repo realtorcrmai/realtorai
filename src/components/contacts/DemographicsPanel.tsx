@@ -49,7 +49,8 @@ export function DemographicsPanel({
     setError(null);
     startTransition(async () => {
       const result = await updateContact(contactId, {
-        demographics: form as unknown as Json,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        demographics: form as any,
       });
       if (result.error) {
         setError(result.error);

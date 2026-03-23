@@ -48,7 +48,7 @@ export function SellerPreferencesPanel({
     setError(null);
     startTransition(async () => {
       const result = await updateContact(contactId, {
-        seller_preferences: form as unknown as Json,
+        seller_preferences: form as any,
       });
       if (result.error) {
         setError(result.error);
@@ -78,7 +78,7 @@ export function SellerPreferencesPanel({
         </div>
         <div className="text-center py-6">
           <p className="text-sm text-muted-foreground mb-3">
-            No preferences set yet.
+            No preferences set — Edit to add seller criteria
           </p>
           <button
             type="button"

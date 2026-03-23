@@ -41,7 +41,7 @@ export function PropertiesOfInterestPanel({
     };
     startTransition(async () => {
       await updateContact(contactId, {
-        buyer_preferences: updatedPrefs as unknown as Json,
+        buyer_preferences: updatedPrefs as any,
       });
       router.refresh();
     });

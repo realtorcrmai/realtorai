@@ -1,0 +1,57 @@
+# Page snapshot
+
+```yaml
+- banner:
+  - link "RealtorAI BC AI Agent":
+    - /url: /
+  - navigation:
+    - link "Listings":
+      - /url: /listings
+    - link "Contacts":
+      - /url: /contacts
+    - link "Pipeline":
+      - /url: /pipeline
+    - link "Showings":
+      - /url: /showings
+    - link "Calendar":
+      - /url: /calendar
+    - button "More"
+  - link "Admin":
+    - /url: /admin
+  - button "Quick add"
+  - text: DU
+  - paragraph: Demo User
+  - paragraph: demo@realestatecrm.com
+  - button "Sign out"
+- main:
+  - link "Back to Dashboard":
+    - /url: /newsletters
+    - button "Back to Dashboard"
+  - heading "Approval Queue" [level=1]
+  - paragraph: Review and send AI-generated newsletters before they go out
+  - text: 4 pending
+  - button "Approve All (4)"
+  - paragraph: Maria Santos
+  - paragraph: Your Neighbourhood's Latest Sales Data
+  - text: market update maria.santos@yahoo.com
+  - button "Send"
+  - button "Skip"
+  - paragraph: Karen White
+  - paragraph: Your Neighbourhood's Latest Sales Data
+  - text: market update karen.white@shaw.ca
+  - button "Send"
+  - button "Skip"
+  - paragraph: Jessica Liu
+  - paragraph: "Neighbourhood Guide: Mount Pleasant"
+  - text: neighbourhood guide jessica.liu@hotmail.com
+  - button "Send"
+  - button "Skip"
+  - paragraph: David Kim
+  - paragraph: "Neighbourhood Guide: East Vancouver"
+  - text: neighbourhood guide david.kim@outlook.com
+  - button "Send"
+  - button "Skip"
+- button "Voice Agent offline"
+- region "Notifications alt+T"
+- alert
+```

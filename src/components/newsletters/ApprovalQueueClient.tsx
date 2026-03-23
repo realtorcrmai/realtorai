@@ -3,6 +3,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { approveNewsletter, skipNewsletter } from "@/actions/newsletters";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, Send, X } from "lucide-react";
 
 interface QueueItem {
   id: string;
@@ -22,7 +26,7 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
   const router = useRouter();
 
   const setLoading = (id: string, loading: boolean) => {
-    setLoadingIds(prev => {
+    setLoadingIds((prev) => {
       const next = new Set(prev);
       loading ? next.add(id) : next.delete(id);
       return next;
@@ -33,7 +37,7 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
     setLoading(id, true);
     startTransition(async () => {
       await approveNewsletter(id);
-      setQueue(q => q.filter(item => item.id !== id));
+      setQueue((q) => q.filter((item) => item.id !== id));
       if (previewId === id) setPreviewId(null);
       setLoading(id, false);
       router.refresh();
@@ -44,7 +48,7 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
     setLoading(id, true);
     startTransition(async () => {
       await skipNewsletter(id);
-      setQueue(q => q.filter(item => item.id !== id));
+      setQueue((q) => q.filter((item) => item.id !== id));
       if (previewId === id) setPreviewId(null);
       setLoading(id, false);
       router.refresh();
@@ -53,7 +57,7 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
 
   const handleBulkApprove = () => {
     startTransition(async () => {
-      const ids = queue.map(q => q.id);
+      const ids = queue.map((q) => q.id);
       setLoadingIds(new Set(ids));
       for (const id of ids) {
         await approveNewsletter(id);
@@ -65,118 +69,136 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
     });
   };
 
-  const previewItem = queue.find(q => q.id === previewId);
+  const previewItem = queue.find((q) => q.id === previewId);
 
   if (queue.length === 0) {
     return (
-      <div className="lf-card" style={{ padding: 40, textAlign: "center" }}>
-        <div style={{ fontSize: 48, marginBottom: 12 }}>{"\u2705"}</div>
-        <h3 style={{ fontSize: 18, fontWeight: 600, color: "#1a1535" }}>All caught up!</h3>
-        <p style={{ fontSize: 14, color: "#6b6b8d", marginTop: 4 }}>No newsletters waiting for approval.</p>
-      </div>
+      <Card className="max-w-md mx-auto">
+        <CardContent className="py-12 text-center">
+          <div className="text-5xl mb-3">✅</div>
+          <h3 className="text-lg font-semibold text-foreground">All caught up!</h3>
+          <p className="text-sm text-muted-foreground mt-1">No newsletters waiting for approval.</p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div>
+    <div className="space-y-4">
       {/* Bulk Actions */}
       {queue.length > 1 && (
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10, gap: 8 }}>
-          <button
-            className="lf-btn-sm lf-btn-success"
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
             onClick={handleBulkApprove}
             disabled={pending}
           >
-            {pending ? "Sending..." : `\u2713 Approve All (${queue.length})`}
-          </button>
+            <Send className="h-4 w-4" />
+            {pending ? "Sending..." : `Approve All (${queue.length})`}
+          </Button>
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: previewId ? "1fr 1fr" : "1fr", gap: 14 }}>
+      <div className={`grid gap-4 ${previewId ? "grid-cols-2" : "grid-cols-1"}`}>
         {/* Queue List */}
-        <div>
-          {queue.map(item => {
+        <div className="space-y-3">
+          {queue.map((item) => {
             const isLoading = loadingIds.has(item.id);
+            const isSelected = previewId === item.id;
             return (
-              <div
+              <Card
                 key={item.id}
-                className="lf-card"
-                style={{
-                  padding: 16,
-                  marginBottom: 10,
-                  cursor: "pointer",
-                  border: previewId === item.id ? "2px solid #4f35d2" : "1px solid transparent",
-                  opacity: isLoading ? 0.6 : 1,
-                  transition: "opacity 0.2s",
-                }}
+                className={`cursor-pointer transition-all ${
+                  isSelected
+                    ? "ring-2 ring-primary border-primary"
+                    : "hover:shadow-md"
+                } ${isLoading ? "opacity-60 pointer-events-none" : ""}`}
                 onClick={() => !isLoading && setPreviewId(item.id)}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: "#1a1535" }}>
-                      {item.contacts?.name || "Unknown"}
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground">
+                        {item.contacts?.name || "Unknown"}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-0.5 truncate">
+                        {item.subject}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        <Badge variant="secondary" className="text-xs capitalize">
+                          {item.email_type.replace(/_/g, " ")}
+                        </Badge>
+                        {item.journey_phase && (
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {item.journey_phase}
+                          </Badge>
+                        )}
+                        {item.contacts?.email && (
+                          <span className="text-xs text-muted-foreground">
+                            {item.contacts.email}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 14, color: "#3a3a5c", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {item.subject}
-                    </div>
-                    <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
-                      <span className="lf-badge lf-badge-info" style={{ fontSize: 10 }}>
-                        {item.email_type.replace(/_/g, " ")}
-                      </span>
-                      {item.journey_phase && (
-                        <span className="lf-badge" style={{ fontSize: 10 }}>
-                          {item.journey_phase}
-                        </span>
-                      )}
-                      <span style={{ fontSize: 11, color: "#a0a0b0" }}>
-                        {item.contacts?.email}
-                      </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        size="sm"
+                        className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleApprove(item.id);
+                        }}
+                        disabled={isLoading || pending}
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        {isLoading ? "..." : "Send"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSkip(item.id);
+                        }}
+                        disabled={isLoading || pending}
+                      >
+                        Skip
+                      </Button>
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 6, flexShrink: 0, marginLeft: 8 }}>
-                    <button
-                      className="lf-btn-sm lf-btn-success"
-                      onClick={(e) => { e.stopPropagation(); handleApprove(item.id); }}
-                      disabled={isLoading || pending}
-                    >
-                      {isLoading ? "..." : "\u2713 Send"}
-                    </button>
-                    <button
-                      className="lf-btn-sm lf-btn-ghost"
-                      onClick={(e) => { e.stopPropagation(); handleSkip(item.id); }}
-                      disabled={isLoading || pending}
-                    >
-                      Skip
-                    </button>
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             );
           })}
         </div>
 
         {/* Preview Panel */}
         {previewItem && (
-          <div className="lf-card" style={{ padding: 0, overflow: "hidden", position: "sticky", top: 110, height: "min(calc(100vh - 130px), 700px)" }}>
-            <div style={{ padding: "12px 16px", borderBottom: "1px solid #e8e5f5", background: "#fafafa", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1535" }}>{previewItem.subject}</div>
-                <div style={{ fontSize: 12, color: "#6b6b8d" }}>To: {previewItem.contacts?.email}</div>
+          <Card className="overflow-hidden sticky top-28 h-[min(calc(100vh-140px),700px)]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-foreground truncate">{previewItem.subject}</p>
+                <p className="text-xs text-muted-foreground">To: {previewItem.contacts?.email}</p>
               </div>
-              <button
-                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#6b6b8d" }}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0 ml-2"
                 onClick={() => setPreviewId(null)}
               >
-                {"\u2715"}
-              </button>
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close preview</span>
+              </Button>
             </div>
             <iframe
               srcDoc={previewItem.html_body}
-              style={{ width: "100%", height: "calc(100% - 50px)", border: "none" }}
+              className="w-full border-none"
+              style={{ height: "calc(100% - 53px)" }}
               title="Email Preview"
               sandbox="allow-same-origin"
             />
-          </div>
+          </Card>
         )}
       </div>
     </div>
