@@ -83,7 +83,7 @@ INSERT INTO contact_relationships (contact_a_id, contact_b_id, relationship_type
 
   -- Referral: Elena Petrova → Eric Johansson
   ('a0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000009',
-   'referral', 'Seller → Buyer Referral', 'Elena referred Eric after her sale'),
+   'friend', 'Seller → Buyer Referral', 'Elena referred Eric after her sale'),
 
   -- Colleague: Aisha Okafor ↔ Omar Al-Rashid
   ('a0000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000010',
