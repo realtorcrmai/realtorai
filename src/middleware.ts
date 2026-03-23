@@ -13,8 +13,7 @@ export default auth((req) => {
     pathname.startsWith("/api/cron") ||
     pathname.startsWith("/api/newsletters/unsubscribe") ||
     pathname.startsWith("/api/newsletters/process") ||
-    pathname.startsWith("/api/voice-agent") ||
-    pathname.startsWith("/api/english-tutor")
+    pathname.startsWith("/api/voice-agent")
   ) {
     return NextResponse.next();
   }

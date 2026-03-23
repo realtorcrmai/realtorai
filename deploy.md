@@ -128,35 +128,49 @@ Run these in order (later ones depend on earlier ones):
 003_allow_anon_role.sql
 004_form_templates_and_submissions.sql
 005_content_engine.sql
-005_english_tutor.sql
-006_contact_enhancements.sql
-006_deals_pipeline.sql
 006_users_and_features.sql
-007_contact_lifecycle.sql
-007_user_integrations.sql
-008_contact_detail_features.sql
-008_seed_sample_data.sql        ← Sample data
-009_mortgages.sql
-009_workflow_automation.sql     ← Workflow engine tables
-010_newsletter_journey_engine.sql  ← Newsletter tables
-010_lifecycle_workflows.sql
-010_seed_mortgage_data.sql
-011_family_openhouse_stats.sql
-011_stage_bar.sql
-011_unify_email_engine.sql      ← Merge journey into workflows
-012_email_template_builder.sql
-012_partner_contact_type.sql
-012_seed_family_openhouse_data.sql
-013_feature_overrides.sql
-013_referrals_table.sql
-013_visual_workflow_builder.sql
-014_extension_tasks.sql
-014_segments_ab_testing.sql     ← Contact segments
-014_seller_preferences.sql
-015_ai_agent.sql                ← AI scoring + recommendations
-015_last_activity_date.sql
-015_seed_buyer_completed_purchases.sql
-016-019_*.sql                   ← Remaining migrations
+007_contact_enhancements.sql
+008_deals_pipeline.sql
+009_contact_lifecycle.sql
+010_user_integrations.sql
+011_contact_detail_features.sql
+012_seed_sample_data.sql        ← Sample data
+013_mortgages.sql
+014_workflow_automation.sql     ← Workflow engine tables
+015_lifecycle_workflows.sql
+016_newsletter_journey_engine.sql  ← Newsletter tables
+017_seed_mortgage_data.sql
+018_stage_bar.sql
+019_family_openhouse_stats.sql
+020_unify_email_engine.sql      ← Merge journey into workflows
+021_email_template_builder.sql
+022_partner_contact_type.sql
+023_seed_family_openhouse_data.sql
+024_feature_overrides.sql
+025_referrals_table.sql
+026_visual_workflow_builder.sql
+027_extension_tasks.sql
+028_segments_ab_testing.sql     ← Contact segments
+029_seller_preferences.sql
+030_ai_agent.sql                ← AI scoring + recommendations
+031_last_activity_date.sql
+032_seed_buyer_completed_purchases.sql
+033_fix_stage_bar_consistency.sql
+034_seed_seller_completed_sales.sql
+035_contact_intelligence.sql    ← Households, relationships
+036_seed_mortgage_renewals_soon.sql
+037_cleanup_relationship_types.sql
+038_object_linking_improvements.sql
+039_contact_consistency_trigger.sql
+040_reset_seed_data.sql         ← Clean seed data reset
+041_agent_event_pipeline.sql
+042_enable_realtime.sql
+043_lead_scoring_and_activities.sql
+044_progressive_trust.sql
+045_offers.sql
+046_under_contract_workflow.sql
+047_data_integrity_fixes.sql
+048_drop_english_tutor.sql
 ```
 
 ---
