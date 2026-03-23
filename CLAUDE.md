@@ -25,6 +25,26 @@ ListingFlow is a real estate transaction management CRM for licensed BC realtors
 | Website Agent | 8768 | `npm run dev` from `listingflow-agent/` |
 | Form Server | 8767 | Python server (separate) |
 
+### Secrets — Encrypted Vault
+
+API keys are stored encrypted in `.env.vault` (committed to git). **Never commit `.env.local` or put API keys in code/CLAUDE.md.**
+
+```bash
+# First time setup — decrypt secrets
+./scripts/vault.sh decrypt        # passphrase from team lead
+
+# After adding a new API key
+./scripts/vault.sh encrypt        # re-encrypt and commit .env.vault
+
+# Check what's stored
+./scripts/vault.sh status         # shows keys with masked values
+
+# Change passphrase
+./scripts/vault.sh rotate
+```
+
+When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.vault` → tell team to `decrypt` after pull.
+
 ### Testing — Use `/test`
 
 **After every build or deploy, run `/test` to validate the application.** The test skill at `.claude/skills/test.md` runs 10 phases: build verification, server health, auth, API endpoints, page loads, email engine, Supabase connection, UX scroll, contact form, and newsletter journeys. Do NOT deploy without a passing test run.
