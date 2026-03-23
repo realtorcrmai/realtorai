@@ -307,6 +307,36 @@ npm run lint
 # python server at localhost:8767
 ```
 
+### MANDATORY: Test Before Build & Deploy
+
+**Every time you build or deploy, run the test suite first:**
+
+```bash
+# 1. Health check (run at session start)
+bash scripts/health-check.sh
+
+# 2. Full test suite (run before every build/deploy)
+bash scripts/test-suite.sh
+
+# 3. Only if tests pass → build
+npm run build
+
+# 4. Only if build passes → deploy (auto via CI on push to main)
+git add -A && git commit && git push origin main
+
+# 5. Save known-good state after successful deploy
+bash scripts/save-state.sh
+```
+
+**Test suite covers (85+ tests):**
+- Navigation: All 35+ page routes return 200
+- CRUD: Create/Read/Update/Delete for contacts, listings, tasks, deals, households, communications
+- Data Integrity: NOT NULL, CHECK constraints, UNIQUE, self-relationship, cascade delete
+- Auth: Cron endpoints require Bearer token, reject invalid/missing tokens
+- Sample Data: Property type diversity, status variety, CASL consent, households, relationships
+
+**Use `/test` slash command** to run the full test suite interactively.
+
 ### Dev Server via Claude Preview
 Configured in `.claude/launch.json`:
 ```json
