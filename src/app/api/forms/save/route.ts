@@ -6,7 +6,7 @@ import { z } from "zod";
 const saveFormSchema = z.object({
   listingId: z.string().uuid(),
   formKey: z.string().min(1).max(100),
-  formData: z.record(z.unknown()),
+  formData: z.record(z.string(), z.unknown()),
 });
 
 /**
