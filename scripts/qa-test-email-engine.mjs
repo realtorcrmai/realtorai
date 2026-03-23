@@ -350,8 +350,12 @@ async function testJourneyEnrollment() {
           },
           allowFail: true,
         });
-        // Should fail due to UNIQUE constraint
-        log("FAIL", "Duplicate enrollment should be blocked", "Second insert succeeded");
+        // allowFail returns null on 409 (constraint violation) — that means it worked
+        if (dupe === null) {
+          log("PASS", "Duplicate enrollment blocked", "UNIQUE constraint works (409 returned)");
+        } else {
+          log("FAIL", "Duplicate enrollment should be blocked", "Second insert succeeded");
+        }
       } catch (e) {
         log("PASS", "Duplicate enrollment blocked", "UNIQUE constraint works");
       }
