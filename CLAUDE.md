@@ -15,7 +15,17 @@ ListingFlow is a real estate transaction management CRM for licensed BC realtors
 - Always push to `dev`. Never push directly to `main`.
 - To release: create PR from `dev → main`, get approval, merge.
 
-### Testing — MANDATORY
+### Deployment — Use `/deploy`
+
+**Run `/deploy` to build and start all services locally.** The deploy skill at `.claude/skills/deploy.md` handles: pull latest, install deps, run migrations, build, start servers, and validate.
+
+| Service | Port | Command |
+|---------|------|---------|
+| CRM (Next.js) | 3000 | `npm run dev` from `realestate-crm/` |
+| Website Agent | 8768 | `npm run dev` from `listingflow-agent/` |
+| Form Server | 8767 | Python server (separate) |
+
+### Testing — Use `/test`
 
 **After every build or deploy, run `/test` to validate the application.** The test skill at `.claude/skills/test.md` runs 10 phases: build verification, server health, auth, API endpoints, page loads, email engine, Supabase connection, UX scroll, contact form, and newsletter journeys. Do NOT deploy without a passing test run.
 
