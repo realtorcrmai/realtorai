@@ -30,7 +30,7 @@ const formSchema = z.object({
   address: z.string().min(5, "Address is required"),
   seller_id: z.string().uuid("Select a seller"),
   lockbox_code: z.string().min(1, "Lockbox code is required"),
-  property_type: z.enum(["Residential", "Condo/Apartment", "Townhouse", "Land", "Commercial", "Multi-Family"]).default("Residential"),
+  property_type: z.enum(["Residential", "Condo/Apartment", "Townhouse", "Land", "Commercial", "Multi-Family"]).optional(),
   mls_number: z.string().optional(),
   list_price: z.string().optional(),
   showing_window_start: z.string().optional(),
@@ -140,7 +140,7 @@ export function ListingFormContent({ onSuccess, sellers }: ListingFormContentPro
           value={selectedPropertyType || "Residential"}
           onValueChange={(val) => {
             setValue("property_type", val as any, { shouldValidate: true, shouldDirty: true });
-            setSelectedPropertyType(val);
+            setSelectedPropertyType(val ?? "Residential");
           }}
         >
           <SelectTrigger>
