@@ -48,3 +48,9 @@ listingflow-agent/.previews/
 # playwright
 **/playwright-report/
 guides/screenshots/*.png
+
+# Local Netlify folder
+.netlify
+
+# Health check state snapshot
+.claude-state.json

@@ -36,9 +36,11 @@ type Task = {
 interface TaskCardProps {
   task: Task;
   onUpdate: () => void;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
-export function TaskCard({ task, onUpdate }: TaskCardProps) {
+export function TaskCard({ task, onUpdate, isSelected = false, onToggleSelect }: TaskCardProps) {
   const priority = TASK_PRIORITY_CONFIG[task.priority] ?? TASK_PRIORITY_CONFIG.medium;
 
   const isOverdue =
@@ -85,14 +87,26 @@ export function TaskCard({ task, onUpdate }: TaskCardProps) {
   return (
     <div
       className={cn(
-        "flex items-start gap-3 p-3 rounded-xl transition-colors group",
+        "flex items-start gap-2 md:gap-3 p-2 md:p-3 rounded-xl transition-colors group",
         task.status === "completed"
           ? "bg-muted/30 opacity-60"
           : isOverdue
-            ? "bg-red-50/50 dark:bg-red-950/20 border border-red-200 dark:border-red-900"
+            ? "bg-red-50/50 dark:bg-red-950/20 border-2 border-red-300 dark:border-red-800 shadow-sm shadow-red-100 dark:shadow-red-950/30"
             : "bg-muted/40 hover:bg-muted/60"
       )}
     >
+      {/* Selection checkbox */}
+      {onToggleSelect && (
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => onToggleSelect(task.id)}
+          onClick={(e) => e.stopPropagation()}
+          className="mt-1 shrink-0 h-4 w-4 cursor-pointer accent-indigo-600"
+          aria-label={`Select task: ${task.title}`}
+        />
+      )}
+
       {/* Status toggle button */}
       <button
         onClick={() => updateStatus(nextStatus())}
@@ -113,7 +127,7 @@ export function TaskCard({ task, onUpdate }: TaskCardProps) {
         <div className="flex items-start justify-between gap-2">
           <p
             className={cn(
-              "text-sm font-medium",
+              "text-xs md:text-sm font-medium",
               task.status === "completed" && "line-through text-muted-foreground"
             )}
           >
@@ -125,12 +139,12 @@ export function TaskCard({ task, onUpdate }: TaskCardProps) {
         </div>
 
         {task.description && (
-          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+          <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 line-clamp-1 md:line-clamp-2">
             {task.description}
           </p>
         )}
 
-        <div className="flex flex-wrap items-center gap-2 mt-2">
+        <div className="flex flex-wrap items-center gap-1.5 md:gap-2 mt-1.5 md:mt-2">
           {/* Category badge */}
           <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-secondary text-secondary-foreground font-medium">
             {TASK_CATEGORY_LABELS[task.category as keyof typeof TASK_CATEGORY_LABELS] ?? task.category}

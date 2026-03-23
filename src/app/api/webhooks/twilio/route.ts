@@ -97,6 +97,35 @@ export async function POST(req: NextRequest) {
     // Don't fail webhook if exit check fails
   }
 
+  // Handle STOP opt-out (CASL/TCPA compliance)
+  if (inboundBody === "STOP") {
+    await supabase
+      .from("contacts")
+      .update({
+        sms_opted_out: true,
+        whatsapp_opted_out: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", contact.id);
+
+    // Audit log
+    await supabase.from("activity_log").insert({
+      contact_id: contact.id,
+      activity_type: "sms_opted_out",
+      description: `${contact.name} opted out of SMS/WhatsApp messages via STOP reply`,
+      metadata: {
+        phone: contact.phone,
+        timestamp: new Date().toISOString(),
+        source: "twilio_stop_reply",
+      },
+    });
+
+    return new NextResponse(
+      "<?xml version='1.0' encoding='UTF-8'?><Response></Response>",
+      { headers: { "Content-Type": "text/xml" } }
+    );
+  }
+
   if (inboundBody === "YES" || inboundBody === "Y") {
     // Confirm the showing
     await supabase

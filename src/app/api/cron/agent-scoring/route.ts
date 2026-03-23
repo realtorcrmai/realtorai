@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { scoreBatch } from "@/lib/ai-agent/lead-scorer";
 
+export const maxDuration = 120; // Allow up to 2 minutes for AI batch scoring
+
 /**
  * GET /api/cron/agent-scoring
  * Runs every 15 minutes. Scores contacts with recent activity or stale scores.
@@ -9,11 +11,12 @@ import { scoreBatch } from "@/lib/ai-agent/lead-scorer";
  */
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const auth = request.headers.get("authorization");
-    if (auth !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!cronSecret) {
+    return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
+  }
+  const auth = request.headers.get("authorization");
+  if (auth !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {

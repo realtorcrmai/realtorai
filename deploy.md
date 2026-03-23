@@ -128,35 +128,66 @@ Run these in order (later ones depend on earlier ones):
 003_allow_anon_role.sql
 004_form_templates_and_submissions.sql
 005_content_engine.sql
-005_english_tutor.sql
-006_contact_enhancements.sql
-006_deals_pipeline.sql
 006_users_and_features.sql
-007_contact_lifecycle.sql
-007_user_integrations.sql
-008_contact_detail_features.sql
-008_seed_sample_data.sql        ← Sample data
-009_mortgages.sql
-009_workflow_automation.sql     ← Workflow engine tables
-010_newsletter_journey_engine.sql  ← Newsletter tables
-010_lifecycle_workflows.sql
-010_seed_mortgage_data.sql
-011_family_openhouse_stats.sql
-011_stage_bar.sql
-011_unify_email_engine.sql      ← Merge journey into workflows
-012_email_template_builder.sql
-012_partner_contact_type.sql
-012_seed_family_openhouse_data.sql
-013_feature_overrides.sql
-013_referrals_table.sql
-013_visual_workflow_builder.sql
-014_extension_tasks.sql
-014_segments_ab_testing.sql     ← Contact segments
-014_seller_preferences.sql
-015_ai_agent.sql                ← AI scoring + recommendations
-015_last_activity_date.sql
-015_seed_buyer_completed_purchases.sql
-016-019_*.sql                   ← Remaining migrations
+007_contact_enhancements.sql
+008_deals_pipeline.sql
+009_contact_lifecycle.sql
+010_user_integrations.sql
+011_contact_detail_features.sql
+012_seed_sample_data.sql        ← Sample data
+013_mortgages.sql
+014_workflow_automation.sql     ← Workflow engine tables
+015_lifecycle_workflows.sql
+016_newsletter_journey_engine.sql  ← Newsletter tables
+017_seed_mortgage_data.sql
+018_stage_bar.sql
+019_family_openhouse_stats.sql
+020_unify_email_engine.sql      ← Merge journey into workflows
+021_email_template_builder.sql
+022_partner_contact_type.sql
+023_seed_family_openhouse_data.sql
+024_feature_overrides.sql
+025_referrals_table.sql
+026_visual_workflow_builder.sql
+027_extension_tasks.sql
+028_segments_ab_testing.sql     ← Contact segments
+029_seller_preferences.sql
+030_ai_agent.sql                ← AI scoring + recommendations
+031_last_activity_date.sql
+032_seed_buyer_completed_purchases.sql
+033_fix_stage_bar_consistency.sql
+034_seed_seller_completed_sales.sql
+035_contact_intelligence.sql    ← Households, relationships
+036_seed_mortgage_renewals_soon.sql
+037_cleanup_relationship_types.sql
+038_object_linking_improvements.sql
+039_contact_consistency_trigger.sql
+040_reset_seed_data.sql         ← Clean seed data reset
+041_agent_event_pipeline.sql
+042_enable_realtime.sql
+043_lead_scoring_and_activities.sql
+044_progressive_trust.sql
+045_offers.sql
+046_under_contract_workflow.sql
+047_data_integrity_fixes.sql
+048_drop_english_tutor.sql
+```
+
+---
+
+## Health Check (Run This First!)
+
+After pulling new changes, run the automated health check:
+
+```bash
+bash scripts/health-check.sh
+```
+
+This checks everything in ~20 seconds: git status, env vars, DB connectivity, build state, dev server, Netlify deploy, and migrations. Fix any ❌ items before starting work.
+
+To save a snapshot of the current working state:
+```bash
+bash scripts/save-state.sh
 ```
 
 ---
@@ -272,6 +303,24 @@ realtorai/                      ← Git repo root
 
 ---
 
+## Recent Breaking Changes (March 2026)
+
+If you pulled and things broke, check these:
+
+1. **Migrations renumbered (001→048)** — All migrations were renumbered with sequential unique prefixes. If you had local migration files with the old numbers (e.g. `019_reset_seed_data.sql`), they're now `040_reset_seed_data.sql`. Run any new ones in order.
+
+2. **`app/` directory renamed to `app-backup/`** — The root `app/` folder was a duplicate project that broke the Next.js build. It's now `app-backup/`. If you recreated `app/`, remove it or rename it.
+
+3. **Tabs component switched to Radix** — `src/components/ui/tabs.tsx` now uses `@radix-ui/react-tabs` instead of `@base-ui/react/tabs`. Run `npm install` to get the new dependency.
+
+4. **Data integrity migration (047)** — Adds unique constraints, CHECK constraints, and triggers. If your DB doesn't have these, run: `supabase db query --linked -f supabase/migrations/047_data_integrity_fixes.sql`
+
+5. **Cron endpoints require CRON_SECRET** — Both `/api/cron/agent-scoring` and `/api/cron/process-workflows` now return 500 if `CRON_SECRET` env var is not set. Make sure it's in your `.env.local`.
+
+6. **Zod validation on 11 API routes** — POST endpoints for deals, parties, checklist, mortgages, family, dates, open-houses, forms/save, and voice-agent/contacts now validate input with Zod. Invalid payloads return 400.
+
+---
+
 ## Troubleshooting
 
 ### "newsletters table missing"
@@ -293,7 +342,18 @@ cp ../listingflow-agent/src/tools/screenshot.ts listingflow-agent/src/tools/scre
 ```
 
 ### Turbopack workspace root warning
-Harmless warning caused by `/Users/bigbear/package-lock.json`. Can be ignored.
+Harmless warning caused by multiple `package-lock.json` files. Fixed via `turbopack.root` in `next.config.ts`.
+
+### Build picks up files from app-backup/ or agent-pipeline/
+These directories are excluded in `tsconfig.json`. If you see errors from them, check that `"exclude"` in `tsconfig.json` includes: `["node_modules", "app", "app-backup", "agent-pipeline", "content-generator", "listingflow-agent"]`
+
+### Contact tabs not switching (Intelligence, Activity, Deals)
+The tabs component was upgraded from Base UI to Radix. Run `npm install` to get `@radix-ui/react-tabs`.
+
+### After pulling: "Module not found" or missing types
+```bash
+rm -rf node_modules .next && npm install && npm run build
+```
 
 ---
 

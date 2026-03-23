@@ -1,6 +1,58 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
+import { z } from "zod";
+
+const mortgageSchema = z.object({
+  lender_name: z.string().min(1).max(200),
+  contact_id: z.string().uuid().optional(),
+  mortgage_amount: z.number().positive().optional(),
+  interest_rate: z.number().min(0).max(100).optional(),
+  mortgage_type: z.enum(["fixed", "variable", "hybrid"]).optional(),
+  term_months: z.number().int().positive().optional(),
+  amortization_years: z.number().int().positive().optional(),
+  start_date: z.string().optional(),
+  renewal_date: z.string().optional(),
+  monthly_payment: z.number().positive().optional(),
+  lender_contact: z.string().max(200).optional(),
+  lender_phone: z.string().max(30).optional(),
+  lender_email: z.string().email().optional(),
+  notes: z.string().optional(),
+}).refine(
+  (data) => {
+    if (data.start_date && data.renewal_date) {
+      return new Date(data.renewal_date) > new Date(data.start_date);
+    }
+    return true;
+  },
+  { message: "renewal_date must be after start_date", path: ["renewal_date"] }
+);
+
+const patchMortgageSchema = z.object({
+  mortgage_id: z.string().uuid(),
+  lender_name: z.string().min(1).max(200).optional(),
+  contact_id: z.string().uuid().optional(),
+  mortgage_amount: z.number().positive().optional(),
+  interest_rate: z.number().min(0).max(100).optional(),
+  mortgage_type: z.enum(["fixed", "variable", "hybrid"]).optional(),
+  term_months: z.number().int().positive().optional(),
+  amortization_years: z.number().int().positive().optional(),
+  start_date: z.string().optional(),
+  renewal_date: z.string().optional(),
+  monthly_payment: z.number().positive().optional(),
+  lender_contact: z.string().max(200).optional(),
+  lender_phone: z.string().max(30).optional(),
+  lender_email: z.string().email().optional(),
+  notes: z.string().optional(),
+}).refine(
+  (data) => {
+    if (data.start_date && data.renewal_date) {
+      return new Date(data.renewal_date) > new Date(data.start_date);
+    }
+    return true;
+  },
+  { message: "renewal_date must be after start_date", path: ["renewal_date"] }
+);
 
 export async function GET(
   _req: NextRequest,
@@ -32,6 +84,14 @@ export async function POST(
   const { id } = await params;
   const supabase = createAdminClient();
   const body = await req.json();
+
+  const parsed = mortgageSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", issues: parsed.error.issues },
+      { status: 400 }
+    );
+  }
 
   const { data, error } = await supabase
     .from("mortgages")
@@ -72,11 +132,15 @@ export async function PATCH(req: NextRequest) {
   const supabase = createAdminClient();
   const body = await req.json();
 
-  if (!body.mortgage_id) {
-    return NextResponse.json({ error: "mortgage_id required" }, { status: 400 });
+  const parsed = patchMortgageSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", issues: parsed.error.issues },
+      { status: 400 }
+    );
   }
 
-  const { mortgage_id, ...updates } = body;
+  const { mortgage_id, ...updates } = parsed.data;
 
   const { data, error } = await supabase
     .from("mortgages")

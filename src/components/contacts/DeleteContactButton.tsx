@@ -1,0 +1,82 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { deleteContact } from "@/actions/contacts";
+
+export function DeleteContactButton({
+  contactId,
+  contactName,
+}: {
+  contactId: string;
+  contactName: string;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+
+  function handleDelete() {
+    setErrorMsg(null);
+    startTransition(async () => {
+      const result = await deleteContact(contactId);
+      if (result.error) {
+        setErrorMsg(result.error);
+      } else {
+        setOpen(false);
+        router.push("/contacts");
+      }
+    });
+  }
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+        onClick={() => setOpen(true)}
+      >
+        <Trash2 className="h-3.5 w-3.5 mr-1" />
+        Delete
+      </Button>
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Contact</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{contactName}</strong>? This will permanently remove the contact and all associated communications, tasks, and documents. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {errorMsg && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+              {errorMsg}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isPending}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isPending ? "Deleting..." : "Delete Contact"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}

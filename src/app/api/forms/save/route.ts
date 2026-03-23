@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { z } from "zod";
+
+const saveFormSchema = z.object({
+  listingId: z.string().uuid(),
+  formKey: z.string().min(1).max(100),
+  formData: z.record(z.string(), z.unknown()),
+});
 
 /**
  * POST /api/forms/save
@@ -14,14 +21,15 @@ export async function POST(req: NextRequest) {
   if (unauthorized) return unauthorized;
 
   try {
-    const { listingId, formKey, formData } = await req.json();
-
-    if (!listingId || !formKey || !formData) {
+    const body = await req.json();
+    const parsed = saveFormSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Missing listingId, formKey, or formData" },
+        { error: "Validation failed", issues: parsed.error.issues },
         { status: 400 }
       );
     }
+    const { listingId, formKey, formData } = parsed.data;
 
     const supabase = createAdminClient();
 

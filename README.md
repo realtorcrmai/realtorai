@@ -95,21 +95,49 @@ Apply all migrations **in order** to your Supabase project via the SQL Editor (o
 | 3 | `003_allow_anon_role.sql` | RLS policies for anon role (required — NextAuth uses anon key) |
 | 4 | `004_form_templates_and_submissions.sql` | BCREA form templates and submissions |
 | 5 | `005_content_engine.sql` | AI prompts and media assets |
-| 6 | `005_english_tutor.sql` | English tutor feature tables |
-| 7 | `006_deals_pipeline.sql` | Deals, parties, and checklists for CRM pipeline |
-| 8 | `007_user_integrations.sql` | User integration credentials (DocuSign, MLS, etc.) |
-| 9 | `008_seed_sample_data.sql` | Demo data: 5 sellers, 5 buyers, 5 listings, deals |
-| 10 | `009_mortgages.sql` | Mortgage tracking for renewal alerts |
-| 11 | `010_seed_mortgage_data.sql` | Mortgage demo data |
-| 12 | `011_family_openhouse_stats.sql` | Family members, important dates, open houses, listing activities |
-| 13 | `012_seed_family_openhouse_data.sql` | Family and dates demo data |
-| 14 | `013_feature_overrides.sql` | Feature flag table |
-| 15 | `014_extension_tasks.sql` | Extension feature tasks |
-| 16 | `015_seed_buyer_completed_purchases.sql` | Buyer purchase history demo data |
-| 17 | `016_seed_seller_completed_sales.sql` | Seller sales history demo data |
-| 18 | `017_seed_mortgage_renewals_soon.sql` | Mortgage renewal scenarios |
-| 19 | `018_object_linking_improvements.sql` | Object linking enhancements |
-| 20 | `019_reset_seed_data.sql` | Clean reset of all seed data |
+| 6 | `006_users_and_features.sql` | Users table and feature flags |
+| 7 | `007_contact_enhancements.sql` | Contact fields: dates, source, tags |
+| 8 | `008_deals_pipeline.sql` | Deals, parties, and checklists for CRM pipeline |
+| 9 | `009_contact_lifecycle.sql` | Buyer preferences, lifecycle stages |
+| 10 | `010_user_integrations.sql` | User integration credentials (DocuSign, MLS, etc.) |
+| 11 | `011_contact_detail_features.sql` | Contact documents, lead status |
+| 12 | `012_seed_sample_data.sql` | Demo data: sellers, buyers, listings, deals |
+| 13 | `013_mortgages.sql` | Mortgage tracking for renewal alerts |
+| 14 | `014_workflow_automation.sql` | Workflow engine: workflows, steps, enrollments, templates |
+| 15 | `015_lifecycle_workflows.sql` | Lifecycle workflow types and seeds |
+| 16 | `016_newsletter_journey_engine.sql` | Newsletters, events, contact journeys |
+| 17 | `017_seed_mortgage_data.sql` | Mortgage demo data |
+| 18 | `018_stage_bar.sql` | Contact stage bar with backfill |
+| 19 | `019_family_openhouse_stats.sql` | Family members, open houses, listing activities |
+| 20 | `020_unify_email_engine.sql` | Merge journey into workflow enrollments |
+| 21 | `021_email_template_builder.sql` | Template builder JSON and AI templates |
+| 22 | `022_partner_contact_type.sql` | Partner/other contact types |
+| 23 | `023_seed_family_openhouse_data.sql` | Family and open house demo data |
+| 24 | `024_feature_overrides.sql` | Feature flag overrides table |
+| 25 | `025_referrals_table.sql` | Referrals tracking |
+| 26 | `026_visual_workflow_builder.sql` | React Flow visual workflow editor |
+| 27 | `027_extension_tasks.sql` | Extension feature tasks |
+| 28 | `028_segments_ab_testing.sql` | Contact segments and A/B testing |
+| 29 | `029_seller_preferences.sql` | Seller preferences JSONB |
+| 30 | `030_ai_agent.sql` | AI lead scoring and agent recommendations |
+| 31 | `031_last_activity_date.sql` | Contact last activity tracking |
+| 32 | `032_seed_buyer_completed_purchases.sql` | Buyer purchase history demo data |
+| 33 | `033_fix_stage_bar_consistency.sql` | Stage bar consistency fixes |
+| 34 | `034_seed_seller_completed_sales.sql` | Seller sales history demo data |
+| 35 | `035_contact_intelligence.sql` | Households, relationships, demographics |
+| 36 | `036_seed_mortgage_renewals_soon.sql` | Mortgage renewal scenarios |
+| 37 | `037_cleanup_relationship_types.sql` | Relationship type constraints |
+| 38 | `038_object_linking_improvements.sql` | Object linking enhancements |
+| 39 | `039_contact_consistency_trigger.sql` | Data consistency triggers |
+| 40 | `040_reset_seed_data.sql` | Clean reset of all seed data |
+| 41 | `041_agent_event_pipeline.sql` | Agent events and decisions |
+| 42 | `042_enable_realtime.sql` | Supabase Realtime on key tables |
+| 43 | `043_lead_scoring_and_activities.sql` | Behavior scoring, activities, properties |
+| 44 | `044_progressive_trust.sql` | Agent trust settings |
+| 45 | `045_offers.sql` | Offers and conditions |
+| 46 | `046_under_contract_workflow.sql` | Under-contract workflow seeds |
+| 47 | `047_data_integrity_fixes.sql` | Constraints, indexes, enforcement triggers |
+| 48 | `048_drop_english_tutor.sql` | Drop unused tutor tables |
 
 **Quick apply with Supabase CLI** (if linked):
 

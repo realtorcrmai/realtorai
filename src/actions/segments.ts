@@ -78,6 +78,8 @@ export async function evaluateSegment(segmentId: string): Promise<{ contactIds: 
 export async function bulkEnroll(contactIds: string[], workflowId: string) {
   const supabase = createAdminClient();
   let enrolled = 0;
+  let failed = 0;
+  const errors: string[] = [];
 
   for (const contactId of contactIds) {
     // Check if already enrolled
@@ -91,18 +93,25 @@ export async function bulkEnroll(contactIds: string[], workflowId: string) {
 
     if (existing) continue;
 
-    await supabase.from("workflow_enrollments").insert({
+    const { error: insertError } = await supabase.from("workflow_enrollments").insert({
       contact_id: contactId,
       workflow_id: workflowId,
       status: "active",
       current_step: 1,
       next_run_at: new Date().toISOString(),
     });
-    enrolled++;
+
+    if (insertError) {
+      failed++;
+      errors.push(`Contact ${contactId}: ${insertError.message}`);
+      console.error("[bulkEnroll] Failed to enroll contact:", contactId, insertError.message);
+    } else {
+      enrolled++;
+    }
   }
 
   revalidatePath("/automations");
-  return { enrolled, total: contactIds.length };
+  return { enrolled, failed, errors, total: contactIds.length };
 }
 
 async function evaluateSegmentRules(rules: SegmentRule[], operator: string): Promise<number> {

@@ -1,6 +1,17 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
+import { z } from "zod";
+
+const createImportantDateSchema = z.object({
+  date_type: z.string().min(1).max(100),
+  date_value: z.string().min(1),
+  label: z.string().max(200).optional(),
+  family_member_id: z.string().uuid().optional(),
+  recurring: z.boolean().optional(),
+  remind_days_before: z.number().int().min(0).max(365).optional(),
+  notes: z.string().optional(),
+});
 
 export async function GET(
   _req: NextRequest,
@@ -32,6 +43,14 @@ export async function POST(
   const { id } = await params;
   const supabase = createAdminClient();
   const body = await req.json();
+
+  const parsed = createImportantDateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", issues: parsed.error.issues },
+      { status: 400 }
+    );
+  }
 
   const { data, error } = await supabase
     .from("contact_important_dates")

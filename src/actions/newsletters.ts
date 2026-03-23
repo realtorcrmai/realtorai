@@ -291,12 +291,15 @@ export async function sendNewsletter(newsletterId: string) {
   const contact = newsletter.contacts as any;
   if (!contact?.email) return { error: "Contact has no email" };
 
-  try {
-    await supabase
-      .from("newsletters")
-      .update({ status: "sending" })
-      .eq("id", newsletterId);
+  // Capture the current status so we can roll back if the API call fails
+  const previousStatus = newsletter.status as string;
 
+  await supabase
+    .from("newsletters")
+    .update({ status: "sending" })
+    .eq("id", newsletterId);
+
+  try {
     const { messageId } = await sendEmail({
       to: contact.email,
       subject: newsletter.subject,
@@ -330,10 +333,11 @@ export async function sendNewsletter(newsletterId: string) {
     revalidatePath("/newsletters");
     return { success: true, messageId };
   } catch (e) {
+    // Roll back status to what it was before we set it to "sending"
     await supabase
       .from("newsletters")
       .update({
-        status: "failed",
+        status: previousStatus,
         error_message: e instanceof Error ? e.message : "Unknown error",
         updated_at: new Date().toISOString(),
       })

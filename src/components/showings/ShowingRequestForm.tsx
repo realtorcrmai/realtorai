@@ -106,7 +106,7 @@ export function ShowingFormContent({
       <div>
         <Label htmlFor="listingId">Listing</Label>
         <Select
-          onValueChange={(val) => setValue("listingId", val as string)}
+          onValueChange={(val) => setValue("listingId", val as string, { shouldValidate: true, shouldDirty: true })}
           defaultValue={preselectedListingId}
         >
           <SelectTrigger>
@@ -219,7 +219,7 @@ export function ShowingRequestForm({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button>
+          <Button disabled={disabled}>
             <Plus className="h-4 w-4 mr-2" />
             New Showing Request
           </Button>

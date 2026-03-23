@@ -30,6 +30,7 @@ const formSchema = z.object({
   address: z.string().min(5, "Address is required"),
   seller_id: z.string().uuid("Select a seller"),
   lockbox_code: z.string().min(1, "Lockbox code is required"),
+  property_type: z.enum(["Residential", "Condo/Apartment", "Townhouse", "Land", "Commercial", "Multi-Family"]).optional(),
   mls_number: z.string().optional(),
   list_price: z.string().optional(),
   showing_window_start: z.string().optional(),
@@ -47,6 +48,7 @@ export interface ListingFormContentProps {
 export function ListingFormContent({ onSuccess, sellers }: ListingFormContentProps) {
   const [submitting, setSubmitting] = useState(false);
   const [selectedSeller, setSelectedSeller] = useState<string>("");
+  const [selectedPropertyType, setSelectedPropertyType] = useState<string>("");
 
   const {
     register,
@@ -56,6 +58,10 @@ export function ListingFormContent({ onSuccess, sellers }: ListingFormContentPro
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      seller_id: "",
+      property_type: "Residential",
+    },
   });
 
   async function onSubmit(data: FormData) {
@@ -65,6 +71,7 @@ export function ListingFormContent({ onSuccess, sellers }: ListingFormContentPro
       seller_id: data.seller_id,
       lockbox_code: data.lockbox_code,
       status: "active",
+      property_type: data.property_type,
       mls_number: data.mls_number,
       list_price: data.list_price ? parseFloat(data.list_price) : undefined,
       showing_window_start: data.showing_window_start,
@@ -74,6 +81,7 @@ export function ListingFormContent({ onSuccess, sellers }: ListingFormContentPro
     setSubmitting(false);
     reset();
     setSelectedSeller("");
+    setSelectedPropertyType("");
     onSuccess?.();
   }
 
@@ -97,7 +105,7 @@ export function ListingFormContent({ onSuccess, sellers }: ListingFormContentPro
         <Select
           value={selectedSeller}
           onValueChange={(val) => {
-            setValue("seller_id", val as string);
+            setValue("seller_id", val as string, { shouldValidate: true, shouldDirty: true });
             setSelectedSeller(val as string);
           }}
         >
@@ -122,6 +130,34 @@ export function ListingFormContent({ onSuccess, sellers }: ListingFormContentPro
         {errors.seller_id && (
           <p className="text-sm text-red-600 mt-1">
             {errors.seller_id.message}
+          </p>
+        )}
+      </div>
+
+      <div>
+        <Label>Property Type</Label>
+        <Select
+          value={selectedPropertyType || "Residential"}
+          onValueChange={(val) => {
+            setValue("property_type", val as any, { shouldValidate: true, shouldDirty: true });
+            setSelectedPropertyType(val ?? "Residential");
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select property type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Residential">Residential</SelectItem>
+            <SelectItem value="Condo/Apartment">Condo/Apartment</SelectItem>
+            <SelectItem value="Townhouse">Townhouse</SelectItem>
+            <SelectItem value="Land">Land</SelectItem>
+            <SelectItem value="Commercial">Commercial</SelectItem>
+            <SelectItem value="Multi-Family">Multi-Family</SelectItem>
+          </SelectContent>
+        </Select>
+        {errors.property_type && (
+          <p className="text-sm text-red-600 mt-1">
+            {errors.property_type.message}
           </p>
         )}
       </div>

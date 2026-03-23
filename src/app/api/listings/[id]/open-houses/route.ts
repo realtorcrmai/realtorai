@@ -1,6 +1,37 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
+import { z } from "zod";
+
+const createOpenHouseSchema = z.object({
+  date: z.string().min(1),
+  start_time: z.string().min(1),
+  end_time: z.string().min(1),
+  type: z.enum(["public", "agent", "virtual"]).optional(),
+  status: z.enum(["scheduled", "completed", "cancelled"]).optional(),
+  notes: z.string().optional(),
+}).refine(
+  (data) => data.end_time > data.start_time,
+  { message: "end_time must be after start_time", path: ["end_time"] }
+);
+
+const patchOpenHouseSchema = z.object({
+  open_house_id: z.string().uuid(),
+  date: z.string().optional(),
+  start_time: z.string().optional(),
+  end_time: z.string().optional(),
+  type: z.enum(["public", "agent", "virtual"]).optional(),
+  status: z.enum(["scheduled", "completed", "cancelled"]).optional(),
+  notes: z.string().optional(),
+}).refine(
+  (data) => {
+    if (data.start_time && data.end_time) {
+      return data.end_time > data.start_time;
+    }
+    return true;
+  },
+  { message: "end_time must be after start_time", path: ["end_time"] }
+);
 
 export async function GET(
   _req: NextRequest,
@@ -32,6 +63,14 @@ export async function POST(
   const { id } = await params;
   const supabase = createAdminClient();
   const body = await req.json();
+
+  const parsed = createOpenHouseSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", issues: parsed.error.issues },
+      { status: 400 }
+    );
+  }
 
   const { data, error } = await supabase
     .from("open_houses")
@@ -67,9 +106,15 @@ export async function PATCH(req: NextRequest) {
   const supabase = createAdminClient();
   const body = await req.json();
 
-  if (!body.open_house_id) return NextResponse.json({ error: "open_house_id required" }, { status: 400 });
+  const parsed = patchOpenHouseSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", issues: parsed.error.issues },
+      { status: 400 }
+    );
+  }
 
-  const { open_house_id, ...updates } = body;
+  const { open_house_id, ...updates } = parsed.data;
   const { data, error } = await supabase
     .from("open_houses")
     .update(updates)

@@ -1,0 +1,126 @@
+import twilio from "twilio";
+
+const client = twilio(
+  process.env.TWILIO_ACCOUNT_SID!,
+  process.env.TWILIO_AUTH_TOKEN!
+);
+
+type Channel = "whatsapp" | "sms";
+
+function formatNumber(phone: string, channel: Channel): string {
+  const clean = phone.replace(/\D/g, "");
+  const e164 = clean.startsWith("1") ? `+${clean}` : `+1${clean}`;
+  return channel === "whatsapp" ? `whatsapp:${e164}` : e164;
+}
+
+export async function sendShowingRequest(params: {
+  to: string;
+  channel: Channel;
+  address: string;
+  startTime: Date;
+  buyerAgentName: string;
+}) {
+  const { to, channel, address, startTime, buyerAgentName } = params;
+
+  const timeStr = startTime.toLocaleString("en-CA", {
+    timeZone: "America/Vancouver",
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  const body = `🏠 *Showing Request*\n\nProperty: ${address}\nDate/Time: ${timeStr}\nBuyer's Agent: ${buyerAgentName}\n\nReply *YES* to confirm or *NO* to decline.\n\n_This is an automated message from your CRM._`;
+
+  const from =
+    channel === "whatsapp"
+      ? process.env.TWILIO_WHATSAPP_NUMBER!
+      : process.env.TWILIO_PHONE_NUMBER!;
+
+  const message = await client.messages.create({
+    body,
+    from,
+    to: formatNumber(to, channel),
+  });
+
+  return message.sid;
+}
+
+export async function sendLockboxCode(params: {
+  to: string;
+  channel: Channel;
+  address: string;
+  lockboxCode: string;
+  showingTime: Date;
+}) {
+  const { to, channel, address, lockboxCode, showingTime } = params;
+
+  const timeStr = showingTime.toLocaleString("en-CA", {
+    timeZone: "America/Vancouver",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  const body = `✅ *Showing Confirmed!*\n\nProperty: ${address}\nTime: ${timeStr}\nLockbox Code: *${lockboxCode}*\n\nPlease ensure the property is secured after your showing. Thank you!`;
+
+  const from =
+    channel === "whatsapp"
+      ? process.env.TWILIO_WHATSAPP_NUMBER!
+      : process.env.TWILIO_PHONE_NUMBER!;
+
+  await client.messages.create({
+    body,
+    from,
+    to: formatNumber(to, channel),
+  });
+}
+
+export async function sendGenericMessage(params: {
+  to: string;
+  channel: Channel;
+  body: string;
+}) {
+  const { to, channel, body } = params;
+
+  const from =
+    channel === "whatsapp"
+      ? process.env.TWILIO_WHATSAPP_NUMBER!
+      : process.env.TWILIO_PHONE_NUMBER!;
+
+  const message = await client.messages.create({
+    body,
+    from,
+    to: formatNumber(to, channel),
+  });
+
+  return message.sid;
+}
+
+export async function sendShowingDenied(params: {
+  to: string;
+  address: string;
+  showingTime: Date;
+}) {
+  const { to, address, showingTime } = params;
+
+  const timeStr = showingTime.toLocaleString("en-CA", {
+    timeZone: "America/Vancouver",
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  const body = `Unfortunately, the showing request for ${address} on ${timeStr} has been declined by the seller. Please contact the listing agent to arrange an alternate time.`;
+
+  await client.messages.create({
+    body,
+    from: process.env.TWILIO_PHONE_NUMBER!,
+    to: formatNumber(to, "sms"),
+  });
+}

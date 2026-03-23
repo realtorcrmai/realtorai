@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import type { z, ZodSchema } from "zod";
+import { isAppError, mapSupabaseError } from "@/lib/errors";
 import type { ActionResult } from "./types";
 
 interface CreateActionOptions<TSchema extends ZodSchema, TResult extends object> {
@@ -51,6 +52,23 @@ export function createAction<TSchema extends ZodSchema, TResult extends object>(
       return { success: true, ...result };
     } catch (err) {
       console.error("Action failed:", err);
+
+      // Map Supabase/PostgreSQL errors to user-friendly messages
+      if (
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        typeof (err as { code: unknown }).code === "string"
+      ) {
+        const mapped = mapSupabaseError(err as { code?: string; message?: string; details?: string; hint?: string });
+        return { error: mapped.userMessage };
+      }
+
+      // Propagate existing AppErrors
+      if (isAppError(err)) {
+        return { error: err.userMessage };
+      }
+
       return {
         error: err instanceof Error ? err.message : "An unexpected error occurred",
       };

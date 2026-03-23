@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireVoiceAgentAuth } from "@/lib/voice-agent-auth";
+import { z } from "zod";
+
+const createContactSchema = z.object({
+  name: z.string().min(1).max(200),
+  phone: z.string().max(30).optional(),
+  email: z.string().email().optional(),
+  type: z.enum(["buyer", "seller"]).optional(),
+  pref_channel: z.enum(["sms", "whatsapp", "email"]).optional(),
+  notes: z.string().optional(),
+});
 
 /**
  * GET /api/voice-agent/contacts
@@ -70,8 +80,12 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
 
-  if (!body.name) {
-    return NextResponse.json({ error: "name is required" }, { status: 400 });
+  const parsed = createContactSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", issues: parsed.error.issues },
+      { status: 400 }
+    );
   }
 
   const supabase = createAdminClient();
@@ -79,12 +93,12 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from("contacts")
     .insert({
-      name: body.name,
-      phone: body.phone || "",
-      email: body.email || null,
-      type: body.type || "buyer",
-      pref_channel: body.pref_channel || "sms",
-      notes: body.notes || null,
+      name: parsed.data.name,
+      phone: parsed.data.phone || "",
+      email: parsed.data.email || null,
+      type: parsed.data.type || "buyer",
+      pref_channel: parsed.data.pref_channel || "sms",
+      notes: parsed.data.notes || null,
     })
     .select()
     .single();

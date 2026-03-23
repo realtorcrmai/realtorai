@@ -6,25 +6,7 @@ import { contactSchema, type ContactFormData } from "@/lib/schemas";
 import type { Json } from "@/types/database";
 import { enforceConsistency } from "@/lib/contact-consistency";
 
-export async function checkDuplicateContact(phone: string, email?: string) {
-  const supabase = createAdminClient();
-  const normalizedPhone = phone.replace(/[\s\-\(\)\.]/g, "");
-  const last10 = normalizedPhone.slice(-10);
-
-  const { data: matches } = await supabase
-    .from("contacts")
-    .select("id, name, phone, email")
-    .or(`phone.ilike.%${last10},email.ilike.${email || "NOMATCH"}`)
-    .limit(1);
-
-  if (matches?.length) {
-    const matchedOn = matches[0].phone?.includes(last10) ? "phone" : "email";
-    return { duplicate: true, existing: matches[0], matchedOn };
-  }
-  return { duplicate: false };
-}
-
-export async function createContact(formData: ContactFormData) {
+export async function createContact(formData: ContactFormData, force = false) {
   const parsed = contactSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: "Invalid form data", issues: parsed.error.issues };
@@ -32,13 +14,39 @@ export async function createContact(formData: ContactFormData) {
 
   const supabase = createAdminClient();
 
-  // Duplicate check
-  const dupCheck = await checkDuplicateContact(parsed.data.phone, parsed.data.email || undefined);
-  if (dupCheck.duplicate) {
-    return {
-      error: `Contact already exists: ${dupCheck.existing?.name} (matched by ${dupCheck.matchedOn})`,
-      duplicate: dupCheck.existing,
-    };
+  if (!force) {
+    // Strip non-digit characters and take the last 10 digits for phone comparison
+    const rawPhone = (parsed.data.phone ?? "").replace(/\D/g, "");
+    const last10 = rawPhone.slice(-10);
+
+    const { data: existing } = await supabase
+      .from("contacts")
+      .select("id, name, phone, email");
+
+    if (existing && existing.length > 0) {
+      const duplicates = existing.filter((c) => {
+        const phoneMatch =
+          last10.length === 10 &&
+          (c.phone ?? "").replace(/\D/g, "").slice(-10) === last10;
+        const emailMatch =
+          parsed.data.email &&
+          c.email &&
+          c.email.toLowerCase() === parsed.data.email.toLowerCase();
+        return phoneMatch || emailMatch;
+      });
+
+      if (duplicates.length > 0) {
+        return {
+          error: "Duplicate contact detected",
+          duplicates: duplicates.map((c) => ({
+            id: c.id,
+            name: c.name,
+            phone: c.phone,
+            email: c.email,
+          })),
+        };
+      }
+    }
   }
 
   const { data, error } = await supabase
@@ -72,71 +80,19 @@ export async function createContact(formData: ContactFormData) {
 
   revalidatePath("/contacts");
 
-  // Auto-enroll in journey (buyer or seller track, starting at "lead" phase)
-  try {
-    const journeyType = data.type === "seller" ? "seller" : "buyer";
-    const nextEmailAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(); // next email in 3 days
-    await supabase.from("contact_journeys").insert({
-      contact_id: data.id,
-      journey_type: journeyType,
-      current_phase: "lead",
-      is_paused: false,
-      next_email_at: nextEmailAt,
-      send_mode: "review",
+  // Fire-and-forget: auto-enroll in workflows (e.g. speed_to_contact)
+  // and create agent notification via workflow-triggers
+  import("@/lib/workflow-triggers")
+    .then(({ fireTrigger }) =>
+      fireTrigger({
+        type: "new_lead",
+        contactId: data.id,
+        contactType: data.type,
+      })
+    )
+    .catch(() => {
+      // Don't fail contact creation if trigger fails
     });
-
-    // Generate and queue welcome email immediately
-    if (data.email) {
-      const welcomeSubject = journeyType === "buyer"
-        ? `Welcome! Let's Find Your Dream Home`
-        : `What's Your Home Worth? Let's Find Out`;
-      const firstName = data.name?.split(" ")[0] || "there";
-      const welcomeHtml = `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f6f5ff;padding:20px;margin:0;">
-<div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(79,53,210,0.06);">
-<div style="padding:28px 32px 20px;text-align:center;"><h1 style="font-size:22px;font-weight:700;color:#4f35d2;margin:0;">ListingFlow</h1></div>
-<div style="padding:0 32px 24px;">
-<p style="font-size:16px;color:#1a1535;margin:0 0 12px;">Hi ${firstName},</p>
-<p style="font-size:15px;color:#3a3a5c;line-height:1.6;margin:0 0 16px;">${journeyType === "buyer"
-  ? "Welcome! I'm excited to help you find your perfect home. I'll be sending you personalized property matches based on your preferences, market updates for your areas of interest, and neighbourhood guides to help you make the best decision."
-  : "Welcome! I'd love to help you get the best value for your property. I'll be sharing recent comparable sales in your area, market trends, and expert tips to make your selling experience smooth and successful."}</p>
-<p style="font-size:15px;color:#3a3a5c;line-height:1.6;margin:0 0 16px;">Here's what you can expect from me:</p>
-<div style="background:#f6f5ff;border-radius:10px;padding:16px 20px;margin:0 0 20px;">
-<div style="font-size:14px;color:#1a1535;margin:0 0 8px;">✅ <strong>${journeyType === "buyer" ? "New listing alerts" : "Comparable sales data"}</strong> tailored to you</div>
-<div style="font-size:14px;color:#1a1535;margin:0 0 8px;">✅ <strong>Market updates</strong> for your area</div>
-<div style="font-size:14px;color:#1a1535;margin:0;">✅ <strong>${journeyType === "buyer" ? "Neighbourhood guides" : "Selling tips & strategies"}</strong></div>
-</div>
-<p style="font-size:15px;color:#3a3a5c;line-height:1.6;margin:0 0 16px;">Feel free to reply to this email anytime — I'm here to help!</p>
-<p style="font-size:15px;color:#3a3a5c;margin:0;">Best regards,<br><strong>Your Realtor</strong></p>
-</div>
-<hr style="border-color:#e8e5f5;margin:0;">
-<div style="padding:20px 32px;text-align:center;">
-<p style="font-size:11px;color:#a0a0b0;margin:0;"><a href="#" style="color:#a0a0b0;text-decoration:underline;">Unsubscribe</a></p>
-</div></div></body></html>`;
-
-      await supabase.from("newsletters").insert({
-        contact_id: data.id,
-        subject: welcomeSubject,
-        email_type: "welcome",
-        status: "draft",
-        html_body: welcomeHtml,
-        ai_context: { journey_phase: "lead", contact_type: data.type, auto_generated: true },
-      });
-    }
-  } catch {
-    // Don't fail contact creation if journey enrollment fails
-  }
-
-  // Fire new_lead trigger for workflow auto-enrollment
-  try {
-    const { fireTrigger } = await import("@/lib/workflow-triggers");
-    await fireTrigger({
-      type: "new_lead",
-      contactId: data.id,
-      contactType: data.type,
-    });
-  } catch {
-    // Don't fail contact creation if trigger fails
-  }
 
   revalidatePath("/newsletters");
 
@@ -527,6 +483,40 @@ export async function deleteContactTask(taskId: string, contactId: string) {
   }
 
   revalidatePath(`/contacts/${contactId}`);
+  return { success: true };
+}
+
+// ── Delete Contact ───────────────────────────────────────────
+
+export async function deleteContact(id: string) {
+  if (!id) {
+    return { error: "Invalid contact ID" };
+  }
+
+  const supabase = createAdminClient();
+
+  // Check for active listings where this contact is the seller
+  const { data: activeListings, error: listingsError } = await supabase
+    .from("listings")
+    .select("id, status")
+    .eq("seller_id", id)
+    .not("status", "in", "(sold,cancelled)");
+
+  if (listingsError) {
+    return { error: "Failed to check contact listings" };
+  }
+
+  if (activeListings && activeListings.length > 0) {
+    return { error: "Cannot delete contact with active listings" };
+  }
+
+  const { error } = await supabase.from("contacts").delete().eq("id", id);
+
+  if (error) {
+    return { error: "Failed to delete contact" };
+  }
+
+  revalidatePath("/contacts");
   return { success: true };
 }
 

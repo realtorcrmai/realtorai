@@ -31,30 +31,7 @@ export async function createListing(formData: ListingFormData) {
 
   revalidatePath("/listings");
 
-  // Advance seller lifecycle milestones (listing created → "has_listing" milestone)
-  if (data?.seller_id) {
-    try {
-      const { advanceLifecycleForContact } = await import("@/lib/workflow-triggers");
-      await advanceLifecycleForContact(data.seller_id);
-    } catch {
-      // Don't fail listing creation if lifecycle advancement fails
-    }
-  }
-
-  // Emit agent event for listing creation
-  try {
-    const { emitListingEvent } = await import("@/lib/ai-agent/event-emitter");
-    await emitListingEvent(data.id, "listing_created", {
-      address: data.address,
-      list_price: data.list_price,
-      bedrooms: data.bedrooms,
-      bathrooms: data.bathrooms,
-      property_type: data.property_type,
-      seller_id: data.seller_id,
-    });
-  } catch {
-    // Don't fail listing creation if event emission fails
-  }
+  // Lifecycle milestone advancement removed — StageBar is the single source of truth.
 
   return { success: true, listing: data };
 }
@@ -102,6 +79,81 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   pending: ["sold", "active"],
   sold: [], // terminal state
 };
+
+export type ListingStatusOverride =
+  | "active"
+  | "pending"
+  | "conditional"
+  | "sold"
+  | "cancelled"
+  | "expired"
+  | "withdrawn";
+
+/**
+ * Manual status override — bypasses workflow-gate transition rules.
+ * Used when the realtor needs to set an out-of-band status (Conditional,
+ * Cancelled, Expired, Withdrawn) that the sequential workflow never produces.
+ */
+export async function overrideListingStatus(
+  id: string,
+  newStatus: ListingStatusOverride
+) {
+  const supabase = createAdminClient();
+
+  const { error } = await supabase
+    .from("listings")
+    .update({ status: newStatus })
+    .eq("id", id);
+
+  if (error) return { error: "Failed to update listing status" };
+
+  revalidatePath("/listings");
+  revalidatePath(`/listings/${id}`);
+  revalidatePath("/contacts");
+
+  // Sync seller stage when relevant
+  const stageMap: Record<string, string> = {
+    conditional: "under_contract",
+    sold: "closed",
+  };
+  const newSellerStage = stageMap[newStatus];
+  if (newSellerStage) {
+    try {
+      const { data: stageListing } = await supabase
+        .from("listings")
+        .select("seller_id")
+        .eq("id", id)
+        .single();
+
+      if (stageListing?.seller_id) {
+        const { data: seller } = await supabase
+          .from("contacts")
+          .select("stage_bar, type")
+          .eq("id", stageListing.seller_id)
+          .single();
+
+        if (seller?.type === "seller") {
+          const stageOrder = ["new", "qualified", "active_listing", "under_contract", "closed"];
+          const currentIdx = stageOrder.indexOf(seller.stage_bar || "new");
+          const newIdx = stageOrder.indexOf(newSellerStage);
+          if (newIdx > currentIdx) {
+            const stageUpdates: Record<string, unknown> = { stage_bar: newSellerStage };
+            if (newSellerStage === "closed") stageUpdates.lead_status = "closed";
+            if (newSellerStage === "under_contract") stageUpdates.lead_status = "under_contract";
+            await supabase
+              .from("contacts")
+              .update(stageUpdates)
+              .eq("id", stageListing.seller_id);
+          }
+        }
+      }
+    } catch {
+      // Don't fail status update if seller stage sync fails
+    }
+  }
+
+  return { success: true };
+}
 
 export async function updateListingStatus(
   id: string,
@@ -182,27 +234,7 @@ export async function updateListingStatus(
     }
   }
 
-  // Advance lifecycle milestones on any status change (active, pending, sold)
-  try {
-    const supabaseLife = createAdminClient();
-    const { data: lifeListing } = await supabaseLife
-      .from("listings")
-      .select("seller_id, buyer_id")
-      .eq("id", id)
-      .single();
-
-    if (lifeListing) {
-      const { advanceLifecycleForContact } = await import("@/lib/workflow-triggers");
-      if (lifeListing.seller_id) {
-        await advanceLifecycleForContact(lifeListing.seller_id);
-      }
-      if (lifeListing.buyer_id) {
-        await advanceLifecycleForContact(lifeListing.buyer_id);
-      }
-    }
-  } catch {
-    // Don't fail status update if lifecycle advancement fails
-  }
+  // Lifecycle milestone advancement removed — StageBar is the single source of truth.
 
   // Fire listing_status_change trigger for workflow auto-enrollment (e.g., post-close workflows)
   if (newStatus === "sold") {

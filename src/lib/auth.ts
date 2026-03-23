@@ -3,6 +3,12 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ALL_FEATURES } from "@/lib/features";
+import {
+  getClientIp,
+  recordFailedAttempt,
+  isRateLimited,
+  resetRateLimit,
+} from "@/lib/rate-limit";
 
 const DEMO_EMAIL = process.env.DEMO_EMAIL || "demo@realestatecrm.com";
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD || "demo1234";
@@ -20,16 +26,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         const email = credentials?.email as string | undefined;
         const password = credentials?.password as string | undefined;
+
+        // Extract client IP from request headers
+        const clientIp = getClientIp(req.headers);
+
+        // Check if IP is rate limited
+        const rateLimit = isRateLimited(clientIp);
+        if (rateLimit.isLimited) {
+          const minutesUntilRetry = rateLimit.minutesUntilRetry || 15;
+          throw new Error(
+            `Too many login attempts. Please try again in ${minutesUntilRetry} minute${minutesUntilRetry !== 1 ? "s" : ""}.`
+          );
+        }
+
+        // Validate credentials
         if (email === DEMO_EMAIL && password === DEMO_PASSWORD) {
+          // Success: reset rate limit for this IP
+          resetRateLimit(clientIp);
           return {
             id: "demo-user",
             name: "Demo User",
             email: DEMO_EMAIL,
           };
         }
+
+        // Failed attempt: record it
+        const isNowBlocked = recordFailedAttempt(clientIp);
+        if (isNowBlocked) {
+          throw new Error(
+            "Too many login attempts. Please try again in 15 minutes."
+          );
+        }
+
         return null;
       },
     }),
@@ -77,9 +108,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.refreshToken = account.refresh_token;
         }
 
-        // Upsert user record and fetch role/features
-        // Skip entirely if we already know the table doesn't exist
-        if (token.email && usersTableExists !== false) {
+        // Skip DB lookup if role/features are already cached in the token
+        // Only fetch on sign-in or if data is missing
+        const needsUserFetch = !token.role || !token.enabledFeatures || trigger === "signIn" || account;
+
+        if (token.email && needsUserFetch && usersTableExists !== false) {
           const { data: existingUser, error: fetchError } = await supabase
             .from("users")
             .select("id, role, enabled_features, is_active")
@@ -124,10 +157,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               token.userId = newUser?.id;
             }
           }
-        } else if (token.email) {
-          // Users table known to be missing — use cached defaults
-          token.role = token.role ?? "realtor";
-          token.enabledFeatures = token.enabledFeatures ?? ALL_FEATURES;
+        } else if (token.email && !token.role) {
+          // Users table known to be missing — use defaults
+          token.role = "realtor";
+          token.enabledFeatures = ALL_FEATURES;
         }
       } catch (err) {
         console.error("[auth] JWT callback error:", err);

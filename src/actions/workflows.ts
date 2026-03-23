@@ -376,17 +376,21 @@ export async function enrollContact(
 
   const { data: enrollment, error } = await supabase
     .from("workflow_enrollments")
-    .insert({
-      workflow_id: workflowId,
-      contact_id: contactId,
-      listing_id: listingId || null,
-      status: "active",
-      current_step: 1,
-      next_run_at: nextRun.toISOString(),
-    })
+    .upsert(
+      {
+        workflow_id: workflowId,
+        contact_id: contactId,
+        listing_id: listingId || null,
+        status: "active",
+        current_step: 1,
+        next_run_at: nextRun.toISOString(),
+      },
+      { onConflict: "workflow_id,contact_id", ignoreDuplicates: true }
+    )
     .select()
     .single();
 
+  if (!enrollment) return { error: "Contact is already enrolled in this workflow" };
   if (error) return { error: "Failed to enroll contact: " + error.message };
 
   // Log activity
@@ -811,70 +815,7 @@ export async function backfillWorkflowEnrollments(): Promise<{
       }
     }
 
-    // ── under_contract: contacts linked to pending listings ────
-    if (workflow.slug === "under_contract") {
-      const { data: pendingListings } = await supabase
-        .from("listings")
-        .select("id, seller_id, buyer_id")
-        .eq("status", "pending");
-
-      for (const listing of pendingListings ?? []) {
-        // Enroll the seller
-        const seller = allContacts.find((c) => c.id === listing.seller_id);
-        if (seller) {
-          const result = await tryEnroll(
-            workflow.id, workflow.slug, seller.id, seller.name, listing.id
-          );
-          (result === "enrolled" ? enrolled : skipped).push(seller.name);
-        }
-        // Enroll the buyer if linked
-        if (listing.buyer_id) {
-          const buyer = allContacts.find((c) => c.id === listing.buyer_id);
-          if (buyer) {
-            const result = await tryEnroll(
-              workflow.id, workflow.slug, buyer.id, buyer.name, listing.id
-            );
-            (result === "enrolled" ? enrolled : skipped).push(buyer.name);
-          }
-        }
-      }
-    }
-
-    // ── seller_lifecycle: all seller contacts ──────────────────
-    if (workflow.slug === "seller_lifecycle") {
-      const sellers = allContacts.filter((c) => c.type === "seller");
-      for (const contact of sellers) {
-        const result = await tryEnroll(
-          workflow.id, workflow.slug, contact.id, contact.name
-        );
-        if (result === "enrolled") {
-          // Fast-forward milestones to current state
-          try {
-            const { advanceLifecycleForContact } = await import("@/lib/workflow-triggers");
-            await advanceLifecycleForContact(contact.id);
-          } catch { /* continue */ }
-        }
-        (result === "enrolled" ? enrolled : skipped).push(contact.name);
-      }
-    }
-
-    // ── buyer_lifecycle: all buyer contacts ───────────────────
-    if (workflow.slug === "buyer_lifecycle") {
-      const buyers = allContacts.filter((c) => c.type === "buyer");
-      for (const contact of buyers) {
-        const result = await tryEnroll(
-          workflow.id, workflow.slug, contact.id, contact.name
-        );
-        if (result === "enrolled") {
-          // Fast-forward milestones to current state
-          try {
-            const { advanceLifecycleForContact } = await import("@/lib/workflow-triggers");
-            await advanceLifecycleForContact(contact.id);
-          } catch { /* continue */ }
-        }
-        (result === "enrolled" ? enrolled : skipped).push(contact.name);
-      }
-    }
+    // NOTE: seller_lifecycle and buyer_lifecycle removed — redundant with StageBar pipeline.
 
     totalEnrolled += enrolled.length;
     results.push({ workflow: workflow.slug, enrolled, skipped });

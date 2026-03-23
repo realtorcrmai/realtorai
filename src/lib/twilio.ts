@@ -32,7 +32,7 @@ export async function sendShowingRequest(params: {
     hour12: true,
   });
 
-  const body = `🏠 *Showing Request*\n\nProperty: ${address}\nDate/Time: ${timeStr}\nBuyer's Agent: ${buyerAgentName}\n\nReply *YES* to confirm or *NO* to decline.\n\n_This is an automated message from your CRM._`;
+  const body = `🏠 *Showing Request*\n\nProperty: ${address}\nDate/Time: ${timeStr}\nBuyer's Agent: ${buyerAgentName}\n\nReply *YES* to confirm or *NO* to decline.\n\nReply *STOP* to opt out of messages.`;
 
   const from =
     channel === "whatsapp"
@@ -64,7 +64,7 @@ export async function sendLockboxCode(params: {
     hour12: true,
   });
 
-  const body = `✅ *Showing Confirmed!*\n\nProperty: ${address}\nTime: ${timeStr}\nLockbox Code: *${lockboxCode}*\n\nPlease ensure the property is secured after your showing. Thank you!`;
+  const body = `✅ *Showing Confirmed!*\n\nProperty: ${address}\nTime: ${timeStr}\nLockbox Code: *${lockboxCode}*\n\nPlease ensure the property is secured after your showing. Thank you!\n\nReply *STOP* to opt out of messages.`;
 
   const from =
     channel === "whatsapp"
@@ -116,7 +116,7 @@ export async function sendShowingDenied(params: {
     hour12: true,
   });
 
-  const body = `Unfortunately, the showing request for ${address} on ${timeStr} has been declined by the seller. Please contact the listing agent to arrange an alternate time.`;
+  const body = `Unfortunately, the showing request for ${address} on ${timeStr} has been declined by the seller. Please contact the listing agent to arrange an alternate time.\n\nReply *STOP* to opt out of messages.`;
 
   await client.messages.create({
     body,

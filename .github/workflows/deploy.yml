@@ -1,0 +1,160 @@
+name: Build & Deploy to Netlify
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  NODE_VERSION: "20"
+
+jobs:
+  build-and-deploy:
+    name: ${{ github.event_name == 'pull_request' && 'Build Check (PR)' || 'Build & Deploy' }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      # ------------------------------------------------------------------ #
+      # 1. Checkout
+      # ------------------------------------------------------------------ #
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------------------------ #
+      # 2. Node.js setup
+      # ------------------------------------------------------------------ #
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # ------------------------------------------------------------------ #
+      # 3. Cache node_modules keyed on package-lock.json hash
+      # ------------------------------------------------------------------ #
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ env.NODE_VERSION }}-
+
+      # ------------------------------------------------------------------ #
+      # 4. Install dependencies
+      # ------------------------------------------------------------------ #
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      # ------------------------------------------------------------------ #
+      # 5. Build Next.js app
+      #    All NEXT_PUBLIC_* vars must be present at build time.
+      # ------------------------------------------------------------------ #
+      - name: Build Next.js app
+        run: npm run build
+        env:
+          # Supabase
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Auth
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          # AI / Comms
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          # App
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # Demo auth
+          DEMO_EMAIL: ${{ secrets.DEMO_EMAIL }}
+          DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+
+      # ------------------------------------------------------------------ #
+      # 6a. Deploy to Netlify (push to main only)
+      # ------------------------------------------------------------------ #
+      - name: Install Netlify CLI
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: npm i -g netlify-cli
+
+      - name: Deploy to Netlify (production)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: netlify-deploy
+        run: |
+          npx netlify deploy \
+            --prod \
+            --dir=.next \
+            --site=${{ secrets.NETLIFY_SITE_ID }} \
+            --auth=${{ secrets.NETLIFY_AUTH_TOKEN }} \
+            --message="Deploy from GitHub Actions — commit ${{ github.sha }}" \
+            --json \
+            | tee deploy-output.json
+
+          DEPLOY_URL=$(jq -r '.deploy_url // .url' deploy-output.json)
+          SITE_URL=$(jq -r '.url // empty' deploy-output.json)
+          echo "deploy_url=${DEPLOY_URL}" >> "$GITHUB_OUTPUT"
+          echo "site_url=${SITE_URL}" >> "$GITHUB_OUTPUT"
+
+      # ------------------------------------------------------------------ #
+      # 6b. Comment deploy URL on commit (push to main only)
+      # ------------------------------------------------------------------ #
+      - name: Comment deploy URL on commit
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deployUrl  = '${{ steps.netlify-deploy.outputs.deploy_url }}';
+            const siteUrl    = '${{ steps.netlify-deploy.outputs.site_url }}';
+            const commitSha  = context.sha;
+            const shortSha   = commitSha.substring(0, 7);
+
+            const body = [
+              `### Netlify deployment succeeded for \`${shortSha}\``,
+              '',
+              `| | URL |`,
+              `|---|---|`,
+              `| **Production** | ${siteUrl || deployUrl} |`,
+              `| **Deploy preview** | ${deployUrl} |`,
+              '',
+              `Triggered by push to \`main\` — [View workflow run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+            ].join('\n');
+
+            await github.rest.repos.createCommitComment({
+              owner:      context.repo.owner,
+              repo:       context.repo.repo,
+              commit_sha: commitSha,
+              body,
+            });
+
+      # ------------------------------------------------------------------ #
+      # 6c. PR build-check summary (no deploy)
+      # ------------------------------------------------------------------ #
+      - name: Report build success (PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const shortSha = context.sha.substring(0, 7);
+
+            await github.rest.issues.createComment({
+              owner:        context.repo.owner,
+              repo:         context.repo.repo,
+              issue_number: prNumber,
+              body: [
+                `### Build check passed for \`${shortSha}\``,
+                '',
+                'Next.js build completed successfully. No deployment is triggered for PRs.',
+                'Merge to `main` to deploy to production.',
+              ].join('\n'),
+            });

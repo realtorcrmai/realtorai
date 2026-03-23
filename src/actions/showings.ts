@@ -125,6 +125,13 @@ export async function createShowingRequest(
     });
   } catch (err) {
     console.error("Failed to send Twilio notification:", err);
+    await supabase
+      .from("appointments")
+      .update({
+        notification_status: "failed",
+        notification_error: err instanceof Error ? err.message : "Unknown Twilio error",
+      })
+      .eq("id", appointment.id);
   }
 
   revalidatePath("/showings");

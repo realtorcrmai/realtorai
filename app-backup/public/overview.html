@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RealtorAI — Product Overview</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #0a0a0f; color: white; overflow: hidden; height: 100vh; }
+
+  /* ── Start Screen ── */
+  #startScreen {
+    position: fixed; inset: 0; z-index: 200;
+    background: radial-gradient(ellipse at 30% 50%, #1e1b4b 0%, #0a0a0f 70%);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    transition: opacity 1s ease, transform 1s ease;
+  }
+  #startScreen.hidden { opacity: 0; transform: scale(1.05); pointer-events: none; }
+  .start-logo { font-size: 14px; font-weight: 700; letter-spacing: 6px; color: rgba(255,255,255,0.2); margin-bottom: 40px; }
+  .start-title { font-size: 64px; font-weight: 900; text-align: center; line-height: 1.1; margin-bottom: 16px; background: linear-gradient(135deg, #fff, rgba(255,255,255,0.6)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .start-sub { font-size: 18px; color: rgba(255,255,255,0.35); text-align: center; max-width: 400px; line-height: 1.6; margin-bottom: 50px; }
+  .start-btn {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none;
+    color: white; font-family: inherit; font-size: 16px; font-weight: 600;
+    padding: 16px 48px; border-radius: 50px; cursor: pointer;
+    transition: all 0.3s; box-shadow: 0 8px 30px rgba(99,102,241,0.3);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .start-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(99,102,241,0.5); }
+  .start-btn svg { width: 20px; height: 20px; }
+  .start-hint { margin-top: 20px; font-size: 11px; color: rgba(255,255,255,0.15); }
+
+  /* ── Slides ── */
+  .slides { position: relative; width: 100vw; height: 100vh; }
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 60px 80px;
+    opacity: 0; transform: translateY(30px);
+    transition: opacity 1s ease, transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+  .slide.active { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+  .slide:nth-child(1) { background: linear-gradient(135deg, #0f172a, #1e1b4b); }
+  .slide:nth-child(2) { background: linear-gradient(135deg, #042f2e, #134e4a); }
+  .slide:nth-child(3) { background: linear-gradient(135deg, #1e1b4b, #312e81); }
+  .slide:nth-child(4) { background: linear-gradient(135deg, #0c4a6e, #0369a1); }
+  .slide:nth-child(5) { background: linear-gradient(135deg, #3b0764, #7c3aed); }
+  .slide:nth-child(6) { background: linear-gradient(135deg, #7c2d12, #ea580c); }
+  .slide:nth-child(7) { background: linear-gradient(135deg, #064e3b, #10b981); }
+  .slide:nth-child(8) { background: linear-gradient(135deg, #0f172a, #4f46e5); }
+
+  .slide::before {
+    content: ''; position: absolute; width: 600px; height: 600px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
+    top: -150px; right: -150px; pointer-events: none;
+  }
+
+  .slide-label { font-size: 11px; font-weight: 600; letter-spacing: 4px; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 20px; }
+  .slide-title {
+    font-size: 48px; font-weight: 800; line-height: 1.15; margin-bottom: 16px;
+    background: linear-gradient(135deg, #fff 60%, rgba(255,255,255,0.7));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .slide-body { font-size: 18px; font-weight: 300; color: rgba(255,255,255,0.55); max-width: 650px; line-height: 1.7; margin-bottom: 40px; }
+
+  /* Feature pills */
+  .pills { display: flex; flex-wrap: wrap; gap: 10px; max-width: 800px; }
+  .pill {
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 12px 18px; display: flex; align-items: center; gap: 10px;
+    opacity: 0; transform: translateY(15px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .slide.active .pill { opacity: 1; transform: translateY(0); }
+  .slide.active .pill:nth-child(1) { transition-delay: 0.3s; }
+  .slide.active .pill:nth-child(2) { transition-delay: 0.45s; }
+  .slide.active .pill:nth-child(3) { transition-delay: 0.6s; }
+  .slide.active .pill:nth-child(4) { transition-delay: 0.75s; }
+  .slide.active .pill:nth-child(5) { transition-delay: 0.9s; }
+  .slide.active .pill:nth-child(6) { transition-delay: 1.05s; }
+  .pill-icon { font-size: 22px; }
+  .pill-text { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.8); }
+
+  /* Workflow list */
+  .wf-list { list-style: none; max-width: 600px; }
+  .wf-item {
+    display: flex; align-items: center; gap: 14px; padding: 10px 0;
+    font-size: 15px; color: rgba(255,255,255,0.7);
+    opacity: 0; transform: translateX(-20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .slide.active .wf-item { opacity: 1; transform: translateX(0); }
+  .slide.active .wf-item:nth-child(1) { transition-delay: 0.2s; }
+  .slide.active .wf-item:nth-child(2) { transition-delay: 0.3s; }
+  .slide.active .wf-item:nth-child(3) { transition-delay: 0.4s; }
+  .slide.active .wf-item:nth-child(4) { transition-delay: 0.5s; }
+  .slide.active .wf-item:nth-child(5) { transition-delay: 0.6s; }
+  .slide.active .wf-item:nth-child(6) { transition-delay: 0.7s; }
+  .slide.active .wf-item:nth-child(7) { transition-delay: 0.8s; }
+  .wf-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .wf-name { font-weight: 600; color: rgba(255,255,255,0.9); }
+
+  /* Progress & chrome */
+  .progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, #6366f1, #22d3ee); transition: width 0.4s linear; z-index: 100; opacity: 0; }
+  .progress-bar.show { opacity: 1; }
+  .logo { position: fixed; top: 28px; left: 40px; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.25); z-index: 100; letter-spacing: 3px; opacity: 0; transition: opacity 1s; }
+  .logo.show { opacity: 1; }
+
+  .nav { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 100; opacity: 0; transition: opacity 1s; }
+  .nav.show { opacity: 1; }
+  .nav-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.15); cursor: pointer; transition: all 0.4s; }
+  .nav-dot.active { width: 28px; border-radius: 5px; background: #6366f1; }
+
+  .controls { position: fixed; bottom: 26px; right: 40px; display: flex; gap: 8px; z-index: 100; opacity: 0; transition: opacity 1s; }
+  .controls.show { opacity: 1; }
+  .ctrl {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.5); border-radius: 8px; padding: 6px 14px;
+    font-size: 11px; cursor: pointer; font-family: inherit; transition: all 0.2s;
+  }
+  .ctrl:hover { background: rgba(255,255,255,0.12); color: white; }
+
+  .audio-indicator {
+    position: fixed; top: 28px; right: 40px; z-index: 100;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px; color: rgba(255,255,255,0.3); letter-spacing: 1px;
+    opacity: 0; transition: opacity 1s;
+  }
+  .audio-indicator.show { opacity: 1; }
+  .audio-bars { display: flex; gap: 2px; align-items: flex-end; height: 14px; }
+  .audio-bars span { width: 3px; background: #6366f1; border-radius: 2px; animation: bar-bounce 1s ease-in-out infinite; }
+  .audio-bars.paused span { animation: none; height: 3px !important; opacity: 0.3; }
+  .audio-bars span:nth-child(1) { height: 6px; animation-delay: 0s; }
+  .audio-bars span:nth-child(2) { height: 10px; animation-delay: 0.15s; }
+  .audio-bars span:nth-child(3) { height: 14px; animation-delay: 0.3s; }
+  .audio-bars span:nth-child(4) { height: 8px; animation-delay: 0.45s; }
+  @keyframes bar-bounce { 0%, 100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }
+
+  .narration {
+    position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%);
+    max-width: 700px; text-align: center; font-size: 14px; color: rgba(255,255,255,0.3);
+    z-index: 100; line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── START SCREEN ── -->
+<div id="startScreen">
+  <div class="start-logo">REALTOR AI</div>
+  <div class="start-title">Product Overview</div>
+  <div class="start-sub">A 90-second walkthrough of how RealtorAI helps Canadian real estate agents manage contacts, listings, and close more deals.</div>
+  <button class="start-btn" id="startBtn">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+    Watch with Audio
+  </button>
+  <div class="start-hint">Press Space or click to begin • Best with sound on</div>
+</div>
+
+<!-- ── PRESENTATION ── -->
+<div class="progress-bar" id="progress"></div>
+<div class="logo" id="logoEl">REALTOR AI</div>
+<div class="audio-indicator" id="audioInd">
+  <div class="audio-bars" id="audioBars"><span></span><span></span><span></span><span></span></div>
+  <span id="audioLabel">NARRATING</span>
+</div>
+
+<div class="slides" id="slides">
+
+  <!-- 1: INTRO -->
+  <div class="slide active">
+    <div class="slide-label">Welcome</div>
+    <div class="slide-title">The CRM That Knows<br>Real Estate</div>
+    <div class="slide-body">RealtorAI is purpose-built for how Canadian agents actually work — managing buyer and seller relationships, tracking listings through every phase, automating follow-ups, and staying compliant with BC regulations. Let us show you how.</div>
+    <div class="pills">
+      <div class="pill"><span class="pill-icon">👥</span><span class="pill-text">Contact Intelligence</span></div>
+      <div class="pill"><span class="pill-icon">🏠</span><span class="pill-text">Listing Pipeline</span></div>
+      <div class="pill"><span class="pill-icon">🔄</span><span class="pill-text">Workflow Automation</span></div>
+      <div class="pill"><span class="pill-icon">🇨🇦</span><span class="pill-text">BC Compliance</span></div>
+      <div class="pill"><span class="pill-icon">✨</span><span class="pill-text">AI Content Engine</span></div>
+    </div>
+  </div>
+
+  <!-- 2: CONTACTS -->
+  <div class="slide">
+    <div class="slide-label">Contact Management</div>
+    <div class="slide-title">Every Client Has<br>a Full Story</div>
+    <div class="slide-body">Open any contact and you see four tabs of intelligence. The Overview shows their preferences, active workflows, and upcoming tasks. Intelligence reveals demographics and a visual relationship graph connecting them to other contacts, referrals, and household members. Activity logs every call, text, and email. And Deals tracks every property they've bought or sold.</div>
+    <div class="pills">
+      <div class="pill"><span class="pill-icon">📊</span><span class="pill-text">Visual Pipeline Stages</span></div>
+      <div class="pill"><span class="pill-icon">🕸️</span><span class="pill-text">Relationship Graph</span></div>
+      <div class="pill"><span class="pill-icon">💬</span><span class="pill-text">Full Communication History</span></div>
+      <div class="pill"><span class="pill-icon">🏷️</span><span class="pill-text">Smart Tags & Referral Tracking</span></div>
+    </div>
+  </div>
+
+  <!-- 3: LISTINGS -->
+  <div class="slide">
+    <div class="slide-label">Property Management</div>
+    <div class="slide-title">From Intake<br>to Closing Day</div>
+    <div class="slide-body">Every listing moves through a clear seven-phase pipeline. You'll see exactly which documents are signed, which are missing, and which showings are scheduled. The system tracks FINTRAC, DORTS, and PDS completion — and alerts you before anything falls through the cracks. Commission calculations happen automatically as listings move from active to sold.</div>
+    <div class="pills">
+      <div class="pill"><span class="pill-icon">📋</span><span class="pill-text">7-Phase MLS Pipeline</span></div>
+      <div class="pill"><span class="pill-icon">📄</span><span class="pill-text">Live Document Tracking</span></div>
+      <div class="pill"><span class="pill-icon">🏡</span><span class="pill-text">Showing & Feedback Management</span></div>
+      <div class="pill"><span class="pill-icon">💰</span><span class="pill-text">Auto Commission Calculation</span></div>
+    </div>
+  </div>
+
+  <!-- 4: WORKFLOWS -->
+  <div class="slide">
+    <div class="slide-label">Automation</div>
+    <div class="slide-title">Follow-Ups That<br>Never Get Forgotten</div>
+    <div class="slide-body">Seven workflow sequences run automatically behind the scenes. When a new lead comes in, speed-to-contact fires a text within sixty seconds. After a closing, the post-close workflow sends congratulations, schedules check-ins at thirty, sixty, and ninety days, and asks for a referral at the right moment.</div>
+    <ul class="wf-list">
+      <li class="wf-item"><span class="wf-dot" style="background:#ef4444"></span><span class="wf-name">Speed-to-Contact</span> — respond in under 60 seconds</li>
+      <li class="wf-item"><span class="wf-dot" style="background:#f59e0b"></span><span class="wf-name">Buyer Nurture</span> — 30-day education drip</li>
+      <li class="wf-item"><span class="wf-dot" style="background:#22c55e"></span><span class="wf-name">Open House Follow-Up</span> — same-day to one week</li>
+      <li class="wf-item"><span class="wf-dot" style="background:#3b82f6"></span><span class="wf-name">Post-Close Buyer</span> — closing day to annual</li>
+      <li class="wf-item"><span class="wf-dot" style="background:#8b5cf6"></span><span class="wf-name">Post-Close Seller</span> — thank you to referral ask</li>
+      <li class="wf-item"><span class="wf-dot" style="background:#ec4899"></span><span class="wf-name">Lead Re-Engagement</span> — wake up cold leads</li>
+      <li class="wf-item"><span class="wf-dot" style="background:#14b8a6"></span><span class="wf-name">Referral Partner</span> — keep your network warm</li>
+    </ul>
+  </div>
+
+  <!-- 5: CONTENT -->
+  <div class="slide">
+    <div class="slide-label">AI Content</div>
+    <div class="slide-title">Your Listings<br>Write Themselves</div>
+    <div class="slide-body">Point the Content Engine at any listing and Claude AI generates four types of content instantly. Professional MLS remarks for both public and realtor audiences. Instagram captions with relevant hashtags. Video prompts for virtual property tours. And marketing image suggestions. What used to take an hour now takes one click.</div>
+    <div class="pills">
+      <div class="pill"><span class="pill-icon">✍️</span><span class="pill-text">MLS Public & Realtor Remarks</span></div>
+      <div class="pill"><span class="pill-icon">📱</span><span class="pill-text">Social Media Captions</span></div>
+      <div class="pill"><span class="pill-icon">🎬</span><span class="pill-text">AI Video Tour Prompts</span></div>
+      <div class="pill"><span class="pill-icon">🖼️</span><span class="pill-text">Marketing Visuals</span></div>
+    </div>
+  </div>
+
+  <!-- 6: BC FORMS -->
+  <div class="slide">
+    <div class="slide-label">Canadian Compliance</div>
+    <div class="slide-title">BC Forms,<br>Zero Paperwork Stress</div>
+    <div class="slide-body">Every required BC real estate form is built right into the platform. FINTRAC identification, disclosure of representation, property disclosure statements, listing contracts, and purchase agreements. Fields auto-populate from your contact and listing data. Edit in the PDF viewer, save drafts, and track completion across every listing.</div>
+    <div class="pills">
+      <div class="pill"><span class="pill-icon">🇨🇦</span><span class="pill-text">FINTRAC Identification</span></div>
+      <div class="pill"><span class="pill-icon">📝</span><span class="pill-text">DORTS Disclosure</span></div>
+      <div class="pill"><span class="pill-icon">🏠</span><span class="pill-text">Property Disclosure Statement</span></div>
+      <div class="pill"><span class="pill-icon">📋</span><span class="pill-text">MLC & CPS Contracts</span></div>
+    </div>
+  </div>
+
+  <!-- 7: TECH -->
+  <div class="slide">
+    <div class="slide-label">Technology</div>
+    <div class="slide-title">Smart Where<br>It Matters</div>
+    <div class="slide-body">The dashboard updates live with WebSocket connections and falls back to polling when needed. An AI model chain triages every major request — using Haiku for fast classification and Sonnet for deep analysis before building anything. The entire app works on mobile with sidebar drawers and responsive layouts. And comprehensive error handling keeps things running even when the network drops.</div>
+    <div class="pills">
+      <div class="pill"><span class="pill-icon">🔗</span><span class="pill-text">AI Model Chaining</span></div>
+      <div class="pill"><span class="pill-icon">⚡</span><span class="pill-text">Real-time Dashboard</span></div>
+      <div class="pill"><span class="pill-icon">📱</span><span class="pill-text">Fully Mobile Responsive</span></div>
+      <div class="pill"><span class="pill-icon">🛡️</span><span class="pill-text">Offline-Aware Error Handling</span></div>
+      <div class="pill"><span class="pill-icon">🌐</span><span class="pill-text">Webhook Lead Capture</span></div>
+    </div>
+  </div>
+
+  <!-- 8: CLOSE -->
+  <div class="slide" style="text-align: center; align-items: center;">
+    <div class="slide-label">Thank You</div>
+    <div class="slide-title" style="font-size: 54px;">Built for Realtors.<br>Powered by AI.</div>
+    <div class="slide-body" style="text-align: center; max-width: 500px;">RealtorAI handles your contacts, listings, compliance, follow-ups, and content — so you can focus on what you do best. Closing deals.</div>
+    <div class="pills" style="justify-content: center;">
+      <div class="pill"><span class="pill-icon">🏗️</span><span class="pill-text">Next.js 16</span></div>
+      <div class="pill"><span class="pill-icon">🗄️</span><span class="pill-text">Supabase</span></div>
+      <div class="pill"><span class="pill-icon">🤖</span><span class="pill-text">Claude AI</span></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="nav" id="nav"></div>
+<div class="narration" id="narration"></div>
+<div class="controls" id="controlsEl">
+  <button class="ctrl" id="prevBtn">← Prev</button>
+  <button class="ctrl" id="playBtn">⏸ Pause</button>
+  <button class="ctrl" id="nextBtn">Next →</button>
+  <button class="ctrl" id="muteBtn">🔊 Audio</button>
+</div>
+
+<script>
+// ── Narration scripts (conversational, natural) ──
+const NARRATIONS = [
+  "Hi, welcome to RealtorAI. This is a quick walkthrough of how the platform helps Canadian real estate agents manage their business — from the first lead inquiry all the way through closing and beyond. Let's take a look.",
+
+  "Let's start with contacts. Every client gets a full intelligence profile. You'll see their pipeline stage, buyer or seller preferences, and active workflow automations. Switch to the Intelligence tab and there's a visual relationship graph showing how contacts connect to each other — through referrals, family, and professional relationships. The Activity tab tracks every text, call, and email. And Deals shows their complete property history.",
+
+  "Now let's look at listings. Each property moves through a clear seven-phase pipeline — from pre-listing all the way to completion. The system tracks which documents are signed and which are missing. If a FINTRAC form or disclosure statement hasn't been uploaded, you'll see the alert right away. Commissions calculate automatically as listings progress from active to sold.",
+
+  "Automation is where RealtorAI saves you the most time. There are seven pre-built workflows that run behind the scenes. Speed-to-contact responds to new leads in under sixty seconds. The buyer nurture sequence educates new clients over thirty days. And post-close workflows handle your thank-you messages, check-ins, review requests, and referral asks — automatically, at exactly the right time.",
+
+  "The Content Engine uses Claude AI to write your listing copy. Point it at any property and it generates professional MLS remarks, social media captions, video tour prompts, and marketing image suggestions. Content that used to take an hour now takes one click.",
+
+  "Compliance is built in, not bolted on. Every required BC real estate form — FINTRAC, DORTS, PDS, listing contracts, and purchase agreements — lives inside the platform. Fields populate automatically from your contact and listing data. You can edit right in the PDF viewer and track completion status across all your active listings.",
+
+  "Under the hood, the dashboard updates in real-time. An AI model chain handles complex tasks — fast triage with Haiku, deep analysis with Sonnet. The app works on phones and tablets with sidebar drawers and responsive layouts. And if the network drops, the error handling keeps the interface stable with an offline banner and automatic reconnection.",
+
+  "That's RealtorAI. Built for Realtors. Powered by AI. Thanks for watching.",
+];
+
+// ── Engine ──
+const slides = document.querySelectorAll('.slide');
+const nav = document.getElementById('nav');
+const progress = document.getElementById('progress');
+const narrationEl = document.getElementById('narration');
+const audioBars = document.getElementById('audioBars');
+const audioLabel = document.getElementById('audioLabel');
+const TOTAL = slides.length;
+let current = 0;
+let playing = true;
+let audioEnabled = true;
+let synth = window.speechSynthesis;
+let selectedVoice = null;
+
+// Build nav dots
+for (let i = 0; i < TOTAL; i++) {
+  const d = document.createElement('div');
+  d.className = 'nav-dot' + (i === 0 ? ' active' : '');
+  d.onclick = () => goTo(i);
+  nav.appendChild(d);
+}
+
+// Find a good voice
+function pickVoice() {
+  const voices = synth.getVoices();
+  selectedVoice =
+    voices.find(v => v.name === 'Samantha') ||
+    voices.find(v => v.name.includes('Daniel') && v.lang.startsWith('en')) ||
+    voices.find(v => v.name.includes('Karen')) ||
+    voices.find(v => v.name.includes('Zira')) ||
+    voices.find(v => v.lang === 'en-US' && v.localService) ||
+    voices.find(v => v.lang.startsWith('en') && v.localService) ||
+    voices[0];
+}
+synth.onvoiceschanged = pickVoice;
+pickVoice();
+
+function speak(text, onDone) {
+  synth.cancel();
+  if (!audioEnabled) {
+    audioBars.classList.add('paused');
+    audioLabel.textContent = 'MUTED';
+    const ms = Math.max(8000, text.split(' ').length * 380);
+    setTimeout(() => { if (onDone) onDone(); }, ms);
+    return;
+  }
+
+  audioBars.classList.remove('paused');
+  audioLabel.textContent = 'NARRATING';
+
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 0.88;
+  u.pitch = 1.0;
+  u.volume = 1.0;
+  if (selectedVoice) u.voice = selectedVoice;
+
+  // Subtitle display
+  const words = text.split(' ');
+  let wi = 0;
+  u.onboundary = (e) => {
+    if (e.name === 'word') {
+      wi++;
+      narrationEl.textContent = words.slice(Math.max(0, wi - 10), wi).join(' ');
+    }
+  };
+
+  u.onend = () => {
+    audioBars.classList.add('paused');
+    narrationEl.textContent = '';
+    setTimeout(() => { if (onDone) onDone(); }, 1200);
+  };
+
+  u.onerror = () => {
+    setTimeout(() => { if (onDone) onDone(); }, 6000);
+  };
+
+  synth.speak(u);
+}
+
+function goTo(index) {
+  synth.cancel();
+  slides[current].classList.remove('active');
+  current = index;
+  slides[current].classList.add('active');
+  document.querySelectorAll('.nav-dot').forEach((d, i) => {
+    d.className = 'nav-dot' + (i === current ? ' active' : '');
+  });
+  progress.style.width = ((current + 1) / TOTAL * 100) + '%';
+  setTimeout(() => {
+    speak(NARRATIONS[current], () => { if (playing && current < TOTAL - 1) next(); });
+  }, 700);
+}
+
+function next() { if (current < TOTAL - 1) goTo(current + 1); }
+function prev() { if (current > 0) goTo(current - 1); }
+
+function togglePlay() {
+  playing = !playing;
+  document.getElementById('playBtn').textContent = playing ? '⏸ Pause' : '▶ Play';
+  if (!playing) { synth.cancel(); audioBars.classList.add('paused'); }
+  else speak(NARRATIONS[current], () => { if (playing && current < TOTAL - 1) next(); });
+}
+
+function toggleMute() {
+  audioEnabled = !audioEnabled;
+  document.getElementById('muteBtn').textContent = audioEnabled ? '🔊 Audio' : '🔇 Muted';
+  if (!audioEnabled) { synth.cancel(); audioBars.classList.add('paused'); audioLabel.textContent = 'MUTED'; }
+  else speak(NARRATIONS[current], () => { if (playing && current < TOTAL - 1) next(); });
+}
+
+document.getElementById('nextBtn').onclick = next;
+document.getElementById('prevBtn').onclick = prev;
+document.getElementById('playBtn').onclick = togglePlay;
+document.getElementById('muteBtn').onclick = toggleMute;
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+  if (e.key === 'ArrowLeft') prev();
+  if (e.key === 'p') togglePlay();
+  if (e.key === 'm') toggleMute();
+});
+
+// ── Start screen ──
+function startPresentation() {
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('progress').classList.add('show');
+  document.getElementById('logoEl').classList.add('show');
+  document.getElementById('audioInd').classList.add('show');
+  document.getElementById('nav').classList.add('show');
+  document.getElementById('controlsEl').classList.add('show');
+  progress.style.width = (1 / TOTAL * 100) + '%';
+
+  // Welcome message first, then start slides
+  speak("Welcome to RealtorAI. Let's take a quick tour of the platform.", () => {
+    speak(NARRATIONS[0], () => { if (playing) next(); });
+  });
+}
+
+document.getElementById('startBtn').onclick = startPresentation;
+document.addEventListener('keydown', function startKey(e) {
+  if (e.key === ' ' || e.key === 'Enter') {
+    e.preventDefault();
+    startPresentation();
+    document.removeEventListener('keydown', startKey);
+  }
+}, { once: false });
+</script>
+
+</body>
+</html>

@@ -15,16 +15,9 @@ import {
   Globe,
   Mail,
   ArrowRight,
-  Target,
-  Zap,
 } from "lucide-react";
-import { RemindersWidget } from "@/components/dashboard/RemindersWidget";
 import PipelineSnapshot from "@/components/dashboard/PipelineSnapshot";
-import AIRecommendations from "@/components/dashboard/AIRecommendations";
-import { FloatingTaskBanner } from "@/components/dashboard/FloatingTaskBanner";
-import { getRecommendations } from "@/actions/recommendations";
-import { getOvernightSummary } from "@/actions/agent-settings";
-import OvernightSummary from "@/components/dashboard/OvernightSummary";
+import { GreetingTicker } from "@/components/dashboard/GreetingTicker";
 
 export const dynamic = "force-dynamic";
 
@@ -46,9 +39,9 @@ export default async function DashboardPage() {
     { count: pendingShowings },
     { data: confirmedThisWeek },
     { data: tasks },
-    { count: activeDealsCount },
     { data: pipelineContacts },
     { data: pipelineListings },
+    { data: allDocs },
   ] = await Promise.all([
     supabase
       .from("listings")
@@ -70,37 +63,20 @@ export default async function DashboardPage() {
       ),
     supabase
       .from("tasks")
-      .select("*")
+      .select("id, status, priority")
       .neq("status", "completed")
       .order("created_at", { ascending: false })
       .limit(5),
-    supabase
-      .from("deals")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "active"),
     supabase.from("contacts").select("id, stage_bar, type"),
     supabase.from("listings").select("id, seller_id, buyer_id, list_price, sold_price, commission_rate, commission_amount, status"),
+    supabase.from("listing_documents").select("listing_id, doc_type"),
   ]);
 
-  const [
-    { count: pendingNewsletters },
-    { count: sentNewsletters },
-  ] = await Promise.all([
-    supabase.from("newsletters").select("*", { count: "exact", head: true }).eq("status", "draft"),
-    supabase.from("newsletters").select("*", { count: "exact", head: true }).eq("status", "sent"),
-  ]);
-
-  const { data: allListings } = await supabase
-    .from("listings")
-    .select("id")
-    .eq("status", "active");
-
-  const { data: allDocs } = await supabase
-    .from("listing_documents")
-    .select("listing_id, doc_type");
+  // Derive active listing IDs from pipelineListings (avoids redundant query)
+  const activeListingIds = (pipelineListings ?? []).filter((l) => l.status === "active");
 
   const requiredTypes = ["FINTRAC", "DORTS", "PDS"];
-  const listingsWithMissing = (allListings ?? []).filter((listing) => {
+  const listingsWithMissing = activeListingIds.filter((listing) => {
     const docs = (allDocs ?? []).filter((d) => d.listing_id === listing.id);
     const docTypes = docs.map((d) => d.doc_type);
     return requiredTypes.some((t) => !docTypes.includes(t));
@@ -128,13 +104,15 @@ export default async function DashboardPage() {
   const contacts = pipelineContacts ?? [];
   const listings = pipelineListings ?? [];
 
+  // Map stage_bar values to pipeline keys (merge active_search + active_listing into "active")
   function toPipelineKey(stageBar: string | null): string {
     if (!stageBar) return "new";
     if (stageBar === "active_search" || stageBar === "active_listing") return "active";
     if (["new", "qualified", "under_contract", "closed"].includes(stageBar)) return stageBar;
-    return "new";
+    return "new"; // cold, contacted, nurturing, etc. map to "new"
   }
 
+  // Group contacts by pipeline stage
   const contactsByStage: Record<string, typeof contacts> = {};
   for (const stage of PIPELINE_STAGES) {
     contactsByStage[stage.key] = [];
@@ -144,6 +122,7 @@ export default async function DashboardPage() {
     if (contactsByStage[key]) contactsByStage[key].push(c);
   }
 
+  // For each contact, find their deal value from listings
   function getDealValueForContact(contactId: string): number {
     let total = 0;
     for (const l of listings) {
@@ -167,6 +146,8 @@ export default async function DashboardPage() {
     return { ...stage, count: stageContacts.length, value };
   });
 
+  // GCI = sum of (commission_amount ?? (list_price * (commission_rate ?? 2.5) / 100))
+  // for active + pending listings
   let totalGCI = 0;
   for (const l of listings) {
     if (l.status === "active" || l.status === "pending") {
@@ -178,6 +159,11 @@ export default async function DashboardPage() {
     }
   }
 
+  // Tile gradients follow a warm-cool alternating pattern across the 3-column grid:
+  // Row 1: teal (cool) — amber (warm) — indigo (cool)
+  // Row 2: orange (warm) — emerald (cool) — rose (warm)
+  // Row 3: blue (cool) — pink (warm) — cyan (cool)
+  // Row 4: violet (cool) — amber (warm)
   const allFeatureTiles = [
     {
       key: "listings",
@@ -198,16 +184,6 @@ export default async function DashboardPage() {
       gradient: "gradient-amber",
       count: null,
       countLabel: null,
-    },
-    {
-      key: "pipeline",
-      href: "/pipeline",
-      title: "Pipeline",
-      description: "Track buyer & seller deals",
-      icon: Target,
-      gradient: "gradient-emerald",
-      count: (activeDealsCount ?? 0) > 0 ? activeDealsCount : null,
-      countLabel: "active",
     },
     {
       key: "tasks",
@@ -235,7 +211,7 @@ export default async function DashboardPage() {
       title: "Calendar",
       description: "View your schedule at a glance",
       icon: CalendarCheck,
-      gradient: "gradient-teal",
+      gradient: "gradient-emerald",
       count:
         (confirmedThisWeek?.length ?? 0) > 0
           ? confirmedThisWeek?.length
@@ -293,8 +269,18 @@ export default async function DashboardPage() {
       countLabel: null,
     },
     {
+      key: "newsletters",
+      href: "/newsletters",
+      title: "Email Marketing",
+      description: "AI newsletters, journeys & analytics",
+      icon: Mail,
+      gradient: "gradient-rose",
+      count: null,
+      countLabel: null,
+    },
+    {
       key: "website",
-      href: "http://localhost:8768",
+      href: process.env.NEXT_PUBLIC_VOICE_AGENT_URL || "http://127.0.0.1:8768",
       title: "Website Marketing",
       description: "AI-powered realtor website generation",
       icon: Globe,
@@ -303,26 +289,6 @@ export default async function DashboardPage() {
       countLabel: null,
       external: true,
     },
-    {
-      key: "newsletters",
-      href: "/newsletters",
-      title: "Email Marketing",
-      description: "AI newsletters, journeys & click intelligence",
-      icon: Mail,
-      gradient: "gradient-rose",
-      count: (pendingNewsletters ?? 0) > 0 ? pendingNewsletters : (sentNewsletters ?? 0) > 0 ? sentNewsletters : null,
-      countLabel: (pendingNewsletters ?? 0) > 0 ? "drafts" : "sent",
-    },
-    {
-      key: "automations",
-      href: "/automations",
-      title: "Automations",
-      description: "AI-powered workflow automations & triggers",
-      icon: Zap,
-      gradient: "gradient-amber",
-      count: null,
-      countLabel: null,
-    },
   ];
 
   // Filter tiles based on user's enabled features
@@ -330,12 +296,22 @@ export default async function DashboardPage() {
     ? allFeatureTiles.filter((tile) => enabledFeatures.includes(tile.key))
     : allFeatureTiles;
 
+  // Initial stats for the ticker bar (passed to client component)
+  const initialDashboardStats = {
+    activeListings: activeListings ?? 0,
+    openTasks: openTasksCount,
+    pendingShowings: pendingShowings ?? 0,
+    missingDocs: listingsWithMissing.length,
+    totalContacts: contacts.length,
+    newLeadsToday: 0,
+  };
+
   return (
     <div className="h-full overflow-y-auto p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
     <div className="space-y-8">
-      {/* Greeting */}
+      {/* Greeting + Live Metrics */}
       <div className="animate-float-in">
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div className="space-y-1">
             <p className="text-sm font-medium text-muted-foreground">
               {new Date().toLocaleDateString("en-CA", {
@@ -348,25 +324,16 @@ export default async function DashboardPage() {
               {getGreeting()}, {userName}
             </h1>
           </div>
-          <p className="hidden sm:block text-xs text-muted-foreground bg-primary/5 border border-primary/15 rounded-lg px-3 py-2 shrink-0">
-            Try <span className="text-primary font-semibold">&ldquo;show me my tasks&rdquo;</span> in the voice panel
-          </p>
+          <div className="hidden sm:block shrink-0">
+            <GreetingTicker initialStats={initialDashboardStats} />
+          </div>
         </div>
       </div>
 
-      {/* Task Ticker Banner */}
-      <FloatingTaskBanner tasks={tasks ?? []} openTasksCount={openTasksCount} />
-
-      {/* AI Overnight Summary */}
-      <OvernightSummarySection />
-
-      {/* Pipeline Snapshot */}
+      {/* Pipeline Snapshot — primary dashboard visual */}
       <div className="animate-float-in" style={{ animationDelay: "80ms" }}>
         <PipelineSnapshot stages={pipelineStages} totalGCI={totalGCI} />
       </div>
-
-      {/* AI Recommendations */}
-      <AIRecommendationsSection />
 
       {/* Feature Hub */}
       <div>
@@ -426,36 +393,7 @@ export default async function DashboardPage() {
           })}
         </div>
       </div>
-
-      {/* Reminders Widget */}
-      <div className="animate-float-in" style={{ animationDelay: "300ms" }}>
-        <RemindersWidget />
-      </div>
     </div>
-
     </div>
   );
-}
-
-async function OvernightSummarySection() {
-  try {
-    const data = await getOvernightSummary();
-    return <OvernightSummary data={data} />;
-  } catch {
-    return null;
-  }
-}
-
-async function AIRecommendationsSection() {
-  try {
-    const recommendations = await getRecommendations();
-    if (!recommendations.length) return null;
-    return (
-      <div className="animate-float-in" style={{ animationDelay: "100ms" }}>
-        <AIRecommendations recommendations={recommendations as any} />
-      </div>
-    );
-  } catch {
-    return null; // Silently fail if agent_recommendations table doesn't exist yet
-  }
 }
