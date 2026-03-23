@@ -9,9 +9,9 @@ export const FEATURE_KEYS = [
   "workflow",
   "import",
   "forms",
-  "website",
-  "newsletters",
   "automations",
+  "newsletters",
+  "website",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -62,17 +62,17 @@ export const FEATURE_META: Record<
     label: "BC Forms",
     description: "Standard BC real estate documents",
   },
+  automations: {
+    label: "Automations",
+    description: "Workflow automations & drip campaigns",
+  },
+  newsletters: {
+    label: "Email Marketing",
+    description: "AI newsletters, journeys & analytics",
+  },
   website: {
     label: "Website Marketing",
     description: "Build & manage your realtor website",
-  },
-  newsletters: {
-    label: "Newsletters",
-    description: "AI-powered email journeys & campaigns",
-  },
-  automations: {
-    label: "Automations",
-    description: "AI-powered workflow automations & triggers",
   },
 };
 
@@ -88,7 +88,7 @@ export const FEATURE_HREF: Record<FeatureKey, string> = {
   workflow: "/workflow",
   import: "/import",
   forms: "/forms",
-  website: "http://localhost:8768",
-  newsletters: "/newsletters",
   automations: "/automations",
+  newsletters: "/newsletters",
+  website: "http://localhost:3001",
 };

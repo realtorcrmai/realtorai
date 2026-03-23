@@ -16,9 +16,6 @@ import {
   ChevronRight,
   ListTodo,
   Search,
-  Kanban,
-  BarChart3,
-  Settings,
   Zap,
   Inbox,
 } from "lucide-react";
@@ -36,13 +33,11 @@ const navSections = [
     label: "CRM",
     items: [
       { href: "/contacts", label: "Contacts", icon: Users },
-      { href: "/pipeline", label: "Pipeline", icon: Kanban },
       { href: "/inbox", label: "Inbox", icon: Inbox },
       { href: "/tasks", label: "Tasks", icon: ListTodo },
       { href: "/automations", label: "Automations", icon: Zap },
       { href: "/showings", label: "Showings", icon: Clock },
       { href: "/calendar", label: "Calendar", icon: Calendar },
-      { href: "/reports", label: "Reports", icon: BarChart3 },
     ],
   },
   {
@@ -58,12 +53,6 @@ const navSections = [
     label: "BC Forms",
     items: [
       { href: "/forms", label: "Standard Forms", icon: FileText },
-    ],
-  },
-  {
-    label: "System",
-    items: [
-      { href: "/settings", label: "Settings", icon: Settings },
     ],
   },
 ];

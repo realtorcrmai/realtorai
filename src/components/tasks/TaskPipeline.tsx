@@ -1,6 +1,8 @@
 "use client";
 
 import { Check } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 const TASK_PHASES = [
   { id: "pending", name: "To Do", desc: "Pending tasks awaiting start", icon: "\u{1F4CB}" },
@@ -79,6 +81,17 @@ export function TaskPipeline({ tasks }: { tasks: Task[] }) {
     completed: completedCount,
   };
 
+  const today = new Date(new Date().toDateString());
+  const overdueByPhase: Record<string, number> = {
+    pending: tasks.filter(
+      (t) => t.status === "pending" && t.due_date && new Date(t.due_date as string) < today
+    ).length,
+    in_progress: tasks.filter(
+      (t) => t.status === "in_progress" && t.due_date && new Date(t.due_date as string) < today
+    ).length,
+    completed: 0,
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -124,10 +137,29 @@ export function TaskPipeline({ tasks }: { tasks: Task[] }) {
                     </div>
                   )}
                   <div>
-                    <p className={`text-sm font-semibold ${styles.text}`}>
-                      {phase.name}
-                    </p>
-                    <p className={`text-xl font-bold ${styles.text}`}>
+                    <div className="flex items-center gap-1.5">
+                      <p className={cn("text-sm font-semibold", styles.text)}>
+                        {phase.name}
+                      </p>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "text-[10px] px-1.5 py-0 font-semibold",
+                          styles.text
+                        )}
+                      >
+                        {counts[phase.id]}
+                      </Badge>
+                      {overdueByPhase[phase.id] > 0 && (
+                        <Badge
+                          variant="destructive"
+                          className="text-[10px] px-1.5 py-0 font-semibold"
+                        >
+                          {overdueByPhase[phase.id]} overdue
+                        </Badge>
+                      )}
+                    </div>
+                    <p className={cn("text-xl font-bold", styles.text)}>
                       {counts[phase.id]}
                     </p>
                   </div>

@@ -13,9 +13,11 @@ const REQUIRED_FOR_PACK = ["CONTRACT", "PDS", "TITLE"] as const;
 export function ConveyancingPackButton({
   address,
   documents,
+  disabled,
 }: {
   address: string;
   documents: ListingDocument[];
+  disabled?: boolean;
 }) {
   const [generating, setGenerating] = useState(false);
 
@@ -56,7 +58,7 @@ export function ConveyancingPackButton({
     <Button
       onClick={handleGenerate}
       variant="outline"
-      disabled={generating}
+      disabled={generating || disabled}
     >
       {generating ? (
         <Loader2 className="h-4 w-4 mr-2 animate-spin" />

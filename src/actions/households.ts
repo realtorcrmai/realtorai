@@ -78,14 +78,14 @@ export async function addContactToHousehold(
 ) {
   const supabase = createAdminClient();
 
-  // Verify household exists before linking
-  const { data: household } = await supabase
+  // Verify the household exists before updating the contact
+  const { data: household, error: householdError } = await supabase
     .from("households")
     .select("id")
     .eq("id", householdId)
     .single();
 
-  if (!household) {
+  if (householdError || !household) {
     return { error: "Household not found" };
   }
 

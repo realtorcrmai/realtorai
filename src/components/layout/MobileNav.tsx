@@ -8,7 +8,6 @@ import {
   Users,
   Building2,
   Calendar,
-  Kanban,
   ListTodo,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,7 +17,6 @@ import type { FeatureKey } from "@/lib/features";
 const navItems: { href: string; label: string; icon: typeof Building2; featureKey?: FeatureKey }[] = [
   { href: "/", label: "Home", icon: LayoutDashboard },
   { href: "/contacts", label: "Contacts", icon: Users, featureKey: "contacts" },
-  { href: "/pipeline", label: "Pipeline", icon: Kanban },
   { href: "/tasks", label: "Tasks", icon: ListTodo, featureKey: "tasks" },
   { href: "/listings", label: "Listings", icon: Building2, featureKey: "listings" },
   { href: "/calendar", label: "Calendar", icon: Calendar, featureKey: "calendar" },

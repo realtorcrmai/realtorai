@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, X, Zap } from "lucide-react";
+import { Search, Filter, X, ArrowDownAZ, Clock } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { Contact } from "@/types";
 import { CONTACT_TYPE_COLORS, type ContactType } from "@/lib/constants";
 import {
@@ -14,6 +15,16 @@ import {
   STAGE_LABELS,
   STAGE_COLORS,
 } from "@/lib/constants/contacts";
+
+// Map pipeline keys to stage_bar filter values
+const PIPELINE_TO_STAGE: Record<string, string> = {
+  new: "new",
+  qualified: "qualified",
+  active: "active_search", // matches both active_search and active_listing
+  under_contract: "under_contract",
+  closed: "closed",
+  cold: "cold",
+};
 
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/);
@@ -92,20 +103,41 @@ const STAGE_FILTERS: { value: StageFilter; label: string; dot: string }[] = [
   { value: "cold", label: "Cold", dot: "bg-gray-400" },
 ];
 
-interface ContactSidebarProps {
-  contacts: Contact[];
-  contactsWithWorkflow?: string[];
-  workflowNames?: Record<string, string>;
-}
+type SortMode = "recent" | "alpha";
 
-export function ContactSidebar({ contacts, contactsWithWorkflow, workflowNames }: ContactSidebarProps) {
+export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [stageFilter, setStageFilter] = useState<StageFilter>("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>("recent");
+
+  // Auto-apply stage filter from ?stage= query param (from pipeline click)
+  useEffect(() => {
+    const stageParam = searchParams.get("stage");
+    if (stageParam && PIPELINE_TO_STAGE[stageParam]) {
+      setStageFilter(PIPELINE_TO_STAGE[stageParam]);
+      setShowFilters(true);
+    }
+  }, [searchParams]);
 
   const hasActiveFilter = typeFilter !== "all" || stageFilter !== "all";
+
+  // Compute stage counts from full contact list (before filtering)
+  const stageCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: contacts.length };
+    for (const c of contacts) {
+      const stage = ((c as Record<string, unknown>).stage_bar as string | null) ?? "new";
+      counts[stage] = (counts[stage] || 0) + 1;
+      // Count active_listing under active_search as well
+      if (stage === "active_listing") {
+        counts["active_search"] = (counts["active_search"] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [contacts]);
 
   const filtered = contacts.filter((c) => {
     // Text search
@@ -117,23 +149,28 @@ export function ContactSidebar({ contacts, contactsWithWorkflow, workflowNames }
     // Type filter
     const matchesType = typeFilter === "all" || c.type === typeFilter;
 
-    // Stage filter
+    // Stage filter — "active_search" also matches "active_listing"
     const contactStage = (c as Record<string, unknown>).stage_bar as string | null;
+    const effectiveStage = contactStage ?? "new";
     const matchesStage =
       stageFilter === "all" ||
-      (contactStage ?? "new") === stageFilter;
+      effectiveStage === stageFilter ||
+      (stageFilter === "active_search" && effectiveStage === "active_listing") ||
+      (stageFilter === "active_listing" && effectiveStage === "active_search");
 
     return matchesSearch && matchesType && matchesStage;
   });
 
-  // Sort: contacts with active workflows first, then by name
-  const hasWorkflow = new Set(contactsWithWorkflow ?? []);
-  filtered.sort((a, b) => {
-    const aHas = hasWorkflow.has(a.id) ? 0 : 1;
-    const bHas = hasWorkflow.has(b.id) ? 0 : 1;
-    if (aHas !== bHas) return aHas - bHas;
-    return a.name.localeCompare(b.name);
-  });
+  // Apply sort
+  const sorted = useMemo(() => {
+    const list = [...filtered];
+    if (sortMode === "alpha") {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+    return list;
+  }, [filtered, sortMode]);
 
   return (
     <aside className="flex flex-col flex-1 min-h-0 overflow-hidden">
@@ -143,7 +180,7 @@ export function ContactSidebar({ contacts, contactsWithWorkflow, workflowNames }
           <h2 className="text-base font-semibold">
             Contacts{" "}
             <span className="text-muted-foreground font-normal">
-              ({filtered.length})
+              ({sorted.length})
             </span>
           </h2>
           <button
@@ -161,15 +198,40 @@ export function ContactSidebar({ contacts, contactsWithWorkflow, workflowNames }
           </button>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search name or phone..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 h-9 text-sm"
-          />
+        {/* Search + sort toggle */}
+        <div className="flex gap-1.5">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search name or phone..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8 pr-7 h-9 text-sm"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                title="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <button
+            onClick={() => setSortMode(sortMode === "recent" ? "alpha" : "recent")}
+            className={cn(
+              "h-9 w-9 flex items-center justify-center rounded-md border shrink-0 transition-colors",
+              "hover:bg-muted text-muted-foreground hover:text-foreground"
+            )}
+            title={sortMode === "recent" ? "Sort A-Z" : "Sort by Recent"}
+          >
+            {sortMode === "recent" ? (
+              <Clock className="h-4 w-4" />
+            ) : (
+              <ArrowDownAZ className="h-4 w-4" />
+            )}
+          </button>
         </div>
 
         {/* Filters — collapsible */}
@@ -197,23 +259,29 @@ export function ContactSidebar({ contacts, contactsWithWorkflow, workflowNames }
 
             {/* Stage filter chips */}
             <div className="flex flex-wrap gap-1">
-              {STAGE_FILTERS.map((f) => (
-                <button
-                  key={f.value}
-                  onClick={() => setStageFilter(f.value)}
-                  className={`
-                    flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all
-                    ${
-                      stageFilter === f.value
-                        ? "bg-white ring-1 ring-gray-300 shadow-sm text-foreground"
-                        : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-                    }
-                  `}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${f.dot}`} />
-                  {f.label}
-                </button>
-              ))}
+              {STAGE_FILTERS.map((f) => {
+                const count = f.value === "all" ? contacts.length : (stageCounts[f.value] ?? 0);
+                return (
+                  <button
+                    key={f.value}
+                    onClick={() => setStageFilter(f.value)}
+                    className={`
+                      flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all
+                      ${
+                        stageFilter === f.value
+                          ? "bg-white ring-1 ring-gray-300 shadow-sm text-foreground"
+                          : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                      }
+                    `}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${f.dot}`} />
+                    {f.label}
+                    {count > 0 && (
+                      <span className="opacity-60">({count})</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Clear filters */}
@@ -234,7 +302,7 @@ export function ContactSidebar({ contacts, contactsWithWorkflow, workflowNames }
 
       {/* Contact items */}
       <div className="flex-1 overflow-y-auto">
-        {filtered.length === 0 ? (
+        {sorted.length === 0 ? (
           <div className="p-4 text-center">
             <p className="text-sm text-muted-foreground">
               {search || hasActiveFilter
@@ -244,7 +312,7 @@ export function ContactSidebar({ contacts, contactsWithWorkflow, workflowNames }
           </div>
         ) : (
           <div className="py-1">
-            {filtered.map((contact) => {
+            {sorted.map((contact) => {
               const isActive = pathname === `/contacts/${contact.id}`;
               const initials = getInitials(contact.name);
               const avatarBg =
@@ -292,14 +360,6 @@ export function ContactSidebar({ contacts, contactsWithWorkflow, workflowNames }
                           contactType={contact.type}
                           currentStage={contactStage}
                         />
-                        {hasWorkflow.has(contact.id) && workflowNames?.[contact.id] && (
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <Zap className="h-2.5 w-2.5 text-amber-500" />
-                            <span className="text-[9px] text-amber-600 dark:text-amber-400 font-medium truncate">
-                              {workflowNames[contact.id]}
-                            </span>
-                          </div>
-                        )}
                       </div>
 
                       {/* Type badge */}

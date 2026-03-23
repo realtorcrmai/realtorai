@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 interface PipelineStage {
   key: string;
   label: string;
@@ -21,6 +23,10 @@ function formatGCI(amount: number): string {
   if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
   if (amount >= 1_000) return `$${Math.round(amount / 1_000)}K`;
   return `$${Math.round(amount)}`;
+}
+
+function stageHref(key: string): string {
+  return `/contacts?stage=${key}`;
 }
 
 export default function PipelineSnapshot({
@@ -47,17 +53,17 @@ export default function PipelineSnapshot({
           const pct = totalCount > 0 ? (stage.count / totalCount) * 100 : 0;
           if (pct === 0) return null;
           return (
-            <div
+            <Link
               key={stage.key}
-              className={`${stage.color} flex items-center justify-center transition-all duration-300`}
+              href={stageHref(stage.key)}
+              className={`${stage.color} flex items-center justify-center transition-all duration-300 hover:brightness-110 cursor-pointer`}
               style={{ width: `${pct}%` }}
+              title={`${stage.label}: ${stage.count} contacts`}
             >
-              {pct > 15 && (
-                <span className="text-xs font-bold text-white drop-shadow-sm">
-                  {stage.count}
-                </span>
-              )}
-            </div>
+              <span className="text-xs font-bold text-white drop-shadow-sm">
+                {stage.count}
+              </span>
+            </Link>
           );
         })}
         {totalCount === 0 && (
@@ -70,12 +76,16 @@ export default function PipelineSnapshot({
       {/* Labels row */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {stages.map((stage) => (
-          <div key={stage.key} className="flex items-start gap-2 min-w-0">
+          <Link
+            key={stage.key}
+            href={stageHref(stage.key)}
+            className="flex items-start gap-2 min-w-0 rounded-lg p-1.5 -m-1.5 transition-colors hover:bg-muted/60 cursor-pointer group"
+          >
             <span
-              className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${stage.color}`}
+              className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${stage.color} group-hover:ring-2 group-hover:ring-offset-1 group-hover:ring-current transition-all`}
             />
             <div className="min-w-0">
-              <p className="text-xs font-medium text-foreground truncate">
+              <p className="text-xs font-medium text-foreground truncate group-hover:text-primary transition-colors">
                 {stage.label}
               </p>
               <p className="text-xs text-muted-foreground">
@@ -85,7 +95,7 @@ export default function PipelineSnapshot({
                 {currencyFmt.format(stage.value)}
               </p>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>

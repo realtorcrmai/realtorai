@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Plus, Users, Building2, Clock, ListTodo } from "lucide-react";
 import {
   DropdownMenu,
@@ -23,10 +23,14 @@ import type { Contact } from "@/types";
 type ActiveDialog = null | "contact" | "listing" | "showing" | "task";
 
 export function QuickAddButton() {
+  const [mounted, setMounted] = useState(false);
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [sellers, setSellers] = useState<Contact[]>([]);
   const [listings, setListings] = useState<{ id: string; address: string }[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Prevent hydration mismatch from base-ui auto-generated IDs
+  useEffect(() => setMounted(true), []);
 
   const openDialog = useCallback(async (type: ActiveDialog) => {
     if (!type) return;
@@ -61,6 +65,18 @@ export function QuickAddButton() {
   const closeDialog = useCallback(() => {
     setActiveDialog(null);
   }, []);
+
+  if (!mounted) {
+    // Render static placeholder during SSR to avoid hydration mismatch from auto-generated IDs
+    return (
+      <button
+        className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#4f35d2] text-white"
+        aria-label="Quick add"
+      >
+        <Plus className="h-4.5 w-4.5" />
+      </button>
+    );
+  }
 
   return (
     <>

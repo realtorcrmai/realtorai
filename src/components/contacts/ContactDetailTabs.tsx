@@ -1,7 +1,6 @@
 "use client";
 
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { Suspense } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { CommunicationTimeline } from "@/components/contacts/CommunicationTimeline";
@@ -103,7 +102,6 @@ export type ContactDetailTabsProps = {
   sortedEnrollments: EnrollmentRow[];
   stepsByWorkflow: Record<string, WorkflowStepRow[]>;
   expandedWorkflowId: string | null;
-  lifecycleComplete: boolean;
   listings: Listing[];
   buyerListings: Listing[];
   communications: Communication[];
@@ -123,8 +121,8 @@ export type ContactDetailTabsProps = {
   contactDates: ContactDate[];
   contactName: string;
 
-  // Activity tab
-  activities: ActivityRow[];
+  // Activity tab (lazy-loaded — null until tab is clicked)
+  activities: ActivityRow[] | null;
 
   // Deals tab
   referredByName: string | null;
@@ -144,7 +142,6 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
     sortedEnrollments,
     stepsByWorkflow,
     expandedWorkflowId,
-    lifecycleComplete,
     listings,
     buyerListings,
     communications,
@@ -172,23 +169,25 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
     documents,
   } = props;
 
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
+  const [currentTab, setCurrentTab] = useState("overview");
 
-  const currentTab = searchParams.get("tab") || "overview";
+  // ── Lazy-load activity log when Activity tab is selected ──
+  const [lazyActivities, setLazyActivities] = useState<ActivityRow[] | null>(activities);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
 
-  const setTab = (value: unknown) => {
-    const tab = value as string;
-    const params = new URLSearchParams(searchParams.toString());
-    if (tab === "overview") params.delete("tab");
-    else params.set("tab", tab);
-    const qs = params.toString();
-    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
-  };
+  useEffect(() => {
+    if (currentTab === "activity" && !lazyActivities && !activitiesLoading) {
+      setActivitiesLoading(true);
+      fetch(`/api/contacts/${contactId}/activities`)
+        .then((r) => r.json())
+        .then((data) => setLazyActivities(data))
+        .catch(() => setLazyActivities([]))
+        .finally(() => setActivitiesLoading(false));
+    }
+  }, [currentTab, contactId, lazyActivities, activitiesLoading]);
 
   return (
-    <Tabs defaultValue={currentTab} value={currentTab} onValueChange={setTab}>
+    <Tabs defaultValue="overview" value={currentTab} onValueChange={setCurrentTab}>
       <TabsList className="w-full justify-start bg-white/60 backdrop-blur border rounded-xl p-1 mb-4">
         <TabsTrigger value="overview" className="rounded-lg">
           📋 Overview
@@ -222,6 +221,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
               </CardContent>
             </Card>
           ))}
+
 
           {/* Seller / Buyer Preferences */}
           {isSeller ? (
@@ -361,11 +361,22 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             </CardContent>
           </Card>
 
-          {/* Activity Log */}
-          {activities.length > 0 && (
+          {/* Activity Log (lazy-loaded) */}
+          {activitiesLoading && (
             <Card className="border-l-4 border-l-slate-400 bg-slate-50/15 dark:bg-slate-950/10">
               <CardContent className="p-6">
-                <ActivityTimeline activities={activities} />
+                <div className="animate-pulse space-y-3">
+                  <div className="h-4 bg-muted rounded w-1/3" />
+                  <div className="h-3 bg-muted rounded w-2/3" />
+                  <div className="h-3 bg-muted rounded w-1/2" />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {!activitiesLoading && lazyActivities && lazyActivities.length > 0 && (
+            <Card className="border-l-4 border-l-slate-400 bg-slate-50/15 dark:bg-slate-950/10">
+              <CardContent className="p-6">
+                <ActivityTimeline activities={lazyActivities} />
               </CardContent>
             </Card>
           )}
@@ -401,11 +412,4 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
   );
 }
 
-// ── Exported wrapper with Suspense (useSearchParams requires it) ──
-export function ContactDetailTabs(props: ContactDetailTabsProps) {
-  return (
-    <Suspense fallback={<div className="animate-pulse h-12 bg-muted rounded-xl" />}>
-      <ContactDetailTabsInner {...props} />
-    </Suspense>
-  );
-}
+export { ContactDetailTabsInner as ContactDetailTabs };

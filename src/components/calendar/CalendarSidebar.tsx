@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { format, addDays, subDays } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin } from "lucide-react";
-import { getStatusColor } from "@/lib/constants/theme";
 
 interface ShowingEvent {
   id: string;
@@ -18,10 +17,10 @@ interface ShowingEvent {
 }
 
 const statusBadgeStyles: Record<string, string> = {
-  confirmed: getStatusColor("showing", "confirmed").badge,
-  requested: getStatusColor("showing", "requested").badge,
-  denied: getStatusColor("showing", "denied").badge,
-  cancelled: getStatusColor("showing", "cancelled").badge,
+  confirmed: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  requested: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  denied: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  cancelled: "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
 };
 
 export function CalendarSidebar() {
@@ -64,7 +63,7 @@ export function CalendarSidebar() {
     .slice(0, 5);
 
   return (
-    <aside className="w-[280px] shrink-0 border-r backdrop-blur-2xl bg-white/78 flex flex-col h-full overflow-hidden">
+    <aside className="w-[280px] shrink-0 border-r bg-card/50 flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b space-y-4">
         <h2 className="text-base font-semibold">Schedule</h2>

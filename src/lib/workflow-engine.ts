@@ -369,136 +369,6 @@ async function executeSystemAction(
   }
 }
 
-// ── Resend Email Executor (replaces Gmail for auto_email) ─────
-
-async function executeAutoEmailViaResend(
-  step: StepRow,
-  contact: Contact,
-  variables: Record<string, string>,
-  listing?: { address?: string; list_price?: number } | null,
-): Promise<{ success: boolean; result?: Record<string, unknown>; error?: string }> {
-  if (!contact.email) {
-    return { success: false, error: "Contact has no email address" };
-  }
-
-  const supabase = createAdminClient();
-  const actionConfig = step.action_config as Record<string, unknown> | null;
-  const aiIntent = actionConfig?.ai_template_intent as string | undefined;
-
-  let body = "";
-  let subject = "";
-
-  // AI-generated content
-  if (aiIntent) {
-    try {
-      const aiResult = await generateMessageContent(
-        aiIntent, "email",
-        { name: contact.name, type: contact.type, stage_bar: contact.lead_status },
-        listing, variables.agent_name,
-      );
-      body = aiResult.body;
-      subject = aiResult.subject || "";
-    } catch (aiErr) {
-      console.error("[workflow-engine] AI message generation failed:", aiErr);
-    }
-  }
-
-  // Template fallback
-  if (!body && step.template_id) {
-    const { data: template } = await supabase
-      .from("message_templates")
-      .select("body, subject")
-      .eq("id", step.template_id)
-      .single();
-    if (template) {
-      body = resolveTemplateVariablesFromMap(template.body, variables);
-      subject = template.subject ? resolveTemplateVariablesFromMap(template.subject, variables) : "";
-    }
-  }
-
-  if (!body) body = resolveTemplateVariablesFromMap(step.name, variables);
-
-  try {
-    const { sendEmail: sendViaResend } = await import("@/lib/resend");
-    const { messageId } = await sendViaResend({
-      to: contact.email,
-      subject: subject || step.name,
-      html: `<div style="font-family:sans-serif;font-size:15px;line-height:1.6;color:#1a1535;">${body.replace(/\n/g, "<br>")}</div>`,
-      tags: [{ name: "source", value: "workflow" }, { name: "step_name", value: step.name }],
-    });
-
-    await supabase.from("communications").insert({
-      contact_id: contact.id, direction: "outbound", channel: "email",
-      body: subject ? `Subject: ${subject}\n\n${body}` : body,
-    });
-
-    return { success: true, result: { channel: "email", messageId, via: "resend" } };
-  } catch (resendErr) {
-    // Fallback to Gmail
-    try {
-      const { sendEmail: sendViaGmail } = await import("@/lib/gmail");
-      const result = await sendViaGmail({ to: contact.email, subject: subject || step.name, body });
-      await supabase.from("communications").insert({
-        contact_id: contact.id, direction: "outbound", channel: "email",
-        body: subject ? `Subject: ${subject}\n\n${body}` : body,
-      });
-      return { success: true, result: { channel: "email", messageId: result.messageId, via: "gmail_fallback" } };
-    } catch (gmailErr) {
-      await supabase.from("communications").insert({
-        contact_id: contact.id, direction: "outbound", channel: "email",
-        body: subject ? `Subject: ${subject}\n\n${body}` : body,
-      });
-      return { success: true, result: { channel: "email", logged: true, resendError: String(resendErr), gmailError: String(gmailErr) } };
-    }
-  }
-}
-
-// ── AI Email Executor (newsletter-style via Claude + React Email + Resend) ────
-
-async function executeAIEmail(
-  step: StepRow,
-  contact: Contact,
-  enrollment: EnrollmentRow,
-): Promise<{ success: boolean; result?: Record<string, unknown>; error?: string }> {
-  if (!contact.email) {
-    return { success: false, error: "Contact has no email address" };
-  }
-
-  const actionConfig = step.action_config as Record<string, unknown> | null;
-  const emailType = (actionConfig?.email_type as string) || "market_update";
-  const sendMode = (actionConfig?.send_mode as string) || "review";
-  const journeyPhase = (enrollment.metadata as Record<string, unknown>)?.journey_phase as string || "lead";
-
-  try {
-    const { generateAndQueueNewsletter } = await import("@/actions/newsletters");
-    const result = await generateAndQueueNewsletter(
-      contact.id,
-      emailType,
-      journeyPhase,
-      undefined,
-      sendMode,
-    );
-
-    if (result.error) {
-      return { success: false, error: result.error };
-    }
-
-    return {
-      success: true,
-      result: {
-        channel: "email",
-        via: "ai_email",
-        email_type: emailType,
-        send_mode: sendMode,
-        newsletter_id: result.data?.id,
-        status: sendMode === "auto" ? "sent" : "draft_queued",
-      },
-    };
-  } catch (err) {
-    return { success: false, error: `AI email generation failed: ${String(err)}` };
-  }
-}
-
 // ── Main Step Executor ────────────────────────────────────────
 
 export async function executeStep(
@@ -536,9 +406,7 @@ export async function executeStep(
     case "auto_whatsapp":
       return executeAutoMessage(step, contact as Contact, variables, "whatsapp", listing);
     case "auto_email":
-      return executeAutoEmailViaResend(step, contact as Contact, variables, listing);
-    case "ai_email":
-      return executeAIEmail(step, contact as Contact, enrollment);
+      return executeAutoMessage(step, contact as Contact, variables, "email", listing);
     case "manual_task":
       return executeManualTask(step, contact as Contact, enrollment.id);
     case "auto_alert":
@@ -606,49 +474,6 @@ export async function processWorkflowQueue(): Promise<{
         continue;
       }
 
-      // AI Send Advisor pre-execution hook (for email steps only)
-      let aiDecision: Record<string, unknown> | null = null;
-      if ((step.action_type === "auto_email" || step.action_type === "ai_email") && process.env.AI_SEND_ADVISOR === "true") {
-        try {
-          const { adviseSend } = await import("@/lib/ai-agent/send-advisor");
-          const actionConfig = step.action_config as Record<string, unknown> | null;
-          const emailType = (actionConfig?.email_type as string) || "market_update";
-          const journeyPhase = (enrollment as any).journey_phase || "lead";
-
-          const advice = await adviseSend(enrollment.contact_id, emailType, journeyPhase);
-          aiDecision = advice as unknown as Record<string, unknown>;
-
-          if (advice.decision === "skip") {
-            // Skip this step, advance to next
-            await supabase.from("workflow_step_logs").insert({
-              enrollment_id: enrollment.id,
-              step_id: step.id,
-              status: "skipped",
-              result: { ai_advisor: "skip", reasoning: advice.reasoning },
-              ai_decision: aiDecision,
-            });
-            // Advance (handled below in normal flow by not blocking)
-            const { data: ns } = await supabase.from("workflow_steps").select("step_order, delay_minutes")
-              .eq("workflow_id", enrollment.workflow_id).gt("step_order", step.step_order).order("step_order").limit(1).single();
-            if (ns) {
-              await supabase.from("workflow_enrollments").update({ current_step: ns.step_order, next_run_at: new Date(Date.now() + (ns.delay_minutes || 0) * 60000).toISOString() }).eq("id", enrollment.id);
-            } else {
-              await supabase.from("workflow_enrollments").update({ status: "completed", completed_at: now }).eq("id", enrollment.id);
-            }
-            processed++;
-            continue;
-          }
-
-          if (advice.decision === "swap" && advice.swap_to && step.action_type === "ai_email") {
-            // Swap the email type in the step config
-            (step as any).action_config = { ...actionConfig, email_type: advice.swap_to };
-          }
-        } catch (advisorErr) {
-          console.error("Send advisor error:", advisorErr);
-          // Continue with original step on advisor failure
-        }
-      }
-
       // Execute the step
       const result = await executeStep(
         enrollment as EnrollmentRow,
@@ -662,7 +487,6 @@ export async function processWorkflowQueue(): Promise<{
         status: result.success ? "sent" : "failed",
         result: result.result || {},
         error_message: result.error || null,
-        ai_decision: aiDecision,
       });
 
       // Log activity

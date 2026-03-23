@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
-import { backfillWorkflowEnrollments, seedAllWorkflows } from "@/actions/workflows";
+import { backfillWorkflowEnrollments } from "@/actions/workflows";
 
 export function BackfillButton() {
   const [isPending, startTransition] = useTransition();
@@ -20,8 +20,6 @@ export function BackfillButton() {
     setError(null);
     startTransition(async () => {
       try {
-        // Seed workflow steps first (skips if already seeded)
-        await seedAllWorkflows();
         const res = await backfillWorkflowEnrollments();
         if (!res.success) {
           setError("Backfill failed — check server logs");

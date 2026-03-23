@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCalendarEvents } from "@/actions/calendar";
-import { requireAuth } from "@/lib/api-auth";
 
 export async function GET(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
-
   const searchParams = req.nextUrl.searchParams;
   const start = searchParams.get("start");
   const end = searchParams.get("end");

@@ -124,13 +124,12 @@ export async function createShowingRequest(
       related_id: appointment.id,
     });
   } catch (err) {
-    console.error("[createShowingRequest] Twilio notification failed:", err);
-    // Flag the appointment so the agent knows the seller was not notified
+    console.error("Failed to send Twilio notification:", err);
     await supabase
       .from("appointments")
       .update({
         notification_status: "failed",
-        notification_error: err instanceof Error ? err.message : "Twilio send failed",
+        notification_error: err instanceof Error ? err.message : "Unknown Twilio error",
       })
       .eq("id", appointment.id);
   }
@@ -185,8 +184,8 @@ export async function updateShowingStatus(
           });
         }
       }
-    } catch (error) {
-      console.error("[updateShowingStatus] Trigger emission failed:", error);
+    } catch {
+      // Don't fail status update if triggers fail
     }
   }
 

@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get("search");
   const type = searchParams.get("type")?.toLowerCase();
 
-  let query = supabase.from("contacts").select("*, listings(id), deals(id), communications(id)").order("created_at", { ascending: false });
+  let query = supabase.from("contacts").select("*").order("created_at", { ascending: false });
 
   if (search) {
     query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`);

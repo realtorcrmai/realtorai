@@ -15,15 +15,13 @@ import {
   Upload,
   FileText,
   Wand2,
+  Zap,
+  Mail,
   LogOut,
   Home,
   ChevronDown,
   Menu,
-  Kanban,
-  BarChart3,
-  Settings,
   Shield,
-  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
@@ -41,23 +39,19 @@ import type { FeatureKey } from "@/lib/features";
 const mainTabs: { href: string; label: string; icon: typeof Building2; featureKey: FeatureKey }[] = [
   { href: "/listings", label: "Listings", icon: Building2, featureKey: "listings" },
   { href: "/contacts", label: "Contacts", icon: Users, featureKey: "contacts" },
-  { href: "/pipeline", label: "Pipeline", icon: Kanban, featureKey: "listings" },
   { href: "/showings", label: "Showings", icon: Clock, featureKey: "showings" },
   { href: "/calendar", label: "Calendar", icon: Calendar, featureKey: "calendar" },
 ];
 
-type MoreItem = { href: string; label: string; icon: typeof Building2; featureKey: FeatureKey; special?: boolean };
-
-const moreItems: MoreItem[] = [
-  { href: "/automations", label: "Automations", icon: Zap, featureKey: "automations", special: true },
-  { href: "/reports", label: "Reports", icon: BarChart3, featureKey: "listings" },
+const moreItems: { href: string; label: string; icon: typeof Building2; featureKey: FeatureKey }[] = [
   { href: "/tasks", label: "Tasks", icon: ListTodo, featureKey: "tasks" },
+  { href: "/automations", label: "Automations", icon: Zap, featureKey: "automations" },
   { href: "/content", label: "Content Engine", icon: Wand2, featureKey: "content" },
   { href: "/search", label: "Property Search", icon: Search, featureKey: "search" },
   { href: "/workflow", label: "MLS Workflow", icon: GitBranch, featureKey: "workflow" },
   { href: "/import", label: "Excel Import", icon: Upload, featureKey: "import" },
   { href: "/forms", label: "BC Forms", icon: FileText, featureKey: "forms" },
-  { href: "/settings", label: "Settings", icon: Settings, featureKey: "listings" },
+  { href: "/newsletters", label: "Email Marketing", icon: Mail, featureKey: "newsletters" },
 ];
 
 export function AppHeader() {
@@ -73,7 +67,7 @@ export function AppHeader() {
     ? mainTabs.filter((tab) => enabledFeatures.includes(tab.featureKey))
     : mainTabs;
   const filteredMoreItems = enabledFeatures.length > 0
-    ? moreItems.filter((item) => item.special || enabledFeatures.includes(item.featureKey))
+    ? moreItems.filter((item) => enabledFeatures.includes(item.featureKey))
     : moreItems;
   const allNav = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, featureKey: undefined as FeatureKey | undefined },
@@ -173,42 +167,20 @@ export function AppHeader() {
             {moreOpen && (
               <div className="absolute top-full left-0 mt-2 w-56 bg-card rounded-xl shadow-lg border border-border py-2 z-50 animate-in fade-in-0 zoom-in-95 duration-100">
                 {filteredMoreItems.map((item) => (
-                  item.special ? (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setMoreOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3 px-4 py-2.5 text-sm font-semibold transition-all mx-1.5 mb-1 rounded-lg",
-                        isActive(item.href)
-                          ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md"
-                          : "bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/40 hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-950/50 dark:hover:to-orange-950/50"
-                      )}
-                    >
-                      <div className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-500/15 dark:bg-amber-500/20">
-                        <item.icon className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                      </div>
-                      {item.label}
-                      <span className="ml-auto text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400">
-                        AI
-                      </span>
-                    </Link>
-                  ) : (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setMoreOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3 px-4 py-2.5 text-sm transition-colors mx-1.5 rounded-lg",
-                        isActive(item.href)
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "text-foreground hover:bg-accent"
-                      )}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {item.label}
-                    </Link>
-                  )
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMoreOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-2.5 text-sm transition-colors mx-1.5 rounded-lg",
+                      isActive(item.href)
+                        ? "bg-primary/10 text-primary font-medium"
+                        : "text-foreground hover:bg-accent"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
                 ))}
               </div>
             )}
@@ -284,41 +256,21 @@ export function AppHeader() {
               </div>
               {/* Nav */}
               <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-                {allNav.map((item) => {
-                  const isSpecial = "special" in item && item.special;
-                  return isSpecial ? (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all",
-                        isActive(item.href)
-                          ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white"
-                          : "bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/40"
-                      )}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {item.label}
-                      <span className="ml-auto text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400">
-                        AI
-                      </span>
-                    </Link>
-                  ) : (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                        isActive(item.href)
-                          ? "bg-[var(--sidebar-accent)] text-[var(--sidebar-primary)]"
-                          : "text-[var(--sidebar-foreground)]/70 hover:bg-[var(--sidebar-accent)]"
-                      )}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
+                {allNav.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                      isActive(item.href)
+                        ? "bg-[var(--sidebar-accent)] text-[var(--sidebar-primary)]"
+                        : "text-[var(--sidebar-foreground)]/70 hover:bg-[var(--sidebar-accent)]"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                ))}
               </nav>
               {/* User */}
               <div className="border-t border-[var(--sidebar-border)] p-3">

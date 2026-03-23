@@ -341,84 +341,10 @@ export const WORKFLOW_BLUEPRINTS: WorkflowBlueprint[] = [
       { name: "Email: annual recap + thank you", action_type: "auto_email", delay_value: 0, delay_unit: "minutes" },
     ],
   },
-  {
-    slug: "under_contract",
-    name: "Under Contract — Closing Countdown",
-    icon: "📋",
-    description: "Subject removal, inspection, financing & closing checklist from offer acceptance to completion",
-    steps: [
-      // Day 0 — Offer accepted
-      { name: "Congratulations text to client", action_type: "auto_sms", delay_value: 0, delay_unit: "minutes", ai_template_intent: "Congratulate client on accepted offer, mention next steps (subjects, inspection, financing)" },
-      { name: "Agent alert: offer accepted — start closing checklist", action_type: "auto_alert", delay_value: 0, delay_unit: "minutes" },
-      { name: "Task: confirm subject removal dates with conveyancer", action_type: "manual_task", delay_value: 0, delay_unit: "minutes", task_config: { priority: "urgent", category: "closing" } },
-      { name: "Task: order home inspection", action_type: "manual_task", delay_value: 0, delay_unit: "hours", task_config: { priority: "high", category: "closing" } },
-
-      // Day 1 — Inspection & financing
-      { name: "Closing timeline email with key dates", action_type: "auto_email", delay_value: 1, delay_unit: "days", ai_template_intent: "Send client a clear timeline of upcoming deadlines: inspection, financing approval, subject removal, completion day" },
-      { name: "Task: verify buyer financing pre-approval with lender", action_type: "manual_task", delay_value: 1, delay_unit: "days", task_config: { priority: "high", category: "closing" } },
-
-      // Day 3 — Inspection follow-up
-      { name: "Check-in text: inspection status", action_type: "auto_sms", delay_value: 3, delay_unit: "days", exit_on_reply: true, ai_template_intent: "Quick check-in — has the inspection been completed? Any concerns?" },
-      { name: "Task: review inspection report & advise client", action_type: "manual_task", delay_value: 3, delay_unit: "days", task_config: { priority: "high", category: "closing" } },
-
-      // Day 5 — Subject removal countdown
-      { name: "Subject removal reminder email", action_type: "auto_email", delay_value: 5, delay_unit: "days", ai_template_intent: "Remind client that subject removal deadline is approaching. Outline what needs to be done before subjects are removed (financing confirmation, inspection sign-off)" },
-      { name: "Task: confirm financing approval received", action_type: "manual_task", delay_value: 5, delay_unit: "days", task_config: { priority: "urgent", category: "closing" } },
-
-      // Day 7 — Subject removal
-      { name: "Agent alert: subject removal deadline today", action_type: "auto_alert", delay_value: 7, delay_unit: "days" },
-      { name: "Task: file subject removal with listing agent", action_type: "manual_task", delay_value: 7, delay_unit: "days", task_config: { priority: "urgent", category: "closing" } },
-      { name: "Subjects removed confirmation text", action_type: "auto_sms", delay_value: 7, delay_unit: "days", ai_template_intent: "Confirm subjects have been removed — the sale is now firm. Congratulations! Next steps: conveyancing and closing prep" },
-
-      // Day 10 — Conveyancing & legal
-      { name: "Task: send deal documents to conveyancer/lawyer", action_type: "manual_task", delay_value: 10, delay_unit: "days", task_config: { priority: "high", category: "closing" } },
-      { name: "Conveyancing intro email", action_type: "auto_email", delay_value: 10, delay_unit: "days", ai_template_intent: "Introduce the conveyancing process — what the lawyer/notary will handle, what documents the client needs to prepare, and approximate closing costs" },
-
-      // Day 14 — Title & insurance
-      { name: "Task: confirm title search completed", action_type: "manual_task", delay_value: 14, delay_unit: "days", task_config: { priority: "medium", category: "closing" } },
-      { name: "Home insurance reminder text", action_type: "auto_sms", delay_value: 14, delay_unit: "days", ai_template_intent: "Reminder to arrange home insurance before closing — lender will require proof of insurance" },
-
-      // Day 21 — Pre-closing
-      { name: "Pre-closing checklist email", action_type: "auto_email", delay_value: 21, delay_unit: "days", ai_template_intent: "Pre-closing checklist: final walkthrough, utility transfers, mail forwarding, key handover logistics, moving plans" },
-      { name: "Task: schedule final walkthrough with client", action_type: "manual_task", delay_value: 21, delay_unit: "days", task_config: { priority: "high", category: "closing" } },
-
-      // Day 25 — Final walkthrough
-      { name: "Final walkthrough reminder text", action_type: "auto_sms", delay_value: 25, delay_unit: "days", ai_template_intent: "Reminder: final walkthrough scheduled. Check that all conditions are met, fixtures are intact, property is in expected condition" },
-      { name: "Task: complete final walkthrough & sign off", action_type: "manual_task", delay_value: 25, delay_unit: "days", task_config: { priority: "urgent", category: "closing" } },
-
-      // Day 28 — Closing
-      { name: "Agent alert: closing day — prepare for key handover", action_type: "auto_alert", delay_value: 28, delay_unit: "days" },
-      { name: "Task: confirm funds transfer & closing with conveyancer", action_type: "manual_task", delay_value: 28, delay_unit: "days", task_config: { priority: "urgent", category: "closing" } },
-      { name: "Closing day congratulations text", action_type: "auto_sms", delay_value: 28, delay_unit: "days", ai_template_intent: "Congratulations on closing! Keys are ready for pickup. Welcome to your new home / thank you for a successful sale!" },
-      { name: "Update contact status to closed", action_type: "system_action", delay_value: 28, delay_unit: "days", action_config: { set_lead_status: "closed" } },
-    ],
-  },
-  {
-    slug: "seller_lifecycle",
-    name: "Seller Lifecycle",
-    icon: "📊",
-    description: "Milestone-based seller journey from intake to closing",
-    steps: [
-      { name: "Initial Contact", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "contact_exists", description: "Seller onboarded, basic info captured" } },
-      { name: "Listing Agreement", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "has_listing", description: "Listing created, documents prepared" } },
-      { name: "Property Listed", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "listing_active", description: "Active on MLS, showings scheduled" } },
-      { name: "Offer Accepted", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "listing_pending_or_sold", description: "Pending sale, conditions in progress" } },
-      { name: "Closing Complete", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "listing_sold", description: "Transaction closed, commission earned" } },
-    ],
-  },
-  {
-    slug: "buyer_lifecycle",
-    name: "Buyer Lifecycle",
-    icon: "🔑",
-    description: "Milestone-based buyer journey from contact to purchase",
-    steps: [
-      { name: "Initial Contact", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "contact_exists", description: "Buyer onboarded, basic info captured" } },
-      { name: "Preferences Set", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "has_buyer_preferences", description: "Budget, areas, property type defined" } },
-      { name: "Property Showings", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "has_showings_or_activity", description: "Viewing properties, narrowing choices" } },
-      { name: "Offer Submitted", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "listing_pending_or_sold", description: "Offer made, negotiation in progress" } },
-      { name: "Closing Complete", action_type: "milestone", delay_value: 0, delay_unit: "minutes", action_config: { condition: "listing_sold", description: "Purchase closed, keys handed over" } },
-    ],
-  },
+  // NOTE: buyer_lifecycle and seller_lifecycle workflows have been REMOVED.
+  // They were 100% redundant with the StageBar pipeline (same stages: new → qualified → active → under_contract → closed).
+  // StageBar is the single source of truth for pipeline position.
+  // Other workflows (buyer_nurture, post_close, etc.) auto-sync stage_bar via WORKFLOW_STAGE_MAP.
 ];
 
 // ── Workflow → Stage Bar Mapping ─────────────────────────────
@@ -435,24 +361,10 @@ export const WORKFLOW_STAGE_MAP: Record<string, {
   post_close_seller: { buyer: "closed", seller: "closed" },
   lead_reengagement: { buyer: "cold", seller: "cold" },
   open_house_followup: { buyer: "active_search", seller: "active_listing" },
-  under_contract: { buyer: "under_contract", seller: "under_contract" },
   referral_partner: { buyer: "new", seller: "new" }, // partners don't have a pipeline stage, keep as-is
 };
 
-// Lifecycle milestone → stage mapping (by step name)
-export const LIFECYCLE_MILESTONE_STAGE_MAP: Record<string, {
-  buyer: string;
-  seller: string;
-}> = {
-  "Initial Contact": { buyer: "new", seller: "new" },
-  "Preferences Set": { buyer: "qualified", seller: "qualified" },
-  "Listing Agreement": { buyer: "qualified", seller: "qualified" },
-  "Property Showings": { buyer: "active_search", seller: "active_listing" },
-  "Property Listed": { buyer: "active_search", seller: "active_listing" },
-  "Offer Submitted": { buyer: "under_contract", seller: "under_contract" },
-  "Offer Accepted": { buyer: "under_contract", seller: "under_contract" },
-  "Closing Complete": { buyer: "closed", seller: "closed" },
-};
+// LIFECYCLE_MILESTONE_STAGE_MAP removed — lifecycle workflows were redundant with StageBar.
 
 // Helper: find blueprint by slug
 export function getWorkflowBlueprint(slug: string): WorkflowBlueprint | undefined {

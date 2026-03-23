@@ -6,11 +6,12 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   MessageSquare,
-  Phone,
+  MessageCircle,
   Mail,
   StickyNote,
   Send,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -18,10 +19,24 @@ import { addCommunicationNote } from "@/actions/contacts";
 import type { Communication } from "@/types";
 
 const channelIcons = {
-  whatsapp: MessageSquare,
-  sms: Phone,
+  whatsapp: MessageCircle,
+  sms: MessageSquare,
   email: Mail,
   note: StickyNote,
+};
+
+const channelBadgeStyles: Record<string, string> = {
+  whatsapp: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400",
+  sms: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
+  email: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400",
+  note: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
+};
+
+const channelLabels: Record<string, string> = {
+  whatsapp: "WhatsApp",
+  sms: "SMS",
+  email: "Email",
+  note: "Note",
 };
 
 type FilterType = "all" | "sms" | "whatsapp" | "email" | "note";
@@ -113,29 +128,63 @@ export function CommunicationTimeline({
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {filtered.map((comm) => {
             const ChannelIcon = channelIcons[comm.channel];
-            const DirectionIcon =
-              comm.direction === "inbound" ? ArrowDownLeft : ArrowUpRight;
+            const isInbound = comm.direction === "inbound";
+            const DirectionIcon = isInbound ? ArrowDownLeft : ArrowUpRight;
+            const badgeStyle = channelBadgeStyles[comm.channel] ?? "bg-muted text-muted-foreground";
+            const formattedDate = new Date(comm.created_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            });
+            const relativeDate = formatDistanceToNow(new Date(comm.created_at), {
+              addSuffix: true,
+            });
+
             return (
               <div
                 key={comm.id}
-                className="flex gap-3 p-3 rounded-lg bg-muted/50"
+                className={cn(
+                  "flex gap-3 p-3 rounded-lg transition-colors",
+                  isInbound
+                    ? "bg-blue-50/50 dark:bg-blue-950/20 border-l-2 border-l-blue-400"
+                    : "bg-muted/50 border-r-2 border-r-emerald-400 ml-4"
+                )}
               >
-                <div className="flex flex-col items-center gap-1">
+                <div className="flex flex-col items-center gap-1.5 shrink-0">
                   <DirectionIcon
-                    className={`h-4 w-4 ${
-                      comm.direction === "inbound"
-                        ? "text-blue-500"
-                        : "text-green-500"
-                    }`}
+                    className={cn(
+                      "h-4 w-4",
+                      isInbound ? "text-blue-500" : "text-emerald-500"
+                    )}
                   />
-                  <ChannelIcon className="h-4 w-4 text-muted-foreground" />
+                  <ChannelIcon
+                    className={cn(
+                      "h-4 w-4",
+                      isInbound ? "text-blue-400" : "text-emerald-400"
+                    )}
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full",
+                        badgeStyle
+                      )}
+                    >
+                      <ChannelIcon className="h-2.5 w-2.5" />
+                      {channelLabels[comm.channel] ?? comm.channel}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {isInbound ? "Received" : "Sent"}
+                    </span>
+                  </div>
                   <p className="text-sm break-words">{comm.body}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {formatDistanceToNow(new Date(comm.created_at), {
-                      addSuffix: true,
-                    })}
+                    {relativeDate}
+                    <span className="mx-1.5 opacity-40">·</span>
+                    {formattedDate}
                   </p>
                 </div>
               </div>
