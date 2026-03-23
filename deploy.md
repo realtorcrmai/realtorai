@@ -175,6 +175,23 @@ Run these in order (later ones depend on earlier ones):
 
 ---
 
+## Health Check (Run This First!)
+
+After pulling new changes, run the automated health check:
+
+```bash
+bash scripts/health-check.sh
+```
+
+This checks everything in ~20 seconds: git status, env vars, DB connectivity, build state, dev server, Netlify deploy, and migrations. Fix any ❌ items before starting work.
+
+To save a snapshot of the current working state:
+```bash
+bash scripts/save-state.sh
+```
+
+---
+
 ## Verify Setup
 
 ### 1. Start the server
@@ -286,6 +303,24 @@ realtorai/                      ← Git repo root
 
 ---
 
+## Recent Breaking Changes (March 2026)
+
+If you pulled and things broke, check these:
+
+1. **Migrations renumbered (001→048)** — All migrations were renumbered with sequential unique prefixes. If you had local migration files with the old numbers (e.g. `019_reset_seed_data.sql`), they're now `040_reset_seed_data.sql`. Run any new ones in order.
+
+2. **`app/` directory renamed to `app-backup/`** — The root `app/` folder was a duplicate project that broke the Next.js build. It's now `app-backup/`. If you recreated `app/`, remove it or rename it.
+
+3. **Tabs component switched to Radix** — `src/components/ui/tabs.tsx` now uses `@radix-ui/react-tabs` instead of `@base-ui/react/tabs`. Run `npm install` to get the new dependency.
+
+4. **Data integrity migration (047)** — Adds unique constraints, CHECK constraints, and triggers. If your DB doesn't have these, run: `supabase db query --linked -f supabase/migrations/047_data_integrity_fixes.sql`
+
+5. **Cron endpoints require CRON_SECRET** — Both `/api/cron/agent-scoring` and `/api/cron/process-workflows` now return 500 if `CRON_SECRET` env var is not set. Make sure it's in your `.env.local`.
+
+6. **Zod validation on 11 API routes** — POST endpoints for deals, parties, checklist, mortgages, family, dates, open-houses, forms/save, and voice-agent/contacts now validate input with Zod. Invalid payloads return 400.
+
+---
+
 ## Troubleshooting
 
 ### "newsletters table missing"
@@ -307,7 +342,18 @@ cp ../listingflow-agent/src/tools/screenshot.ts listingflow-agent/src/tools/scre
 ```
 
 ### Turbopack workspace root warning
-Harmless warning caused by `/Users/bigbear/package-lock.json`. Can be ignored.
+Harmless warning caused by multiple `package-lock.json` files. Fixed via `turbopack.root` in `next.config.ts`.
+
+### Build picks up files from app-backup/ or agent-pipeline/
+These directories are excluded in `tsconfig.json`. If you see errors from them, check that `"exclude"` in `tsconfig.json` includes: `["node_modules", "app", "app-backup", "agent-pipeline", "content-generator", "listingflow-agent"]`
+
+### Contact tabs not switching (Intelligence, Activity, Deals)
+The tabs component was upgraded from Base UI to Radix. Run `npm install` to get `@radix-ui/react-tabs`.
+
+### After pulling: "Module not found" or missing types
+```bash
+rm -rf node_modules .next && npm install && npm run build
+```
 
 ---
 
