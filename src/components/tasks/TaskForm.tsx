@@ -65,8 +65,8 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
           priority,
           category,
           due_date: dueDate || undefined,
-          contact_id: contactId || undefined,
-          listing_id: listingId || undefined,
+          contact_id: contactId && contactId !== "none" ? contactId : undefined,
+          listing_id: listingId && listingId !== "none" ? listingId : undefined,
         }),
       });
 

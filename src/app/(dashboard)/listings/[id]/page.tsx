@@ -1,8 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { MapPin, DollarSign, Key, Clock, User } from "lucide-react";
+import { ManualStatusOverride } from "@/components/listings/ManualStatusOverride";
 import { ListingWorkflow } from "@/components/listings/ListingWorkflow";
 import { FormReadinessPanel } from "@/components/listings/FormReadinessPanel";
 import { ConveyancingPackButton } from "@/components/listings/ConveyancingPackButton";
@@ -13,7 +13,6 @@ import { NeighborhoodButton } from "@/components/listings/NeighborhoodButton";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import type { ListingDocument } from "@/types";
-import { LISTING_STATUS_COLORS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -96,12 +95,10 @@ export default async function ListingDetailPage({
                     <h1 className="text-2xl font-bold tracking-tight truncate">
                       {listing.address}
                     </h1>
-                    <Badge
-                      variant="secondary"
-                      className={`${LISTING_STATUS_COLORS[listing.status as keyof typeof LISTING_STATUS_COLORS]} text-xs shrink-0`}
-                    >
-                      {listing.status}
-                    </Badge>
+                    <ManualStatusOverride
+                      listingId={id}
+                      currentStatus={listing.status}
+                    />
                   </div>
                   <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
                     {listing.list_price != null && (

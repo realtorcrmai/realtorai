@@ -6,13 +6,49 @@ import { contactSchema, type ContactFormData } from "@/lib/schemas";
 import type { Json } from "@/types/database";
 import { enforceConsistency } from "@/lib/contact-consistency";
 
-export async function createContact(formData: ContactFormData) {
+export async function createContact(formData: ContactFormData, force = false) {
   const parsed = contactSchema.safeParse(formData);
   if (!parsed.success) {
     return { error: "Invalid form data", issues: parsed.error.issues };
   }
 
   const supabase = createAdminClient();
+
+  if (!force) {
+    // Strip non-digit characters and take the last 10 digits for phone comparison
+    const rawPhone = (parsed.data.phone ?? "").replace(/\D/g, "");
+    const last10 = rawPhone.slice(-10);
+
+    const { data: existing } = await supabase
+      .from("contacts")
+      .select("id, name, phone, email");
+
+    if (existing && existing.length > 0) {
+      const duplicates = existing.filter((c) => {
+        const phoneMatch =
+          last10.length === 10 &&
+          (c.phone ?? "").replace(/\D/g, "").slice(-10) === last10;
+        const emailMatch =
+          parsed.data.email &&
+          c.email &&
+          c.email.toLowerCase() === parsed.data.email.toLowerCase();
+        return phoneMatch || emailMatch;
+      });
+
+      if (duplicates.length > 0) {
+        return {
+          error: "Duplicate contact detected",
+          duplicates: duplicates.map((c) => ({
+            id: c.id,
+            name: c.name,
+            phone: c.phone,
+            email: c.email,
+          })),
+        };
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from("contacts")
     .insert({
@@ -41,17 +77,19 @@ export async function createContact(formData: ContactFormData) {
 
   revalidatePath("/contacts");
 
-  // Fire new_lead trigger for workflow auto-enrollment
-  try {
-    const { fireTrigger } = await import("@/lib/workflow-triggers");
-    await fireTrigger({
-      type: "new_lead",
-      contactId: data.id,
-      contactType: data.type,
+  // Fire-and-forget: auto-enroll in workflows (e.g. speed_to_contact)
+  // and create agent notification via workflow-triggers
+  import("@/lib/workflow-triggers")
+    .then(({ fireTrigger }) =>
+      fireTrigger({
+        type: "new_lead",
+        contactId: data.id,
+        contactType: data.type,
+      })
+    )
+    .catch(() => {
+      // Don't fail contact creation if trigger fails
     });
-  } catch (error) {
-    console.error("[createContact] Trigger emission failed:", error);
-  }
 
   return { success: true, contact: data };
 }
@@ -183,8 +221,8 @@ export async function updateContact(
         });
       }
     }
-  } catch (error) {
-    console.error("[updateContact] Trigger emission failed:", error);
+  } catch {
+    // Don't fail update if triggers fail
   }
 
   return { success: true };
@@ -440,6 +478,40 @@ export async function deleteContactTask(taskId: string, contactId: string) {
   }
 
   revalidatePath(`/contacts/${contactId}`);
+  return { success: true };
+}
+
+// ── Delete Contact ───────────────────────────────────────────
+
+export async function deleteContact(id: string) {
+  if (!id) {
+    return { error: "Invalid contact ID" };
+  }
+
+  const supabase = createAdminClient();
+
+  // Check for active listings where this contact is the seller
+  const { data: activeListings, error: listingsError } = await supabase
+    .from("listings")
+    .select("id, status")
+    .eq("seller_id", id)
+    .not("status", "in", "(sold,cancelled)");
+
+  if (listingsError) {
+    return { error: "Failed to check contact listings" };
+  }
+
+  if (activeListings && activeListings.length > 0) {
+    return { error: "Cannot delete contact with active listings" };
+  }
+
+  const { error } = await supabase.from("contacts").delete().eq("id", id);
+
+  if (error) {
+    return { error: "Failed to delete contact" };
+  }
+
+  revalidatePath("/contacts");
   return { success: true };
 }
 

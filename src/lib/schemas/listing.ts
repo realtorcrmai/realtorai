@@ -6,6 +6,7 @@ export const listingSchema = z.object({
   seller_id: z.string().uuid(),
   lockbox_code: z.string().min(1),
   status: z.enum(LISTING_STATUSES).default("active"),
+  property_type: z.enum(["Residential", "Condo/Apartment", "Townhouse", "Land", "Commercial", "Multi-Family"]).default("Residential"),
   mls_number: z.string().optional(),
   list_price: z.number().positive().optional(),
   showing_window_start: z.string().optional(),

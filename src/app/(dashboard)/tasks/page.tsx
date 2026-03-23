@@ -10,7 +10,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Clock, ListTodo } from "lucide-react";
+import { Plus, Clock, ListTodo, CheckCheck } from "lucide-react";
+import { toast } from "sonner";
 import { TaskForm } from "@/components/tasks/TaskForm";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { TaskPipeline } from "@/components/tasks/TaskPipeline";
@@ -35,6 +36,8 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -51,6 +54,11 @@ export default function TasksPage() {
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
+
+  // Clear selection whenever tasks reload
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [tasks]);
 
   // Sort: overdue first, then by priority, then by due date
   const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
@@ -78,6 +86,55 @@ export default function TasksPage() {
 
     return 0;
   });
+
+  // Only non-completed tasks are selectable
+  const selectableTasks = sortedTasks.filter((t) => t.status !== "completed");
+  const allSelected =
+    selectableTasks.length > 0 && selectedIds.size === selectableTasks.length;
+  const someSelected = selectedIds.size > 0;
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(selectableTasks.map((t) => t.id)));
+    }
+  }
+
+  async function bulkComplete() {
+    if (selectedIds.size === 0) return;
+    setBulkLoading(true);
+    try {
+      const resp = await fetch("/api/tasks/bulk-complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      });
+      if (!resp.ok) throw new Error("Failed to bulk complete");
+      const result = await resp.json();
+      toast.success(
+        `${result.updated ?? selectedIds.size} task${selectedIds.size !== 1 ? "s" : ""} marked complete`
+      );
+      setSelectedIds(new Set());
+      fetchTasks();
+    } catch {
+      toast.error("Failed to mark tasks complete");
+    } finally {
+      setBulkLoading(false);
+    }
+  }
 
   return (
     <div className="space-y-6 animate-float-in">
@@ -114,6 +171,17 @@ export default function TasksPage() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
+            {/* Select All checkbox — only shown when there are selectable tasks */}
+            {!loading && selectableTasks.length > 0 && (
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleSelectAll}
+                className="h-4 w-4 cursor-pointer accent-indigo-600"
+                aria-label="Select all incomplete tasks"
+                title={allSelected ? "Deselect all" : "Select all incomplete tasks"}
+              />
+            )}
             <ListTodo className="h-4 w-4" />
             All Tasks
             <span className="text-muted-foreground font-normal text-sm">
@@ -140,10 +208,42 @@ export default function TasksPage() {
           )}
 
           {sortedTasks.map((task) => (
-            <TaskCard key={task.id} task={task} onUpdate={fetchTasks} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              onUpdate={fetchTasks}
+              isSelected={selectedIds.has(task.id)}
+              onToggleSelect={task.status !== "completed" ? toggleSelect : undefined}
+            />
           ))}
         </CardContent>
       </Card>
+
+      {/* Floating bulk action bar */}
+      {someSelected && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl bg-white dark:bg-zinc-900 border border-border">
+          <span className="text-sm font-medium text-muted-foreground">
+            {selectedIds.size} selected
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setSelectedIds(new Set())}
+            disabled={bulkLoading}
+          >
+            Clear
+          </Button>
+          <Button
+            size="sm"
+            onClick={bulkComplete}
+            disabled={bulkLoading}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            <CheckCheck className="h-4 w-4 mr-1.5" />
+            {bulkLoading ? "Completing..." : "Mark Complete"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

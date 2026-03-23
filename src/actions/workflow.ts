@@ -156,6 +156,84 @@ export async function saveStepData(
   return { success: true };
 }
 
+/**
+ * Force-marks a workflow step as complete regardless of prior steps.
+ * This satisfies the data conditions that `deriveStepStatuses` checks,
+ * allowing the realtor to "skip" or bypass phases they want to treat as done.
+ *
+ * For data-driven phases (price, MLS number) the DB column is set to a
+ * placeholder value if it is not already present.
+ * For form-driven phases, all required form_submissions are upserted as completed.
+ */
+export async function markStepComplete(listingId: string, stepId: string) {
+  const supabase = createAdminClient();
+
+  const { data: listing } = await supabase
+    .from("listings")
+    .select("list_price, mls_number")
+    .eq("id", listingId)
+    .single();
+
+  if (!listing) return { error: "Listing not found" };
+
+  switch (stepId) {
+    case "seller-intake":
+      // Seller intake is always considered complete — nothing to do.
+      break;
+
+    case "data-enrichment":
+    case "cma":
+    case "pricing-review":
+      // These phases become "completed" once a list_price is set.
+      if (!listing.list_price) {
+        await supabase
+          .from("listings")
+          .update({ list_price: 0 })
+          .eq("id", listingId);
+      }
+      break;
+
+    case "form-generation":
+    case "e-signature": {
+      // Complete all required forms via upsert.
+      const requiredForms = ["fintrac", "dorts", "pds", "mlc"];
+      for (const formKey of requiredForms) {
+        await supabase.from("form_submissions").upsert(
+          {
+            listing_id: listingId,
+            form_key: formKey,
+            form_data: { _skipped: true },
+            status: "completed" as const,
+          },
+          { onConflict: "listing_id,form_key" }
+        );
+      }
+      break;
+    }
+
+    case "mls-prep":
+    case "mls-submission":
+      // These phases become "completed" once an mls_number is set.
+      if (!listing.mls_number) {
+        await supabase
+          .from("listings")
+          .update({ mls_number: "PENDING" })
+          .eq("id", listingId);
+      }
+      break;
+
+    case "post-listing":
+      // Post-listing is driven by listing status; nothing to force here.
+      break;
+
+    default:
+      return { error: `Unknown step: ${stepId}` };
+  }
+
+  revalidatePath(`/listings/${listingId}`);
+  return { success: true };
+}
+
 export async function deleteStepFile(
   listingId: string,
   documentId: string

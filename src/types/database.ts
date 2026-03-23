@@ -166,6 +166,7 @@ export interface Database {
           seller_id: string;
           lockbox_code: string;
           status: "active" | "pending" | "sold";
+          property_type: "Residential" | "Condo/Apartment" | "Townhouse" | "Land" | "Commercial" | "Multi-Family";
           mls_number: string | null;
           list_price: number | null;
           showing_window_start: string | null;
@@ -187,6 +188,7 @@ export interface Database {
           seller_id: string;
           lockbox_code: string;
           status?: "active" | "pending" | "sold";
+          property_type?: "Residential" | "Condo/Apartment" | "Townhouse" | "Land" | "Commercial" | "Multi-Family";
           mls_number?: string | null;
           list_price?: number | null;
           showing_window_start?: string | null;
@@ -208,6 +210,7 @@ export interface Database {
           seller_id?: string;
           lockbox_code?: string;
           status?: "active" | "pending" | "sold";
+          property_type?: "Residential" | "Condo/Apartment" | "Townhouse" | "Land" | "Commercial" | "Multi-Family";
           mls_number?: string | null;
           list_price?: number | null;
           showing_window_start?: string | null;

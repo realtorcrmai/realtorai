@@ -5,15 +5,16 @@ import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, MessageSquare, Edit } from "lucide-react";
 import { ContactForm } from "@/components/contacts/ContactForm";
 import { ContactContextPanel } from "@/components/contacts/ContactContextPanel";
+import { MobileDetailSheet } from "@/components/layout/MobileDetailSheet";
 import { type ReferralRow } from "@/components/contacts/ReferralsPanel";
 import { HouseholdBanner } from "@/components/contacts/HouseholdBanner";
 import { RelationshipManager } from "@/components/contacts/RelationshipManager";
-import { MobileDetailSheet } from "@/components/layout";
 import { QuickActionBar } from "@/components/contacts/QuickActionBar";
 import { TagEditor } from "@/components/contacts/TagEditor";
 import { StageBar, type StageData } from "@/components/contacts/StageBar";
 import EmailComposer from "@/components/contacts/EmailComposer";
 import { ContactDetailTabs } from "@/components/contacts/ContactDetailTabs";
+import { DeleteContactButton } from "@/components/contacts/DeleteContactButton";
 import { Button } from "@/components/ui/button";
 import type { Contact, Communication, Listing, ContactDate, ContactDocument, BuyerPreferences, SellerPreferences, Demographics } from "@/types";
 import {
@@ -63,6 +64,9 @@ export default async function ContactDetailPage({
     { data: referredByContact },
     { data: relationshipsData },
     { data: allHouseholds },
+    { data: householdData },
+    { data: householdMembersData },
+    { data: allWorkflowSteps },
   ] = await Promise.all([
     // 1. Communications — limit to recent 50
     supabase
@@ -132,13 +136,8 @@ export default async function ContactDetailPage({
       .from("workflows")
       .select("id, slug, name, is_active")
       .order("name", { ascending: true }),
-    // 12. Activity log (was waterfall 3)
-    supabase
-      .from("activity_log")
-      .select("id, contact_id, listing_id, activity_type, description, metadata, created_at")
-      .eq("contact_id", id)
-      .order("created_at", { ascending: false })
-      .limit(30),
+    // 12. Activity log — deferred to tab click (lazy-loaded)
+    Promise.resolve({ data: null }),
     // 13. All listings for properties of interest (was waterfall 4)
     !isSeller
       ? supabase
@@ -164,31 +163,33 @@ export default async function ContactDetailPage({
       .from("households")
       .select("id, name")
       .order("name"),
+    // 17. Household detail (if contact has household_id) — was sequential
+    (contact as Record<string, unknown>).household_id
+      ? supabase.from("households").select("*").eq("id", (contact as Record<string, unknown>).household_id as string).single()
+      : Promise.resolve({ data: null }),
+    // 18. Household members (if contact has household_id) — was sequential
+    (contact as Record<string, unknown>).household_id
+      ? supabase.from("contacts").select("id, name, type").eq("household_id", (contact as Record<string, unknown>).household_id as string)
+      : Promise.resolve({ data: [] }),
+    // 19. ALL workflow steps (filter client-side) — was sequential waterfall
+    supabase
+      .from("workflow_steps")
+      .select("id, workflow_id, step_order, name, action_type, delay_minutes, delay_unit, delay_value, exit_on_reply")
+      .order("step_order", { ascending: true }),
   ]);
 
   const referredByName = referredByContact?.name ?? null;
+  const household = householdData;
+  const householdMembers = (householdMembersData ?? []) as { id: string; name: string; type: string }[];
 
-  // ── Household + members (only if contact has household_id) ──
-  const household = (contact as Record<string, unknown>).household_id
-    ? (await supabase.from("households").select("*").eq("id", (contact as Record<string, unknown>).household_id as string).single()).data
-    : null;
-
-  const householdMembers = (contact as Record<string, unknown>).household_id
-    ? (await supabase.from("contacts").select("id, name, type").eq("household_id", (contact as Record<string, unknown>).household_id as string)).data ?? []
-    : [];
-
-  // ── Workflow steps — only sequential query (depends on enrollment IDs) ──
+  // Filter workflow steps to only active/paused enrollment workflows (client-side)
   const activeEnrollmentWorkflowIds = (workflowEnrollments ?? [])
     .filter((e: { status: string }) => e.status === "active" || e.status === "paused")
     .map((e: { workflow_id: string }) => e.workflow_id);
-
-  const { data: workflowSteps } = activeEnrollmentWorkflowIds.length > 0
-    ? await supabase
-        .from("workflow_steps")
-        .select("id, workflow_id, step_order, name, action_type, delay_minutes, delay_unit, delay_value, exit_on_reply")
-        .in("workflow_id", activeEnrollmentWorkflowIds)
-        .order("step_order", { ascending: true })
-    : { data: [] as never[] };
+  const activeWfIdSet = new Set(activeEnrollmentWorkflowIds);
+  const workflowSteps = (allWorkflowSteps ?? []).filter(
+    (s: { workflow_id: string }) => activeWfIdSet.has(s.workflow_id)
+  );
 
   // Group steps by workflow_id
   type WorkflowStepRow = {
@@ -523,11 +524,14 @@ export default async function ContactDetailPage({
                       <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" />{contact.pref_channel}</span>
                     </div>
                   </div>
-                  <ContactForm
-                    contact={contact}
-                    allContacts={(allContacts ?? []) as { id: string; name: string }[]}
-                    trigger={<Button variant="outline" size="sm"><Edit className="h-3.5 w-3.5 mr-1" />Edit</Button>}
-                  />
+                  <div className="flex items-center gap-2 shrink-0">
+                    <ContactForm
+                      contact={contact}
+                      allContacts={(allContacts ?? []) as { id: string; name: string }[]}
+                      trigger={<Button variant="outline" size="sm"><Edit className="h-3.5 w-3.5 mr-1" />Edit</Button>}
+                    />
+                    <DeleteContactButton contactId={id} contactName={contact.name} />
+                  </div>
                 </div>
 
                 {/* Row 2: Pipeline bar */}
@@ -556,8 +560,8 @@ export default async function ContactDetailPage({
             />
           )}
 
-          {/* Mobile detail panel trigger */}
-          <MobileDetailSheet title="Contact Details">
+          {/* Mobile: Details button to open right panel in sheet */}
+          <MobileDetailSheet title="Details">
             <ContactContextPanel
               contact={contact}
               communications={typedCommunications}
@@ -593,7 +597,7 @@ export default async function ContactDetailPage({
             sortedEnrollments={sortedEnrollments}
             stepsByWorkflow={stepsByWorkflow}
             expandedWorkflowId={expandedWorkflowId}
-            lifecycleComplete={lifecycleComplete}
+
             listings={typedListings}
             buyerListings={typedBuyerListings}
             communications={typedCommunications}
@@ -610,15 +614,7 @@ export default async function ContactDetailPage({
             dataScore={dataScore}
             contactDates={(contactDates ?? []) as ContactDate[]}
             contactName={contact.name}
-            activities={
-              (activityLog ?? []) as {
-                id: string;
-                activity_type: string;
-                description: string | null;
-                metadata: Record<string, unknown> | null;
-                created_at: string;
-              }[]
-            }
+            activities={[]}
             referredByName={referredByName}
             referralsAsReferrer={(referralsAsReferrer ?? []) as ReferralRow[]}
             referralsAsReferred={(referralsAsReferred ?? []) as ReferralRow[]}
