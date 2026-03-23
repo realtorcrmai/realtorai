@@ -94,6 +94,11 @@ export async function createContact(formData: ContactFormData, force = false) {
       // Don't fail contact creation if trigger fails
     });
 
+  // Auto-enroll in journey + generate welcome email draft
+  autoEnrollAndWelcome(data.id, data.type, data.name, data.email, data.notes).catch(() => {
+    // Don't fail contact creation if journey enrollment fails
+  });
+
   revalidatePath("/newsletters");
 
   return { success: true, contact: data };
@@ -535,4 +540,114 @@ export async function deleteContactDocument(docId: string, contactId: string) {
 
   revalidatePath(`/contacts/${contactId}`);
   return { success: true };
+}
+
+// ── Auto Journey Enrollment + Welcome Email ──────────────────
+
+async function autoEnrollAndWelcome(
+  contactId: string,
+  contactType: string,
+  name: string,
+  email: string | null,
+  notes: string | null
+) {
+  const supabase = createAdminClient();
+  const journeyType = contactType === "seller" ? "seller" : "buyer";
+
+  // 1. Check if already enrolled
+  const { data: existing } = await supabase
+    .from("contact_journeys")
+    .select("id")
+    .eq("contact_id", contactId)
+    .eq("journey_type", journeyType)
+    .limit(1);
+
+  if (existing && existing.length > 0) return;
+
+  // 2. Enroll in journey
+  const nextEmailAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+  await supabase.from("contact_journeys").insert({
+    contact_id: contactId,
+    journey_type: journeyType,
+    current_phase: "lead",
+    is_paused: false,
+    next_email_at: nextEmailAt,
+    send_mode: "review",
+  });
+
+  // 3. Generate welcome email draft (skip if no email address)
+  if (!email) return;
+
+  const firstName = name?.split(" ")[0] || "there";
+  const isBuyer = journeyType === "buyer";
+
+  // Extract context from notes for personalization
+  const areaMatch = notes?.match(/(?:in|near|around)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/);
+  const area = areaMatch?.[1] || "Vancouver";
+  const budgetMatch = notes?.match(/\$?([\d,]+)[Kk]?\s*[-\u2013]\s*\$?([\d,]+)[Kk]?/);
+  const budget = budgetMatch ? `$${budgetMatch[1]}K - $${budgetMatch[2]}K` : null;
+
+  const subject = isBuyer
+    ? `Welcome ${firstName}! Let's Find Your Dream Home`
+    : `Welcome ${firstName}! Let's Get Your Home Sold`;
+
+  const intro = isBuyer
+    ? `Welcome! I'm excited to help you find your perfect home${area !== "Vancouver" ? ` in ${area}` : ""}. ${budget ? `With your budget of ${budget}, there are some great options available right now.` : "Let me know your preferences and I'll start matching you with properties."}`
+    : `Welcome! I'm looking forward to helping you sell your property${area !== "Vancouver" ? ` in ${area}` : ""}. I'll prepare a comprehensive market analysis so we can price it right and get you the best result.`;
+
+  const bullets = isBuyer
+    ? [
+        "New listing alerts matching your criteria",
+        `Market updates for ${area}`,
+        "Neighbourhood guides \u2014 schools, amenities, lifestyle",
+        "Expert advice throughout your buying journey",
+      ]
+    : [
+        "Free market analysis of your property",
+        "Marketing plan to maximize exposure",
+        "Weekly updates on showings and feedback",
+        "Expert negotiation to get you the best price",
+      ];
+
+  const cta = isBuyer ? "View Available Listings" : "Get Your Free CMA";
+
+  const bulletsHtml = bullets
+    .map(
+      (b) =>
+        `<div style="font-size:14px;color:#1a1535;margin:0 0 8px;">&#10003; <strong>${b}</strong></div>`
+    )
+    .join("\n");
+
+  const htmlBody = `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f6f5ff;padding:20px;margin:0;">
+<div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(79,53,210,0.06);">
+<div style="padding:28px 32px 20px;text-align:center;"><h1 style="font-size:22px;font-weight:700;color:#4f35d2;margin:0;">ListingFlow</h1></div>
+<div style="padding:0 32px 24px;">
+<p style="font-size:16px;color:#1a1535;margin:0 0 12px;">Hi ${firstName},</p>
+<p style="font-size:15px;color:#3a3a5c;line-height:1.6;margin:0 0 16px;">${intro}</p>
+<p style="font-size:15px;color:#3a3a5c;line-height:1.6;margin:0 0 16px;">Here's what you can expect from me:</p>
+<div style="background:#f6f5ff;border-radius:10px;padding:16px 20px;margin:0 0 20px;">
+${bulletsHtml}
+</div>
+<div style="text-align:center;margin:20px 0;"><a href="#" style="background:linear-gradient(135deg,#4f35d2,#6c4fe6);color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block;">${cta}</a></div>
+<p style="font-size:15px;color:#3a3a5c;margin:24px 0 0;">Best regards,<br><strong>Your Realtor</strong></p>
+</div>
+<hr style="border-color:#e8e5f5;margin:0;">
+<div style="padding:20px 32px;text-align:center;">
+<p style="font-size:11px;color:#a0a0b0;margin:0;"><a href="#" style="color:#a0a0b0;text-decoration:underline;">Unsubscribe</a></p>
+</div></div></body></html>`;
+
+  await supabase.from("newsletters").insert({
+    contact_id: contactId,
+    subject,
+    email_type: "welcome",
+    status: "draft",
+    html_body: htmlBody,
+    ai_context: {
+      journey_phase: "lead",
+      contact_type: contactType,
+      auto_generated: true,
+      area,
+      budget,
+    },
+  });
 }
