@@ -59,18 +59,6 @@ const JOURNEY_SCHEDULES: Record<JourneyType, Record<JourneyPhase, Array<{ emailT
 export async function enrollContactInJourney(contactId: string, journeyType: JourneyType) {
   const supabase = createAdminClient();
 
-  // Check if already enrolled
-  const { data: existing } = await supabase
-    .from("contact_journeys")
-    .select("id")
-    .eq("contact_id", contactId)
-    .eq("journey_type", journeyType)
-    .single();
-
-  if (existing) {
-    return { error: "Contact already enrolled in this journey" };
-  }
-
   // Get first email schedule
   const schedule = JOURNEY_SCHEDULES[journeyType].lead;
   const nextEmailAt = schedule.length > 0
@@ -79,17 +67,22 @@ export async function enrollContactInJourney(contactId: string, journeyType: Jou
 
   const { data, error } = await supabase
     .from("contact_journeys")
-    .insert({
-      contact_id: contactId,
-      journey_type: journeyType,
-      current_phase: "lead",
-      next_email_at: nextEmailAt,
-      emails_sent_in_phase: 0,
-    })
+    .upsert(
+      {
+        contact_id: contactId,
+        journey_type: journeyType,
+        current_phase: "lead",
+        next_email_at: nextEmailAt,
+        emails_sent_in_phase: 0,
+      },
+      { onConflict: "contact_id,journey_type", ignoreDuplicates: true }
+    )
     .select()
     .single();
 
   if (error) return { error: error.message };
+  // ignoreDuplicates: if row already existed, select() returns null
+  if (!data) return { error: "Contact already enrolled in this journey" };
 
   revalidatePath("/newsletters");
   return { data };

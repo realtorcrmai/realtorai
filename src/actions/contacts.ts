@@ -49,8 +49,8 @@ export async function createContact(formData: ContactFormData) {
       contactId: data.id,
       contactType: data.type,
     });
-  } catch {
-    // Don't fail contact creation if trigger fails
+  } catch (error) {
+    console.error("[createContact] Trigger emission failed:", error);
   }
 
   return { success: true, contact: data };
@@ -183,8 +183,8 @@ export async function updateContact(
         });
       }
     }
-  } catch {
-    // Don't fail update if triggers fail
+  } catch (error) {
+    console.error("[updateContact] Trigger emission failed:", error);
   }
 
   return { success: true };

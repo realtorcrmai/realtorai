@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ContactSidebar } from "@/components/contacts/ContactSidebar";
 import { ContactForm } from "@/components/contacts/ContactForm";
+import { MobileSidebarSheet } from "@/components/layout";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export default async function ContactsLayout({
   const workflowNames: Record<string, string> = {};
   for (const e of enrollments ?? []) {
     if (e.contact_id && !workflowNames[e.contact_id]) {
-      const wf = e.workflows as { name: string } | null;
+      const wf = e.workflows as unknown as { name: string } | null;
       if (wf) workflowNames[e.contact_id] = wf.name;
     }
   }
@@ -52,6 +53,18 @@ export default async function ContactsLayout({
 
       {/* Center + Right content */}
       <div className="flex-1 overflow-hidden relative">
+        {/* Mobile sidebar sheet for contact list */}
+        <MobileSidebarSheet
+          title="Contacts"
+          footer={<ContactForm />}
+        >
+          <ContactSidebar
+            contacts={contacts ?? []}
+            contactsWithWorkflow={contactsWithWorkflow}
+            workflowNames={workflowNames}
+          />
+        </MobileSidebarSheet>
+
         {children}
         {/* Mobile FAB for creating contacts */}
         <div className="md:hidden fixed bottom-20 right-4 z-50">

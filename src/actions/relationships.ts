@@ -30,6 +30,20 @@ export async function createRelationship(data: {
 }) {
   const supabase = createAdminClient();
 
+  // Validate both contacts exist in a single query
+  const { data: contacts } = await supabase
+    .from("contacts")
+    .select("id")
+    .in("id", [data.contact_a_id, data.contact_b_id]);
+
+  const foundIds = new Set((contacts ?? []).map((c) => c.id));
+  if (!foundIds.has(data.contact_a_id)) {
+    return { error: "Contact A not found" };
+  }
+  if (!foundIds.has(data.contact_b_id)) {
+    return { error: "Contact B not found" };
+  }
+
   const { error } = await supabase.from("contact_relationships").insert({
     contact_a_id: data.contact_a_id,
     contact_b_id: data.contact_b_id,

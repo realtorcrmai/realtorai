@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TaskSidebar } from "@/components/tasks/TaskSidebar";
+import { MobileSidebarSheet } from "@/components/layout";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,11 @@ export default async function TasksLayout({
         <TaskSidebar initialTasks={tasks ?? []} />
       </div>
       <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+        {/* Mobile sidebar sheet for task list */}
+        <MobileSidebarSheet title="Tasks">
+          <TaskSidebar initialTasks={tasks ?? []} />
+        </MobileSidebarSheet>
+
         {children}
       </div>
     </div>

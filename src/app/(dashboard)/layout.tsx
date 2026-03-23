@@ -1,5 +1,6 @@
 import { AppHeader } from "@/components/layout/AppHeader";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { NetworkErrorBanner } from "@/components/shared";
 import { VoiceAgentWidget } from "@/components/voice-agent/VoiceAgentWidget";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -10,6 +11,9 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
+      {/* Network connectivity banner */}
+      <NetworkErrorBanner />
+
       {/* Header with horizontal nav (desktop) / mobile top bar */}
       <AppHeader />
 

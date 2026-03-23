@@ -36,8 +36,8 @@ export async function createListing(formData: ListingFormData) {
     try {
       const { advanceLifecycleForContact } = await import("@/lib/workflow-triggers");
       await advanceLifecycleForContact(data.seller_id);
-    } catch {
-      // Don't fail listing creation if lifecycle advancement fails
+    } catch (error) {
+      console.error("[createListing] Lifecycle advancement failed:", error);
     }
   }
 
@@ -52,8 +52,8 @@ export async function createListing(formData: ListingFormData) {
       property_type: data.property_type,
       seller_id: data.seller_id,
     });
-  } catch {
-    // Don't fail listing creation if event emission fails
+  } catch (error) {
+    console.error("[createListing] Event emission failed:", error);
   }
 
   return { success: true, listing: data };
@@ -177,8 +177,8 @@ export async function updateListingStatus(
           }
         }
       }
-    } catch {
-      // Don't fail status update if seller stage sync fails
+    } catch (error) {
+      console.error("[updateListingStatus] Seller stage sync failed:", error);
     }
   }
 
@@ -200,8 +200,8 @@ export async function updateListingStatus(
         await advanceLifecycleForContact(lifeListing.buyer_id);
       }
     }
-  } catch {
-    // Don't fail status update if lifecycle advancement fails
+  } catch (error) {
+    console.error("[updateListingStatus] Lifecycle advancement failed:", error);
   }
 
   // Fire listing_status_change trigger for workflow auto-enrollment (e.g., post-close workflows)
@@ -236,8 +236,8 @@ export async function updateListingStatus(
         }
 
       }
-    } catch {
-      // Don't fail status update if triggers fail
+    } catch (error) {
+      console.error("[updateListingStatus] Trigger emission failed:", error);
     }
   }
 

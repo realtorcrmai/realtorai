@@ -329,19 +329,6 @@ export async function enrollContact(
 ) {
   const supabase = createAdminClient();
 
-  // Check if already enrolled in this workflow
-  const { data: existing } = await supabase
-    .from("workflow_enrollments")
-    .select("id")
-    .eq("workflow_id", workflowId)
-    .eq("contact_id", contactId)
-    .eq("status", "active")
-    .single();
-
-  if (existing) {
-    return { error: "Contact is already enrolled in this workflow" };
-  }
-
   // Enforce max_enrollments concurrency limit
   const { data: workflow } = await supabase
     .from("workflows")
@@ -376,18 +363,23 @@ export async function enrollContact(
 
   const { data: enrollment, error } = await supabase
     .from("workflow_enrollments")
-    .insert({
-      workflow_id: workflowId,
-      contact_id: contactId,
-      listing_id: listingId || null,
-      status: "active",
-      current_step: 1,
-      next_run_at: nextRun.toISOString(),
-    })
+    .upsert(
+      {
+        workflow_id: workflowId,
+        contact_id: contactId,
+        listing_id: listingId || null,
+        status: "active",
+        current_step: 1,
+        next_run_at: nextRun.toISOString(),
+      },
+      { onConflict: "workflow_id,contact_id", ignoreDuplicates: true }
+    )
     .select()
     .single();
 
   if (error) return { error: "Failed to enroll contact: " + error.message };
+  // ignoreDuplicates: if row already existed, select() returns null
+  if (!enrollment) return { error: "Contact is already enrolled in this workflow" };
 
   // Log activity
   await supabase.from("activity_log").insert({

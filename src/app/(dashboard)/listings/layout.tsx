@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ListingSidebar } from "@/components/listings/ListingSidebar";
 import { ListingForm } from "@/components/listings/ListingForm";
+import { MobileSidebarSheet } from "@/components/layout";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,17 @@ export default async function ListingsLayout({
 
       {/* Center + Right content */}
       <div className="flex-1 overflow-hidden relative">
+        {/* Mobile sidebar sheet for listing list */}
+        <MobileSidebarSheet
+          title="Listings"
+          footer={<ListingForm sellers={sellers ?? []} />}
+        >
+          <ListingSidebar
+            listings={(listings ?? []) as (typeof listings extends (infer T)[] | null ? T : never)[]}
+            sellers={sellers ?? []}
+          />
+        </MobileSidebarSheet>
+
         {children}
         {/* Mobile FAB for creating listings */}
         <div className="md:hidden fixed bottom-20 right-4 z-50">

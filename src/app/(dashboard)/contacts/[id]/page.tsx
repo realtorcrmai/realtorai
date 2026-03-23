@@ -8,6 +8,7 @@ import { ContactContextPanel } from "@/components/contacts/ContactContextPanel";
 import { type ReferralRow } from "@/components/contacts/ReferralsPanel";
 import { HouseholdBanner } from "@/components/contacts/HouseholdBanner";
 import { RelationshipManager } from "@/components/contacts/RelationshipManager";
+import { MobileDetailSheet } from "@/components/layout";
 import { QuickActionBar } from "@/components/contacts/QuickActionBar";
 import { TagEditor } from "@/components/contacts/TagEditor";
 import { StageBar, type StageData } from "@/components/contacts/StageBar";
@@ -554,6 +555,22 @@ export default async function ContactDetailPage({
               allHouseholds={(allHouseholds ?? []) as { id: string; name: string }[]}
             />
           )}
+
+          {/* Mobile detail panel trigger */}
+          <MobileDetailSheet title="Contact Details">
+            <ContactContextPanel
+              contact={contact}
+              communications={typedCommunications}
+              contactDates={(contactDates ?? []) as ContactDate[]}
+            />
+            <div className="border-t pt-5">
+              <RelationshipManager
+                contactId={contact.id}
+                relationships={relationships}
+                allContacts={allContacts?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })) ?? []}
+              />
+            </div>
+          </MobileDetailSheet>
 
           {/* Quick Action Bar — colored icon buttons */}
           <div className="flex items-center gap-2 px-1">

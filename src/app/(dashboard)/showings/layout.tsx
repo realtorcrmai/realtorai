@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ShowingSidebar } from "@/components/showings/ShowingSidebar";
 import { ShowingRequestForm } from "@/components/showings/ShowingRequestForm";
+import { MobileSidebarSheet } from "@/components/layout";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,16 @@ export default async function ShowingsLayout({
 
       {/* Center + Right content */}
       <div className="flex-1 overflow-hidden relative">
+        {/* Mobile sidebar sheet for showing list */}
+        <MobileSidebarSheet
+          title="Showings"
+          footer={<ShowingRequestForm listings={activeListings ?? []} />}
+        >
+          <ShowingSidebar
+            showings={(showings ?? []) as (typeof showings extends (infer T)[] | null ? T : never)[]}
+          />
+        </MobileSidebarSheet>
+
         {children}
         {/* Mobile FAB for creating showings */}
         <div className="md:hidden fixed bottom-20 right-4 z-50">

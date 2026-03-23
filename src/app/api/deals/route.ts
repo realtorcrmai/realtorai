@@ -1,6 +1,17 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
+import { z } from "zod";
+
+const createDealSchema = z.object({
+  title: z.string().min(1).max(500),
+  type: z.enum(["purchase", "sale", "lease"]).optional(),
+  value: z.number().positive().optional(),
+  commission_pct: z.number().min(0).max(100).optional(),
+  listing_id: z.string().uuid().optional(),
+  contact_id: z.string().uuid().optional(),
+  stage: z.string().optional(),
+});
 
 export async function GET(req: NextRequest) {
   const { unauthorized } = await requireAuth();
@@ -30,6 +41,14 @@ export async function POST(req: NextRequest) {
 
   const supabase = createAdminClient();
   const body = await req.json();
+
+  const parsed = createDealSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", issues: parsed.error.issues },
+      { status: 400 }
+    );
+  }
 
   const { data: deal, error } = await supabase
     .from("deals")

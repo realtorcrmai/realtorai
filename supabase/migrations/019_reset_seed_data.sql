@@ -62,7 +62,7 @@ INSERT INTO contacts (id, name, phone, email, type, pref_channel, notes, created
 
 -- LISTING 1: SOLD — Sharma condo (fully completed workflow)
 INSERT INTO listings (id, address, seller_id, lockbox_code, status, mls_number, list_price, showing_window_start, showing_window_end, notes, created_at) VALUES
-  ('l0000001-0000-0000-0000-000000000001',
+  ('a0000001-0000-0000-0000-100000000001',
    '4521 Kingsway, Burnaby, BC V5H 2A3',
    'c0000001-0000-0000-0000-000000000001',
    'LB4521', 'sold', 'V1234567', 899900.00,
@@ -72,7 +72,7 @@ INSERT INTO listings (id, address, seller_id, lockbox_code, status, mls_number, 
 
 -- LISTING 2: SOLD — Chen luxury condo (over asking)
 INSERT INTO listings (id, address, seller_id, lockbox_code, status, mls_number, list_price, showing_window_start, showing_window_end, notes, created_at) VALUES
-  ('l0000001-0000-0000-0000-000000000002',
+  ('a0000001-0000-0000-0000-100000000002',
    '1808-1288 W Georgia St, Vancouver, BC V6E 4R3',
    'c0000001-0000-0000-0000-000000000002',
    'LB1808', 'sold', 'V2345678', 1250000.00,
@@ -82,7 +82,7 @@ INSERT INTO listings (id, address, seller_id, lockbox_code, status, mls_number, 
 
 -- LISTING 3: ACTIVE — Gill condo (Phase 5 — forms in progress, has showings)
 INSERT INTO listings (id, address, seller_id, lockbox_code, status, mls_number, list_price, showing_window_start, showing_window_end, notes, created_at) VALUES
-  ('l0000001-0000-0000-0000-000000000003',
+  ('a0000001-0000-0000-0000-100000000003',
    '3205-4670 Assembly Way, Burnaby, BC V5H 4L7',
    'c0000001-0000-0000-0000-000000000004',
    'LB3205', 'active', 'V4567890', 648500.00,
@@ -92,7 +92,7 @@ INSERT INTO listings (id, address, seller_id, lockbox_code, status, mls_number, 
 
 -- LISTING 4: ACTIVE — O'Brien White Rock (Phase 2 — data enrichment in progress)
 INSERT INTO listings (id, address, seller_id, lockbox_code, status, mls_number, list_price, showing_window_start, showing_window_end, notes, created_at) VALUES
-  ('l0000001-0000-0000-0000-000000000004',
+  ('a0000001-0000-0000-0000-100000000004',
    '15234 Royal Ave, White Rock, BC V4B 1Z4',
    'c0000001-0000-0000-0000-000000000003',
    'LB1523', 'active', NULL, 1595000.00,
@@ -102,7 +102,7 @@ INSERT INTO listings (id, address, seller_id, lockbox_code, status, mls_number, 
 
 -- LISTING 5: ACTIVE — Tanaka North Van (Phase 7 — MLS prep, all forms done)
 INSERT INTO listings (id, address, seller_id, lockbox_code, status, mls_number, list_price, showing_window_start, showing_window_end, notes, created_at) VALUES
-  ('l0000001-0000-0000-0000-000000000005',
+  ('a0000001-0000-0000-0000-100000000005',
    '203-150 W 15th St, North Vancouver, BC V7M 0C4',
    'c0000001-0000-0000-0000-000000000008',
    'LB0203', 'active', NULL, 725000.00,
@@ -112,7 +112,7 @@ INSERT INTO listings (id, address, seller_id, lockbox_code, status, mls_number, 
 
 -- LISTING 6: PENDING — Kovacs Yaletown (offer accepted, subject removal pending)
 INSERT INTO listings (id, address, seller_id, lockbox_code, status, mls_number, list_price, showing_window_start, showing_window_end, notes, created_at) VALUES
-  ('l0000001-0000-0000-0000-000000000006',
+  ('a0000001-0000-0000-0000-100000000006',
    '1502-1455 Howe St, Vancouver, BC V6Z 1C2',
    'c0000001-0000-0000-0000-000000000006',
    'LB1502', 'pending', 'V6789012', 785000.00,
@@ -122,7 +122,7 @@ INSERT INTO listings (id, address, seller_id, lockbox_code, status, mls_number, 
 
 -- LISTING 7: ACTIVE — Singh Surrey (Phase 1 — just started intake)
 INSERT INTO listings (id, address, seller_id, lockbox_code, status, mls_number, list_price, showing_window_start, showing_window_end, notes, created_at) VALUES
-  ('l0000001-0000-0000-0000-000000000007',
+  ('a0000001-0000-0000-0000-100000000007',
    '7845 128th St, Surrey, BC V3W 4E6',
    'c0000001-0000-0000-0000-000000000007',
    'LB7845', 'active', NULL, NULL,
@@ -137,64 +137,64 @@ INSERT INTO listings (id, address, seller_id, lockbox_code, status, mls_number, 
 
 -- Listing 1 (Sharma — SOLD): 4 past showings, all confirmed & completed
 INSERT INTO appointments (id, listing_id, start_time, end_time, status, buyer_agent_name, buyer_agent_phone, buyer_agent_email, twilio_message_sid, notes, created_at) VALUES
-  ('a0000001-0000-0000-0000-000000000001', 'l0000001-0000-0000-0000-000000000001',
+  ('a0000001-0000-0000-0000-000000000001', 'a0000001-0000-0000-0000-100000000001',
    NOW() - INTERVAL '50 days', NOW() - INTERVAL '50 days' + INTERVAL '30 minutes',
    'confirmed', 'Amy Zhang', '+16045554200', 'amy.zhang@remax.ca',
    'SM_sharma_1', 'Buyer loved the layout. Asked about strata fees.', NOW() - INTERVAL '52 days'),
-  ('a0000001-0000-0000-0000-000000000002', 'l0000001-0000-0000-0000-000000000001',
+  ('a0000001-0000-0000-0000-000000000002', 'a0000001-0000-0000-0000-100000000001',
    NOW() - INTERVAL '48 days', NOW() - INTERVAL '48 days' + INTERVAL '30 minutes',
    'confirmed', 'Kevin Brar', '+17785553300', 'kevin@suttongroup.com',
    'SM_sharma_2', 'Second viewing. Client very interested.', NOW() - INTERVAL '49 days'),
-  ('a0000001-0000-0000-0000-000000000003', 'l0000001-0000-0000-0000-000000000001',
+  ('a0000001-0000-0000-0000-000000000003', 'a0000001-0000-0000-0000-100000000001',
    NOW() - INTERVAL '46 days', NOW() - INTERVAL '46 days' + INTERVAL '30 minutes',
    'confirmed', 'Nina Sandhu', '+16045553700', 'nina@macdonaldrealty.com',
    'SM_sharma_3', 'Buyer submitted offer same day.', NOW() - INTERVAL '47 days'),
-  ('a0000001-0000-0000-0000-000000000004', 'l0000001-0000-0000-0000-000000000001',
+  ('a0000001-0000-0000-0000-000000000004', 'a0000001-0000-0000-0000-100000000001',
    NOW() - INTERVAL '45 days', NOW() - INTERVAL '45 days' + INTERVAL '30 minutes',
    'denied', 'Tom Singh', '+17785554100', 'tom.singh@century21.ca',
    'SM_sharma_4', NULL, NOW() - INTERVAL '46 days');
 
 -- Listing 2 (Chen — SOLD): 3 past showings
 INSERT INTO appointments (id, listing_id, start_time, end_time, status, buyer_agent_name, buyer_agent_phone, buyer_agent_email, twilio_message_sid, notes, created_at) VALUES
-  ('a0000001-0000-0000-0000-000000000005', 'l0000001-0000-0000-0000-000000000002',
+  ('a0000001-0000-0000-0000-000000000005', 'a0000001-0000-0000-0000-100000000002',
    NOW() - INTERVAL '70 days', NOW() - INTERVAL '70 days' + INTERVAL '30 minutes',
    'confirmed', 'James Park', '+16045554400', 'james.park@exprealty.com',
    'SM_chen_1', 'Very impressed with the harbour view.', NOW() - INTERVAL '72 days'),
-  ('a0000001-0000-0000-0000-000000000006', 'l0000001-0000-0000-0000-000000000002',
+  ('a0000001-0000-0000-0000-000000000006', 'a0000001-0000-0000-0000-100000000002',
    NOW() - INTERVAL '68 days', NOW() - INTERVAL '68 days' + INTERVAL '30 minutes',
    'confirmed', 'Sarah Lee', '+16045554500', 'sarah.lee@royallepage.ca',
    'SM_chen_2', 'Second showing with client''s parents. Offer to follow.', NOW() - INTERVAL '69 days'),
-  ('a0000001-0000-0000-0000-000000000007', 'l0000001-0000-0000-0000-000000000002',
+  ('a0000001-0000-0000-0000-000000000007', 'a0000001-0000-0000-0000-100000000002',
    NOW() - INTERVAL '65 days', NOW() - INTERVAL '65 days' + INTERVAL '30 minutes',
    'cancelled', 'Mike Johnson', '+17785554600', 'mike.j@remax.ca',
    'SM_chen_3', 'Buyer found another property.', NOW() - INTERVAL '67 days');
 
 -- Listing 3 (Gill — ACTIVE Phase 5): 2 confirmed (1 past, 1 upcoming), 1 requested
 INSERT INTO appointments (id, listing_id, start_time, end_time, status, buyer_agent_name, buyer_agent_phone, buyer_agent_email, twilio_message_sid, notes, created_at) VALUES
-  ('a0000001-0000-0000-0000-000000000008', 'l0000001-0000-0000-0000-000000000003',
+  ('a0000001-0000-0000-0000-000000000008', 'a0000001-0000-0000-0000-100000000003',
    NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days' + INTERVAL '30 minutes',
    'confirmed', 'Nina Sandhu', '+16045553700', 'nina@macdonaldrealty.com',
    'SM_gill_1', 'Buyer liked it but wants to see more options.', NOW() - INTERVAL '5 days'),
-  ('a0000001-0000-0000-0000-000000000009', 'l0000001-0000-0000-0000-000000000003',
+  ('a0000001-0000-0000-0000-000000000009', 'a0000001-0000-0000-0000-100000000003',
    NOW() + INTERVAL '2 days', NOW() + INTERVAL '2 days' + INTERVAL '30 minutes',
    'confirmed', 'Amy Zhang', '+16045554200', 'amy.zhang@remax.ca',
    'SM_gill_2', NULL, NOW() - INTERVAL '1 day'),
-  ('a0000001-0000-0000-0000-000000000010', 'l0000001-0000-0000-0000-000000000003',
+  ('a0000001-0000-0000-0000-000000000010', 'a0000001-0000-0000-0000-100000000003',
    NOW() + INTERVAL '4 days', NOW() + INTERVAL '4 days' + INTERVAL '30 minutes',
    'requested', 'Ryan Chen', '+17785554600', 'ryan.chen@remax.ca',
    NULL, NULL, NOW() - INTERVAL '6 hours');
 
 -- Listing 6 (Kovacs — PENDING): 3 past confirmed showings (before offer)
 INSERT INTO appointments (id, listing_id, start_time, end_time, status, buyer_agent_name, buyer_agent_phone, buyer_agent_email, twilio_message_sid, notes, created_at) VALUES
-  ('a0000001-0000-0000-0000-000000000011', 'l0000001-0000-0000-0000-000000000006',
+  ('a0000001-0000-0000-0000-000000000011', 'a0000001-0000-0000-0000-100000000006',
    NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days' + INTERVAL '30 minutes',
    'confirmed', 'Kevin Brar', '+17785553300', 'kevin@suttongroup.com',
    'SM_kovacs_1', 'Client loved the Yaletown location.', NOW() - INTERVAL '22 days'),
-  ('a0000001-0000-0000-0000-000000000012', 'l0000001-0000-0000-0000-000000000006',
+  ('a0000001-0000-0000-0000-000000000012', 'a0000001-0000-0000-0000-100000000006',
    NOW() - INTERVAL '18 days', NOW() - INTERVAL '18 days' + INTERVAL '30 minutes',
    'confirmed', 'Tom Singh', '+17785554100', 'tom.singh@century21.ca',
    'SM_kovacs_2', 'Buyer submitted offer at $780K.', NOW() - INTERVAL '19 days'),
-  ('a0000001-0000-0000-0000-000000000013', 'l0000001-0000-0000-0000-000000000006',
+  ('a0000001-0000-0000-0000-000000000013', 'a0000001-0000-0000-0000-100000000006',
    NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days' + INTERVAL '30 minutes',
    'denied', 'James Park', '+16045554400', 'james.park@exprealty.com',
    'SM_kovacs_3', NULL, NOW() - INTERVAL '16 days');
@@ -254,7 +254,7 @@ INSERT INTO communications (contact_id, direction, channel, body, created_at) VA
 -- Deal 1: Sharma SOLD — seller deal (WON)
 INSERT INTO deals (id, listing_id, contact_id, type, stage, status, title, value, commission_pct, commission_amount, close_date, possession_date, notes, created_at) VALUES
   ('d0000001-0000-0000-0000-000000000001',
-   'l0000001-0000-0000-0000-000000000001', 'c0000001-0000-0000-0000-000000000001',
+   'a0000001-0000-0000-0000-100000000001', 'c0000001-0000-0000-0000-000000000001',
    'seller', 'closed', 'won',
    'Sharma — 4521 Kingsway SOLD',
    915000.00, 3.50, 32025.00,
@@ -265,7 +265,7 @@ INSERT INTO deals (id, listing_id, contact_id, type, stage, status, title, value
 -- Deal 2: Chen SOLD — seller deal (WON)
 INSERT INTO deals (id, listing_id, contact_id, type, stage, status, title, value, commission_pct, commission_amount, close_date, possession_date, notes, created_at) VALUES
   ('d0000001-0000-0000-0000-000000000002',
-   'l0000001-0000-0000-0000-000000000002', 'c0000001-0000-0000-0000-000000000002',
+   'a0000001-0000-0000-0000-100000000002', 'c0000001-0000-0000-0000-000000000002',
    'seller', 'closed', 'won',
    'Chen — 1288 W Georgia SOLD',
    1285000.00, 3.00, 38550.00,
@@ -276,7 +276,7 @@ INSERT INTO deals (id, listing_id, contact_id, type, stage, status, title, value
 -- Deal 3: Kovacs PENDING — seller deal (active, conditional)
 INSERT INTO deals (id, listing_id, contact_id, type, stage, status, title, value, commission_pct, commission_amount, subject_removal_date, notes, created_at) VALUES
   ('d0000001-0000-0000-0000-000000000003',
-   'l0000001-0000-0000-0000-000000000006', 'c0000001-0000-0000-0000-000000000006',
+   'a0000001-0000-0000-0000-100000000006', 'c0000001-0000-0000-0000-000000000006',
    'seller', 'conditional', 'active',
    'Kovacs — 1455 Howe St CONDITIONAL',
    780000.00, 3.25, 25350.00,
@@ -402,29 +402,29 @@ INSERT INTO mortgages (deal_id, contact_id, lender_name, mortgage_amount, intere
 
 -- Sharma (SOLD) — all docs
 INSERT INTO listing_documents (listing_id, doc_type, file_name, file_url) VALUES
-  ('l0000001-0000-0000-0000-000000000001', 'FINTRAC', 'sharma_fintrac_signed.pdf', '/docs/sharma/fintrac.pdf'),
-  ('l0000001-0000-0000-0000-000000000001', 'DORTS', 'sharma_dorts_signed.pdf', '/docs/sharma/dorts.pdf'),
-  ('l0000001-0000-0000-0000-000000000001', 'PDS', 'sharma_pds_signed.pdf', '/docs/sharma/pds.pdf'),
-  ('l0000001-0000-0000-0000-000000000001', 'CONTRACT', 'sharma_contract_of_purchase.pdf', '/docs/sharma/contract.pdf');
+  ('a0000001-0000-0000-0000-100000000001', 'FINTRAC', 'sharma_fintrac_signed.pdf', '/docs/sharma/fintrac.pdf'),
+  ('a0000001-0000-0000-0000-100000000001', 'DORTS', 'sharma_dorts_signed.pdf', '/docs/sharma/dorts.pdf'),
+  ('a0000001-0000-0000-0000-100000000001', 'PDS', 'sharma_pds_signed.pdf', '/docs/sharma/pds.pdf'),
+  ('a0000001-0000-0000-0000-100000000001', 'CONTRACT', 'sharma_contract_of_purchase.pdf', '/docs/sharma/contract.pdf');
 
 -- Chen (SOLD) — all docs
 INSERT INTO listing_documents (listing_id, doc_type, file_name, file_url) VALUES
-  ('l0000001-0000-0000-0000-000000000002', 'FINTRAC', 'chen_fintrac_signed.pdf', '/docs/chen/fintrac.pdf'),
-  ('l0000001-0000-0000-0000-000000000002', 'DORTS', 'chen_dorts_signed.pdf', '/docs/chen/dorts.pdf'),
-  ('l0000001-0000-0000-0000-000000000002', 'PDS', 'chen_pds_signed.pdf', '/docs/chen/pds.pdf'),
-  ('l0000001-0000-0000-0000-000000000002', 'CONTRACT', 'chen_contract_of_purchase.pdf', '/docs/chen/contract.pdf');
+  ('a0000001-0000-0000-0000-100000000002', 'FINTRAC', 'chen_fintrac_signed.pdf', '/docs/chen/fintrac.pdf'),
+  ('a0000001-0000-0000-0000-100000000002', 'DORTS', 'chen_dorts_signed.pdf', '/docs/chen/dorts.pdf'),
+  ('a0000001-0000-0000-0000-100000000002', 'PDS', 'chen_pds_signed.pdf', '/docs/chen/pds.pdf'),
+  ('a0000001-0000-0000-0000-100000000002', 'CONTRACT', 'chen_contract_of_purchase.pdf', '/docs/chen/contract.pdf');
 
 -- Tanaka (Phase 7 — all forms done, no contract yet)
 INSERT INTO listing_documents (listing_id, doc_type, file_name, file_url) VALUES
-  ('l0000001-0000-0000-0000-000000000005', 'FINTRAC', 'tanaka_fintrac_signed.pdf', '/docs/tanaka/fintrac.pdf'),
-  ('l0000001-0000-0000-0000-000000000005', 'DORTS', 'tanaka_dorts_signed.pdf', '/docs/tanaka/dorts.pdf'),
-  ('l0000001-0000-0000-0000-000000000005', 'PDS', 'tanaka_pds_signed.pdf', '/docs/tanaka/pds.pdf');
+  ('a0000001-0000-0000-0000-100000000005', 'FINTRAC', 'tanaka_fintrac_signed.pdf', '/docs/tanaka/fintrac.pdf'),
+  ('a0000001-0000-0000-0000-100000000005', 'DORTS', 'tanaka_dorts_signed.pdf', '/docs/tanaka/dorts.pdf'),
+  ('a0000001-0000-0000-0000-100000000005', 'PDS', 'tanaka_pds_signed.pdf', '/docs/tanaka/pds.pdf');
 
 -- Kovacs (pending — has docs)
 INSERT INTO listing_documents (listing_id, doc_type, file_name, file_url) VALUES
-  ('l0000001-0000-0000-0000-000000000006', 'FINTRAC', 'kovacs_fintrac_signed.pdf', '/docs/kovacs/fintrac.pdf'),
-  ('l0000001-0000-0000-0000-000000000006', 'DORTS', 'kovacs_dorts_signed.pdf', '/docs/kovacs/dorts.pdf'),
-  ('l0000001-0000-0000-0000-000000000006', 'PDS', 'kovacs_pds_signed.pdf', '/docs/kovacs/pds.pdf');
+  ('a0000001-0000-0000-0000-100000000006', 'FINTRAC', 'kovacs_fintrac_signed.pdf', '/docs/kovacs/fintrac.pdf'),
+  ('a0000001-0000-0000-0000-100000000006', 'DORTS', 'kovacs_dorts_signed.pdf', '/docs/kovacs/dorts.pdf'),
+  ('a0000001-0000-0000-0000-100000000006', 'PDS', 'kovacs_pds_signed.pdf', '/docs/kovacs/pds.pdf');
 
 
 -- ===================
@@ -433,37 +433,37 @@ INSERT INTO listing_documents (listing_id, doc_type, file_name, file_url) VALUES
 
 -- Sharma (SOLD) — all forms completed
 INSERT INTO form_submissions (listing_id, form_key, form_data, status) VALUES
-  ('l0000001-0000-0000-0000-000000000001', 'FINTRAC', '{"verified": true}', 'completed'),
-  ('l0000001-0000-0000-0000-000000000001', 'DORTS', '{"signed": true}', 'completed'),
-  ('l0000001-0000-0000-0000-000000000001', 'PDS', '{"disclosed": true}', 'completed'),
-  ('l0000001-0000-0000-0000-000000000001', 'MLC', '{"signed": true}', 'completed');
+  ('a0000001-0000-0000-0000-100000000001', 'FINTRAC', '{"verified": true}', 'completed'),
+  ('a0000001-0000-0000-0000-100000000001', 'DORTS', '{"signed": true}', 'completed'),
+  ('a0000001-0000-0000-0000-100000000001', 'PDS', '{"disclosed": true}', 'completed'),
+  ('a0000001-0000-0000-0000-100000000001', 'MLC', '{"signed": true}', 'completed');
 
 -- Chen (SOLD) — all forms completed
 INSERT INTO form_submissions (listing_id, form_key, form_data, status) VALUES
-  ('l0000001-0000-0000-0000-000000000002', 'FINTRAC', '{"verified": true}', 'completed'),
-  ('l0000001-0000-0000-0000-000000000002', 'DORTS', '{"signed": true}', 'completed'),
-  ('l0000001-0000-0000-0000-000000000002', 'PDS', '{"disclosed": true}', 'completed'),
-  ('l0000001-0000-0000-0000-000000000002', 'MLC', '{"signed": true}', 'completed');
+  ('a0000001-0000-0000-0000-100000000002', 'FINTRAC', '{"verified": true}', 'completed'),
+  ('a0000001-0000-0000-0000-100000000002', 'DORTS', '{"signed": true}', 'completed'),
+  ('a0000001-0000-0000-0000-100000000002', 'PDS', '{"disclosed": true}', 'completed'),
+  ('a0000001-0000-0000-0000-100000000002', 'MLC', '{"signed": true}', 'completed');
 
 -- Gill (Phase 5 — forms in progress)
 INSERT INTO form_submissions (listing_id, form_key, form_data, status) VALUES
-  ('l0000001-0000-0000-0000-000000000003', 'FINTRAC', '{"verified": true}', 'completed'),
-  ('l0000001-0000-0000-0000-000000000003', 'DORTS', '{"draft": true}', 'draft'),
-  ('l0000001-0000-0000-0000-000000000003', 'PDS', '{"draft": true}', 'draft');
+  ('a0000001-0000-0000-0000-100000000003', 'FINTRAC', '{"verified": true}', 'completed'),
+  ('a0000001-0000-0000-0000-100000000003', 'DORTS', '{"draft": true}', 'draft'),
+  ('a0000001-0000-0000-0000-100000000003', 'PDS', '{"draft": true}', 'draft');
 
 -- Tanaka (Phase 7 — all forms completed)
 INSERT INTO form_submissions (listing_id, form_key, form_data, status) VALUES
-  ('l0000001-0000-0000-0000-000000000005', 'FINTRAC', '{"verified": true}', 'completed'),
-  ('l0000001-0000-0000-0000-000000000005', 'DORTS', '{"signed": true}', 'completed'),
-  ('l0000001-0000-0000-0000-000000000005', 'PDS', '{"disclosed": true}', 'completed'),
-  ('l0000001-0000-0000-0000-000000000005', 'MLC', '{"signed": true}', 'completed');
+  ('a0000001-0000-0000-0000-100000000005', 'FINTRAC', '{"verified": true}', 'completed'),
+  ('a0000001-0000-0000-0000-100000000005', 'DORTS', '{"signed": true}', 'completed'),
+  ('a0000001-0000-0000-0000-100000000005', 'PDS', '{"disclosed": true}', 'completed'),
+  ('a0000001-0000-0000-0000-100000000005', 'MLC', '{"signed": true}', 'completed');
 
 -- Kovacs (pending — all forms completed before listing)
 INSERT INTO form_submissions (listing_id, form_key, form_data, status) VALUES
-  ('l0000001-0000-0000-0000-000000000006', 'FINTRAC', '{"verified": true}', 'completed'),
-  ('l0000001-0000-0000-0000-000000000006', 'DORTS', '{"signed": true}', 'completed'),
-  ('l0000001-0000-0000-0000-000000000006', 'PDS', '{"disclosed": true}', 'completed'),
-  ('l0000001-0000-0000-0000-000000000006', 'MLC', '{"signed": true}', 'completed');
+  ('a0000001-0000-0000-0000-100000000006', 'FINTRAC', '{"verified": true}', 'completed'),
+  ('a0000001-0000-0000-0000-100000000006', 'DORTS', '{"signed": true}', 'completed'),
+  ('a0000001-0000-0000-0000-100000000006', 'PDS', '{"disclosed": true}', 'completed'),
+  ('a0000001-0000-0000-0000-100000000006', 'MLC', '{"signed": true}', 'completed');
 
 
 -- ===================
@@ -472,7 +472,7 @@ INSERT INTO form_submissions (listing_id, form_key, form_data, status) VALUES
 
 -- Sharma (SOLD) — full AI content
 INSERT INTO prompts (listing_id, mls_public, mls_realtor, ig_caption, video_prompt, image_prompt) VALUES
-  ('l0000001-0000-0000-0000-000000000001',
+  ('a0000001-0000-0000-0000-100000000001',
    'Stunning 2BR condo in the heart of Burnaby! Steps to Metrotown, SkyTrain & Crystal Mall. Open layout with floor-to-ceiling windows, modern kitchen, and mountain views. In-suite laundry, 1 parking + storage. Perfect for first-time buyers or investors.',
    'Well-maintained unit in sought-after Metrotown location. Strata fees include heat & hot water. Recent updates: new flooring, painted throughout. Rentals allowed. Very responsive strata. Seller motivated — relocating to Toronto.',
    'JUST SOLD in Metrotown! This stunning 2BR went $15K over asking with 3 competing offers. The Burnaby condo market is HOT right now. DM me if you''re thinking about selling!',
@@ -481,7 +481,7 @@ INSERT INTO prompts (listing_id, mls_public, mls_realtor, ig_caption, video_prom
 
 -- Tanaka (Phase 7 — MLS remarks being generated)
 INSERT INTO prompts (listing_id, mls_public, mls_realtor) VALUES
-  ('l0000001-0000-0000-0000-000000000005',
+  ('a0000001-0000-0000-0000-100000000005',
    'Bright 2BR in Lower Lonsdale! Walk to SeaBus, Lonsdale Quay & waterfront. Updated kitchen, in-suite laundry, 1 parking. Enjoy the best of North Shore living with easy downtown access.',
    'Corner unit with extra natural light. Strata well-managed with healthy contingency fund. Seller downsizing — motivated and flexible on possession.');
 
@@ -492,24 +492,24 @@ INSERT INTO prompts (listing_id, mls_public, mls_realtor) VALUES
 
 -- Sharma (SOLD) — full activity history
 INSERT INTO listing_activities (listing_id, activity_type, date, count, source, description) VALUES
-  ('l0000001-0000-0000-0000-000000000001', 'view', (NOW() - INTERVAL '50 days')::date, 45, 'MLS', 'MLS listing views first week'),
-  ('l0000001-0000-0000-0000-000000000001', 'view', (NOW() - INTERVAL '48 days')::date, 12, 'Realtor.ca', 'Realtor.ca views'),
-  ('l0000001-0000-0000-0000-000000000001', 'showing', (NOW() - INTERVAL '50 days')::date, 4, 'Agent', 'Total showings'),
-  ('l0000001-0000-0000-0000-000000000001', 'inquiry', (NOW() - INTERVAL '49 days')::date, 3, 'Email', 'Buyer agent inquiries'),
-  ('l0000001-0000-0000-0000-000000000001', 'offer', (NOW() - INTERVAL '44 days')::date, 3, 'Agent', 'Multiple offers received');
+  ('a0000001-0000-0000-0000-100000000001', 'view', (NOW() - INTERVAL '50 days')::date, 45, 'MLS', 'MLS listing views first week'),
+  ('a0000001-0000-0000-0000-100000000001', 'view', (NOW() - INTERVAL '48 days')::date, 12, 'Realtor.ca', 'Realtor.ca views'),
+  ('a0000001-0000-0000-0000-100000000001', 'showing', (NOW() - INTERVAL '50 days')::date, 4, 'Agent', 'Total showings'),
+  ('a0000001-0000-0000-0000-100000000001', 'inquiry', (NOW() - INTERVAL '49 days')::date, 3, 'Email', 'Buyer agent inquiries'),
+  ('a0000001-0000-0000-0000-100000000001', 'offer', (NOW() - INTERVAL '44 days')::date, 3, 'Agent', 'Multiple offers received');
 
 -- Gill (ACTIVE) — growing activity
 INSERT INTO listing_activities (listing_id, activity_type, date, count, source, description) VALUES
-  ('l0000001-0000-0000-0000-000000000003', 'view', (NOW() - INTERVAL '20 days')::date, 28, 'MLS', 'MLS listing views'),
-  ('l0000001-0000-0000-0000-000000000003', 'view', (NOW() - INTERVAL '15 days')::date, 8, 'Realtor.ca', 'Realtor.ca views'),
-  ('l0000001-0000-0000-0000-000000000003', 'showing', (NOW() - INTERVAL '3 days')::date, 1, 'Agent', 'First showing completed'),
-  ('l0000001-0000-0000-0000-000000000003', 'inquiry', (NOW() - INTERVAL '10 days')::date, 2, 'Email', 'Buyer agent inquiries');
+  ('a0000001-0000-0000-0000-100000000003', 'view', (NOW() - INTERVAL '20 days')::date, 28, 'MLS', 'MLS listing views'),
+  ('a0000001-0000-0000-0000-100000000003', 'view', (NOW() - INTERVAL '15 days')::date, 8, 'Realtor.ca', 'Realtor.ca views'),
+  ('a0000001-0000-0000-0000-100000000003', 'showing', (NOW() - INTERVAL '3 days')::date, 1, 'Agent', 'First showing completed'),
+  ('a0000001-0000-0000-0000-100000000003', 'inquiry', (NOW() - INTERVAL '10 days')::date, 2, 'Email', 'Buyer agent inquiries');
 
 -- Kovacs (PENDING) — pre-offer activity
 INSERT INTO listing_activities (listing_id, activity_type, date, count, source, description) VALUES
-  ('l0000001-0000-0000-0000-000000000006', 'view', (NOW() - INTERVAL '35 days')::date, 52, 'MLS', 'MLS listing views'),
-  ('l0000001-0000-0000-0000-000000000006', 'showing', (NOW() - INTERVAL '20 days')::date, 3, 'Agent', 'Total showings before offer'),
-  ('l0000001-0000-0000-0000-000000000006', 'offer', (NOW() - INTERVAL '14 days')::date, 1, 'Agent', 'Offer received and accepted');
+  ('a0000001-0000-0000-0000-100000000006', 'view', (NOW() - INTERVAL '35 days')::date, 52, 'MLS', 'MLS listing views'),
+  ('a0000001-0000-0000-0000-100000000006', 'showing', (NOW() - INTERVAL '20 days')::date, 3, 'Agent', 'Total showings before offer'),
+  ('a0000001-0000-0000-0000-100000000006', 'offer', (NOW() - INTERVAL '14 days')::date, 1, 'Agent', 'Offer received and accepted');
 
 
 -- ===================
@@ -518,34 +518,34 @@ INSERT INTO listing_activities (listing_id, activity_type, date, count, source, 
 
 -- Gill listing — 1 completed, 1 upcoming
 INSERT INTO open_houses (id, listing_id, date, start_time, end_time, type, status, visitor_count, notes) VALUES
-  ('oh000001-0000-0000-0000-000000000001', 'l0000001-0000-0000-0000-000000000003',
+  ('00000001-0000-0000-0000-200000000001', 'a0000001-0000-0000-0000-100000000003',
    (NOW() - INTERVAL '7 days')::date, '13:00', '15:00', 'public', 'completed', 8,
    'Good turnout. 3 serious buyers.'),
-  ('oh000001-0000-0000-0000-000000000002', 'l0000001-0000-0000-0000-000000000003',
+  ('00000001-0000-0000-0000-200000000002', 'a0000001-0000-0000-0000-100000000003',
    (NOW() + INTERVAL '5 days')::date, '13:00', '15:00', 'public', 'scheduled', 0,
    'Second open house planned.');
 
 -- Open house visitors for completed event
 INSERT INTO open_house_visitors (open_house_id, name, phone, email, agent_name, interest_level, feedback, wants_followup) VALUES
-  ('oh000001-0000-0000-0000-000000000001', 'Wei Zhang', '+16045559111', 'wei.z@gmail.com', NULL, 'hot', 'Loved the layout. Wants to bring partner back.', true),
-  ('oh000001-0000-0000-0000-000000000001', 'Chris Martin', '+17785559222', 'chris.m@outlook.com', 'Amy Zhang', 'warm', 'Nice unit. Comparing with another in the building.', true),
-  ('oh000001-0000-0000-0000-000000000001', 'Nadia Khan', '+16045559333', NULL, NULL, 'cold', 'Just browsing the area. Not actively looking.', false);
+  ('00000001-0000-0000-0000-200000000001', 'Wei Zhang', '+16045559111', 'wei.z@gmail.com', NULL, 'hot', 'Loved the layout. Wants to bring partner back.', true),
+  ('00000001-0000-0000-0000-200000000001', 'Chris Martin', '+17785559222', 'chris.m@outlook.com', 'Amy Zhang', 'warm', 'Nice unit. Comparing with another in the building.', true),
+  ('00000001-0000-0000-0000-200000000001', 'Nadia Khan', '+16045559333', NULL, NULL, 'cold', 'Just browsing the area. Not actively looking.', false);
 
 
 -- ===================
 -- TASKS
 -- ===================
 INSERT INTO tasks (title, description, status, priority, category, due_date, contact_id, listing_id) VALUES
-  ('Follow up with Wei Zhang from open house', 'Hot lead — wants second viewing with partner', 'pending', 'high', 'follow_up', (NOW() + INTERVAL '1 day')::date, NULL, 'l0000001-0000-0000-0000-000000000003'),
-  ('Complete DORTS form for Gill listing', 'Draft started. Need seller signatures.', 'in_progress', 'high', 'document', (NOW() + INTERVAL '2 days')::date, 'c0000001-0000-0000-0000-000000000004', 'l0000001-0000-0000-0000-000000000003'),
-  ('Run BC Geocoder for O''Brien listing', 'Data enrichment Phase 2 — geocoding pending', 'pending', 'medium', 'listing', (NOW() + INTERVAL '1 day')::date, 'c0000001-0000-0000-0000-000000000003', 'l0000001-0000-0000-0000-000000000004'),
-  ('Upload MLS photos for Tanaka listing', 'All forms done. Preparing for MLS submission.', 'pending', 'high', 'marketing', (NOW() + INTERVAL '2 days')::date, 'c0000001-0000-0000-0000-000000000008', 'l0000001-0000-0000-0000-000000000005'),
-  ('Collect seller ID docs from Singh', 'FINTRAC intake — need passport or DL copy', 'pending', 'urgent', 'document', (NOW())::date, 'c0000001-0000-0000-0000-000000000007', 'l0000001-0000-0000-0000-000000000007'),
-  ('Confirm inspection date for Kovacs deal', 'Buyer needs home inspection before subject removal', 'in_progress', 'urgent', 'inspection', (NOW() + INTERVAL '5 days')::date, 'c0000001-0000-0000-0000-000000000006', 'l0000001-0000-0000-0000-000000000006'),
-  ('Send Emily Nguyen Tanaka listing details', 'Once MLS is live — she''s first showing priority', 'pending', 'medium', 'follow_up', (NOW() + INTERVAL '3 days')::date, 'c0000002-0000-0000-0000-000000000004', 'l0000001-0000-0000-0000-000000000005'),
-  ('Schedule second open house for Gill', 'First one had good turnout. Plan for next weekend.', 'completed', 'medium', 'showing', (NOW() - INTERVAL '1 day')::date, 'c0000001-0000-0000-0000-000000000004', 'l0000001-0000-0000-0000-000000000003'),
+  ('Follow up with Wei Zhang from open house', 'Hot lead — wants second viewing with partner', 'pending', 'high', 'follow_up', (NOW() + INTERVAL '1 day')::date, NULL, 'a0000001-0000-0000-0000-100000000003'),
+  ('Complete DORTS form for Gill listing', 'Draft started. Need seller signatures.', 'in_progress', 'high', 'document', (NOW() + INTERVAL '2 days')::date, 'c0000001-0000-0000-0000-000000000004', 'a0000001-0000-0000-0000-100000000003'),
+  ('Run BC Geocoder for O''Brien listing', 'Data enrichment Phase 2 — geocoding pending', 'pending', 'medium', 'listing', (NOW() + INTERVAL '1 day')::date, 'c0000001-0000-0000-0000-000000000003', 'a0000001-0000-0000-0000-100000000004'),
+  ('Upload MLS photos for Tanaka listing', 'All forms done. Preparing for MLS submission.', 'pending', 'high', 'marketing', (NOW() + INTERVAL '2 days')::date, 'c0000001-0000-0000-0000-000000000008', 'a0000001-0000-0000-0000-100000000005'),
+  ('Collect seller ID docs from Singh', 'FINTRAC intake — need passport or DL copy', 'pending', 'urgent', 'document', (NOW())::date, 'c0000001-0000-0000-0000-000000000007', 'a0000001-0000-0000-0000-100000000007'),
+  ('Confirm inspection date for Kovacs deal', 'Buyer needs home inspection before subject removal', 'in_progress', 'urgent', 'inspection', (NOW() + INTERVAL '5 days')::date, 'c0000001-0000-0000-0000-000000000006', 'a0000001-0000-0000-0000-100000000006'),
+  ('Send Emily Nguyen Tanaka listing details', 'Once MLS is live — she''s first showing priority', 'pending', 'medium', 'follow_up', (NOW() + INTERVAL '3 days')::date, 'c0000002-0000-0000-0000-000000000004', 'a0000001-0000-0000-0000-100000000005'),
+  ('Schedule second open house for Gill', 'First one had good turnout. Plan for next weekend.', 'completed', 'medium', 'showing', (NOW() - INTERVAL '1 day')::date, 'c0000001-0000-0000-0000-000000000004', 'a0000001-0000-0000-0000-100000000003'),
   ('Park family — send White Rock listings', 'Raj mentioned new listings on Marine Dr', 'pending', 'low', 'follow_up', (NOW() + INTERVAL '4 days')::date, 'c0000002-0000-0000-0000-000000000005', NULL),
-  ('Prepare closing docs for Sharma', 'Final paperwork for completed sale', 'completed', 'high', 'closing', (NOW() - INTERVAL '37 days')::date, 'c0000001-0000-0000-0000-000000000001', 'l0000001-0000-0000-0000-000000000001');
+  ('Prepare closing docs for Sharma', 'Final paperwork for completed sale', 'completed', 'high', 'closing', (NOW() - INTERVAL '37 days')::date, 'c0000001-0000-0000-0000-000000000001', 'a0000001-0000-0000-0000-100000000001');
 
 
 -- ===================

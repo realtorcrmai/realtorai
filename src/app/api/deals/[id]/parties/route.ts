@@ -1,6 +1,15 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-auth";
+import { z } from "zod";
+
+const createPartySchema = z.object({
+  role: z.string().min(1).max(100),
+  name: z.string().min(1).max(200),
+  phone: z.string().max(30).optional(),
+  email: z.string().email().optional(),
+  company: z.string().max(200).optional(),
+});
 
 export async function POST(
   req: NextRequest,
@@ -12,6 +21,14 @@ export async function POST(
   const { id } = await params;
   const supabase = createAdminClient();
   const body = await req.json();
+
+  const parsed = createPartySchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", issues: parsed.error.issues },
+      { status: 400 }
+    );
+  }
 
   const { data, error } = await supabase
     .from("deal_parties")
