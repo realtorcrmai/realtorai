@@ -8,6 +8,17 @@ ListingFlow is a real estate transaction management CRM for licensed BC realtors
 **Monorepo root:** `/Users/bigbear/reality crm/`
 **App directory:** `/Users/bigbear/reality crm/realestate-crm/`
 
+### Git Workflow
+
+- **`dev`** — default branch, all development commits go here
+- **`main`** — production/release, protected (requires PR with 1 approval)
+- Always push to `dev`. Never push directly to `main`.
+- To release: create PR from `dev → main`, get approval, merge.
+
+### Testing — MANDATORY
+
+**After every build or deploy, run `/test` to validate the application.** The test skill at `.claude/skills/test.md` runs 10 phases: build verification, server health, auth, API endpoints, page loads, email engine, Supabase connection, UX scroll, contact form, and newsletter journeys. Do NOT deploy without a passing test run.
+
 ---
 
 ## Tech Stack
