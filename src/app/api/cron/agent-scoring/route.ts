@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { scoreBatch } from "@/lib/ai-agent/lead-scorer";
 
+export const maxDuration = 120; // Allow up to 2 minutes for AI batch scoring
+
 /**
  * GET /api/cron/agent-scoring
  * Runs every 15 minutes. Scores contacts with recent activity or stale scores.
