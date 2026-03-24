@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import PipelineSnapshot from "@/components/dashboard/PipelineSnapshot";
 import { GreetingTicker } from "@/components/dashboard/GreetingTicker";
+import { DailyDigestCard } from "@/components/dashboard/DailyDigestCard";
 
 export const dynamic = "force-dynamic";
 
@@ -330,8 +331,13 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {/* AI Email Summary */}
+      <div className="animate-float-in" style={{ animationDelay: "60ms" }}>
+        <DailyDigestCard />
+      </div>
+
       {/* Pipeline Snapshot — primary dashboard visual */}
-      <div className="animate-float-in" style={{ animationDelay: "80ms" }}>
+      <div className="animate-float-in" style={{ animationDelay: "120ms" }}>
         <PipelineSnapshot stages={pipelineStages} totalGCI={totalGCI} />
       </div>
 
