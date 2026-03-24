@@ -107,14 +107,14 @@ ALTER TABLE realtor_weekly_feedback ENABLE ROW LEVEL SECURITY;
 ALTER TABLE showing_feedback ENABLE ROW LEVEL SECURITY;
 ALTER TABLE platform_intelligence ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS ci_auth ON contact_instructions FOR ALL USING (true);
-CREATE POLICY IF NOT EXISTS cw_auth ON contact_watchlist FOR ALL USING (true);
-CREATE POLICY IF NOT EXISTS cc_auth ON contact_context FOR ALL USING (true);
-CREATE POLICY IF NOT EXISTS oe_auth ON outcome_events FOR ALL USING (true);
-CREATE POLICY IF NOT EXISTS ef_auth ON email_feedback FOR ALL USING (true);
-CREATE POLICY IF NOT EXISTS rwf_auth ON realtor_weekly_feedback FOR ALL USING (true);
-CREATE POLICY IF NOT EXISTS sf_auth ON showing_feedback FOR ALL USING (true);
-CREATE POLICY IF NOT EXISTS pi_auth ON platform_intelligence FOR ALL USING (true);
+DROP POLICY IF EXISTS ci_auth ON contact_instructions; CREATE POLICY ci_auth ON contact_instructions FOR ALL USING (true);
+DROP POLICY IF EXISTS cw_auth ON contact_watchlist; CREATE POLICY cw_auth ON contact_watchlist FOR ALL USING (true);
+DROP POLICY IF EXISTS cc_auth ON contact_context; CREATE POLICY cc_auth ON contact_context FOR ALL USING (true);
+DROP POLICY IF EXISTS oe_auth ON outcome_events; CREATE POLICY oe_auth ON outcome_events FOR ALL USING (true);
+DROP POLICY IF EXISTS ef_auth ON email_feedback; CREATE POLICY ef_auth ON email_feedback FOR ALL USING (true);
+DROP POLICY IF EXISTS rwf_auth ON realtor_weekly_feedback; CREATE POLICY rwf_auth ON realtor_weekly_feedback FOR ALL USING (true);
+DROP POLICY IF EXISTS sf_auth ON showing_feedback; CREATE POLICY sf_auth ON showing_feedback FOR ALL USING (true);
+DROP POLICY IF EXISTS pi_auth ON platform_intelligence; CREATE POLICY pi_auth ON platform_intelligence FOR ALL USING (true);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_ci_contact ON contact_instructions(contact_id, is_active);

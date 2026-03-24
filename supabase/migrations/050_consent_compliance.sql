@@ -28,8 +28,8 @@ ALTER TABLE communications ADD COLUMN IF NOT EXISTS triggered_by_newsletter_id U
 
 -- RLS
 ALTER TABLE consent_records ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS consent_records_auth ON consent_records
-  FOR ALL USING (true);
+DROP POLICY IF EXISTS consent_records_auth ON consent_records;
+CREATE POLICY consent_records_auth ON consent_records FOR ALL USING (true);
 
 -- Index for consent lookups
 CREATE INDEX IF NOT EXISTS idx_consent_contact ON consent_records(contact_id, withdrawn);

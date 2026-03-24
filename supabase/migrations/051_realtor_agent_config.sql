@@ -64,10 +64,10 @@ CREATE TABLE IF NOT EXISTS agent_learning_log (
 
 -- RLS
 ALTER TABLE realtor_agent_config ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS rac_auth ON realtor_agent_config FOR ALL USING (true);
+DROP POLICY IF EXISTS rac_auth ON realtor_agent_config; CREATE POLICY rac_auth ON realtor_agent_config FOR ALL USING (true);
 
 ALTER TABLE agent_learning_log ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS all_auth ON agent_learning_log FOR ALL USING (true);
+DROP POLICY IF EXISTS all_auth ON agent_learning_log; CREATE POLICY all_auth ON agent_learning_log FOR ALL USING (true);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_learning_realtor ON agent_learning_log(realtor_id, created_at DESC);
