@@ -11,74 +11,237 @@
 
 ## 1. Prospect Journey
 
+### 1A. Entry Points — How Prospects Find the Realtor
+
 ```mermaid
 flowchart TD
-    A[Prospect discovers realtor] --> B{How?}
-    B -->|Website form| C[Lead captured with email]
-    B -->|Phone call| D[Realtor manually adds to CRM]
-    B -->|Open house| E[Quick add: name + phone]
-    B -->|Referral| F[Added with referrer linked]
-    B -->|Social media| G[Lead from DM/comment]
+    A[Prospect discovers realtor] --> B{Entry channel}
+    B -->|Website form| C[Lead captured with email + source]
+    B -->|Inbound phone call| D[Realtor logs call in CRM]
+    B -->|Open house sign-in| E[Quick add: name + phone at event]
+    B -->|Referral from past client| F[Added with referrer linked]
+    B -->|Social media DM| G[Lead from Instagram/Facebook]
+    B -->|Yard sign / print ad| H[Prospect calls listing number]
+    B -->|Google ad / SEO| I[Clicks ad - lands on website]
 
-    C & D & E & F & G --> H[Contact created in CRM]
+    C & D & E & F & G & H & I --> J[Contact created in CRM]
 
-    H --> I{Has email?}
-    I -->|Yes| J[Auto-enroll in journey]
-    I -->|No| K[SMS-only nurture path]
+    J --> K[Auto-detect: has email? has phone?]
+    K --> L{Communication channels}
+    L -->|Email + Phone| M[Full journey: email + SMS]
+    L -->|Email only| N[Email-only journey]
+    L -->|Phone only| O[SMS-only nurture + ask for email]
+    L -->|Neither| P[Realtor must follow up manually]
 
-    J --> L[Welcome email drafted]
-    L --> M{Realtor trust level?}
-    M -->|Ghost/Co-pilot| N[Email goes to approval queue]
-    M -->|Supervised+| O[Email auto-sends]
+    M & N & O --> Q[Auto-enroll in prospect journey]
+    Q --> R[Welcome message drafted]
+```
 
-    N --> P{Realtor action}
-    P -->|Approve| Q[Email sent]
-    P -->|Edit| R[Realtor modifies - AI learns voice]
-    P -->|Skip| S[Skipped - AI notes reason]
-    R --> Q
+### 1B. Welcome + First Engagement
 
-    Q --> T{Prospect engagement}
-    T -->|Opens email| U[Engagement score +5]
-    T -->|Clicks listing| V[Engagement score +15 - AI infers area price type]
-    T -->|Clicks CMA/showing| W[HOT LEAD - Realtor alert immediately]
-    T -->|No action| X[Score unchanged - Try different content next time]
-    T -->|Unsubscribes| Y[Journey paused - CASL compliant]
+```mermaid
+flowchart TD
+    R[Welcome message drafted] --> S{Realtor trust level}
+    S -->|Level 0: Ghost| S1[Realtor reviews every email manually]
+    S -->|Level 1: Co-pilot| S2[1-tap approve in queue]
+    S -->|Level 2: Supervised| S3[Auto-sends - realtor gets digest]
+    S -->|Level 3: Autonomous| S4[Auto-sends - weekly summary only]
 
-    U & V --> Z[Next email adapts]
-    Z --> AA{What did they click?}
-    AA -->|Listings in Kits| AB[Future emails: Kits focus]
-    AA -->|School info| AC[Future emails: family angle]
-    AA -->|Market stats| AD[Future emails: data-heavy]
-    AA -->|Nothing 3x| AE[Change content type - Reduce frequency]
+    S1 & S2 --> T{Realtor action}
+    T -->|Approve| U[Message sent]
+    T -->|Edit| V[Realtor modifies - AI learns voice rules]
+    T -->|Skip| W[Skipped - AI logs reason for learning]
+    V --> U
+    S3 & S4 --> U
+```
 
-    AB & AC & AD --> AF[Scheduled email in 3-7 days]
-    AF --> T
+### 1C. Engagement Tracking — Email + Direct Contact
 
-    AE --> AG{Still no engagement after 60 days?}
-    AG -->|Yes| AH[Move to Dormant - Re-engagement email]
-    AG -->|No| AF
+```mermaid
+flowchart TD
+    U[Message sent to prospect] --> ENG{Engagement type}
 
-    W --> AI[Realtor calls/texts prospect]
-    AI --> AJ{Outcome?}
-    AJ -->|Books showing| AK[Convert to BUYER - Journey: Lead to Active]
-    AJ -->|Wants to sell| AL[Convert to SELLER - Journey: Lead to Active]
-    AJ -->|Not ready| AM[Stay in nurture - Continue journey]
-    AJ -->|Lost| AN[Mark as lost - Pause journey]
+    ENG -->|EMAIL ENGAGEMENT| EA[Tracked automatically]
+    ENG -->|DIRECT CONTACT| DC[Realtor logs in CRM]
 
-    AK --> AO[Buyer journey begins]
-    AL --> AP[Seller journey begins]
+    EA --> EB{What happened?}
+    EB -->|Opened email| EC[Score +5]
+    EB -->|Clicked content| ED[Score +15 - classify click]
+    EB -->|No action| EE[Score unchanged]
+    EB -->|Unsubscribed| EF[Journey paused - CASL compliant]
+
+    DC --> DC1{Contact type}
+    DC1 -->|Inbound call| DC2[Score +25 - log call notes + trigger]
+    DC1 -->|Text / WhatsApp| DC3[Score +20 - auto-logged via Twilio]
+    DC1 -->|Open house visit| DC4[Score +15 - log property interest]
+    DC1 -->|Walked into office| DC5[Score +20 - log conversation]
+    DC1 -->|Social media reply| DC6[Score +10 - log interaction]
+
+    DC2 --> DC7{What triggered the call?}
+    DC7 -->|After receiving email| DC8[Link call back to email - attribution]
+    DC7 -->|Saw yard sign| DC9[Source: yard sign - log listing]
+    DC7 -->|Google search| DC10[Source: organic - log search intent]
+    DC7 -->|Referral mentioned| DC11[Source: referral - link referrer]
+```
+
+### 1D. Click Intelligence — What Clicks Reveal
+
+```mermaid
+flowchart TD
+    ED[Prospect clicks in email] --> CL{Click category}
+
+    CL -->|Specific listing| CL1[Infer: area + price range + property type]
+    CL -->|School / family info| CL2[Infer: has kids - schools matter]
+    CL -->|Market stats / data| CL3[Infer: analytical - wants proof]
+    CL -->|Mortgage calculator| CL4[Infer: actively budgeting - pre-approval stage]
+    CL -->|Neighbourhood lifestyle| CL5[Infer: exploring areas - early stage]
+    CL -->|Book Showing button| CL6[HOT: ready to see homes NOW]
+    CL -->|Get CMA / home value| CL7[HOT: thinking about selling]
+    CL -->|Investment / rental yield| CL8[Infer: investor buyer - focus on ROI]
+    CL -->|Price drop alert| CL9[Infer: bargain hunter or watching specific listing]
+    CL -->|Open house RSVP| CL10[Infer: wants to see homes - low commitment]
+    CL -->|Forwarded email| CL11[Infer: advocate - may have referral]
+    CL -->|Clicked same email 2x+| CL12[Infer: highly interested in this content]
+
+    CL1 & CL2 & CL3 & CL4 & CL5 & CL8 & CL9 & CL10 --> AI[AI updates contact intelligence]
+    AI --> ADAPT[Next email adapts to inferred interests]
+    ADAPT --> NEXT[Schedule next email in 3-7 days]
+    NEXT --> U
+
+    CL6 & CL7 --> HOT[HOT LEAD - immediate realtor alert]
+    CL11 & CL12 --> WARM[WARM SIGNAL - include in daily digest]
+```
+
+### 1E. Graduated Escalation — When Does the Realtor Step In?
+
+```mermaid
+flowchart TD
+    SCORE[Engagement Score Updates] --> ESC{Current score range}
+
+    ESC -->|0-20: Cold| L1[AI handles everything]
+    L1 --> L1A[Weekly/bi-weekly nurture emails]
+    L1A --> L1B[No realtor action needed]
+
+    ESC -->|20-40: Warming| L2[AI increases frequency]
+    L2 --> L2A[2x per week - varied content]
+    L2A --> L2B[Optional: appears in weekly digest]
+
+    ESC -->|40-60: Engaged| L3[AI sends targeted content]
+    L3 --> L3A[Daily if matching listings exist]
+    L3A --> L3B[Soft alert to realtor: X is engaging - consider reaching out]
+
+    ESC -->|60-80: Hot| L4[AI sends time-sensitive alerts]
+    L4 --> L4A[Same-day listing matches]
+    L4A --> L4B[CALL THEM: X clicked 4 listings this week]
+
+    ESC -->|80+: Ready| L5[AI reduces email - realtor should own relationship]
+    L5 --> L5A[Offer-prep and showing-prep content only]
+    L5A --> L5B[URGENT: X clicked Book Showing 3 times - ready to act]
+
+    ESC -->|Direct contact logged| L6[Score jumps +20-30]
+    L6 --> L6A[Realtor logs call/text/visit outcome]
+    L6A --> CONV{Ready to convert?}
+```
+
+### 1F. Conversion — Prospect Becomes Buyer or Seller
+
+```mermaid
+flowchart TD
+    CONV{Conversion trigger} --> TR{What triggered it?}
+
+    TR -->|Clicked Book Showing in email| T1[AI suggests: Move to Active Buyer?]
+    TR -->|Clicked Get CMA in email| T2[AI suggests: Move to Active Seller?]
+    TR -->|Called about a listing| T3[Realtor logs: interested in buying]
+    TR -->|Asked about selling in call| T4[Realtor logs: interested in selling]
+    TR -->|Booked showing via CRM| T5[Auto-convert: Active Buyer]
+    TR -->|Signed listing agreement| T6[Auto-convert: Active Seller]
+    TR -->|Score 60+ sustained 2 weeks| T7[AI suggests conversion with evidence]
+    TR -->|Attended open house + positive| T8[AI suggests: promising buyer]
+    TR -->|Realtor manually changes type| T9[Manual override - immediate]
+
+    T1 & T2 & T7 & T8 --> SUGGEST[AI shows conversion prompt]
+    SUGGEST --> PROMPT["X has been engaging for 2 weeks, score 72.<br>Clicked 6 Kits listings + mortgage calc.<br>Opened every email."]
+    PROMPT --> REAL{Realtor decides}
+    REAL -->|Yes - buyer| BUY[Convert to BUYER journey]
+    REAL -->|Yes - seller| SELL[Convert to SELLER journey]
+    REAL -->|Not yet| WAIT[Keep nurturing - check again in 1 week]
+    REAL -->|Actually both| DUAL[Dual journey: buyer + seller]
+
+    T3 & T4 & T9 --> MANUAL[Realtor confirms type]
+    MANUAL --> BUY2{Which?}
+    BUY2 -->|Buyer| BUY
+    BUY2 -->|Seller| SELL
+
+    T5 --> BUY
+    T6 --> SELL
+
+    BUY --> BUYJ[Buyer journey begins - see Section 2]
+    SELL --> SELLJ[Seller journey begins - see Section 3]
+```
+
+### 1G. Dormancy + Re-engagement
+
+```mermaid
+flowchart TD
+    DORM{No engagement detected} --> D1{How long?}
+    D1 -->|30 days no opens| D2[Reduce frequency to 1x per 2 weeks]
+    D1 -->|45 days no opens| D3[Try completely different content type]
+    D1 -->|60 days no opens| D4[Move to Dormant phase]
+
+    D4 --> D5[Re-engagement email: Market changed since we last spoke]
+    D5 --> D6{Response?}
+    D6 -->|Opens| D7[Reactivate - score reset to 20]
+    D6 -->|Clicks| D8[Reactivate - score reset to 35]
+    D6 -->|Nothing| D9[Wait 30 more days]
+    D9 --> D10[Final attempt: Different subject line + channel]
+    D10 --> D11{Response?}
+    D11 -->|Yes| D7
+    D11 -->|No 90 days total| D12[Auto-sunset: stop all emails]
+    D12 --> D13[Contact stays in CRM but marked inactive]
+    D13 --> D14[Realtor can manually reactivate anytime]
 ```
 
 ### Key Decision Points
 
 | # | Decision | Who Decides | Data Used |
 |---|----------|-------------|-----------|
-| 1 | Welcome email content | AI + Realtor | Contact type, notes, area from form |
-| 2 | What to send next | AI Agent | Click history, engagement score, inferred interests |
-| 3 | When to send | AI Agent | Optimal send time, frequency cap, last email date |
-| 4 | Whether to send at all | Send Governor | Engagement trend, frequency limit, CASL status |
-| 5 | Hot lead alert | AI Agent | Click type (showing/CMA = hot), engagement velocity |
-| 6 | Convert to buyer/seller | Realtor | Phone call outcome, prospect's stated intent |
+| 1 | Welcome email content | AI + Realtor | Contact type, notes, area, source |
+| 2 | What to send next | AI Agent | Click history (12 categories), engagement score, inferred interests |
+| 3 | When to send | AI Agent | Optimal send time, frequency cap, last email date, score-based frequency |
+| 4 | Whether to send at all | Send Governor | Engagement trend, frequency limit, CASL status, sunset rules |
+| 5 | Hot lead alert | AI Agent | Click type (showing/CMA = hot), engagement velocity, direct contact |
+| 6 | Soft alert (daily digest) | AI Agent | Score 40-60, consistent engagement pattern |
+| 7 | Convert to buyer/seller | AI suggests + Realtor confirms | Score 60+, click patterns, direct contact outcome |
+| 8 | Dormancy handling | AI Agent | Days since last open, content type exhaustion |
+| 9 | Attribution | System | Link calls/showings back to emails that triggered them |
+| 10 | Reactivation | AI or Realtor | Re-engagement click, or manual override |
+
+### Click Intelligence Categories (12)
+
+| Category | Signal | AI Response | Score Impact |
+|---|---|---|---|
+| Specific listing | Interested in that type/area/price | Narrow future listings | +15 |
+| School / family info | Has kids, schools matter | Family-angle content | +10 |
+| Market stats / data | Analytical, wants proof | Data-heavy emails | +10 |
+| Mortgage calculator | Actively budgeting | Pre-approval info + affordable listings | +20 |
+| Neighbourhood lifestyle | Exploring areas, early stage | Area comparison content | +10 |
+| Book Showing button | Ready to act NOW | HOT LEAD alert | +30 |
+| Get CMA / home value | Thinking about selling | Switch to seller nurture | +30 |
+| Investment / rental yield | Investor buyer | Focus on ROI and cap rates | +15 |
+| Price drop alert | Bargain hunter or watching | Re-send listing with urgency | +10 |
+| Open house RSVP | Wants to see homes, low commitment | Open house roundups | +15 |
+| Forwarded email | Advocate, potential referral | Referral incentive | +5 |
+| Multiple clicks same email | Highly interested in this content | More of this type | +10 |
+
+### Engagement Score Thresholds
+
+| Score | Label | AI Frequency | Realtor Action |
+|---|---|---|---|
+| 0-20 | Cold | Weekly | None |
+| 20-40 | Warming | 2x/week | In weekly digest |
+| 40-60 | Engaged | Daily if inventory | Soft alert: consider reaching out |
+| 60-80 | Hot | Same-day matches | Call them: high engagement |
+| 80+ | Ready | Reduce email, realtor owns it | Urgent: ready to act |
 
 ---
 
