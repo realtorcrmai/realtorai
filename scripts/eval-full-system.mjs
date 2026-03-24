@@ -26,6 +26,12 @@ const BASE_URL = "http://localhost:3000";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 let pass = 0, fail = 0, skip = 0;
 const failures = [];
+let authCookies = ""; // Session cookies for authenticated API calls
+
+// Helper: authenticated fetch (passes session cookies)
+async function authFetch(url, options = {}) {
+  return fetch(url, { ...options, headers: { ...options.headers, Cookie: authCookies } });
+}
 
 function test(phase, name, ok, detail) {
   if (ok === null) { skip++; console.log(`  ⏭️  ${name} — skipped`); return; }
@@ -45,6 +51,32 @@ async function run() {
   console.log("║   LISTINGFLOW FULL SYSTEM EVALUATION                      ║");
   console.log("║   Testing all phases with canary data                      ║");
   console.log("╚═══════════════════════════════════════════════════════════╝\n");
+
+  // ── AUTHENTICATE ──
+  console.log("── Auth ──");
+  try {
+    const csrfRes = await fetch(`${BASE_URL}/api/auth/csrf`);
+    const csrfData = await csrfRes.json();
+    const csrfCookies = csrfRes.headers.getSetCookie?.() || [];
+
+    const loginRes = await fetch(`${BASE_URL}/api/auth/callback/credentials`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Cookie: csrfCookies.join("; "),
+      },
+      body: `csrfToken=${csrfData.csrfToken}&email=demo@realestatecrm.com&password=demo1234`,
+      redirect: "manual",
+    });
+    const loginCookies = loginRes.headers.getSetCookie?.() || [];
+    authCookies = [...csrfCookies, ...loginCookies].join("; ");
+
+    const sessionRes = await fetch(`${BASE_URL}/api/auth/session`, { headers: { Cookie: authCookies } });
+    const session = await sessionRes.json();
+    test("AUTH", "Login + session", !!session?.user?.email);
+  } catch (e) {
+    test("AUTH", "Login", false, String(e));
+  }
 
   // ═══════════════════════════════════════════════════════
   // PHASE 1: Contact Creation + Auto-Enrollment
@@ -346,7 +378,7 @@ async function run() {
 
   if (buyerNlId) {
     // Prospect reaction (thumbs up)
-    const fbRes = await fetch(`${BASE_URL}/api/feedback`, {
+    const fbRes = await authFetch(`${BASE_URL}/api/feedback`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ newsletterId: buyerNlId, source: "prospect_reaction", rating: 1 }),
@@ -354,7 +386,7 @@ async function run() {
     test("P9", "Prospect thumbs up recorded", fbRes.ok);
 
     // Realtor quick feedback
-    const fb2Res = await fetch(`${BASE_URL}/api/feedback`, {
+    const fb2Res = await authFetch(`${BASE_URL}/api/feedback`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ newsletterId: buyerNlId, source: "realtor_quick", rating: 4, note: "Good listing match" }),
@@ -370,7 +402,7 @@ async function run() {
 
   // Contact instructions
   if (buyer) {
-    const instrRes = await fetch(`${BASE_URL}/api/contacts/instructions`, {
+    const instrRes = await authFetch(`${BASE_URL}/api/contacts/instructions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contactId: buyer.id, instructionText: "Only ground floor units — has dog", instructionType: "constraint" }),
@@ -378,7 +410,7 @@ async function run() {
     test("P9", "Contact instruction created", instrRes.ok);
 
     // Context log
-    const ctxRes = await fetch(`${BASE_URL}/api/contacts/context`, {
+    const ctxRes = await authFetch(`${BASE_URL}/api/contacts/context`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contactId: buyer.id, contextType: "objection", text: "Thinks Kits is too expensive" }),
@@ -386,7 +418,7 @@ async function run() {
     test("P9", "Context entry created", ctxRes.ok);
 
     // Log interaction
-    const logRes = await fetch(`${BASE_URL}/api/contacts/log-interaction`, {
+    const logRes = await authFetch(`${BASE_URL}/api/contacts/log-interaction`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contactId: buyer.id, channel: "call_inbound", notes: "Called about Kits condo", outcome: "interested", scoreImpact: 25 }),
@@ -421,18 +453,18 @@ async function run() {
   console.log("\n═══ PHASE 11: Edge Cases ═══");
 
   // Empty body feedback
-  const emptyFb = await fetch(`${BASE_URL}/api/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  const emptyFb = await authFetch(`${BASE_URL}/api/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
   test("P11", "Empty feedback body → 400", emptyFb.status === 400);
 
   // Missing contactId in log-interaction
-  const badLog = await fetch(`${BASE_URL}/api/contacts/log-interaction`, {
+  const badLog = await authFetch(`${BASE_URL}/api/contacts/log-interaction`, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ channel: "call" }),
   });
   test("P11", "Missing contactId → 400", badLog.status === 400);
 
   // Missing contactId in context
-  const badCtx = await fetch(`${BASE_URL}/api/contacts/context`, {
+  const badCtx = await authFetch(`${BASE_URL}/api/contacts/context`, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ contextType: "info" }),
   });
