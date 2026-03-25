@@ -19,6 +19,7 @@ import { JourneysTab } from "@/components/newsletters/JourneysTab";
 import { SettingsTab } from "@/components/newsletters/SettingsTab";
 import { PipelineCard } from "@/components/newsletters/PipelineCard";
 import { RelationshipsTab } from "@/components/newsletters/RelationshipsTab";
+import { SentByAIList } from "@/components/newsletters/SentByAIList";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const phases = ["lead", "active", "under_contract", "past_client", "dormant"];
@@ -240,64 +241,8 @@ export default async function NewsletterDashboard() {
                 </Card>
               ))}
 
-              {/* AI Sent Emails — Full activity log with engagement */}
-              <Card>
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold">📨 Sent by AI</h4>
-                    <Badge variant="secondary" className="text-xs">
-                      {sentNewsletters.length} emails
-                    </Badge>
-                  </div>
-                  {sentNewsletters.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-3">No emails sent yet. AI will start sending as contacts progress.</p>
-                  ) : sentNewsletters.map((nl: any) => {
-                    const contactName = Array.isArray(nl.contacts) ? nl.contacts[0]?.name : nl.contacts?.name;
-                    const contactType = Array.isArray(nl.contacts) ? nl.contacts[0]?.type : nl.contacts?.type;
-                    const opens = nl.events?.filter((e: any) => e.event_type === "opened").length || 0;
-                    const clicks = nl.events?.filter((e: any) => e.event_type === "clicked").length || 0;
-                    const bounced = nl.events?.some((e: any) => e.event_type === "bounced");
-
-                    return (
-                      <div key={nl.id} className="py-3 border-b border-border last:border-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0 ${
-                              contactType === "seller" ? "bg-gradient-to-br from-primary to-orange-500" : "bg-gradient-to-br from-primary to-purple-500"
-                            }`}>
-                              {(contactName || "?")[0]}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium truncate">{contactName || "Unknown"}</p>
-                              <p className="text-xs text-muted-foreground truncate">{nl.subject}</p>
-                            </div>
-                          </div>
-                          <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
-                            {nl.sent_at ? new Date(nl.sent_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 ml-9 mt-1">
-                          <Badge variant="outline" className="text-[10px] capitalize">{nl.email_type?.replace(/_/g, " ")}</Badge>
-                          {bounced ? (
-                            <span className="text-[10px] text-red-500 font-medium">⚠ Bounced</span>
-                          ) : (
-                            <>
-                              <span className={`text-[10px] font-medium ${opens > 0 ? "text-emerald-600" : "text-muted-foreground"}`}>
-                                {opens > 0 ? `✓ Opened${opens > 1 ? ` (${opens}x)` : ""}` : "Not opened"}
-                              </span>
-                              {clicks > 0 && (
-                                <span className="text-[10px] font-medium text-primary">
-                                  🔗 {clicks} click{clicks > 1 ? "s" : ""}
-                                </span>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
+              {/* AI Sent Emails — Expandable with engagement timeline */}
+              <SentByAIList newsletters={sentNewsletters as any} />
 
               {/* Suppressed Emails Section */}
               <Card>
