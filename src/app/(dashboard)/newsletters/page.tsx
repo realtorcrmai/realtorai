@@ -18,6 +18,7 @@ import { CampaignsTab } from "@/components/newsletters/CampaignsTab";
 import { JourneysTab } from "@/components/newsletters/JourneysTab";
 import { SettingsTab } from "@/components/newsletters/SettingsTab";
 import { PipelineCard } from "@/components/newsletters/PipelineCard";
+import { RelationshipsTab } from "@/components/newsletters/RelationshipsTab";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const phases = ["lead", "active", "under_contract", "past_client", "dormant"];
@@ -257,6 +258,19 @@ export default async function NewsletterDashboard() {
           /* ═══ CAMPAIGNS (Templates + Blasts) ═══ */
           campaigns: (
             <CampaignsTab listings={(listings || []) as any} />
+          ),
+
+          /* ═══ RELATIONSHIPS ═══ */
+          relationships: (
+            <RelationshipsTab
+              contacts={(hotLeadsRaw || []) as any}
+              journeys={(journeys || []) as any}
+              newsletters={(recentNewsletters || []) as any}
+              buyerPhases={dashboard.buyerPhases}
+              sellerPhases={dashboard.sellerPhases}
+              buyerContactsByPhase={buyerContactsByPhase}
+              sellerContactsByPhase={sellerContactsByPhase}
+            />
           ),
 
           /* ═══ JOURNEYS ═══ */
