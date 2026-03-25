@@ -443,6 +443,7 @@ export async function executeStep(
           subject: `[Suppressed] ${step.action_type} — ${step.template_id || "auto"}`,
           email_type: step.template_id || step.action_type,
           status: "suppressed",
+          html_body: "<p>Email suppressed by AI — not generated.</p>",
           ai_context: {
             suppression_reason: governorResult.reason,
             adjustments: governorResult.adjustments,
