@@ -15,6 +15,7 @@ import {
 import { DailyDigestCard } from "@/components/dashboard/DailyDigestCard";
 import { EmailMarketingTabs } from "@/components/newsletters/EmailMarketingTabs";
 import { CampaignsTab } from "@/components/newsletters/CampaignsTab";
+import { JourneysTab } from "@/components/newsletters/JourneysTab";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const phases = ["lead", "active", "under_contract", "past_client", "dormant"];
@@ -251,42 +252,9 @@ export default async function NewsletterDashboard() {
             <CampaignsTab listings={(listings || []) as any} />
           ),
 
-          /* ═══ CONTACTS (Journeys + Schedule merged) ═══ */
+          /* ═══ JOURNEYS ═══ */
           journeys: (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Contact Journeys ({journeys?.length || 0})</h3>
-                <div className="flex gap-1">
-                  <Badge variant="outline" className="text-xs">Sort: Phase</Badge>
-                </div>
-              </div>
-              {(!journeys || journeys.length === 0) ? (
-                <Card><CardContent className="p-8 text-center text-muted-foreground text-sm">No journey enrollments yet.</CardContent></Card>
-              ) : journeys.map((j: any) => (
-                <Card key={j.id}>
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">{phaseIcons[j.current_phase] || "•"}</span>
-                        <div>
-                          <p className="text-sm font-medium">{j.contacts?.name || "Unknown"}</p>
-                          <p className="text-xs text-muted-foreground">{j.journey_type} · {j.current_phase.replace(/_/g, " ")}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {j.is_paused && <Badge variant="outline" className="text-xs text-amber-600">Paused</Badge>}
-                        <Badge variant="secondary" className="text-xs">{j.send_mode}</Badge>
-                        {j.next_email_at && (
-                          <span className="text-[10px] text-muted-foreground">
-                            Next: {new Date(j.next_email_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <JourneysTab journeys={journeys || []} />
           ),
 
           /* ═══ ANALYTICS (Analytics + Activity merged) ═══ */
