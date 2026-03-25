@@ -17,6 +17,7 @@ import { EmailMarketingTabs } from "@/components/newsletters/EmailMarketingTabs"
 import { CampaignsTab } from "@/components/newsletters/CampaignsTab";
 import { JourneysTab } from "@/components/newsletters/JourneysTab";
 import { SettingsTab } from "@/components/newsletters/SettingsTab";
+import { PipelineCard } from "@/components/newsletters/PipelineCard";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const phases = ["lead", "active", "under_contract", "past_client", "dormant"];
@@ -51,6 +52,21 @@ export default async function NewsletterDashboard() {
   }).sort((a: any, b: any) => (b.newsletter_intelligence?.engagement_score || 0) - (a.newsletter_intelligence?.engagement_score || 0));
 
   const suppressedEmails = suppressedRaw || [];
+
+  // Build pipeline drilldown data from journeys
+  const buyerContactsByPhase: Record<string, any[]> = {};
+  const sellerContactsByPhase: Record<string, any[]> = {};
+  for (const j of (journeys || [])) {
+    const contact = Array.isArray(j.contacts) ? j.contacts[0] : j.contacts;
+    if (!contact) continue;
+    const entry = { id: j.contact_id, name: contact.name, phone: null as string | null, email: contact.email, type: contact.type, newsletter_intelligence: null };
+    // Try to find intelligence from hotLeadsRaw
+    const found = (hotLeadsRaw || []).find((c: any) => c.id === j.contact_id);
+    if (found) { entry.newsletter_intelligence = found.newsletter_intelligence; entry.phone = found.phone; }
+    const map = j.journey_type === "buyer" ? buyerContactsByPhase : sellerContactsByPhase;
+    if (!map[j.current_phase]) map[j.current_phase] = [];
+    map[j.current_phase].push(entry);
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -130,30 +146,20 @@ export default async function NewsletterDashboard() {
                 </Card>
               </div>
 
-              {/* Pipeline Row */}
+              {/* Pipeline Row — Clickable drilldown */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardContent className="p-5">
-                    <h3 className="text-base font-semibold mb-4">🏠 Buyer Pipeline</h3>
-                    {phases.map((p) => (
-                      <div key={p} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                        <span className="text-sm">{phaseIcons[p]} {phaseLabels[p]}</span>
-                        <span className="text-sm font-semibold text-primary">{dashboard.buyerPhases[p] || 0}</span>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-5">
-                    <h3 className="text-base font-semibold mb-4">🏗️ Seller Pipeline</h3>
-                    {phases.map((p) => (
-                      <div key={p} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                        <span className="text-sm">{phaseIcons[p]} {phaseLabels[p]}</span>
-                        <span className="text-sm font-semibold text-primary">{dashboard.sellerPhases[p] || 0}</span>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
+                <PipelineCard
+                  title="🏠 Buyer Pipeline"
+                  type="buyer"
+                  phaseCounts={dashboard.buyerPhases}
+                  contactsByPhase={buyerContactsByPhase}
+                />
+                <PipelineCard
+                  title="🏗️ Seller Pipeline"
+                  type="seller"
+                  phaseCounts={dashboard.sellerPhases}
+                  contactsByPhase={sellerContactsByPhase}
+                />
               </div>
             </div>
           ),
