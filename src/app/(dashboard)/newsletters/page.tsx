@@ -162,7 +162,7 @@ export default async function NewsletterDashboard() {
           ),
 
           /* ═══ CONTACTS (Journeys + Schedule merged) ═══ */
-          contacts: (
+          journeys: (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Contact Journeys ({journeys?.length || 0})</h3>

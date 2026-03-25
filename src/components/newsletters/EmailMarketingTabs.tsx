@@ -7,7 +7,7 @@ import {
   Bot,
   Megaphone,
   BarChart3,
-  Users,
+  Route,
   Settings2,
 } from "lucide-react";
 
@@ -24,7 +24,7 @@ type Props = {
     overview: React.ReactNode;
     queue: React.ReactNode;
     campaigns: React.ReactNode;
-    contacts: React.ReactNode;
+    journeys: React.ReactNode;
     analytics: React.ReactNode;
     settings: React.ReactNode;
   };
@@ -37,7 +37,7 @@ export function EmailMarketingTabs({ queueCount, children }: Props) {
     { id: "overview", label: "Overview", icon: <LayoutDashboard className="w-4 h-4" /> },
     { id: "queue", label: "AI Agent", icon: <Bot className="w-4 h-4" />, badge: queueCount > 0 ? queueCount : undefined },
     { id: "campaigns", label: "Campaigns", icon: <Megaphone className="w-4 h-4" /> },
-    { id: "contacts", label: "Contacts", icon: <Users className="w-4 h-4" /> },
+    { id: "journeys", label: "Journeys", icon: <Route className="w-4 h-4" /> },
     { id: "analytics", label: "Analytics", icon: <BarChart3 className="w-4 h-4" /> },
     { id: "settings", label: "Settings", icon: <Settings2 className="w-4 h-4" /> },
   ];
@@ -77,7 +77,7 @@ export function EmailMarketingTabs({ queueCount, children }: Props) {
         {activeTab === "overview" && children.overview}
         {activeTab === "queue" && children.queue}
         {activeTab === "campaigns" && children.campaigns}
-        {activeTab === "contacts" && children.contacts}
+        {activeTab === "journeys" && children.journeys}
         {activeTab === "analytics" && children.analytics}
         {activeTab === "settings" && children.settings}
       </div>
