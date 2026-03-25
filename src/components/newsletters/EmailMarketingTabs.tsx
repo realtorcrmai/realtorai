@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   LayoutDashboard,
-  MailOpen,
+  Bot,
   Megaphone,
   BarChart3,
   Users,
@@ -35,7 +35,7 @@ export function EmailMarketingTabs({ queueCount, children }: Props) {
 
   const tabs: Tab[] = [
     { id: "overview", label: "Overview", icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: "queue", label: "Queue", icon: <MailOpen className="w-4 h-4" />, badge: queueCount > 0 ? queueCount : undefined },
+    { id: "queue", label: "AI Agent", icon: <Bot className="w-4 h-4" />, badge: queueCount > 0 ? queueCount : undefined },
     { id: "campaigns", label: "Campaigns", icon: <Megaphone className="w-4 h-4" /> },
     { id: "contacts", label: "Contacts", icon: <Users className="w-4 h-4" /> },
     { id: "analytics", label: "Analytics", icon: <BarChart3 className="w-4 h-4" /> },
