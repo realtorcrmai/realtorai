@@ -608,6 +608,9 @@ async function autoEnrollAndWelcome(
       auto_generated: true,
       area,
       budget,
+      reasoning: area
+        ? `Welcome email for new ${contactType} lead interested in ${area}${budget ? ` with budget $${budget}` : ""}. Using personalized template with area-specific content.`
+        : `Welcome email for new ${contactType} lead. Using generic welcome template — no area preferences specified yet.`,
     },
   });
 }

@@ -91,6 +91,7 @@ interface GeneratedContent {
   stats?: Array<{ label: string; value: string; change?: string }>;
   tips?: string[];
   funFact?: string;
+  reasoning?: string;
 }
 
 export async function generateNewsletterContent(
@@ -181,10 +182,11 @@ Rules:
   "highlights": ["Optional bullet points for key info"],
   "stats": [{"label": "Stat name", "value": "$X", "change": "+X%"}],
   "tips": ["Optional tips or advice"],
-  "funFact": "Optional interesting neighbourhood fact"
+  "funFact": "Optional interesting neighbourhood fact",
+  "reasoning": "1-2 sentences explaining WHY you chose this content, tone, and angle for this specific contact. Reference their click history, preferences, or journey phase."
 }
 
-Only include fields relevant to the email type. Omit optional fields if not needed.`;
+Always include the "reasoning" field. The realtor sees this to understand why the AI chose this content. Omit other optional fields if not needed.`;
 }
 
 function buildUserPrompt(context: NewsletterContext): string {

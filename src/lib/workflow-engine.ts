@@ -435,6 +435,27 @@ export async function executeStep(
         `[workflow-engine] Send governor blocked for contact ${contact.id}: ${governorResult.reason}`,
         governorResult.adjustments,
       );
+
+      // Write suppressed record so it's visible in AI Agent tab
+      try {
+        await supabase.from("newsletters").insert({
+          contact_id: contact.id,
+          subject: `[Suppressed] ${step.action_type} — ${step.template_id || "auto"}`,
+          email_type: step.template_id || step.action_type,
+          status: "suppressed",
+          ai_context: {
+            suppression_reason: governorResult.reason,
+            adjustments: governorResult.adjustments,
+            suggested_delay_hours: governorResult.suggestedDelay,
+            journey_phase: journeyPhase,
+            contact_type: contact.type,
+            suppressed_at: new Date().toISOString(),
+          },
+        });
+      } catch {
+        // Don't fail the workflow if suppression logging fails
+      }
+
       return { success: false, error: `Send governor: ${governorResult.reason}` };
     }
   }
