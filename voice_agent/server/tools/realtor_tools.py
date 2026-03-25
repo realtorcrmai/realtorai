@@ -195,6 +195,56 @@ REALTOR_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "navigate_to",
+            "description": "Navigate to a page in the ListingFlow CRM. Use this when the user wants to go to a specific page, view, or section of the app.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "page": {
+                        "type": "string",
+                        "description": "The page to navigate to. Examples: dashboard, listings, contacts, showings, calendar, tasks, pipeline, newsletters, automations, content, search, workflow, import, forms, settings, inbox",
+                        "enum": [
+                            "dashboard", "listings", "contacts", "showings", "calendar",
+                            "tasks", "pipeline", "newsletters", "newsletters/queue",
+                            "newsletters/analytics", "newsletters/guide", "automations",
+                            "automations/templates", "content", "search", "workflow",
+                            "import", "forms", "forms/templates", "contacts/segments",
+                            "settings", "inbox",
+                        ],
+                    },
+                    "id": {
+                        "type": "string",
+                        "description": "Optional record ID to navigate to a specific detail page (e.g., a specific contact or listing)",
+                    },
+                    "tab": {
+                        "type": "string",
+                        "description": "Optional tab to open on the detail page (e.g., intelligence, activity, deals for contacts)",
+                    },
+                },
+                "required": ["page"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_crm_help",
+            "description": "Get help about ListingFlow CRM features, workflows, and how to use the app. Use when the user asks 'how do I...', 'where is...', 'what does X do'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "topic": {
+                        "type": "string",
+                        "description": "The topic to get help on. Examples: listing workflow, forms, newsletters, contacts, showings, compliance, FINTRAC",
+                    },
+                },
+                "required": ["topic"],
+            },
+        },
+    },
 ]
 
 
@@ -308,6 +358,171 @@ async def handle_realtor_tool(tool_name: str, args: dict, realtor_id: str = "R00
                 realtor_id=realtor_id,
             )
             result = {"messages": history, "count": len(history)}
+
+        # ── Local tools (no API call) ─────────────────────────────────────
+
+        elif tool_name == "navigate_to":
+            page = args.get("page", "dashboard")
+            record_id = args.get("id", "")
+            tab = args.get("tab", "")
+
+            routes = {
+                "dashboard": "/",
+                "listings": "/listings",
+                "contacts": "/contacts",
+                "showings": "/showings",
+                "calendar": "/calendar",
+                "tasks": "/tasks",
+                "pipeline": "/pipeline",
+                "newsletters": "/newsletters",
+                "newsletters/queue": "/newsletters/queue",
+                "newsletters/analytics": "/newsletters/analytics",
+                "newsletters/guide": "/newsletters/guide",
+                "automations": "/automations",
+                "automations/templates": "/automations/templates",
+                "content": "/content",
+                "search": "/search",
+                "workflow": "/workflow",
+                "import": "/import",
+                "forms": "/forms",
+                "forms/templates": "/forms/templates",
+                "contacts/segments": "/contacts/segments",
+                "settings": "/settings",
+                "inbox": "/inbox",
+            }
+
+            path = routes.get(page, "/")
+            if record_id:
+                path = f"/{page}/{record_id}"
+            if tab:
+                path += f"?tab={tab}"
+
+            result = {
+                "action": "navigate",
+                "path": path,
+                "page_name": page.replace("/", " → ").title(),
+                "message": f"Navigating to {page.replace('/', ' → ').title()}",
+            }
+
+        elif tool_name == "get_crm_help":
+            topic = args.get("topic", "").lower()
+
+            knowledge_base = {
+                "listing workflow": (
+                    "ListingFlow uses an 8-phase listing workflow: "
+                    "Phase 1 — Seller Intake (FINTRAC identity, property details, commissions, showing instructions); "
+                    "Phase 2 — Data Enrichment (BC Geocoder, ParcelMap BC, LTSA, BC Assessment); "
+                    "Phase 3 — CMA Analysis (comparable market analysis); "
+                    "Phase 4 — Pricing & Review (list price, price lock, marketing tier); "
+                    "Phase 5 — Form Generation (12 BCREA forms auto-filled via Python server); "
+                    "Phase 6 — E-Signature (DocuSign envelope tracking); "
+                    "Phase 7 — MLS Preparation (Claude AI remarks, photo management); "
+                    "Phase 8 — MLS Submission (manual submission). "
+                    "Navigate to a listing and click 'Workflow' to advance phases."
+                ),
+                "forms": (
+                    "ListingFlow generates 12 BCREA forms automatically from listing data: "
+                    "DORTS, MLC, PDS, FINTRAC, PRIVACY, C3, DRUP, MLS_INPUT, MKTAUTH, AGENCY, C3CONF, FAIRHSG. "
+                    "Forms are generated in Phase 5 via the Python ListingFlow server at port 8767. "
+                    "Go to a listing's workflow, reach Phase 5, and click 'Generate Forms'. "
+                    "You can also browse form templates at /forms/templates."
+                ),
+                "newsletters": (
+                    "The AI Newsletter Engine sends 6 email types: "
+                    "New Listing Alert, Market Update, Just Sold, Open House Invite, Neighbourhood Guide, Home Anniversary. "
+                    "Drafts are AI-generated by Claude and queued for your approval at /newsletters/queue. "
+                    "Analytics (opens, clicks, attribution) are at /newsletters/analytics. "
+                    "Contact journeys automate lifecycle-driven email sequences for buyers and sellers. "
+                    "Emails are sent via Resend and every click is tracked to build contact intelligence."
+                ),
+                "contacts": (
+                    "Contacts are buyers or sellers stored in the CRM. "
+                    "Each contact has a name, phone, email, type (buyer/seller), preferred channel (SMS/WhatsApp/email), and notes. "
+                    "View contacts at /contacts. Click a contact to see their communication timeline, journey status, and AI intelligence. "
+                    "Contact segments (audience groups) are at /contacts/segments — use them to bulk-enroll contacts into automation workflows."
+                ),
+                "showings": (
+                    "Showings are managed end-to-end: buyer agent submits a request → seller is notified by SMS/WhatsApp → seller replies YES/NO → "
+                    "confirmation triggers lockbox code delivery and Google Calendar event creation. "
+                    "View all showings at /showings. Each showing has a status: pending, confirmed, denied, completed. "
+                    "Messages to buyer agents and sellers are logged in the communication timeline."
+                ),
+                "compliance": (
+                    "FINTRAC identity verification is collected for sellers in Phase 1 (full name, DOB, citizenship, ID type/number/expiry). "
+                    "CASL consent is tracked as a form field on contacts. "
+                    "Note: FINTRAC for buyers, Receipt of Funds reports, and Suspicious Transaction reports are not yet implemented. "
+                    "Record retention policies are not yet enforced in the system."
+                ),
+                "fintrac": (
+                    "FINTRAC identity verification is collected for sellers during Phase 1 — Seller Intake. "
+                    "Required fields: full legal name, date of birth, citizenship, ID type (passport/driver's licence/etc.), ID number, and expiry date. "
+                    "This data is stored in the seller_identities table. "
+                    "Buyer FINTRAC collection is not yet implemented."
+                ),
+                "content engine": (
+                    "The AI Content Engine generates marketing assets for listings using Claude AI and Kling AI. "
+                    "Claude generates MLS public remarks (max 500 chars), REALTOR remarks (max 500 chars), Instagram captions, and Kling prompts. "
+                    "Kling AI generates Image-to-Video (hero photo → 4K video for Reels) and Text-to-Image (prompt → 8K image for Instagram). "
+                    "Access the content engine at /content. Select a listing to start generating assets."
+                ),
+                "pipeline": (
+                    "The pipeline view shows all listings grouped by status: active, pending, sold. "
+                    "Each card shows the listing address, price, current workflow phase, and key dates. "
+                    "Use /pipeline for a visual deal-stage overview. "
+                    "Update a listing's status via the listing detail page or by voice command."
+                ),
+                "automations": (
+                    "Automations (workflows) are visual email/SMS sequences built with the React Flow workflow builder at /automations. "
+                    "Each workflow has steps: ai_email (Claude-generated), auto_email (template-based), delay, condition. "
+                    "Contacts are enrolled individually or in bulk via segments. "
+                    "Browse and manage reusable email templates at /automations/templates."
+                ),
+                "import": (
+                    "Import contacts in bulk from Excel or CSV at /import. "
+                    "Required columns: name, phone or email, type (buyer/seller). "
+                    "Optional: preferred channel, notes. "
+                    "After import, contacts can be immediately enrolled into journey workflows."
+                ),
+                "calendar": (
+                    "The calendar at /calendar shows your Google Calendar events alongside CRM showing events. "
+                    "Connect your Google account to sync availability. "
+                    "Confirmed showings automatically create Google Calendar events. "
+                    "Use the calendar to check availability before scheduling showings."
+                ),
+                "settings": (
+                    "Settings at /settings allow you to configure: Google Calendar integration, "
+                    "Twilio SMS/WhatsApp phone numbers, Resend email sender address, "
+                    "demo credentials, and notification preferences."
+                ),
+                "inbox": (
+                    "The inbox at /inbox aggregates inbound messages from SMS, WhatsApp, and email. "
+                    "Showing confirmations (YES/NO replies) are automatically processed by the Twilio webhook. "
+                    "Other inbound messages appear here for manual follow-up."
+                ),
+            }
+
+            # Find the best matching topic from the knowledge base
+            help_text = None
+            for key, text in knowledge_base.items():
+                if key in topic or topic in key:
+                    help_text = text
+                    break
+
+            # Fallback: partial word match
+            if not help_text:
+                for key, text in knowledge_base.items():
+                    if any(word in key for word in topic.split() if len(word) > 3):
+                        help_text = text
+                        break
+
+            if not help_text:
+                help_text = (
+                    f"I don't have specific help content for '{topic}'. "
+                    "Available topics: listing workflow, forms, newsletters, contacts, showings, "
+                    "compliance, FINTRAC, content engine, pipeline, automations, import, calendar, settings, inbox."
+                )
+
+            result = {"topic": topic, "help": help_text}
 
         else:
             result = {"error": f"Unknown tool: {tool_name}"}
