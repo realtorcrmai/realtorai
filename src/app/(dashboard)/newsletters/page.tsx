@@ -46,7 +46,7 @@ export default async function NewsletterDashboard() {
     supabase.from("listings").select("id, address, list_price, status").eq("status", "active").order("created_at", { ascending: false }).limit(10),
     supabase.from("contacts").select("id, name, phone, type, newsletter_intelligence").not("newsletter_intelligence", "is", null).order("created_at", { ascending: false }).limit(50),
     supabase.from("newsletters").select("id, subject, email_type, status, ai_context, contacts(name, type)").eq("status", "suppressed").order("created_at", { ascending: false }).limit(10),
-    supabase.from("newsletters").select("id, subject, email_type, status, sent_at, contact_id, contacts(name, type), newsletter_events(event_type)").eq("status", "sent").order("sent_at", { ascending: false }).limit(20),
+    supabase.from("newsletters").select("id, subject, email_type, status, sent_at, contact_id, html_body, contacts(name, type), newsletter_events(event_type, metadata, created_at)").eq("status", "sent").order("sent_at", { ascending: false }).limit(20),
   ]);
 
   // Filter hot leads: engagement score >= 60

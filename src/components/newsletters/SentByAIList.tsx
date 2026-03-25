@@ -16,6 +16,7 @@ type SentEmail = {
   sent_at: string | null;
   contact_id: string;
   contacts: any;
+  html_body?: string | null;
   events: { event_type: string; metadata?: any; created_at?: string }[];
 };
 
@@ -36,9 +37,24 @@ function getContactInfo(nl: SentEmail) {
   return { name: c?.name || "Unknown", type: c?.type || "buyer" };
 }
 
+function getResponseTime(sentAt: string | null, events: SentEmail["events"]): string | null {
+  if (!sentAt) return null;
+  const firstOpen = events.find(e => e.event_type === "opened");
+  if (!firstOpen?.created_at) return null;
+  const diffMs = new Date(firstOpen.created_at).getTime() - new Date(sentAt).getTime();
+  if (diffMs < 0) return null;
+  const diffMin = Math.round(diffMs / 60000);
+  if (diffMin < 1) return "<1 min";
+  if (diffMin < 60) return `${diffMin} min`;
+  const diffHr = Math.round(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h`;
+  return `${Math.round(diffHr / 24)}d`;
+}
+
 export function SentByAIList({ newsletters }: { newsletters: SentEmail[] }) {
   const [expandedContact, setExpandedContact] = useState<string | null>(null);
   const [expandedEmail, setExpandedEmail] = useState<string | null>(null);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
 
   // Group emails by contact
   const grouped = useMemo<ContactGroup[]>(() => {
@@ -305,11 +321,24 @@ export function SentByAIList({ newsletters }: { newsletters: SentEmail[] }) {
                                 )}
                               </div>
 
-                              {/* Preview button */}
+                              {/* Response time + Preview button */}
                               <div className="flex items-center gap-2 mt-3 pt-2 border-t border-border/50">
-                                <button className="flex items-center gap-1 text-[10px] px-2 py-1 rounded border border-border hover:bg-muted font-medium">
-                                  <ExternalLink className="h-2.5 w-2.5" /> Preview Email
-                                </button>
+                                {(() => {
+                                  const rt = getResponseTime(nl.sent_at, nl.events);
+                                  return rt ? (
+                                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                      <Clock className="h-2.5 w-2.5" /> Opened in {rt}
+                                    </span>
+                                  ) : null;
+                                })()}
+                                {nl.html_body && (
+                                  <button
+                                    onClick={() => setPreviewHtml(nl.html_body!)}
+                                    className="flex items-center gap-1 text-[10px] px-2 py-1 rounded border border-border hover:bg-muted font-medium ml-auto"
+                                  >
+                                    <ExternalLink className="h-2.5 w-2.5" /> Preview Email
+                                  </button>
+                                )}
                               </div>
                             </div>
                           )}
@@ -323,6 +352,27 @@ export function SentByAIList({ newsletters }: { newsletters: SentEmail[] }) {
           })}
         </div>
       </CardContent>
+
+      {/* Email Preview Modal */}
+      {previewHtml && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setPreviewHtml(null)}>
+          <div className="bg-background rounded-xl shadow-2xl w-[90vw] max-w-[700px] max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <h4 className="text-sm font-semibold">Email Preview</h4>
+              <button onClick={() => setPreviewHtml(null)} className="text-muted-foreground hover:text-foreground text-lg leading-none">&times;</button>
+            </div>
+            <div className="flex-1 overflow-auto p-1">
+              <iframe
+                srcDoc={previewHtml}
+                className="w-full border-0 rounded-b-xl"
+                style={{ minHeight: "500px", height: "70vh" }}
+                sandbox="allow-same-origin"
+                title="Email preview"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
