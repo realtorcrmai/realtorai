@@ -17,6 +17,7 @@ import {
   Settings2,
   ArrowRight,
 } from "lucide-react";
+import { DailyDigestCard } from "@/components/dashboard/DailyDigestCard";
 
 const phases = ["lead", "active", "under_contract", "past_client", "dormant"];
 
@@ -77,6 +78,9 @@ export default async function NewsletterDashboard() {
           </Link>
         </div>
       </div>
+
+      {/* AI Email Summary */}
+      <DailyDigestCard />
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
