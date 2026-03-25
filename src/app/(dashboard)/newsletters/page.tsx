@@ -21,6 +21,7 @@ import { PipelineCard } from "@/components/newsletters/PipelineCard";
 import { RelationshipsTab } from "@/components/newsletters/RelationshipsTab";
 import { SentByAIList } from "@/components/newsletters/SentByAIList";
 import { AIAgentQueue } from "@/components/newsletters/AIAgentQueue";
+import { HeldBackList } from "@/components/newsletters/HeldBackList";
 import { sendNewsletter, skipNewsletter, bulkApproveNewsletters } from "@/actions/newsletters";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -47,7 +48,7 @@ export default async function NewsletterDashboard() {
     supabase.from("workflows").select("id, name, slug, is_active, trigger_type").order("name"),
     supabase.from("listings").select("id, address, list_price, status").eq("status", "active").order("created_at", { ascending: false }).limit(10),
     supabase.from("contacts").select("id, name, phone, type, newsletter_intelligence").not("newsletter_intelligence", "is", null).order("created_at", { ascending: false }).limit(50),
-    supabase.from("newsletters").select("id, subject, email_type, status, ai_context, contacts(name, type)").eq("status", "suppressed").order("created_at", { ascending: false }).limit(10),
+    supabase.from("newsletters").select("id, subject, email_type, status, ai_context, contact_id, created_at, contacts(name, type, email, phone)").eq("status", "suppressed").order("created_at", { ascending: false }).limit(10),
     supabase.from("newsletters").select("id, subject, email_type, status, sent_at, contact_id, html_body, contacts(name, type), newsletter_events(event_type, metadata, created_at)").eq("status", "sent").order("sent_at", { ascending: false }).limit(20),
   ]);
 
@@ -190,25 +191,7 @@ export default async function NewsletterDashboard() {
               <SentByAIList newsletters={sentNewsletters as any} />
 
               {/* Suppressed Emails Section */}
-              <Card>
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold">🤚 Held Back by AI</h4>
-                    <Badge variant="secondary" className="text-xs">{suppressedEmails.length} suppressed</Badge>
-                  </div>
-                  {suppressedEmails.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-3">No suppressed emails. AI sent everything it planned.</p>
-                  ) : suppressedEmails.slice(0, 5).map((s: any) => (
-                    <div key={s.id} className="flex items-start gap-2 py-2 border-b border-border last:border-0">
-                      <span className="text-sm mt-0.5">🚫</span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">{(Array.isArray(s.contacts) ? s.contacts[0]?.name : s.contacts?.name) || "Unknown"} — {s.subject}</p>
-                        <p className="text-xs text-muted-foreground">{s.ai_context?.suppression_reason || "Frequency cap or low engagement"}</p>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+              <HeldBackList emails={suppressedEmails as any} />
             </div>
           ),
 
