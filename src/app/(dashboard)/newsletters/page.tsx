@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { DailyDigestCard } from "@/components/dashboard/DailyDigestCard";
 import { EmailMarketingTabs } from "@/components/newsletters/EmailMarketingTabs";
+import { CampaignsTab } from "@/components/newsletters/CampaignsTab";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const phases = ["lead", "active", "under_contract", "past_client", "dormant"];
@@ -108,57 +109,9 @@ export default async function NewsletterDashboard() {
             </div>
           ),
 
-          /* ═══ CAMPAIGNS (Templates + Blasts merged) ═══ */
+          /* ═══ CAMPAIGNS (Templates + Blasts) ═══ */
           campaigns: (
-            <div className="space-y-6">
-              {/* Templates */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Email Templates</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[
-                    { emoji: "📧", name: "Welcome", rate: "67%" },
-                    { emoji: "🏠", name: "Listing Alert", rate: "83%" },
-                    { emoji: "📊", name: "Market Update", rate: "31%" },
-                    { emoji: "🎉", name: "Just Sold", rate: "72%" },
-                    { emoji: "🏡", name: "Open House", rate: "75%" },
-                    { emoji: "🗺️", name: "Area Guide", rate: "45%" },
-                    { emoji: "🎂", name: "Anniversary", rate: "68%" },
-                    { emoji: "✨", name: "Luxury Showcase", rate: "—" },
-                  ].map((t) => (
-                    <Card key={t.name} className="cursor-pointer hover:border-primary/50 transition-colors">
-                      <CardContent className="p-4 text-center">
-                        <div className="text-2xl mb-2">{t.emoji}</div>
-                        <p className="text-sm font-medium">{t.name}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{t.rate} open rate</p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-
-              {/* Listing Blasts */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold">Listing Blasts</h3>
-                  <p className="text-xs text-muted-foreground">Send announcements to all agents</p>
-                </div>
-                {(!listings || listings.length === 0) ? (
-                  <Card><CardContent className="p-6 text-center text-muted-foreground text-sm">No active listings. Create a listing to blast to agents.</CardContent></Card>
-                ) : listings.map((l: any) => (
-                  <Card key={l.id} className="mb-2">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium">{l.address}</p>
-                          <p className="text-xs text-muted-foreground">{l.list_price ? `$${Number(l.list_price).toLocaleString()}` : "Price TBD"}</p>
-                        </div>
-                        <button className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium hover:bg-primary/90">📧 Send Blast</button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
+            <CampaignsTab listings={(listings || []) as any} />
           ),
 
           /* ═══ CONTACTS (Journeys + Schedule merged) ═══ */
