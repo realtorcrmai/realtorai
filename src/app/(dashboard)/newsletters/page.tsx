@@ -20,6 +20,8 @@ import { SettingsTab } from "@/components/newsletters/SettingsTab";
 import { PipelineCard } from "@/components/newsletters/PipelineCard";
 import { RelationshipsTab } from "@/components/newsletters/RelationshipsTab";
 import { SentByAIList } from "@/components/newsletters/SentByAIList";
+import { AIAgentQueue } from "@/components/newsletters/AIAgentQueue";
+import { sendNewsletter, skipNewsletter, bulkApproveNewsletters } from "@/actions/newsletters";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const phases = ["lead", "active", "under_contract", "past_client", "dormant"];
@@ -177,69 +179,12 @@ export default async function NewsletterDashboard() {
           /* ═══ AI AGENT ═══ */
           queue: (
             <div className="space-y-4">
-              {/* Header with bulk actions */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold">🤖 AI Agent Queue</h3>
-                  <p className="text-xs text-muted-foreground">{queue.length} emails drafted by AI — review, edit, or approve</p>
-                </div>
-                {queue.length > 0 && (
-                  <div className="flex gap-2">
-                    <button className="text-xs px-3 py-1.5 rounded-md bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">✓ Approve All ({queue.length})</button>
-                  </div>
-                )}
-              </div>
-
-              {/* Pending Drafts */}
-              {queue.length === 0 ? (
-                <Card><CardContent className="p-10 text-center"><div className="text-3xl mb-2">🤖</div><p className="text-sm font-medium">All caught up!</p><p className="text-xs text-muted-foreground mt-1">AI will generate new drafts as contacts progress through their journeys.</p></CardContent></Card>
-              ) : queue.map((n: any) => (
-                <Card key={n.id} className="overflow-hidden">
-                  <CardContent className="p-0">
-                    {/* Email header bar */}
-                    <div className="flex items-center justify-between p-4 border-b border-border">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                          {(n.contacts?.name || "?")[0]}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold">{n.contacts?.name || "Unknown"}</p>
-                          <p className="text-xs text-muted-foreground">{n.contacts?.type} · {n.email_type?.replace(/_/g, " ")}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 ml-3">
-                        <Badge variant="outline" className="text-[10px] capitalize">{n.email_type?.replace(/_/g, " ")}</Badge>
-                      </div>
-                    </div>
-                    {/* Subject + Preview */}
-                    <div className="p-4">
-                      <p className="text-sm font-medium mb-1">Subject: {n.subject}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-2">{n.html_body ? n.html_body.replace(/<[^>]*>/g, "").slice(0, 200) + "..." : "No preview available"}</p>
-                    </div>
-                    {/* AI Reasoning (collapsible) */}
-                    {n.ai_context && (
-                      <div className="px-4 pb-3">
-                        <details>
-                          <summary className="text-xs text-primary font-medium cursor-pointer hover:underline">🧠 Why this email?</summary>
-                          <div className="mt-2 text-xs text-muted-foreground bg-muted/50 rounded-md p-3 leading-relaxed">
-                            {n.ai_context.journey_phase && <span>Journey phase: <strong>{n.ai_context.journey_phase}</strong>. </span>}
-                            {n.ai_context.contact_type && <span>Contact type: <strong>{n.ai_context.contact_type}</strong>. </span>}
-                            {n.ai_context.auto_generated && <span>Auto-generated based on journey schedule. </span>}
-                            {n.ai_context.reasoning || "AI generated this email based on the contact's journey phase and engagement history."}
-                          </div>
-                        </details>
-                      </div>
-                    )}
-                    {/* Action buttons */}
-                    <div className="flex items-center gap-2 px-4 pb-4">
-                      <button className="text-xs px-3 py-1.5 rounded-md bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors">✓ Approve & Send</button>
-                      <button className="text-xs px-3 py-1.5 rounded-md border border-border text-foreground font-medium hover:bg-muted transition-colors">✎ Edit</button>
-                      <button className="text-xs px-3 py-1.5 rounded-md text-muted-foreground font-medium hover:text-foreground transition-colors">✕ Skip</button>
-                      <button className="text-xs px-3 py-1.5 rounded-md text-muted-foreground font-medium hover:text-foreground transition-colors ml-auto">👁 Preview</button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              <AIAgentQueue
+                drafts={queue as any}
+                sendAction={sendNewsletter}
+                skipAction={skipNewsletter}
+                bulkApproveAction={bulkApproveNewsletters}
+              />
 
               {/* AI Sent Emails — Expandable with engagement timeline */}
               <SentByAIList newsletters={sentNewsletters as any} />

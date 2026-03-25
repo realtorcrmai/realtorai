@@ -464,3 +464,16 @@ export async function getNewsletterAnalytics(days: number = 30) {
     byType,
   };
 }
+
+export async function bulkApproveNewsletters(ids: string[]) {
+  const results = [];
+  for (const id of ids) {
+    try {
+      const result = await sendNewsletter(id);
+      results.push({ id, ...result });
+    } catch (e) {
+      results.push({ id, error: String(e) });
+    }
+  }
+  return { results, sent: results.filter(r => r.success).length, failed: results.filter(r => r.error).length };
+}
