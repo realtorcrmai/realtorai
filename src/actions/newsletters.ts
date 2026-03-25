@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/resend";
+import { validatedSend } from "@/lib/validated-send";
 import { generateNewsletterContent, NewsletterContext } from "@/lib/newsletter-ai";
 import { render } from "@react-email/components";
 import { revalidatePath } from "next/cache";
@@ -280,9 +281,10 @@ export async function generateAndQueueNewsletter(
 export async function sendNewsletter(newsletterId: string) {
   const supabase = createAdminClient();
 
+  // Fetch newsletter with full contact data (including buyer_preferences and type)
   const { data: newsletter } = await supabase
     .from("newsletters")
-    .select("*, contacts(email, name)")
+    .select("*, contacts(id, email, name, type, buyer_preferences)")
     .eq("id", newsletterId)
     .single();
 
@@ -291,7 +293,37 @@ export async function sendNewsletter(newsletterId: string) {
   const contact = newsletter.contacts as any;
   if (!contact?.email) return { error: "Contact has no email" };
 
-  // Capture the current status so we can roll back if the API call fails
+  // Extract buyer preferences for validation pipeline
+  const buyerPrefs = (contact.buyer_preferences as Record<string, any>) || {};
+  const preferredAreas: string[] = buyerPrefs.areas || buyerPrefs.preferred_areas || [];
+  const budgetMin: number | null = buyerPrefs.budget_min || buyerPrefs.min_price || null;
+  const budgetMax: number | null = buyerPrefs.budget_max || buyerPrefs.max_price || null;
+
+  // Fetch journey data for trust level and phase
+  const { data: journey } = await supabase
+    .from("contact_journeys")
+    .select("current_phase, trust_level")
+    .eq("contact_id", contact.id)
+    .limit(1)
+    .maybeSingle();
+
+  const trustLevel = (journey as any)?.trust_level ?? 0;
+  const journeyPhase = journey?.current_phase || newsletter.journey_phase || undefined;
+
+  // Fetch recent subjects for deduplication check
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+  const { data: recentNewsletters } = await supabase
+    .from("newsletters")
+    .select("subject")
+    .eq("contact_id", contact.id)
+    .eq("status", "sent")
+    .gte("sent_at", sevenDaysAgo)
+    .order("sent_at", { ascending: false })
+    .limit(5);
+
+  const lastSubjects = recentNewsletters?.map((n) => n.subject).filter(Boolean) || [];
+
+  // Capture the current status so we can roll back if needed
   const previousStatus = newsletter.status as string;
 
   await supabase
@@ -300,38 +332,48 @@ export async function sendNewsletter(newsletterId: string) {
     .eq("id", newsletterId);
 
   try {
-    const { messageId } = await sendEmail({
-      to: contact.email,
+    const result = await validatedSend({
+      newsletterId,
+      contactId: contact.id,
+      contactName: contact.name,
+      contactEmail: contact.email,
+      contactType: contact.type || "buyer",
+      preferredAreas,
+      budgetMin,
+      budgetMax,
       subject: newsletter.subject,
-      html: newsletter.html_body,
-      tags: [
-        { name: "newsletter_id", value: newsletterId },
-        { name: "email_type", value: newsletter.email_type },
-        { name: "journey_phase", value: newsletter.journey_phase || "" },
-      ],
+      htmlBody: newsletter.html_body,
+      emailType: newsletter.email_type,
+      trustLevel,
+      lastSubjects,
+      journeyPhase,
     });
 
-    await supabase
-      .from("newsletters")
-      .update({
-        status: "sent",
-        sent_at: new Date().toISOString(),
-        resend_message_id: messageId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", newsletterId);
+    // validatedSend handles status updates for sent/blocked/deferred/regenerate internally.
+    // We only need to handle the communications log and rollback for non-sent outcomes.
 
-    // Log to communications
-    await supabase.from("communications").insert({
-      contact_id: newsletter.contact_id,
-      direction: "outbound",
-      channel: "email",
-      body: `Newsletter: ${newsletter.subject}`,
-      newsletter_id: newsletterId,
-    });
+    if (result.sent) {
+      // Log to communications
+      await supabase.from("communications").insert({
+        contact_id: newsletter.contact_id,
+        direction: "outbound",
+        channel: "email",
+        body: `Newsletter: ${newsletter.subject}`,
+        newsletter_id: newsletterId,
+      });
 
+      revalidatePath("/newsletters");
+      return { success: true, messageId: result.messageId };
+    }
+
+    // For non-sent results (queued, deferred, blocked, regenerate),
+    // validatedSend already updated the newsletter status.
     revalidatePath("/newsletters");
-    return { success: true, messageId };
+    return {
+      error: result.error || `Validation pipeline returned: ${result.action}`,
+      action: result.action,
+      validationResult: result.validationResult,
+    };
   } catch (e) {
     // Roll back status to what it was before we set it to "sending"
     await supabase

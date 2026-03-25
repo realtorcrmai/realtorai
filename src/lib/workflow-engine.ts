@@ -19,6 +19,7 @@ import {
   syncLeadStatusAndStage,
   filterInvalidTags,
 } from "@/lib/contact-consistency";
+import { checkSendGovernor } from "@/lib/send-governor";
 import type { Json } from "@/types/database";
 
 type Contact = {
@@ -377,10 +378,10 @@ export async function executeStep(
 ): Promise<{ success: boolean; result?: Record<string, unknown>; error?: string }> {
   const supabase = createAdminClient();
 
-  // Fetch contact
+  // Fetch contact (include newsletter_intelligence for send governor)
   const { data: contact } = await supabase
     .from("contacts")
-    .select("id, name, phone, email, type, pref_channel, lead_status, tags, stage_bar")
+    .select("id, name, phone, email, type, pref_channel, lead_status, tags, stage_bar, newsletter_intelligence")
     .eq("id", enrollment.contact_id)
     .single();
 
@@ -398,6 +399,45 @@ export async function executeStep(
   }
 
   const variables = buildVariableContext(contact as Contact, listing);
+
+  // For message-sending steps, check the send governor first
+  const isMessageStep = ["auto_sms", "auto_whatsapp", "auto_email"].includes(step.action_type);
+
+  if (isMessageStep) {
+    // Resolve journey phase from contact_journeys (default to lead_status)
+    let journeyPhase = contact.lead_status || "lead";
+    const { data: journey } = await supabase
+      .from("contact_journeys")
+      .select("current_phase")
+      .eq("contact_id", contact.id)
+      .eq("status", "active")
+      .limit(1)
+      .single();
+    if (journey?.current_phase) {
+      journeyPhase = journey.current_phase;
+    }
+
+    // Extract engagement data from newsletter_intelligence
+    const intel = (contact.newsletter_intelligence as Record<string, unknown>) || {};
+    const engagementScore = (typeof intel.engagement_score === "number" ? intel.engagement_score : 0);
+    const engagementTrend = (typeof intel.engagement_trend === "string" ? intel.engagement_trend : "stable");
+
+    const governorResult = await checkSendGovernor({
+      contactId: contact.id,
+      contactType: contact.type,
+      journeyPhase,
+      engagementScore,
+      engagementTrend,
+    });
+
+    if (!governorResult.allowed) {
+      console.log(
+        `[workflow-engine] Send governor blocked for contact ${contact.id}: ${governorResult.reason}`,
+        governorResult.adjustments,
+      );
+      return { success: false, error: `Send governor: ${governorResult.reason}` };
+    }
+  }
 
   // Execute based on action type
   switch (step.action_type) {

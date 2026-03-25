@@ -95,9 +95,12 @@ export async function POST(request: NextRequest) {
     // Classify click link
     let linkUrl: string | null = null;
     let linkType: string | null = null;
+    let scoreImpact = 0;
     if (eventType === "clicked" && data.click?.link) {
       linkUrl = data.click.link as string;
-      linkType = classifyLink(linkUrl);
+      const classification = classifyClick(linkUrl);
+      linkType = classification.type;
+      scoreImpact = classification.score_impact;
     }
 
     // Log event
@@ -113,12 +116,15 @@ export async function POST(request: NextRequest) {
         ip: data.click?.ipAddress,
         user_agent: data.click?.userAgent,
         email_type: newsletter.email_type,
+        ...(eventType === "clicked" && linkType
+          ? { click_classification: linkType, score_impact: scoreImpact }
+          : {}),
       },
     });
 
     // Update contact intelligence on engagement events
     if (eventType === "opened" || eventType === "clicked") {
-      await updateContactIntelligence(supabase, contactId, eventType, linkType, linkUrl);
+      await updateContactIntelligence(supabase, contactId, eventType, linkType, linkUrl, scoreImpact);
 
       // Emit agent events for AI evaluation
       try {
@@ -131,12 +137,13 @@ export async function POST(request: NextRequest) {
           linkUrl,
         });
 
-        // Detect high-intent clicks
-        if (linkType && ["showing", "cma", "contact_agent"].includes(linkType)) {
+        // Detect high-intent clicks (score_impact >= 30)
+        if (scoreImpact >= 30) {
           await emitEngagementEvent(contactId, "high_intent_click", {
             newsletterId: newsletterId,
             linkType,
             linkUrl,
+            scoreImpact,
           });
         }
       } catch {
@@ -178,17 +185,33 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function classifyLink(url: string): string {
+interface ClickClassification {
+  type: string;
+  score_impact: number;
+}
+
+const CLICK_CATEGORIES: { type: string; score_impact: number; patterns: string[] }[] = [
+  { type: "book_showing", score_impact: 30, patterns: ["/book-showing", "/schedule-viewing"] },
+  { type: "get_cma", score_impact: 30, patterns: ["/cma", "/home-value", "/what-is-my-home-worth"] },
+  { type: "mortgage_calc", score_impact: 20, patterns: ["/mortgage", "/calculator", "/pre-approval"] },
+  { type: "listing", score_impact: 15, patterns: ["/listing", "/property", "/homes/"] },
+  { type: "investment", score_impact: 15, patterns: ["/investment", "/rental", "/yield", "/cap-rate"] },
+  { type: "open_house_rsvp", score_impact: 15, patterns: ["/open-house", "/rsvp"] },
+  { type: "school_info", score_impact: 10, patterns: ["/school", "/education"] },
+  { type: "market_stats", score_impact: 10, patterns: ["/market", "/stats", "/report"] },
+  { type: "neighbourhood", score_impact: 10, patterns: ["/neighbourhood", "/neighborhood", "/area-guide"] },
+  { type: "price_drop", score_impact: 10, patterns: ["/price-drop", "/reduced"] },
+  { type: "forwarded", score_impact: 5, patterns: ["/forward", "/share"] },
+];
+
+function classifyClick(url: string): ClickClassification {
   const lower = url.toLowerCase();
-  if (lower.includes("/listings/") || lower.includes("listing")) return "listing";
-  if (lower.includes("/showings/") || lower.includes("showing") || lower.includes("book")) return "showing";
-  if (lower.includes("market") || lower.includes("report") || lower.includes("stats")) return "market_report";
-  if (lower.includes("school")) return "school_info";
-  if (lower.includes("neighbour") || lower.includes("neighborhood") || lower.includes("area")) return "neighbourhood";
-  if (lower.includes("cma") || lower.includes("valuation") || lower.includes("value")) return "cma";
-  if (lower.includes("contact") || lower.includes("call") || lower.includes("phone")) return "contact_agent";
-  if (lower.includes("unsubscribe")) return "unsubscribe";
-  return "other";
+  for (const category of CLICK_CATEGORIES) {
+    if (category.patterns.some((p) => lower.includes(p))) {
+      return { type: category.type, score_impact: category.score_impact };
+    }
+  }
+  return { type: "other", score_impact: 5 };
 }
 
 async function updateContactIntelligence(
@@ -196,7 +219,8 @@ async function updateContactIntelligence(
   contactId: string,
   eventType: string,
   linkType: string | null,
-  linkUrl: string | null
+  linkUrl: string | null,
+  scoreImpact: number = 5
 ) {
   const { data: contact } = await supabase
     .from("contacts")

@@ -19,7 +19,8 @@ export default auth((req) => {
     pathname.startsWith("/api/contacts/context") ||
     pathname.startsWith("/api/contacts/instructions") ||
     pathname.startsWith("/api/contacts/watchlist") ||
-    pathname.startsWith("/api/contacts/journey")
+    pathname.startsWith("/api/contacts/journey") ||
+    pathname.startsWith("/api/newsletters/edit")
   ) {
     return NextResponse.next();
   }
