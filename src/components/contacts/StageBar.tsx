@@ -94,14 +94,20 @@ export function StageBar({ contactId, contactType, currentStage, stageData }: St
         {/* Pipeline steps */}
         <div className="flex items-center gap-0">
           {pipelineStages.map((s, i) => {
-            const isCompleted = !isCold && currentIndex > i;
+            const isPastStage = !isCold && currentIndex > i;
             const isCurrent = !isCold && stage === s;
             const colors = STAGE_COLORS[s];
             const label = STAGE_LABELS[s];
             const completeness = getCompleteness(s);
             const hasData = stageData?.[s] && stageData[s].items.length > 0;
             const isExpanded = expandedStage === s;
-            const isClickableForData = (isCompleted || isCurrent) && hasData;
+
+            // A stage is only truly completed if it's a past stage AND all its subtasks are done.
+            // If subtask data exists but some items are missing, show as "in progress" (not green check).
+            const allSubtasksDone = !completeness || completeness.filled === completeness.total;
+            const isCompleted = isPastStage && allSubtasksDone;
+            const isIncomplete = isPastStage && !allSubtasksDone; // past stage with missing subtasks
+            const isClickableForData = (isPastStage || isCurrent) && hasData;
 
             return (
               <div key={s} className="flex items-center">
@@ -109,7 +115,10 @@ export function StageBar({ contactId, contactType, currentStage, stageData }: St
                 {i > 0 && (
                   <div
                     className={`h-0.5 w-4 sm:w-6 md:w-8 transition-colors duration-300 ${
-                      isCompleted || isCurrent ? "bg-emerald-400" : "bg-gray-200"
+                      isCompleted ? "bg-emerald-400"
+                        : isIncomplete ? "bg-amber-400"
+                        : isCurrent ? "bg-emerald-400"
+                        : "bg-gray-200"
                     }`}
                   />
                 )}
@@ -133,6 +142,8 @@ export function StageBar({ contactId, contactType, currentStage, stageData }: St
                       ${
                         isCompleted
                           ? "bg-emerald-500 text-white shadow-sm"
+                          : isIncomplete
+                          ? "bg-amber-500 text-white shadow-sm ring-2 ring-offset-1 ring-amber-300"
                           : isCurrent
                           ? `${colors.dot} text-white shadow-md ring-2 ring-offset-1 ring-indigo-300`
                           : "bg-gray-200 text-gray-400 group-hover:bg-gray-300"
@@ -142,6 +153,8 @@ export function StageBar({ contactId, contactType, currentStage, stageData }: St
                   >
                     {isCompleted ? (
                       <Check className="w-3.5 h-3.5" />
+                    ) : isIncomplete ? (
+                      <span className="text-[10px] font-bold">!</span>
                     ) : (
                       <span className="text-[10px] font-semibold">{i + 1}</span>
                     )}
@@ -156,6 +169,8 @@ export function StageBar({ contactId, contactType, currentStage, stageData }: St
                           ? `font-semibold ${colors.text}`
                           : isCompleted
                           ? "font-medium text-emerald-700"
+                          : isIncomplete
+                          ? "font-medium text-amber-600"
                           : "text-gray-400"
                       }
                     `}
@@ -164,7 +179,7 @@ export function StageBar({ contactId, contactType, currentStage, stageData }: St
                   </span>
 
                   {/* Data completeness indicator */}
-                  {completeness && (isCompleted || isCurrent) && (
+                  {completeness && (isPastStage || isCurrent) && (
                     <span
                       className={`
                         mt-0.5 text-[8px] font-medium leading-none
