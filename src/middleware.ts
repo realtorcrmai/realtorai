@@ -21,7 +21,8 @@ export default auth((req) => {
     pathname.startsWith("/api/contacts/watchlist") ||
     pathname.startsWith("/api/contacts/journey") ||
     pathname.startsWith("/api/newsletters/edit") ||
-    pathname.startsWith("/api/listings/blast")
+    pathname.startsWith("/api/listings/blast") ||
+    pathname.startsWith("/api/templates/preview")
   ) {
     return NextResponse.next();
   }

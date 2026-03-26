@@ -147,25 +147,12 @@ export function CampaignsTab({ listings, blastHistory = [] }: Props) {
                         <div className="bg-muted/50 rounded-md p-2 text-[10px] text-muted-foreground leading-relaxed">
                           {t.preview}
                         </div>
-                        {/* Mini email preview mockup */}
-                        <div className="mt-2 border border-border rounded-md overflow-hidden">
-                          <div className="bg-primary/5 px-2 py-1 flex items-center gap-1">
-                            <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                            <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                            <span className="text-[8px] text-muted-foreground ml-1">Preview</span>
-                          </div>
-                          <div className="p-2 space-y-1">
-                            <div className={`h-12 rounded ${t.id === "luxury_showcase" ? "bg-gray-800" : "bg-muted"}`} />
-                            <div className="flex gap-1">
-                              <div className="h-2 bg-primary/20 rounded flex-1" />
-                              <div className="h-2 bg-muted rounded w-1/3" />
-                            </div>
-                            <div className="h-1.5 bg-muted rounded w-2/3" />
-                            <div className="h-1.5 bg-muted rounded w-1/2" />
-                            <div className="h-5 bg-primary/20 rounded-sm w-1/3 mx-auto mt-1" />
-                          </div>
-                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); window.open(`/api/templates/preview?template=${t.id}`, "_blank"); }}
+                          className="mt-2 w-full flex items-center justify-center gap-1.5 text-xs px-3 py-2 rounded-md border border-border hover:bg-muted font-medium transition-colors"
+                        >
+                          <Eye className="h-3 w-3" /> Preview Full Email ↗
+                        </button>
                       </div>
                     ))}
                   </div>
