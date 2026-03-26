@@ -586,8 +586,9 @@ async function autoEnrollAndWelcome(
   const budgetMatch = notes?.match(/\$?([\d,]+)[Kk]?\s*[-\u2013]\s*\$?([\d,]+)[Kk]?/);
   const budget = budgetMatch ? `$${budgetMatch[1]}K - $${budgetMatch[2]}K` : null;
 
-  // Use Apple-quality block-based email builder with pre-send checks
-  const { assembleEmail, runPreSendChecks } = await import("@/lib/email-blocks");
+  // Use Apple-quality block-based email builder with pre-send checks + dynamic brand
+  const { assembleEmail, runPreSendChecks, getBrandConfig } = await import("@/lib/email-blocks");
+  const brand = await getBrandConfig();
   const isBuyer = journeyType === "buyer";
   let subject = isBuyer
     ? `Welcome! Let's find your dream home${area !== "Vancouver" ? " in " + area : ""}`
@@ -603,7 +604,7 @@ async function autoEnrollAndWelcome(
 
   const htmlBody = assembleEmail("welcome", {
     contact: { name: name || "there", firstName, type: contactType },
-    agent: { name: "Kunal", brokerage: "RE/MAX City Realty", phone: "604-555-0123", initials: "K" },
+    agent: brand,
     content: {
       subject,
       intro: introText,

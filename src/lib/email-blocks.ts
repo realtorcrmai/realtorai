@@ -446,6 +446,36 @@ ${renderedBlocks}
 </body></html>`;
 }
 
+// Default brand config — used when DB config not available
+const DEFAULT_BRAND = { name: "Kunal", brokerage: "RE/MAX City Realty", phone: "604-555-0123", initials: "K" };
+
+/**
+ * Get brand config from DB or use defaults.
+ * Caches for 5 minutes to avoid repeated DB calls.
+ */
+let brandCache: { data: typeof DEFAULT_BRAND; expires: number } | null = null;
+
+export async function getBrandConfig(): Promise<typeof DEFAULT_BRAND> {
+  if (brandCache && Date.now() < brandCache.expires) return brandCache.data;
+  try {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const supabase = createAdminClient();
+    const { data } = await supabase.from("realtor_agent_config").select("brand_config").eq("realtor_id", "demo").single();
+    if (data?.brand_config) {
+      const bc = data.brand_config as Record<string, string>;
+      const brand = {
+        name: bc.name || DEFAULT_BRAND.name,
+        brokerage: bc.brokerage || DEFAULT_BRAND.brokerage,
+        phone: bc.phone || DEFAULT_BRAND.phone,
+        initials: (bc.name || DEFAULT_BRAND.name)[0],
+      };
+      brandCache = { data: brand, expires: Date.now() + 300000 };
+      return brand;
+    }
+  } catch {}
+  return DEFAULT_BRAND;
+}
+
 /**
  * Quick helper — build email with minimal input.
  * Used by seed script and workflow engine.
@@ -460,13 +490,13 @@ export function buildEmailFromType(
 ): string {
   return assembleEmail(emailType, {
     contact: { name: contactName, firstName: contactName.split(" ")[0], type: contactType },
-    agent: { name: "Kunal", brokerage: "RE/MAX City Realty", phone: "604-555-0123", initials: "K" },
+    agent: DEFAULT_BRAND,
     content: { subject, intro: bodyText, body: "", ctaText },
   });
 }
 
 /**
- * Run text pipeline on content before rendering.
+ * Run text pipeline + quality scoring on content before rendering.
  * Used by all send paths except sendNewsletter (which has its own pipeline call).
  * Fails silently — never blocks the caller.
  */
@@ -477,7 +507,11 @@ export async function runPreSendChecks(
   contactName: string,
   contactType: string,
   emailType: string,
-): Promise<{ subject: string; body: string; warnings: string[] }> {
+): Promise<{ subject: string; body: string; warnings: string[]; qualityScore?: number }> {
+  let warnings: string[] = [];
+  let qualityScore: number | undefined;
+
+  // Text pipeline
   try {
     const { runTextPipeline } = await import("@/lib/text-pipeline");
     const result = await runTextPipeline({
@@ -494,8 +528,51 @@ export async function runPreSendChecks(
     if (result.blocked) {
       console.warn(`[pre-send] Blocked for ${contactName}: ${result.blockReason}`);
     }
-    return { subject: result.subject, body: result.intro, warnings: result.warnings };
-  } catch {
-    return { subject, body, warnings: [] };
-  }
+    subject = result.subject;
+    body = result.intro;
+    warnings = result.warnings;
+  } catch {}
+
+  // Quality scoring
+  try {
+    const { scoreEmailQuality } = await import("@/lib/quality-pipeline");
+    const score = await scoreEmailQuality({
+      subject,
+      intro: body,
+      body: "",
+      ctaText: "",
+      emailType,
+      contactName,
+      contactType,
+    });
+    qualityScore = score.overall;
+    if (score.overall < 4) {
+      console.warn(`[pre-send] Low quality (${score.overall}/10) for ${contactName}: ${score.feedback}`);
+      warnings.push(`Quality score ${score.overall}/10 — ${score.suggestions.join("; ")}`);
+    }
+  } catch {}
+
+  return { subject, body, warnings, qualityScore };
+}
+
+/**
+ * Generate plain text version from HTML for email clients that don't render HTML.
+ */
+export function generatePlainText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/tr>/gi, "\n")
+    .replace(/<\/td>/gi, " | ")
+    .replace(/<a[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/gi, "$2 ($1)")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#\d+;/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }

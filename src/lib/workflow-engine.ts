@@ -211,8 +211,9 @@ async function executeAutoMessage(
     }
 
     try {
-      // Run pre-send text checks + build Apple-quality HTML
-      const { assembleEmail, runPreSendChecks } = await import("@/lib/email-blocks");
+      // Run pre-send checks + build Apple-quality HTML with dynamic brand
+      const { assembleEmail, runPreSendChecks, getBrandConfig } = await import("@/lib/email-blocks");
+      const brand = await getBrandConfig();
       const checks = await runPreSendChecks(subject || step.name, body, contact.id, contact.name, contact.type, step.template_id || "welcome");
       subject = checks.subject;
       body = checks.body;
@@ -220,7 +221,7 @@ async function executeAutoMessage(
       const emailSubject = subject || step.name;
       const htmlBody = assembleEmail(emailType, {
         contact: { name: contact.name, firstName: contact.name?.split(" ")[0] || "there", type: contact.type },
-        agent: { name: "Kunal", brokerage: "RE/MAX City Realty", phone: "604-555-0123", initials: "K" },
+        agent: brand,
         content: { subject: emailSubject, intro: body, body: "", ctaText: "View Details" },
       });
 

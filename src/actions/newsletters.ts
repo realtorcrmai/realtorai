@@ -412,10 +412,10 @@ export async function sendNewsletter(newsletterId: string) {
         return { error: `Quality check failed (${qualityScore.overall}/10): ${decision.reason}`, action: "blocked" };
       }
 
-      // Note: if decision is "regenerate", we still send for now
-      // Future: implement auto-regeneration loop
+      // Auto-regeneration: if score is low, mark for realtor review instead of sending
       if (decision.action === "regenerate") {
         await supabase.from("newsletters").update({
+          status: "draft", // Keep as draft — realtor should review low-quality emails
           ai_context: {
             ...((newsletter.ai_context as object) || {}),
             quality_warning: true,
@@ -423,6 +423,8 @@ export async function sendNewsletter(newsletterId: string) {
             quality_suggestions: qualityScore.suggestions,
           },
         }).eq("id", newsletterId);
+        revalidatePath("/newsletters");
+        return { error: `Quality too low (${qualityScore.overall}/10) — kept as draft for review. ${qualityScore.suggestions.join("; ")}`, action: "regenerate" };
       }
     } catch {
       // Don't block sending if quality scoring fails
@@ -572,4 +574,21 @@ export async function bulkApproveNewsletters(ids: string[]) {
     }
   }
   return { results, sent: results.filter(r => r.success).length, failed: results.filter(r => r.error).length };
+}
+
+export async function sendListingBlast(listingId: string, _template: string) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  try {
+    const res = await fetch(`${appUrl}/api/listings/blast`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingId, sendToAllAgents: true }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { error: data.error || "Blast failed" };
+    revalidatePath("/newsletters");
+    return { success: true, sent: data.sent, failed: data.failed };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Blast failed" };
+  }
 }

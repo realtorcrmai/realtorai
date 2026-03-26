@@ -94,8 +94,10 @@ export async function POST(req: Request) {
     if (listing.square_feet) listingDetails.push(`${Number(listing.square_feet).toLocaleString()} sqft`);
     const detailsStr = listingDetails.join(" · ");
 
-    // Use Apple-quality block-based email builder
-    const { assembleEmail } = await import("@/lib/email-blocks");
+    // Run pre-send checks + build Apple-quality HTML
+    const { assembleEmail, runPreSendChecks } = await import("@/lib/email-blocks");
+    const checks = await runPreSendChecks(subject, intro, "blast", "Fellow Agent", "agent", "listing_alert");
+    const checkedIntro = checks.body || intro;
     const html = assembleEmail("listing_alert", {
       contact: { name: "Fellow Agent", firstName: "Fellow Agent", type: "agent" },
       agent: {
@@ -104,7 +106,7 @@ export async function POST(req: Request) {
         phone: brand.phone || "604-555-0123",
         initials: (brand.realtorName || "K")[0],
       },
-      content: { subject, intro, body: "", ctaText: "Schedule a Showing" },
+      content: { subject: checks.subject || subject, intro: checkedIntro, body: "", ctaText: "Schedule a Showing" },
       listing: {
         address,
         area: listing.city || "Vancouver",
