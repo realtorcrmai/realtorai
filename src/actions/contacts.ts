@@ -586,14 +586,23 @@ async function autoEnrollAndWelcome(
   const budgetMatch = notes?.match(/\$?([\d,]+)[Kk]?\s*[-\u2013]\s*\$?([\d,]+)[Kk]?/);
   const budget = budgetMatch ? `$${budgetMatch[1]}K - $${budgetMatch[2]}K` : null;
 
-  // Use email builder for consistent, branded, CASL-compliant emails
-  const { buildWelcomeEmail } = await import("@/lib/email-builder");
-  const { subject, html: htmlBody } = buildWelcomeEmail({
-    firstName,
-    contactType: journeyType as "buyer" | "seller",
-    area,
-    budget: budget || undefined,
-    contactId,
+  // Use Apple-quality block-based email builder
+  const { assembleEmail } = await import("@/lib/email-blocks");
+  const isBuyer = journeyType === "buyer";
+  const subject = isBuyer
+    ? `Welcome! Let's find your dream home${area !== "Vancouver" ? " in " + area : ""}`
+    : `Let's get your home sold — here's the plan`;
+  const htmlBody = assembleEmail("welcome", {
+    contact: { name: name || "there", firstName, type: contactType },
+    agent: { name: "Kunal", brokerage: "RE/MAX City Realty", phone: "604-555-0123", initials: "K" },
+    content: {
+      subject,
+      intro: isBuyer
+        ? `I'm excited to help you find your perfect home${area !== "Vancouver" ? " in " + area : ""}. I'll be sending you personalized listing alerts, neighbourhood guides, and market updates${budget ? " matched to your " + budget + " budget" : ""}.`
+        : `Thank you for considering me to help sell your property. I'll keep you updated with showing reports, market data, and comparable sales to ensure we get you the best price.`,
+      body: "Feel free to reply to this email anytime — I'm here to help!",
+      ctaText: isBuyer ? "View Listings" : "Get Started",
+    },
   });
 
   await supabase.from("newsletters").insert({

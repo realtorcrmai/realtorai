@@ -69,51 +69,35 @@ export async function GET(req: Request) {
     // Send digest email via Resend to realtor
     const realtorEmail = process.env.AGENT_EMAIL || "demo@realestatecrm.com";
 
-    const hotLeadRows = digest.hot_leads
-      .map(
-        (l) =>
-          `<tr><td style="padding:8px 12px;border-bottom:1px solid #eee">${l.name}</td><td style="padding:8px 12px;border-bottom:1px solid #eee">${l.type}</td><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600">${l.score}</td></tr>`
-      )
-      .join("");
+    // Build Apple-quality digest email
+    const F = "-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Helvetica Neue',sans-serif";
+    const hotLeadRows = digest.hot_leads.map((l: any) =>
+      `<tr><td style="padding:10px 0;border-bottom:1px solid #f0f0f0"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px;font-weight:500;color:#1d1d1f">${l.name}</div></div></td><td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:12px;color:#86868b">${l.type}</td><td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:${l.score >= 70 ? "#dc2626" : l.score >= 50 ? "#f59e0b" : "#1d1d1f"}">${l.score}</td></tr>`
+    ).join("");
 
-    const digestHtml = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f4f2ff">
-  <div style="max-width:600px;margin:0 auto;padding:32px 20px">
-    <div style="background:#fff;border-radius:13px;padding:32px;box-shadow:0 2px 12px rgba(79,53,210,.08)">
-      <h1 style="margin:0 0 4px;font-size:22px;color:#4f35d2">ListingFlow Daily Digest</h1>
-      <p style="margin:0 0 24px;color:#888;font-size:14px">${digest.date}</p>
-
-      <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
-        <tr>
-          <td style="text-align:center;padding:16px;background:#f8f7ff;border-radius:8px">
-            <div style="font-size:28px;font-weight:700;color:#4f35d2">${digest.emails_sent}</div>
-            <div style="font-size:12px;color:#666;margin-top:4px">Emails Sent</div>
-          </td>
-          <td style="width:8px"></td>
-          <td style="text-align:center;padding:16px;background:#f8f7ff;border-radius:8px">
-            <div style="font-size:28px;font-weight:700;color:#4f35d2">${digest.open_rate}%</div>
-            <div style="font-size:12px;color:#666;margin-top:4px">Open Rate</div>
-          </td>
-          <td style="width:8px"></td>
-          <td style="text-align:center;padding:16px;background:#f8f7ff;border-radius:8px">
-            <div style="font-size:28px;font-weight:700;color:#4f35d2">${digest.clicks_today}</div>
-            <div style="font-size:12px;color:#666;margin-top:4px">Clicks</div>
-          </td>
-        </tr>
-      </table>
-
-      ${digest.pending_drafts > 0 ? `<div style="background:#fff7ed;border-left:4px solid #f59e0b;padding:12px 16px;border-radius:0 8px 8px 0;margin-bottom:24px"><strong style="color:#b45309">${digest.pending_drafts} draft${digest.pending_drafts > 1 ? "s" : ""} pending approval</strong><br><span style="font-size:13px;color:#92400e">Review in the approval queue to keep your pipeline moving.</span></div>` : ""}
-
-      ${digest.hot_leads.length > 0 ? `<h2 style="font-size:16px;color:#1a1535;margin:0 0 12px">Hot Leads</h2><table style="width:100%;border-collapse:collapse;margin-bottom:24px"><thead><tr style="background:#f8f7ff"><th style="text-align:left;padding:8px 12px;font-size:13px;color:#666">Name</th><th style="text-align:left;padding:8px 12px;font-size:13px;color:#666">Type</th><th style="text-align:left;padding:8px 12px;font-size:13px;color:#666">Score</th></tr></thead><tbody>${hotLeadRows}</tbody></table>` : ""}
-
-      <p style="margin:0;font-size:13px;color:#999;text-align:center">Sent by ListingFlow CRM</p>
-    </div>
-  </div>
-</body>
-</html>`.trim();
+    const digestHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="color-scheme" content="light dark"><style>@media(prefers-color-scheme:dark){.eb{background:#111!important}.ec{background:#1c1c1e!important}}</style></head>
+<body style="margin:0;padding:0;background:#f5f5f7;font-family:${F};-webkit-font-smoothing:antialiased;" class="eb">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f7;"><tr><td align="center" style="padding:24px 16px;">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);" class="ec">
+  <tr><td style="padding:20px 32px 16px;"><table width="100%"><tr><td><span style="font-size:15px;font-weight:700;color:#1d1d1f;">ListingFlow</span></td><td align="right"><span style="font-size:11px;color:#86868b;letter-spacing:0.5px;text-transform:uppercase;">Daily Digest</span></td></tr></table></td></tr>
+  <tr><td style="padding:0 16px;"><div style="background:linear-gradient(135deg,#5856d6,#af52de);border-radius:16px;padding:36px 28px;text-align:center;">
+    <div style="font-size:12px;color:rgba(255,255,255,0.6);letter-spacing:1.5px;text-transform:uppercase;">${digest.date}</div>
+    <div style="font-size:28px;font-weight:800;color:#fff;margin-top:8px;letter-spacing:-0.5px;">Your AI worked overnight</div>
+  </div></td></tr>
+  <tr><td style="padding:20px 32px 0;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td style="text-align:center;padding:16px;background:#f5f5f7;border-radius:12px;"><div style="font-size:28px;font-weight:800;color:#1d1d1f;">${digest.emails_sent}</div><div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Sent</div></td>
+      <td width="8"></td>
+      <td style="text-align:center;padding:16px;background:#f5f5f7;border-radius:12px;"><div style="font-size:28px;font-weight:800;color:#15803d;">${digest.open_rate}%</div><div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Opens</div></td>
+      <td width="8"></td>
+      <td style="text-align:center;padding:16px;background:#f5f5f7;border-radius:12px;"><div style="font-size:28px;font-weight:800;color:#5856d6;">${digest.clicks_today}</div><div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Clicks</div></td>
+    </tr></table>
+  </td></tr>
+  ${digest.pending_drafts > 0 ? `<tr><td style="padding:20px 32px 0;"><div style="background:linear-gradient(135deg,#fff7ed,#fffbeb);border:1px solid #fde68a;border-radius:14px;padding:16px 20px;"><div style="font-size:14px;font-weight:600;color:#92400e;">📬 ${digest.pending_drafts} draft${digest.pending_drafts > 1 ? "s" : ""} pending approval</div><div style="font-size:13px;color:#a16207;margin-top:4px;">Review in the approval queue to keep your pipeline moving.</div></div></td></tr>` : ""}
+  ${digest.hot_leads.length > 0 ? `<tr><td style="padding:20px 32px 0;"><div style="font-size:12px;font-weight:700;color:#1d1d1f;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">🔥 Hot Buyers — Call Today</div><table width="100%" cellpadding="0" cellspacing="0">${hotLeadRows}</table></td></tr>` : ""}
+  <tr><td style="padding:28px 32px 0;text-align:center;"><a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/newsletters" style="display:inline-block;background:#1d1d1f;color:#fff;padding:16px 48px;border-radius:980px;text-decoration:none;font-weight:600;font-size:15px;">Open Dashboard</a></td></tr>
+  <tr><td style="padding:24px 32px 20px;text-align:center;"><p style="font-size:11px;color:#86868b;margin:0;">ListingFlow CRM · <a href="#" style="color:#86868b;text-decoration:underline;">Unsubscribe from digest</a></p></td></tr>
+</table></td></tr></table></body></html>`.trim();
 
     let emailResult = null;
     try {

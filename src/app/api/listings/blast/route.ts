@@ -95,39 +95,26 @@ export async function POST(req: Request) {
     if (listing.square_feet) listingDetails.push(`${Number(listing.square_feet).toLocaleString()} sqft`);
     const detailsStr = listingDetails.join(" · ");
 
-    const html = buildEmail({
-      brand: {
-        primaryColor: brand.primaryColor || "#4f35d2",
-        accentColor: brand.accentColor || "#6c4fe6",
-        logoText: brand.logoText || "ListingFlow",
-        realtorName: brand.realtorName || "Your Realtor",
-        realtorTitle: brand.realtorTitle || "REALTOR®",
-        brokerage: brand.brokerage || "",
-        phone: brand.phone || "",
-        address: brand.address || "",
+    // Use Apple-quality block-based email builder
+    const { assembleEmail } = await import("@/lib/email-blocks");
+    const html = assembleEmail("listing_alert", {
+      contact: { name: "Fellow Agent", firstName: "Fellow Agent", type: "agent" },
+      agent: {
+        name: brand.realtorName || "Kunal",
+        brokerage: brand.brokerage || "RE/MAX City Realty",
+        phone: brand.phone || "604-555-0123",
+        initials: (brand.realtorName || "K")[0],
       },
-      firstName: "Fellow Agent",
-      intro,
-      listings: [
-        {
-          address,
-          price,
-          beds: listing.bedrooms,
-          baths: listing.bathrooms,
-          sqft: listing.square_feet,
-          photoUrl: heroImage,
-        },
-      ],
-      stats: listing.notes
-        ? undefined
-        : [
-            { value: price, label: "List Price" },
-            { value: detailsStr || "—", label: "Details" },
-            { value: listing.status || "Active", label: "Status" },
-          ],
-      ctaText: "Schedule a Showing",
-      ctaUrl: "#",
-      signoff: "Looking forward to working together,",
+      content: { subject, intro, body: "", ctaText: "Schedule a Showing" },
+      listing: {
+        address,
+        area: listing.city || "Vancouver",
+        price,
+        beds: listing.bedrooms,
+        baths: listing.bathrooms,
+        sqft: listing.square_feet ? String(listing.square_feet) : undefined,
+        photos: [heroImage],
+      },
     });
 
     // 5. Send batch

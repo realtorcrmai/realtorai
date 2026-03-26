@@ -211,31 +211,59 @@ async function executeAutoMessage(
     }
 
     try {
-      const { sendEmail } = await import("@/lib/gmail");
+      // Build Apple-quality HTML email using block system
+      const { assembleEmail } = await import("@/lib/email-blocks");
+      const emailType = step.template_id || "welcome";
+      const emailSubject = subject || step.name;
+      const htmlBody = assembleEmail(emailType, {
+        contact: { name: contact.name, firstName: contact.name?.split(" ")[0] || "there", type: contact.type },
+        agent: { name: "Kunal", brokerage: "RE/MAX City Realty", phone: "604-555-0123", initials: "K" },
+        content: { subject: emailSubject, intro: body, body: "", ctaText: "View Details" },
+      });
+
+      // Send via Resend (not Gmail) for tracking + deliverability
+      const { sendEmail } = await import("@/lib/resend");
       const result = await sendEmail({
         to: contact.email,
-        subject: subject || step.name,
-        body,
+        subject: emailSubject,
+        html: htmlBody,
+        tags: [
+          { name: "contact_id", value: contact.id },
+          { name: "email_type", value: emailType },
+        ],
       });
+
+      // Save to newsletters table for tracking in AI Agent tab
+      await supabase.from("newsletters").insert({
+        contact_id: contact.id,
+        subject: emailSubject,
+        email_type: emailType,
+        status: "sent",
+        html_body: htmlBody,
+        sent_at: new Date().toISOString(),
+        resend_message_id: result.messageId || null,
+        send_mode: "auto",
+        ai_context: { source: "workflow", step_name: step.name, workflow_id: step.workflow_id },
+      }); // Best effort — don't fail workflow if this errors
 
       // Log to communications
       await supabase.from("communications").insert({
         contact_id: contact.id,
         direction: "outbound",
         channel: "email",
-        body: subject ? `Subject: ${subject}\n\n${body}` : body,
+        body: `Subject: ${emailSubject}\n\n${body}`,
       });
 
       return { success: true, result: { channel: "email", messageId: result.messageId } };
     } catch (emailErr) {
-      // Fallback: log as communication even if Gmail API fails
+      // Fallback: log as communication even if send fails
       await supabase.from("communications").insert({
         contact_id: contact.id,
         direction: "outbound",
         channel: "email",
         body: subject ? `Subject: ${subject}\n\n${body}` : body,
       });
-      return { success: true, result: { channel: "email", logged: true, gmailError: String(emailErr) } };
+      return { success: true, result: { channel: "email", logged: true, sendError: String(emailErr) } };
     }
   }
 
