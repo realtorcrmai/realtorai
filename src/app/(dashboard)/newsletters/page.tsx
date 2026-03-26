@@ -255,29 +255,6 @@ export default async function NewsletterDashboard() {
                   gradientFrom="from-orange-500" gradientTo="to-red-500"
                 />
 
-                {/* Pending Approvals */}
-                <Card>
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-base font-semibold">📬 Pending Approvals</h3>
-                      <Badge variant={queue.length > 0 ? "default" : "secondary"} className="text-xs">{queue.length} drafts</Badge>
-                    </div>
-                    {queue.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">All caught up! No emails waiting for review.</p>
-                    ) : queue.slice(0, 5).map((n: any) => (
-                      <div key={n.id} className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{n.contacts?.name || "Unknown"}</p>
-                          <p className="text-xs text-muted-foreground truncate">{n.subject}</p>
-                        </div>
-                        <Badge variant="outline" className="text-[10px] shrink-0 ml-2 capitalize">{n.email_type?.replace(/_/g, " ")}</Badge>
-                      </div>
-                    ))}
-                    {queue.length > 0 && (
-                      <p className="text-xs text-primary font-medium mt-3 cursor-pointer hover:underline">Review all in AI Agent tab →</p>
-                    )}
-                  </CardContent>
-                </Card>
               </div>
 
               {/* Pipeline Row — Clickable drilldown */}
@@ -340,12 +317,12 @@ export default async function NewsletterDashboard() {
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-semibold">Active Workflows ({(workflows || []).length})</h4>
-                    <a href="/newsletters/workflows" className="text-xs text-primary font-medium hover:underline">Manage →</a>
+                    <a href="/automations" className="text-xs text-primary font-medium hover:underline">Manage →</a>
                   </div>
                   {(!workflows || workflows.length === 0) ? (
                     <p className="text-sm text-muted-foreground text-center py-3">No workflows configured.</p>
                   ) : workflows.map((w: any) => (
-                    <div key={w.id} className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
+                    <a key={w.id} href={`/automations/workflows/${w.id}`} className="flex items-center justify-between py-2.5 border-b border-border last:border-0 hover:bg-muted/30 transition-colors -mx-1 px-1 rounded">
                       <div>
                         <p className="text-sm font-medium">{w.name}</p>
                         <p className="text-xs text-muted-foreground">Trigger: {w.trigger_type?.replace(/_/g, " ")}</p>
@@ -353,7 +330,7 @@ export default async function NewsletterDashboard() {
                       <Badge variant={w.is_active ? "default" : "secondary"} className="text-xs">
                         {w.is_active ? "Active" : "Paused"}
                       </Badge>
-                    </div>
+                    </a>
                   ))}
                 </CardContent>
               </Card>
