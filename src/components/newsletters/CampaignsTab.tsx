@@ -99,20 +99,79 @@ export function CampaignsTab({ listings, blastHistory = [] }: Props) {
 
             {/* Settings panel */}
             {showSettings && (
-              <div className="space-y-3 pt-3 border-t border-border mb-4">
-                <div className="flex items-center justify-between">
-                  <div><p className="text-sm font-medium">Template</p><p className="text-xs text-muted-foreground">Which template for auto-blasts</p></div>
-                  <select
-                    value={autoBlastTemplate}
-                    onChange={e => setAutoBlastTemplate(e.target.value)}
-                    className="text-xs border border-border rounded-md px-2 py-1.5 bg-background"
-                  >
-                    <option value="ai_chooses">🤖 AI Chooses Best</option>
-                    {TEMPLATES.filter(t => t.id === "listing_alert" || t.id === "luxury_showcase" || t.id === "open_house").map(t => (
-                      <option key={t.id} value={t.id}>{t.emoji} {t.name}</option>
+              <div className="space-y-4 pt-3 border-t border-border mb-4">
+                {/* Template Selection — Visual cards */}
+                <div>
+                  <p className="text-sm font-medium mb-1">Email Template</p>
+                  <p className="text-xs text-muted-foreground mb-3">Choose how your listing blast emails look</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {/* AI Chooses */}
+                    <div
+                      onClick={() => setAutoBlastTemplate("ai_chooses")}
+                      className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${autoBlastTemplate === "ai_chooses" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Sparkles className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold">AI Chooses Best</p>
+                          <p className="text-[10px] text-muted-foreground">Recommended</p>
+                        </div>
+                        {autoBlastTemplate === "ai_chooses" && <CheckCircle2 className="h-4 w-4 text-primary ml-auto" />}
+                      </div>
+                      <div className="bg-muted/50 rounded-md p-2 text-[10px] text-muted-foreground leading-relaxed">
+                        AI picks the best template based on property type, price range, and what's performing best with your agents. Luxury properties get the Showcase template, standard listings get the Alert template.
+                      </div>
+                    </div>
+
+                    {/* Specific templates */}
+                    {[
+                      { id: "listing_alert", emoji: "🏠", name: "New Listing Alert", preview: "Clean, professional layout with hero photo, price bar, property specs, and a clear 'Schedule Showing' CTA. Best for standard residential listings.", rate: "83%" },
+                      { id: "luxury_showcase", emoji: "✨", name: "Luxury Showcase", preview: "Full-width hero with dark overlay, gold accents, photo gallery grid, premium typography. Best for $1.5M+ properties.", rate: "—" },
+                      { id: "open_house", emoji: "🏡", name: "Open House Invite", preview: "Event-focused layout with date/time prominently displayed, property highlights, RSVP button, and map link. Best when open house is scheduled.", rate: "75%" },
+                    ].map(t => (
+                      <div
+                        key={t.id}
+                        onClick={() => setAutoBlastTemplate(t.id)}
+                        className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${autoBlastTemplate === t.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xl">{t.emoji}</span>
+                          <div>
+                            <p className="text-sm font-semibold">{t.name}</p>
+                            <p className="text-[10px] text-muted-foreground">{t.rate} open rate</p>
+                          </div>
+                          {autoBlastTemplate === t.id && <CheckCircle2 className="h-4 w-4 text-primary ml-auto" />}
+                        </div>
+                        <div className="bg-muted/50 rounded-md p-2 text-[10px] text-muted-foreground leading-relaxed">
+                          {t.preview}
+                        </div>
+                        {/* Mini email preview mockup */}
+                        <div className="mt-2 border border-border rounded-md overflow-hidden">
+                          <div className="bg-primary/5 px-2 py-1 flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            <span className="text-[8px] text-muted-foreground ml-1">Preview</span>
+                          </div>
+                          <div className="p-2 space-y-1">
+                            <div className={`h-12 rounded ${t.id === "luxury_showcase" ? "bg-gray-800" : "bg-muted"}`} />
+                            <div className="flex gap-1">
+                              <div className="h-2 bg-primary/20 rounded flex-1" />
+                              <div className="h-2 bg-muted rounded w-1/3" />
+                            </div>
+                            <div className="h-1.5 bg-muted rounded w-2/3" />
+                            <div className="h-1.5 bg-muted rounded w-1/2" />
+                            <div className="h-5 bg-primary/20 rounded-sm w-1/3 mx-auto mt-1" />
+                          </div>
+                        </div>
+                      </div>
                     ))}
-                  </select>
+                  </div>
                 </div>
+
+                {/* Recipients */}
                 <div className="flex items-center justify-between">
                   <div><p className="text-sm font-medium">Recipients</p><p className="text-xs text-muted-foreground">Who receives auto-blasts</p></div>
                   <select
@@ -125,6 +184,8 @@ export function CampaignsTab({ listings, blastHistory = [] }: Props) {
                     <option value="active_agents">Recently active agents</option>
                   </select>
                 </div>
+
+                {/* Approval */}
                 <div className="flex items-center justify-between">
                   <div><p className="text-sm font-medium">Approval</p><p className="text-xs text-muted-foreground">Review before sending or auto-send</p></div>
                   <div className="flex bg-muted rounded-lg p-0.5">
