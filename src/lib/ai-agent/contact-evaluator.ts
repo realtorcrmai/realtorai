@@ -260,11 +260,23 @@ RULES:
 Return ONLY valid JSON:
 {"decision":"send|skip|defer|suppress","email_type":"new_listing_alert|market_update|neighbourhood_guide|just_sold|open_house_invite|home_anniversary","reasoning":"brief explanation","relevance_score":0-100,"confidence":0.0-1.0}`;
 
+  // RAG: retrieve contact journey context
+  let ragContext = '';
+  try {
+    const { retrieveContext } = await import('@/lib/rag/retriever');
+    const retrieved = await retrieveContext(
+      `${contact.name} journey interactions preferences`,
+      { contact_id: contact.id, content_type: ['message', 'activity', 'email'] },
+      3
+    );
+    if (retrieved.formatted) ragContext = `\n\nCONTACT HISTORY:\n${retrieved.formatted}`;
+  } catch { /* RAG not available */ }
+
   try {
     const msg = await anthropic.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 300,
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: prompt + ragContext }],
     });
 
     const text = msg.content[0].type === "text" ? msg.content[0].text : "";

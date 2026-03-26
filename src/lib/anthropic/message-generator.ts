@@ -35,10 +35,25 @@ ${channel === "email" ? 'Return JSON: { "subject": "...", "body": "..." }' : 'Re
 
 Return ONLY valid JSON, no markdown.`;
 
+  // RAG: retrieve past conversations for tone continuity
+  let ragContext = '';
+  try {
+    const { retrieveContext } = await import('@/lib/rag/retriever');
+    const contactId = (params as any).contact?.id;
+    if (contactId) {
+      const retrieved = await retrieveContext(
+        `${(params as any).contact?.name} ${intent}`,
+        { contact_id: contactId, content_type: ['message', 'activity'] },
+        3
+      );
+      if (retrieved.formatted) ragContext = `\n\nPAST INTERACTIONS:\n${retrieved.formatted}`;
+    }
+  } catch { /* RAG not available */ }
+
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 500,
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: "user", content: prompt + ragContext }],
   });
 
   const text = message.content[0].type === "text" ? message.content[0].text : "";
