@@ -559,8 +559,15 @@ All crons require `Authorization: Bearer CRON_SECRET` header.
 | `src/lib/workflow-engine.ts` | Workflow step executor (sends via blocks + Resend) |
 | `src/actions/newsletters.ts` | Newsletter CRUD, send, approve, bulk, skip |
 | `src/actions/journeys.ts` | Journey enrollment, phase advancement |
+| `src/lib/validators/*.ts` | 4 validators: content, design, compliance-gate, quality-scorer |
+| `src/lib/voice-learning.ts` | Extract writing rules from realtor edits |
+| `src/lib/learning-engine.ts` | Weekly learning cycle — analyze outcomes, adjust config |
 | `src/app/api/webhooks/resend/route.ts` | Click/open/bounce tracking (12 click categories) |
-| `src/components/newsletters/*.tsx` | All 7 tab components |
+| `src/app/api/templates/preview/route.ts` | Apple-quality template previews (3 designs) |
+| `src/app/api/listings/blast/route.ts` | Listing blast batch send to agents |
+| `src/app/api/cron/daily-digest/route.ts` | Morning digest email to realtor |
+| `src/app/api/cron/consent-expiry/route.ts` | CASL consent expiry checker |
+| `src/components/newsletters/*.tsx` | All 7 tab components + PipelineCard |
 | `scripts/seed-demo.mjs` | Demo seed data (29 contacts, 84 emails, 129 events) |
 
 ### Seed Data
