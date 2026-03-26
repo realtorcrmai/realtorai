@@ -211,8 +211,11 @@ async function executeAutoMessage(
     }
 
     try {
-      // Build Apple-quality HTML email using block system
-      const { assembleEmail } = await import("@/lib/email-blocks");
+      // Run pre-send text checks + build Apple-quality HTML
+      const { assembleEmail, runPreSendChecks } = await import("@/lib/email-blocks");
+      const checks = await runPreSendChecks(subject || step.name, body, contact.id, contact.name, contact.type, step.template_id || "welcome");
+      subject = checks.subject;
+      body = checks.body;
       const emailType = step.template_id || "welcome";
       const emailSubject = subject || step.name;
       const htmlBody = assembleEmail(emailType, {

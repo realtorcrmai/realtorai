@@ -22,6 +22,7 @@ export type EmailData = {
     photos?: string[]; features?: { icon: string; title: string; desc: string }[];
     openHouseDate?: string; openHouseTime?: string;
   };
+  listings?: { address: string; price: string | number; beds?: number; baths?: number; sqft?: string; photo?: string }[];
   market?: {
     avgPrice?: string; avgDom?: number; inventoryChange?: string;
     recentSales?: { address: string; price: string; dom: number }[];
@@ -31,6 +32,12 @@ export type EmailData = {
     purchasePrice?: string; currentEstimate?: string; appreciation?: string; equityGained?: string;
     areaHighlights?: { icon: string; text: string }[];
   };
+  testimonial?: { quote: string; name: string; role?: string };
+  mortgageCalc?: { monthly: string; downPayment?: string; rate?: string; details?: string };
+  countdown?: { value: string; label?: string; subtext?: string };
+  mapPreview?: { imageUrl: string; caption?: string };
+  videoThumbnail?: { thumbnailUrl: string; videoUrl?: string };
+  socialProof?: { headline?: string; text: string; stats?: { value: string; label: string }[] };
 };
 
 type BlockFn = (data: EmailData) => string;
@@ -240,6 +247,119 @@ const blocks: Record<string, BlockFn> = {
     </td></tr>`;
   },
 
+  propertyGrid: (d) => {
+    const listings = d.listings;
+    if (!listings?.length) return "";
+    return `
+    <tr><td style="padding:24px 16px 0;">
+      <div style="font-size:12px;font-weight:700;color:#1d1d1f;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;padding:0 16px;">Matching Properties</div>
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+        ${listings.slice(0, 3).map(l => `
+        <td width="${Math.floor(100 / Math.min(listings.length, 3))}%" style="padding:4px;vertical-align:top;">
+          <div style="background:#f5f5f7;border-radius:14px;overflow:hidden;">
+            ${l.photo ? `<img src="${l.photo}" width="100%" style="display:block;">` : `<div style="height:120px;background:linear-gradient(135deg,#e5e5ea,#f5f5f7);"></div>`}
+            <div style="padding:12px;">
+              <div style="font-size:16px;font-weight:700;color:#1d1d1f;">${typeof l.price === "number" ? "$" + l.price.toLocaleString() : l.price}</div>
+              <div style="font-size:12px;color:#86868b;margin-top:2px;">${l.address}</div>
+              <div style="font-size:11px;color:#86868b;">${l.beds || "—"} bd · ${l.baths || "—"} ba${l.sqft ? " · " + l.sqft + " sqft" : ""}</div>
+            </div>
+          </div>
+        </td>`).join('<td width="2%"></td>')}
+      </tr></table>
+    </td></tr>`;
+  },
+
+  testimonial: (d) => {
+    const t = d.testimonial;
+    if (!t) return "";
+    return `
+    <tr><td style="padding:24px 32px 0;">
+      <div style="background:#f5f5f7;border-radius:14px;padding:24px;position:relative;">
+        <div style="font-size:36px;color:#d1d1d6;line-height:1;margin-bottom:8px;">"</div>
+        <p style="font-size:15px;color:#1d1d1f;line-height:1.65;margin:0;font-style:italic;">${t.quote}</p>
+        <div style="margin-top:12px;font-size:13px;font-weight:600;color:#1d1d1f;">${t.name}</div>
+        <div style="font-size:12px;color:#86868b;">${t.role || "Client"}</div>
+      </div>
+    </td></tr>`;
+  },
+
+  mortgageCalc: (d) => {
+    const mc = d.mortgageCalc;
+    if (!mc) return "";
+    return `
+    <tr><td style="padding:24px 32px 0;">
+      <div style="background:linear-gradient(135deg,#f5f0ff,#f0f9ff);border-radius:14px;padding:20px;border:1px solid rgba(88,86,214,0.1);">
+        <div style="font-size:12px;font-weight:700;color:#86868b;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Estimated Monthly Payment</div>
+        <div style="font-size:32px;font-weight:800;color:#5856d6;letter-spacing:-1px;">${mc.monthly}</div>
+        <div style="font-size:12px;color:#86868b;margin-top:4px;">${mc.details || "Based on 20% down, 5-year fixed rate"}</div>
+        <table width="100%" style="margin-top:12px;" cellpadding="0" cellspacing="0"><tr>
+          <td style="font-size:12px;color:#86868b;">Down payment: <strong style="color:#1d1d1f;">${mc.downPayment || "20%"}</strong></td>
+          <td style="font-size:12px;color:#86868b;text-align:right;">Rate: <strong style="color:#1d1d1f;">${mc.rate || "4.89%"}</strong></td>
+        </tr></table>
+      </div>
+    </td></tr>`;
+  },
+
+  countdown: (d) => {
+    const cd = d.countdown;
+    if (!cd) return "";
+    return `
+    <tr><td style="padding:24px 32px 0;">
+      <div style="background:linear-gradient(135deg,#fef2f2,#fff7ed);border:1px solid #fecaca;border-radius:14px;padding:20px;text-align:center;">
+        <div style="font-size:11px;color:#dc2626;text-transform:uppercase;letter-spacing:2px;font-weight:600;">${cd.label || "Time Remaining"}</div>
+        <div style="font-size:48px;font-weight:800;color:#dc2626;margin-top:4px;letter-spacing:-2px;">${cd.value}</div>
+        <div style="font-size:13px;color:#92400e;margin-top:4px;">${cd.subtext || ""}</div>
+      </div>
+    </td></tr>`;
+  },
+
+  mapPreview: (d) => {
+    const mp = d.mapPreview;
+    if (!mp?.imageUrl) return "";
+    return `
+    <tr><td style="padding:24px 16px 0;">
+      <div style="border-radius:16px;overflow:hidden;">
+        <img src="${mp.imageUrl}" alt="Location map" width="568" style="display:block;width:100%;height:auto;">
+      </div>
+      ${mp.caption ? `<div style="text-align:center;padding:8px 32px 0;font-size:12px;color:#86868b;">${mp.caption}</div>` : ""}
+    </td></tr>`;
+  },
+
+  videoThumbnail: (d) => {
+    const vt = d.videoThumbnail;
+    if (!vt?.thumbnailUrl) return "";
+    return `
+    <tr><td style="padding:24px 16px 0;">
+      <a href="${vt.videoUrl || "#"}" style="display:block;position:relative;border-radius:16px;overflow:hidden;">
+        <img src="${vt.thumbnailUrl}" alt="Property video" width="568" style="display:block;width:100%;height:auto;">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:64px;height:64px;background:rgba(0,0,0,0.7);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+          <div style="width:0;height:0;border-top:12px solid transparent;border-bottom:12px solid transparent;border-left:20px solid #fff;margin-left:4px;"></div>
+        </div>
+        <div style="position:absolute;bottom:12px;left:12px;background:rgba(0,0,0,0.6);border-radius:6px;padding:4px 10px;font-size:11px;color:#fff;font-weight:500;">▶ Watch Property Tour</div>
+      </a>
+    </td></tr>`;
+  },
+
+  socialProof: (d) => {
+    const sp = d.socialProof;
+    if (!sp) return "";
+    return `
+    <tr><td style="padding:24px 32px 0;">
+      <div style="background:#f5f5f7;border-radius:14px;padding:20px;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td width="48" style="vertical-align:top;">
+            <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#5856d6,#ff6b6b);text-align:center;line-height:44px;color:#fff;font-weight:700;font-size:17px;">${d.agent.initials || d.agent.name[0]}</div>
+          </td>
+          <td style="padding-left:14px;">
+            <div style="font-size:14px;font-weight:600;color:#1d1d1f;">${sp.headline || d.agent.name + "'s Track Record"}</div>
+            <div style="font-size:13px;color:#86868b;margin-top:2px;line-height:1.5;">${sp.text}</div>
+            ${sp.stats ? `<div style="margin-top:8px;display:flex;gap:16px;">${sp.stats.map((s: {value:string;label:string}) => `<span style="font-size:12px;"><strong style="color:#5856d6;">${s.value}</strong> <span style="color:#86868b;">${s.label}</span></span>`).join(" · ")}</div>` : ""}
+          </td>
+        </tr></table>
+      </div>
+    </td></tr>`;
+  },
+
   cta: (d) => `
     <tr><td style="padding:28px 32px 0;text-align:center;">
       <a href="${d.content.ctaUrl || "#"}" style="display:inline-block;background:#1d1d1f;color:#fff;padding:16px 48px;border-radius:980px;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:-0.2px;">${d.content.ctaText}</a>
@@ -273,16 +393,17 @@ const blocks: Record<string, BlockFn> = {
 // ═══════════════════════════════════════════════
 
 const TEMPLATE_BLOCKS: Record<string, string[]> = {
-  listing_alert: ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "priceComparison", "openHouse", "cta", "agentCard", "footer"],
-  welcome: ["header", "heroGradient", "personalNote", "cta", "agentCard", "footer"],
-  market_update: ["header", "heroGradient", "statsRow", "personalNote", "recentSales", "cta", "agentCard", "footer"],
-  neighbourhood_guide: ["header", "heroGradient", "personalNote", "areaHighlights", "cta", "agentCard", "footer"],
+  listing_alert: ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "priceComparison", "mortgageCalc", "openHouse", "cta", "agentCard", "footer"],
+  welcome: ["header", "heroGradient", "personalNote", "propertyGrid", "socialProof", "cta", "agentCard", "footer"],
+  market_update: ["header", "heroGradient", "statsRow", "personalNote", "recentSales", "propertyGrid", "cta", "agentCard", "footer"],
+  neighbourhood_guide: ["header", "heroGradient", "personalNote", "areaHighlights", "mapPreview", "cta", "agentCard", "footer"],
   home_anniversary: ["header", "heroGradient", "personalNote", "anniversaryComparison", "areaHighlights", "cta", "agentCard", "footer"],
-  just_sold: ["header", "heroImage", "priceBar", "personalNote", "cta", "agentCard", "footer"],
-  open_house: ["header", "heroGradient", "heroImage", "priceBar", "personalNote", "featureList", "openHouse", "cta", "agentCard", "footer"],
-  seller_report: ["header", "heroGradient", "statsRow", "personalNote", "recentSales", "cta", "agentCard", "footer"],
-  cma_preview: ["header", "heroGradient", "personalNote", "priceComparison", "recentSales", "cta", "agentCard", "footer"],
-  re_engagement: ["header", "heroGradient", "personalNote", "statsRow", "cta", "agentCard", "footer"],
+  just_sold: ["header", "heroImage", "priceBar", "personalNote", "testimonial", "socialProof", "cta", "agentCard", "footer"],
+  open_house: ["header", "heroGradient", "heroImage", "priceBar", "personalNote", "featureList", "mapPreview", "openHouse", "cta", "agentCard", "footer"],
+  seller_report: ["header", "heroGradient", "statsRow", "personalNote", "recentSales", "countdown", "cta", "agentCard", "footer"],
+  cma_preview: ["header", "heroGradient", "personalNote", "priceComparison", "recentSales", "socialProof", "cta", "agentCard", "footer"],
+  re_engagement: ["header", "heroGradient", "personalNote", "statsRow", "propertyGrid", "cta", "agentCard", "footer"],
+  luxury_showcase: ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "videoThumbnail", "cta", "agentCard", "footer"],
 };
 
 // ═══════════════════════════════════════════════
@@ -342,4 +463,39 @@ export function buildEmailFromType(
     agent: { name: "Kunal", brokerage: "RE/MAX City Realty", phone: "604-555-0123", initials: "K" },
     content: { subject, intro: bodyText, body: "", ctaText },
   });
+}
+
+/**
+ * Run text pipeline on content before rendering.
+ * Used by all send paths except sendNewsletter (which has its own pipeline call).
+ * Fails silently — never blocks the caller.
+ */
+export async function runPreSendChecks(
+  subject: string,
+  body: string,
+  contactId: string,
+  contactName: string,
+  contactType: string,
+  emailType: string,
+): Promise<{ subject: string; body: string; warnings: string[] }> {
+  try {
+    const { runTextPipeline } = await import("@/lib/text-pipeline");
+    const result = await runTextPipeline({
+      subject,
+      intro: body,
+      body: "",
+      ctaText: "",
+      emailType,
+      contactId,
+      contactName,
+      contactFirstName: contactName.split(" ")[0],
+      contactType,
+    });
+    if (result.blocked) {
+      console.warn(`[pre-send] Blocked for ${contactName}: ${result.blockReason}`);
+    }
+    return { subject: result.subject, body: result.intro, warnings: result.warnings };
+  } catch {
+    return { subject, body, warnings: [] };
+  }
 }
