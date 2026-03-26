@@ -4,6 +4,7 @@ import { getJourneyDashboard } from "@/actions/journeys";
 import { getApprovalQueue } from "@/actions/newsletters";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Send, MailOpen, MousePointerClick } from "lucide-react";
 import { DailyDigestCard } from "@/components/dashboard/DailyDigestCard";
 import { EmailMarketingTabs } from "@/components/newsletters/EmailMarketingTabs";
 import { CampaignsTab } from "@/components/newsletters/CampaignsTab";
@@ -16,6 +17,7 @@ import { AIWorkingForYou } from "@/components/newsletters/AIWorkingForYou";
 import { ListingBlastAutomation } from "@/components/newsletters/ListingBlastAutomation";
 import { sendNewsletter, skipNewsletter, bulkApproveNewsletters } from "@/actions/newsletters";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { WORKFLOW_BLUEPRINTS } from "@/lib/constants";
 
 export default async function NewsletterDashboard() {
   const supabase = createAdminClient();
@@ -34,7 +36,7 @@ export default async function NewsletterDashboard() {
     { data: upcomingJourneys },
   ] = await Promise.all([
     supabase.from("contact_journeys").select("id, contact_id, journey_type, current_phase, is_paused, next_email_at, send_mode, contacts(name, type, email)").order("created_at", { ascending: false }),
-    supabase.from("workflows").select("id, name, slug, is_active, trigger_type").order("name"),
+    supabase.from("workflows").select("id, name, slug, description, is_active, trigger_type, contact_type, workflow_steps(id)").order("name"),
     supabase.from("listings").select("id, address, list_price, status").eq("status", "active").order("created_at", { ascending: false }).limit(10),
     supabase.from("contacts").select("id, name, phone, type, newsletter_intelligence").not("newsletter_intelligence", "is", null).order("created_at", { ascending: false }).limit(50),
     supabase.from("newsletters").select("id, subject, email_type, status, ai_context, contact_id, created_at, contacts(name, type, email, phone)").eq("status", "suppressed").order("created_at", { ascending: false }).limit(10),
@@ -90,6 +92,9 @@ export default async function NewsletterDashboard() {
   // AI Success Stories — build from contacts with newsletter_intelligence + sent emails
   const successStories: Array<{ contactId: string; contactName: string; contactType: string; icon: string; story: string; score?: number }> = [];
   const phaseLabelsMap: Record<string, string> = { lead: "Lead", active: "Active", under_contract: "Under Contract", past_client: "Past Client", dormant: "Dormant" };
+  const phases = ["lead", "active", "under_contract", "past_client", "dormant"];
+  const phaseLabels: Record<string, string> = { lead: "New Leads", active: "Active", under_contract: "Under Contract", past_client: "Past Clients", dormant: "Dormant" };
+  const phaseIcons: Record<string, string> = { lead: "🟢", active: "🔥", under_contract: "📝", past_client: "⭐", dormant: "❄️" };
 
   // Story type 1: Hot leads with high engagement from AI emails
   for (const lead of hotLeads.slice(0, 2)) {
@@ -185,92 +190,149 @@ export default async function NewsletterDashboard() {
         {{
           /* ═══ OVERVIEW ═══ */
           overview: (
-            <div className="space-y-4">
+            <div className="space-y-3">
 
-              {/* Stats — Glass + Accent Bar Style */}
-              <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                <div className="relative overflow-hidden rounded-xl bg-white/85 backdrop-blur-sm border border-white/50 shadow-sm p-4 text-center">
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-orange-500" />
-                  <div className="text-lg mb-1">🔥</div>
-                  <div className="text-2xl font-extrabold text-red-600">{hotBuyers.length}</div>
-                  <div className="text-[11px] font-semibold text-foreground mt-1">Hot Buyers</div>
-                  <div className="text-[10px] text-red-600 font-medium mt-0.5">At risk</div>
-                </div>
-                <div className="relative overflow-hidden rounded-xl bg-white/85 backdrop-blur-sm border border-white/50 shadow-sm p-4 text-center">
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500" />
-                  <div className="text-lg mb-1">🔥</div>
-                  <div className="text-2xl font-extrabold text-orange-600">{hotSellers.length}</div>
-                  <div className="text-[11px] font-semibold text-foreground mt-1">Hot Sellers</div>
-                  <div className="text-[10px] text-orange-600 font-medium mt-0.5">At risk</div>
-                </div>
-                <div className="relative overflow-hidden rounded-xl bg-white/85 backdrop-blur-sm border border-white/50 shadow-sm p-4 text-center">
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 to-yellow-400" />
-                  <div className="text-lg mb-1">🌡️</div>
-                  <div className="text-2xl font-extrabold text-amber-600">{warmContacts.length}</div>
-                  <div className="text-[11px] font-semibold text-foreground mt-1">Warm</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">Nurturing</div>
-                </div>
-                <div className="relative overflow-hidden rounded-xl bg-white/85 backdrop-blur-sm border border-white/50 shadow-sm p-4 text-center">
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
-                  <div className="text-lg mb-1">📧</div>
-                  <div className="text-2xl font-extrabold text-[#4f35d2]">{dashboard.totalSent}</div>
-                  <div className="text-[11px] font-semibold text-foreground mt-1">Emails Sent</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">This month</div>
-                </div>
-                <div className="relative overflow-hidden rounded-xl bg-white/85 backdrop-blur-sm border border-white/50 shadow-sm p-4 text-center">
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
-                  <div className="text-lg mb-1">📬</div>
-                  <div className={`text-2xl font-extrabold ${dashboard.openRate > 40 ? "text-emerald-600" : "text-amber-500"}`}>{dashboard.openRate}%</div>
-                  <div className="text-[11px] font-semibold text-foreground mt-1">Open Rate</div>
-                  <div className="text-[10px] text-emerald-600 font-medium mt-0.5">{dashboard.openRate > 21 ? `${(dashboard.openRate / 21).toFixed(1)}x industry` : "Industry avg 21%"}</div>
-                </div>
-                <div className="relative overflow-hidden rounded-xl bg-white/85 backdrop-blur-sm border border-white/50 shadow-sm p-4 text-center">
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-pink-500" />
-                  <div className="text-lg mb-1">🖱️</div>
-                  <div className={`text-2xl font-extrabold ${dashboard.clickRate > 10 ? "text-purple-600" : "text-amber-500"}`}>{dashboard.clickRate}%</div>
-                  <div className="text-[11px] font-semibold text-foreground mt-1">Click Rate</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">{dashboard.clickRate > 10 ? "Above average" : "Needs work"}</div>
-                </div>
+              {/* Row 1: Compact stat pills */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mr-1">Health:</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">🔥 {hotBuyers.length} Hot Buyers</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-700 border border-orange-200">🔥 {hotSellers.length} Hot Sellers</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">🌡️ {warmContacts.length} Warm</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200">❄️ {coolingContacts.length + dormantContacts.length} Cold</span>
+                <span className="text-muted-foreground mx-1">·</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">📧 {dashboard.totalSent} sent</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">📬 {dashboard.openRate}% opens</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">🖱️ {dashboard.clickRate}% clicks</span>
               </div>
 
-              {/* Hot Buyers + Hot Sellers Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Hot Buyers */}
-                <HotContactCard
-                  title="🔥 Hot Buyers"
-                  contacts={hotBuyers}
-                  warningText="These buyers are actively searching. If you don't reach out, another agent will."
-                  emptyText="No hot buyers right now. AI is nurturing your contacts."
-                  bottomStat="Buyers who get a call within 5 minutes are 21x more likely to convert"
-                  gradientFrom="from-red-500" gradientTo="to-amber-500"
-                />
+              {/* Row 2: ACT NOW — top 3 most urgent contacts (buyers + sellers mixed) */}
+              {(() => {
+                const urgent = [...hotBuyers, ...hotSellers]
+                  .sort((a: any, b: any) => (b.newsletter_intelligence?.engagement_score || 0) - (a.newsletter_intelligence?.engagement_score || 0))
+                  .slice(0, 4);
+                if (urgent.length === 0) return null;
+                return (
+                  <Card className="border-red-200 bg-gradient-to-r from-red-50/80 to-orange-50/80">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">🚨</span>
+                          <h3 className="text-sm font-bold text-red-800">Act Now — Before They Go to Another Agent</h3>
+                        </div>
+                        <Badge variant="destructive" className="text-[10px]">{urgent.length} at risk</Badge>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {urgent.map((c: any) => {
+                          const score = c.newsletter_intelligence?.engagement_score || 0;
+                          const lastClicked = c.newsletter_intelligence?.last_clicked;
+                          const daysSince = lastClicked ? Math.floor((Date.now() - new Date(lastClicked).getTime()) / 86400000) : null;
+                          const isBuyer = c.type === "buyer";
+                          return (
+                            <div key={c.id} className="flex items-center justify-between p-2.5 bg-white/70 rounded-lg border border-red-100">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="relative">
+                                  <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${isBuyer ? "from-red-500 to-amber-500" : "from-orange-500 to-red-500"} flex items-center justify-center text-white text-xs font-bold`}>
+                                    {(c.name || "?")[0]}
+                                  </div>
+                                  {daysSince !== null && daysSince <= 2 && <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse" />}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <p className="text-xs font-semibold truncate">{c.name}</p>
+                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${isBuyer ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>
+                                      {isBuyer ? "BUYER" : "SELLER"}
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-muted-foreground truncate">
+                                    Score {score} · {daysSince === 0 ? "Active today" : daysSince === 1 ? "Yesterday" : daysSince !== null ? `${daysSince}d ago` : "Engaged"}
+                                  </p>
+                                </div>
+                              </div>
+                              <a href={`tel:${c.phone}`} className="text-[10px] px-2.5 py-1.5 rounded-md bg-red-600 text-white font-bold hover:bg-red-700 shrink-0 ml-2">Call</a>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[9px] text-red-600/70 font-medium mt-2 text-center">Leads contacted within 5 minutes convert 21x more · Sellers who get a CMA within 24h list with that agent 73% of the time</p>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
 
-                {/* Hot Sellers */}
-                <HotContactCard
-                  title="🔥 Hot Sellers"
-                  contacts={hotSellers}
-                  warningText="These sellers are ready to list. If you don't secure the listing, another agent will."
-                  emptyText="No hot sellers right now. AI is sending market updates."
-                  bottomStat="Sellers who get a CMA within 24 hours list with that agent 73% of the time"
-                  gradientFrom="from-orange-500" gradientTo="to-red-500"
-                />
+              {/* Row 3: Pipeline (compact) + AI Activity (side by side) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Compact Pipeline — merged buyer + seller */}
+                <Card>
+                  <CardContent className="p-4">
+                    <h4 className="text-sm font-semibold mb-3">Pipeline</h4>
+                    <div className="space-y-1.5">
+                      {phases.map((p) => {
+                        const bCount = dashboard.buyerPhases[p] || 0;
+                        const sCount = dashboard.sellerPhases[p] || 0;
+                        const total = bCount + sCount;
+                        return (
+                          <div key={p} className="flex items-center justify-between py-1.5">
+                            <span className="text-xs font-medium">{phaseIcons[p]} {phaseLabels[p]}</span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-[10px] text-muted-foreground">{bCount}B · {sCount}S</span>
+                              <span className="text-xs font-bold text-foreground w-6 text-right">{total}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div className="flex items-center justify-between pt-2 border-t border-border mt-1">
+                        <span className="text-xs font-semibold">Total</span>
+                        <span className="text-xs font-bold text-primary">{dashboard.totalContacts}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              </div>
-
-              {/* Pipeline Row — Clickable drilldown */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <PipelineCard
-                  title="🏠 Buyer Pipeline"
-                  type="buyer"
-                  phaseCounts={dashboard.buyerPhases}
-                  contactsByPhase={buyerContactsByPhase}
-                />
-                <PipelineCard
-                  title="🏗️ Seller Pipeline"
-                  type="seller"
-                  phaseCounts={dashboard.sellerPhases}
-                  contactsByPhase={sellerContactsByPhase}
-                />
+                {/* AI Activity Feed */}
+                <Card>
+                  <CardContent className="p-4">
+                    <h4 className="text-sm font-semibold mb-3">AI Activity</h4>
+                    <div className="space-y-2">
+                      {dashboard.totalSent > 0 && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><Send className="h-3 w-3 text-primary" /></span>
+                          <span><strong>{dashboard.totalSent}</strong> emails sent this month</span>
+                        </div>
+                      )}
+                      {queue.length > 0 && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center shrink-0"><MailOpen className="h-3 w-3 text-amber-600" /></span>
+                          <span><strong>{queue.length}</strong> drafts pending approval</span>
+                        </div>
+                      )}
+                      {suppressedEmails.length > 0 && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center shrink-0"><span className="text-[10px]">🚫</span></span>
+                          <span><strong>{suppressedEmails.length}</strong> emails held back (frequency cap, low engagement)</span>
+                        </div>
+                      )}
+                      {dashboard.recentEvents.length > 0 && (
+                        <>
+                          {dashboard.recentEvents.slice(0, 4).map((event: any) => (
+                            <div key={event.id} className="flex items-center gap-2 text-xs">
+                              <span className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                                {event.event_type === "opened" ? <MailOpen className="h-3 w-3 text-emerald-600" /> :
+                                 event.event_type === "clicked" ? <MousePointerClick className="h-3 w-3 text-primary" /> :
+                                 <Send className="h-3 w-3 text-muted-foreground" />}
+                              </span>
+                              <span className="truncate">
+                                <strong>{event.contacts?.name}</strong> {event.event_type} {event.newsletters?.subject?.slice(0, 30)}
+                              </span>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                      {dashboard.totalSent === 0 && queue.length === 0 && dashboard.recentEvents.length === 0 && (
+                        <p className="text-xs text-muted-foreground text-center py-3">No activity yet. AI will start when contacts are enrolled.</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           ),
@@ -309,33 +371,75 @@ export default async function NewsletterDashboard() {
 
 
           /* ═══ AI WORKFLOWS ═══ */
-          workflows: (
-            <div className="space-y-4">
-              <ListingBlastAutomation />
+          workflows: (() => {
+            const blueprintsBySlug: Record<string, { icon: string }> = {};
+            for (const bp of WORKFLOW_BLUEPRINTS) blueprintsBySlug[bp.slug] = bp;
+            const workflowList = workflows || [];
 
-              <Card>
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold">Active Workflows ({(workflows || []).length})</h4>
-                    <a href="/automations" className="text-xs text-primary font-medium hover:underline">Manage →</a>
+            return (
+              <div className="space-y-4">
+                <ListingBlastAutomation />
+
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Workflows ({workflowList.length})</h4>
+                  <a href="/automations" className="text-xs text-primary font-medium hover:underline">Manage All →</a>
+                </div>
+
+                {workflowList.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <p className="text-sm text-muted-foreground">No workflows configured yet.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {workflowList.map((w: any) => {
+                      const icon = blueprintsBySlug[w.slug]?.icon || "⚙️";
+                      const stepCount = Array.isArray(w.workflow_steps) ? w.workflow_steps.length : 0;
+
+                      return (
+                        <a key={w.id} href={`/automations/workflows/${w.id}`} className="group">
+                          <Card className="h-full transition-shadow hover:shadow-md group-hover:border-primary/30">
+                            <CardContent className="p-5 space-y-3">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-2xl">{icon}</span>
+                                  <div>
+                                    <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors leading-tight">
+                                      {w.name}
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                                      {w.description || w.trigger_type?.replace(/_/g, " ")}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                <span>{stepCount} step{stepCount !== 1 ? "s" : ""}</span>
+                                <span>Trigger: {w.trigger_type?.replace(/_/g, " ")}</span>
+                              </div>
+
+                              <div className="flex items-center justify-between">
+                                {w.is_active ? (
+                                  <Badge className="bg-green-100 text-green-800 hover:bg-green-100 text-[11px]">Active</Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="text-[11px]">Paused</Badge>
+                                )}
+                                {w.contact_type && w.contact_type !== "any" && (
+                                  <Badge variant="outline" className="text-[11px] capitalize">{w.contact_type}</Badge>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </a>
+                      );
+                    })}
                   </div>
-                  {(!workflows || workflows.length === 0) ? (
-                    <p className="text-sm text-muted-foreground text-center py-3">No workflows configured.</p>
-                  ) : workflows.map((w: any) => (
-                    <a key={w.id} href={`/automations/workflows/${w.id}`} className="flex items-center justify-between py-2.5 border-b border-border last:border-0 hover:bg-muted/30 transition-colors -mx-1 px-1 rounded">
-                      <div>
-                        <p className="text-sm font-medium">{w.name}</p>
-                        <p className="text-xs text-muted-foreground">Trigger: {w.trigger_type?.replace(/_/g, " ")}</p>
-                      </div>
-                      <Badge variant={w.is_active ? "default" : "secondary"} className="text-xs">
-                        {w.is_active ? "Active" : "Paused"}
-                      </Badge>
-                    </a>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
-          ),
+                )}
+              </div>
+            );
+          })(),
 
           /* ═══ SETTINGS ═══ */
           settings: (
