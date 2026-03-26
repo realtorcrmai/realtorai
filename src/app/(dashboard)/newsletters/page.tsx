@@ -13,6 +13,7 @@ import { SentByAIList } from "@/components/newsletters/SentByAIList";
 import { AIAgentQueue } from "@/components/newsletters/AIAgentQueue";
 import { HeldBackList } from "@/components/newsletters/HeldBackList";
 import { AIWorkingForYou } from "@/components/newsletters/AIWorkingForYou";
+import { ListingBlastAutomation } from "@/components/newsletters/ListingBlastAutomation";
 import { sendNewsletter, skipNewsletter, bulkApproveNewsletters } from "@/actions/newsletters";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -186,14 +187,50 @@ export default async function NewsletterDashboard() {
           overview: (
             <div className="space-y-4">
 
-              {/* Relationship Health + Email Stats */}
+              {/* Stats — Glass + Accent Bar Style */}
               <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                <Card className="border-red-200"><CardContent className="p-4 text-center bg-red-50"><div className="text-2xl font-bold text-red-600">{hotLeads.length}</div><div className="text-xs font-semibold">🔥 Hot Buyers</div><div className="text-[10px] text-red-600 font-medium">At risk — call today</div></CardContent></Card>
-                <Card><CardContent className="p-4 text-center bg-amber-50"><div className="text-2xl font-bold text-amber-600">{warmContacts.length}</div><div className="text-xs font-semibold">🌡️ Warm</div></CardContent></Card>
-                <Card><CardContent className="p-4 text-center bg-blue-50"><div className="text-2xl font-bold text-blue-600">{coolingContacts.length + dormantContacts.length}</div><div className="text-xs font-semibold">❄️ Cold</div></CardContent></Card>
-                <Card><CardContent className="p-4 text-center"><div className="text-2xl font-bold text-foreground">{dashboard.totalSent}</div><div className="text-xs font-semibold">📧 Sent</div></CardContent></Card>
-                <Card><CardContent className="p-4 text-center"><div className={`text-2xl font-bold ${dashboard.openRate > 40 ? "text-emerald-600" : "text-amber-500"}`}>{dashboard.openRate}%</div><div className="text-xs font-semibold">📬 Opens</div></CardContent></Card>
-                <Card><CardContent className="p-4 text-center"><div className={`text-2xl font-bold ${dashboard.clickRate > 10 ? "text-emerald-600" : "text-amber-500"}`}>{dashboard.clickRate}%</div><div className="text-xs font-semibold">🖱️ Clicks</div></CardContent></Card>
+                <div className="relative overflow-hidden rounded-xl bg-white/85 backdrop-blur-sm border border-white/50 shadow-sm p-4 text-center">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-orange-500" />
+                  <div className="text-lg mb-1">🔥</div>
+                  <div className="text-2xl font-extrabold text-red-600">{hotBuyers.length}</div>
+                  <div className="text-[11px] font-semibold text-foreground mt-1">Hot Buyers</div>
+                  <div className="text-[10px] text-red-600 font-medium mt-0.5">At risk</div>
+                </div>
+                <div className="relative overflow-hidden rounded-xl bg-white/85 backdrop-blur-sm border border-white/50 shadow-sm p-4 text-center">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500" />
+                  <div className="text-lg mb-1">🔥</div>
+                  <div className="text-2xl font-extrabold text-orange-600">{hotSellers.length}</div>
+                  <div className="text-[11px] font-semibold text-foreground mt-1">Hot Sellers</div>
+                  <div className="text-[10px] text-orange-600 font-medium mt-0.5">At risk</div>
+                </div>
+                <div className="relative overflow-hidden rounded-xl bg-white/85 backdrop-blur-sm border border-white/50 shadow-sm p-4 text-center">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 to-yellow-400" />
+                  <div className="text-lg mb-1">🌡️</div>
+                  <div className="text-2xl font-extrabold text-amber-600">{warmContacts.length}</div>
+                  <div className="text-[11px] font-semibold text-foreground mt-1">Warm</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">Nurturing</div>
+                </div>
+                <div className="relative overflow-hidden rounded-xl bg-white/85 backdrop-blur-sm border border-white/50 shadow-sm p-4 text-center">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
+                  <div className="text-lg mb-1">📧</div>
+                  <div className="text-2xl font-extrabold text-[#4f35d2]">{dashboard.totalSent}</div>
+                  <div className="text-[11px] font-semibold text-foreground mt-1">Emails Sent</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">This month</div>
+                </div>
+                <div className="relative overflow-hidden rounded-xl bg-white/85 backdrop-blur-sm border border-white/50 shadow-sm p-4 text-center">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
+                  <div className="text-lg mb-1">📬</div>
+                  <div className={`text-2xl font-extrabold ${dashboard.openRate > 40 ? "text-emerald-600" : "text-amber-500"}`}>{dashboard.openRate}%</div>
+                  <div className="text-[11px] font-semibold text-foreground mt-1">Open Rate</div>
+                  <div className="text-[10px] text-emerald-600 font-medium mt-0.5">{dashboard.openRate > 21 ? `${(dashboard.openRate / 21).toFixed(1)}x industry` : "Industry avg 21%"}</div>
+                </div>
+                <div className="relative overflow-hidden rounded-xl bg-white/85 backdrop-blur-sm border border-white/50 shadow-sm p-4 text-center">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-pink-500" />
+                  <div className="text-lg mb-1">🖱️</div>
+                  <div className={`text-2xl font-extrabold ${dashboard.clickRate > 10 ? "text-purple-600" : "text-amber-500"}`}>{dashboard.clickRate}%</div>
+                  <div className="text-[11px] font-semibold text-foreground mt-1">Click Rate</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">{dashboard.clickRate > 10 ? "Above average" : "Needs work"}</div>
+                </div>
               </div>
 
               {/* Hot Buyers + Hot Sellers Row */}
@@ -297,6 +334,8 @@ export default async function NewsletterDashboard() {
           /* ═══ AI WORKFLOWS ═══ */
           workflows: (
             <div className="space-y-4">
+              <ListingBlastAutomation />
+
               <Card>
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between mb-3">
