@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { CONTENT_STEPS } from "@/lib/constants";
-import { Check, Sparkles, Wand2, Image } from "lucide-react";
+import { Sparkles, Wand2, Image } from "lucide-react";
 
 const stepIcons = [Sparkles, Wand2, Image];
 
@@ -21,7 +21,12 @@ export function ContentStepper({
     <div className={cn("flex items-center gap-2", className)}>
       {CONTENT_STEPS.map((s, i) => {
         const Icon = stepIcons[i];
-        const isComplete = currentStep > s.step;
+        // "visited" = user has navigated past this step. We intentionally avoid a green
+        // checkmark here because we cannot validate server-side data (e.g. prompts saved)
+        // from this client-only stepper. A green check would falsely imply the step is
+        // fully complete. Instead, visited steps use the primary (indigo) palette to signal
+        // "been here" without claiming "all done".
+        const isVisited = currentStep > s.step;
         const isCurrent = currentStep === s.step;
 
         return (
@@ -32,8 +37,8 @@ export function ContentStepper({
                 "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 w-full group",
                 isCurrent
                   ? "bg-primary text-primary-foreground shadow-sm elevation-4"
-                  : isComplete
-                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                  : isVisited
+                    ? "bg-primary/8 text-primary border border-primary/20 hover:bg-primary/12"
                     : "bg-muted/50 text-muted-foreground border border-transparent hover:bg-muted"
               )}
             >
@@ -42,16 +47,13 @@ export function ContentStepper({
                   "flex h-8 w-8 items-center justify-center rounded-lg shrink-0 transition-colors",
                   isCurrent
                     ? "bg-white/20"
-                    : isComplete
-                      ? "bg-emerald-100"
+                    : isVisited
+                      ? "bg-primary/15"
                       : "bg-muted"
                 )}
               >
-                {isComplete ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Icon className="h-4 w-4" />
-                )}
+                {/* Always show the step's own icon — no green check, to avoid implying completion */}
+                <Icon className="h-4 w-4" />
               </div>
               <div className="text-left min-w-0">
                 <p className="text-sm font-semibold leading-tight">
@@ -62,8 +64,8 @@ export function ContentStepper({
                     "text-xs leading-tight mt-0.5",
                     isCurrent
                       ? "text-primary-foreground/70"
-                      : isComplete
-                        ? "text-emerald-600"
+                      : isVisited
+                        ? "text-primary/70"
                         : "text-muted-foreground"
                   )}
                 >
@@ -72,12 +74,12 @@ export function ContentStepper({
               </div>
             </button>
 
-            {/* Connector line */}
+            {/* Connector line — indigo for visited segments, not green */}
             {i < CONTENT_STEPS.length - 1 && (
               <div
                 className={cn(
                   "h-px w-6 shrink-0",
-                  currentStep > s.step ? "bg-emerald-300" : "bg-border"
+                  currentStep > s.step ? "bg-primary/40" : "bg-border"
                 )}
               />
             )}

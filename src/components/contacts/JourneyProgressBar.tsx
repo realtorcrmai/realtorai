@@ -91,7 +91,10 @@ export function JourneyProgressBar({
       {/* Progress bar */}
       <div className="flex items-center gap-0 mt-3">
         {phases.map((phase, i) => {
-          const isComplete = i < currentIndex;
+          // "visited" means the contact has passed through this phase — it does NOT mean
+          // all subtasks were completed. We use indigo (brand) rather than green (done)
+          // to signal "visited" vs "complete" so the UI never falsely implies full completion.
+          const isVisited = i < currentIndex;
           const isCurrent = i === currentIndex;
           const isFuture = i > currentIndex;
 
@@ -101,21 +104,22 @@ export function JourneyProgressBar({
               <div className="flex flex-col items-center">
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm border-2 transition-all ${
-                    isComplete
-                      ? "bg-emerald-500 border-emerald-500 text-white"
+                    isVisited
+                      ? "bg-primary/80 border-primary/80 text-white"
                       : isCurrent
                       ? "bg-primary border-primary text-white ring-4 ring-primary/20"
                       : "bg-muted border-border text-muted-foreground"
                   }`}
                 >
-                  {isComplete ? "✓" : phase.emoji}
+                  {/* Show phase emoji for all states — no green checkmark, to avoid implying subtask completion */}
+                  {phase.emoji}
                 </div>
                 <span
                   className={`text-[10px] mt-1 text-center leading-tight max-w-[60px] ${
                     isCurrent
                       ? "font-bold text-primary"
-                      : isComplete
-                      ? "text-emerald-600 font-medium"
+                      : isVisited
+                      ? "text-primary/70 font-medium"
                       : "text-muted-foreground"
                   }`}
                 >
@@ -131,12 +135,12 @@ export function JourneyProgressBar({
                 )}
               </div>
 
-              {/* Connector line */}
+              {/* Connector line — indigo for visited segments, not green */}
               {i < phases.length - 1 && (
                 <div
                   className={`flex-1 h-0.5 mx-1 ${
                     i < currentIndex
-                      ? "bg-emerald-500"
+                      ? "bg-primary/50"
                       : i === currentIndex
                       ? "bg-gradient-to-r from-primary to-muted"
                       : "bg-border"
