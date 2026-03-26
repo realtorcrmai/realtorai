@@ -107,14 +107,14 @@ REALTOR_TOOLS = [
         "type": "function",
         "function": {
             "name": "update_listing_status",
-            "description": "Update a listing's pipeline status. Valid: active, pending, sold.",
+            "description": "Update a listing's pipeline status. Valid: active, pending, sold, conditional, subject_removal, withdrawn, expired.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "listing_id": {"type": "string"},
                     "new_status": {
                         "type": "string",
-                        "enum": ["active", "pending", "sold"],
+                        "enum": ["active", "pending", "sold", "conditional", "subject_removal", "withdrawn", "expired"],
                     },
                 },
                 "required": ["listing_id", "new_status"],
@@ -242,6 +242,141 @@ REALTOR_TOOLS = [
                     },
                 },
                 "required": ["topic"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_tasks",
+            "description": "Search and list tasks. Filter by status, priority, or linked contact/listing.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": ["pending", "in_progress", "completed"],
+                        "description": "Filter by task status",
+                    },
+                    "priority": {
+                        "type": "string",
+                        "enum": ["high", "medium", "low"],
+                        "description": "Filter by task priority",
+                    },
+                    "contact_id": {"type": "string", "description": "Filter tasks linked to this contact ID"},
+                    "listing_id": {"type": "string", "description": "Filter tasks linked to this listing ID"},
+                    "limit": {"type": "integer", "description": "Maximum number of tasks to return (default 20)"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_task",
+            "description": "Create a new task for the realtor.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string", "description": "Task title"},
+                    "priority": {
+                        "type": "string",
+                        "enum": ["high", "medium", "low"],
+                        "description": "Task priority (default: medium)",
+                    },
+                    "due_date": {"type": "string", "description": "Due date in ISO format (e.g. 2026-04-01)"},
+                    "contact_id": {"type": "string", "description": "Contact ID to link to this task"},
+                    "listing_id": {"type": "string", "description": "Listing ID to link to this task"},
+                    "notes": {"type": "string", "description": "Additional notes for the task"},
+                },
+                "required": ["title"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_deals",
+            "description": "Search deals in the pipeline. Filter by stage, type, contact, or listing.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "stage": {"type": "string", "description": "Deal stage to filter by (e.g. new_lead, active, under_contract, closed)"},
+                    "type": {
+                        "type": "string",
+                        "enum": ["buyer", "seller"],
+                        "description": "Deal type",
+                    },
+                    "contact_id": {"type": "string", "description": "Filter deals linked to this contact ID"},
+                    "listing_id": {"type": "string", "description": "Filter deals linked to this listing ID"},
+                    "limit": {"type": "integer", "description": "Maximum number of deals to return (default 20)"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_deal",
+            "description": "Create a new deal in the pipeline.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string", "description": "Deal title"},
+                    "type": {
+                        "type": "string",
+                        "enum": ["buyer", "seller"],
+                        "description": "Deal type",
+                    },
+                    "contact_id": {"type": "string", "description": "Contact ID associated with this deal"},
+                    "listing_id": {"type": "string", "description": "Listing ID associated with this deal"},
+                    "stage": {"type": "string", "description": "Initial deal stage (default: new_lead)"},
+                    "value": {"type": "number", "description": "Deal value / expected sale price"},
+                    "commission_pct": {"type": "number", "description": "Commission percentage"},
+                },
+                "required": ["title", "type", "contact_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_communications",
+            "description": "Get communication history for a contact. Shows SMS, email, WhatsApp messages and notes.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {"type": "string", "description": "Contact ID to fetch communications for"},
+                    "channel": {
+                        "type": "string",
+                        "enum": ["sms", "whatsapp", "email", "note"],
+                        "description": "Filter by communication channel",
+                    },
+                    "limit": {"type": "integer", "description": "Maximum number of messages to return (default 20)"},
+                },
+                "required": ["contact_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "confirm_showing",
+            "description": "Confirm or deny a showing request. Updates the appointment status.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "showing_id": {"type": "string", "description": "Showing / appointment ID"},
+                    "action": {
+                        "type": "string",
+                        "enum": ["confirm", "deny", "cancel"],
+                        "description": "Action to take on the showing",
+                    },
+                    "notes": {"type": "string", "description": "Optional notes or reason"},
+                },
+                "required": ["showing_id", "action"],
             },
         },
     },
@@ -403,6 +538,83 @@ async def handle_realtor_tool(tool_name: str, args: dict, realtor_id: str = "R00
                 "page_name": page.replace("/", " → ").title(),
                 "message": f"Navigating to {page.replace('/', ' → ').title()}",
             }
+
+        elif tool_name == "get_tasks":
+            params = {}
+            if args.get("status"):
+                params["status"] = args["status"]
+            if args.get("priority"):
+                params["priority"] = args["priority"]
+            if args.get("contact_id"):
+                params["contact_id"] = args["contact_id"]
+            if args.get("listing_id"):
+                params["listing_id"] = args["listing_id"]
+            params["limit"] = str(args.get("limit", 20))
+            result = await api.get("/api/voice-agent/tasks", params)
+
+        elif tool_name == "create_task":
+            payload = {
+                "title": args["title"],
+                "priority": args.get("priority", "medium"),
+            }
+            if args.get("due_date"):
+                payload["due_date"] = args["due_date"]
+            if args.get("contact_id"):
+                payload["contact_id"] = args["contact_id"]
+            if args.get("listing_id"):
+                payload["listing_id"] = args["listing_id"]
+            if args.get("notes"):
+                payload["notes"] = args["notes"]
+            result = await api.post("/api/voice-agent/tasks", payload)
+
+        elif tool_name == "get_deals":
+            params = {}
+            if args.get("stage"):
+                params["stage"] = args["stage"]
+            if args.get("type"):
+                params["type"] = args["type"]
+            if args.get("contact_id"):
+                params["contact_id"] = args["contact_id"]
+            if args.get("listing_id"):
+                params["listing_id"] = args["listing_id"]
+            params["limit"] = str(args.get("limit", 20))
+            result = await api.get("/api/voice-agent/deals", params)
+
+        elif tool_name == "create_deal":
+            payload = {
+                "title": args["title"],
+                "type": args["type"],
+                "contact_id": args["contact_id"],
+                "stage": args.get("stage", "new_lead"),
+            }
+            if args.get("listing_id"):
+                payload["listing_id"] = args["listing_id"]
+            if args.get("value") is not None:
+                payload["value"] = args["value"]
+            if args.get("commission_pct") is not None:
+                payload["commission_pct"] = args["commission_pct"]
+            result = await api.post("/api/voice-agent/deals", payload)
+
+        elif tool_name == "get_communications":
+            params = {"contact_id": args["contact_id"]}
+            if args.get("channel"):
+                params["channel"] = args["channel"]
+            params["limit"] = str(args.get("limit", 20))
+            result = await api.get("/api/voice-agent/communications", params)
+
+        elif tool_name == "confirm_showing":
+            action_to_status = {
+                "confirm": "confirmed",
+                "deny": "denied",
+                "cancel": "cancelled",
+            }
+            payload = {"status": action_to_status.get(args["action"], args["action"])}
+            if args.get("notes"):
+                payload["notes"] = args["notes"]
+            result = await api.patch(
+                f"/api/voice-agent/showings/{args['showing_id']}",
+                payload,
+            )
 
         elif tool_name == "get_crm_help":
             topic = args.get("topic", "").lower()

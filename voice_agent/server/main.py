@@ -270,7 +270,17 @@ async def handle_chat(request):
 
     body = await request.json()
     sid = body.get("session_id")
-    message = body.get("message", "")
+    message = body.get("message", "").strip()
+
+    # Empty message guard — return helpful prompt instead of hanging
+    if not message:
+        return web.json_response({
+            "ok": True,
+            "response": "I didn't catch that. Could you please say or type your question?",
+            "fields": {},
+            "session_id": sid,
+            "provider": "none",
+        }, headers=_cors_headers())
 
     if sid not in _sessions:
         return web.json_response({"error": "Session not found"}, status=404, headers=_cors_headers())
@@ -318,7 +328,17 @@ async def handle_chat_stream(request):
 
     body = await request.json()
     sid = body.get("session_id")
-    message = body.get("message", "")
+    message = body.get("message", "").strip()
+
+    # Empty message guard
+    if not message:
+        return web.json_response({
+            "ok": True,
+            "response": "I didn't catch that. Could you please say or type your question?",
+            "fields": {},
+            "session_id": sid,
+            "provider": "none",
+        }, headers=_cors_headers())
 
     if sid not in _sessions:
         return web.json_response({"error": "Session not found"}, status=404, headers=_cors_headers())
@@ -401,6 +421,43 @@ async def handle_reminders(request):
     return web.json_response({"reminders": get_reminders(realtor_id=CURRENT_REALTOR_ID)}, headers=_cors_headers())
 
 
+async def on_startup(app):
+    """
+    Warm up Turbopack lazy-compiled voice-agent API routes on startup.
+    Turbopack only compiles routes on first request; hitting them once prevents
+    the first real user request from getting a 500 compilation error.
+    """
+    from config import LISTINGFLOW_API, VOICE_AGENT_API_KEY
+    import aiohttp
+
+    warmup_paths = [
+        "/api/voice-agent/contacts",
+        "/api/voice-agent/listings",
+        "/api/voice-agent/showings",
+        "/api/voice-agent/tasks",
+        "/api/voice-agent/deals",
+        "/api/voice-agent/feedback",
+    ]
+    base = LISTINGFLOW_API.rstrip("/")
+    headers = {}
+    if VOICE_AGENT_API_KEY:
+        headers["Authorization"] = f"Bearer {VOICE_AGENT_API_KEY}"
+
+    print("[WARMUP] Pinging Next.js voice-agent routes to trigger Turbopack compilation...")
+    try:
+        async with aiohttp.ClientSession() as session:
+            for path in warmup_paths:
+                url = f"{base}{path}"
+                try:
+                    async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=20)) as resp:
+                        print(f"[WARMUP] {path} → HTTP {resp.status}")
+                except Exception as e:
+                    print(f"[WARMUP] {path} → error: {e}")
+    except Exception as e:
+        print(f"[WARMUP] Session error: {e}")
+    print("[WARMUP] Done.")
+
+
 async def on_shutdown(app):
     """Clean up the API client session on server shutdown."""
     await listingflow_api.close()
@@ -408,6 +465,7 @@ async def on_shutdown(app):
 
 def create_app():
     app = web.Application()
+    app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
     app.router.add_route("OPTIONS", "/{path:.*}", handle_options)
     app.router.add_get("/api/health", handle_health)
