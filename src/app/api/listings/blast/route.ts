@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBatchEmails } from "@/lib/resend";
-import { buildEmail } from "@/lib/email-builder";
 
 export const maxDuration = 120;
 
