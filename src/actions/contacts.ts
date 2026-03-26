@@ -80,24 +80,22 @@ export async function createContact(formData: ContactFormData, force = false) {
 
   revalidatePath("/contacts");
 
-  // Fire-and-forget: auto-enroll in workflows (e.g. speed_to_contact)
-  // and create agent notification via workflow-triggers
-  import("@/lib/workflow-triggers")
-    .then(({ fireTrigger }) =>
-      fireTrigger({
-        type: "new_lead",
-        contactId: data.id,
-        contactType: data.type,
-      })
-    )
-    .catch(() => {
-      // Don't fail contact creation if trigger fails
-    });
+  // Fire-and-forget: enroll in journey + trigger matching workflows
+  // Journey tracks phase (lead → active → contract → closed)
+  // Workflows handle email sequences (welcome, nurture, follow-up)
+  (async () => {
+    try {
+      // 1. Enroll in journey (phase tracking only — no welcome email)
+      await enrollInJourney(data.id, data.type, data.name);
 
-  // Auto-enroll in journey + generate welcome email draft
-  autoEnrollAndWelcome(data.id, data.type, data.name, data.email, data.notes).catch(() => {
-    // Don't fail contact creation if journey enrollment fails
-  });
+      // 2. Fire trigger engine — enrolls in matching workflows
+      //    Welcome email comes from "Speed to Contact" workflow, not auto-enroll
+      const { fireTrigger } = await import("@/lib/trigger-engine");
+      await fireTrigger("new_lead", data.id, { contactType: data.type });
+    } catch {
+      // Don't fail contact creation if enrollment fails
+    }
+  })();
 
   revalidatePath("/newsletters");
 
@@ -544,6 +542,41 @@ export async function deleteContactDocument(docId: string, contactId: string) {
 
 // ── Auto Journey Enrollment + Welcome Email ──────────────────
 
+/**
+ * Enroll contact in journey (phase tracking only — no welcome email).
+ * Welcome email comes from the "Speed to Contact" workflow via trigger engine.
+ */
+async function enrollInJourney(contactId: string, contactType: string, name: string) {
+  const supabase = createAdminClient();
+  const journeyType = contactType === "seller" ? "seller" : "buyer";
+
+  // Check if already enrolled
+  const { data: existing } = await supabase
+    .from("contact_journeys")
+    .select("id")
+    .eq("contact_id", contactId)
+    .eq("journey_type", journeyType)
+    .maybeSingle();
+
+  if (existing) return; // Already enrolled
+
+  await supabase.from("contact_journeys").insert({
+    contact_id: contactId,
+    journey_type: journeyType,
+    current_phase: "lead",
+    phase_entered_at: new Date().toISOString(),
+    next_email_at: new Date(Date.now() + 3 * 86400000).toISOString(),
+    emails_sent_in_phase: 0,
+    send_mode: "review",
+    is_paused: false,
+    agent_mode: "schedule",
+    trust_level: 0,
+  });
+
+  console.log(`[journey] Enrolled ${name} in ${journeyType} journey (lead phase)`);
+}
+
+/** @deprecated Use enrollInJourney + trigger engine instead */
 async function autoEnrollAndWelcome(
   contactId: string,
   contactType: string,
