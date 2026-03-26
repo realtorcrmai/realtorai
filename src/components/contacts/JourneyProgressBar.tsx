@@ -12,7 +12,7 @@ const BUYER_PHASES: Phase[] = [
   { key: "lead", label: "New Lead", emoji: "🟢" },
   { key: "warm", label: "Warming", emoji: "🌡️" },
   { key: "engaged", label: "Engaged", emoji: "💬" },
-  { key: "hot", label: "Hot Lead", emoji: "🔥" },
+  { key: "hot", label: "Hot Buyer", emoji: "🔥" },
   { key: "active", label: "Active", emoji: "🏠" },
   { key: "under_contract", label: "Contract", emoji: "📝" },
   { key: "past_client", label: "Closed", emoji: "🎉" },
