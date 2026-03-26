@@ -50,7 +50,8 @@ function listingAlert(s: any) {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <meta name="color-scheme" content="light dark">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+  * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
   @media(prefers-color-scheme:dark){
     .email-body{background:#111!important}
     .email-card{background:#1c1c1e!important}
@@ -68,7 +69,7 @@ function listingAlert(s: any) {
   }
 </style>
 </head>
-<body style="margin:0;padding:0;background:#f5f5f7;font-family:'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;" class="email-body">
+<body style="margin:0;padding:0;background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Inter','Helvetica Neue',sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;" class="email-body">
 
 <!-- Preheader -->
 <div style="display:none;max-height:0;overflow:hidden;font-size:1px;color:#f5f5f7;">
@@ -218,7 +219,7 @@ function luxuryShowcase(s: any) {
   }
 </style>
 </head>
-<body style="margin:0;padding:0;background:#0a0a0a;font-family:'Inter',-apple-system,sans-serif;">
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Inter','Helvetica Neue',sans-serif;-webkit-font-smoothing:antialiased;">
 
 <div style="display:none;max-height:0;overflow:hidden;font-size:1px;color:#0a0a0a;">
   Exclusive: ${s.address}, ${s.area} — ${s.price}. A rare opportunity in one of Vancouver's most coveted neighbourhoods.
@@ -353,7 +354,7 @@ function openHouseInvite(s: any) {
   }
 </style>
 </head>
-<body style="margin:0;padding:0;background:#f5f5f7;font-family:'Inter',-apple-system,sans-serif;" class="email-body">
+<body style="margin:0;padding:0;background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Inter','Helvetica Neue',sans-serif;-webkit-font-smoothing:antialiased;" class="email-body">
 
 <div style="display:none;max-height:0;overflow:hidden;font-size:1px;color:#f5f5f7;">
   You're invited: Open house at ${s.address} on ${s.openHouse}, ${s.openHouseTime}. ${s.price}.
