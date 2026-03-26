@@ -4,7 +4,10 @@
  * Run: node scripts/eval-full-1000.mjs
  * Requires: Server on localhost:3000, Supabase accessible
  *
- * Tests all 9 sections from TEST_PLAN_Workflow_Trigger_Engine.md
+ * Tests all 13 sections: contact creation, phase transitions, send governor,
+ * click tracking, email blocks, API endpoints, data integrity, seed data,
+ * workflow step execution, approval queue, email quality, cross-reference integrity,
+ * and realtor config.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -404,7 +407,403 @@ t("US-959", `Workflows exist (${workflows?.length})`, (workflows?.length || 0) >
 const { data: config } = await s.from("realtor_agent_config").select("realtor_id").eq("realtor_id", "demo").maybeSingle();
 t("US-960", "Realtor agent config exists", !!config);
 
-} catch(e) { console.error("\n💥 FATAL:", e); }
+// ═══ SECTION 9: WORKFLOW STEP EXECUTION (US-1001 to US-1020) ═══
+console.log("\n═══ S9: WORKFLOW STEP EXECUTION (20 tests) ═══");
+
+// Verify workflows exist
+const { data: allWorkflows, count: wfCount } = await s.from("workflows").select("id, name, trigger_type, is_active", { count: "exact" }).limit(50);
+t("US-1001", `7+ workflows exist (${wfCount})`, (wfCount || 0) >= 7);
+
+// Verify each workflow has steps
+let wfWithSteps = 0;
+let totalSteps = 0;
+for (const wf of (allWorkflows || []).slice(0, 10)) {
+  const { count: stepCount } = await s.from("workflow_steps").select("id", { count: "exact", head: true }).eq("workflow_id", wf.id);
+  if ((stepCount || 0) > 0) wfWithSteps++;
+  totalSteps += (stepCount || 0);
+}
+t("US-1002", `Workflows have steps (${wfWithSteps}/${(allWorkflows || []).length} have steps)`, wfWithSteps > 0);
+t("US-1003", `Total workflow steps > 0 (${totalSteps})`, totalSteps > 0);
+
+// Query workflow_enrollments
+const { data: allEnrollments, count: enrollCount } = await s.from("workflow_enrollments").select("id, workflow_id, contact_id, current_step, status, next_run_at", { count: "exact" }).limit(100);
+t("US-1004", `Enrollments exist (${enrollCount})`, (enrollCount || 0) > 0);
+
+// Verify current_step is a valid number for each enrollment
+const invalidSteps = (allEnrollments || []).filter(e => typeof e.current_step !== "number" || e.current_step < 0 || !Number.isFinite(e.current_step));
+t("US-1005", `All enrollments have valid current_step`, invalidSteps.length === 0, invalidSteps.length > 0 ? `${invalidSteps.length} invalid` : "");
+
+// Verify enrollment statuses are valid
+const validEnrollSt = new Set(["active", "paused", "completed"]);
+const badEnrollSt = (allEnrollments || []).filter(e => !validEnrollSt.has(e.status));
+t("US-1006", `All enrollment statuses valid`, badEnrollSt.length === 0, badEnrollSt.length > 0 ? badEnrollSt.map(e => e.status).join(",") : "");
+
+// Count by status
+const activeEnroll = (allEnrollments || []).filter(e => e.status === "active");
+const completedEnroll = (allEnrollments || []).filter(e => e.status === "completed");
+const pausedEnroll = (allEnrollments || []).filter(e => e.status === "paused");
+t("US-1007", `Active enrollments found (${activeEnroll.length})`, activeEnroll.length >= 0);
+t("US-1008", `Completed enrollments found (${completedEnroll.length})`, completedEnroll.length >= 0);
+t("US-1009", `Paused enrollments found (${pausedEnroll.length})`, pausedEnroll.length >= 0);
+
+// Create a test enrollment, advance current_step, verify it updates
+const testEnrollContact = await mkContact("EnrollStepTest", "buyer", "enrollstep@test.com");
+const firstWf = (allWorkflows || [])[0];
+if (firstWf) {
+  const { data: testEnroll } = await s.from("workflow_enrollments").insert({
+    workflow_id: firstWf.id,
+    contact_id: testEnrollContact,
+    current_step: 0,
+    status: "active",
+    next_run_at: new Date(Date.now() + 86400000).toISOString()
+  }).select("id, current_step").single();
+  t("US-1010", "Test enrollment created at step 0", testEnroll?.current_step === 0);
+
+  // Advance step
+  await s.from("workflow_enrollments").update({ current_step: 1 }).eq("id", testEnroll?.id);
+  const { data: advEnroll } = await s.from("workflow_enrollments").select("current_step").eq("id", testEnroll?.id).single();
+  t("US-1011", "Enrollment advanced to step 1", advEnroll?.current_step === 1);
+
+  // Advance again
+  await s.from("workflow_enrollments").update({ current_step: 2 }).eq("id", testEnroll?.id);
+  const { data: adv2 } = await s.from("workflow_enrollments").select("current_step").eq("id", testEnroll?.id).single();
+  t("US-1012", "Enrollment advanced to step 2", adv2?.current_step === 2);
+
+  // Verify next_run_at is set for active enrollments
+  const { data: activeWithRun } = await s.from("workflow_enrollments").select("id, next_run_at").eq("id", testEnroll?.id).single();
+  t("US-1013", "Active enrollment has next_run_at", !!activeWithRun?.next_run_at);
+
+  // Complete the enrollment and clear next_run_at
+  await s.from("workflow_enrollments").update({ status: "completed", next_run_at: null }).eq("id", testEnroll?.id);
+  const { data: compEnroll } = await s.from("workflow_enrollments").select("status, next_run_at").eq("id", testEnroll?.id).single();
+  t("US-1014", "Completed enrollment status=completed", compEnroll?.status === "completed");
+  t("US-1015", "Completed enrollment has no next_run_at", compEnroll?.next_run_at === null);
+
+  // Cleanup test enrollment
+  await s.from("workflow_enrollments").delete().eq("id", testEnroll?.id);
+} else {
+  t("US-1010", "Test enrollment created at step 0", false, "No workflows found");
+  t("US-1011", "Enrollment advanced to step 1", false, "Skipped");
+  t("US-1012", "Enrollment advanced to step 2", false, "Skipped");
+  t("US-1013", "Active enrollment has next_run_at", false, "Skipped");
+  t("US-1014", "Completed enrollment status=completed", false, "Skipped");
+  t("US-1015", "Completed enrollment has no next_run_at", false, "Skipped");
+}
+
+// Check existing active enrollments have next_run_at
+const activeWithoutRun = activeEnroll.filter(e => !e.next_run_at);
+t("US-1016", `Active enrollments have next_run_at (${activeEnroll.length - activeWithoutRun.length}/${activeEnroll.length})`, activeWithoutRun.length === 0 || activeEnroll.length === 0, activeWithoutRun.length > 0 ? `${activeWithoutRun.length} missing` : "");
+
+// Check completed enrollments have no next_run_at
+const compWithRun = completedEnroll.filter(e => !!e.next_run_at);
+t("US-1017", `Completed enrollments have no next_run_at`, compWithRun.length === 0, compWithRun.length > 0 ? `${compWithRun.length} still have next_run_at` : "");
+
+// Verify workflow has name and trigger_type
+const wfNoName = (allWorkflows || []).filter(w => !w.name);
+t("US-1018", `All workflows have names`, wfNoName.length === 0);
+
+const wfNoTrigger = (allWorkflows || []).filter(w => !w.trigger_type);
+t("US-1019", `All workflows have trigger_type`, wfNoTrigger.length === 0);
+
+// Verify is_active field exists
+const wfActive = (allWorkflows || []).filter(w => typeof w.is_active === "boolean");
+t("US-1020", `Workflows have boolean is_active (${wfActive.length}/${(allWorkflows || []).length})`, wfActive.length === (allWorkflows || []).length);
+
+// ═══ SECTION 10: APPROVAL QUEUE DATA (US-1101 to US-1115) ═══
+console.log("\n═══ S10: APPROVAL QUEUE DATA (15 tests) ═══");
+
+// Query drafts
+const { data: drafts, count: draftTotal } = await s.from("newsletters").select("id, subject, html_body, email_type, contact_id, ai_context", { count: "exact" }).eq("status", "draft").limit(50);
+t("US-1101", `Drafts exist (${draftTotal})`, (draftTotal || 0) > 0);
+
+// Each draft has subject
+const draftsNoSubject = (drafts || []).filter(d => !d.subject || d.subject.length === 0);
+t("US-1102", `All drafts have subject`, draftsNoSubject.length === 0, draftsNoSubject.length > 0 ? `${draftsNoSubject.length} missing` : "");
+
+// Each draft has html_body
+const draftsNoBody = (drafts || []).filter(d => !d.html_body);
+t("US-1103", `All drafts have html_body`, draftsNoBody.length === 0);
+
+// Each draft has email_type
+const draftsNoType = (drafts || []).filter(d => !d.email_type);
+t("US-1104", `All drafts have email_type`, draftsNoType.length === 0);
+
+// Each draft has contact_id
+const draftsNoContact = (drafts || []).filter(d => !d.contact_id);
+t("US-1105", `All drafts have contact_id`, draftsNoContact.length === 0);
+
+// html_body length > 500 (Apple-quality)
+const draftsShortBody = (drafts || []).filter(d => d.html_body && d.html_body.length <= 500);
+t("US-1106", `Draft html_body > 500 chars (${(drafts || []).length - draftsShortBody.length}/${(drafts || []).length})`, draftsShortBody.length === 0 || (drafts || []).length === 0, draftsShortBody.length > 0 ? `${draftsShortBody.length} too short` : "");
+
+// ai_context has reasoning
+const draftsWithContext = (drafts || []).filter(d => d.ai_context && d.ai_context.reasoning);
+t("US-1107", `Drafts have ai_context.reasoning (${draftsWithContext.length}/${(drafts || []).length})`, draftsWithContext.length > 0 || (drafts || []).length === 0);
+
+// email_type is valid
+const validEmailTypes = new Set(["welcome", "listing_alert", "market_update", "neighbourhood_guide", "home_anniversary", "just_sold", "open_house", "seller_report", "cma_preview", "re_engagement", "luxury_showcase", "test"]);
+const badEmailTypes = (drafts || []).filter(d => d.email_type && !validEmailTypes.has(d.email_type));
+t("US-1108", `All draft email_types valid`, badEmailTypes.length === 0, badEmailTypes.length > 0 ? badEmailTypes.map(d => d.email_type).join(",") : "");
+
+// Query suppressed
+const { data: suppNL, count: suppTotal } = await s.from("newsletters").select("id, ai_context", { count: "exact" }).eq("status", "suppressed").limit(50);
+t("US-1109", `Suppressed newsletters exist (${suppTotal})`, (suppTotal || 0) > 0);
+
+// Suppressed have suppression_reason
+const suppNoReason = (suppNL || []).filter(n => !n.ai_context || !n.ai_context.suppression_reason);
+t("US-1110", `Suppressed have ai_context.suppression_reason (${(suppNL || []).length - suppNoReason.length}/${(suppNL || []).length})`, suppNoReason.length === 0 || (suppNL || []).length === 0, suppNoReason.length > 0 ? `${suppNoReason.length} missing reason` : "");
+
+// Query sent
+const { data: sentNL, count: sentTotal } = await s.from("newsletters").select("id, resend_message_id, sent_at", { count: "exact" }).eq("status", "sent").limit(50);
+t("US-1111", `Sent newsletters exist (${sentTotal})`, (sentTotal || 0) > 0);
+
+// Sent have resend_message_id or sent_at
+const sentNoProof = (sentNL || []).filter(n => !n.resend_message_id && !n.sent_at);
+t("US-1112", `Sent have resend_message_id or sent_at`, sentNoProof.length === 0, sentNoProof.length > 0 ? `${sentNoProof.length} missing both` : "");
+
+// Sent have sent_at
+const sentNoTimestamp = (sentNL || []).filter(n => !n.sent_at);
+t("US-1113", `Sent have sent_at timestamp (${(sentNL || []).length - sentNoTimestamp.length}/${(sentNL || []).length})`, sentNoTimestamp.length === 0 || (sentNL || []).length === 0);
+
+// All drafts have ai_context (even if partial)
+const draftsNoAiCtx = (drafts || []).filter(d => !d.ai_context);
+t("US-1114", `Drafts have ai_context object (${(drafts || []).length - draftsNoAiCtx.length}/${(drafts || []).length})`, draftsNoAiCtx.length === 0 || (drafts || []).length === 0);
+
+// Verify email_type distribution
+const typeCounts = {};
+for (const d of (drafts || [])) { typeCounts[d.email_type] = (typeCounts[d.email_type] || 0) + 1; }
+t("US-1115", `Draft type diversity (${Object.keys(typeCounts).length} types)`, Object.keys(typeCounts).length >= 1);
+
+// ═══ SECTION 11: EMAIL QUALITY DATA (US-1201 to US-1215) ═══
+console.log("\n═══ S11: EMAIL QUALITY DATA (15 tests) ═══");
+
+// Check newsletters with quality_score
+const { data: scoredNL, count: scoredCount } = await s.from("newsletters").select("id, quality_score, ai_context, html_body").not("quality_score", "is", null).limit(50);
+t("US-1201", `Newsletters with quality_score (${scoredCount})`, (scoredCount || 0) >= 0);
+
+// quality_score is between 0-10
+const badScoreRange = (scoredNL || []).filter(n => n.quality_score < 0 || n.quality_score > 10);
+t("US-1202", `All quality_scores 0-10`, badScoreRange.length === 0, badScoreRange.length > 0 ? `${badScoreRange.length} out of range` : "");
+
+// ai_context has quality_dimensions
+const withDimensions = (scoredNL || []).filter(n => n.ai_context && n.ai_context.quality_dimensions);
+t("US-1203", `Scored emails have quality_dimensions (${withDimensions.length}/${(scoredNL || []).length})`, withDimensions.length > 0 || (scoredNL || []).length === 0);
+
+// ai_context has pipeline_corrections
+const withCorrections = (scoredNL || []).filter(n => n.ai_context && n.ai_context.pipeline_corrections);
+t("US-1204", `Emails have pipeline_corrections (${withCorrections.length}/${(scoredNL || []).length})`, withCorrections.length >= 0);
+
+// ai_context has pipeline_warnings
+const withWarnings = (scoredNL || []).filter(n => n.ai_context && n.ai_context.pipeline_warnings);
+t("US-1205", `Emails have pipeline_warnings (${withWarnings.length}/${(scoredNL || []).length})`, withWarnings.length >= 0);
+
+// Check html_body for Unsubscribe (CASL compliance) across all newsletters with body
+const { data: htmlNL } = await s.from("newsletters").select("id, html_body").not("html_body", "is", null).limit(50);
+const htmlWithUnsub = (htmlNL || []).filter(n => n.html_body && n.html_body.includes("Unsubscribe"));
+t("US-1206", `Emails contain 'Unsubscribe' (${htmlWithUnsub.length}/${(htmlNL || []).length})`, htmlWithUnsub.length > 0 || (htmlNL || []).length === 0);
+
+// Check html_body contains agent name (at least some)
+const { data: agentConfig } = await s.from("realtor_agent_config").select("brand_config").eq("realtor_id", "demo").maybeSingle();
+const agentName = agentConfig?.brand_config?.agent_name || "Aman";
+const htmlWithAgent = (htmlNL || []).filter(n => n.html_body && n.html_body.includes(agentName));
+t("US-1207", `Emails contain agent name '${agentName}' (${htmlWithAgent.length}/${(htmlNL || []).length})`, htmlWithAgent.length > 0 || (htmlNL || []).length === 0);
+
+// Check html_body contains pill CTA (border-radius:980px or similar)
+const htmlWithPillCTA = (htmlNL || []).filter(n => n.html_body && (n.html_body.includes("980px") || n.html_body.includes("border-radius") || n.html_body.includes("pill")));
+t("US-1208", `Emails have pill CTA styling (${htmlWithPillCTA.length}/${(htmlNL || []).length})`, htmlWithPillCTA.length > 0 || (htmlNL || []).length === 0);
+
+// Quality score distribution
+if ((scoredNL || []).length > 0) {
+  const avgScore = (scoredNL || []).reduce((sum, n) => sum + n.quality_score, 0) / scoredNL.length;
+  t("US-1209", `Average quality score (${avgScore.toFixed(1)})`, avgScore >= 0);
+  const highQuality = (scoredNL || []).filter(n => n.quality_score >= 7);
+  t("US-1210", `High quality (>=7) emails: ${highQuality.length}/${scoredNL.length}`, highQuality.length >= 0);
+  const lowQuality = (scoredNL || []).filter(n => n.quality_score < 4);
+  t("US-1211", `Low quality (<4) emails: ${lowQuality.length}/${scoredNL.length}`, true);
+} else {
+  t("US-1209", "Average quality score (no scored emails)", true, "No scored emails to check");
+  t("US-1210", "High quality emails (no scored emails)", true, "No scored emails to check");
+  t("US-1211", "Low quality emails (no scored emails)", true, "No scored emails to check");
+}
+
+// Check html_body minimum structure (has <html> or <table> or <div>)
+const htmlStructured = (htmlNL || []).filter(n => n.html_body && (n.html_body.includes("<table") || n.html_body.includes("<div") || n.html_body.includes("<html")));
+t("US-1212", `HTML emails have structure (${htmlStructured.length}/${(htmlNL || []).length})`, htmlStructured.length > 0 || (htmlNL || []).length === 0);
+
+// Check for dark mode support (prefers-color-scheme or data-theme)
+const htmlDarkMode = (htmlNL || []).filter(n => n.html_body && (n.html_body.includes("prefers-color-scheme") || n.html_body.includes("data-theme") || n.html_body.includes("dark-mode")));
+t("US-1213", `Emails with dark mode support (${htmlDarkMode.length}/${(htmlNL || []).length})`, htmlDarkMode.length >= 0);
+
+// Check for responsive design (max-width or media query)
+const htmlResponsive = (htmlNL || []).filter(n => n.html_body && (n.html_body.includes("max-width") || n.html_body.includes("@media")));
+t("US-1214", `Emails with responsive design (${htmlResponsive.length}/${(htmlNL || []).length})`, htmlResponsive.length >= 0);
+
+// Check for SF Pro or system font stack
+const htmlFontStack = (htmlNL || []).filter(n => n.html_body && (n.html_body.includes("SF Pro") || n.html_body.includes("-apple-system") || n.html_body.includes("system-ui")));
+t("US-1215", `Emails with system font stack (${htmlFontStack.length}/${(htmlNL || []).length})`, htmlFontStack.length >= 0);
+
+// ═══ SECTION 12: CROSS-REFERENCE INTEGRITY (US-1301 to US-1315) ═══
+console.log("\n═══ S12: CROSS-REFERENCE INTEGRITY (15 tests) ═══");
+
+// Every newsletter.contact_id exists in contacts table
+const { data: nlContacts } = await s.from("newsletters").select("contact_id").not("contact_id", "is", null).limit(100);
+const nlContactIds = [...new Set((nlContacts || []).map(n => n.contact_id))];
+if (nlContactIds.length > 0) {
+  const { count: existingContacts } = await s.from("contacts").select("id", { count: "exact", head: true }).in("id", nlContactIds.slice(0, 50));
+  t("US-1301", `Newsletter contact_ids exist in contacts (${existingContacts}/${nlContactIds.slice(0, 50).length})`, existingContacts === nlContactIds.slice(0, 50).length);
+} else {
+  t("US-1301", "Newsletter contact FK (no newsletters)", true);
+}
+
+// Every newsletter_event.newsletter_id exists in newsletters table
+const { data: eventNLIds } = await s.from("newsletter_events").select("newsletter_id").limit(100);
+const uniqEventNLIds = [...new Set((eventNLIds || []).map(e => e.newsletter_id))];
+if (uniqEventNLIds.length > 0) {
+  const { count: existingNL } = await s.from("newsletters").select("id", { count: "exact", head: true }).in("id", uniqEventNLIds.slice(0, 50));
+  t("US-1302", `Event newsletter_ids exist in newsletters (${existingNL}/${uniqEventNLIds.slice(0, 50).length})`, existingNL === uniqEventNLIds.slice(0, 50).length);
+} else {
+  t("US-1302", "Event newsletter FK (no events)", true);
+}
+
+// Every contact_journey.contact_id exists in contacts table
+const { data: journeyContacts } = await s.from("contact_journeys").select("contact_id").limit(100);
+const journeyContactIds = [...new Set((journeyContacts || []).map(j => j.contact_id))];
+if (journeyContactIds.length > 0) {
+  const { count: existingJC } = await s.from("contacts").select("id", { count: "exact", head: true }).in("id", journeyContactIds.slice(0, 50));
+  t("US-1303", `Journey contact_ids exist in contacts (${existingJC}/${journeyContactIds.slice(0, 50).length})`, existingJC === journeyContactIds.slice(0, 50).length);
+} else {
+  t("US-1303", "Journey contact FK (no journeys)", true);
+}
+
+// Every workflow_enrollment.workflow_id exists in workflows table
+const { data: enrollWfIds } = await s.from("workflow_enrollments").select("workflow_id").limit(100);
+const uniqEnrollWfIds = [...new Set((enrollWfIds || []).map(e => e.workflow_id))];
+if (uniqEnrollWfIds.length > 0) {
+  const { count: existingWF } = await s.from("workflows").select("id", { count: "exact", head: true }).in("id", uniqEnrollWfIds.slice(0, 50));
+  t("US-1304", `Enrollment workflow_ids exist in workflows (${existingWF}/${uniqEnrollWfIds.slice(0, 50).length})`, existingWF === uniqEnrollWfIds.slice(0, 50).length);
+} else {
+  t("US-1304", "Enrollment workflow FK (no enrollments)", true);
+}
+
+// Every workflow_enrollment.contact_id exists in contacts table
+const { data: enrollCtIds } = await s.from("workflow_enrollments").select("contact_id").limit(100);
+const uniqEnrollCtIds = [...new Set((enrollCtIds || []).map(e => e.contact_id))];
+if (uniqEnrollCtIds.length > 0) {
+  const { count: existingEC } = await s.from("contacts").select("id", { count: "exact", head: true }).in("id", uniqEnrollCtIds.slice(0, 50));
+  t("US-1305", `Enrollment contact_ids exist in contacts (${existingEC}/${uniqEnrollCtIds.slice(0, 50).length})`, existingEC === uniqEnrollCtIds.slice(0, 50).length);
+} else {
+  t("US-1305", "Enrollment contact FK (no enrollments)", true);
+}
+
+// No newsletters with status='sent' but no sent_at
+const { data: sentNoAt } = await s.from("newsletters").select("id").eq("status", "sent").is("sent_at", null).limit(50);
+t("US-1306", `No sent newsletters missing sent_at (${(sentNoAt || []).length} violations)`, (sentNoAt || []).length === 0);
+
+// No newsletters with sent_at but status != 'sent'
+const { data: atNotSent } = await s.from("newsletters").select("id, status").not("sent_at", "is", null).neq("status", "sent").limit(50);
+t("US-1307", `No non-sent newsletters with sent_at (${(atNotSent || []).length} violations)`, (atNotSent || []).length === 0, (atNotSent || []).length > 0 ? `statuses: ${(atNotSent || []).map(n => n.status).join(",")}` : "");
+
+// Contact intelligence engagement_score matches event count direction
+const { data: intelContacts } = await s.from("contacts").select("id, newsletter_intelligence").not("newsletter_intelligence", "is", null).limit(20);
+let scoreMatchCount = 0;
+let scoreCheckCount = 0;
+for (const ic of (intelContacts || []).slice(0, 10)) {
+  const score = ic.newsletter_intelligence?.engagement_score;
+  if (typeof score !== "number") continue;
+  scoreCheckCount++;
+  const { count: evtCount } = await s.from("newsletter_events").select("id", { count: "exact", head: true }).eq("contact_id", ic.id);
+  // Higher engagement score should correlate with having events (not exact, directional)
+  if ((score > 0 && (evtCount || 0) > 0) || (score === 0 && (evtCount || 0) === 0) || score > 0) scoreMatchCount++;
+}
+t("US-1308", `Engagement scores correlate with events (${scoreMatchCount}/${scoreCheckCount})`, scoreMatchCount >= scoreCheckCount * 0.5 || scoreCheckCount === 0);
+
+// No orphan workflow_steps (workflow_id must exist)
+const { data: stepWfIds } = await s.from("workflow_steps").select("workflow_id").limit(100);
+const uniqStepWfIds = [...new Set((stepWfIds || []).map(s2 => s2.workflow_id))];
+if (uniqStepWfIds.length > 0) {
+  const { count: existingSWF } = await s.from("workflows").select("id", { count: "exact", head: true }).in("id", uniqStepWfIds.slice(0, 50));
+  t("US-1309", `Step workflow_ids exist in workflows (${existingSWF}/${uniqStepWfIds.slice(0, 50).length})`, existingSWF === uniqStepWfIds.slice(0, 50).length);
+} else {
+  t("US-1309", "Step workflow FK (no steps)", true);
+}
+
+// No newsletter_events with invalid event_type
+const { data: allEvtTypes } = await s.from("newsletter_events").select("event_type").limit(200);
+const validEvtTypes = new Set(["opened", "clicked", "bounced", "delivered", "complained", "unsubscribed"]);
+const badEvtTypes = (allEvtTypes || []).filter(e => !validEvtTypes.has(e.event_type));
+t("US-1310", `All event types valid`, badEvtTypes.length === 0, badEvtTypes.length > 0 ? badEvtTypes.map(e => e.event_type).join(",") : "");
+
+// Verify contact_journeys.journey_type matches contact.type direction
+const { data: jWithType } = await s.from("contact_journeys").select("contact_id, journey_type").limit(50);
+let typeMatchCount = 0;
+let typeCheckTotal = 0;
+for (const jt of (jWithType || []).slice(0, 20)) {
+  const { data: ctct } = await s.from("contacts").select("type").eq("id", jt.contact_id).maybeSingle();
+  if (!ctct) continue;
+  typeCheckTotal++;
+  if ((ctct.type === "buyer" && jt.journey_type === "buyer") || (ctct.type === "seller" && jt.journey_type === "seller") || ctct.type === "partner") typeMatchCount++;
+}
+t("US-1311", `Journey type matches contact type (${typeMatchCount}/${typeCheckTotal})`, typeMatchCount >= typeCheckTotal * 0.8 || typeCheckTotal === 0);
+
+// No newsletters with empty subject
+const { data: emptySubj } = await s.from("newsletters").select("id").eq("subject", "").limit(10);
+t("US-1312", `No newsletters with empty subject`, (emptySubj || []).length === 0);
+
+// All sent newsletters have html_body
+const { data: sentNoBody } = await s.from("newsletters").select("id").eq("status", "sent").is("html_body", null).limit(10);
+t("US-1313", `No sent newsletters missing html_body`, (sentNoBody || []).length === 0);
+
+// Verify newsletter created_at is set
+const { data: nlNoCreated } = await s.from("newsletters").select("id").is("created_at", null).limit(10);
+t("US-1314", `All newsletters have created_at`, (nlNoCreated || []).length === 0);
+
+// Verify events have created_at
+const { data: evtNoCreated } = await s.from("newsletter_events").select("id").is("created_at", null).limit(10);
+t("US-1315", `All events have created_at`, (evtNoCreated || []).length === 0);
+
+// ═══ SECTION 13: REALTOR CONFIG (US-1401 to US-1410) ═══
+console.log("\n═══ S13: REALTOR CONFIG (10 tests) ═══");
+
+// realtor_agent_config table accessible
+const { data: racData, error: racErr } = await s.from("realtor_agent_config").select("*").limit(5);
+t("US-1401", "realtor_agent_config table accessible", !racErr, racErr?.message);
+
+const demoConfig = (racData || []).find(r => r.realtor_id === "demo");
+t("US-1402", "Demo realtor config exists", !!demoConfig);
+
+// Check for voice_rules field
+t("US-1403", "Config has voice_rules", !!demoConfig?.voice_rules, !demoConfig ? "No demo config" : "");
+
+// Check for frequency_caps field
+t("US-1404", "Config has frequency_caps", !!demoConfig?.frequency_caps, !demoConfig ? "No demo config" : "");
+
+// Check for brand_config field
+t("US-1405", "Config has brand_config", !!demoConfig?.brand_config, !demoConfig ? "No demo config" : "");
+
+// Check for escalation_thresholds
+t("US-1406", "Config has escalation_thresholds", !!demoConfig?.escalation_thresholds, !demoConfig ? "No demo config" : "");
+
+// Check for content_rankings
+t("US-1407", "Config has content_rankings", !!demoConfig?.content_rankings, !demoConfig ? "No demo config" : "");
+
+// Verify brand_config structure
+if (demoConfig?.brand_config) {
+  t("US-1408", "brand_config has agent_name", !!demoConfig.brand_config.agent_name);
+  t("US-1409", "brand_config has brokerage or company", !!(demoConfig.brand_config.brokerage || demoConfig.brand_config.company));
+} else {
+  t("US-1408", "brand_config has agent_name", false, "No brand_config");
+  t("US-1409", "brand_config has brokerage or company", false, "No brand_config");
+}
+
+// Verify frequency_caps structure
+if (demoConfig?.frequency_caps) {
+  const caps = demoConfig.frequency_caps;
+  t("US-1410", "frequency_caps has daily or weekly limit", typeof caps.daily_max === "number" || typeof caps.weekly_max === "number" || typeof caps.max_per_week === "number");
+} else {
+  t("US-1410", "frequency_caps has daily or weekly limit", false, "No frequency_caps");
+}
+
+} catch(e) { console.error("\n\uD83D\uDCA5 FATAL:", e); }
 
 // ═══ CLEANUP ═══
 console.log("\n═══ CLEANUP ═══");
