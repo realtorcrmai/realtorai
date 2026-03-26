@@ -24,7 +24,6 @@ export default async function NewsletterDashboard() {
   const sevenDaysFromNow = new Date(Date.now() + 7 * 86400000).toISOString();
 
   const [
-    { data: recentNewsletters },
     { data: journeys },
     { data: workflows },
     { data: listings },
@@ -33,7 +32,6 @@ export default async function NewsletterDashboard() {
     { data: sentRaw },
     { data: upcomingJourneys },
   ] = await Promise.all([
-    supabase.from("newsletters").select("id, subject, email_type, status, sent_at, created_at, contact_id, contacts(name, type)").order("created_at", { ascending: false }).limit(20),
     supabase.from("contact_journeys").select("id, contact_id, journey_type, current_phase, is_paused, next_email_at, send_mode, contacts(name, type, email)").order("created_at", { ascending: false }),
     supabase.from("workflows").select("id, name, slug, is_active, trigger_type").order("name"),
     supabase.from("listings").select("id, address, list_price, status").eq("status", "active").order("created_at", { ascending: false }).limit(10),
@@ -43,11 +41,13 @@ export default async function NewsletterDashboard() {
     supabase.from("contact_journeys").select("id, contact_id, journey_type, current_phase, next_email_at, emails_sent_in_phase, contacts(name, type)").eq("is_paused", false).not("next_email_at", "is", null).lte("next_email_at", sevenDaysFromNow).order("next_email_at").limit(50),
   ]);
 
-  // Filter hot leads: engagement score >= 60
+  // Filter hot leads: engagement score >= 60, split by type
   const hotLeads = (hotLeadsRaw || []).filter((c: any) => {
     const score = c.newsletter_intelligence?.engagement_score;
     return typeof score === "number" && score >= 60;
   }).sort((a: any, b: any) => (b.newsletter_intelligence?.engagement_score || 0) - (a.newsletter_intelligence?.engagement_score || 0));
+  const hotBuyers = hotLeads.filter((c: any) => c.type === "buyer");
+  const hotSellers = hotLeads.filter((c: any) => c.type === "seller");
 
   const suppressedEmails = suppressedRaw || [];
 
@@ -185,7 +185,6 @@ export default async function NewsletterDashboard() {
           /* ═══ OVERVIEW ═══ */
           overview: (
             <div className="space-y-4">
-              <DailyDigestCard />
 
               {/* Relationship Health + Email Stats */}
               <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
@@ -197,61 +196,27 @@ export default async function NewsletterDashboard() {
                 <Card><CardContent className="p-4 text-center"><div className={`text-2xl font-bold ${dashboard.clickRate > 10 ? "text-emerald-600" : "text-amber-500"}`}>{dashboard.clickRate}%</div><div className="text-xs font-semibold">🖱️ Clicks</div></CardContent></Card>
               </div>
 
-              {/* Hot Buyers + Pending Approvals Row */}
+              {/* Hot Buyers + Hot Sellers Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Hot Buyers — with competitive risk */}
-                <Card className={hotLeads.length > 0 ? "border-red-200 bg-red-50/30" : ""}>
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-base font-semibold">🔥 Hot Buyers</h3>
-                      <Badge variant={hotLeads.length > 0 ? "destructive" : "secondary"} className="text-xs">{hotLeads.length} ready to act</Badge>
-                    </div>
-                    {hotLeads.length > 0 && (
-                      <div className="flex items-center gap-1.5 mb-3 px-2.5 py-1.5 bg-red-100 border border-red-200 rounded-md">
-                        <span className="text-sm">⚠️</span>
-                        <p className="text-[11px] text-red-800 font-medium">These buyers are actively searching. If you don't reach out, another agent will.</p>
-                      </div>
-                    )}
-                    {hotLeads.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">No hot buyers right now. AI is nurturing your contacts.</p>
-                    ) : hotLeads.slice(0, 5).map((lead: any) => {
-                      const score = lead.newsletter_intelligence?.engagement_score || 0;
-                      const lastClicked = lead.newsletter_intelligence?.last_clicked;
-                      const daysSinceClick = lastClicked ? Math.floor((Date.now() - new Date(lastClicked).getTime()) / 86400000) : null;
-                      const isUrgent = daysSinceClick !== null && daysSinceClick <= 2;
+                {/* Hot Buyers */}
+                <HotContactCard
+                  title="🔥 Hot Buyers"
+                  contacts={hotBuyers}
+                  warningText="These buyers are actively searching. If you don't reach out, another agent will."
+                  emptyText="No hot buyers right now. AI is nurturing your contacts."
+                  bottomStat="Buyers who get a call within 5 minutes are 21x more likely to convert"
+                  gradientFrom="from-red-500" gradientTo="to-amber-500"
+                />
 
-                      return (
-                        <div key={lead.id} className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="relative">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-500 to-amber-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                                {(lead.name || "?")[0]}
-                              </div>
-                              {isUrgent && <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <p className="text-sm font-medium truncate">{lead.name}</p>
-                                {isUrgent && <span className="text-[9px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-semibold shrink-0">ACT NOW</span>}
-                              </div>
-                              <p className="text-xs text-muted-foreground truncate">
-                                Score {score} · {daysSinceClick !== null ? (daysSinceClick === 0 ? "Active today" : daysSinceClick === 1 ? "Active yesterday" : `${daysSinceClick}d ago`) : "Engaged"}
-                                {score >= 75 && " · Likely talking to other agents"}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                            <a href={`tel:${lead.phone}`} className="text-xs px-2.5 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 font-semibold">Call Now</a>
-                            <a href={`/contacts/${lead.id}`} className="text-xs px-2 py-1 rounded bg-primary/10 text-primary hover:bg-primary/20 font-medium">View</a>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {hotLeads.length > 0 && (
-                      <p className="text-[10px] text-red-600 font-medium mt-3">Buyers who get a call within 5 minutes are 21x more likely to convert</p>
-                    )}
-                  </CardContent>
-                </Card>
+                {/* Hot Sellers */}
+                <HotContactCard
+                  title="🔥 Hot Sellers"
+                  contacts={hotSellers}
+                  warningText="These sellers are ready to list. If you don't secure the listing, another agent will."
+                  emptyText="No hot sellers right now. AI is sending market updates."
+                  bottomStat="Sellers who get a CMA within 24 hours list with that agent 73% of the time"
+                  gradientFrom="from-orange-500" gradientTo="to-red-500"
+                />
 
                 {/* Pending Approvals */}
                 <Card>
@@ -329,9 +294,36 @@ export default async function NewsletterDashboard() {
           ),
 
 
+          /* ═══ AI WORKFLOWS ═══ */
+          workflows: (
+            <div className="space-y-4">
+              <Card>
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold">Active Workflows ({(workflows || []).length})</h4>
+                    <a href="/newsletters/workflows" className="text-xs text-primary font-medium hover:underline">Manage →</a>
+                  </div>
+                  {(!workflows || workflows.length === 0) ? (
+                    <p className="text-sm text-muted-foreground text-center py-3">No workflows configured.</p>
+                  ) : workflows.map((w: any) => (
+                    <div key={w.id} className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
+                      <div>
+                        <p className="text-sm font-medium">{w.name}</p>
+                        <p className="text-xs text-muted-foreground">Trigger: {w.trigger_type?.replace(/_/g, " ")}</p>
+                      </div>
+                      <Badge variant={w.is_active ? "default" : "secondary"} className="text-xs">
+                        {w.is_active ? "Active" : "Paused"}
+                      </Badge>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          ),
+
           /* ═══ SETTINGS ═══ */
           settings: (
-            <SettingsTab workflows={workflows || []} />
+            <SettingsTab />
           ),
         }}
       </EmailMarketingTabs>
@@ -339,4 +331,61 @@ export default async function NewsletterDashboard() {
   );
 }
 
-
+function HotContactCard({ title, contacts, warningText, emptyText, bottomStat, gradientFrom, gradientTo }: {
+  title: string; contacts: any[]; warningText: string; emptyText: string; bottomStat: string;
+  gradientFrom: string; gradientTo: string;
+}) {
+  return (
+    <Card className={contacts.length > 0 ? "border-red-200 bg-red-50/30" : ""}>
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-base font-semibold">{title}</h3>
+          <Badge variant={contacts.length > 0 ? "destructive" : "secondary"} className="text-xs">{contacts.length} ready to act</Badge>
+        </div>
+        {contacts.length > 0 && (
+          <div className="flex items-center gap-1.5 mb-3 px-2.5 py-1.5 bg-red-100 border border-red-200 rounded-md">
+            <span className="text-sm">⚠️</span>
+            <p className="text-[11px] text-red-800 font-medium">{warningText}</p>
+          </div>
+        )}
+        {contacts.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">{emptyText}</p>
+        ) : contacts.slice(0, 5).map((lead: any) => {
+          const score = lead.newsletter_intelligence?.engagement_score || 0;
+          const lastClicked = lead.newsletter_intelligence?.last_clicked;
+          const daysSinceClick = lastClicked ? Math.floor((Date.now() - new Date(lastClicked).getTime()) / 86400000) : null;
+          const isUrgent = daysSinceClick !== null && daysSinceClick <= 2;
+          return (
+            <div key={lead.id} className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="relative">
+                  <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${gradientFrom} ${gradientTo} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
+                    {(lead.name || "?")[0]}
+                  </div>
+                  {isUrgent && <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium truncate">{lead.name}</p>
+                    {isUrgent && <span className="text-[9px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-semibold shrink-0">ACT NOW</span>}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    Score {score} · {daysSinceClick !== null ? (daysSinceClick === 0 ? "Active today" : daysSinceClick === 1 ? "Active yesterday" : `${daysSinceClick}d ago`) : "Engaged"}
+                    {score >= 75 && " · Likely talking to other agents"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                <a href={`tel:${lead.phone}`} className="text-xs px-2.5 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 font-semibold">Call Now</a>
+                <a href={`/contacts/${lead.id}`} className="text-xs px-2 py-1 rounded bg-primary/10 text-primary hover:bg-primary/20 font-medium">View</a>
+              </div>
+            </div>
+          );
+        })}
+        {contacts.length > 0 && (
+          <p className="text-[10px] text-red-600 font-medium mt-3">{bottomStat}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
