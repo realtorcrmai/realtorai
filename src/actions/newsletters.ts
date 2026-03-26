@@ -332,6 +332,102 @@ export async function sendNewsletter(newsletterId: string) {
     .eq("id", newsletterId);
 
   try {
+    // ── TEXT PIPELINE — clean and validate content before sending ──
+    let finalSubject = newsletter.subject;
+    let finalHtml = newsletter.html_body;
+
+    try {
+      const { runTextPipeline } = await import("@/lib/text-pipeline");
+      const textResult = await runTextPipeline({
+        subject: newsletter.subject,
+        intro: newsletter.html_body?.replace(/<[^>]*>/g, "").slice(0, 300) || "",
+        body: "",
+        ctaText: "View Details",
+        emailType: newsletter.email_type,
+        contactId: contact.id,
+        contactName: contact.name,
+        contactFirstName: contact.name?.split(" ")[0] || "",
+        contactType: contact.type || "buyer",
+        contactArea: preferredAreas[0],
+        contactBudget: { min: budgetMin || undefined, max: budgetMax || undefined },
+        voiceRules: [],
+      });
+
+      if (textResult.blocked) {
+        await supabase.from("newsletters").update({
+          status: "failed",
+          ai_context: { pipeline_blocked: true, block_reason: textResult.blockReason, warnings: textResult.warnings },
+        }).eq("id", newsletterId);
+        revalidatePath("/newsletters");
+        return { error: `Text pipeline blocked: ${textResult.blockReason}`, action: "blocked" };
+      }
+
+      // Apply corrections
+      if (textResult.corrections.length > 0) {
+        finalSubject = textResult.subject;
+        // Store corrections for learning
+        await supabase.from("newsletters").update({
+          ai_context: {
+            ...((newsletter.ai_context as object) || {}),
+            pipeline_corrections: textResult.corrections,
+            pipeline_warnings: textResult.warnings,
+          },
+        }).eq("id", newsletterId);
+      }
+    } catch {
+      // Don't block sending if pipeline fails
+    }
+
+    // ── QUALITY SCORING — rate email before sending ──
+    try {
+      const { scoreEmailQuality, makeQualityDecision, recordQualityOutcome } = await import("@/lib/quality-pipeline");
+      const qualityScore = await scoreEmailQuality({
+        subject: finalSubject,
+        intro: finalHtml?.replace(/<[^>]*>/g, "").slice(0, 200) || "",
+        body: "",
+        ctaText: "View Details",
+        emailType: newsletter.email_type,
+        contactName: contact.name,
+        contactType: contact.type || "buyer",
+        contactArea: preferredAreas[0],
+        previousSubjects: lastSubjects,
+      });
+
+      const decision = makeQualityDecision(qualityScore);
+      await recordQualityOutcome(newsletterId, qualityScore.overall, qualityScore.dimensions);
+
+      if (decision.action === "block") {
+        await supabase.from("newsletters").update({
+          status: "failed",
+          quality_score: qualityScore.overall,
+          ai_context: {
+            ...((newsletter.ai_context as object) || {}),
+            quality_blocked: true,
+            quality_reason: decision.reason,
+            quality_dimensions: qualityScore.dimensions,
+            quality_suggestions: qualityScore.suggestions,
+          },
+        }).eq("id", newsletterId);
+        revalidatePath("/newsletters");
+        return { error: `Quality check failed (${qualityScore.overall}/10): ${decision.reason}`, action: "blocked" };
+      }
+
+      // Note: if decision is "regenerate", we still send for now
+      // Future: implement auto-regeneration loop
+      if (decision.action === "regenerate") {
+        await supabase.from("newsletters").update({
+          ai_context: {
+            ...((newsletter.ai_context as object) || {}),
+            quality_warning: true,
+            quality_score: qualityScore.overall,
+            quality_suggestions: qualityScore.suggestions,
+          },
+        }).eq("id", newsletterId);
+      }
+    } catch {
+      // Don't block sending if quality scoring fails
+    }
+
     const result = await validatedSend({
       newsletterId,
       contactId: contact.id,
@@ -341,8 +437,8 @@ export async function sendNewsletter(newsletterId: string) {
       preferredAreas,
       budgetMin,
       budgetMax,
-      subject: newsletter.subject,
-      htmlBody: newsletter.html_body,
+      subject: finalSubject,
+      htmlBody: finalHtml,
       emailType: newsletter.email_type,
       trustLevel,
       lastSubjects,
