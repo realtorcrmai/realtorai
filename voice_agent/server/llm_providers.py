@@ -222,20 +222,70 @@ class AnthropicProvider(LLMProvider):
     def _convert_messages(self, messages: list) -> tuple[list, list]:
         """Convert OpenAI-format messages to Anthropic format.
         Returns (system_blocks, converted_messages).
-        system_blocks is a list of content blocks with cache_control for prompt caching.
+
+        Handles proper Anthropic tool_use / tool_result message format:
+        - "assistant_tool_use" role → assistant message with tool_use content blocks
+        - "tool_result" role → user message with tool_result content blocks
+        - "tool" role (legacy) → user message with text tool result
+
+        Ensures valid role alternation (user/assistant must alternate).
         """
         system_parts = []
         converted = []
+
         for msg in messages:
-            if msg["role"] == "system":
+            role = msg["role"]
+
+            if role == "system":
                 system_parts.append(msg["content"])
-            elif msg["role"] in ("user", "assistant"):
-                converted.append({"role": msg["role"], "content": msg["content"]})
-            elif msg["role"] == "tool":
+
+            elif role == "assistant_tool_use":
+                # Assistant message containing tool_use blocks (stored by our handler)
+                converted.append({
+                    "role": "assistant",
+                    "content": msg["content"],  # list of tool_use content blocks
+                })
+
+            elif role == "tool_result":
+                # User message containing tool_result blocks
+                converted.append({
+                    "role": "user",
+                    "content": msg["content"],  # list of tool_result content blocks
+                })
+
+            elif role == "assistant":
+                converted.append({"role": "assistant", "content": msg["content"]})
+
+            elif role == "user":
+                converted.append({"role": "user", "content": msg["content"]})
+
+            elif role == "tool":
+                # Legacy format — wrap as user message
                 converted.append({"role": "user", "content": f"[Tool result]: {msg['content']}"})
 
+        # Fix role alternation: merge consecutive same-role messages
+        merged = []
+        for msg in converted:
+            if merged and merged[-1]["role"] == msg["role"]:
+                # Merge: append content
+                prev = merged[-1]["content"]
+                curr = msg["content"]
+                if isinstance(prev, str) and isinstance(curr, str):
+                    merged[-1]["content"] = prev + "\n" + curr
+                elif isinstance(prev, list) and isinstance(curr, list):
+                    merged[-1]["content"] = prev + curr
+                elif isinstance(prev, str) and isinstance(curr, list):
+                    merged[-1]["content"] = [{"type": "text", "text": prev}] + curr
+                elif isinstance(prev, list) and isinstance(curr, str):
+                    merged[-1]["content"] = prev + [{"type": "text", "text": curr}]
+            else:
+                merged.append(msg)
+
+        # Ensure conversation starts with user (Anthropic requirement)
+        if merged and merged[0]["role"] == "assistant":
+            merged.insert(0, {"role": "user", "content": "(conversation start)"})
+
         # Build system blocks with cache_control on the main prompt (first block)
-        # so Anthropic caches the large static system prompt across turns
         system_blocks = []
         for i, part in enumerate(system_parts):
             block = {"type": "text", "text": part}
@@ -243,7 +293,7 @@ class AnthropicProvider(LLMProvider):
                 block["cache_control"] = {"type": "ephemeral"}
             system_blocks.append(block)
 
-        return system_blocks, converted
+        return system_blocks, merged
 
     def _convert_tools(self, tools: list) -> list:
         """Convert OpenAI-format tools to Anthropic format."""
@@ -277,17 +327,26 @@ class AnthropicProvider(LLMProvider):
 
         content = ""
         tool_calls = None
+        raw_content_blocks = []  # preserve original Anthropic content blocks
         for block in response.content:
             if block.type == "text":
                 content += block.text
+                raw_content_blocks.append({"type": "text", "text": block.text})
             elif block.type == "tool_use":
                 if tool_calls is None:
                     tool_calls = []
                 tool_calls.append({
+                    "id": block.id,
                     "function": {
                         "name": block.name,
                         "arguments": json.dumps(block.input),
                     }
+                })
+                raw_content_blocks.append({
+                    "type": "tool_use",
+                    "id": block.id,
+                    "name": block.name,
+                    "input": block.input,
                 })
 
         usage = {}
@@ -299,7 +358,12 @@ class AnthropicProvider(LLMProvider):
             if hasattr(response.usage, "cache_read_input_tokens"):
                 usage["cache_read_input_tokens"] = response.usage.cache_read_input_tokens or 0
 
-        return {"content": content, "tool_calls": tool_calls, "usage": usage}
+        return {
+            "content": content,
+            "tool_calls": tool_calls,
+            "raw_content_blocks": raw_content_blocks,
+            "usage": usage,
+        }
 
     async def chat_stream(self, messages: list, tools: list | None = None) -> AsyncGenerator[dict, None]:
         import anthropic
@@ -317,51 +381,95 @@ class AnthropicProvider(LLMProvider):
         if tools:
             kwargs["tools"] = self._convert_tools(tools)
 
-        tool_name = ""
-        tool_input = ""
+        # Accumulators for multi-tool responses
+        tool_calls_acc = []       # list of completed tool call dicts
+        current_tool_id = ""
+        current_tool_name = ""
+        current_tool_input = ""
         in_tool_use = False
         emitted_done = False
-        has_text = False
+        raw_content_blocks = []   # Anthropic content blocks for session history
+        usage = {}
 
         try:
             async with client.messages.stream(**kwargs) as stream:
                 async for event in stream:
-                    if event.type == "content_block_start":
-                        if hasattr(event.content_block, "type") and event.content_block.type == "tool_use":
+                    if event.type == "message_start":
+                        # Capture input token usage
+                        if hasattr(event, "message") and hasattr(event.message, "usage"):
+                            usage["input_tokens"] = event.message.usage.input_tokens
+
+                    elif event.type == "content_block_start":
+                        block = event.content_block
+                        if hasattr(block, "type") and block.type == "tool_use":
                             in_tool_use = True
-                            tool_name = event.content_block.name
-                            tool_input = ""
+                            current_tool_id = block.id
+                            current_tool_name = block.name
+                            current_tool_input = ""
+                        elif hasattr(block, "type") and block.type == "text":
+                            in_tool_use = False
+
                     elif event.type == "content_block_delta":
                         if in_tool_use and hasattr(event.delta, "partial_json"):
-                            tool_input += event.delta.partial_json
+                            current_tool_input += event.delta.partial_json
                         elif hasattr(event.delta, "text"):
-                            has_text = True
                             yield {"token": event.delta.text, "done": False}
+
                     elif event.type == "content_block_stop":
                         if in_tool_use:
                             try:
-                                parsed_input = json.loads(tool_input) if tool_input else {}
+                                parsed_input = json.loads(current_tool_input) if current_tool_input else {}
                             except json.JSONDecodeError:
                                 parsed_input = {}
-                            emitted_done = True
-                            yield {
-                                "tool_calls": [{"function": {"name": tool_name, "arguments": json.dumps(parsed_input)}}],
-                                "done": True,
-                            }
-                            return
+                            tool_calls_acc.append({
+                                "id": current_tool_id,
+                                "function": {
+                                    "name": current_tool_name,
+                                    "arguments": json.dumps(parsed_input),
+                                },
+                            })
+                            raw_content_blocks.append({
+                                "type": "tool_use",
+                                "id": current_tool_id,
+                                "name": current_tool_name,
+                                "input": parsed_input,
+                            })
+                            in_tool_use = False
+                            # Don't return — wait for message_stop to collect all tool calls
+
+                    elif event.type == "message_delta":
+                        # Capture output token usage
+                        if hasattr(event, "usage") and event.usage:
+                            usage["output_tokens"] = event.usage.output_tokens
+
                     elif event.type == "message_stop":
                         emitted_done = True
-                        yield {"token": "", "done": True}
+                        if tool_calls_acc:
+                            yield {
+                                "tool_calls": tool_calls_acc,
+                                "raw_content_blocks": raw_content_blocks,
+                                "usage": usage,
+                                "done": True,
+                            }
+                        else:
+                            yield {"token": "", "usage": usage, "done": True}
                         return
+
         except Exception as e:
-            # If streaming fails partway, emit done so frontend doesn't hang
             if not emitted_done:
                 yield {"token": "", "done": True}
             return
 
-        # Safety net: if stream ended without message_stop, emit done
         if not emitted_done:
-            yield {"token": "", "done": True}
+            if tool_calls_acc:
+                yield {
+                    "tool_calls": tool_calls_acc,
+                    "raw_content_blocks": raw_content_blocks,
+                    "usage": usage,
+                    "done": True,
+                }
+            else:
+                yield {"token": "", "done": True}
 
 
 class GroqProvider(LLMProvider):

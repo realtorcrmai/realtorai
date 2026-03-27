@@ -40,6 +40,7 @@ from tools import (
     GENERIC_TOOLS, handle_generic_tool,
 )
 from llm_providers import get_active_provider, get_llm_provider, get_provider_for_query
+from stt_providers import get_stt_provider
 from api_client import api as listingflow_api
 
 
@@ -197,21 +198,19 @@ class SessionState:
                          self.messages, self.participant_name)
 
     def get_messages_with_focus(self) -> list:
-        """Return messages with current focus context injected."""
-        focus_ctx = self._get_focus_context()
-        if not focus_ctx:
-            return self.messages
-
-        # Inject focus as a system message right before the last user message
+        """Return messages with current date/time and focus context injected."""
         msgs = list(self.messages)
-        # Find last user message index
-        last_user_idx = None
-        for i in range(len(msgs) - 1, -1, -1):
-            if msgs[i]["role"] == "user":
-                last_user_idx = i
-                break
-        if last_user_idx is not None:
-            msgs.insert(last_user_idx, {"role": "system", "content": f"[Session focus] {focus_ctx}"})
+
+        # Inject current date/time as a system message (eliminates wrong-date hallucinations)
+        now = datetime.now()
+        time_ctx = f"Current date and time: {now.strftime('%A, %B %d, %Y at %I:%M %p')}. Use this for all date calculations."
+        msgs.append({"role": "system", "content": time_ctx})
+
+        # Inject focus context
+        focus_ctx = self._get_focus_context()
+        if focus_ctx:
+            msgs.append({"role": "system", "content": f"[Session focus] {focus_ctx}"})
+
         return msgs
 
     # ── Dynamic tool selection ─────────────────────────────────────────
@@ -655,6 +654,8 @@ async def handle_chat_stream(request):
         _tools_used = []
         _t0 = _time.time()
         tools = session.get_tools(message)
+        _total_input_tokens = 0
+        _total_output_tokens = 0
 
         for _round in range(max_tool_rounds + 1):
             got_tool_call = False
@@ -665,9 +666,26 @@ async def handle_chat_stream(request):
             ):
                 if chunk.get("tool_calls"):
                     got_tool_call = True
+                    # Capture usage from this round
+                    _usage = chunk.get("usage", {})
+                    _total_input_tokens += _usage.get("input_tokens", 0)
+                    _total_output_tokens += _usage.get("output_tokens", 0)
+
+                    # Store assistant's tool_use message in session history
+                    # (Anthropic needs to see the assistant's tool_use blocks)
+                    raw_blocks = chunk.get("raw_content_blocks", [])
+                    if raw_blocks:
+                        session.messages.append({
+                            "role": "assistant_tool_use",
+                            "content": raw_blocks,
+                        })
+
+                    # Build tool_result blocks for all tool calls in this round
+                    tool_result_blocks = []
                     for tc in chunk["tool_calls"]:
                         fn = tc.get("function", {})
                         tool_name = fn.get("name", "")
+                        tool_use_id = tc.get("id", "")
                         _tools_used.append(tool_name)
                         tool_args = fn.get("arguments", {})
                         if isinstance(tool_args, str):
@@ -679,22 +697,51 @@ async def handle_chat_stream(request):
                             tool_result = await session.handle_tool_call(tool_name, tool_args)
                         except Exception as te:
                             tool_result = json.dumps({"error": f"Tool {tool_name} failed: {te}"})
-                        session.messages.append({"role": "tool", "content": tool_result})
+
+                        tool_result_blocks.append({
+                            "type": "tool_result",
+                            "tool_use_id": tool_use_id,
+                            "content": tool_result,
+                        })
                         await response.write(f"data: {json.dumps({'tool': tool_name, 'done': False})}\n\n".encode())
-                    break  # exit inner loop, outer loop will start next round
+
+                    # Store tool results as proper Anthropic tool_result message
+                    session.messages.append({
+                        "role": "tool_result",
+                        "content": tool_result_blocks,
+                    })
+                    break  # exit inner loop, outer loop starts next round
                 else:
                     token = chunk.get("token", "")
                     done = chunk.get("done", False)
                     if token:
                         full_content += token
+                    # Capture usage from final chunk
+                    if done:
+                        _usage = chunk.get("usage", {})
+                        _total_input_tokens += _usage.get("input_tokens", 0)
+                        _total_output_tokens += _usage.get("output_tokens", 0)
                     await response.write(f"data: {json.dumps({'token': token, 'done': done})}\n\n".encode())
                     if done:
                         break
 
             if not got_tool_call:
-                break  # model produced text, we're done
+                break
 
-        # If we got no content at all, send a fallback
+        # If empty response after tool calls, retry with non-streaming fallback
+        if not full_content.strip() and _tools_used:
+            try:
+                fallback_result = await provider.chat(session.get_messages_with_focus())
+                full_content = fallback_result.get("content", "")
+                _fu = fallback_result.get("usage", {})
+                _total_input_tokens += _fu.get("input_tokens", 0)
+                _total_output_tokens += _fu.get("output_tokens", 0)
+                if full_content.strip():
+                    await response.write(f"data: {json.dumps({'token': full_content, 'done': True})}\n\n".encode())
+            except Exception:
+                pass
+
+        # Final fallback
         if not full_content.strip():
             fallback_msg = _get_fallback()
             full_content = fallback_msg
@@ -705,10 +752,8 @@ async def handle_chat_stream(request):
         if fields:
             await response.write(f"data: {json.dumps({'fields': fields, 'done': True})}\n\n".encode())
 
-        # Log cost for the streaming call (estimate tokens from char counts)
+        # Log cost with real tokens when available, estimates as fallback
         _latency = int((_time.time() - _t0) * 1000)
-        _est_input = len(message) // 4
-        _est_output = len(full_content) // 4
         _meta = {"type": "stream", "message_preview": message[:80]}
         if _tools_used:
             _meta["tools"] = _tools_used
@@ -716,13 +761,13 @@ async def handle_chat_stream(request):
             session_id=sid, realtor_id=session.realtor_id,
             service="llm", provider=provider.name,
             model=getattr(provider, "model", None),
-            input_tokens=_est_input, output_tokens=_est_output,
+            input_tokens=_total_input_tokens or (len(message) // 4),
+            output_tokens=_total_output_tokens or (len(full_content) // 4),
             latency_ms=_latency,
             metadata=_meta,
         )
 
     except Exception as e:
-        # Send a user-friendly error instead of raw exception
         error_msg = "I ran into a technical issue. Could you try asking again?"
         await response.write(f"data: {json.dumps({'token': error_msg, 'done': True})}\n\n".encode())
         session.add_message("assistant", error_msg)
@@ -936,6 +981,172 @@ async def handle_tts_voices(request):
         return web.json_response({"error": str(e)}, status=500, headers=_cors_headers())
 
 
+async def handle_quick(request):
+    """POST /api/quick — One-shot endpoint for Siri Shortcuts / Google Assistant.
+    Creates a session, sends the message, returns the response — all in one call.
+    Body: {"message": "How many active listings?"}
+    Returns: {"response": "You have 15 active listings...", "session_id": "..."}
+    """
+    if not _check_auth(request):
+        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers())
+
+    body = await request.json()
+    message = body.get("message", "").strip()
+    if not message:
+        return web.json_response({"error": "No message provided"}, status=400, headers=_cors_headers())
+
+    # Reuse existing Siri session or create new one
+    siri_sid = body.get("session_id")
+    if siri_sid and siri_sid in _sessions:
+        session = _sessions[siri_sid]
+    else:
+        session = SessionState(mode="realtor", realtor_id=CURRENT_REALTOR_ID)
+        _sessions[session.session_id] = session
+        siri_sid = session.session_id
+
+    session.add_message("user", message)
+    provider = get_provider_for_query(message)
+
+    import time as _time
+    _t0 = _time.time()
+    _tools_used = []
+    content = ""
+    _total_input = 0
+    _total_output = 0
+
+    try:
+        # Multi-round tool loop (same as streaming handler but non-streaming)
+        for _round in range(4):
+            tools = session.get_tools(message) if _round < 3 else None
+            result = await provider.chat(session.get_messages_with_focus(), tools)
+            _usage = result.get("usage", {})
+            _total_input += _usage.get("input_tokens", 0)
+            _total_output += _usage.get("output_tokens", 0)
+
+            tool_calls = result.get("tool_calls")
+            if not tool_calls:
+                content = result.get("content", "")
+                break
+
+            # Store assistant tool_use in history
+            raw_blocks = result.get("raw_content_blocks", [])
+            if raw_blocks:
+                session.messages.append({"role": "assistant_tool_use", "content": raw_blocks})
+
+            # Execute tools and store results
+            tool_result_blocks = []
+            for tc in tool_calls:
+                fn = tc.get("function", {})
+                tool_name = fn.get("name", "")
+                tool_use_id = tc.get("id", "")
+                _tools_used.append(tool_name)
+                tool_args = fn.get("arguments", {})
+                if isinstance(tool_args, str):
+                    try:
+                        tool_args = json.loads(tool_args)
+                    except json.JSONDecodeError:
+                        tool_args = {}
+                try:
+                    tool_result = await session.handle_tool_call(tool_name, tool_args)
+                except Exception as te:
+                    tool_result = json.dumps({"error": str(te)})
+                tool_result_blocks.append({
+                    "type": "tool_result",
+                    "tool_use_id": tool_use_id,
+                    "content": tool_result,
+                })
+
+            session.messages.append({"role": "tool_result", "content": tool_result_blocks})
+
+        if not content.strip():
+            content = "Sorry, I couldn't process that. Try again?"
+
+        session.add_message("assistant", content)
+        clean = _clean_for_voice(content)
+
+        _latency = int((_time.time() - _t0) * 1000)
+        log_cost(
+            session_id=siri_sid, realtor_id=session.realtor_id,
+            service="llm", provider=provider.name,
+            model=getattr(provider, "model", None),
+            input_tokens=_total_input, output_tokens=_total_output,
+            latency_ms=_latency,
+            metadata={"type": "quick", "source": body.get("source", "siri"), "tools": _tools_used},
+        )
+
+        return web.json_response({
+            "ok": True,
+            "response": clean,
+            "session_id": siri_sid,
+            "tools_used": _tools_used,
+            "provider": provider.name,
+        }, headers=_cors_headers())
+
+    except Exception as e:
+        return web.json_response({
+            "error": str(e), "hint": "Voice agent error"
+        }, status=500, headers=_cors_headers())
+
+
+async def handle_stt(request):
+    """POST /api/stt — Transcribe audio using Whisper.
+    Accepts: multipart/form-data with 'audio' file, or raw audio bytes.
+    Returns: {"text": "transcribed text", "provider": "whisper_local"}
+    """
+    if not _check_auth(request):
+        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers())
+
+    import time as _time
+    _t0 = _time.time()
+
+    # Accept audio from multipart form or raw body
+    content_type = request.content_type or ""
+    audio_bytes = None
+    language = "en"
+
+    if "multipart" in content_type:
+        reader = await request.multipart()
+        async for part in reader:
+            if part.name == "audio":
+                audio_bytes = await part.read()
+            elif part.name == "language":
+                language = (await part.text()) or "en"
+    else:
+        audio_bytes = await request.read()
+        language = request.query.get("language", "en")
+
+    if not audio_bytes:
+        return web.json_response({"error": "No audio provided"}, status=400, headers=_cors_headers())
+
+    try:
+        stt = get_stt_provider()
+        text = await stt.transcribe(audio_bytes, language=language)
+        _latency = int((_time.time() - _t0) * 1000)
+
+        # Log STT cost
+        audio_seconds = len(audio_bytes) / 32000  # rough estimate for 16kHz 16-bit
+        log_cost(
+            session_id="stt", realtor_id=CURRENT_REALTOR_ID,
+            service="stt", provider=stt.name,
+            audio_seconds=audio_seconds,
+            latency_ms=_latency,
+            metadata={"text_preview": text[:80]},
+        )
+
+        return web.json_response({
+            "ok": True,
+            "text": text,
+            "provider": stt.name,
+            "latency_ms": _latency,
+        }, headers=_cors_headers())
+
+    except Exception as e:
+        return web.json_response({
+            "error": f"STT failed: {e}",
+            "provider": get_stt_provider().name,
+        }, status=500, headers=_cors_headers())
+
+
 async def handle_session_costs(request):
     """GET /api/costs/:session_id — Cost breakdown for a single session."""
     if not _check_auth(request):
@@ -960,8 +1171,10 @@ def create_app():
     app.router.add_post("/api/session/create", handle_session_create)
     app.router.add_post("/api/chat", handle_chat)
     app.router.add_post("/api/chat/stream", handle_chat_stream)
+    app.router.add_post("/api/quick", handle_quick)
     app.router.add_post("/api/tool", handle_tool)
     app.router.add_post("/api/tts", handle_tts)
+    app.router.add_post("/api/stt", handle_stt)
     app.router.add_get("/api/tts/voices", handle_tts_voices)
     return app
 
