@@ -104,7 +104,54 @@ Affected: [files, tables, APIs]
 | **SECURITY_AUDIT** | rls, webhooks, secrets, compliance | Security review |
 
 If confidence is LOW → ask one clarifying question.
-If compound task → execute primary type fully, then secondary.
+
+### 3.1 Multi-Task Handling
+
+When a single prompt contains **multiple tasks** (e.g., "fix the contact bug, add export feature, and update the tests"):
+
+**Step 1 — Decompose**: Break the prompt into a numbered task list. For each task:
+- Task name (short, descriptive)
+- Task type:subtype classification
+- Affected files/tables
+- Dependencies (does task B depend on task A completing first?)
+
+**Step 2 — Order & Parallelize**:
+- Independent tasks → launch parallel agents (one per task)
+- Dependent tasks → execute sequentially (complete A before starting B)
+- Each agent follows the FULL playbook for its task (Pre-Flight → Classify → Execute → Validate)
+
+**Step 3 — Execute**: Deploy agents using model chaining:
+- Haiku agents for INFO_QA, quick searches, classification
+- Sonnet agents for CODING, TESTING, INTEGRATION, DATA_MIGRATION
+- Opus agents for DESIGN_SPEC, SECURITY_AUDIT, complex DEBUGGING
+
+**Step 4 — Verify Completion**: After all agents finish:
+- [ ] Review each task's output — did it complete fully or partially?
+- [ ] Run `bash scripts/test-suite.sh` — do all tests still pass?
+- [ ] Run `npx tsc --noEmit` — any TypeScript errors introduced?
+- [ ] Check for conflicts between parallel tasks (same file modified by two agents)
+- [ ] If any task failed or was partial → report what's done vs what remains
+- [ ] Commit all completed work with clear per-task descriptions
+
+**Step 5 — Report**: Present a completion summary:
+```
+Multi-Task Summary:
+  Task 1: [name] — ✅ Complete
+  Task 2: [name] — ✅ Complete
+  Task 3: [name] — ⚠️ Partial (reason)
+  Task 4: [name] — ❌ Blocked (dependency)
+
+Tests: 73/73 passing
+TypeScript: 0 errors
+Commit: abc1234 pushed to dev
+```
+
+**Rules**:
+- Never skip the playbook for any individual task, even in a multi-task batch
+- Never mark a task complete if its validation step failed
+- If parallel agents modify the same file → resolve conflicts before committing
+- If one task breaks another → fix the regression before reporting completion
+- Maximum parallel agents: 5 (to avoid context/resource exhaustion)
 
 ---
 
