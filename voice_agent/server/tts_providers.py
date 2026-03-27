@@ -133,6 +133,33 @@ class ElevenLabsTTSProvider(TTSProvider):
             return response.content
 
 
+class EdgeTTSProvider(TTSProvider):
+    """Microsoft Edge TTS — free, high-quality, no API key needed."""
+
+    name = "edge_tts"
+
+    def __init__(self, voice: str = "en-US-JennyNeural"):
+        self.voice = voice
+
+    def is_available(self) -> bool:
+        try:
+            import edge_tts  # noqa: F401
+            return True
+        except ImportError:
+            return False
+
+    async def synthesize(self, text: str) -> bytes:
+        import edge_tts
+        import io
+
+        communicate = edge_tts.Communicate(text, self.voice)
+        buffer = io.BytesIO()
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                buffer.write(chunk["data"])
+        return buffer.getvalue()
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 #  FACTORY
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -141,6 +168,7 @@ _TTS_PROVIDERS = {
     "piper": PiperTTSProvider,
     "openai_tts": OpenAITTSProvider,
     "elevenlabs": ElevenLabsTTSProvider,
+    "edge_tts": EdgeTTSProvider,
 }
 
 

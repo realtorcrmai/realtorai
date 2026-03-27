@@ -6,24 +6,50 @@
 
 ## 1. Purpose
 
-This playbook governs how **all developers (human and AI)** operate on the ListingFlow codebase. Every task follows: **Pre-Flight → Classify → Execute → Validate**. No steps skipped.
+This playbook governs how **all developers (human and AI)** operate on the ListingFlow codebase. Every task follows: **Pre-Flight → Classify → Execute → Validate → Log**. No steps skipped. No exceptions. No bypass.
 
-### 1.1 Team Policy — Mandatory Use
+### 1.1 Team Policy — STRICT ENFORCEMENT
 
-- All developers working on ListingFlow **must** follow this playbook.
-- No direct work on `main`. All changes go via `dev` and must pass `health-check.sh` + `test-suite.sh` before merge.
-- Code reviews must verify the relevant task playbook was followed:
-  - CODING: Was scope analysis done? Feature fit checked? FINTRAC/RLS/CASL verified?
-  - TESTING: Were test cases documented in `tests/<feature>.md`?
-  - DATA_MIGRATION: Was idempotency verified? Rollback plan written?
-  - SECURITY_AUDIT: Were RLS policies checked? Secrets scanned?
-- PR descriptions must include: task type classification, playbook phases completed, test results.
-- PR review checklist:
-  - [ ] Pre-flight followed (branch=dev, health check passed)
-  - [ ] Scope analysis identifies all affected files/tables/APIs
-  - [ ] Use-case doc created/updated (`usecases/<feature>.md`) if feature change
-  - [ ] Test doc created/updated (`tests/<feature>.md`) if behavior change
-  - [ ] Post-task validation completed (tests pass, no TS errors)
+**ZERO-TOLERANCE POLICY: Every task, every developer, every time.**
+
+There is NO scenario where the playbook can be skipped, partially followed, or bypassed:
+- Not for "quick fixes"
+- Not for "just a small change"
+- Not for urgent requests
+- Not for follow-up tasks in the same session
+- Not because "I already know what to do"
+- Not because the user said "just do it"
+
+**If you cannot follow the playbook for a task, you do not do the task. Stop and explain why.**
+
+**Enforcement:**
+- Every task MUST produce a classification block (Section 3.1) before any code/file changes
+- Every task MUST end with a compliance log entry (Section 11)
+- A task without a classification block is an unauthorized change
+- A task without a compliance log entry did not happen
+- Work that skips the playbook WILL be reverted — it is not trusted
+- No direct work on `main`. All changes go via `dev` and must pass `health-check.sh` + `test-suite.sh` before merge
+
+**Code reviews MUST verify:**
+- CODING: Was scope analysis done? Feature fit checked? FINTRAC/RLS/CASL verified?
+- TESTING: Were test cases documented in `tests/<feature>.md`?
+- DATA_MIGRATION: Was idempotency verified? Rollback plan written?
+- SECURITY_AUDIT: Were RLS policies checked? Secrets scanned?
+
+**PR requirements (mandatory — PR will be rejected without these):**
+- Task type classification block in description
+- Playbook phases completed (list them)
+- Test results (pass/fail counts)
+- Compliance log entry reference
+
+**PR review checklist:**
+- [ ] Pre-flight followed (branch=dev, health check passed)
+- [ ] Classification block present with correct task type
+- [ ] Scope analysis identifies all affected files/tables/APIs
+- [ ] Use-case doc created/updated (`usecases/<feature>.md`) if feature change
+- [ ] Test doc created/updated (`tests/<feature>.md`) if behavior change
+- [ ] Post-task validation completed (tests pass, no TS errors)
+- [ ] Compliance log entry appended to `.claude/compliance-log.md`
 
 ### 1.2 Feature Evaluation & Market Fit
 
@@ -76,12 +102,38 @@ Fix any ❌ before proceeding.
 
 ## 3. Task Classification
 
+### 3.0 MANDATORY — Understand Before Executing
+
+**No Read, Edit, Write, Bash, or Agent tool call is permitted until this section is complete.**
+
+1. **Read the FULL prompt** — every sentence, not just the first request
+2. **Decompose** into discrete steps — list them
+3. **Map dependencies** — does step B need step A's output? Does file X require file Y first?
+4. **Reorder** into correct execution sequence — users write in thought order, NOT dependency order
+5. **Output the classification block** (Section 3.1) — this proves you completed steps 1-4
+6. **Only then** proceed to execution
+
+Example: User writes "update the frontend, then fix the backend API, then add the database column."
+Correct execution order: database column → backend API → frontend. **Always reorder by dependency.**
+
+If the correct order is unclear → ask ONE clarifying question. Do not guess.
+
+**This step is NOT optional. It applies to:**
+- Every new task
+- Every follow-up task
+- Every "small fix"
+- Every task in a multi-task session
+- Tasks where you "already know what to do"
+
+### 3.1 Classification Output
+
 Before execution, output:
 ```
 Task Type: CODING:feature
 Confidence: high/medium/low
 Reasoning: [1-2 sentences]
 Affected: [files, tables, APIs]
+Execution Order: [if multi-step, list the reordered sequence]
 ```
 
 ### 14 Task Types
@@ -105,7 +157,7 @@ Affected: [files, tables, APIs]
 
 If confidence is LOW → ask one clarifying question.
 
-### 3.1 Multi-Task Handling
+### 3.2 Multi-Task Handling
 
 When a single prompt contains **multiple tasks** (e.g., "fix the contact bug, add export feature, and update the tests"):
 
@@ -636,11 +688,16 @@ Launch parallel agents when tasks are independent. Use `subagent_type=Explore` f
 ## 10. Quick Reference Card
 
 ```
-PRE-FLIGHT
+STRICT POLICY: No step below can be skipped. No exceptions. No bypass.
+
+PRE-FLIGHT (BLOCKING — nothing runs until green)
 □ health-check.sh  □ branch=dev  □ pull latest  □ load memory  □ services up
 
-CLASSIFY
-□ type:subtype  □ confidence  □ reasoning  □ affected files
+UNDERSTAND FIRST (Section 3.0 — BLOCKING — no tool calls until done)
+□ Read FULL prompt  □ Decompose steps  □ Map dependencies  □ Reorder correctly
+
+CLASSIFY (BLOCKING — no code changes until block is outputted)
+□ type:subtype  □ confidence  □ reasoning  □ affected files  □ execution order
 
 CRM RULES (every CODING task)
 □ FINTRAC fields non-nullable  □ CASL consent before outbound
@@ -667,4 +724,54 @@ EXECUTE
 
 VALIDATE
 □ test-suite.sh  □ tsc --noEmit  □ git push dev  □ check CI  □ save-state.sh
+
+COMPLIANCE LOG (Section 11 — BLOCKING — task is NOT complete without this)
+□ Append entry to .claude/compliance-log.md  □ ✅ or ❌  □ No log = unauthorized change
 ```
+
+---
+
+## 11. Playbook Compliance Tracker — MANDATORY
+
+**A task without a compliance log entry is an unauthorized change.** No exceptions.
+
+### 11.1 When to Log
+
+- After EVERY task — no matter how small
+- Before reporting completion to the user
+- If the task was abandoned mid-way — still log it with status "abandoned"
+- If the user explicitly says "skip the playbook" — log it as ❌ with note "user override"
+
+**A task is not complete until its compliance entry exists.**
+
+### 11.2 How to Log
+
+Append a row to `.claude/compliance-log.md`:
+
+```markdown
+| Date | Developer | Task Summary | Type | Playbook Followed | Phases Completed | Phases Skipped | Notes |
+|------|-----------|-------------|------|-------------------|-----------------|----------------|-------|
+| 2026-03-27 | claude | Voice agent TTS + prompt rewrite | VOICE_AGENT:system_prompt | ❌ NO | 2,3,4,5 | 0,1.2,6 | Jumped to coding without loading playbook |
+```
+
+### 11.3 Required Fields
+
+- **Date**: ISO date (YYYY-MM-DD)
+- **Developer**: who did the work (claude, rahul, or other dev name)
+- **Task Summary**: 1-line description
+- **Type**: classification from Section 3.1 (must match the block you outputted)
+- **Playbook Followed**: ✅ YES (ALL phases for that task type completed) or ❌ NO (ANY phase skipped)
+- **Phases Completed**: list of phase numbers/names actually followed
+- **Phases Skipped**: list of phases missed + brief reason for each
+- **Notes**: context, lessons learned, what broke
+
+### 11.4 Strict Rules
+
+1. **No log = unauthorized change** — work without a log entry is untrusted and subject to revert
+2. **Every task, every developer, every time** — no exceptions for "small" tasks
+3. **Append-only** — never edit, rewrite, or delete past entries (this is an audit trail)
+4. **Honest logging** — ❌ is acceptable; missing entries are not
+5. **3+ consecutive ❌ from any developer** → mandatory process review before next task
+6. **No classification block in conversation = ❌** — the block proves you loaded the playbook
+7. **Weekly review** — scan log for patterns (which phases get skipped, which developers skip them)
+8. **The log tracks ALL developers equally** — human and AI, same rules, same accountability

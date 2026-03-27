@@ -25,8 +25,24 @@ REALTOR_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "find_contact",
+            "description": "Search for any contact in the CRM by name — buyers, sellers, partners, leads, or any type. Returns matching contacts with their profiles.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Contact name (partial match)"},
+                    "contact_id": {"type": "string", "description": "Contact ID for exact lookup"},
+                    "type": {"type": "string", "description": "Optional filter: buyer, seller, partner, or leave empty for all types"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "find_buyer",
-            "description": "Look up a buyer by name or buyer ID. Returns buyer profile with criteria and notes.",
+            "description": "Look up a buyer specifically. Use find_contact for general contact search.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -284,6 +300,11 @@ REALTOR_TOOLS = [
                         "type": "string",
                         "enum": ["high", "medium", "low"],
                         "description": "Task priority (default: medium)",
+                    },
+                    "category": {
+                        "type": "string",
+                        "enum": ["follow_up", "showing", "paperwork", "marketing", "admin"],
+                        "description": "Task category (default: follow_up)",
                     },
                     "due_date": {"type": "string", "description": "Due date in ISO format (e.g. 2026-04-01)"},
                     "contact_id": {"type": "string", "description": "Contact ID to link to this task"},
@@ -902,6 +923,24 @@ REALTOR_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "bc_real_estate_reference",
+            "description": "Look up BC real estate reference info: BCREA forms, FINTRAC compliance, property types, listing statuses, PTT/GST taxes, subject clauses, strata, ALR, or listing workflow phases. Use this when the user asks about real estate terms, forms, compliance, or processes.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "topic": {
+                        "type": "string",
+                        "enum": ["forms", "fintrac", "property_types", "statuses", "taxes", "terms", "workflow", "all"],
+                        "description": "Which reference topic to look up",
+                    },
+                },
+                "required": ["topic"],
+            },
+        },
+    },
 ]
 
 
@@ -916,15 +955,28 @@ async def handle_realtor_tool(tool_name: str, args: dict, realtor_id: str = "R00
     Playbooks and conversation history stay in local SQLite.
     """
     try:
-        if tool_name == "find_buyer":
-            params = {"type": "buyer"}
+        if tool_name == "find_contact":
+            params = {}
+            if args.get("contact_id"):
+                params["id"] = args["contact_id"]
+            elif args.get("name"):
+                params["name"] = args["name"]
+            if args.get("type"):
+                params["type"] = args["type"]
+            result = await api.get("/api/voice-agent/contacts", params)
+            if result.get("count", 0) == 0:
+                result = {"message": f"No contact found matching '{args.get('name', args.get('contact_id', ''))}'."}
+
+        elif tool_name == "find_buyer":
+            params = {}
             if args.get("buyer_id"):
                 params["id"] = args["buyer_id"]
             elif args.get("name"):
                 params["name"] = args["name"]
+            # Search all types first, then filter if needed
             result = await api.get("/api/voice-agent/contacts", params)
             if result.get("count", 0) == 0:
-                result = {"message": "No buyer found matching that query."}
+                result = {"message": "No contact found matching that query."}
 
         elif tool_name == "create_buyer_profile":
             criteria = args.get("criteria", {})
@@ -1078,6 +1130,7 @@ async def handle_realtor_tool(tool_name: str, args: dict, realtor_id: str = "R00
             payload = {
                 "title": args["title"],
                 "priority": args.get("priority", "medium"),
+                "category": args.get("category", "follow_up"),
             }
             if args.get("due_date"):
                 payload["due_date"] = args["due_date"]
@@ -1478,6 +1531,82 @@ async def handle_realtor_tool(tool_name: str, args: dict, realtor_id: str = "R00
                 )
 
             result = {"topic": topic, "help": help_text}
+
+        elif tool_name == "bc_real_estate_reference":
+            topic = args.get("topic", "all").lower()
+            ref = {}
+            if topic in ("forms", "all"):
+                ref["bcrea_forms"] = {
+                    "DORTS": "Disclosure of Representation in Trading Services — given at first contact before trading services begin",
+                    "MLC": "Multiple Listing Contract — listing agreement between seller and brokerage for MLS rights",
+                    "PDS": "Property Disclosure Statement — seller's written disclosure of known defects and material facts",
+                    "FINTRAC": "Individual Identification Information Record — federal AML compliance, two government IDs required",
+                    "PRIVACY": "Privacy Disclosure — how personal info is collected/used/stored under BC PIPA",
+                    "C3": "Contract of Purchase and Sale — primary purchase agreement with offer price, subjects, completion day",
+                    "DRUP": "Disclosure of Risks to Unrepresented Parties",
+                    "MLS_INPUT": "MLS Data Input Form — technical data sheet for Paragon",
+                    "MKTAUTH": "Marketing Authorization — authorizes internet, virtual tours, open houses, social media",
+                    "AGENCY": "Agency Disclosure — documents who the licensee represents at time of offer",
+                    "C3CONF": "Contract of Purchase and Sale Confirmation",
+                    "FAIRHSG": "Fair Housing Declaration — equal opportunity housing under BC Human Rights Code",
+                }
+            if topic in ("fintrac", "all"):
+                ref["fintrac"] = {
+                    "requirement": "Identity verification required for ALL clients before providing trading services",
+                    "ids": "Two government-issued IDs: one photo ID (passport, driver's license) + one secondary",
+                    "corporations": "Verify entity and identify beneficial owners with 25%+ ownership",
+                    "source_of_funds": "Document when cash transaction or funds inconsistent with stated occupation",
+                    "retention": "ALL records kept minimum 5 years from transaction date",
+                    "str": "Suspicious Transaction Reports filed within 30 days",
+                    "pep": "Politically Exposed Persons require enhanced due diligence + senior management approval",
+                    "large_cash": "Large Cash Transaction Reports for cash $10,000+ within 24 hours",
+                }
+            if topic in ("property_types", "all"):
+                ref["property_types"] = {
+                    "detached": "Single-family home, own lot, no strata",
+                    "condo": "Strata-titled unit, subject to bylaws, strata fees, depreciation reports",
+                    "townhouse": "Ground-level strata unit, private outdoor space",
+                    "land": "Vacant lot, acreage, rural — may be ALR restricted",
+                    "commercial": "Retail, office, industrial, mixed-use — GST almost always applies",
+                    "multi_family": "Duplex, triplex, fourplex, larger rental buildings",
+                }
+            if topic in ("statuses", "all"):
+                ref["listing_statuses"] = {
+                    "Active": "Live on MLS, accepting showings/offers",
+                    "Conditional": "Accepted offer with outstanding subject clauses",
+                    "Subject Removal": "All conditions waived, deal is firm and binding",
+                    "Sold": "Transaction completed, ownership transferred",
+                    "Withdrawn": "Removed from marketing before expiry",
+                    "Expired": "Listing term ended without sale",
+                }
+            if topic in ("taxes", "all"):
+                ref["taxes"] = {
+                    "PTT": "1% on first 200K, 2% on 200K-2M, 3% over 2M, 5% on residential over 3M. First-time buyer exemption under 500K",
+                    "GST": "5% on new construction and substantially renovated homes. Partial rebate under 450K for primary residences",
+                }
+            if topic in ("terms", "all"):
+                ref["key_terms"] = {
+                    "Subject Clauses": "Conditions in C3 that must be satisfied/waived before firm (financing, inspection, strata docs)",
+                    "Subject Removal": "Waiving all conditions — contract becomes firm. Backing out forfeits deposit",
+                    "Completion Day": "Date ownership legally transfers, title changes hands",
+                    "Adjustment Day": "Date property taxes, strata fees, utilities adjusted between buyer and seller",
+                    "Strata Fees": "Monthly fees for building insurance, maintenance, contingency reserve",
+                    "Form B": "Strata Information Certificate — fees, special levies, bylaws, litigation. 7-day buyer review",
+                    "Depreciation Report": "30-year engineering report on future repair/replacement costs for strata common property",
+                    "ALR": "Agricultural Land Reserve — protected farmland, development heavily restricted",
+                }
+            if topic in ("workflow", "all"):
+                ref["workflow_phases"] = {
+                    "Phase 1": "Seller Intake — FINTRAC identity, property details, commissions, showing instructions",
+                    "Phase 2": "Data Enrichment — BC Geocoder, ParcelMap BC, LTSA, BC Assessment",
+                    "Phase 3": "CMA Analysis — comparable sales, active competition, expired listings",
+                    "Phase 4": "Pricing & Review — confirm list price, lock price, set marketing tier",
+                    "Phase 5": "Form Generation — auto-fill 12 BCREA forms via Python server",
+                    "Phase 6": "E-Signature — DocuSign envelope tracking",
+                    "Phase 7": "MLS Preparation — Claude AI remarks, photo management",
+                    "Phase 8": "MLS Submission — manual submission to Paragon",
+                }
+            result = ref if ref else {"error": f"Unknown topic: {topic}. Use: forms, fintrac, property_types, statuses, taxes, terms, workflow, or all"}
 
         else:
             result = {"error": f"Unknown tool: {tool_name}"}

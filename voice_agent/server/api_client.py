@@ -4,6 +4,7 @@ Async HTTP client for calling the ListingFlow Next.js API.
 Replaces direct SQLite calls for listings, contacts, showings, and feedback
 so that Supabase is the single source of truth.
 """
+from __future__ import annotations
 
 import aiohttp
 from config import LISTINGFLOW_API, VOICE_AGENT_API_KEY

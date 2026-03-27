@@ -43,5 +43,8 @@ google-api-python-client>=2.100.0
 google-auth-httplib2>=0.1.0
 google-auth-oauthlib>=1.1.0
 
+# ── Edge TTS (free, high-quality Microsoft Neural voices) ────
+edge-tts>=6.1.0
+
 # ── ElevenLabs TTS (optional, cloud) ─────────────────────────
 # elevenlabs>=1.0.0  # Uncomment if using ElevenLabs TTS
