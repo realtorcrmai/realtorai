@@ -8,12 +8,18 @@ ListingFlow is a real estate transaction management CRM for licensed BC realtors
 **Repo root:** `/Users/rahulmittal/Library/CloudStorage/OneDrive-Personal/CoWork/realtorai/`
 **App files:** `src/`, `package.json`, `next.config.ts` are at repo root (flat monorepo — no nested `realestate-crm/` subdirectory)
 
-### Git Workflow
+### Git Workflow — Feature Branch Model
 
-- **`dev`** — default branch, all development commits go here
-- **`main`** — production/release, protected (requires PR with 1 approval)
-- Always push to `dev`. Never push directly to `main`.
-- To release: create PR from `dev → main`, get approval, merge.
+```
+feature branch → PR → dev (integration) → PR → main (production)
+```
+
+- **Feature branches** — `<developer>/<description>` (e.g. `rahul/voice-tts`, `claude/playbook-fix`)
+- **`dev`** — integration branch, protected (PR required, 0 approvals — merge your own)
+- **`main`** — production, protected (PR required, 1 approval)
+- **Never push directly to `dev` or `main`** — always use PRs
+- Branch from `dev`, create PR back to `dev`, merge, delete feature branch
+- To release: create PR from `dev → main`, get 1 approval, merge
 
 ### Deployment — Use `/deploy`
 
