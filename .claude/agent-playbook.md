@@ -84,7 +84,7 @@ When modifying an existing feature → update its use-case and test docs.
 7. Create a feature branch, PR, merge — feel the full flow
 
 **First week:**
-8. Read the full playbook (Sections 2-11)
+8. Read the full playbook (Sections 2-14)
 9. Read `CLAUDE.md` for project architecture
 10. Read the relevant `usecases/*.md` for features you'll work on
 
@@ -303,7 +303,7 @@ If in doubt → it's not trivial. Use the full playbook.
 
 If confidence is LOW → ask one clarifying question.
 
-### 3.2 Multi-Task Handling
+### 3.3 Multi-Task Handling
 
 When a single prompt contains **multiple tasks** (e.g., "fix the contact bug, add export feature, and update the tests"):
 
@@ -543,9 +543,17 @@ Existing test inventory (check before creating new):
 
 **Phase 4** — Observability: log decisions to `agent_decisions`, track latency, define alerts
 
+**Phase 5** — Output guardrails (required before any agent output reaches a user or external system):
+1. **PII check** — Output contains no PII beyond Section 14.2 allowlist (no phone numbers, emails, FINTRAC data)
+2. **Hallucination check** — Any contact names, listing addresses, or prices in the output MUST exist in Supabase (verify with a query, don't trust the model)
+3. **Consent check** — If output triggers an outbound message (email/SMS/WhatsApp) → verify CASL consent_status is active for that contact
+4. **Instruction leak check** — Output does not contain system prompt fragments, tool schemas, or internal playbook references
+5. If any check fails → suppress the output, log as `safety_flag`, return a safe fallback or escalate to human
+
 ### 4.7 INTEGRATION
 
 **Phase 1** — Read API docs. Endpoints needed. Sandbox available? Existing similar integration?
+- **Third-party risk check** (for new services only): (1) Does the provider have SOC 2 or equivalent security certification? (2) Does the service process PII — if yes, Section 14.2 rules apply to all data sent to it. (3) Is there a data processing agreement covering Canadian data residency (PIPEDA)? (4) Pin API versions — never track `latest` or unversioned endpoints. (5) Check: if this service goes down, what breaks? Document the fallback (graceful degradation, cached data, or manual process).
 
 **Phase 2** — Data contracts. Request/response schemas. Field mapping.
 - Twilio: use `lib/twilio.ts` formatter for phones
@@ -846,6 +854,7 @@ For every new feature or major enhancement, create or update `usecases/<feature-
 | DESIGN_SPEC | 300K | 30K | 80% of limit |
 | RAG_KB | 100K | 20K | 80% of limit |
 | ORCHESTRATION | 150K | 30K | 80% of limit |
+| All other types (TESTING, DEBUGGING, INTEGRATION, DEPLOY, VOICE_AGENT, DATA_MIGRATION, SECURITY_AUDIT, DOCS, EVAL) | 150K | 30K | 80% of limit |
 
 **Model selection rules (override Section 5.1 guidance → these are rules):**
 
@@ -1350,9 +1359,15 @@ Maintain adversarial test cases in `tests/agent-evals/safety-tests.md`:
 | **Medium** | MLS remarks generation, content prompts, workflow step creation | Approval queue — realtor reviews before publishing |
 | **Low** | Classification, search, file reads, test runs, INFO_QA | No human review — agent proceeds autonomously |
 
+**Preventing rubber-stamp approvals (automation bias):**
+- For high/critical risk operations, the approval queue MUST present: (1) what the AI decided, (2) why (reasoning/confidence), (3) what alternatives were considered, (4) what could go wrong
+- The reviewer MUST be able to **reject** or **edit**, not just approve — "approve only" UX creates rubber-stamping
+- AI-generated emails: show the realtor a diff against previous emails to the same contact, not just the draft in isolation
+- Schema migrations: show the migration SQL + a plain-English summary of what it changes + what could break
+
 **Escalation path:**
 1. Agent encounters ambiguity → ask ONE clarifying question (existing rule)
-2. Agent encounters high-risk operation → log + request human approval before proceeding
+2. Agent encounters high-risk operation → log + request human approval before proceeding (with context per above)
 3. Agent encounters safety violation → STOP, log the violation, alert in compliance log, do NOT proceed
 4. Agent encounters conflicting instructions → follow playbook, log the conflict, ask product owner
 
@@ -1384,3 +1399,23 @@ Latency: ~45s | Errors: 0 | Safety flags: 0
 - 3+ tool errors in a single task → investigate tool reliability
 - Compliance rate drops below 90% for any developer → process review
 - Weekly cost exceeds 2x rolling average → budget review
+
+### 14.6 Feature Sunset & Decommission
+
+**When to sunset an agent-powered feature:**
+
+| Trigger | Threshold | Action |
+|---------|-----------|--------|
+| Accuracy degradation | Golden task score drops below 20/30 for 2 consecutive weeks | Disable feature, investigate root cause |
+| Cost exceeds value | Feature's weekly token cost >3x the next most expensive feature with comparable usage | Review: optimize, downgrade model tier, or sunset |
+| Regulatory change | New regulation invalidates the approach (e.g., CASL amendment, PIPEDA update) | Immediately disable outbound communications, review compliance |
+| Zero usage | Feature unused for 30+ days (no compliance log entries of that task type) | Mark as deprecated, remove in next release |
+| Security incident | Feature involved in a data leak, prompt injection success, or PII exposure | Immediately disable, full safety eval before re-enabling |
+
+**Sunset process:**
+1. Disable the feature (feature flag, remove from UI, comment out cron trigger)
+2. Notify affected users (realtor sees a banner, not a silent removal)
+3. Retain logs and compliance entries for 90 days (regulatory requirement for FINTRAC-adjacent features)
+4. Remove code in a dedicated PR with task type `CODING:refactor`
+5. Update CLAUDE.md and relevant `usecases/*.md` to reflect removal
+6. Archive related golden tasks from Section 13.2 (don't delete — useful for regression if feature returns)

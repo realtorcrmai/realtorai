@@ -2,9 +2,19 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
+// Detect if react-compiler plugin is available (only in CI with full npm ci)
+let reactCompilerOverride = [];
+try {
+  await import("eslint-plugin-react-compiler");
+  reactCompilerOverride = [{ rules: { "react-compiler/react-compiler": "warn" } }];
+} catch {
+  // Plugin not installed locally — skip
+}
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  ...reactCompilerOverride,
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
@@ -31,6 +41,7 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/ban-ts-comment": "warn",
       "prefer-const": "warn",
       "@next/next/no-html-link-for-pages": "warn",
+      "react/no-unescaped-entities": "warn",
     },
   },
 ]);
