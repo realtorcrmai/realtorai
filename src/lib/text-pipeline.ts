@@ -92,7 +92,8 @@ const COMPLIANCE_BLOCKLIST = [
 export async function runTextPipeline(input: PipelineInput): Promise<PipelineResult> {
   const corrections: Correction[] = [];
   const warnings: string[] = [];
-  let { subject, intro, body, ctaText } = input;
+  let { subject, intro, body } = input;
+  const { ctaText } = input;
 
   // ── Step 1: Personalization ──
   const tokens: Record<string, string> = {

@@ -354,6 +354,7 @@ async function executeSystemAction(
       // Sync stage_bar when lead_status changes
       const contactType = contact.type || "other";
       const stageBar = contact.stage_bar ?? null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const synced = syncLeadStatusAndStage(value, stageBar, contactType as any);
       const { error } = await supabase
         .from("contacts")
@@ -366,6 +367,7 @@ async function executeSystemAction(
       const currentTags = Array.isArray(contact.tags) ? (contact.tags as string[]) : [];
       if (!currentTags.includes(value)) {
         const newTags = [...currentTags, value];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const cleanTags = filterInvalidTags(newTags, contact.type as any, contact.lead_status);
         const { error } = await supabase
           .from("contacts")
@@ -377,7 +379,9 @@ async function executeSystemAction(
     }
     case "change_stage": {
       // Validate stage for contact type and sync lead_status
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const validStage = validateStageForType(contact.type as any, value);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const stageSynced = syncLeadStatusAndStage(contact.lead_status, validStage, contact.type as any);
       const { error } = await supabase
         .from("contacts")

@@ -223,6 +223,7 @@ export async function checkInactivity(dormancyDays: number = 60): Promise<number
   let dormantCount = 0;
 
   for (const journey of (journeys || [])) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const intel = (journey as any).contacts?.newsletter_intelligence as Record<string, unknown> | null;
     const lastOpened = intel?.last_opened as string | null;
     const lastClicked = intel?.last_clicked as string | null;
@@ -238,6 +239,7 @@ export async function checkInactivity(dormancyDays: number = 60): Promise<number
 
       // Fire trigger for re-engagement workflow
       await fireTrigger("inactivity", journey.contact_id, {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         contactType: (journey as any).contacts?.type,
       });
 

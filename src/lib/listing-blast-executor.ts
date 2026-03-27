@@ -18,6 +18,7 @@ export async function executeListingBlastRules(
   const config = await getRealtorConfig();
   if (!config?.brand_config) return { fired: 0, skipped: 0 };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rules: AutomationRule[] = (config.brand_config as any).automation_rules || [];
   const matchingRules = rules.filter(r => r.enabled && r.trigger === triggerType);
 
@@ -44,7 +45,7 @@ export async function executeListingBlastRules(
           .eq("newsletter_unsubscribed", false)
           .not("email", "is", null);
 
-        const recipientEmails = (buyers || []).map((b: any) => b.email).filter(Boolean);
+        const recipientEmails = (buyers || []).map((b: { email: string | null }) => b.email).filter(Boolean);
 
         if (recipientEmails.length === 0) {
           skipped++;

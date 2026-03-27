@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { QuickAddButton } from "@/components/layout/QuickAddButton";
+import { ContextualHelpButton } from "@/components/help/ContextualHelpButton";
 
 import type { FeatureKey } from "@/lib/features";
 
@@ -204,6 +205,9 @@ export function AppHeader() {
             <span className="hidden lg:inline">Admin</span>
           </Link>
         )}
+
+        {/* Help */}
+        <ContextualHelpButton />
 
         {/* Quick Add */}
         <QuickAddButton />

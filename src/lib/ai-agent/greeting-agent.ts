@@ -113,6 +113,7 @@ export async function evaluateGreetings(): Promise<{
   const config = await getRealtorConfig();
   if (!config?.brand_config) return { candidates: 0, decisions: [], errors: 0 };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const greetingRules: GreetingRule[] = (config.brand_config as any).greeting_rules || [];
   const enabledRules = greetingRules.filter(r => r.enabled);
   if (enabledRules.length === 0) return { candidates: 0, decisions: [], errors: 0 };
@@ -123,6 +124,7 @@ export async function evaluateGreetings(): Promise<{
   const day = today.getDate();
   const year = today.getFullYear();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const brand = config.brand_config as any;
   const agentName = brand.realtorName || "Your Realtor";
 
@@ -142,22 +144,22 @@ export async function evaluateGreetings(): Promise<{
           .select("contact_id, date")
           .ilike("label", "%birthday%");
         contactIds = (data || [])
-          .filter((d: any) => {
+          .filter((d: { contact_id: string; date: string }) => {
             const dParts = String(d.date).split("-");
             return parseInt(dParts[1]) === month && parseInt(dParts[2]) === day;
           })
-          .map((d: any) => d.contact_id);
+          .map((d: { contact_id: string; date: string }) => d.contact_id);
       } else if (rule.occasion === "home_anniversary") {
         const { data } = await supabase
           .from("contact_dates")
           .select("contact_id, date")
           .or("label.ilike.%anniversary%,label.ilike.%closing%");
         contactIds = (data || [])
-          .filter((d: any) => {
+          .filter((d: { contact_id: string; date: string }) => {
             const dParts = String(d.date).split("-");
             return parseInt(dParts[1]) === month && parseInt(dParts[2]) === day;
           })
-          .map((d: any) => d.contact_id);
+          .map((d: { contact_id: string; date: string }) => d.contact_id);
       } else {
         // Calendar-based holidays
         if (!isOccasionToday(rule.occasion, today)) continue;
@@ -174,7 +176,7 @@ export async function evaluateGreetings(): Promise<{
         .eq("email_type", `greeting_${rule.occasion}`)
         .gte("created_at", yearStart)
         .in("status", ["sent", "draft", "approved", "sending"]);
-      const sentSet = new Set((alreadySent || []).map((n: any) => n.contact_id));
+      const sentSet = new Set((alreadySent || []).map((n: { contact_id: string }) => n.contact_id));
       contactIds = contactIds.filter(id => !sentSet.has(id));
 
       if (contactIds.length === 0) continue;
@@ -191,7 +193,7 @@ export async function evaluateGreetings(): Promise<{
         .limit(200);
 
       for (const c of contacts || []) {
-        const intel = (c.newsletter_intelligence as any) || {};
+        const intel = (c.newsletter_intelligence as Record<string, unknown>) || {};
         candidates.push({
           contactId: c.id,
           contactName: c.name,
@@ -200,12 +202,12 @@ export async function evaluateGreetings(): Promise<{
           occasion: rule.occasion,
           occasionLabel: getOccasionLabel(rule.occasion),
           rule,
-          engagementScore: intel.engagement_score || 0,
+          engagementScore: (intel.engagement_score as number) || 0,
           relationshipContext: [
             c.type && `Type: ${c.type}`,
             c.stage_bar && `Stage: ${c.stage_bar}`,
             intel.total_opens && `Opens: ${intel.total_opens}`,
-            intel.inferred_interests?.areas?.length && `Areas: ${intel.inferred_interests.areas.join(", ")}`,
+            (intel.inferred_interests as Record<string, string[]> | undefined)?.areas?.length && `Areas: ${(intel.inferred_interests as Record<string, string[]>).areas.join(", ")}`,
             c.notes && `Notes: ${(c.notes as string).slice(0, 100)}`,
           ].filter(Boolean).join(" | "),
         });
@@ -372,6 +374,7 @@ Return JSON array:
 
     const parsed = JSON.parse(jsonMatch[0]);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return parsed.map((item: any) => {
       const candidate = candidates[(item.index || 1) - 1];
       if (!candidate) return null;
@@ -403,7 +406,7 @@ Return JSON array:
 
 // ── Helpers ──────────────────────────────────────────────────
 
-async function getContactIdsByRecipients(supabase: any, recipients: string): Promise<string[]> {
+async function getContactIdsByRecipients(supabase: ReturnType<typeof createAdminClient>, recipients: string): Promise<string[]> {
   let query = supabase
     .from("contacts")
     .select("id")
@@ -419,7 +422,7 @@ async function getContactIdsByRecipients(supabase: any, recipients: string): Pro
   }
 
   const { data } = await query.limit(500);
-  return (data || []).map((c: any) => c.id);
+  return (data || []).map((c: { id: string }) => c.id);
 }
 
 function wrapGreetingHtml(body: string, occasion: string, agentName: string, brokerage: string): string {
