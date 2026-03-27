@@ -6,7 +6,43 @@
 
 ## 1. Purpose
 
-This playbook governs how AI agents (Claude Code) operate on the ListingFlow codebase. Every task follows: **Pre-Flight → Classify → Execute → Validate**. No steps skipped.
+This playbook governs how **all developers (human and AI)** operate on the ListingFlow codebase. Every task follows: **Pre-Flight → Classify → Execute → Validate**. No steps skipped.
+
+### 1.1 Team Policy — Mandatory Use
+
+- All developers working on ListingFlow **must** follow this playbook.
+- No direct work on `main`. All changes go via `dev` and must pass `health-check.sh` + `test-suite.sh` before merge.
+- Code reviews must verify the relevant task playbook was followed:
+  - CODING: Was scope analysis done? Feature fit checked? FINTRAC/RLS/CASL verified?
+  - TESTING: Were test cases documented in `tests/<feature>.md`?
+  - DATA_MIGRATION: Was idempotency verified? Rollback plan written?
+  - SECURITY_AUDIT: Were RLS policies checked? Secrets scanned?
+- PR descriptions must include: task type classification, playbook phases completed, test results.
+- PR review checklist:
+  - [ ] Pre-flight followed (branch=dev, health check passed)
+  - [ ] Scope analysis identifies all affected files/tables/APIs
+  - [ ] Use-case doc created/updated (`usecases/<feature>.md`) if feature change
+  - [ ] Test doc created/updated (`tests/<feature>.md`) if behavior change
+  - [ ] Post-task validation completed (tests pass, no TS errors)
+
+### 1.2 Feature Evaluation & Market Fit
+
+Before building any **new feature**, answer:
+- What problem does this solve for BC realtors using ListingFlow?
+- What measurable benefit does it create? (time saved, better leads, fewer errors, compliance)
+- Does a similar capability already exist in the codebase? (grep, search docs, check specs)
+- How do 2-3 competitors handle this? (Follow Up Boss, LionDesk, kvCORE, Realvolve)
+- Are we copying, differentiating, or deliberately staying simpler?
+- Does this fit ListingFlow's vision as a BC realtor transaction CRM?
+- If unclear → **pause and ask the product owner**.
+
+### 1.3 Documentation Requirements
+
+Every significant feature must have:
+- **Use-case doc**: `usecases/<feature-name>.md` — problem, scenarios, demo script
+- **Test doc**: `tests/<feature-name>.md` — all test cases (auto/manual/pending)
+
+When modifying an existing feature → update its use-case and test docs.
 
 ---
 
@@ -76,6 +112,14 @@ If compound task → execute primary type fully, then secondary.
 
 ### 4.1 CODING
 
+**Phase 0 — Feature Fit & Existing System Check** *(CODING:feature only)*
+- Search codebase for similar capabilities: grep repo, search docs, check existing components
+- Summarize what already exists in 3-5 bullets
+- If overlap found → plan to EXTEND the existing feature, not create a parallel one
+- Answer: "Does this enhance an existing workflow or create a new one?"
+- If creating something new → complete Section 1.2 (Feature Evaluation) first
+- Document justification in `usecases/<feature-name>.md`
+
 **Phase 1 — Scope Analysis**
 - List files to CREATE and MODIFY
 - List DB tables affected (schema change? new columns? new constraints?)
@@ -141,9 +185,25 @@ If compound task → execute primary type fully, then secondary.
 - Check: missing error handling, edge cases (empty array, null, max length)
 - If `next.config.ts` modified → verify `turbopack.root` preserved
 - For new pages → verify `force-dynamic` present
-- Run tests: `npx vitest run` or `bash scripts/test-suite.sh`
 
-**Phase 6 — Output**
+*Targeted Regression Testing:*
+- Identify impacted areas: same module, shared DB tables/columns, shared APIs or workflows
+- From `tests/<feature>.md` and `evals.md`, pick all tests covering impacted areas
+- Run: all tests for NEW functionality + all tests for IMPACTED existing functionality
+
+| Change Type | What to Run |
+|-------------|-------------|
+| Minor isolated (copy, styling, non-critical UI) | Smoke tests + targeted unit tests for changed component |
+| Shared flow touched (auth, RLS, email, RAG, workflows) | Full module tests + one e2e path through that flow |
+| Schema change or DATA_MIGRATION | Full `test-suite.sh` + validate critical paths from `tests/<feature>.md` |
+| DEPLOY or production release | Full `test-suite.sh` + `qa-test-email-engine.mjs` + relevant eval suite |
+
+**Phase 6 — Documentation**
+- Update `usecases/<feature>.md` if feature behavior changed
+- Update `tests/<feature>.md` with new/modified test cases
+- Mark test cases as `[auto]`, `[manual]`, or `[pending]`
+
+**Phase 7 — Output**
 - Summarize changes, breaking changes, new env vars, new migrations
 - Commit to `dev`, push
 
@@ -153,6 +213,25 @@ If compound task → execute primary type fully, then secondary.
 - e2e: use Playwright (`playwright.config.ts`, run: `npx playwright test`)
 - Check existing tests + `evals.md` (200 QA test cases at repo root)
 - Check `scripts/eval-*.mjs` (8 eval suites) before creating new
+
+**Phase 1.5 — Test Documentation**
+
+Each core feature must have a `tests/<feature-name>.md` that:
+- Lists ALL test cases organized by: happy path, edge cases, error conditions, race conditions, cascade effects
+- Marks each as: `[auto]` (with file path), `[manual]` (with steps), `[pending]` (not yet implemented)
+- Tracks coverage: X of Y test cases automated
+
+When to update:
+- Adding functionality → add test cases to relevant MD file
+- Changing behavior → update affected test cases
+- Bug fix → add the test case that would have caught the bug
+
+Existing test inventory (check before creating new):
+- `evals.md` — 200 QA test cases (high-level)
+- `scripts/test-suite.sh` — 73+ automated tests
+- `scripts/qa-test-email-engine.mjs` — 28 email marketing tests
+- `scripts/eval-*.mjs` — 8 domain-specific eval suites
+- `tests/` — Playwright e2e tests
 
 **Phase 2** — Test plan covering: happy path, empty/null inputs, boundary values, duplicates, race conditions, cascade effects, permission denied, timeout/retry
 
@@ -175,6 +254,15 @@ If compound task → execute primary type fully, then secondary.
 **Phase 5** — Write regression test. Grep for same anti-pattern elsewhere.
 
 ### 4.4 DESIGN_SPEC
+
+**Phase 0 — Feature Justification**
+- Describe existing behavior and related components. Extension or new capability?
+- Answer: What problem does this solve for BC realtors? What measurable benefit?
+- Compare against 2-3 reference products (Follow Up Boss, LionDesk, kvCORE, Realvolve):
+  - What do they do here? Are we copying, differentiating, or staying simpler?
+  - What's our unique angle? (BC compliance, voice agent, AI content)
+- Conclude: "Does this fit ListingFlow's vision?" If unclear → ask the product owner.
+- Document in `usecases/<feature-name>.md` with problem statement + 3 scenarios + demo script
 
 **Phase 1** — Goals, non-goals, constraints, success metrics, dependencies
 
@@ -400,6 +488,31 @@ SUPABASE_ACCESS_TOKEN=xxx npx supabase db query --linked -f supabase/migrations/
 - No raw SQL (use Supabase client parameterized queries)
 - No `dangerouslySetInnerHTML` without sanitization
 
+### 4.15 Use-Case Documentation
+
+For every new feature or major enhancement, create or update `usecases/<feature-name>.md`.
+
+**Required sections**:
+
+1. **Problem Statement** — What user pain does this solve? (2-3 sentences)
+2. **User Roles** — Who uses this? (single realtor, team lead, admin, buyer client, seller client)
+3. **Existing System Context** — What related features already exist? How does this fit?
+4. **End-to-End Scenarios** (minimum 3):
+   - Scenario name
+   - Preconditions (user state, data state)
+   - Steps (numbered: user does X → system does Y → user sees Z)
+   - Expected outcome
+   - Edge cases / error conditions
+5. **Demo Script** — How to show this in a live demo:
+   - Setup (sample data, services running)
+   - Script (click X → say Y → show Z)
+   - Key talking points
+6. **Market Context** (for new features):
+   - How do 2-3 competitors handle this?
+   - Our differentiation
+
+**Naming**: `usecases/` + kebab-case (e.g., `usecases/voice-agent-showing-management.md`)
+
 ---
 
 ## 5. Model Chaining
@@ -487,6 +600,19 @@ CRM RULES (every CODING task)
 □ RLS on new tables  □ lf-* design classes  □ Zod v4 validation
 □ force-dynamic on live pages  □ Parent ≠ complete if child incomplete
 □ Twilio formatter  □ tsconfig exclude array intact
+
+FEATURE GATE (CODING:feature + DESIGN_SPEC)
+□ Search for existing capability  □ Summarize what exists
+□ What problem? What benefit?  □ Compare 2-3 competitors
+□ Fits ListingFlow vision?  □ If unclear → ask product owner
+
+DOCUMENTATION (every feature change)
+□ usecases/<feature>.md created/updated  □ 3+ scenarios + demo script
+□ tests/<feature>.md updated  □ Cases marked [auto]/[manual]/[pending]
+
+REGRESSION (every code change)
+□ Identify impacted areas  □ Pick relevant tests
+□ Minor → smoke  □ Shared flow → module tests  □ Schema → full suite
 
 EXECUTE
 → Follow per-type checklist phase by phase
