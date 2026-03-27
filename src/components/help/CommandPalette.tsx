@@ -4,7 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
 import { Search, BookOpen, ArrowRight, Zap } from "lucide-react";
-import { getAllFeatures, getFeatureIcon } from "@/lib/help-parser";
+
+interface HelpItem {
+  slug: string;
+  title: string;
+  problem: string;
+  icon: string;
+}
 
 const ACTIONS = [
   { label: "Create Listing", href: "/listings", icon: "🏠" },
@@ -16,18 +22,24 @@ const ACTIONS = [
   { label: "Settings", href: "/settings", icon: "⚙️" },
 ];
 
-function routeQuery(query: string): "help" | "action" | "mixed" {
-  if (/^(how|what|why|when|where|can i|do i|is there|help|guide|tutorial)/i.test(query)) return "help";
-  if (/^(create|add|new|open|go to|navigate|delete|update)/i.test(query)) return "action";
-  return "mixed";
-}
+// Static help items (no server import needed)
+const HELP_ITEMS: HelpItem[] = [
+  { slug: "listing-workflow", title: "Listing Workflow", problem: "8-phase pipeline from seller intake to MLS submission", icon: "🏠" },
+  { slug: "contact-management", title: "Contact Management", problem: "Manage buyers, sellers, partners, households, relationships", icon: "👥" },
+  { slug: "showing-management", title: "Showing Management", problem: "Schedule, confirm, track showings and buyer feedback", icon: "🔑" },
+  { slug: "deal-pipeline", title: "Deal Pipeline", problem: "Track transactions from lead to close", icon: "💰" },
+  { slug: "email-marketing-engine", title: "Email Marketing", problem: "AI-powered email drafts, campaigns, analytics", icon: "📧" },
+  { slug: "ai-content-engine", title: "AI Content Engine", problem: "MLS remarks, social captions, video prompts", icon: "✨" },
+  { slug: "bc-forms-generation", title: "BC Forms Generation", problem: "Auto-fill 12 BCREA standard forms", icon: "📋" },
+  { slug: "fintrac-compliance", title: "FINTRAC Compliance", problem: "Identity verification and AML compliance", icon: "🛡️" },
+  { slug: "voice-agent", title: "Voice Agent", problem: "Voice-controlled CRM assistant", icon: "🎙️" },
+  { slug: "workflow-automations", title: "Workflow Automations", problem: "Drip campaigns, triggers, enrollments", icon: "⚡" },
+];
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
-  const features = typeof window === "undefined" ? [] : (() => { try { return getAllFeatures(); } catch { return []; } })();
 
-  // Cmd+K shortcut
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -49,10 +61,7 @@ export function CommandPalette() {
 
   return (
     <div className="fixed inset-0 z-[100]" role="dialog" aria-label="Command palette">
-      {/* Backdrop */}
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
-
-      {/* Dialog */}
       <div className="fixed top-[20%] left-1/2 -translate-x-1/2 w-[90vw] max-w-lg">
         <Command className="bg-card rounded-xl border border-border shadow-2xl overflow-hidden" label="Search everything">
           <div className="flex items-center gap-2 px-4 border-b border-border">
@@ -70,9 +79,8 @@ export function CommandPalette() {
               No results found.
             </Command.Empty>
 
-            {/* Help Articles */}
             <Command.Group heading="Help" className="mb-2">
-              {features.map((f) => (
+              {HELP_ITEMS.map((f) => (
                 <Command.Item
                   key={f.slug}
                   value={`help ${f.title} ${f.problem}`}
@@ -81,15 +89,14 @@ export function CommandPalette() {
                 >
                   <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <span className="text-foreground">{getFeatureIcon(f.slug)} {f.title}</span>
-                    <p className="text-xs text-muted-foreground truncate">{f.problem.slice(0, 80)}</p>
+                    <span className="text-foreground">{f.icon} {f.title}</span>
+                    <p className="text-xs text-muted-foreground truncate">{f.problem}</p>
                   </div>
                   <ArrowRight className="h-3 w-3 text-muted-foreground/50 shrink-0" />
                 </Command.Item>
               ))}
             </Command.Group>
 
-            {/* Quick Actions */}
             <Command.Group heading="Actions" className="mb-2">
               {ACTIONS.map((action) => (
                 <Command.Item
