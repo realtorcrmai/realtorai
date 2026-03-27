@@ -70,6 +70,40 @@ Every significant feature must have:
 
 When modifying an existing feature → update its use-case and test docs.
 
+### 1.4 Onboarding — New Developers
+
+**First 15 minutes:**
+1. Read `CONTRIBUTING.md` (git workflow, branch naming, PR process)
+2. Read this section (1.1-1.3) — understand the zero-tolerance policy
+3. Read Section 10 (Quick Reference Card) — print it, keep it visible
+4. Run `bash scripts/health-check.sh` — verify your environment works
+
+**First task:**
+5. Pick a small task (typo fix, docs update)
+6. Follow the Quick Reference Card step by step
+7. Create a feature branch, PR, merge — feel the full flow
+
+**First week:**
+8. Read the full playbook (Sections 2-11)
+9. Read `CLAUDE.md` for project architecture
+10. Read the relevant `usecases/*.md` for features you'll work on
+
+### 1.5 Human vs AI Developer Tracks
+
+The same rules apply to both, but enforcement differs:
+
+| | Human Developer | AI Developer (Claude, etc.) |
+|---|---|---|
+| **Classification block** | Optional in conversation, required in PR description | Required in conversation before any tool call |
+| **Compliance log** | Auto-logged by CI (see below) | Must append manually to `.claude/compliance-log.md` |
+| **Pre-flight** | CI runs health checks; local optional but recommended | Must run `health-check.sh` every session |
+| **Scope analysis** | In PR description | In conversation before coding |
+| **Feature branch** | Enforced by GitHub (branch protection) | Enforced by GitHub (branch protection) |
+| **CI checks** | Enforced by GitHub (must pass to merge) | Enforced by GitHub (must pass to merge) |
+| **Docs update** | Checked in PR review | Must do before marking task complete |
+
+**Key insight:** Human developers are protected by CI gates (automated). AI developers are protected by classification blocks + compliance log (conversation-level). Both produce the same quality output.
+
 ---
 
 ## 2. Pre-Flight Protocol (Every Task, No Exceptions)
@@ -168,6 +202,29 @@ Reasoning: [1-2 sentences]
 Affected: [files, tables, APIs]
 Execution Order: [if multi-step, list the reordered sequence]
 ```
+
+### 3.2 Trivial Change Fast Path
+
+For genuinely trivial changes, use the fast path instead of the full playbook:
+
+**Qualifies as trivial (ALL must be true):**
+- 3 or fewer lines changed
+- Single file only
+- No logic change (typo, comment, copy, formatting)
+- No schema change, no new imports, no API change
+- No test impact
+
+**Fast path:**
+```
+Task Type: CODING:trivial
+Affected: [single file]
+```
+→ Implement → PR → CI must pass → merge
+
+**Skipped phases:** scope analysis, plan, self-check, docs update
+**Still required:** classification block, feature branch, PR, CI pass, compliance log
+
+If in doubt → it's not trivial. Use the full playbook.
 
 ### 14 Task Types
 
@@ -521,38 +578,56 @@ Existing test inventory (check before creating new):
 ### 4.12 VOICE_AGENT
 
 **Phase 1 — Identify scope**
-- Target: `voice_agent/server/` (Python, NOT TypeScript)
-- Activate venv: `source voice_agent/venv/bin/activate`
+- Backend: `voice_agent/server/` (Python 3.12+, aiohttp)
+- Frontend: `src/components/voice-agent/` (TypeScript/React)
+- Run with: `/opt/homebrew/bin/python3.14 voice_agent/server/main.py` (requires Python 3.12+ for edge-tts)
 
 **Phase 2 — Provider awareness**
 - 4 LLM providers: Ollama, OpenAI, Anthropic, Groq
 - Different tool-calling formats and token limits per provider
 - Config: `voice_agent/server/config.py` + `.env`
 - Fallback chain: `LLM_FALLBACK_CHAIN=anthropic,openai,ollama`
+- Anthropic prompt caching enabled (`cache_control: ephemeral` on system blocks) — saves ~90% on turns 2+
 
 **Phase 3 — Tool development** (for new voice commands)
 1. Create API endpoint: `src/app/api/voice-agent/<resource>/route.ts`
 2. Add tool schema to: `voice_agent/server/tools/realtor_tools.py` (REALTOR_TOOLS list)
 3. Add handler in: `handle_realtor_tool()` function
-4. Currently 60 tools across 21 API routes
+4. 56 tools across 21 API routes
+5. **Dynamic tool selection**: tools are routed by message keywords (see `SessionState.get_tools()` in `main.py`)
+   - Core set (12 tools) always included
+   - Additional tools activated by keyword matching (e.g., "showing" → showing tools)
+   - Session focus (current contact/listing) also activates relevant tools
+   - This cuts tool tokens from ~8K to ~2.5K per turn
 
 **Phase 4 — System prompts**
-- `voice_agent/server/system_prompts.py` — 3 modes: realtor, client, generic
-- BC real estate knowledge embedded in realtor prompt
-- Form-fill mode for structured data extraction
+- `voice_agent/server/system_prompts.py` — 4 modes: realtor, client, generic, help
+- Voice-optimized: 10 strict rules (no markdown, concise, natural speech, contractions)
+- BC real estate knowledge embedded (forms, FINTRAC, terms, workflow phases)
+- Form-fill mode for structured data extraction (JSON at end of response)
 
-**Phase 5 — Testing**
+**Phase 5 — Key features to preserve**
+- Edge TTS endpoint (`/api/tts`) with LRU cache (100 entries) + 13 pre-rendered phrases
+- Session focus tracking (`SessionState.focus`) — tracks current contact/listing across turns
+- Context summarization — compresses old turns after 20 messages, keeps last 12 verbatim
+- `_clean_for_voice()` — strips markdown from responses before TTS
+- Empty response retry + fallback messages
+
+**Phase 6 — Testing**
 ```bash
 # Create session
-curl -X POST localhost:8768/api/session/create -H "Authorization: Bearer va-bridge-secret-key-2026" -d '{"mode":"realtor"}'
+curl -X POST localhost:8768/api/session/create -H "Content-Type: application/json" -H "Authorization: Bearer va-bridge-secret-key-2026" -d '{"mode":"realtor"}'
 # Send chat
-curl -X POST localhost:8768/api/chat -H "Authorization: Bearer va-bridge-secret-key-2026" -d '{"session_id":"ID","message":"test prompt"}'
+curl -X POST localhost:8768/api/chat -H "Content-Type: application/json" -H "Authorization: Bearer va-bridge-secret-key-2026" -d '{"session_id":"ID","message":"How many active listings?"}'
+# Test TTS
+curl -o /tmp/test.mp3 -X POST localhost:8768/api/tts -H "Content-Type: application/json" -H "Authorization: Bearer va-bridge-secret-key-2026" -d '{"text":"Hello testing"}'
 ```
 
-**Phase 6 — Verify fallback chain**
+**Phase 7 — Verify fallback chain**
 - Test with each provider active
 - Verify tool-calling works with selected provider
-- Check timeout handling for slow providers (Ollama 3B can take 30s+)
+- Check timeout handling for slow providers (Ollama can take 30s+)
+- Verify prompt caching: second turn should show `cache_read_input_tokens` > 0
 
 ### 4.13 DATA_MIGRATION
 
@@ -649,13 +724,28 @@ For every new feature or major enhancement, create or update `usecases/<feature-
 
 ## 5. Model Chaining
 
-| Model | Use For |
-|-------|---------|
-| **Haiku** | Task classification, quick searches, file pattern matching, schema lookups |
-| **Sonnet** | Coding, testing, API development, tool implementation, migrations |
-| **Opus** | Architecture, design specs, complex debugging, playbook updates, gap analysis |
+### 5.1 Model Selection
 
-Launch parallel agents when tasks are independent. Use `subagent_type=Explore` for codebase research.
+| Model | Use For | Cost (input/output per 1M tokens) |
+|-------|---------|----------------------------------|
+| **Haiku** | Classification, quick searches, file matching, schema lookups | $0.25 / $1.25 |
+| **Sonnet** | Coding, testing, API dev, tool implementation, migrations | $3 / $15 |
+| **Opus** | Architecture, design specs, complex debugging, playbook, gap analysis | $15 / $75 |
+
+### 5.2 When to Override
+
+- User explicitly requests a model → use it regardless of task type
+- Task classified as trivial (Section 3.2) → Haiku or Sonnet, never Opus
+- Budget-sensitive context → prefer Sonnet over Opus for coding tasks
+- If rate-limited on one model → fall back to next tier (Opus → Sonnet → Haiku)
+
+### 5.3 Parallel Agent Rules
+
+- Launch parallel agents when tasks are independent (no shared files)
+- Use `subagent_type=Explore` for codebase research
+- Maximum 5 parallel agents (context/resource limit)
+- Each parallel agent follows the FULL playbook for its task
+- If two agents will touch the same file → run them sequentially, not in parallel
 
 ---
 
@@ -683,6 +773,54 @@ Launch parallel agents when tasks are independent. Use `subagent_type=Explore` f
 | 4 | Resend delivery | resend.com/dashboard |
 | 5 | Rollback | Redeploy previous Netlify deploy from dashboard |
 | 6 | DB restore | Supabase Dashboard → Database → Backups |
+
+---
+
+## 7.1 Dev Branch Broken — Emergency Protocol
+
+When a PR to `dev` breaks the build and blocks other developers:
+
+| Step | Action | Who |
+|------|--------|-----|
+| 1 | **Detect**: CI fails on dev, or developer reports `npm run build` failing after pull | Anyone |
+| 2 | **Alert**: Post in team channel: "dev is broken — [describe error] — do NOT merge until fixed" | Whoever found it |
+| 3 | **Identify**: `git log --oneline -5 dev` → find which merge commit broke it | Anyone |
+| 4 | **Fix or revert** (within 30 min): | PR author |
+| | Option A: Author pushes a fix PR immediately | |
+| | Option B: If fix is complex → `git revert <merge-commit> --no-edit` on a branch, PR to dev | |
+| 5 | **Verify**: CI passes on dev after fix/revert | Author |
+| 6 | **All clear**: Post in team channel: "dev is green again" | Whoever fixed it |
+
+**Rules:**
+- The PR author is responsible for fixing their own breakage
+- If author is unavailable, any team member can revert (don't wait)
+- Never force-push dev to "fix" history — always use revert commits
+- 30-minute SLA: if dev is broken for >30 min, revert first, fix later
+
+---
+
+## 7.2 Conflict Resolution Protocol
+
+When two developers modify the same file:
+
+**Prevention (before it happens):**
+- Check `WIP.md` before starting work (see Section 12)
+- `git log --oneline -5 -- <file>` — see who touched it recently
+- If overlap → message the other developer BEFORE starting
+
+**Resolution (when it happens):**
+1. The **second PR** (created later) is responsible for resolving conflicts
+2. `git checkout dev && git pull && git checkout <your-branch> && git rebase dev`
+3. Resolve conflicts locally, test, push
+4. If the conflict is in a shared file (e.g., `database.ts`, `globals.css`):
+   - Both developers review the merged result together
+   - Don't guess what the other developer intended
+5. If you can't reach the other developer → resolve conservatively (keep both changes, don't delete theirs)
+
+**Never:**
+- Force-push over someone else's merged work
+- Delete the other developer's changes to resolve a conflict
+- Merge without testing after conflict resolution
 
 ---
 
@@ -726,7 +864,8 @@ Launch parallel agents when tasks are independent. Use `subagent_type=Explore` f
 STRICT POLICY: No step below can be skipped. No exceptions. No bypass.
 
 PRE-FLIGHT (BLOCKING — nothing runs until green)
-□ health-check.sh  □ branch=dev  □ pull latest  □ load memory  □ services up
+□ health-check.sh  □ check WIP.md for conflicts  □ feature branch from dev
+□ pull latest  □ load memory  □ services up
 
 UNDERSTAND FIRST (Section 3.0 — BLOCKING — no tool calls until done)
 □ Read FULL prompt  □ Decompose steps  □ Map dependencies  □ Reorder correctly
@@ -762,6 +901,12 @@ VALIDATE
 
 COMPLIANCE LOG (Section 11 — BLOCKING — task is NOT complete without this)
 □ Append entry to .claude/compliance-log.md  □ ✅ or ❌  □ No log = unauthorized change
+
+WIP BOARD (Section 12)
+□ Add row to .claude/WIP.md BEFORE starting  □ Remove AFTER PR merged
+
+TRIVIAL FAST PATH (Section 3.2 — only if ≤3 lines, 1 file, no logic change)
+□ classify → implement → PR → CI pass → merge (skip scope/plan/docs)
 ```
 
 ---
@@ -810,3 +955,61 @@ Append a row to `.claude/compliance-log.md`:
 6. **No classification block in conversation = ❌** — the block proves you loaded the playbook
 7. **Weekly review** — scan log for patterns (which phases get skipped, which developers skip them)
 8. **The log tracks ALL developers equally** — human and AI, same rules, same accountability
+
+### 11.5 Log Rotation
+
+The compliance log rotates monthly to stay readable:
+
+- Active log: `.claude/compliance-log.md` (current month)
+- Archive: `.claude/compliance-archive/YYYY-MM.md` (previous months)
+- On the 1st of each month: move current log rows to archive, keep header in active log
+- Archives are read-only — never modify
+
+### 11.6 Velocity Metrics (from compliance log)
+
+Weekly, extract these metrics from the log:
+
+| Metric | How to Calculate | What It Reveals |
+|--------|-----------------|-----------------|
+| Tasks per developer per week | Count rows grouped by developer | Who's active, who's blocked |
+| Compliance rate by developer | ✅ count / total count per developer | Who follows the playbook |
+| Most common task type | Count by Type column | Where the team spends time |
+| Most skipped phases | Frequency in "Phases Skipped" column | Process bottlenecks to fix |
+| Average tasks per day | Total rows / days in period | Team velocity trend |
+
+This can be a monthly review in the team meeting or an automated script.
+
+---
+
+## 12. Work-In-Progress Visibility
+
+### 12.1 WIP Board
+
+Before starting any task, announce what you're working on in `.claude/WIP.md`:
+
+```markdown
+# Work In Progress
+
+| Developer | Branch | What | Started | Files Touched |
+|-----------|--------|------|---------|---------------|
+| rahul | rahul/voice-tts | Voice agent Edge TTS integration | 2026-03-27 | voice_agent/server/main.py, tts_providers.py |
+| claude | claude/playbook-v4 | Playbook gap fixes | 2026-03-27 | .claude/agent-playbook.md |
+```
+
+### 12.2 Rules
+
+- **Add your row BEFORE starting work** — this is how other devs know you're touching those files
+- **Remove your row AFTER your PR is merged** — not before
+- **Check WIP.md BEFORE starting** — if someone else is touching the same files, coordinate first
+- If WIP.md shows a conflict → message the other developer before creating your branch
+- Stale entries (>3 days old, no matching open PR) can be removed by anyone
+
+### 12.3 Why Not Use GitHub Issues/Projects?
+
+WIP.md is:
+- Checked into the repo — everyone pulls it automatically
+- Visible in `git pull` output — you see it without opening a browser
+- Editable by AI agents — no GitHub UI needed
+- Lightweight — no project management overhead
+
+For larger teams (5+), migrate to GitHub Projects or Linear.
