@@ -202,7 +202,7 @@ export async function evaluateGreetings(): Promise<{
           occasion: rule.occasion,
           occasionLabel: getOccasionLabel(rule.occasion),
           rule,
-          engagementScore: intel.engagement_score || 0,
+          engagementScore: (intel.engagement_score as number) || 0,
           relationshipContext: [
             c.type && `Type: ${c.type}`,
             c.stage_bar && `Stage: ${c.stage_bar}`,
