@@ -142,6 +142,7 @@ export function VoiceAgentWidget() {
   const [speaking, setSpeaking] = useState(false);
   const [continuousMode, setContinuousMode] = useState(true);
   const [useEdgeTTS, setUseEdgeTTS] = useState(true); // prefer server TTS
+  const [useWhisperSTT, setUseWhisperSTT] = useState(true); // prefer server Whisper STT
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognitionType | null>(null);
@@ -149,6 +150,8 @@ export function VoiceAgentWidget() {
   const spokenTextRef = useRef("");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ttsAbortRef = useRef(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -156,7 +159,22 @@ export function VoiceAgentWidget() {
 
   useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
 
-  // ── Health check ──────────────────────────────────────────
+  // ── Request mic permission early (so browser doesn't block later) ──
+
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && navigator.mediaDevices) {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then((stream) => {
+          // Got permission — release the stream immediately
+          stream.getTracks().forEach((t) => t.stop());
+        })
+        .catch(() => {
+          // User denied — voice will fall back to text input
+        });
+    }
+  }, []);
+
+  // ── Health check + auto-open ──────────────────────────────
 
   useEffect(() => {
     let stopped = false;
@@ -168,6 +186,11 @@ export function VoiceAgentWidget() {
         if (data.ok) {
           setConnected(true);
           setProvider(data.llm_provider);
+          // Auto-open the voice panel on first successful connection
+          setOpen((prev) => {
+            if (!prev && !hasGreetedRef.current) return true;
+            return prev;
+          });
           if (!stopped && !interval) interval = setInterval(check, 30000);
         }
       } catch {
@@ -310,9 +333,62 @@ export function VoiceAgentWidget() {
     setSpeaking(false);
   }, []);
 
-  // ── Start listening ───────────────────────────────────────
+  // ── Whisper STT — record audio and send to server ────────
+
+  const startWhisperRecording = useCallback(() => {
+    if (listening || sending) return;
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        if (blob.size < 100) { setListening(false); return; }
+        // Send to Whisper
+        setInput("Transcribing...");
+        try {
+          const form = new FormData();
+          form.append("audio", blob, "recording.webm");
+          const resp = await fetch(`${VOICE_AGENT_API}/api/stt`, {
+            method: "POST",
+            headers: { Authorization: API_HEADERS.Authorization },
+            body: form,
+          });
+          const data = await resp.json();
+          if (data.ok && data.text) {
+            setInput(data.text);
+            spokenTextRef.current = data.text;
+          } else {
+            setInput("");
+          }
+        } catch {
+          setInput("");
+        }
+        setListening(false);
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setListening(true);
+      // Auto-stop after 15 seconds of silence detection isn't easy,
+      // so use a max recording time
+    }).catch(() => { setListening(false); });
+  }, [listening, sending]);
+
+  const stopWhisperRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop();
+    }
+  }, []);
+
+  // ── Start listening (routes to Whisper or browser STT) ──
 
   const startListening = useCallback(() => {
+    if (useWhisperSTT) {
+      startWhisperRecording();
+      return;
+    }
+    // Browser STT fallback
     if (!recognitionRef.current || listening || sending) return;
     try {
       recognitionRef.current.start();
@@ -323,13 +399,17 @@ export function VoiceAgentWidget() {
         try { recognitionRef.current?.start(); setListening(true); } catch { setListening(false); }
       }, 200);
     }
-  }, [listening, sending]);
+  }, [listening, sending, useWhisperSTT, startWhisperRecording]);
 
   const stopListening = useCallback(() => {
+    if (useWhisperSTT) {
+      stopWhisperRecording();
+      return;
+    }
     if (!recognitionRef.current) return;
     recognitionRef.current.stop();
     setListening(false);
-  }, []);
+  }, [useWhisperSTT, stopWhisperRecording]);
 
   const toggleListening = useCallback(() => {
     if (listening) stopListening();
@@ -484,16 +564,18 @@ export function VoiceAgentWidget() {
     setSending(false);
   }
 
-  // ── Auto-send after speech recognition (increased delay) ──
+  // ── Auto-send after speech recognition ──────────────────
 
   useEffect(() => {
-    if (!listening && spokenTextRef.current && recognitionRef.current) {
+    if (!listening && spokenTextRef.current) {
       const captured = spokenTextRef.current;
       spokenTextRef.current = "";
-      // 1.5s delay — gives user time to collect thoughts
+      // Whisper: send immediately (already waited during transcription)
+      // Browser STT: 1.5s delay for user to collect thoughts
+      const delay = useWhisperSTT ? 100 : 1500;
       const timeout = setTimeout(() => {
         if (captured) sendMessage(captured);
-      }, 1500);
+      }, delay);
       return () => clearTimeout(timeout);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -524,6 +606,8 @@ export function VoiceAgentWidget() {
     if (open) {
       stopSpeaking();
       stopListening();
+      // Reset greeting so re-opening will greet again
+      hasGreetedRef.current = false;
     }
     setOpen((prev) => !prev);
   }
