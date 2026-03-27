@@ -213,7 +213,7 @@ function parseFAQ(content: string): HelpFeature["faq"] {
 export function getAllFeatures(): HelpFeature[] {
   if (!fs || !fs.existsSync(USECASES_DIR)) return [];
 
-  const files = fs.readdirSync(USECASES_DIR).filter((f) => f.endsWith(".md"));
+  const files = (fs.readdirSync(USECASES_DIR) as string[]).filter((f: string) => f.endsWith(".md"));
   return files
     .map((file) => {
       const raw = fs.readFileSync(path.join(USECASES_DIR, file), "utf-8");
