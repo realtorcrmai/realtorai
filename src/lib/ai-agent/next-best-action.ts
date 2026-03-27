@@ -8,7 +8,7 @@ const anthropic = new Anthropic();
 
 const RecommendationSchema = z.object({
   contact_id: z.string(),
-  action_type: z.enum(["call", "send_email", "send_sms", "enroll_workflow", "advance_stage", "add_tag", "create_task", "reengage"]),
+  action_type: z.enum(["call", "send_email", "send_sms", "send_greeting", "enroll_workflow", "advance_stage", "add_tag", "create_task", "reengage"]),
   reasoning: z.string(),
   priority: z.enum(["hot", "warm", "info"]),
   action_config: z.record(z.string(), z.unknown()).optional(),

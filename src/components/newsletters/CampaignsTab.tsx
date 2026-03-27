@@ -19,6 +19,8 @@ type BlastRun = {
 type Props = {
   listings: Listing[];
   blastHistory?: BlastRun[];
+  onSendBlast?: (listingId: string, template: string) => Promise<{ success?: boolean; error?: string }>;
+  onSendCampaign?: (emailType: string, recipients: string, subject: string) => Promise<{ success?: boolean; error?: string }>;
 };
 
 const TEMPLATES = [
@@ -36,15 +38,10 @@ type View = "home" | "listing_blast" | "custom_campaign";
 type BlastStep = "select_listing" | "customize" | "recipients" | "review";
 type CampaignStep = "select_template" | "select_contacts" | "customize" | "schedule";
 
-export function CampaignsTab({ listings, blastHistory = [] }: Props) {
+export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendCampaign }: Props) {
+  const [isSending, setIsSending] = useState(false);
   const [view, setView] = useState<View>("home");
 
-  // Auto-blast settings
-  const [autoBlastEnabled, setAutoBlastEnabled] = useState(false);
-  const [autoBlastTemplate, setAutoBlastTemplate] = useState("ai_chooses");
-  const [autoBlastRecipients, setAutoBlastRecipients] = useState("all_agents");
-  const [autoBlastApproval, setAutoBlastApproval] = useState<"review" | "auto">("review");
-  const [showSettings, setShowSettings] = useState(false);
   const [expandedRun, setExpandedRun] = useState<string | null>(null);
 
   // Blast wizard state
@@ -73,132 +70,6 @@ export function CampaignsTab({ listings, blastHistory = [] }: Props) {
 
     return (
       <div className="space-y-5">
-        {/* Auto-Blast Pipeline */}
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Zap className="h-5 w-5 text-amber-500" />
-                <div>
-                  <h3 className="text-base font-semibold">Listing Blast Automation</h3>
-                  <p className="text-xs text-muted-foreground">Automatically blast every new listing to agents</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setShowSettings(!showSettings)} className="p-1.5 rounded-md hover:bg-muted">
-                  <Settings2 className="h-4 w-4 text-muted-foreground" />
-                </button>
-                <button
-                  onClick={() => setAutoBlastEnabled(!autoBlastEnabled)}
-                  className={`relative w-11 h-6 rounded-full transition-colors ${autoBlastEnabled ? "bg-emerald-500" : "bg-gray-300"}`}
-                >
-                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${autoBlastEnabled ? "left-[22px]" : "left-0.5"}`} />
-                </button>
-              </div>
-            </div>
-
-            {/* Settings panel */}
-            {showSettings && (
-              <div className="space-y-4 pt-3 border-t border-border mb-4">
-                {/* Template Selection — Visual cards */}
-                <div>
-                  <p className="text-sm font-medium mb-1">Email Template</p>
-                  <p className="text-xs text-muted-foreground mb-3">Choose how your listing blast emails look</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {/* AI Chooses */}
-                    <div
-                      onClick={() => setAutoBlastTemplate("ai_chooses")}
-                      className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${autoBlastTemplate === "ai_chooses" ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Sparkles className="h-4 w-4 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold">AI Chooses Best</p>
-                          <p className="text-[10px] text-muted-foreground">Recommended</p>
-                        </div>
-                        {autoBlastTemplate === "ai_chooses" && <CheckCircle2 className="h-4 w-4 text-primary ml-auto" />}
-                      </div>
-                      <div className="bg-muted/50 rounded-md p-2 text-[10px] text-muted-foreground leading-relaxed">
-                        AI picks the best template based on property type, price range, and what's performing best with your agents. Luxury properties get the Showcase template, standard listings get the Alert template.
-                      </div>
-                    </div>
-
-                    {/* Specific templates */}
-                    {[
-                      { id: "listing_alert", emoji: "🏠", name: "New Listing Alert", preview: "Clean, professional layout with hero photo, price bar, property specs, and a clear 'Schedule Showing' CTA. Best for standard residential listings.", rate: "83%" },
-                      { id: "luxury_showcase", emoji: "✨", name: "Luxury Showcase", preview: "Full-width hero with dark overlay, gold accents, photo gallery grid, premium typography. Best for $1.5M+ properties.", rate: "—" },
-                      { id: "open_house", emoji: "🏡", name: "Open House Invite", preview: "Event-focused layout with date/time prominently displayed, property highlights, RSVP button, and map link. Best when open house is scheduled.", rate: "75%" },
-                    ].map(t => (
-                      <div
-                        key={t.id}
-                        onClick={() => setAutoBlastTemplate(t.id)}
-                        className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${autoBlastTemplate === t.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xl">{t.emoji}</span>
-                          <div>
-                            <p className="text-sm font-semibold">{t.name}</p>
-                            <p className="text-[10px] text-muted-foreground">{t.rate} open rate</p>
-                          </div>
-                          {autoBlastTemplate === t.id && <CheckCircle2 className="h-4 w-4 text-primary ml-auto" />}
-                        </div>
-                        <div className="bg-muted/50 rounded-md p-2 text-[10px] text-muted-foreground leading-relaxed">
-                          {t.preview}
-                        </div>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); window.open(`/api/templates/preview?template=${t.id}`, "_blank"); }}
-                          className="mt-2 w-full flex items-center justify-center gap-1.5 text-xs px-3 py-2 rounded-md border border-border hover:bg-muted font-medium transition-colors"
-                        >
-                          <Eye className="h-3 w-3" /> Preview Full Email ↗
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Recipients */}
-                <div className="flex items-center justify-between">
-                  <div><p className="text-sm font-medium">Recipients</p><p className="text-xs text-muted-foreground">Who receives auto-blasts</p></div>
-                  <select
-                    value={autoBlastRecipients}
-                    onChange={e => setAutoBlastRecipients(e.target.value)}
-                    className="text-xs border border-border rounded-md px-2 py-1.5 bg-background"
-                  >
-                    <option value="all_agents">All agents (5)</option>
-                    <option value="area_agents">Area-specific agents</option>
-                    <option value="active_agents">Recently active agents</option>
-                  </select>
-                </div>
-
-                {/* Approval */}
-                <div className="flex items-center justify-between">
-                  <div><p className="text-sm font-medium">Approval</p><p className="text-xs text-muted-foreground">Review before sending or auto-send</p></div>
-                  <div className="flex bg-muted rounded-lg p-0.5">
-                    <button
-                      onClick={() => setAutoBlastApproval("review")}
-                      className={`text-xs px-3 py-1 rounded-md font-medium ${autoBlastApproval === "review" ? "bg-background shadow" : "text-muted-foreground"}`}
-                    >Review</button>
-                    <button
-                      onClick={() => setAutoBlastApproval("auto")}
-                      className={`text-xs px-3 py-1 rounded-md font-medium ${autoBlastApproval === "auto" ? "bg-background shadow" : "text-muted-foreground"}`}
-                    >Auto-send</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Status line */}
-            <div className={`flex items-center gap-2 text-xs ${autoBlastEnabled ? "text-emerald-600" : "text-muted-foreground"}`}>
-              <div className={`w-2 h-2 rounded-full ${autoBlastEnabled ? "bg-emerald-500 animate-pulse" : "bg-gray-300"}`} />
-              {autoBlastEnabled
-                ? `Active — new listings auto-blast via ${autoBlastTemplate === "ai_chooses" ? "AI-chosen" : TEMPLATES.find(t => t.id === autoBlastTemplate)?.name} template to ${autoBlastRecipients.replace(/_/g, " ")}`
-                : "Disabled — new listings won't auto-blast. Use manual blast below."}
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Action buttons */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Card className="cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all group" onClick={() => { setView("listing_blast"); resetBlast(); }}>
@@ -429,7 +300,18 @@ export function CampaignsTab({ listings, blastHistory = [] }: Props) {
               <button onClick={() => setBlastStep("recipients")} className="text-xs px-4 py-2 rounded-lg border border-border font-medium hover:bg-muted">← Back</button>
               <div className="flex gap-2">
                 <button className="text-xs px-4 py-2 rounded-lg border border-border font-medium">📧 Send Test</button>
-                <button onClick={() => setBlastSent(true)} className="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700">✓ Send to 5 Agents</button>
+                <button
+                  disabled={isSending}
+                  onClick={async () => {
+                    if (onSendBlast && selectedListing) {
+                      setIsSending(true);
+                      try { await onSendBlast(selectedListing.id, "listing_alert"); } catch {}
+                      setIsSending(false);
+                    }
+                    setBlastSent(true);
+                  }}
+                  className="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 disabled:opacity-50"
+                >{isSending ? "Sending..." : "Send to 5 Agents"}</button>
               </div>
             </div>
           </div>
@@ -541,7 +423,18 @@ export function CampaignsTab({ listings, blastHistory = [] }: Props) {
               <button onClick={() => setCampaignStep("customize")} className="text-xs px-4 py-2 rounded-lg border border-border font-medium hover:bg-muted">← Back</button>
               <div className="flex gap-2">
                 <button className="text-xs px-4 py-2 rounded-lg border border-border font-medium">📧 Test</button>
-                <button onClick={() => setCampaignSent(true)} className="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700">{scheduleType === "now" ? "✓ Send" : "📅 Schedule"}</button>
+                <button
+                  disabled={isSending}
+                  onClick={async () => {
+                    if (onSendCampaign && selectedTemplate) {
+                      setIsSending(true);
+                      try { await onSendCampaign(selectedTemplate.id, selectedRecipients, selectedTemplate.desc); } catch {}
+                      setIsSending(false);
+                    }
+                    setCampaignSent(true);
+                  }}
+                  className="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 disabled:opacity-50"
+                >{isSending ? "Sending..." : scheduleType === "now" ? "Send" : "Schedule"}</button>
               </div>
             </div>
           </div>

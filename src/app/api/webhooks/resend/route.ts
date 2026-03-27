@@ -194,7 +194,7 @@ const CLICK_CATEGORIES: { type: string; score_impact: number; patterns: string[]
   { type: "book_showing", score_impact: 30, patterns: ["/book-showing", "/schedule-viewing"] },
   { type: "get_cma", score_impact: 30, patterns: ["/cma", "/home-value", "/what-is-my-home-worth"] },
   { type: "mortgage_calc", score_impact: 20, patterns: ["/mortgage", "/calculator", "/pre-approval"] },
-  { type: "listing", score_impact: 15, patterns: ["/listing", "/property", "/homes/"] },
+  { type: "listing", score_impact: 15, patterns: ["/listing/", "/listings/", "/listings?", "/property/", "/homes/"] },
   { type: "investment", score_impact: 15, patterns: ["/investment", "/rental", "/yield", "/cap-rate"] },
   { type: "open_house_rsvp", score_impact: 15, patterns: ["/open-house", "/rsvp"] },
   { type: "school_info", score_impact: 10, patterns: ["/school", "/education"] },

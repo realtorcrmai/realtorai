@@ -36,7 +36,7 @@ export interface NewsletterContext {
   contact: {
     name: string;
     firstName: string;
-    type: "buyer" | "seller";
+    type: "buyer" | "seller" | "customer" | "agent" | "partner" | "other";
     email: string;
     areas?: string[];
     preferences?: {

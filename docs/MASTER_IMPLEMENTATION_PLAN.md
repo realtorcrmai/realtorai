@@ -914,4 +914,30 @@ To keep scope manageable, these are explicitly DEFERRED beyond the 10 sprints:
 ---
 
 *Version 1.1 — 2026-03-23 (reviewed and corrected)*
-*Next: Clean up tech debt, fix git author, then start Sprint 0*
+*Version 1.2 — 2026-03-26 (added Phase D: Website Integration Platform)*
+
+---
+
+## Phase D: Website Integration Platform (Sprints 20-25, ~16 days)
+
+**PRD:** `docs/PRD_Website_Integration_Platform.md`
+
+An integration SDK that connects ANY realtor website to the CRM — not a website builder.
+
+| Sprint | What | Days |
+|--------|------|------|
+| 20 | Public APIs + JS SDK (`listingflow.js`) — 7 endpoints, API key auth, analytics beacon | 3 |
+| 21 | CRM `/websites` dashboard — 4 tabs, embed code generator, settings | 3 |
+| 22 | AI chatbot widget — Claude + tool_use, streaming, shadow DOM | 3-4 |
+| 23 | Analytics dashboard — visitor charts, lead funnel, UTM tracking | 2-3 |
+| 24 | Session recording — FullStory + rrweb, replay in CRM | 2-3 |
+| 25 | Listings feed + advanced widgets — property cards, newsletter, booking | 2-3 |
+
+**Key deliverables:**
+- `realestate-crm/public/sdk/listingflow.js` — <5KB embeddable SDK
+- 7 new API routes at `/api/websites/*`
+- CRM dashboard at `/websites` with analytics + embed codes
+- AI chatbot with property search, scheduling, lead capture
+- Session recording with replay viewer
+- 127 new test cases (category WEB in TEST_PLAN_1000.md)
+- Migration `055_website_integrations.sql`

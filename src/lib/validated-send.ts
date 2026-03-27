@@ -35,6 +35,10 @@ type ValidatedSendInput = {
   lastSubjects?: string[];
   journeyPhase?: string;
   skipQualityScore?: boolean;
+  /** Workflow/trigger metadata for BCC monitoring */
+  workflowName?: string;
+  stepName?: string;
+  triggeredBy?: string;
 };
 
 /**
@@ -94,6 +98,16 @@ export async function validatedSend(
             { name: "contact_id", value: input.contactId },
             { name: "email_type", value: input.emailType },
           ],
+          metadata: {
+            workflowName: input.workflowName,
+            stepName: input.stepName,
+            emailType: input.emailType,
+            journeyPhase: input.journeyPhase,
+            contactName: input.contactName,
+            contactType: input.contactType,
+            contactId: input.contactId,
+            triggeredBy: input.triggeredBy || "AI Newsletter Engine",
+          },
         });
 
         // Update newsletter status

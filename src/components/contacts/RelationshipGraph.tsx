@@ -8,7 +8,7 @@ export type GraphNode = {
   id: string;
   name: string;
   initials: string;
-  type: "buyer" | "seller" | "partner" | "other" | "child";
+  type: string;
   isCentral: boolean;
   color: string;
 };

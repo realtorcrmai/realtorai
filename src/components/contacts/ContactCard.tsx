@@ -19,8 +19,10 @@ export function ContactCard({ contact }: { contact: Contact }) {
           <div className="flex items-start gap-3">
             <div
               className={`flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold shrink-0 ${
-                contact.type === "seller"
-                  ? "bg-purple-50 text-purple-700"
+                contact.type === "seller" ? "bg-purple-50 text-purple-700"
+                  : contact.type === "customer" ? "bg-green-50 text-green-700"
+                  : contact.type === "agent" ? "bg-orange-50 text-orange-700"
+                  : contact.type === "partner" ? "bg-teal-50 text-teal-700"
                   : "bg-blue-50 text-blue-700"
               }`}
             >
@@ -34,8 +36,10 @@ export function ContactCard({ contact }: { contact: Contact }) {
                 <Badge
                   variant="outline"
                   className={`text-[11px] font-medium capitalize shrink-0 ${
-                    contact.type === "seller"
-                      ? "bg-purple-50 text-purple-700 border-purple-200"
+                    contact.type === "seller" ? "bg-purple-50 text-purple-700 border-purple-200"
+                      : contact.type === "customer" ? "bg-green-50 text-green-700 border-green-200"
+                      : contact.type === "agent" ? "bg-orange-50 text-orange-700 border-orange-200"
+                      : contact.type === "partner" ? "bg-teal-50 text-teal-700 border-teal-200"
                       : "bg-blue-50 text-blue-700 border-blue-200"
                   }`}
                 >

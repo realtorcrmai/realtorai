@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { processEventBatch } from "@/lib/ai-agent/contact-evaluator";
+import { evaluateGreetings } from "@/lib/ai-agent/greeting-agent";
 
 const CRON_SECRET = process.env.CRON_SECRET;
 const BATCH_SIZE = parseInt(process.env.AGENT_EVAL_BATCH_SIZE ?? "100", 10);
@@ -17,10 +18,26 @@ export async function GET(req: Request) {
   }
 
   try {
-    const result = await processEventBatch(BATCH_SIZE);
+    // Process contact events (existing)
+    const eventResult = await processEventBatch(BATCH_SIZE);
+
+    // Evaluate greeting automations (new)
+    let greetingResult = { candidates: 0, decisions: [] as any[], errors: 0 };
+    try {
+      greetingResult = await evaluateGreetings();
+    } catch (e) {
+      console.error("[cron/agent-evaluate] Greeting evaluation error:", e);
+    }
+
     return NextResponse.json({
       ok: true,
-      ...result,
+      events: eventResult,
+      greetings: {
+        candidates: greetingResult.candidates,
+        sent: greetingResult.decisions.filter(d => d.action === "send").length,
+        skipped: greetingResult.decisions.filter(d => d.action === "skip").length,
+        errors: greetingResult.errors,
+      },
       processedAt: new Date().toISOString(),
     });
   } catch (err) {

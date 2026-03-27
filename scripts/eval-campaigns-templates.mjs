@@ -800,7 +800,7 @@ async function section4() {
     `${sentNoBody.length} sent without body`);
 
   // Test 100: All newsletter statuses are in valid set
-  const validStatuses = new Set(["draft", "sent", "failed", "suppressed", "scheduled", "pending", "cancelled"]);
+  const validStatuses = new Set(["draft", "sent", "failed", "suppressed", "skipped", "sending", "approved", "scheduled", "pending", "cancelled"]);
   const invalidStatuses = (allNewsletters || []).filter(n => !validStatuses.has(n.status));
   t("CT-100", "All newsletter statuses are in valid set",
     invalidStatuses.length === 0,

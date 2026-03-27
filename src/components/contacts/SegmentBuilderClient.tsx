@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createSegment, deleteSegment, evaluateSegment, bulkEnroll } from "@/actions/segments";
 
 const RULE_FIELDS = [
-  { key: "type", label: "Contact Type", operators: ["equals"], values: ["buyer", "seller"] },
+  { key: "type", label: "Contact Type", operators: ["equals"], values: ["buyer", "seller", "customer", "agent", "partner", "other"] },
   { key: "stage_bar", label: "Stage", operators: ["equals"], values: ["new", "qualified", "active_search", "active_listing", "under_contract", "closed", "cold"] },
   { key: "lead_status", label: "Lead Status", operators: ["equals"], values: ["new", "contacted", "qualified", "nurturing", "converted", "lost"] },
   { key: "tags", label: "Has Tag", operators: ["contains"], values: [] },

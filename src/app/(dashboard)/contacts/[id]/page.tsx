@@ -18,6 +18,7 @@ import { JourneyProgressBar } from "@/components/contacts/JourneyProgressBar";
 import { EmailHistoryTimeline } from "@/components/contacts/EmailHistoryTimeline";
 import { IntelligencePanel } from "@/components/contacts/IntelligencePanel";
 import { ContextLog } from "@/components/contacts/ContextLog";
+import { WebsiteActivityLoader } from "@/components/contacts/WebsiteActivityLoader";
 import { DeleteContactButton } from "@/components/contacts/DeleteContactButton";
 import { Button } from "@/components/ui/button";
 import type { Contact, Communication, Listing, ContactDate, ContactDocument, BuyerPreferences, SellerPreferences, Demographics } from "@/types";
@@ -579,14 +580,34 @@ export default async function ContactDetailPage({
                   </div>
                 </div>
 
-                {/* Row 2: Pipeline bar */}
+                {/* Row 2: Pipeline bar or Convert button */}
                 <div className="mt-4 pt-3 border-t border-indigo-50 dark:border-indigo-900/20">
-                  <StageBar
-                    contactId={id}
-                    contactType={contact.type as "buyer" | "seller"}
-                    currentStage={contact.stage_bar as string | null}
-                    stageData={stageData}
-                  />
+                  {contact.type === "customer" ? (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <span className="text-sm text-green-800 font-medium flex-1">This is an unqualified lead. Convert when ready:</span>
+                      <form action={async () => {
+                        "use server";
+                        const { convertContactType } = await import("@/actions/contacts");
+                        await convertContactType(id, "buyer");
+                      }}>
+                        <button type="submit" className="text-xs px-3 py-1.5 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700">Convert to Buyer</button>
+                      </form>
+                      <form action={async () => {
+                        "use server";
+                        const { convertContactType } = await import("@/actions/contacts");
+                        await convertContactType(id, "seller");
+                      }}>
+                        <button type="submit" className="text-xs px-3 py-1.5 rounded-md bg-purple-600 text-white font-medium hover:bg-purple-700">Convert to Seller</button>
+                      </form>
+                    </div>
+                  ) : (
+                    <StageBar
+                      contactId={id}
+                      contactType={contact.type}
+                      currentStage={contact.stage_bar as string | null}
+                      stageData={stageData}
+                    />
+                  )}
                 </div>
                 {contact.notes && (
                   <p className="text-xs text-muted-foreground mt-2">{contact.notes}</p>
@@ -656,16 +677,19 @@ export default async function ContactDetailPage({
           )}
 
           {intel && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <IntelligencePanel
-                intelligence={intel}
-                totalEmails={newslettersWithEvents.length}
-              />
-              <ContextLog
-                contactId={id}
-                entries={(contactContextEntries ?? []) as Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>}
-              />
-            </div>
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <IntelligencePanel
+                  intelligence={intel}
+                  totalEmails={newslettersWithEvents.length}
+                />
+                <ContextLog
+                  contactId={id}
+                  entries={(contactContextEntries ?? []) as Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>}
+                />
+              </div>
+              <WebsiteActivityLoader contactId={id} />
+            </>
           )}
 
           {/* Tabbed Content */}

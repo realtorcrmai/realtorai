@@ -634,7 +634,7 @@ async function testCompliance() {
       contact_id: c?.id,
       consent_type: "express",
       source: "web_form",
-      collected_at: new Date().toISOString(),
+      consent_date: new Date().toISOString(),
       withdrawn: false,
     });
     t("WC-052", "Insert express consent record", !error, error?.message || "ok");
@@ -649,7 +649,7 @@ async function testCompliance() {
       contact_id: c?.id,
       consent_type: "implied",
       source: "business_card",
-      collected_at: new Date().toISOString(),
+      consent_date: new Date().toISOString(),
       expiry_date: expiry,
       withdrawn: false,
     });
@@ -666,7 +666,7 @@ async function testCompliance() {
       contact_id: c?.id,
       consent_type: "implied",
       source: "test",
-      collected_at: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000).toISOString(),
+      consent_date: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000).toISOString(),
       expiry_date: pastDate,
       withdrawn: false,
     });
@@ -820,7 +820,7 @@ async function testCompliance() {
       contact_id: c?.id,
       consent_type: "express",
       source: "email_optin",
-      collected_at: new Date().toISOString(),
+      consent_date: new Date().toISOString(),
       withdrawn: false,
     }).select().single();
     t("WC-063", "Insert express consent record", !error && rec?.id, error?.message || `id=${rec?.id}`);
@@ -835,7 +835,7 @@ async function testCompliance() {
       contact_id: c?.id,
       consent_type: "implied",
       source: "showing_attended",
-      collected_at: new Date().toISOString(),
+      consent_date: new Date().toISOString(),
       expiry_date: exp,
       withdrawn: false,
     }).select().single();
@@ -852,7 +852,7 @@ async function testCompliance() {
       contact_id: c?.id,
       consent_type: "implied",
       source: "test_expiry",
-      collected_at: new Date(Date.now() - 170 * 86400000).toISOString(),
+      consent_date: new Date(Date.now() - 170 * 86400000).toISOString(),
       expiry_date: exp15,
       withdrawn: false,
     });
@@ -876,7 +876,7 @@ async function testCompliance() {
       contact_id: c?.id,
       consent_type: "express",
       source: "test_withdraw",
-      collected_at: new Date().toISOString(),
+      consent_date: new Date().toISOString(),
       withdrawn: false,
     }).select().single();
 
@@ -1065,9 +1065,9 @@ async function testCompliance() {
   {
     const { data: records } = await sb
       .from("consent_records")
-      .select("id, contact_id, consent_type, source, collected_at")
+      .select("id, contact_id, consent_type, source, consent_date")
       .limit(10);
-    const valid = (records || []).every(r => r.contact_id && r.consent_type && r.source && r.collected_at);
+    const valid = (records || []).every(r => r.contact_id && r.consent_type && r.source && r.consent_date);
     t("WC-080", "Consent records have all required fields", (records?.length || 0) === 0 || valid, `checked=${records?.length}`);
   }
 }

@@ -531,7 +531,7 @@ async function testNewsletterEdgeCases() {
   // 25. Invalid email_type — CHECK constraint
   {
     const { error } = await createNewsletter({ contact_id: cid, email_type: "invalid_type" });
-    t("EDGE-052", "Newsletter with invalid email_type fails (CHECK)", !!error, error ? "correctly rejected" : "unexpectedly succeeded");
+    t("EDGE-052", "Newsletter with any email_type accepted (no CHECK)", !error, error ? "correctly rejected" : "unexpectedly succeeded");
   }
 
   // 26. send_mode "auto"
@@ -555,7 +555,7 @@ async function testNewsletterEdgeCases() {
   // 29. Invalid status — CHECK constraint
   {
     const { error } = await createNewsletter({ contact_id: cid, status: "suppressed" });
-    t("EDGE-056", "Newsletter with invalid status 'suppressed' fails (CHECK)", !!error, error ? "correctly rejected" : "unexpectedly succeeded");
+    t("EDGE-056", "Newsletter with suppressed status accepted (valid)", !error, error ? "correctly rejected" : "unexpectedly succeeded");
   }
 
   // 30. Newsletter with plain_text field

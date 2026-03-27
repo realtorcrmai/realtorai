@@ -352,9 +352,9 @@ async function executeSystemAction(
   switch (action) {
     case "change_lead_status": {
       // Sync stage_bar when lead_status changes
-      const contactType = contact.type as "buyer" | "seller" | "partner" | "other";
+      const contactType = contact.type || "other";
       const stageBar = contact.stage_bar ?? null;
-      const synced = syncLeadStatusAndStage(value, stageBar, contactType);
+      const synced = syncLeadStatusAndStage(value, stageBar, contactType as any);
       const { error } = await supabase
         .from("contacts")
         .update({ lead_status: synced.lead_status, stage_bar: synced.stage_bar })
@@ -366,8 +366,7 @@ async function executeSystemAction(
       const currentTags = Array.isArray(contact.tags) ? (contact.tags as string[]) : [];
       if (!currentTags.includes(value)) {
         const newTags = [...currentTags, value];
-        const contactTypeForTag = contact.type as "buyer" | "seller" | "partner" | "other";
-        const cleanTags = filterInvalidTags(newTags, contactTypeForTag, contact.lead_status);
+        const cleanTags = filterInvalidTags(newTags, contact.type as any, contact.lead_status);
         const { error } = await supabase
           .from("contacts")
           .update({ tags: cleanTags })
@@ -378,9 +377,8 @@ async function executeSystemAction(
     }
     case "change_stage": {
       // Validate stage for contact type and sync lead_status
-      const stageContactType = contact.type as "buyer" | "seller" | "partner" | "other";
-      const validStage = validateStageForType(stageContactType, value);
-      const stageSynced = syncLeadStatusAndStage(contact.lead_status, validStage, stageContactType);
+      const validStage = validateStageForType(contact.type as any, value);
+      const stageSynced = syncLeadStatusAndStage(contact.lead_status, validStage, contact.type as any);
       const { error } = await supabase
         .from("contacts")
         .update({ stage_bar: stageSynced.stage_bar, lead_status: stageSynced.lead_status })

@@ -60,7 +60,7 @@ export interface ContactFormContentProps {
   onSuccess?: () => void;
   contact?: Contact;
   allContacts?: { id: string; name: string }[];
-  defaultType?: "buyer" | "seller";
+  defaultType?: string;
   defaultReferredById?: string;
 }
 
@@ -96,8 +96,8 @@ export function ContactFormContent({
           name: contact.name,
           phone: contact.phone,
           email: contact.email ?? "",
-          type: contact.type,
-          pref_channel: contact.pref_channel,
+          type: contact.type as FormData["type"],
+          pref_channel: contact.pref_channel as FormData["pref_channel"],
           notes: contact.notes ?? "",
           address: contact.address ?? "",
           referred_by_id: contact.referred_by_id ?? "",
@@ -110,12 +110,12 @@ export function ContactFormContent({
           referral_agreement_terms: contact.referral_agreement_terms ?? "",
         }
       : {
-          type: defaultType ?? "buyer",
+          type: (defaultType ?? "buyer") as FormData["type"],
           pref_channel: "sms",
           referred_by_id: defaultReferredById ?? "",
           source: "",
-          lead_status: "new",
-          partner_type: "",
+          lead_status: "new" as FormData["lead_status"],
+          partner_type: "" as FormData["partner_type"],
           company_name: "",
           job_title: "",
           typical_client_profile: "",
@@ -442,7 +442,7 @@ export function ContactForm({
   trigger?: React.ReactNode;
   allContacts?: { id: string; name: string }[];
   defaultReferredById?: string;
-  defaultType?: "buyer" | "seller";
+  defaultType?: string;
 }) {
   const [open, setOpen] = useState(false);
 

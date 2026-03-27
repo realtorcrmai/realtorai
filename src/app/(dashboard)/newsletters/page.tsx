@@ -15,14 +15,21 @@ import { AIAgentQueue } from "@/components/newsletters/AIAgentQueue";
 import { HeldBackList } from "@/components/newsletters/HeldBackList";
 import { AIWorkingForYou } from "@/components/newsletters/AIWorkingForYou";
 import { ListingBlastAutomation } from "@/components/newsletters/ListingBlastAutomation";
-import { sendNewsletter, skipNewsletter, bulkApproveNewsletters } from "@/actions/newsletters";
+import { GreetingAutomations } from "@/components/newsletters/GreetingAutomations";
+import { sendNewsletter, skipNewsletter, bulkApproveNewsletters, sendListingBlast, sendCampaign } from "@/actions/newsletters";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { WORKFLOW_BLUEPRINTS } from "@/lib/constants";
+import { getRealtorConfig, getAutomationRules, getGreetingRules } from "@/actions/config";
 
 export default async function NewsletterDashboard() {
   const supabase = createAdminClient();
-  const dashboard = await getJourneyDashboard();
-  const queue = await getApprovalQueue();
+  const [dashboard, queue, realtorConfig, automationRules, greetingRules] = await Promise.all([
+    getJourneyDashboard(),
+    getApprovalQueue(),
+    getRealtorConfig(),
+    getAutomationRules(),
+    getGreetingRules(),
+  ]);
 
   const sevenDaysFromNow = new Date(Date.now() + 7 * 86400000).toISOString();
 
@@ -49,7 +56,7 @@ export default async function NewsletterDashboard() {
     const score = c.newsletter_intelligence?.engagement_score;
     return typeof score === "number" && score >= 60;
   }).sort((a: any, b: any) => (b.newsletter_intelligence?.engagement_score || 0) - (a.newsletter_intelligence?.engagement_score || 0));
-  const hotBuyers = hotLeads.filter((c: any) => c.type === "buyer");
+  const hotBuyers = hotLeads.filter((c: any) => c.type === "buyer" || c.type === "customer");
   const hotSellers = hotLeads.filter((c: any) => c.type === "seller");
 
   const suppressedEmails = suppressedRaw || [];
@@ -226,7 +233,7 @@ export default async function NewsletterDashboard() {
                           const score = c.newsletter_intelligence?.engagement_score || 0;
                           const lastClicked = c.newsletter_intelligence?.last_clicked;
                           const daysSince = lastClicked ? Math.floor((Date.now() - new Date(lastClicked).getTime()) / 86400000) : null;
-                          const isBuyer = c.type === "buyer";
+                          const isBuyer = c.type === "buyer" || c.type === "customer";
                           return (
                             <div key={c.id} className="flex items-center justify-between p-2.5 bg-white/70 rounded-lg border border-red-100">
                               <div className="flex items-center gap-2.5 min-w-0">
@@ -240,7 +247,7 @@ export default async function NewsletterDashboard() {
                                   <div className="flex items-center gap-1.5">
                                     <p className="text-xs font-semibold truncate">{c.name}</p>
                                     <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${isBuyer ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>
-                                      {isBuyer ? "BUYER" : "SELLER"}
+                                      {c.type === "customer" ? "LEAD" : isBuyer ? "BUYER" : "SELLER"}
                                     </span>
                                   </div>
                                   <p className="text-[10px] text-muted-foreground truncate">
@@ -366,7 +373,7 @@ export default async function NewsletterDashboard() {
 
           /* ═══ CAMPAIGNS (Templates + Blasts) ═══ */
           campaigns: (
-            <CampaignsTab listings={(listings || []) as any} />
+            <CampaignsTab listings={(listings || []) as any} onSendBlast={sendListingBlast} onSendCampaign={sendCampaign} />
           ),
 
 
@@ -378,8 +385,6 @@ export default async function NewsletterDashboard() {
 
             return (
               <div className="space-y-4">
-                <ListingBlastAutomation />
-
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Workflows ({workflowList.length})</h4>
                   <a href="/automations" className="text-xs text-primary font-medium hover:underline">Manage All →</a>
@@ -441,9 +446,24 @@ export default async function NewsletterDashboard() {
             );
           })(),
 
+          /* ═══ AUTOMATION ═══ */
+          automation: (
+            <div className="space-y-6">
+              <ListingBlastAutomation initialRules={automationRules as any} />
+              <GreetingAutomations initialRules={greetingRules as any} />
+            </div>
+          ),
+
           /* ═══ SETTINGS ═══ */
           settings: (
-            <SettingsTab />
+            <SettingsTab config={realtorConfig ? {
+              sending_enabled: realtorConfig.sending_enabled,
+              skip_weekends: realtorConfig.skip_weekends,
+              quiet_hours: realtorConfig.quiet_hours as any,
+              frequency_caps: realtorConfig.frequency_caps as any,
+              default_send_hour: realtorConfig.default_send_hour,
+              brand_config: realtorConfig.brand_config as any,
+            } : null} />
           ),
         }}
       </EmailMarketingTabs>

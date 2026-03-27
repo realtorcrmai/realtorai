@@ -211,7 +211,7 @@ export async function generateAndQueueNewsletter(
     contact: {
       name: contact.name,
       firstName: contact.name.split(" ")[0],
-      type: contact.type as "buyer" | "seller",
+      type: contact.type as any,
       email: contact.email,
       areas: intelligence.inferred_interests?.areas,
       preferences: contact.buyer_preferences as any,
@@ -379,7 +379,11 @@ export async function sendNewsletter(newsletterId: string) {
     }
 
     // ── QUALITY SCORING — rate email before sending ──
-    try {
+    // Skip quality scoring for greeting emails (they're intentionally short & personal)
+    const isGreeting = newsletter.email_type?.startsWith("greeting_");
+    if (isGreeting) {
+      // Greetings bypass quality scoring — they're relationship touches, not marketing emails
+    } else try {
       const { scoreEmailQuality, makeQualityDecision, recordQualityOutcome } = await import("@/lib/quality-pipeline");
       const qualityScore = await scoreEmailQuality({
         subject: finalSubject,
@@ -445,6 +449,7 @@ export async function sendNewsletter(newsletterId: string) {
       trustLevel,
       lastSubjects,
       journeyPhase,
+      skipQualityScore: isGreeting,
     });
 
     // validatedSend handles status updates for sent/blocked/deferred/regenerate internally.
@@ -574,6 +579,53 @@ export async function bulkApproveNewsletters(ids: string[]) {
     }
   }
   return { results, sent: results.filter(r => r.success).length, failed: results.filter(r => r.error).length };
+}
+
+export async function sendCampaign(emailType: string, recipients: string, subject: string) {
+  const supabase = createAdminClient();
+
+  // Build recipient query based on selection
+  let query = supabase
+    .from("contacts")
+    .select("id, name, email, type")
+    .eq("newsletter_unsubscribed", false)
+    .not("email", "is", null);
+
+  switch (recipients) {
+    case "all_buyers": query = query.eq("type", "buyer"); break;
+    case "all_sellers": query = query.eq("type", "seller"); break;
+    case "active_buyers": query = query.eq("type", "buyer").in("stage_bar", ["active_search", "qualified"]); break;
+    case "past_clients": query = query.in("stage_bar", ["closed"]); break;
+    case "new_leads": query = query.in("lead_status", ["new"]).gte("created_at", new Date(Date.now() - 30 * 86400000).toISOString()); break;
+    // "everyone" — no filter
+  }
+
+  const { data: contacts } = await query.limit(500);
+  if (!contacts || contacts.length === 0) {
+    return { error: "No matching contacts found" };
+  }
+
+  let sent = 0;
+  let failed = 0;
+
+  for (const contact of contacts) {
+    try {
+      const result = await generateAndQueueNewsletter(
+        contact.id,
+        emailType,
+        "campaign",
+        undefined,
+        "auto"
+      );
+      if (result.data) sent++;
+      else failed++;
+    } catch {
+      failed++;
+    }
+  }
+
+  revalidatePath("/newsletters");
+  return { success: true, sent, failed, total: contacts.length };
 }
 
 export async function sendListingBlast(listingId: string, _template: string) {

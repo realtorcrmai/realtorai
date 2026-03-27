@@ -17,6 +17,7 @@ import {
   Wand2,
   Zap,
   Mail,
+  Globe,
   LogOut,
   Home,
   ChevronDown,
@@ -52,6 +53,7 @@ const moreItems: { href: string; label: string; icon: typeof Building2; featureK
   { href: "/import", label: "Excel Import", icon: Upload, featureKey: "import" },
   { href: "/forms", label: "BC Forms", icon: FileText, featureKey: "forms" },
   { href: "/newsletters", label: "Email Marketing", icon: Mail, featureKey: "newsletters" },
+  { href: "/websites", label: "Website Marketing", icon: Globe, featureKey: "website" },
 ];
 
 export function AppHeader() {

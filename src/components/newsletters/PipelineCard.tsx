@@ -16,7 +16,7 @@ type Contact = {
 
 type Props = {
   title: string;
-  type: "buyer" | "seller";
+  type: string;
   phaseCounts: Record<string, number>;
   contactsByPhase: Record<string, Contact[]>;
 };

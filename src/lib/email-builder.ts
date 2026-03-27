@@ -141,7 +141,7 @@ ${b.address ? `<p style="font-size:11px;color:#a0a0b0;margin:0 0 8px;font-family
  */
 export function buildWelcomeEmail(options: {
   firstName: string;
-  contactType: "buyer" | "seller";
+  contactType: string;
   area?: string;
   budget?: string;
   brand?: Partial<BrandConfig>;

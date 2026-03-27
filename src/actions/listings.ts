@@ -31,7 +31,13 @@ export async function createListing(formData: ListingFormData) {
 
   revalidatePath("/listings");
 
-  // Lifecycle milestone advancement removed — StageBar is the single source of truth.
+  // Fire listing_created trigger for automation rules
+  try {
+    const { executeListingBlastRules } = await import("@/lib/listing-blast-executor");
+    await executeListingBlastRules("listing_created", data.id);
+  } catch {
+    // Don't fail listing creation if blast fails
+  }
 
   return { success: true, listing: data };
 }
@@ -59,6 +65,14 @@ export async function updateListing(
       Number(updateData.sold_price) * (Number(updateData.commission_rate) / 100);
   }
 
+  // Check if price changed (for blast automation trigger)
+  const priceChanged = updateData.list_price !== undefined;
+  let oldPrice: number | null = null;
+  if (priceChanged) {
+    const { data: current } = await supabase.from("listings").select("list_price, status").eq("id", id).single();
+    oldPrice = current?.list_price;
+  }
+
   const { error } = await supabase
     .from("listings")
     .update(updateData)
@@ -71,6 +85,17 @@ export async function updateListing(
   revalidatePath("/listings");
   revalidatePath(`/listings/${id}`);
   revalidatePath("/contacts");
+
+  // Fire price_change trigger if list_price changed on an active listing
+  if (priceChanged && updateData.list_price !== oldPrice) {
+    try {
+      const { executeListingBlastRules } = await import("@/lib/listing-blast-executor");
+      await executeListingBlastRules("price_change", id);
+    } catch {
+      // Don't fail listing update if blast fails
+    }
+  }
+
   return { success: true };
 }
 
@@ -234,7 +259,15 @@ export async function updateListingStatus(
     }
   }
 
-  // Lifecycle milestone advancement removed — StageBar is the single source of truth.
+  // Fire listing_active trigger for blast automation rules
+  if (newStatus === "active") {
+    try {
+      const { executeListingBlastRules } = await import("@/lib/listing-blast-executor");
+      await executeListingBlastRules("listing_active", id);
+    } catch {
+      // Don't fail status update if blast fails
+    }
+  }
 
   // Fire listing_status_change trigger for workflow auto-enrollment (e.g., post-close workflows)
   if (newStatus === "sold") {

@@ -134,16 +134,28 @@ async function seed() {
   // ── CLEANUP ──
   console.log("🧹 Cleaning previous demo data...");
   const { data: old } = await supabase.from("contacts").select("id").like("phone", `${P}%`);
-  const ids = (old || []).map(c => c.id);
-  if (ids.length) {
-    await supabase.from("newsletter_events").delete().in("contact_id", ids);
-    await supabase.from("newsletters").delete().in("contact_id", ids);
-    await supabase.from("contact_journeys").delete().in("contact_id", ids);
-    await supabase.from("workflow_enrollments").delete().in("contact_id", ids);
-    await supabase.from("communications").delete().in("contact_id", ids);
-    await supabase.from("contacts").delete().in("id", ids);
-    console.log(`  Removed ${ids.length} contacts + related data`);
+  // Also clean up duplicate Aman Singh contacts (from other test scripts)
+  const demoEmails = C.map(c => c.e);
+  const { data: emailDupes } = await supabase.from("contacts").select("id").in("email", demoEmails);
+  const allOldIds = [...new Set([...(old || []).map(c => c.id), ...(emailDupes || []).map(c => c.id)])];
+  if (allOldIds.length) {
+    await supabase.from("newsletter_events").delete().in("contact_id", allOldIds);
+    await supabase.from("newsletters").delete().in("contact_id", allOldIds);
+    await supabase.from("contact_journeys").delete().in("contact_id", allOldIds);
+    await supabase.from("workflow_enrollments").delete().in("contact_id", allOldIds);
+    await supabase.from("communications").delete().in("contact_id", allOldIds);
+    await supabase.from("contacts").delete().in("id", allOldIds);
+    console.log(`  Removed ${allOldIds.length} contacts + related data`);
   }
+
+  // ── FIX STALE ENROLLMENTS ──
+  // Clean up completed enrollments that still have next_run_at (stale data)
+  const { count: fixedEnroll } = await supabase.from("workflow_enrollments")
+    .update({ next_run_at: null })
+    .eq("status", "completed")
+    .not("next_run_at", "is", null)
+    .select("id", { count: "exact", head: true });
+  if (fixedEnroll > 0) console.log(`  Fixed ${fixedEnroll} completed enrollments with stale next_run_at`);
 
   // ── CONTACTS ──
   console.log("\n👥 Creating contacts...");

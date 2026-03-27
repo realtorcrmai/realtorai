@@ -37,7 +37,7 @@ export type StageData = {
 
 interface StageBarProps {
   contactId: string;
-  contactType: "buyer" | "seller";
+  contactType: string;
   currentStage: string | null;
   /** Per-stage data to display when expanded. Key = stage slug */
   stageData?: Record<string, StageData>;
@@ -47,6 +47,11 @@ export function StageBar({ contactId, contactType, currentStage, stageData }: St
   const [isPending, startTransition] = useTransition();
   const [confirmStage, setConfirmStage] = useState<string | null>(null);
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
+
+  // Only buyer and seller have stage pipelines
+  if (contactType !== "buyer" && contactType !== "seller") {
+    return null; // No pipeline for customer, agent, partner, other
+  }
 
   const allStages = contactType === "buyer" ? BUYER_STAGES : SELLER_STAGES;
   const pipelineStages = allStages.filter((s) => s !== "cold");

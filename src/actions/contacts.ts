@@ -82,16 +82,12 @@ export async function createContact(formData: ContactFormData, force = false) {
 
   // Fire-and-forget: enroll in journey + trigger matching workflows
   // Journey tracks phase (lead → active → contract → closed)
-  // Workflows handle email sequences (welcome, nurture, follow-up)
+  // Auto-enroll in journey (phase tracking only — no emails sent)
+  // Speed-to-Contact workflow is INACTIVE by default — realtor enables manually
+  // and enrolls contacts through the Automations UI (/automations/workflows/{id})
   (async () => {
     try {
-      // 1. Enroll in journey (phase tracking only — no welcome email)
       await enrollInJourney(data.id, data.type, data.name);
-
-      // 2. Fire trigger engine — enrolls in matching workflows
-      //    Welcome email comes from "Speed to Contact" workflow, not auto-enroll
-      const { fireTrigger } = await import("@/lib/trigger-engine");
-      await fireTrigger("new_lead", data.id, { contactType: data.type });
     } catch {
       // Don't fail contact creation if enrollment fails
     }
@@ -540,15 +536,66 @@ export async function deleteContactDocument(docId: string, contactId: string) {
   return { success: true };
 }
 
+// ── Convert Contact Type ─────────────────────────────────────
+
+/**
+ * Convert a customer (lead) to buyer or seller.
+ * - Updates contact type
+ * - Enrolls in appropriate journey (buyer or seller)
+ * - Fires trigger for matching workflows (e.g., Buyer Nurture)
+ */
+export async function convertContactType(
+  contactId: string,
+  newType: "buyer" | "seller"
+) {
+  const supabase = createAdminClient();
+
+  const { data: contact } = await supabase
+    .from("contacts")
+    .select("id, name, type")
+    .eq("id", contactId)
+    .single();
+
+  if (!contact) return { error: "Contact not found" };
+
+  // Update type
+  const { error } = await supabase
+    .from("contacts")
+    .update({ type: newType, lead_status: "qualified" })
+    .eq("id", contactId);
+
+  if (error) return { error: error.message };
+
+  // Re-enroll in correct journey
+  try {
+    await enrollInJourney(contactId, newType, contact.name);
+  } catch {}
+
+  // Fire trigger for workflow enrollment (e.g., Buyer Nurture)
+  try {
+    const { fireTrigger } = await import("@/lib/trigger-engine");
+    await fireTrigger("lead_status_change", contactId, { contactType: newType });
+  } catch {}
+
+  revalidatePath(`/contacts/${contactId}`);
+  revalidatePath("/contacts");
+  revalidatePath("/newsletters");
+  return { success: true, newType };
+}
+
 // ── Auto Journey Enrollment + Welcome Email ──────────────────
 
 /**
  * Enroll contact in journey (phase tracking only — no welcome email).
  * Welcome email comes from the "Speed to Contact" workflow via trigger engine.
  */
-async function enrollInJourney(contactId: string, contactType: string, name: string) {
+async function enrollInJourney(contactId: string, contactType: string, _name: string) {
   const supabase = createAdminClient();
-  const journeyType = contactType === "seller" ? "seller" : "buyer";
+  // Map contact type to journey type
+  const journeyMap: Record<string, string> = {
+    buyer: "buyer", seller: "seller", customer: "customer", agent: "agent",
+  };
+  const journeyType = journeyMap[contactType] || "customer";
 
   // Check if already enrolled
   const { data: existing } = await supabase

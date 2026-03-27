@@ -6,10 +6,9 @@ import {
   LayoutDashboard,
   Bot,
   Megaphone,
-  BarChart3,
-  Route,
+  Workflow,
+  Zap,
   Settings2,
-  Handshake,
 } from "lucide-react";
 
 type Tab = {
@@ -25,9 +24,8 @@ type Props = {
     overview: React.ReactNode;
     queue: React.ReactNode;
     campaigns: React.ReactNode;
-    relationships: React.ReactNode;
-    journeys: React.ReactNode;
-    analytics: React.ReactNode;
+    workflows: React.ReactNode;
+    automation: React.ReactNode;
     settings: React.ReactNode;
   };
 };
@@ -37,11 +35,10 @@ export function EmailMarketingTabs({ queueCount, children }: Props) {
 
   const tabs: Tab[] = [
     { id: "overview", label: "Overview", icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: "queue", label: "AI Agent", icon: <Bot className="w-4 h-4" />, badge: queueCount > 0 ? queueCount : undefined },
+    { id: "workflows", label: "AI Workflows", icon: <Workflow className="w-4 h-4" /> },
+    { id: "queue", label: "Performance", icon: <Bot className="w-4 h-4" />, badge: queueCount > 0 ? queueCount : undefined },
     { id: "campaigns", label: "Campaigns", icon: <Megaphone className="w-4 h-4" /> },
-    { id: "relationships", label: "Relationships", icon: <Handshake className="w-4 h-4" /> },
-    { id: "journeys", label: "Journeys", icon: <Route className="w-4 h-4" /> },
-    { id: "analytics", label: "Analytics", icon: <BarChart3 className="w-4 h-4" /> },
+    { id: "automation", label: "Automation", icon: <Zap className="w-4 h-4" /> },
     { id: "settings", label: "Settings", icon: <Settings2 className="w-4 h-4" /> },
   ];
 
@@ -80,9 +77,8 @@ export function EmailMarketingTabs({ queueCount, children }: Props) {
         {activeTab === "overview" && children.overview}
         {activeTab === "queue" && children.queue}
         {activeTab === "campaigns" && children.campaigns}
-        {activeTab === "relationships" && children.relationships}
-        {activeTab === "journeys" && children.journeys}
-        {activeTab === "analytics" && children.analytics}
+        {activeTab === "workflows" && children.workflows}
+        {activeTab === "automation" && children.automation}
         {activeTab === "settings" && children.settings}
       </div>
     </div>
