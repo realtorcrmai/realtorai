@@ -19,7 +19,7 @@ export async function updateRealtorSettings(settings: {
   sending_enabled?: boolean;
   skip_weekends?: boolean;
   quiet_hours?: { start: string; end: string };
-  frequency_caps?: Record<string, any>;
+  frequency_caps?: Record<string, unknown>;
   default_send_day?: string;
   default_send_hour?: number;
   default_send_mode?: string;
@@ -29,8 +29,9 @@ export async function updateRealtorSettings(settings: {
   if (!config) return { error: "Config not found" };
 
   // If default_send_mode provided, merge into brand_config
-  const updates: Record<string, any> = { ...settings, updated_at: new Date().toISOString() };
+  const updates: Record<string, unknown> = { ...settings, updated_at: new Date().toISOString() };
   if (settings.default_send_mode) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const brandConfig = (config.brand_config as any) || {};
     brandConfig.default_send_mode = settings.default_send_mode;
     updates.brand_config = brandConfig;
@@ -60,6 +61,7 @@ export type AutomationRule = {
 export async function getAutomationRules(): Promise<AutomationRule[]> {
   const config = await getRealtorConfig();
   if (!config?.brand_config) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rules = (config.brand_config as any).automation_rules;
   return Array.isArray(rules) ? rules : [];
 }
@@ -69,6 +71,7 @@ export async function saveAutomationRules(rules: AutomationRule[]) {
   const config = await getRealtorConfig();
   if (!config) return { error: "Config not found" };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const brandConfig = (config.brand_config as any) || {};
   brandConfig.automation_rules = rules;
 
@@ -98,6 +101,7 @@ export type GreetingRule = {
 export async function getGreetingRules(): Promise<GreetingRule[]> {
   const config = await getRealtorConfig();
   if (!config?.brand_config) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rules = (config.brand_config as any).greeting_rules;
   return Array.isArray(rules) ? rules : [];
 }
@@ -107,6 +111,7 @@ export async function saveGreetingRules(rules: GreetingRule[]) {
   const config = await getRealtorConfig();
   if (!config) return { error: "Config not found" };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const brandConfig = (config.brand_config as any) || {};
   brandConfig.greeting_rules = rules;
 
