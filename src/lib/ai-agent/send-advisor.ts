@@ -35,7 +35,7 @@ export async function adviseSend(
   // Fetch contact + recent data
   const { data: contact } = await supabase
     .from("contacts")
-    .select("name, type, stage_bar, lead_status, newsletter_intelligence, ai_lead_score, buyer_preferences")
+    .select("id, name, type, stage_bar, lead_status, newsletter_intelligence, ai_lead_score, buyer_preferences")
     .eq("id", contactId)
     .single();
 

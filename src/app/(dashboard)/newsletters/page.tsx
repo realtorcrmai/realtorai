@@ -449,7 +449,7 @@ export default async function NewsletterDashboard() {
           /* ═══ AUTOMATION ═══ */
           automation: (
             <div className="space-y-6">
-              <ListingBlastAutomation initialRules={automationRules as any} />
+              <ListingBlastAutomation />
               <GreetingAutomations initialRules={greetingRules as any} />
             </div>
           ),
