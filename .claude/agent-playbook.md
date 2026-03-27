@@ -897,6 +897,8 @@ Agents can enter expensive loops (tool fails → retry → fail → retry). Thes
 
 ## 6. Post-Task Validation (Every Task, No Exceptions)
 
+### 6.1 Validation Steps
+
 1. `bash scripts/test-suite.sh` — all tests pass
 2. `npx tsc --noEmit` — no TypeScript errors in `src/`
 3. `git status` — clean working tree
@@ -906,6 +908,144 @@ Agents can enter expensive loops (tool fails → retry → fail → retry). Thes
 7. If new migration: verify it applied on remote DB
 8. `bash scripts/save-state.sh` — snapshot saved
 9. After PR approval + merge → delete feature branch: `git branch -d <branch>`
+
+### 6.2 Self-Healing Retry Loop (When Validation Fails)
+
+**When steps 6.1.1 or 6.1.2 fail, the agent MUST follow this algorithm — not improvise.**
+
+```
+RETRY_LOOP (max_retries = 3 per error, 5 total across all errors):
+
+  attempt = 0
+  while attempt < 3:
+    attempt += 1
+
+    1. CAPTURE — Read the FULL error output (stack trace, TS error, test failure message)
+       - Do NOT skim. Copy the exact error message and file:line location.
+
+    2. DIAGNOSE — Form a hypothesis in ONE sentence:
+       - "The test fails because X function returns Y instead of Z"
+       - "TypeScript error: property 'foo' missing from interface Bar"
+       - If you cannot form a clear hypothesis → HALT immediately (do not guess-and-retry)
+
+    3. SCOPE CHECK — Is the fix within your original task's scope?
+       - YES → proceed to step 4
+       - NO (error is in unrelated code you didn't touch) → HALT, report as pre-existing
+
+    4. FIX — Apply the minimal change that addresses the hypothesis
+       - Fix ONLY the diagnosed issue. No surrounding refactors.
+       - No "while I'm here" improvements.
+
+    5. RE-VALIDATE — Run the same validation step that failed
+       - PASS → exit loop, continue to step 6.1.3+
+       - FAIL with SAME error → hypothesis was wrong. Increment attempt, back to step 1.
+       - FAIL with NEW error → count toward 5-total cap, diagnose the new error
+
+  HALT — 3 attempts on same error exhausted (or 5 total). Do NOT continue.
+    - Log: what failed, what you tried, what you think the root cause is
+    - Commit working code (if any) to a WIP branch
+    - Escalate: "Validation failed after N retries. Error: [X]. Fixes attempted: [1, 2, 3]."
+    - Compliance log: ❌ with Notes: "self-heal failed, escalated"
+```
+
+**Rules:**
+- **Never retry without a new hypothesis.** Rerunning the same command hoping for a different result is not debugging.
+- **Never suppress a test to make validation pass.** Deleting, `.skip()`-ing, or commenting out a failing test is not a fix.
+- **Never broaden types to silence TypeScript.** Casting to `any`, adding `// @ts-ignore`, or widening to `string | undefined` when it shouldn't be is not a fix.
+- **Save state before each retry attempt:** `git stash` so you can revert if the fix makes things worse.
+
+**What counts as a valid fix per error type:**
+
+| Error Type | Valid Fix | Invalid Fix (NEVER do this) |
+|-----------|-----------|-------------|
+| Test assertion failure | Fix the code so the assertion passes | Change the assertion to match wrong output |
+| TypeScript type error | Fix the type or the value to match the contract | Cast to `any`, add `@ts-ignore` |
+| Import error | Fix the import path or add missing export | Delete the import and code that uses it |
+| Runtime error in test | Fix root cause (null check, async, missing data) | Wrap in try/catch that swallows the error |
+| Build error | Fix the source (config, dependency, syntax) | Skip the build step |
+| Migration failure | Fix the SQL (syntax, missing table, constraint) | Drop table and recreate from scratch |
+
+### 6.3 Escalation Triggers (Immediate Halt — No Retries)
+
+These errors indicate a systemic problem. Do NOT attempt self-heal. HALT and escalate:
+
+| Trigger | Why |
+|---------|-----|
+| Error is in a file you did NOT modify | Pre-existing issue or environment problem |
+| Error references missing env var or secret | Environment config — agent cannot resolve |
+| Error is a Supabase connection failure | Infrastructure issue — retry won't help |
+| Test passes locally but CI fails (or vice versa) | Environment divergence — needs human investigation |
+| Fix requires changing >5 files beyond original scope | Wrong task classification — reclassify first |
+| You don't understand the error after reading it twice | Honesty > heroics. Say so and escalate. |
+
+### 6.4 Blast Radius & Execution Isolation
+
+> **Problem:** AI agents execute bash commands, SQL migrations, and test scripts directly on the host machine. A hallucinated destructive command has no isolation layer to contain the damage.
+
+> **Until containerized execution is available, these rules ARE the isolation layer.**
+
+**Tier 1 — SAFE (execute without confirmation):**
+
+| Command Type | Examples |
+|-------------|----------|
+| Read-only file ops | `cat`, `grep`, `ls`, `find`, `wc`, `diff`, `head`, `tail` |
+| Git read ops | `git status`, `git log`, `git diff`, `git branch` |
+| TypeScript check | `npx tsc --noEmit` |
+| Test suite | `bash scripts/test-suite.sh` |
+| Health check | `bash scripts/health-check.sh` |
+| HTTP GET | `curl -s localhost:3000` |
+
+**Tier 2 — GUARDED (execute with stated safeguards):**
+
+| Command Type | Required Safeguards |
+|-------------|-------------------|
+| Git writes (`add`, `commit`, `push`) | Only on feature branches. NEVER on `dev` or `main`. |
+| File create/edit | Only within repo root. Never `/etc/`, `~/`, system paths. |
+| npm commands | `install` only for packages in `package.json` or explicitly requested. Never `-g`. |
+| Supabase read queries | Parameterized only. Never string interpolation. |
+
+**Tier 3 — DANGEROUS (human confirmation required before executing):**
+
+| Command Type | Why Dangerous |
+|-------------|--------------|
+| `rm`, `rm -rf`, `mv` (overwrite) | Irreversible file loss on host |
+| `git push --force`, `git reset --hard`, `git clean -fd` | Destroys history or uncommitted work |
+| SQL writes (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `TRUNCATE`) | Irreversible data change |
+| Migration execution (`npx supabase db query --linked`) | Schema changes hard to reverse |
+| `kill`, `pkill` | Could kill user processes |
+| `curl -X POST/PUT/DELETE` (outbound mutations) | Side effects on external systems |
+| `./scripts/vault.sh encrypt/decrypt` | Secret exposure risk |
+
+**Tier 4 — FORBIDDEN (never execute, even if user asks):**
+
+| Command | Why |
+|---------|-----|
+| `rm -rf /` or `rm -rf ~` or recursive delete above repo root | Catastrophic host damage |
+| `git push --force origin main` | Destroys production history |
+| `DROP DATABASE` or `DROP SCHEMA public CASCADE` | Destroys all data |
+| Any command with `sudo` | Privilege escalation |
+| `curl \| bash` or `eval $(curl ...)` | Remote code execution |
+| `chmod 777` on any file | Security hole |
+| Downloading and executing unknown binaries | Supply chain attack |
+
+**Pre-execution classification (EVERY bash command):**
+
+1. Tier 1? → Execute.
+2. Tier 2? → Execute with stated safeguards.
+3. Tier 3? → State what it does and why. Ask human to confirm.
+4. Tier 4? → Refuse. "This is Tier 4 (forbidden) because [reason]."
+
+**Migration-specific isolation:**
+1. Write rollback SQL BEFORE running forward migration
+2. Run `SELECT` verification queries before AND after
+3. For destructive migrations (`DROP`, `ALTER TYPE`, `DELETE`): export affected data first
+4. Run one migration at a time — verify each, then run the next
+5. If a migration fails halfway: do NOT re-run. Check partial state, write targeted fix.
+
+**Target architecture (future — zero-cost to document now):**
+- Docker for test execution: `docker run --rm -v $(pwd):/app node:22 bash scripts/test-suite.sh`
+- Supabase branch databases for migration testing
+- GitHub Actions as the ONLY path for production SQL (no local execution against production)
 
 ---
 
