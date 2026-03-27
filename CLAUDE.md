@@ -473,6 +473,244 @@ RESEND_API_KEY=<key> ANTHROPIC_API_KEY=<key> CRON_SECRET=<secret> \
 - **force-dynamic** on pages that need real-time data
 - **Revalidate paths** after mutations: `revalidatePath('/route')`
 
+### New Feature Deliverables (Mandatory)
+
+Every new feature MUST include all of the following before it is considered complete:
+
+1. **Skill file** — If the feature introduces a new user-invocable workflow, create a `.claude/skills/<name>.md` describing how to use/test it
+2. **Use cases** — Add user stories / use case descriptions to `docs/user-journeys.md` or the relevant spec file
+3. **Test scenarios** — Write comprehensive tests (see TESTING checklist below) covering:
+   - Happy path for every new function/endpoint/page
+   - Edge cases: empty inputs, nulls, boundaries, duplicates, invalid state transitions
+   - Error conditions: network failure, missing data, auth failures
+   - Data integration: FK integrity, cascade effects, cross-table consistency
+4. **Navigation test** — Add new page routes to `scripts/test-suite.sh` navigation section
+5. **Seed data** — If the feature introduces a new table, add representative seed data to the seed migration
+6. **Documentation** — Update CLAUDE.md sections (Project Structure, Database Schema) if new files/tables added
+
+---
+
+## Agent Playbook — Task Execution Framework
+
+> **Before executing ANY developer request:** classify → load checklist → execute → validate.
+
+### Step 0: Pre-Flight (Every Session)
+
+- Run `bash scripts/health-check.sh` (see `feedback_auto_health_check.md`)
+- Confirm branch is `dev` (never work on `main`)
+- Pull latest: `git pull origin dev`
+- Read MEMORY.md for recent behavioral rules
+
+If pre-flight fails: **fix the environment first**. Do NOT start the requested task with a broken build, wrong branch, or stale code.
+
+### Step 1: Task Classification
+
+**Output this explicitly before any work:**
+
+```
+Task: CODING:feature
+Confidence: high
+Reasoning: User wants to add a contact field — feature addition
+Affected: contacts table, ContactForm.tsx, contacts.ts action, database.ts types
+```
+
+| Type | Subtypes | When |
+|------|----------|------|
+| `CODING` | feature, bugfix, refactor, script | Writing or modifying code |
+| `TESTING` | unit, integration, e2e, eval | Creating/running tests, analyzing failures |
+| `DEBUGGING` | error, performance, data_issue | Finding and fixing defects |
+| `DESIGN_SPEC` | architecture, feature_spec, api_design, migration_plan | Design docs, specs, plans BEFORE coding |
+| `RAG_KB` | pipeline, tuning, evaluation, content | RAG indexing, retrieval tuning, evaluation |
+| `ORCHESTRATION` | workflow, trigger, pipeline, agent_config | AI agent workflows, trigger rules, pipeline stages |
+| `INTEGRATION` | api_connect, webhook, auth, data_sync | External APIs, webhooks, third-party services |
+| `DOCS` | spec, guide, runbook, changelog | Documentation |
+| `EVAL` | metrics, golden_set, ab_test, quality_gate | Evaluations, test sets, scoring |
+| `INFO_QA` | explain, compare, recommend | Answering questions — no code changes |
+
+**Rules:**
+- Multiple types → pick primary, note secondaries, execute in order (finish one before starting next)
+- Low confidence → ask ONE clarifying question (don't guess)
+- Error/stack trace mentioned → classify as `DEBUGGING` first (not CODING:bugfix)
+- "Plan" or "design" before "build" → classify as `DESIGN_SPEC` first
+- "Refactor" → `CODING:refactor` (NOT feature)
+
+### Step 2: Per-Task Checklists
+
+#### CODING:feature
+
+**Phase 1 — Scope & Impact** (before writing ANY code):
+- List every file to create or modify
+- List every DB table affected (schema change? migration needed? next migration number?)
+- List every API route and UI component affected
+- Check integration points (Twilio, Resend, Google Calendar, Anthropic, Voyage?)
+- Search codebase for overlap with existing features
+- Check: new env vars needed? CLAUDE.md updates needed?
+- Check: could this break existing tests? Other devs' in-progress work?
+
+**Phase 2 — Context Loading:**
+- Read ONLY affected files (not entire repo)
+- Read relevant types in `src/types/database.ts`
+- Read relevant migrations if touching schema
+- Summarize current behavior in 3-5 bullets BEFORE modifying
+
+**Phase 3 — Plan:**
+- Entry points → data flow → new types/functions → error handling
+- If complex (5+ files or schema change): present plan to developer BEFORE coding
+- Specify model chain: which tier handles what
+
+**Phase 4 — Implement** (follow Coding Conventions above + data integrity rules from memory):
+- One file at a time — not giant multi-file diffs
+- Validate at ALL boundaries; use DB constraints; transactions for multi-table ops
+- Verify FK references exist; include rollback on partial failure
+- Parent status NEVER "complete" if any child is incomplete
+
+**Phase 5 — Self-Check** (before presenting to developer):
+- Re-read every modified file line by line
+- Check: unused variables, unhandled branches, type mismatches, missing error handling
+- Check: empty inputs, null values, boundary values, concurrent operations
+- Run `npx vitest run` — tests must pass
+
+**Phase 6 — Output:**
+- Summarize files changed + behavior added
+- Note breaking changes, new env vars, new migrations
+- Report test results (X passing out of Y)
+
+#### CODING:bugfix
+
+Same as feature, plus:
+- Before Phase 4: reproduce the bug, write a FAILING test that captures it
+- After Phase 4: verify the test now PASSES
+- Minimal fix only — do NOT refactor surrounding code
+
+#### CODING:refactor
+
+- State explicitly: "This changes structure, NOT behavior"
+- Existing tests must pass WITHOUT modification
+- If tests need changes, explain each one
+
+#### TESTING
+
+**Phase 1 — Level:** unit / integration / e2e / eval
+
+**Phase 2 — Scenario Coverage** (cover ALL of these for every function):
+
+| Category | Examples |
+|----------|---------|
+| Happy path | Normal valid inputs → expected output |
+| Empty/null | Missing fields, null, undefined, empty string |
+| Boundary values | Min, max, at limit, one above/below |
+| Invalid types | Wrong type, string where number expected |
+| Special characters | Unicode, emoji, HTML entities, SQL injection, XSS |
+| Duplicates | Same record twice, double-submit |
+| Concurrent access | Two updates to same record simultaneously |
+| Error conditions | Network failure, DB error, API timeout |
+| Permission/auth | No session, wrong role, expired token |
+| Cascade effects | Delete parent → what happens to children? |
+| Data integrity | Orphaned records, FK violations, circular refs |
+| State transitions | Invalid transitions, skipping steps, going backwards |
+| Large data | Many records, long strings, large JSONB |
+| Time-dependent | Timezone, date boundaries, expired data |
+
+**Phase 3 — Implement:** vitest, test files in `app/src/` mirror, deterministic + isolated, descriptive names
+
+**Phase 4 — Analyze failures:** categorize (environment / flaky / bug / wrong assertion) → fix root cause
+
+**Phase 5 — Report:** X/Y passing, gaps identified, recommendations
+
+#### DEBUGGING
+
+**Phase 1 — Problem:** Restate symptom. Read stack trace completely. When/scope/environment?
+
+**Phase 2 — Reproduce:** Minimal steps. Trace call path. Check: data issue? env issue? timing?
+
+**Phase 3 — Hypotheses:** 2-4 causes ordered by likelihood. For each: what confirms, what eliminates. Check most likely first.
+
+| Category | How to Check |
+|----------|-------------|
+| Data issue | Query DB directly, check specific record |
+| Code logic | Read code path line by line |
+| Type mismatch | Check TS types vs runtime values |
+| Environment | Check .env.local, test connection |
+| Race condition | Add timestamps/logging |
+| External service | Test call in isolation |
+| Migration gap | Compare migration vs actual schema |
+
+**Phase 4 — Fix:** MINIMAL change. Explain root cause → fix mapping. No surrounding refactors.
+
+**Phase 5 — Prevent:** Write test that catches this bug. Grep for similar patterns elsewhere.
+
+#### DESIGN_SPEC
+
+1. **Problem:** Goals, non-goals, constraints, success metrics
+2. **Current state:** Audit existing code/schema. What can we reuse? What's broken?
+3. **Options:** At least 2 approaches with pros/cons/risks/complexity
+4. **Design:** Data model, APIs, components, data flow, error handling, security
+5. **Ops:** Deployment, monitoring, failure modes, cost estimates
+6. **Plan:** Phased delivery, file-level detail, test plan, dependencies
+
+#### RAG_KB
+
+1. **Use case:** Question types, data sources, privacy, freshness, accuracy bar
+2. **Content:** Chunking strategy (per `src/lib/rag/chunker.ts`), metadata, volume estimate
+3. **Retrieval:** Semantic vs hybrid, top_k, threshold, content_type filters
+4. **Prompting:** System prompt structure, grounding rules, guardrails, fallback
+5. **Eval:** 20+ test queries, relevance criteria, precision/recall, latency
+6. **Iterate:** Low precision → tighten filters. Low recall → broaden sources. Hallucinations → strengthen grounding.
+
+#### ORCHESTRATION
+
+1. **Type:** Sequential / event-driven / state machine / supervisor — map to existing: trigger-engine, workflow-engine, contact-evaluator, trust-gate
+2. **States:** All states + transitions + triggers + guards + dead-state handling
+3. **Errors:** Timeouts, retries, human-in-the-loop, graceful degradation, circuit breaker
+4. **Observability:** Log to agent_decisions, track latency, define alerts
+
+#### INTEGRATION
+
+1. **API:** Read docs fully. Endpoints, auth, rate limits, quotas. Sandbox available?
+2. **Contracts:** Request/response schemas. Map to internal models. Handle missing/extra/mistyped fields.
+3. **Errors:** Timeouts, retry with backoff, rate limit (429 + Retry-After), idempotency
+4. **Security:** Keys in .env.local + vault.sh. Never log secrets. Validate webhook signatures.
+5. **Tests:** Happy path, auth failure, rate limit, timeout, malformed response, webhook signature
+
+#### DOCS
+
+1. Audience + purpose → 2. Outline first → 3. Draft with real paths/tables → 4. Verify all references → 5. Consistent terminology with CLAUDE.md
+
+#### EVAL
+
+1. Define metrics → 2. Create 20+ test cases → 3. Scoring method → 4. Run + analyze → 5. Recommend ship/iterate/redesign
+
+#### INFO_QA
+
+1. Restate question → 2. Research codebase + CLAUDE.md + memory + git → 3. Answer with file:line citations → 4. Examples → 5. State limitations
+
+### Step 3: Post-Task Validation
+
+| Condition | Action |
+|-----------|--------|
+| Code changed | `npx vitest run` — all tests must pass |
+| 5+ files changed | `bash scripts/test-suite.sh` — full 73-test suite |
+| Schema changed | Verify migration: correct number, constraints, RLS |
+| New env var | Document in CLAUDE.md, NEVER commit value |
+| Any task done | Update todo list, mark completed |
+
+### Model Chaining
+
+| Phase | Model | Why |
+|-------|-------|-----|
+| Classification | Haiku (internal) | Fast routing |
+| File search, exploration | Haiku agents | Quick parallel lookup |
+| Code implementation | Sonnet agents | Speed + quality balance |
+| Architecture, complex analysis | Opus (main) | Deep reasoning |
+| Test writing | Sonnet agents | Accurate but straightforward |
+| Code review, self-check | Opus (main) | Catches subtle bugs |
+
+### Ask vs Act
+
+**Act immediately:** Clear request, localized change, tests exist, standard patterns, reads/searches/git ops, running tests/builds.
+
+**Ask first:** Ambiguous request, shared state change (schema, API, env vars), could break others' work, low confidence, destructive ops, 10+ files, trade-off with no clear winner.
+
 ---
 
 ## AI Email Marketing Engine
