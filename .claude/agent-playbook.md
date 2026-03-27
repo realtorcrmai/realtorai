@@ -80,11 +80,44 @@ bash scripts/health-check.sh
 ```
 Fix any ❌ before proceeding.
 
-### 2.2 Git
-- Confirm branch = `dev` (never work on `main`)
-- `git pull origin dev` — get latest
-- Check `git status` — if uncommitted changes exist from another dev, **do NOT discard**
-- Check `git log --oneline -5` for recent changes to affected files
+### 2.2 Git — Feature Branch Workflow
+
+**Branch model (strict — no exceptions):**
+```
+feature branch → PR → dev (integration) → PR → main (production)
+```
+
+Both `dev` and `main` are **protected** — no direct pushes. All changes go through PRs.
+
+**Branch naming convention:**
+```
+<developer>/<short-description>
+```
+Examples: `rahul/voice-agent-tts`, `claude/playbook-enforcement`, `alex/contact-export`
+
+**Pre-flight git steps:**
+1. `git checkout dev && git pull origin dev` — start from latest dev
+2. `git checkout -b <developer>/<feature-name>` — create your feature branch
+3. Check `git log --oneline -5 -- <affected-files>` — see if another dev touched these recently
+4. If another dev is working on the same area → coordinate before starting
+
+**When done:**
+1. Commit to your feature branch
+2. `git push origin <developer>/<feature-name>`
+3. Create PR → `dev` with: classification block, files changed, test results
+4. Merge your own PR (no approval needed — PR is for tracking/visibility)
+5. Release: create PR `dev` → `main` (batched, requires 1 approval)
+
+**Branch protection:**
+- `dev`: PR required, **0 approvals** — merge your own PRs, but always via PR (no direct push)
+- `main`: PR required, **1 approval** — production releases need review
+
+**Rules:**
+- NEVER push directly to `dev` or `main` — both are protected, use PRs
+- NEVER work on someone else's feature branch without telling them
+- If your branch is stale: `git rebase dev` (not merge) to keep history clean
+- Delete feature branches after merge
+- If two devs modify the same file → resolve conflict in the PR, not by force-pushing
 
 ### 2.3 Services (if task requires API/page loads)
 | Service | Port | Check |
@@ -631,10 +664,12 @@ Launch parallel agents when tasks are independent. Use `subagent_type=Explore` f
 1. `bash scripts/test-suite.sh` — all tests pass
 2. `npx tsc --noEmit` — no TypeScript errors in `src/`
 3. `git status` — clean working tree
-4. `git push origin dev` — pushed
-5. Check GitHub Actions CI: `gh run view`
-6. If new migration: verify it applied on remote DB
-7. `bash scripts/save-state.sh` — snapshot saved
+4. `git push origin <developer>/<feature-branch>` — push your feature branch (NOT dev or main)
+5. `gh pr create --base dev` — create PR to dev with classification block + test results
+6. Check GitHub Actions CI: `gh run view`
+7. If new migration: verify it applied on remote DB
+8. `bash scripts/save-state.sh` — snapshot saved
+9. After PR approval + merge → delete feature branch: `git branch -d <branch>`
 
 ---
 
