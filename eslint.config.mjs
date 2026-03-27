@@ -31,7 +31,6 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/ban-ts-comment": "warn",
       "prefer-const": "warn",
       "@next/next/no-html-link-for-pages": "warn",
-      "react-compiler/react-compiler": "warn",
     },
   },
 ]);
