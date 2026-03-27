@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { contactSchema, type ContactFormData } from "@/lib/schemas";
 import type { Json } from "@/types/database";
 import { enforceConsistency } from "@/lib/contact-consistency";
+import { triggerIngest } from "@/lib/rag/realtime-ingest";
 
 export async function createContact(formData: ContactFormData, force = false) {
   const parsed = contactSchema.safeParse(formData);
@@ -98,6 +99,9 @@ export async function createContact(formData: ContactFormData, force = false) {
   })();
 
   revalidatePath("/newsletters");
+
+  // Real-time RAG ingestion
+  triggerIngest("contacts", data.id);
 
   return { success: true, contact: data };
 }
@@ -233,6 +237,9 @@ export async function updateContact(
     // Don't fail update if triggers fail
   }
 
+  // Real-time RAG re-ingestion
+  triggerIngest("contacts", id);
+
   return { success: true };
 }
 
@@ -253,6 +260,8 @@ export async function addCommunicationNote(
   }
 
   revalidatePath(`/contacts/${contactId}`);
+  // Re-ingest contact profile with new communication data
+  triggerIngest("contacts", contactId);
   return { success: true };
 }
 

@@ -1,6 +1,7 @@
 "use server";
 
 import Anthropic from "@anthropic-ai/sdk";
+import { createWithRetry } from "@/lib/anthropic/retry";
 import { z } from "zod";
 
 const anthropic = new Anthropic();
@@ -122,7 +123,7 @@ export async function generateNewsletterContent(
 
   const model = process.env.NEWSLETTER_AI_MODEL || "claude-sonnet-4-20250514";
 
-  const message = await anthropic.messages.create({
+  const message = await createWithRetry(anthropic, {
     model,
     max_tokens: 2000,
     system: systemPrompt + ragContext,

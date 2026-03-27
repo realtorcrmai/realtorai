@@ -27,8 +27,14 @@ interface SynthesizeOutput {
 /**
  * Generate a grounded response using retrieved context.
  * Routes to Sonnet (standard) or Opus (complex) based on QueryPlan.
+ * BLOCKS generation entirely if guardrail is triggered (tax/legal/financial).
  */
 export async function synthesize(input: SynthesizeInput): Promise<SynthesizeOutput> {
+  // If guardrail triggered, return disclaimer directly — do NOT call Claude
+  if (input.guardrailDisclaimer) {
+    return { text: input.guardrailDisclaimer, model_tier: 'haiku' };
+  }
+
   const model = input.plan.escalate_to_opus
     ? MODELS.TIER3_COMPLEX
     : MODELS.TIER3_STANDARD;
@@ -52,12 +58,7 @@ export async function synthesize(input: SynthesizeInput): Promise<SynthesizeOutp
   const text =
     response.content[0].type === 'text' ? response.content[0].text : '';
 
-  // Prepend guardrail disclaimer if triggered
-  const finalText = input.guardrailDisclaimer
-    ? `${input.guardrailDisclaimer}\n\n${text}`
-    : text;
-
-  return { text: finalText, model_tier: modelTier };
+  return { text, model_tier: modelTier };
 }
 
 /**

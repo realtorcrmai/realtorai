@@ -3,7 +3,8 @@
 // ============================================================
 
 import { createClient } from '@supabase/supabase-js';
-import { SESSION } from './constants';
+import Anthropic from '@anthropic-ai/sdk';
+import { SESSION, MODELS, MAX_TOKENS } from './constants';
 import type { RagSession, RagMessage, UIContext, SourceReference } from './types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -153,6 +154,67 @@ export function getRecentHistory(session: RagSession): RagMessage[] {
  */
 export function needsSummarization(session: RagSession): boolean {
   return session.messages.length > SESSION.SUMMARIZE_THRESHOLD;
+}
+
+/**
+ * Summarize old messages when session exceeds SUMMARIZE_THRESHOLD.
+ * Compresses all messages except the last MAX_HISTORY_TURNS into a single summary.
+ * Replaces the session's messages array with [summary, ...recent].
+ */
+export async function summarizeHistory(sessionId: string): Promise<void> {
+  const admin = getAdmin();
+  const { data: session } = await admin
+    .from('rag_sessions')
+    .select('messages')
+    .eq('id', sessionId)
+    .single();
+
+  if (!session) return;
+
+  const messages = session.messages as RagMessage[];
+  if (messages.length <= SESSION.SUMMARIZE_THRESHOLD) return;
+
+  // Split: older messages to summarize, recent to keep verbatim
+  const cutoff = messages.length - SESSION.MAX_HISTORY_TURNS;
+  const toSummarize = messages.slice(0, cutoff);
+  const toKeep = messages.slice(cutoff);
+
+  // Build conversation text for summarization
+  const conversationText = toSummarize
+    .map((m) => `${m.role}: ${m.content}`)
+    .join('\n\n');
+
+  try {
+    const anthropic = new Anthropic();
+    const response = await anthropic.messages.create({
+      model: MODELS.TIER1_PLANNER,
+      max_tokens: MAX_TOKENS.TIER1_PLANNER,
+      messages: [{
+        role: 'user',
+        content: `Summarize this conversation history in 2-3 sentences, preserving key facts, decisions, and any contact/listing names mentioned:\n\n${conversationText}`,
+      }],
+    });
+
+    const summaryText = response.content[0].type === 'text'
+      ? response.content[0].text
+      : 'Previous conversation summarized.';
+
+    const summaryMessage: RagMessage = {
+      role: 'assistant',
+      content: `[Summary of earlier conversation]\n${summaryText}`,
+      timestamp: new Date().toISOString(),
+    };
+
+    const condensed = [summaryMessage, ...toKeep];
+
+    await admin
+      .from('rag_sessions')
+      .update({ messages: condensed, updated_at: new Date().toISOString() })
+      .eq('id', sessionId);
+  } catch (err) {
+    console.warn('[rag-conversation] Summarization failed:', (err as Error)?.message);
+    // Don't fail — just leave messages as-is
+  }
 }
 
 /**

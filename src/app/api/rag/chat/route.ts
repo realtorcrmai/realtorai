@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { auth } from '@/lib/auth';
 import { planQuery } from '@/lib/rag/query-planner';
 import { retrieveContext } from '@/lib/rag/retriever';
 import { synthesize, generateDirect } from '@/lib/rag/synthesizer';
-import { getOrCreateSession, addMessage, getRecentHistory, buildUserMessage, buildAssistantMessage } from '@/lib/rag/conversation';
+import { getOrCreateSession, addMessage, getRecentHistory, needsSummarization, summarizeHistory, buildUserMessage, buildAssistantMessage } from '@/lib/rag/conversation';
 import { checkGuardrails, buildFallbackResponse, hasAdequateContext } from '@/lib/rag/guardrails';
 import { logAudit } from '@/lib/rag/feedback';
 import type { ChatRequest, ChatResponse } from '@/lib/rag/types';
@@ -13,7 +12,7 @@ export async function POST(req: NextRequest) {
   const startTime = Date.now();
 
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -91,6 +90,12 @@ export async function POST(req: NextRequest) {
     // 9. Save assistant message
     const assistantMsg = buildAssistantMessage(responseText, sources);
     await addMessage(chatSession.id, assistantMsg);
+
+    // 9b. Summarize old messages if session is getting long
+    const updatedSession = { ...chatSession, messages: [...chatSession.messages, userMsg, assistantMsg] };
+    if (needsSummarization(updatedSession)) {
+      summarizeHistory(chatSession.id).catch(() => {}); // fire-and-forget
+    }
 
     const latencyMs = Date.now() - startTime;
 

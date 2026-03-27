@@ -103,15 +103,14 @@ export function DDFImportModal() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>
-        <button
-          type="button"
-          className="w-full inline-flex items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-        >
-          <Globe className="h-3.5 w-3.5" />
-          Import from DDF
-        </button>
-      </DialogTrigger>
+      <DialogTrigger
+        render={
+          <Button variant="outline" size="sm" className="w-full gap-1.5 text-xs">
+            <Globe className="h-3.5 w-3.5" />
+            Import from DDF
+          </Button>
+        }
+      />
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

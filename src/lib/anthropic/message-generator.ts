@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { createWithRetry } from "@/lib/anthropic/retry";
 
 const anthropic = new Anthropic();
 
@@ -39,10 +40,10 @@ Return ONLY valid JSON, no markdown.`;
   let ragContext = '';
   try {
     const { retrieveContext } = await import('@/lib/rag/retriever');
-    const contactId = (params as any).contact?.id;
+    const contactId = (contact as any).id;
     if (contactId) {
       const retrieved = await retrieveContext(
-        `${(params as any).contact?.name} ${intent}`,
+        `${contact.name} ${intent}`,
         { contact_id: contactId, content_type: ['message', 'activity'] },
         3
       );
@@ -50,8 +51,8 @@ Return ONLY valid JSON, no markdown.`;
     }
   } catch { /* RAG not available */ }
 
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+  const message = await createWithRetry(anthropic, {
+    model: process.env.AI_SCORING_MODEL || "claude-sonnet-4-20250514",
     max_tokens: 500,
     messages: [{ role: "user", content: prompt + ragContext }],
   });

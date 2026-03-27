@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import Anthropic from "@anthropic-ai/sdk";
+import { createWithRetry } from "@/lib/anthropic/retry";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -273,8 +274,8 @@ Return ONLY valid JSON:
   } catch { /* RAG not available */ }
 
   try {
-    const msg = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
+    const msg = await createWithRetry(anthropic, {
+      model: process.env.AI_EVAL_MODEL || "claude-haiku-4-5-20251001",
       max_tokens: 300,
       messages: [{ role: "user", content: prompt + ragContext }],
     });

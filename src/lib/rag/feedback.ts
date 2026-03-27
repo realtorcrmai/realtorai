@@ -35,6 +35,27 @@ export async function saveFeedback(feedback: FeedbackRequest): Promise<string> {
 /**
  * Log a RAG query to the audit log for debugging and compliance.
  */
+// Cost per 1K tokens (input/output) by model tier
+const COST_PER_1K: Record<string, { input: number; output: number }> = {
+  haiku: { input: 0.001, output: 0.005 },
+  sonnet: { input: 0.003, output: 0.015 },
+  opus: { input: 0.005, output: 0.025 },
+};
+
+/**
+ * Estimate cost from text lengths. Rough: 1 token ~ 4 chars.
+ */
+function estimateCost(
+  modelTier: string,
+  inputChars: number,
+  outputChars: number
+): number {
+  const rates = COST_PER_1K[modelTier] ?? COST_PER_1K.sonnet;
+  const inputTokens = inputChars / 4;
+  const outputTokens = outputChars / 4;
+  return (inputTokens / 1000) * rates.input + (outputTokens / 1000) * rates.output;
+}
+
 export async function logAudit(params: {
   sessionId?: string;
   userEmail?: string;
@@ -49,6 +70,15 @@ export async function logAudit(params: {
   guardrailTriggered?: string;
 }): Promise<void> {
   const admin = getAdmin();
+
+  const cost = params.modelTier
+    ? estimateCost(
+        params.modelTier,
+        params.queryText.length + JSON.stringify(params.queryPlan ?? {}).length,
+        params.responseText?.length ?? 0
+      )
+    : null;
+
   await admin.from('rag_audit_log').insert({
     session_id: params.sessionId || null,
     user_email: params.userEmail || null,
@@ -58,9 +88,10 @@ export async function logAudit(params: {
     retrieved_ids: params.retrievedIds || null,
     retrieved_scores: params.retrievedScores || null,
     model_tier: params.modelTier || null,
-    response_text: params.responseText?.slice(0, 5000) || null, // cap at 5K chars
+    response_text: params.responseText?.slice(0, 5000) || null,
     latency_ms: params.latencyMs || null,
     guardrail_triggered: params.guardrailTriggered || null,
+    estimated_cost_usd: cost,
   });
 }
 

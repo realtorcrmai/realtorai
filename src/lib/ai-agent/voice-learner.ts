@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import Anthropic from "@anthropic-ai/sdk";
+import { createWithRetry } from "@/lib/anthropic/retry";
 
 interface VoiceRule {
   rule_type: string;
@@ -21,14 +22,13 @@ export async function extractVoiceRules(limit: number = 20): Promise<VoiceRule[]
 
   if (!edits || edits.length < 3) return [];
 
-  const anthropic = new Anthropic();
-
   const editPairs = edits.map((e, i) =>
     `Edit ${i + 1}:\n  Original subject: "${e.original_subject}"\n  Edited subject: "${e.edited_subject}"\n  Original body: "${e.original_body_excerpt.slice(0, 200)}"\n  Edited body: "${e.edited_body_excerpt.slice(0, 200)}"\n  Edit type: ${e.edit_type}`
   ).join("\n\n");
 
-  const msg = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
+  const anthropic = new Anthropic();
+  const msg = await createWithRetry(anthropic, {
+    model: process.env.AI_EVAL_MODEL || "claude-haiku-4-5-20251001",
     max_tokens: 800,
     messages: [{
       role: "user",

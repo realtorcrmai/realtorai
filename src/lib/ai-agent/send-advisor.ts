@@ -2,6 +2,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createWithRetry } from "@/lib/anthropic/retry";
 import { z } from "zod";
 
 const anthropic = new Anthropic();
@@ -113,7 +114,7 @@ Respond with JSON only:
 
   try {
     const model = process.env.AI_SCORING_MODEL || "claude-sonnet-4-20250514";
-    const message = await anthropic.messages.create({
+    const message = await createWithRetry(anthropic, {
       model,
       max_tokens: 300,
       messages: [{ role: "user", content: prompt + ragContext }],

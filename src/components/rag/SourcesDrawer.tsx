@@ -21,6 +21,20 @@ const TABLE_LABELS: Record<string, string> = {
   competitive_emails: '🔍 Competitor',
 };
 
+const DEEP_LINK_ROUTES: Record<string, string> = {
+  contacts: '/contacts',
+  listings: '/listings',
+  newsletters: '/newsletters',
+  knowledge_articles: '/assistant/knowledge',
+};
+
+function getDeepLink(sourceTable: string, sourceId: string): string | null {
+  const route = DEEP_LINK_ROUTES[sourceTable];
+  if (!route) return null;
+  if (sourceTable === 'knowledge_articles') return route; // no per-article route
+  return `${route}/${sourceId}`;
+}
+
 export default function SourcesDrawer({ sources }: SourcesDrawerProps) {
   const [open, setOpen] = useState(false);
 
@@ -38,19 +52,28 @@ export default function SourcesDrawer({ sources }: SourcesDrawerProps) {
 
       {open && (
         <div className="mt-2 space-y-2 pl-2 border-l-2 border-indigo-100">
-          {sources.map((s, i) => (
-            <div key={i} className="text-xs bg-gray-50 rounded p-2 border">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-medium text-indigo-600">
-                  {TABLE_LABELS[s.source_table] ?? s.source_table}
-                </span>
-                <span className="text-gray-400">
-                  {(s.similarity * 100).toFixed(0)}% match
-                </span>
+          {sources.map((s, i) => {
+            const deepLink = getDeepLink(s.source_table, s.source_id);
+            return (
+              <div key={i} className="text-xs bg-gray-50 rounded p-2 border">
+                <div className="flex items-center gap-2 mb-1">
+                  {deepLink ? (
+                    <a href={deepLink} className="font-medium text-indigo-600 hover:underline">
+                      {TABLE_LABELS[s.source_table] ?? s.source_table} →
+                    </a>
+                  ) : (
+                    <span className="font-medium text-indigo-600">
+                      {TABLE_LABELS[s.source_table] ?? s.source_table}
+                    </span>
+                  )}
+                  <span className="text-gray-400">
+                    {(s.similarity * 100).toFixed(0)}% match
+                  </span>
+                </div>
+                <p className="text-gray-600 leading-snug">{s.snippet}</p>
               </div>
-              <p className="text-gray-600 leading-snug">{s.snippet}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
