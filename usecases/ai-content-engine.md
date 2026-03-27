@@ -1,3 +1,13 @@
+---
+title: " Use Case: AI Content Engine"
+slug: "ai-content-engine"
+owner: rahul
+last_reviewed: "2026-03-27"
+visibility: public
+related_routes: ["/content"]
+changelog: []
+---
+
 # Use Case: AI Content Engine
 
 ## Problem Statement

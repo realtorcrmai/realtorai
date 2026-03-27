@@ -61,15 +61,17 @@ export function getFeatureIcon(slug: string): string {
 // ── Parsers ──────────────────────────────────────────────────
 
 function extractSection(content: string, heading: string): string {
-  // Find the section by heading (## heading)
-  const regex = new RegExp(
-    `^##\\s+${heading}[\\s\\S]*?(?=\\n##\\s|$)`,
-    "im"
-  );
-  const match = content.match(regex);
-  if (!match) return "";
-  // Remove the heading line itself
-  return match[0].replace(/^##\s+.*\n/, "").trim();
+  // Find a section whose heading CONTAINS the keyword (case-insensitive)
+  // Split by ## headings and find the matching one
+  const sections = content.split(/^(?=## )/m);
+  for (const section of sections) {
+    const firstLine = section.split("\n")[0] || "";
+    if (firstLine.startsWith("## ") && firstLine.toLowerCase().includes(heading.toLowerCase())) {
+      // Return everything after the heading line
+      return section.replace(/^##\s+.*\n/, "").trim();
+    }
+  }
+  return "";
 }
 
 function parseProblemStatement(content: string): string {

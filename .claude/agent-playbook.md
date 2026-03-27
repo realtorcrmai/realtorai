@@ -443,6 +443,37 @@ Commit: abc1234 pushed to dev
 | Schema change or DATA_MIGRATION | Full `test-suite.sh` + validate critical paths from `tests/<feature>.md` |
 | DEPLOY or production release | Full `test-suite.sh` + `qa-test-email-engine.mjs` + relevant eval suite |
 
+**Mandatory Testing Thresholds (BLOCKING — code cannot be committed without meeting these):**
+
+| Lines Changed | Minimum Testing Required | Compliance |
+|--------------|-------------------------|------------|
+| ≤20 lines, single file | Smoke test + `tsc --noEmit` | Trivial fast path OK |
+| 21–100 lines | Targeted tests for every changed function/component + `tsc --noEmit` | Must list tests run in PR |
+| **101–500 lines** | **Full touchpoint analysis + targeted tests for ALL impacted modules + `test-suite.sh` + `tsc --noEmit`** | **Must document: (1) every file touched, (2) every module impacted, (3) tests run per module, (4) results** |
+| **500+ lines** | **Everything above + end-to-end test for every user-facing flow affected + manual walkthrough of UI changes** | **PR MUST include a "Test Report" section with pass/fail per touchpoint. PR will be REJECTED without it.** |
+
+**Touchpoint analysis (required for >100 lines):**
+
+Before testing, map every touchpoint the change could affect:
+1. **Direct**: files you modified
+2. **Data layer**: tables/columns your code reads from or writes to → find ALL other code that uses those same tables
+3. **API layer**: routes your code calls or exposes → find ALL consumers of those routes
+4. **UI layer**: components that render data you changed → verify they still display correctly
+5. **Workflow layer**: if your change is in a workflow phase → test phase transitions before AND after
+6. **Integration layer**: if your change touches Twilio/Resend/Calendar/Kling → verify those integrations still work
+
+**What "tested thoroughly" means (no ambiguity):**
+- Every new function has been called at least once with valid input and verified output
+- Every new API route has been hit with a request and returned expected response
+- Every new UI component has been rendered in the browser and visually verified
+- Every database query has been run and returned expected data
+- Edge cases tested: empty inputs, null values, missing records, duplicate submissions
+- Error paths tested: what happens when the API fails? When the DB is unreachable? When input is invalid?
+
+**"I tested it" without evidence = ❌.** The PR must show what was tested and what passed.
+
+**Zero-tolerance rule: Any change >100 lines that only received typo/lint testing is an automatic ❌ in the compliance log AND the PR must be reverted or re-tested before merge.**
+
 **Phase 6 — Documentation**
 - Update `usecases/<feature>.md` if feature behavior changed
 - Update `tests/<feature>.md` with new/modified test cases
@@ -1177,6 +1208,12 @@ DOCUMENTATION (every feature change)
 REGRESSION (every code change)
 □ Identify impacted areas  □ Pick relevant tests
 □ Minor → smoke  □ Shared flow → module tests  □ Schema → full suite
+
+TESTING THRESHOLDS (BLOCKING — by lines changed)
+□ ≤20 lines → smoke + tsc  □ 21-100 → targeted per function + tsc
+□ 101-500 → full touchpoint analysis + test-suite.sh + document results
+□ 500+ → all above + e2e + manual UI walkthrough + Test Report in PR
+□ >100 lines with only typo testing = automatic ❌ + revert or re-test
 
 EXECUTE
 → Follow per-type checklist phase by phase
