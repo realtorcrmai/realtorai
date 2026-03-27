@@ -1,0 +1,497 @@
+# Agent Playbook — ListingFlow CRM
+
+> Task execution framework for AI development agents working on the ListingFlow real estate CRM.
+
+---
+
+## 1. Purpose
+
+This playbook governs how AI agents (Claude Code) operate on the ListingFlow codebase. Every task follows: **Pre-Flight → Classify → Execute → Validate**. No steps skipped.
+
+---
+
+## 2. Pre-Flight Protocol (Every Task, No Exceptions)
+
+### 2.1 Environment
+```bash
+bash scripts/health-check.sh
+```
+Fix any ❌ before proceeding.
+
+### 2.2 Git
+- Confirm branch = `dev` (never work on `main`)
+- `git pull origin dev` — get latest
+- Check `git status` — if uncommitted changes exist from another dev, **do NOT discard**
+- Check `git log --oneline -5` for recent changes to affected files
+
+### 2.3 Services (if task requires API/page loads)
+| Service | Port | Check |
+|---------|------|-------|
+| CRM (Next.js) | 3000 | `curl -s localhost:3000` |
+| Ollama | 11434 | `curl -s localhost:11434/api/tags` |
+| Voice Agent | 8768 | `curl -s localhost:8768/api/health` |
+| Form Server | 8767 | `curl -s localhost:8767/health` |
+
+### 2.4 Memory
+- Read `MEMORY.md` for behavioral rules
+- Check for task-relevant memory entries
+
+---
+
+## 3. Task Classification
+
+Before execution, output:
+```
+Task Type: CODING:feature
+Confidence: high/medium/low
+Reasoning: [1-2 sentences]
+Affected: [files, tables, APIs]
+```
+
+### 14 Task Types
+
+| Type | Subtypes | When |
+|------|----------|------|
+| CODING | feature, bugfix, refactor, script | Build or modify code |
+| TESTING | unit, integration, e2e, eval | Write or run tests |
+| DEBUGGING | error, performance, data_issue | Investigate failures |
+| DESIGN_SPEC | architecture, feature, api, migration | Plan before building |
+| RAG_KB | pipeline, tuning, evaluation, content | RAG system work |
+| ORCHESTRATION | workflow, trigger, pipeline, agent | AI agent workflows |
+| INTEGRATION | api_connect, webhook, auth, data_sync | Wire external services |
+| DOCS | spec, guide, runbook, changelog | Documentation |
+| EVAL | metrics, golden_set, ab_test, quality_gate | Quality evaluation |
+| INFO_QA | explain, compare, recommend | Answer questions (no code) |
+| **DEPLOY** | local, production, rollback, migration_only | Build & deploy |
+| **VOICE_AGENT** | tool_dev, provider_switch, system_prompt, eval | Python voice agent |
+| **DATA_MIGRATION** | schema, seed, bulk_fix, rollback | DB migrations & data |
+| **SECURITY_AUDIT** | rls, webhooks, secrets, compliance | Security review |
+
+If confidence is LOW → ask one clarifying question.
+If compound task → execute primary type fully, then secondary.
+
+---
+
+## 4. Task Playbooks
+
+### 4.1 CODING
+
+**Phase 1 — Scope Analysis**
+- List files to CREATE and MODIFY
+- List DB tables affected (schema change? new columns? new constraints?)
+- List API routes affected
+- List UI components that render affected data
+- Check: does this overlap with existing features? (grep before coding)
+- Check: new migration needed? → determine next number (`ls supabase/migrations/`)
+- Check: new env vars needed? → list them
+- Check: could this break existing tests?
+- Check: another dev working on related files? (`git log --oneline -5`)
+- **FINTRAC**: if touching `contacts`, `seller_identities`, or listing Phase 1 → verify FINTRAC fields remain non-nullable
+- **RLS**: if adding new table → MUST include `ALTER TABLE x ENABLE ROW LEVEL SECURITY; CREATE POLICY...`
+- **Realtime**: if table needs live UI → add to Supabase realtime publication (migration 042 pattern)
+- **tsconfig**: if modifying → verify exclude contains `[app, app-backup, agent-pipeline, content-generator, listingflow-agent]`
+- **Migrations**: files 050-053 have duplicates — always check highest number
+
+**Phase 2 — Context Loading**
+- Read relevant existing files (only files from Phase 1)
+- Read type definitions in `src/types/database.ts`
+- Read relevant migration files if touching schema
+- Summarize current behavior in 3-5 bullets BEFORE modifying
+
+**Phase 3 — Plan**
+- Write short plan: entry points → data flow → new types/functions → error handling
+- If complex (5+ files or schema change) → present plan before coding
+- Run `bash scripts/save-state.sh` before large changes
+
+**Phase 4 — Implementation**
+
+*File Organization:*
+- Server Actions for mutations → `src/actions/`
+- API routes for GETs and webhooks → `src/app/api/`
+- Zod v4 for all validation (use `.min(1)` not `.nonempty()`)
+- JSONB columns for flexible structured data
+- `@/` path alias maps to `src/`
+
+*UI/Styling:*
+- Use `lf-*` CSS classes: `lf-card`, `lf-btn`, `lf-badge`, `lf-input`, `lf-select`, `lf-textarea`
+- No inline styles — use class names
+- Emoji icons on pages, Lucide only inside reusable components
+- `export const dynamic = 'force-dynamic'` on pages with live Supabase data
+- `revalidatePath()` after every mutation
+
+*Data Integrity:*
+- Validate inputs at ALL boundaries (API, forms, webhooks, server actions)
+- DB constraints: FK, NOT NULL, CHECK, UNIQUE — not just app validation
+- Transactions for multi-table mutations
+- Verify referenced records exist before linking (FK check)
+- Rollback/cleanup on partial failures
+- Parent status NEVER "complete" if any child subtask is incomplete
+- **CASL**: before ANY outbound message (email/SMS/WhatsApp) → check consent_status
+- **Twilio**: always use `lib/twilio.ts` formatter (adds +1, strips whitespace)
+- **Kling AI**: async — use `useKlingTask` hook, store task_id in media_assets with `status: 'pending'`
+
+*Security:*
+- No SQL injection, XSS, exposed secrets
+- Validate webhook signatures
+- Never commit `.env.local`
+
+**Phase 5 — Self-Check**
+- Re-read every modified file
+- Check: unused vars, unhandled branches, type mismatches
+- Check: missing error handling, edge cases (empty array, null, max length)
+- If `next.config.ts` modified → verify `turbopack.root` preserved
+- For new pages → verify `force-dynamic` present
+- Run tests: `npx vitest run` or `bash scripts/test-suite.sh`
+
+**Phase 6 — Output**
+- Summarize changes, breaking changes, new env vars, new migrations
+- Commit to `dev`, push
+
+### 4.2 TESTING
+
+**Phase 1** — Determine level: unit / integration / e2e / eval
+- e2e: use Playwright (`playwright.config.ts`, run: `npx playwright test`)
+- Check existing tests + `evals.md` (200 QA test cases at repo root)
+- Check `scripts/eval-*.mjs` (7 eval suites) before creating new
+
+**Phase 2** — Test plan covering: happy path, empty/null inputs, boundary values, duplicates, race conditions, cascade effects, permission denied, timeout/retry
+
+**Phase 3** — Implement with vitest. Deterministic, isolated, descriptive names.
+
+**Phase 4** — Failure analysis: environment / flaky / actual bug / wrong assertion
+
+**Phase 5** — Report: X/Y passing, gaps identified, recommendations
+
+### 4.3 DEBUGGING
+
+**Phase 1** — Restate symptom precisely. Error message? Stack trace? When? Scope?
+
+**Phase 2** — Reproduce. Trace call path. Check: data issue? env issue? race condition?
+
+**Phase 3** — Hypotheses (2-4), ordered by likelihood. Check most likely first.
+
+**Phase 4** — Minimal fix. No surrounding refactors.
+
+**Phase 5** — Write regression test. Grep for same anti-pattern elsewhere.
+
+### 4.4 DESIGN_SPEC
+
+**Phase 1** — Goals, non-goals, constraints, success metrics, dependencies
+
+**Phase 2** — Current state audit. What exists that we can reuse?
+
+**Phase 3** — 2+ design options with pros/cons/risks
+
+**Phase 4** — Detailed design: data model, API surface, components, data flow, error handling, security
+
+**Phase 5** — Operational: deployment plan, monitoring, failure modes, cost
+
+**Phase 6** — Implementation plan: phases, files per phase, test plan
+
+### 4.5 RAG_KB
+
+**Phase 1** — Use case: question types, data sources, privacy, freshness, accuracy bar
+
+**Phase 2** — Content prep: chunking strategy, metadata schema, embedding cost. Two RAG systems exist: TypeScript (`src/lib/rag/`) and Python (`listingflow-rag/`) — identify target
+
+**Phase 3** — Retrieval config: search mode, top_k, similarity threshold, context budget
+
+**Phase 4** — Prompting: system prompt, context layout, guardrails, fallback
+
+**Phase 5** — Evaluation: 20+ test queries, guardrail testing, cross-contact isolation, latency P95 < 5s
+
+### 4.6 ORCHESTRATION
+
+**Phase 1** — Workflow type: sequential, event-driven, state machine, fan-out. Map to existing: `trigger-engine.ts`, `workflow-engine.ts`, `contact-evaluator.ts`, `trust-gate.ts`, `send-governor.ts`
+
+**Phase 2** — States & transitions. Guard conditions. Dead state handling. Rollback.
+
+**Phase 3** — Error handling: timeouts, retries, human-in-the-loop, circuit breaker
+
+**Phase 4** — Observability: log decisions to `agent_decisions`, track latency, define alerts
+
+### 4.7 INTEGRATION
+
+**Phase 1** — Read API docs. Endpoints needed. Sandbox available? Existing similar integration?
+
+**Phase 2** — Data contracts. Request/response schemas. Field mapping.
+- Twilio: use `lib/twilio.ts` formatter for phones
+- Kling AI: async task_id → poll via `/api/kling/status`
+- Resend: verify svix webhook headers against `RESEND_WEBHOOK_SECRET`
+
+**Phase 3** — Error/retry: timeout values, exponential backoff, rate limiting (429), idempotency
+
+**Phase 4** — Security:
+- Keys in `.env.local` → encrypt with `vault.sh` → NEVER commit
+- Validate webhook signatures
+- **CASL**: verify consent before outbound messages
+- Vault workflow: `decrypt → edit → encrypt → commit .env.vault → tell team`
+
+**Phase 5** — Integration tests against sandbox/mock
+
+### 4.8 DOCS
+
+**Phase 1** — Audience (developer/user/admin). What action does it enable?
+
+**Phase 2** — Outline structure before writing
+
+**Phase 3** — Draft with real file paths, table names, commands
+
+**Phase 4** — Verify all paths exist, commands work, names are current
+
+**Phase 5** — Align terminology with CLAUDE.md
+
+### 4.9 EVAL
+
+**Phase 1** — Define metrics: accuracy, latency, cost, groundedness
+
+**Phase 2** — Check existing `evals.md` (200 cases) and `scripts/eval-*.mjs` (7 suites) first
+
+**Phase 3** — Scoring: automatic or manual review
+
+**Phase 4** — Run, record, identify failure patterns
+
+**Phase 5** — Decision: ship / iterate / redesign
+
+### 4.10 INFO_QA
+
+**Phase 1** — Restate question, identify sub-questions
+
+**Phase 2** — Research: codebase, CLAUDE.md, memory, git log
+
+**Phase 3** — Answer with citations (file:line), call out assumptions
+
+**Phase 4** — Examples and edge cases. State limitations.
+
+### 4.11 DEPLOY
+
+**Phase 1 — Pre-deploy**
+- `bash scripts/health-check.sh` — all green
+- Branch = `dev`, all changes committed
+- `npm run build` passes
+
+**Phase 2 — Migrations**
+- List pending: compare `supabase/migrations/` against last applied
+- Run in order: `SUPABASE_ACCESS_TOKEN=xxx npx supabase db query --linked -f <file>`
+- Verify each succeeded
+
+**Phase 3 — Service startup**
+1. Supabase (remote — always running)
+2. Next.js CRM: `npm run dev` → :3000
+3. Form Server (optional): Python → :8767
+4. Voice Agent (optional): `python3 voice_agent/server/main.py` → :8768
+5. Ollama (if voice agent uses it): `ollama serve` → :11434
+
+**Phase 4 — Netlify deploy**
+- Env vars must be set in Netlify dashboard (not just `.env.local`)
+- Required: `CRON_SECRET`, `ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXTAUTH_SECRET`, `DEMO_EMAIL`, `DEMO_PASSWORD`
+- Deploy: push to `main` triggers GitHub Actions → Netlify auto-deploy
+- Or manual: `npx netlify deploy --prod --dir=.next`
+
+**Phase 5 — Post-deploy validation**
+- `bash scripts/test-suite.sh`
+- Check Netlify deploy URL responds
+- `bash scripts/save-state.sh`
+
+**Phase 6 — Rollback**
+- Netlify: redeploy previous deploy from dashboard
+- Migration: run reverse SQL (must be prepared before running forward migration)
+- Git: `git revert HEAD` → push
+
+### 4.12 VOICE_AGENT
+
+**Phase 1 — Identify scope**
+- Target: `voice_agent/server/` (Python, NOT TypeScript)
+- Activate venv: `source voice_agent/venv/bin/activate`
+
+**Phase 2 — Provider awareness**
+- 4 LLM providers: Ollama, OpenAI, Anthropic, Groq
+- Different tool-calling formats and token limits per provider
+- Config: `voice_agent/server/config.py` + `.env`
+- Fallback chain: `LLM_FALLBACK_CHAIN=anthropic,openai,ollama`
+
+**Phase 3 — Tool development** (for new voice commands)
+1. Create API endpoint: `src/app/api/voice-agent/<resource>/route.ts`
+2. Add tool schema to: `voice_agent/server/tools/realtor_tools.py` (REALTOR_TOOLS list)
+3. Add handler in: `handle_realtor_tool()` function
+4. Currently 46 tools across 21 API routes
+
+**Phase 4 — System prompts**
+- `voice_agent/server/system_prompts.py` — 3 modes: realtor, client, generic
+- BC real estate knowledge embedded in realtor prompt
+- Form-fill mode for structured data extraction
+
+**Phase 5 — Testing**
+```bash
+# Create session
+curl -X POST localhost:8768/api/session/create -H "Authorization: Bearer va-bridge-secret-key-2026" -d '{"mode":"realtor"}'
+# Send chat
+curl -X POST localhost:8768/api/chat -H "Authorization: Bearer va-bridge-secret-key-2026" -d '{"session_id":"ID","message":"test prompt"}'
+```
+
+**Phase 6 — Verify fallback chain**
+- Test with each provider active
+- Verify tool-calling works with selected provider
+- Check timeout handling for slow providers (Ollama 3B can take 30s+)
+
+### 4.13 DATA_MIGRATION
+
+**Phase 1 — Numbering**
+- `ls supabase/migrations/ | tail -5` — check highest number
+- ⚠️ Files 050-053 have duplicates — always verify uniqueness
+
+**Phase 2 — Schema design**
+- RLS policy REQUIRED for every new table
+- FK constraints, CHECK constraints, indexes
+- Use JSONB for flexible data, NOT NULL on required fields
+
+**Phase 3 — Idempotency**
+- `IF NOT EXISTS`, `DO $$` blocks, `ON CONFLICT DO NOTHING`
+- Migration must be safe to run twice
+
+**Phase 4 — Seed data realism (BC)**
+- Postal codes: V-prefix (V6B 1A1, V5K 3E2)
+- Phone area codes: 604, 778, 236, 250
+- Prices: CAD $600K–$3M for detached, $400K–$1.2M for condos
+- Cities: Metro Vancouver / Fraser Valley
+- MLS numbers: R2xxxxxxx format
+
+**Phase 5 — Execute**
+```bash
+SUPABASE_ACCESS_TOKEN=xxx npx supabase db query --linked -f supabase/migrations/<file>.sql
+```
+
+**Phase 6 — Verify**
+- Query affected tables to confirm changes applied
+- Test constraints are enforced (try invalid inserts)
+
+**Phase 7 — Rollback plan**
+- Document the reverse SQL BEFORE running forward migration
+- For destructive migrations: export data first via Supabase SQL editor
+
+### 4.14 SECURITY_AUDIT
+
+**Phase 1 — RLS**
+- Every table must have: `ALTER TABLE x ENABLE ROW LEVEL SECURITY`
+- Policy: `CREATE POLICY x ON table FOR ALL USING (auth.role() = 'authenticated')`
+- Check: `SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename NOT IN (SELECT tablename FROM pg_policies)`
+
+**Phase 2 — Webhooks**
+- Resend: verify `svix-id`, `svix-timestamp`, `svix-signature` against `RESEND_WEBHOOK_SECRET`
+- Twilio: `twilio.validateRequest()` with `TWILIO_AUTH_TOKEN`
+- Check all routes in `src/app/api/webhooks/`
+
+**Phase 3 — Secrets**
+- `grep -r "sk-" src/` — should find ZERO matches
+- Verify `.env.local` in `.gitignore`
+- `./scripts/vault.sh status` — all keys masked, vault encrypted
+
+**Phase 4 — FINTRAC compliance**
+- `seller_identities` fields must be non-nullable: `full_name`, `dob`, `citizenship`, `id_type`, `id_number`, `id_expiry`
+- Verify identity collection in Phase 1 workflow
+
+**Phase 5 — CASL/TCPA**
+- Outbound messages must check `consent_status` before sending
+- `/api/cron/consent-expiry` processes expiring consents
+- Unsubscribe endpoint must work without auth
+
+**Phase 6 — Input sanitization**
+- Zod on all POST/PATCH endpoints
+- No raw SQL (use Supabase client parameterized queries)
+- No `dangerouslySetInnerHTML` without sanitization
+
+---
+
+## 5. Model Chaining
+
+| Model | Use For |
+|-------|---------|
+| **Haiku** | Task classification, quick searches, file pattern matching, schema lookups |
+| **Sonnet** | Coding, testing, API development, tool implementation, migrations |
+| **Opus** | Architecture, design specs, complex debugging, playbook updates, gap analysis |
+
+Launch parallel agents when tasks are independent. Use `subagent_type=Explore` for codebase research.
+
+---
+
+## 6. Post-Task Validation (Every Task, No Exceptions)
+
+1. `bash scripts/test-suite.sh` — all tests pass
+2. `npx tsc --noEmit` — no TypeScript errors in `src/`
+3. `git status` — clean working tree
+4. `git push origin dev` — pushed
+5. Check GitHub Actions CI: `gh run view`
+6. If new migration: verify it applied on remote DB
+7. `bash scripts/save-state.sh` — snapshot saved
+
+---
+
+## 7. Production Incident Protocol
+
+| Step | Action | Check |
+|------|--------|-------|
+| 1 | Netlify status | app.netlify.com/projects/realtorai-crm |
+| 2 | Supabase status | supabase.com/dashboard |
+| 3 | Cron jobs | `curl -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/cron/process-workflows` |
+| 4 | Resend delivery | resend.com/dashboard |
+| 5 | Rollback | Redeploy previous Netlify deploy from dashboard |
+| 6 | DB restore | Supabase Dashboard → Database → Backups |
+
+---
+
+## 8. Secret Rotation
+
+1. Generate new key in provider dashboard (Anthropic, Resend, Twilio, Supabase)
+2. `./scripts/vault.sh decrypt` → edit `.env.local` → `./scripts/vault.sh encrypt`
+3. Update Netlify env vars (Settings → Environment Variables)
+4. Update GitHub secrets: `gh secret set KEY_NAME --body "value"`
+5. Redeploy
+6. Revoke old key in provider dashboard
+
+---
+
+## 9. Infrastructure Map
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| CRM | `src/` | Next.js 16 App Router, Turbopack |
+| Voice Agent | `voice_agent/server/` | Python aiohttp, 46 tools, 21 API routes |
+| Form Server | external :8767 | Python BCREA form generation |
+| Migrations | `supabase/migrations/` | 56+ SQL files |
+| Health Check | `scripts/health-check.sh` | Pre-session diagnostic |
+| Test Suite | `scripts/test-suite.sh` | 73+ functional tests |
+| Save State | `scripts/save-state.sh` | Snapshot before risky ops |
+| Vault | `scripts/vault.sh` | Encrypt/decrypt secrets |
+| CI/CD | `.github/workflows/deploy.yml` | Auto-deploy on push to main |
+| Eval Scripts | `scripts/eval-*.mjs` | 7 eval suites |
+| QA Cases | `evals.md` | 200 QA test cases |
+| Playwright | `playwright.config.ts` + `tests/` | Browser e2e tests |
+| RAG (TS) | `src/lib/rag/` | TypeScript RAG module |
+| RAG (Python) | `listingflow-rag/` | Separate FastAPI service |
+| Content Gen | `content-generator/` | Separate package (excluded from build) |
+| Agent Pipeline | `agent-pipeline/` | Research/build pipeline (excluded) |
+
+---
+
+## 10. Quick Reference Card
+
+```
+PRE-FLIGHT
+□ health-check.sh  □ branch=dev  □ pull latest  □ load memory  □ services up
+
+CLASSIFY
+□ type:subtype  □ confidence  □ reasoning  □ affected files
+
+CRM RULES (every CODING task)
+□ FINTRAC fields non-nullable  □ CASL consent before outbound
+□ RLS on new tables  □ lf-* design classes  □ Zod v4 validation
+□ force-dynamic on live pages  □ Parent ≠ complete if child incomplete
+□ Twilio formatter  □ tsconfig exclude array intact
+
+EXECUTE
+→ Follow per-type checklist phase by phase
+→ Model chain: Haiku classify → Sonnet code → Opus architect
+
+VALIDATE
+□ test-suite.sh  □ tsc --noEmit  □ git push dev  □ check CI  □ save-state.sh
+```
