@@ -5,8 +5,8 @@
 ListingFlow is a real estate transaction management CRM for licensed BC realtors. It automates the full property listing lifecycle — from seller intake through closing — with integrated showing management, BCREA form generation, AI content creation, and regulatory compliance tracking.
 
 **Live URL:** localhost:3000 (dev)
-**Monorepo root:** `/Users/bigbear/reality crm/`
-**App directory:** `/Users/bigbear/reality crm/realestate-crm/`
+**Repo root:** `/Users/rahulmittal/Library/CloudStorage/OneDrive-Personal/CoWork/realtorai/`
+**App files:** `src/`, `package.json`, `next.config.ts` are at repo root (flat monorepo — no nested `realestate-crm/` subdirectory)
 
 ### Git Workflow
 
@@ -21,7 +21,7 @@ ListingFlow is a real estate transaction management CRM for licensed BC realtors
 
 | Service | Port | Command |
 |---------|------|---------|
-| CRM (Next.js) | 3000 | `npm run dev` from `realestate-crm/` |
+| CRM (Next.js) | 3000 | `npm run dev` from repo root |
 | Website Agent | 8768 | `npm run dev` from `listingflow-agent/` |
 | Form Server | 8767 | Python server (separate) |
 
@@ -47,7 +47,7 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 
 ### Testing — Use `/test`
 
-**After every build or deploy, run `/test` to validate the application.** The test skill at `.claude/skills/test.md` runs 10 phases: build verification, server health, auth, API endpoints, page loads, email engine, Supabase connection, UX scroll, contact form, and newsletter journeys. Do NOT deploy without a passing test run.
+**After every build or deploy, run `/test` to validate the application.** The test skill at `.claude/skills/test.md` runs 7 categories: Navigation (35 routes), API Auth, CRUD (7 entities), Data Integrity (7 constraints), Cron Auth (4 tests), Cascade Delete, Sample Data Validation — 73+ tests total. Do NOT deploy without a passing test run.
 
 ---
 
@@ -75,7 +75,7 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 ## Project Structure
 
 ```
-realestate-crm/
+/  (repo root)
 ├── src/
 │   ├── app/
 │   │   ├── (auth)/login/          # Login page (demo + Google OAuth)
@@ -152,14 +152,7 @@ realestate-crm/
 │       ├── database.ts            # Supabase table types
 │       └── index.ts               # Exported type aliases
 ├── supabase/migrations/
-│   ├── 001_initial_schema.sql     # contacts, listings, appointments, communications, documents
-│   ├── 002-009_*.sql              # tasks, forms, content engine, contacts, workflows
-│   ├── 010_newsletter_journey_engine.sql  # newsletters, newsletter_events, contact_journeys
-│   ├── 011_unify_email_engine.sql # merge journey into workflow_enrollments
-│   ├── 012_email_template_builder.sql # builder_json, is_ai_template columns
-│   ├── 013_visual_workflow_builder.sql # flow_json for React Flow editor
-│   ├── 014_segments_ab_testing.sql # contact_segments table
-│   └── 015_ai_agent.sql          # ai_lead_score, agent_recommendations, ai_decision
+│   └── 56+ migration files (001 through 056)
 ├── scripts/
 │   └── qa-test-email-engine.mjs   # Automated QA test runner (27 tests)
 └── package.json
@@ -202,7 +195,7 @@ The UI uses a custom glassmorphism design language. All custom styles are define
 - Horizontal pill navigation: 40px height
 - Content area: `margin-top: 100px` (header + nav), `padding: 18px`
 - Animated gradient background canvas (`.wf-canvas`)
-- No vertical sidebar (converted to horizontal nav)
+- Sidebar components exist (`Sidebar.tsx`, `SidebarLayout.tsx`, `MobileSidebarSheet.tsx`) but the default layout uses `AppHeader` with horizontal nav + `MobileNav` bottom bar
 
 ### Conventions
 - Emoji icons throughout UI (no Lucide icons on pages, only in some components)
@@ -335,7 +328,7 @@ RESEND_WEBHOOK_SECRET=
 ## Development Commands
 
 ```bash
-# Start dev server (from realestate-crm/)
+# Start dev server (from repo root)
 npm run dev
 
 # Build for production
@@ -363,13 +356,13 @@ bash scripts/test-suite.sh
 npm run build
 
 # 4. Only if build passes → deploy (auto via CI on push to main)
-git add -A && git commit && git push origin main
+git add -A && git commit && git push origin dev
 
 # 5. Save known-good state after successful deploy
 bash scripts/save-state.sh
 ```
 
-**Test suite covers (85+ tests):**
+**Test suite covers (73+ tests):**
 - Navigation: All 35+ page routes return 200
 - CRUD: Create/Read/Update/Delete for contacts, listings, tasks, deals, households, communications
 - Data Integrity: NOT NULL, CHECK constraints, UNIQUE, self-relationship, cascade delete
@@ -382,10 +375,11 @@ bash scripts/save-state.sh
 Configured in `.claude/launch.json`:
 ```json
 {
-  "name": "dev",
+  "name": "nextjs",
   "runtimeExecutable": "npm",
-  "runtimeArgs": ["run", "dev", "--prefix", "/Users/bigbear/reality crm/realestate-crm"],
-  "port": 3000
+  "runtimeArgs": ["run", "dev"],
+  "port": 3000,
+  "cwd": "<repo root>"
 }
 ```
 
@@ -393,7 +387,7 @@ Configured in `.claude/launch.json`:
 
 ## Design Documents
 
-Located in project root (`/Users/bigbear/reality crm/`):
+Located in repo root:
 
 | Document | Description |
 |----------|-------------|
@@ -818,7 +812,7 @@ All demo contacts use phone prefix `+1604555` for easy cleanup. Idempotent — s
 
 ```bash
 # 1. Deploy to Vercel (includes cron jobs from vercel.json)
-cd realestate-crm && vercel --prod
+vercel --prod
 
 # 2. Set env vars in Vercel dashboard (from vault)
 ./scripts/vault.sh status  # see all keys
@@ -849,7 +843,7 @@ cd realestate-crm && vercel --prod
 | Validation Pipeline Spec | `docs/SPEC_Validation_Pipeline.md` |
 | Competitive RAG Plan | `docs/PLAN_Competitive_RAG.md` |
 | User Journey Maps | `docs/user-journeys.md` |
-| Pending Work | `/Users/bigbear/reality crm/pendingwork.md` |
+| Pending Work | `pendingwork.md` (repo root) |
 
 ---
 

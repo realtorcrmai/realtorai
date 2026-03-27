@@ -152,7 +152,7 @@ If compound task → execute primary type fully, then secondary.
 **Phase 1** — Determine level: unit / integration / e2e / eval
 - e2e: use Playwright (`playwright.config.ts`, run: `npx playwright test`)
 - Check existing tests + `evals.md` (200 QA test cases at repo root)
-- Check `scripts/eval-*.mjs` (7 eval suites) before creating new
+- Check `scripts/eval-*.mjs` (8 eval suites) before creating new
 
 **Phase 2** — Test plan covering: happy path, empty/null inputs, boundary values, duplicates, race conditions, cascade effects, permission denied, timeout/retry
 
@@ -245,7 +245,7 @@ If compound task → execute primary type fully, then secondary.
 
 **Phase 1** — Define metrics: accuracy, latency, cost, groundedness
 
-**Phase 2** — Check existing `evals.md` (200 cases) and `scripts/eval-*.mjs` (7 suites) first
+**Phase 2** — Check existing `evals.md` (200 cases) and `scripts/eval-*.mjs` (8 suites) first
 
 **Phase 3** — Scoring: automatic or manual review
 
@@ -314,7 +314,7 @@ If compound task → execute primary type fully, then secondary.
 1. Create API endpoint: `src/app/api/voice-agent/<resource>/route.ts`
 2. Add tool schema to: `voice_agent/server/tools/realtor_tools.py` (REALTOR_TOOLS list)
 3. Add handler in: `handle_realtor_tool()` function
-4. Currently 46 tools across 21 API routes
+4. Currently 60 tools across 21 API routes
 
 **Phase 4 — System prompts**
 - `voice_agent/server/system_prompts.py` — 3 modes: realtor, client, generic
@@ -455,15 +455,15 @@ Launch parallel agents when tasks are independent. Use `subagent_type=Explore` f
 | Component | Location | Purpose |
 |-----------|----------|---------|
 | CRM | `src/` | Next.js 16 App Router, Turbopack |
-| Voice Agent | `voice_agent/server/` | Python aiohttp, 46 tools, 21 API routes |
+| Voice Agent | `voice_agent/server/` | Python aiohttp, 60 tools, 21 API routes |
 | Form Server | external :8767 | Python BCREA form generation |
-| Migrations | `supabase/migrations/` | 56+ SQL files |
+| Migrations | `supabase/migrations/` | 61 SQL files |
 | Health Check | `scripts/health-check.sh` | Pre-session diagnostic |
 | Test Suite | `scripts/test-suite.sh` | 73+ functional tests |
 | Save State | `scripts/save-state.sh` | Snapshot before risky ops |
 | Vault | `scripts/vault.sh` | Encrypt/decrypt secrets |
 | CI/CD | `.github/workflows/deploy.yml` | Auto-deploy on push to main |
-| Eval Scripts | `scripts/eval-*.mjs` | 7 eval suites |
+| Eval Scripts | `scripts/eval-*.mjs` | 8 eval suites |
 | QA Cases | `evals.md` | 200 QA test cases |
 | Playwright | `playwright.config.ts` + `tests/` | Browser e2e tests |
 | RAG (TS) | `src/lib/rag/` | TypeScript RAG module |

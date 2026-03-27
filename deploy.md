@@ -230,22 +230,32 @@ Expected: 27/28 pass
 | Service | Port | Purpose |
 |---------|------|---------|
 | CRM (Next.js) | 3000 | Main application |
-| Website Agent | 8768 | AI website generator (optional) |
+| Voice Agent | 8768 | Python voice agent (`voice_agent/server/main.py`, optional) |
 | Form Server | 8767 | BCREA form generation (Python, optional) |
+| Website Agent | 8769 | AI website generator (`listingflow-agent/`, optional, separate service) |
+
+### Start Voice Agent (optional)
+```bash
+source voice_agent/venv/bin/activate
+python voice_agent/server/main.py
+# → http://localhost:8768
+```
 
 ### Start Website Agent (optional)
 ```bash
-cd ../listingflow-agent
+cd ./listingflow-agent
 npm install
 npm run dev
-# → http://localhost:8768
+# → http://localhost:8769
 ```
 
 ---
 
 ## Cron Jobs
 
-These endpoints need to be called periodically (via Vercel Crons, external scheduler, or manual curl):
+These endpoints need to be called periodically (via external scheduler or manual curl).
+
+> **Note:** CI/CD deploys go through **Netlify** (not Vercel). The `vercel.json` file exists only for cron job configuration — it does not affect deployments. Do not use `vercel deploy`.
 
 | Endpoint | Frequency | Purpose |
 |----------|-----------|---------|
@@ -324,7 +334,7 @@ If you pulled and things broke, check these:
 ## Troubleshooting
 
 ### "newsletters table missing"
-Run migration `010_newsletter_journey_engine.sql` in Supabase.
+Run migration `016_newsletter_journey_engine.sql` in Supabase.
 
 ### Cron endpoints return 401
 Add `/api/cron` to middleware exemptions in `src/middleware.ts` (already done in latest code).
