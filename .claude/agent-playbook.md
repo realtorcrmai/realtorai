@@ -1045,6 +1045,16 @@ EXECUTE
 VALIDATE
 □ test-suite.sh  □ tsc --noEmit  □ git push dev  □ check CI  □ save-state.sh
 
+SELF-HEAL ON FAILURE (Section 6.2 — max 3 retries per error, 5 total)
+□ Capture full error  □ Diagnose in 1 sentence  □ Scope check (your code?)
+□ Minimal fix  □ Re-validate  □ If 3 fails → HALT + escalate to human
+□ NEVER: suppress test, cast to any, delete failing code, retry without hypothesis
+
+BLAST RADIUS (Section 6.4 — classify EVERY bash command before running)
+□ Tier 1 (read-only) → execute  □ Tier 2 (guarded) → execute with safeguards
+□ Tier 3 (dangerous) → ask human  □ Tier 4 (forbidden) → refuse always
+□ Migrations: rollback SQL first, verify before/after, one at a time
+
 COMPLIANCE LOG (Section 11 — BLOCKING — task is NOT complete without this)
 □ Append entry to .claude/compliance-log.md  □ ✅ or ❌  □ No log = unauthorized change
 
