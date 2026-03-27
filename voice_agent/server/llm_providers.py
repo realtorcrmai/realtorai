@@ -16,7 +16,7 @@ from config import (
     LLM_PROVIDER, LLM_FALLBACK_CHAIN,
     OLLAMA_MODEL, OLLAMA_URL,
     OPENAI_API_KEY, OPENAI_MODEL,
-    ANTHROPIC_API_KEY, ANTHROPIC_MODEL,
+    ANTHROPIC_API_KEY, ANTHROPIC_MODEL, ANTHROPIC_MODEL_FAST,
     GROQ_API_KEY, GROQ_MODEL,
 )
 
@@ -80,9 +80,14 @@ class OllamaProvider(LLMProvider):
             data = resp.json()
 
         msg = data.get("message", {})
+        usage = {}
+        if "eval_count" in data:
+            usage["input_tokens"] = data.get("prompt_eval_count", 0)
+            usage["output_tokens"] = data.get("eval_count", 0)
         return {
             "content": msg.get("content", ""),
             "tool_calls": msg.get("tool_calls"),
+            "usage": usage,
         }
 
     async def chat_stream(self, messages: list, tools: list | None = None) -> AsyncGenerator[dict, None]:
@@ -154,9 +159,15 @@ class OpenAIProvider(LLMProvider):
                 for tc in choice.message.tool_calls
             ]
 
+        usage = {}
+        if response.usage:
+            usage["input_tokens"] = response.usage.prompt_tokens
+            usage["output_tokens"] = response.usage.completion_tokens
+
         return {
             "content": choice.message.content or "",
             "tool_calls": tool_calls,
+            "usage": usage,
         }
 
     async def chat_stream(self, messages: list, tools: list | None = None) -> AsyncGenerator[dict, None]:
@@ -208,18 +219,31 @@ class AnthropicProvider(LLMProvider):
     def is_available(self) -> bool:
         return bool(self.api_key)
 
-    def _convert_messages(self, messages: list) -> tuple[str, list]:
-        """Convert OpenAI-format messages to Anthropic format."""
-        system = ""
+    def _convert_messages(self, messages: list) -> tuple[list, list]:
+        """Convert OpenAI-format messages to Anthropic format.
+        Returns (system_blocks, converted_messages).
+        system_blocks is a list of content blocks with cache_control for prompt caching.
+        """
+        system_parts = []
         converted = []
         for msg in messages:
             if msg["role"] == "system":
-                system += msg["content"] + "\n"
+                system_parts.append(msg["content"])
             elif msg["role"] in ("user", "assistant"):
                 converted.append({"role": msg["role"], "content": msg["content"]})
             elif msg["role"] == "tool":
                 converted.append({"role": "user", "content": f"[Tool result]: {msg['content']}"})
-        return system.strip(), converted
+
+        # Build system blocks with cache_control on the main prompt (first block)
+        # so Anthropic caches the large static system prompt across turns
+        system_blocks = []
+        for i, part in enumerate(system_parts):
+            block = {"type": "text", "text": part}
+            if i == 0:
+                block["cache_control"] = {"type": "ephemeral"}
+            system_blocks.append(block)
+
+        return system_blocks, converted
 
     def _convert_tools(self, tools: list) -> list:
         """Convert OpenAI-format tools to Anthropic format."""
@@ -237,15 +261,15 @@ class AnthropicProvider(LLMProvider):
         import anthropic
         client = anthropic.AsyncAnthropic(api_key=self.api_key)
 
-        system, converted_msgs = self._convert_messages(messages)
+        system_blocks, converted_msgs = self._convert_messages(messages)
 
         kwargs = {
             "model": self.model,
             "max_tokens": 4096,
             "messages": converted_msgs,
         }
-        if system:
-            kwargs["system"] = system
+        if system_blocks:
+            kwargs["system"] = system_blocks
         if tools:
             kwargs["tools"] = self._convert_tools(tools)
 
@@ -266,55 +290,78 @@ class AnthropicProvider(LLMProvider):
                     }
                 })
 
-        return {"content": content, "tool_calls": tool_calls}
+        usage = {}
+        if hasattr(response, "usage") and response.usage:
+            usage["input_tokens"] = response.usage.input_tokens
+            usage["output_tokens"] = response.usage.output_tokens
+            if hasattr(response.usage, "cache_creation_input_tokens"):
+                usage["cache_creation_input_tokens"] = response.usage.cache_creation_input_tokens or 0
+            if hasattr(response.usage, "cache_read_input_tokens"):
+                usage["cache_read_input_tokens"] = response.usage.cache_read_input_tokens or 0
+
+        return {"content": content, "tool_calls": tool_calls, "usage": usage}
 
     async def chat_stream(self, messages: list, tools: list | None = None) -> AsyncGenerator[dict, None]:
         import anthropic
         client = anthropic.AsyncAnthropic(api_key=self.api_key)
 
-        system, converted_msgs = self._convert_messages(messages)
+        system_blocks, converted_msgs = self._convert_messages(messages)
 
         kwargs = {
             "model": self.model,
             "max_tokens": 4096,
             "messages": converted_msgs,
-            "stream": True,
         }
-        if system:
-            kwargs["system"] = system
+        if system_blocks:
+            kwargs["system"] = system_blocks
         if tools:
             kwargs["tools"] = self._convert_tools(tools)
 
         tool_name = ""
         tool_input = ""
         in_tool_use = False
+        emitted_done = False
+        has_text = False
 
-        async with client.messages.stream(**kwargs) as stream:
-            async for event in stream:
-                if event.type == "content_block_start":
-                    if hasattr(event.content_block, "type") and event.content_block.type == "tool_use":
-                        in_tool_use = True
-                        tool_name = event.content_block.name
-                        tool_input = ""
-                elif event.type == "content_block_delta":
-                    if in_tool_use and hasattr(event.delta, "partial_json"):
-                        tool_input += event.delta.partial_json
-                    elif hasattr(event.delta, "text"):
-                        yield {"token": event.delta.text, "done": False}
-                elif event.type == "content_block_stop":
-                    if in_tool_use:
-                        try:
-                            parsed_input = json.loads(tool_input) if tool_input else {}
-                        except json.JSONDecodeError:
-                            parsed_input = {}
-                        yield {
-                            "tool_calls": [{"function": {"name": tool_name, "arguments": json.dumps(parsed_input)}}],
-                            "done": True,
-                        }
+        try:
+            async with client.messages.stream(**kwargs) as stream:
+                async for event in stream:
+                    if event.type == "content_block_start":
+                        if hasattr(event.content_block, "type") and event.content_block.type == "tool_use":
+                            in_tool_use = True
+                            tool_name = event.content_block.name
+                            tool_input = ""
+                    elif event.type == "content_block_delta":
+                        if in_tool_use and hasattr(event.delta, "partial_json"):
+                            tool_input += event.delta.partial_json
+                        elif hasattr(event.delta, "text"):
+                            has_text = True
+                            yield {"token": event.delta.text, "done": False}
+                    elif event.type == "content_block_stop":
+                        if in_tool_use:
+                            try:
+                                parsed_input = json.loads(tool_input) if tool_input else {}
+                            except json.JSONDecodeError:
+                                parsed_input = {}
+                            emitted_done = True
+                            yield {
+                                "tool_calls": [{"function": {"name": tool_name, "arguments": json.dumps(parsed_input)}}],
+                                "done": True,
+                            }
+                            return
+                    elif event.type == "message_stop":
+                        emitted_done = True
+                        yield {"token": "", "done": True}
                         return
-                elif event.type == "message_stop":
-                    yield {"token": "", "done": True}
-                    return
+        except Exception as e:
+            # If streaming fails partway, emit done so frontend doesn't hang
+            if not emitted_done:
+                yield {"token": "", "done": True}
+            return
+
+        # Safety net: if stream ended without message_stop, emit done
+        if not emitted_done:
+            yield {"token": "", "done": True}
 
 
 class GroqProvider(LLMProvider):
@@ -352,9 +399,15 @@ class GroqProvider(LLMProvider):
                 for tc in choice.message.tool_calls
             ]
 
+        usage = {}
+        if response.usage:
+            usage["input_tokens"] = response.usage.prompt_tokens
+            usage["output_tokens"] = response.usage.completion_tokens
+
         return {
             "content": choice.message.content or "",
             "tool_calls": tool_calls,
+            "usage": usage,
         }
 
     async def chat_stream(self, messages: list, tools: list | None = None) -> AsyncGenerator[dict, None]:
@@ -375,6 +428,51 @@ class GroqProvider(LLMProvider):
             if chunk.choices[0].finish_reason:
                 yield {"token": "", "done": True}
                 return
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  SMART MODEL ROUTING
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Patterns that require Sonnet (complex reasoning, generation, mutations)
+_SONNET_PATTERNS = [
+    # Content generation
+    "draft", "write", "compose", "create an email", "generate",
+    # Analysis
+    "analyze", "compare", "explain why", "what should i",
+    "strategy", "recommend", "plan", "summarize",
+    "negotiate", "what's the best", "help me think",
+    "review", "evaluate", "pros and cons",
+    # Mutations — actions that change data must use Sonnet for reliable tool calling
+    "create a task", "create task", "add a task", "add task",
+    "set a reminder", "set reminder", "remind me",
+    "update", "change", "modify", "delete", "remove",
+    "schedule", "book", "cancel",
+    "add a note", "take a note", "save a note",
+    "create a deal", "create deal", "add a deal",
+    "create a listing", "create listing", "add listing",
+    "create a showing", "create showing", "book showing",
+    "create a contact", "add contact", "create contact",
+]
+
+
+def classify_complexity(message: str) -> str:
+    """Classify a message as 'simple' or 'complex' for model routing.
+    Simple → Haiku (cheap, fast). Complex → Sonnet (smart, expensive).
+    """
+    msg_lower = message.lower().strip()
+
+    # Short messages are almost always simple lookups
+    if len(msg_lower.split()) <= 4:
+        return "simple"
+
+    # Check for complex patterns
+    for pattern in _SONNET_PATTERNS:
+        if pattern in msg_lower:
+            return "complex"
+
+    # Default: simple (most voice queries are lookups/navigation)
+    return "simple"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -413,3 +511,17 @@ def get_llm_provider(name: Optional[str] = None) -> LLMProvider:
 def get_active_provider() -> LLMProvider:
     """Get the currently configured primary LLM provider."""
     return get_llm_provider(LLM_PROVIDER)
+
+
+def get_provider_for_query(message: str) -> LLMProvider:
+    """Smart routing: use Haiku for simple queries, Sonnet for complex ones.
+    Only applies when the active provider is Anthropic.
+    """
+    active = get_active_provider()
+    if active.name != "anthropic":
+        return active
+
+    complexity = classify_complexity(message)
+    if complexity == "simple":
+        return AnthropicProvider(api_key=ANTHROPIC_API_KEY, model=ANTHROPIC_MODEL_FAST)
+    return active

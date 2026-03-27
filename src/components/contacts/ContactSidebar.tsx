@@ -51,7 +51,10 @@ function MiniStageDots({
   return (
     <div className="flex items-center gap-0.5 mt-1">
       {stages.map((s, i) => {
-        const isCompleted = !isCold && currentIndex > i;
+        // Past stages use neutral gray-500 (visited), NOT green (complete).
+        // We have no subtask data here, so green would falsely imply "all tasks done".
+        // Only the full StageBar (which receives stage data) should ever show green/amber.
+        const isVisited = !isCold && currentIndex > i;
         const isCurrent = !isCold && stage === s;
         const colors = STAGE_COLORS[s];
 
@@ -62,8 +65,8 @@ function MiniStageDots({
             className={`
               w-1.5 h-1.5 rounded-full transition-all
               ${
-                isCompleted
-                  ? "bg-emerald-500"
+                isVisited
+                  ? "bg-gray-500"
                   : isCurrent
                   ? `${colors.dot} ring-1 ring-offset-0.5 ring-current`
                   : "bg-gray-200"

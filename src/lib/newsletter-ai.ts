@@ -1,6 +1,7 @@
 "use server";
 
 import Anthropic from "@anthropic-ai/sdk";
+import { createWithRetry } from "@/lib/anthropic/retry";
 import { z } from "zod";
 
 const anthropic = new Anthropic();
@@ -100,12 +101,32 @@ export async function generateNewsletterContent(
   const systemPrompt = buildSystemPrompt(context);
   const userPrompt = buildUserPrompt(context);
 
+  // RAG augmentation: retrieve relevant past interactions + successful emails
+  let ragContext = '';
+  try {
+    const { retrieveContext } = await import('@/lib/rag/retriever');
+    const contactId = (context as any).contact?.id;
+    const retrieved = await retrieveContext(
+      `${context.contact?.name} ${context.emailType} ${context.contact?.areas?.join(' ') ?? ''}`,
+      {
+        contact_id: contactId,
+        content_type: ['message', 'activity', 'email'],
+      },
+      5
+    );
+    if (retrieved.formatted) {
+      ragContext = `\n\nRELEVANT CONTEXT FROM CRM (use to personalize):\n${retrieved.formatted}`;
+    }
+  } catch {
+    // RAG not available — continue without
+  }
+
   const model = process.env.NEWSLETTER_AI_MODEL || "claude-sonnet-4-20250514";
 
-  const message = await anthropic.messages.create({
+  const message = await createWithRetry(anthropic, {
     model,
     max_tokens: 2000,
-    system: systemPrompt,
+    system: systemPrompt + ragContext,
     messages: [{ role: "user", content: userPrompt }],
   });
 

@@ -12,18 +12,29 @@ load_dotenv()
 MODE = os.getenv("AGENT_MODE", "realtor")  # "realtor", "client", or "generic"
 
 # ── LLM Provider Configuration ────────────────────────────────────────────────
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama")  # ollama | openai | anthropic | groq
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:8b")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
+ANTHROPIC_MODEL_FAST = os.getenv("ANTHROPIC_MODEL_FAST", "claude-haiku-4-5-20251001")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
+# ── Smart LLM Provider Selection ─────────────────────────────────────────────
+# Priority: explicit env override → anthropic (if key set) → openai → ollama
+def _resolve_default_provider() -> str:
+    if ANTHROPIC_API_KEY:
+        return "anthropic"
+    if OPENAI_API_KEY:
+        return "openai"
+    return "ollama"
+
+LLM_PROVIDER = os.getenv("LLM_PROVIDER") or _resolve_default_provider()
+
 # ── LLM Fallback Chain ───────────────────────────────────────────────────────
-LLM_FALLBACK_CHAIN = os.getenv("LLM_FALLBACK_CHAIN", "ollama,openai,groq").split(",")
+LLM_FALLBACK_CHAIN = os.getenv("LLM_FALLBACK_CHAIN", "anthropic,openai,ollama").split(",")
 
 # ── STT Provider Configuration ────────────────────────────────────────────────
 STT_PROVIDER = os.getenv("STT_PROVIDER", "whisper_local")  # whisper_local | openai_whisper

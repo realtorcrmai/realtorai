@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 
   // Filter by status
   const status = params.get("status");
-  if (status && ["active", "pending", "sold"].includes(status.toLowerCase())) {
+  if (status && ["active", "pending", "sold", "conditional", "subject_removal", "withdrawn", "expired"].includes(status.toLowerCase())) {
     query = query.eq("status", status.toLowerCase());
   }
 

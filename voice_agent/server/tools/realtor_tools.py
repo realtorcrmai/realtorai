@@ -25,8 +25,24 @@ REALTOR_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "find_contact",
+            "description": "Search for any contact in the CRM by name — buyers, sellers, partners, leads, or any type. Returns matching contacts with their profiles.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Contact name (partial match)"},
+                    "contact_id": {"type": "string", "description": "Contact ID for exact lookup"},
+                    "type": {"type": "string", "description": "Optional filter: buyer, seller, partner, or leave empty for all types"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "find_buyer",
-            "description": "Look up a buyer by name or buyer ID. Returns buyer profile with criteria and notes.",
+            "description": "Look up a buyer specifically. Use find_contact for general contact search.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -107,14 +123,14 @@ REALTOR_TOOLS = [
         "type": "function",
         "function": {
             "name": "update_listing_status",
-            "description": "Update a listing's pipeline status. Valid: active, pending, sold.",
+            "description": "Update a listing's pipeline status. Valid: active, pending, sold, conditional, subject_removal, withdrawn, expired.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "listing_id": {"type": "string"},
                     "new_status": {
                         "type": "string",
-                        "enum": ["active", "pending", "sold"],
+                        "enum": ["active", "pending", "sold", "conditional", "subject_removal", "withdrawn", "expired"],
                     },
                 },
                 "required": ["listing_id", "new_status"],
@@ -245,6 +261,686 @@ REALTOR_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_tasks",
+            "description": "Search and list tasks. Filter by status, priority, or linked contact/listing.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": ["pending", "in_progress", "completed"],
+                        "description": "Filter by task status",
+                    },
+                    "priority": {
+                        "type": "string",
+                        "enum": ["high", "medium", "low"],
+                        "description": "Filter by task priority",
+                    },
+                    "contact_id": {"type": "string", "description": "Filter tasks linked to this contact ID"},
+                    "listing_id": {"type": "string", "description": "Filter tasks linked to this listing ID"},
+                    "limit": {"type": "integer", "description": "Maximum number of tasks to return (default 20)"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_task",
+            "description": "Create a new task for the realtor.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string", "description": "Task title"},
+                    "priority": {
+                        "type": "string",
+                        "enum": ["high", "medium", "low"],
+                        "description": "Task priority (default: medium)",
+                    },
+                    "category": {
+                        "type": "string",
+                        "enum": ["follow_up", "showing", "paperwork", "marketing", "admin"],
+                        "description": "Task category (default: follow_up)",
+                    },
+                    "due_date": {"type": "string", "description": "Due date in ISO format (e.g. 2026-04-01)"},
+                    "contact_id": {"type": "string", "description": "Contact ID to link to this task"},
+                    "listing_id": {"type": "string", "description": "Listing ID to link to this task"},
+                    "notes": {"type": "string", "description": "Additional notes for the task"},
+                },
+                "required": ["title"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_deals",
+            "description": "Search deals in the pipeline. Filter by stage, type, contact, or listing.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "stage": {"type": "string", "description": "Deal stage to filter by (e.g. new_lead, active, under_contract, closed)"},
+                    "type": {
+                        "type": "string",
+                        "enum": ["buyer", "seller"],
+                        "description": "Deal type",
+                    },
+                    "contact_id": {"type": "string", "description": "Filter deals linked to this contact ID"},
+                    "listing_id": {"type": "string", "description": "Filter deals linked to this listing ID"},
+                    "limit": {"type": "integer", "description": "Maximum number of deals to return (default 20)"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_deal",
+            "description": "Create a new deal in the pipeline.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string", "description": "Deal title"},
+                    "type": {
+                        "type": "string",
+                        "enum": ["buyer", "seller"],
+                        "description": "Deal type",
+                    },
+                    "contact_id": {"type": "string", "description": "Contact ID associated with this deal"},
+                    "listing_id": {"type": "string", "description": "Listing ID associated with this deal"},
+                    "stage": {"type": "string", "description": "Initial deal stage (default: new_lead)"},
+                    "value": {"type": "number", "description": "Deal value / expected sale price"},
+                    "commission_pct": {"type": "number", "description": "Commission percentage"},
+                },
+                "required": ["title", "type", "contact_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_communications",
+            "description": "Get communication history for a contact. Shows SMS, email, WhatsApp messages and notes.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {"type": "string", "description": "Contact ID to fetch communications for"},
+                    "channel": {
+                        "type": "string",
+                        "enum": ["sms", "whatsapp", "email", "note"],
+                        "description": "Filter by communication channel",
+                    },
+                    "limit": {"type": "integer", "description": "Maximum number of messages to return (default 20)"},
+                },
+                "required": ["contact_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "confirm_showing",
+            "description": "Confirm or deny a showing request. Updates the appointment status.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "showing_id": {"type": "string", "description": "Showing / appointment ID"},
+                    "action": {
+                        "type": "string",
+                        "enum": ["confirm", "deny", "cancel"],
+                        "description": "Action to take on the showing",
+                    },
+                    "notes": {"type": "string", "description": "Optional notes or reason"},
+                },
+                "required": ["showing_id", "action"],
+            },
+        },
+    },
+    # ── Contact Management ────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "update_contact",
+            "description": "Update any field on an existing contact — name, phone, email, type, preferred channel, stage, lead status, source, or notes.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {"type": "string", "description": "ID of the contact to update"},
+                    "name": {"type": "string", "description": "Full name"},
+                    "phone": {"type": "string", "description": "Phone number"},
+                    "email": {"type": "string", "description": "Email address"},
+                    "type": {
+                        "type": "string",
+                        "enum": ["buyer", "seller"],
+                        "description": "Contact type",
+                    },
+                    "pref_channel": {
+                        "type": "string",
+                        "enum": ["sms", "whatsapp", "email"],
+                        "description": "Preferred communication channel",
+                    },
+                    "stage_bar": {"type": "string", "description": "Contact lifecycle stage"},
+                    "lead_status": {"type": "string", "description": "Lead status (e.g. hot, warm, cold)"},
+                    "source": {"type": "string", "description": "Lead source (e.g. referral, website, open house)"},
+                    "notes": {"type": "string", "description": "Internal notes about the contact"},
+                },
+                "required": ["contact_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_contact",
+            "description": "Permanently delete a contact from the CRM. This cannot be undone.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {"type": "string", "description": "ID of the contact to delete"},
+                },
+                "required": ["contact_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_contact_details",
+            "description": "Get the full profile of a contact including linked listings, deals, tasks, communications, and journey status.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {"type": "string", "description": "ID of the contact to retrieve"},
+                },
+                "required": ["contact_id"],
+            },
+        },
+    },
+    # ── Listing Management ────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "create_listing",
+            "description": "Create a new property listing in the CRM.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "address": {"type": "string", "description": "Full property address"},
+                    "seller_id": {"type": "string", "description": "Contact ID of the seller"},
+                    "lockbox_code": {"type": "string", "description": "Lockbox code for property access"},
+                    "list_price": {"type": "number", "description": "Listing price in dollars"},
+                    "property_type": {"type": "string", "description": "Property type (e.g. detached, condo, townhouse)"},
+                    "mls_number": {"type": "string", "description": "MLS number if already assigned"},
+                    "notes": {"type": "string", "description": "Internal notes about the listing"},
+                },
+                "required": ["address", "seller_id", "lockbox_code"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_listing",
+            "description": "Permanently delete a listing from the CRM. This cannot be undone.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "listing_id": {"type": "string", "description": "ID of the listing to delete"},
+                },
+                "required": ["listing_id"],
+            },
+        },
+    },
+    # ── Showing Management ────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "get_showings",
+            "description": "List showings with optional filters for listing, status, or date.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "listing_id": {"type": "string", "description": "Filter showings for this listing ID"},
+                    "status": {
+                        "type": "string",
+                        "enum": ["requested", "confirmed", "denied", "cancelled"],
+                        "description": "Filter by showing status",
+                    },
+                    "date": {"type": "string", "description": "Filter by date (ISO format, e.g. 2026-04-01)"},
+                    "limit": {"type": "integer", "description": "Maximum number of showings to return (default 20)"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_showing",
+            "description": "Create a showing request for a listing on behalf of a buyer agent.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "listing_id": {"type": "string", "description": "ID of the listing to show"},
+                    "buyer_agent_name": {"type": "string", "description": "Buyer agent's full name"},
+                    "buyer_agent_phone": {"type": "string", "description": "Buyer agent's phone number"},
+                    "start_time": {"type": "string", "description": "Showing start time in ISO format (e.g. 2026-04-01T14:00:00)"},
+                    "end_time": {"type": "string", "description": "Showing end time in ISO format (e.g. 2026-04-01T15:00:00)"},
+                    "buyer_agent_email": {"type": "string", "description": "Buyer agent's email address"},
+                    "notes": {"type": "string", "description": "Special instructions or notes for the showing"},
+                },
+                "required": ["listing_id", "buyer_agent_name", "buyer_agent_phone", "start_time", "end_time"],
+            },
+        },
+    },
+    # ── Task Management ───────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "update_task",
+            "description": "Update a task's status, priority, due date, title, or description.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task_id": {"type": "string", "description": "ID of the task to update"},
+                    "status": {
+                        "type": "string",
+                        "enum": ["pending", "in_progress", "completed"],
+                        "description": "New task status",
+                    },
+                    "priority": {
+                        "type": "string",
+                        "enum": ["high", "medium", "low"],
+                        "description": "New task priority",
+                    },
+                    "due_date": {"type": "string", "description": "New due date in ISO format (e.g. 2026-04-01)"},
+                    "title": {"type": "string", "description": "New task title"},
+                    "description": {"type": "string", "description": "New task description"},
+                },
+                "required": ["task_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_task",
+            "description": "Permanently delete a task from the CRM.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task_id": {"type": "string", "description": "ID of the task to delete"},
+                },
+                "required": ["task_id"],
+            },
+        },
+    },
+    # ── Deal Management ───────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "update_deal",
+            "description": "Update a deal's stage, status, value, commission percentage, or linked listing.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "deal_id": {"type": "string", "description": "ID of the deal to update"},
+                    "stage": {"type": "string", "description": "New deal stage (e.g. new_lead, active, under_contract, closed)"},
+                    "status": {"type": "string", "description": "New deal status"},
+                    "value": {"type": "number", "description": "Updated deal value / expected sale price"},
+                    "commission_pct": {"type": "number", "description": "Updated commission percentage"},
+                    "listing_id": {"type": "string", "description": "Link or update the associated listing ID"},
+                },
+                "required": ["deal_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_deal_details",
+            "description": "Get full details of a deal including checklist items, parties involved, and linked listing.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "deal_id": {"type": "string", "description": "ID of the deal to retrieve"},
+                },
+                "required": ["deal_id"],
+            },
+        },
+    },
+    # ── Offer Management ──────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "get_offers",
+            "description": "List offers for a listing or by buyer contact, optionally filtered by status.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "listing_id": {"type": "string", "description": "Filter offers for this listing ID"},
+                    "buyer_contact_id": {"type": "string", "description": "Filter offers from this buyer contact ID"},
+                    "status": {"type": "string", "description": "Filter by offer status (e.g. pending, accepted, rejected, countered, withdrawn)"},
+                    "limit": {"type": "integer", "description": "Maximum number of offers to return (default 20)"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_offer",
+            "description": "Create a new offer on a listing from a buyer.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "listing_id": {"type": "string", "description": "ID of the listing being offered on"},
+                    "buyer_contact_id": {"type": "string", "description": "Contact ID of the buyer making the offer"},
+                    "offer_amount": {"type": "number", "description": "Offer price in dollars"},
+                    "expiry_date": {"type": "string", "description": "Offer expiry date/time in ISO format"},
+                    "financing_type": {"type": "string", "description": "Financing type (e.g. cash, conventional, insured)"},
+                    "deposit_amount": {"type": "number", "description": "Deposit amount in dollars"},
+                    "conditions_text": {"type": "string", "description": "Subject conditions (e.g. subject to financing, inspection)"},
+                    "possession_date": {"type": "string", "description": "Requested possession date in ISO format"},
+                },
+                "required": ["listing_id", "buyer_contact_id", "offer_amount"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_offer",
+            "description": "Accept, reject, counter, or withdraw an offer.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "offer_id": {"type": "string", "description": "ID of the offer to update"},
+                    "action": {
+                        "type": "string",
+                        "enum": ["accept", "reject", "counter", "withdraw"],
+                        "description": "Action to take on the offer",
+                    },
+                    "notes": {"type": "string", "description": "Optional notes or counter-offer details"},
+                },
+                "required": ["offer_id", "action"],
+            },
+        },
+    },
+    # ── Household Management ──────────────────────────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "get_households",
+            "description": "List all households in the CRM.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_household_members",
+            "description": "Get a household with all its member contacts.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "household_id": {"type": "string", "description": "ID of the household to retrieve"},
+                },
+                "required": ["household_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_household",
+            "description": "Create a new household group to link related contacts (e.g. a family).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Household name (e.g. 'The Smith Family')"},
+                    "address": {"type": "string", "description": "Household address"},
+                    "notes": {"type": "string", "description": "Notes about the household"},
+                },
+                "required": ["name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "add_to_household",
+            "description": "Add a contact to an existing household.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "household_id": {"type": "string", "description": "ID of the household"},
+                    "contact_id": {"type": "string", "description": "ID of the contact to add to the household"},
+                },
+                "required": ["household_id", "contact_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remove_from_household",
+            "description": "Remove a contact from their current household.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {"type": "string", "description": "ID of the contact to remove from their household"},
+                },
+                "required": ["contact_id"],
+            },
+        },
+    },
+    # ── Relationship Management ───────────────────────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "get_relationships",
+            "description": "Get all relationships for a contact (spouse, family, friends, colleagues, etc.).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {"type": "string", "description": "ID of the contact to get relationships for"},
+                },
+                "required": ["contact_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_relationship",
+            "description": "Link two contacts with a defined relationship type.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_a_id": {"type": "string", "description": "ID of the first contact"},
+                    "contact_b_id": {"type": "string", "description": "ID of the second contact"},
+                    "relationship_type": {
+                        "type": "string",
+                        "enum": ["spouse", "parent", "child", "sibling", "friend", "colleague", "neighbour", "other"],
+                        "description": "Type of relationship between the two contacts",
+                    },
+                    "notes": {"type": "string", "description": "Optional notes about the relationship"},
+                },
+                "required": ["contact_a_id", "contact_b_id", "relationship_type"],
+            },
+        },
+    },
+    # ── Workflow Management ───────────────────────────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "get_workflows",
+            "description": "List all available automation workflows that contacts can be enrolled in.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "enroll_in_workflow",
+            "description": "Enroll a contact in an automation workflow.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "workflow_id": {"type": "string", "description": "ID of the workflow to enroll the contact in"},
+                    "contact_id": {"type": "string", "description": "ID of the contact to enroll"},
+                },
+                "required": ["workflow_id", "contact_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_enrollments",
+            "description": "Check the active workflow enrollment status for a contact.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {"type": "string", "description": "ID of the contact to check enrollments for"},
+                },
+                "required": ["contact_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "manage_enrollment",
+            "description": "Pause, resume, or exit a contact's workflow enrollment.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "enrollment_id": {"type": "string", "description": "ID of the enrollment to manage"},
+                    "action": {
+                        "type": "string",
+                        "enum": ["pause", "resume", "exit"],
+                        "description": "Action to take on the enrollment",
+                    },
+                },
+                "required": ["enrollment_id", "action"],
+            },
+        },
+    },
+    # ── Activity Logging ──────────────────────────────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "get_activities",
+            "description": "Get the activity log for a contact — calls, emails, showings, notes, and more.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {"type": "string", "description": "ID of the contact to get activities for"},
+                    "activity_type": {
+                        "type": "string",
+                        "enum": ["call", "email", "meeting", "showing", "note", "task", "sms", "whatsapp", "social_media", "open_house", "referral", "follow_up", "other"],
+                        "description": "Filter by activity type",
+                    },
+                    "limit": {"type": "integer", "description": "Maximum number of activities to return (default 20)"},
+                },
+                "required": ["contact_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "log_activity",
+            "description": "Log a new activity against a contact (call, email, meeting, showing, note, etc.).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {"type": "string", "description": "ID of the contact to log the activity against"},
+                    "activity_type": {
+                        "type": "string",
+                        "enum": ["call", "email", "meeting", "showing", "note", "task", "sms", "whatsapp", "social_media", "open_house", "referral", "follow_up", "other"],
+                        "description": "Type of activity",
+                    },
+                    "description": {"type": "string", "description": "Description or summary of the activity"},
+                    "metadata": {"type": "object", "description": "Additional structured data for the activity (e.g. call duration, outcome)"},
+                },
+                "required": ["contact_id", "activity_type"],
+            },
+        },
+    },
+    # ── Newsletter Management ─────────────────────────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "get_newsletters",
+            "description": "List newsletter drafts, approved newsletters, or sent newsletters.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": ["draft", "approved", "sent"],
+                        "description": "Filter by newsletter status",
+                    },
+                    "limit": {"type": "integer", "description": "Maximum number of newsletters to return (default 20)"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "approve_newsletter",
+            "description": "Approve or skip a newsletter draft in the approval queue.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "newsletter_id": {"type": "string", "description": "ID of the newsletter to approve or skip"},
+                    "action": {
+                        "type": "string",
+                        "enum": ["approve", "skip"],
+                        "description": "Approve to schedule sending, skip to dismiss the draft",
+                    },
+                },
+                "required": ["newsletter_id", "action"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "bc_real_estate_reference",
+            "description": "Look up BC real estate reference info: BCREA forms, FINTRAC compliance, property types, listing statuses, PTT/GST taxes, subject clauses, strata, ALR, or listing workflow phases. Use this when the user asks about real estate terms, forms, compliance, or processes.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "topic": {
+                        "type": "string",
+                        "enum": ["forms", "fintrac", "property_types", "statuses", "taxes", "terms", "workflow", "all"],
+                        "description": "Which reference topic to look up",
+                    },
+                },
+                "required": ["topic"],
+            },
+        },
+    },
 ]
 
 
@@ -259,15 +955,28 @@ async def handle_realtor_tool(tool_name: str, args: dict, realtor_id: str = "R00
     Playbooks and conversation history stay in local SQLite.
     """
     try:
-        if tool_name == "find_buyer":
-            params = {"type": "buyer"}
+        if tool_name == "find_contact":
+            params = {}
+            if args.get("contact_id"):
+                params["id"] = args["contact_id"]
+            elif args.get("name"):
+                params["name"] = args["name"]
+            if args.get("type"):
+                params["type"] = args["type"]
+            result = await api.get("/api/voice-agent/contacts", params)
+            if result.get("count", 0) == 0:
+                result = {"message": f"No contact found matching '{args.get('name', args.get('contact_id', ''))}'."}
+
+        elif tool_name == "find_buyer":
+            params = {}
             if args.get("buyer_id"):
                 params["id"] = args["buyer_id"]
             elif args.get("name"):
                 params["name"] = args["name"]
+            # Search all types first, then filter if needed
             result = await api.get("/api/voice-agent/contacts", params)
             if result.get("count", 0) == 0:
-                result = {"message": "No buyer found matching that query."}
+                result = {"message": "No contact found matching that query."}
 
         elif tool_name == "create_buyer_profile":
             criteria = args.get("criteria", {})
@@ -404,6 +1113,305 @@ async def handle_realtor_tool(tool_name: str, args: dict, realtor_id: str = "R00
                 "message": f"Navigating to {page.replace('/', ' → ').title()}",
             }
 
+        elif tool_name == "get_tasks":
+            params = {}
+            if args.get("status"):
+                params["status"] = args["status"]
+            if args.get("priority"):
+                params["priority"] = args["priority"]
+            if args.get("contact_id"):
+                params["contact_id"] = args["contact_id"]
+            if args.get("listing_id"):
+                params["listing_id"] = args["listing_id"]
+            params["limit"] = str(args.get("limit", 20))
+            result = await api.get("/api/voice-agent/tasks", params)
+
+        elif tool_name == "create_task":
+            payload = {
+                "title": args["title"],
+                "priority": args.get("priority", "medium"),
+                "category": args.get("category", "follow_up"),
+            }
+            if args.get("due_date"):
+                payload["due_date"] = args["due_date"]
+            if args.get("contact_id"):
+                payload["contact_id"] = args["contact_id"]
+            if args.get("listing_id"):
+                payload["listing_id"] = args["listing_id"]
+            if args.get("notes"):
+                payload["notes"] = args["notes"]
+            result = await api.post("/api/voice-agent/tasks", payload)
+
+        elif tool_name == "get_deals":
+            params = {}
+            if args.get("stage"):
+                params["stage"] = args["stage"]
+            if args.get("type"):
+                params["type"] = args["type"]
+            if args.get("contact_id"):
+                params["contact_id"] = args["contact_id"]
+            if args.get("listing_id"):
+                params["listing_id"] = args["listing_id"]
+            params["limit"] = str(args.get("limit", 20))
+            result = await api.get("/api/voice-agent/deals", params)
+
+        elif tool_name == "create_deal":
+            payload = {
+                "title": args["title"],
+                "type": args["type"],
+                "contact_id": args["contact_id"],
+                "stage": args.get("stage", "new_lead"),
+            }
+            if args.get("listing_id"):
+                payload["listing_id"] = args["listing_id"]
+            if args.get("value") is not None:
+                payload["value"] = args["value"]
+            if args.get("commission_pct") is not None:
+                payload["commission_pct"] = args["commission_pct"]
+            result = await api.post("/api/voice-agent/deals", payload)
+
+        elif tool_name == "get_communications":
+            params = {"contact_id": args["contact_id"]}
+            if args.get("channel"):
+                params["channel"] = args["channel"]
+            params["limit"] = str(args.get("limit", 20))
+            result = await api.get("/api/voice-agent/communications", params)
+
+        elif tool_name == "confirm_showing":
+            action_to_status = {
+                "confirm": "confirmed",
+                "deny": "denied",
+                "cancel": "cancelled",
+            }
+            payload = {"status": action_to_status.get(args["action"], args["action"])}
+            if args.get("notes"):
+                payload["notes"] = args["notes"]
+            result = await api.patch(
+                f"/api/voice-agent/showings/{args['showing_id']}",
+                payload,
+            )
+
+        # ── Contact Management ────────────────────────────────────────────
+
+        elif tool_name == "update_contact":
+            payload = {}
+            for field in ["name", "phone", "email", "type", "pref_channel", "stage_bar", "lead_status", "source", "notes"]:
+                if args.get(field) is not None:
+                    payload[field] = args[field]
+            result = await api.patch(f"/api/voice-agent/contacts/{args['contact_id']}", payload)
+
+        elif tool_name == "delete_contact":
+            result = await api.delete(f"/api/voice-agent/contacts/{args['contact_id']}")
+
+        elif tool_name == "get_contact_details":
+            result = await api.get(f"/api/voice-agent/contacts/{args['contact_id']}")
+
+        # ── Listing Management ────────────────────────────────────────────
+
+        elif tool_name == "create_listing":
+            payload = {
+                "address": args["address"],
+                "seller_id": args["seller_id"],
+                "lockbox_code": args["lockbox_code"],
+            }
+            if args.get("list_price") is not None:
+                payload["list_price"] = args["list_price"]
+            if args.get("property_type"):
+                payload["property_type"] = args["property_type"]
+            if args.get("mls_number"):
+                payload["mls_number"] = args["mls_number"]
+            if args.get("notes"):
+                payload["notes"] = args["notes"]
+            result = await api.post("/api/voice-agent/listings", payload)
+
+        elif tool_name == "delete_listing":
+            result = await api.delete(f"/api/voice-agent/listings/{args['listing_id']}")
+
+        # ── Showing Management ────────────────────────────────────────────
+
+        elif tool_name == "get_showings":
+            params = {}
+            if args.get("listing_id"):
+                params["listing_id"] = args["listing_id"]
+            if args.get("status"):
+                params["status"] = args["status"]
+            if args.get("date"):
+                params["date"] = args["date"]
+            params["limit"] = str(args.get("limit", 20))
+            result = await api.get("/api/voice-agent/showings", params)
+
+        elif tool_name == "create_showing":
+            payload = {
+                "listing_id": args["listing_id"],
+                "buyer_agent_name": args["buyer_agent_name"],
+                "buyer_agent_phone": args["buyer_agent_phone"],
+                "start_time": args["start_time"],
+                "end_time": args["end_time"],
+            }
+            if args.get("buyer_agent_email"):
+                payload["buyer_agent_email"] = args["buyer_agent_email"]
+            if args.get("notes"):
+                payload["notes"] = args["notes"]
+            result = await api.post("/api/voice-agent/showings", payload)
+
+        # ── Task Management ───────────────────────────────────────────────
+
+        elif tool_name == "update_task":
+            payload = {}
+            for field in ["status", "priority", "due_date", "title", "description"]:
+                if args.get(field) is not None:
+                    payload[field] = args[field]
+            result = await api.patch(f"/api/voice-agent/tasks/{args['task_id']}", payload)
+
+        elif tool_name == "delete_task":
+            result = await api.delete(f"/api/voice-agent/tasks/{args['task_id']}")
+
+        # ── Deal Management ───────────────────────────────────────────────
+
+        elif tool_name == "update_deal":
+            payload = {}
+            for field in ["stage", "status", "listing_id"]:
+                if args.get(field) is not None:
+                    payload[field] = args[field]
+            if args.get("value") is not None:
+                payload["value"] = args["value"]
+            if args.get("commission_pct") is not None:
+                payload["commission_pct"] = args["commission_pct"]
+            result = await api.patch(f"/api/voice-agent/deals/{args['deal_id']}", payload)
+
+        elif tool_name == "get_deal_details":
+            result = await api.get(f"/api/voice-agent/deals/{args['deal_id']}")
+
+        # ── Offer Management ──────────────────────────────────────────────
+
+        elif tool_name == "get_offers":
+            params = {}
+            if args.get("listing_id"):
+                params["listing_id"] = args["listing_id"]
+            if args.get("buyer_contact_id"):
+                params["buyer_contact_id"] = args["buyer_contact_id"]
+            if args.get("status"):
+                params["status"] = args["status"]
+            params["limit"] = str(args.get("limit", 20))
+            result = await api.get("/api/voice-agent/offers", params)
+
+        elif tool_name == "create_offer":
+            payload = {
+                "listing_id": args["listing_id"],
+                "buyer_contact_id": args["buyer_contact_id"],
+                "offer_amount": args["offer_amount"],
+            }
+            for field in ["expiry_date", "financing_type", "conditions_text", "possession_date"]:
+                if args.get(field):
+                    payload[field] = args[field]
+            if args.get("deposit_amount") is not None:
+                payload["deposit_amount"] = args["deposit_amount"]
+            result = await api.post("/api/voice-agent/offers", payload)
+
+        elif tool_name == "update_offer":
+            payload = {"action": args["action"]}
+            if args.get("notes"):
+                payload["notes"] = args["notes"]
+            result = await api.patch(f"/api/voice-agent/offers/{args['offer_id']}", payload)
+
+        # ── Household Management ──────────────────────────────────────────
+
+        elif tool_name == "get_households":
+            result = await api.get("/api/voice-agent/households")
+
+        elif tool_name == "get_household_members":
+            result = await api.get(f"/api/voice-agent/households/{args['household_id']}")
+
+        elif tool_name == "create_household":
+            payload = {"name": args["name"]}
+            if args.get("address"):
+                payload["address"] = args["address"]
+            if args.get("notes"):
+                payload["notes"] = args["notes"]
+            result = await api.post("/api/voice-agent/households", payload)
+
+        elif tool_name == "add_to_household":
+            result = await api.post(
+                f"/api/voice-agent/households/{args['household_id']}",
+                {"contact_id": args["contact_id"]},
+            )
+
+        elif tool_name == "remove_from_household":
+            result = await api.patch(
+                f"/api/voice-agent/contacts/{args['contact_id']}",
+                {"household_id": None},
+            )
+
+        # ── Relationship Management ───────────────────────────────────────
+
+        elif tool_name == "get_relationships":
+            result = await api.get("/api/voice-agent/relationships", {"contact_id": args["contact_id"]})
+
+        elif tool_name == "create_relationship":
+            payload = {
+                "contact_a_id": args["contact_a_id"],
+                "contact_b_id": args["contact_b_id"],
+                "relationship_type": args["relationship_type"],
+            }
+            if args.get("notes"):
+                payload["notes"] = args["notes"]
+            result = await api.post("/api/voice-agent/relationships", payload)
+
+        # ── Workflow Management ───────────────────────────────────────────
+
+        elif tool_name == "get_workflows":
+            result = await api.get("/api/voice-agent/workflows")
+
+        elif tool_name == "enroll_in_workflow":
+            result = await api.post("/api/voice-agent/workflows", {
+                "workflow_id": args["workflow_id"],
+                "contact_id": args["contact_id"],
+            })
+
+        elif tool_name == "get_enrollments":
+            result = await api.get("/api/voice-agent/enrollments", {"contact_id": args["contact_id"]})
+
+        elif tool_name == "manage_enrollment":
+            result = await api.patch("/api/voice-agent/enrollments", {
+                "enrollment_id": args["enrollment_id"],
+                "action": args["action"],
+            })
+
+        # ── Activity Logging ──────────────────────────────────────────────
+
+        elif tool_name == "get_activities":
+            params = {"contact_id": args["contact_id"]}
+            if args.get("activity_type"):
+                params["activity_type"] = args["activity_type"]
+            params["limit"] = str(args.get("limit", 20))
+            result = await api.get("/api/voice-agent/activities", params)
+
+        elif tool_name == "log_activity":
+            payload = {
+                "contact_id": args["contact_id"],
+                "activity_type": args["activity_type"],
+            }
+            if args.get("description"):
+                payload["description"] = args["description"]
+            if args.get("metadata"):
+                payload["metadata"] = args["metadata"]
+            result = await api.post("/api/voice-agent/activities", payload)
+
+        # ── Newsletter Management ─────────────────────────────────────────
+
+        elif tool_name == "get_newsletters":
+            params = {}
+            if args.get("status"):
+                params["status"] = args["status"]
+            params["limit"] = str(args.get("limit", 20))
+            result = await api.get("/api/voice-agent/newsletters", params)
+
+        elif tool_name == "approve_newsletter":
+            result = await api.patch("/api/voice-agent/newsletters", {
+                "newsletter_id": args["newsletter_id"],
+                "action": args["action"],
+            })
+
         elif tool_name == "get_crm_help":
             topic = args.get("topic", "").lower()
 
@@ -523,6 +1531,82 @@ async def handle_realtor_tool(tool_name: str, args: dict, realtor_id: str = "R00
                 )
 
             result = {"topic": topic, "help": help_text}
+
+        elif tool_name == "bc_real_estate_reference":
+            topic = args.get("topic", "all").lower()
+            ref = {}
+            if topic in ("forms", "all"):
+                ref["bcrea_forms"] = {
+                    "DORTS": "Disclosure of Representation in Trading Services — given at first contact before trading services begin",
+                    "MLC": "Multiple Listing Contract — listing agreement between seller and brokerage for MLS rights",
+                    "PDS": "Property Disclosure Statement — seller's written disclosure of known defects and material facts",
+                    "FINTRAC": "Individual Identification Information Record — federal AML compliance, two government IDs required",
+                    "PRIVACY": "Privacy Disclosure — how personal info is collected/used/stored under BC PIPA",
+                    "C3": "Contract of Purchase and Sale — primary purchase agreement with offer price, subjects, completion day",
+                    "DRUP": "Disclosure of Risks to Unrepresented Parties",
+                    "MLS_INPUT": "MLS Data Input Form — technical data sheet for Paragon",
+                    "MKTAUTH": "Marketing Authorization — authorizes internet, virtual tours, open houses, social media",
+                    "AGENCY": "Agency Disclosure — documents who the licensee represents at time of offer",
+                    "C3CONF": "Contract of Purchase and Sale Confirmation",
+                    "FAIRHSG": "Fair Housing Declaration — equal opportunity housing under BC Human Rights Code",
+                }
+            if topic in ("fintrac", "all"):
+                ref["fintrac"] = {
+                    "requirement": "Identity verification required for ALL clients before providing trading services",
+                    "ids": "Two government-issued IDs: one photo ID (passport, driver's license) + one secondary",
+                    "corporations": "Verify entity and identify beneficial owners with 25%+ ownership",
+                    "source_of_funds": "Document when cash transaction or funds inconsistent with stated occupation",
+                    "retention": "ALL records kept minimum 5 years from transaction date",
+                    "str": "Suspicious Transaction Reports filed within 30 days",
+                    "pep": "Politically Exposed Persons require enhanced due diligence + senior management approval",
+                    "large_cash": "Large Cash Transaction Reports for cash $10,000+ within 24 hours",
+                }
+            if topic in ("property_types", "all"):
+                ref["property_types"] = {
+                    "detached": "Single-family home, own lot, no strata",
+                    "condo": "Strata-titled unit, subject to bylaws, strata fees, depreciation reports",
+                    "townhouse": "Ground-level strata unit, private outdoor space",
+                    "land": "Vacant lot, acreage, rural — may be ALR restricted",
+                    "commercial": "Retail, office, industrial, mixed-use — GST almost always applies",
+                    "multi_family": "Duplex, triplex, fourplex, larger rental buildings",
+                }
+            if topic in ("statuses", "all"):
+                ref["listing_statuses"] = {
+                    "Active": "Live on MLS, accepting showings/offers",
+                    "Conditional": "Accepted offer with outstanding subject clauses",
+                    "Subject Removal": "All conditions waived, deal is firm and binding",
+                    "Sold": "Transaction completed, ownership transferred",
+                    "Withdrawn": "Removed from marketing before expiry",
+                    "Expired": "Listing term ended without sale",
+                }
+            if topic in ("taxes", "all"):
+                ref["taxes"] = {
+                    "PTT": "1% on first 200K, 2% on 200K-2M, 3% over 2M, 5% on residential over 3M. First-time buyer exemption under 500K",
+                    "GST": "5% on new construction and substantially renovated homes. Partial rebate under 450K for primary residences",
+                }
+            if topic in ("terms", "all"):
+                ref["key_terms"] = {
+                    "Subject Clauses": "Conditions in C3 that must be satisfied/waived before firm (financing, inspection, strata docs)",
+                    "Subject Removal": "Waiving all conditions — contract becomes firm. Backing out forfeits deposit",
+                    "Completion Day": "Date ownership legally transfers, title changes hands",
+                    "Adjustment Day": "Date property taxes, strata fees, utilities adjusted between buyer and seller",
+                    "Strata Fees": "Monthly fees for building insurance, maintenance, contingency reserve",
+                    "Form B": "Strata Information Certificate — fees, special levies, bylaws, litigation. 7-day buyer review",
+                    "Depreciation Report": "30-year engineering report on future repair/replacement costs for strata common property",
+                    "ALR": "Agricultural Land Reserve — protected farmland, development heavily restricted",
+                }
+            if topic in ("workflow", "all"):
+                ref["workflow_phases"] = {
+                    "Phase 1": "Seller Intake — FINTRAC identity, property details, commissions, showing instructions",
+                    "Phase 2": "Data Enrichment — BC Geocoder, ParcelMap BC, LTSA, BC Assessment",
+                    "Phase 3": "CMA Analysis — comparable sales, active competition, expired listings",
+                    "Phase 4": "Pricing & Review — confirm list price, lock price, set marketing tier",
+                    "Phase 5": "Form Generation — auto-fill 12 BCREA forms via Python server",
+                    "Phase 6": "E-Signature — DocuSign envelope tracking",
+                    "Phase 7": "MLS Preparation — Claude AI remarks, photo management",
+                    "Phase 8": "MLS Submission — manual submission to Paragon",
+                }
+            result = ref if ref else {"error": f"Unknown topic: {topic}. Use: forms, fintrac, property_types, statuses, taxes, terms, workflow, or all"}
 
         else:
             result = {"error": f"Unknown tool: {tool_name}"}

@@ -6,6 +6,7 @@ import { validatedSend } from "@/lib/validated-send";
 import { generateNewsletterContent, NewsletterContext } from "@/lib/newsletter-ai";
 import { render } from "@react-email/components";
 import { revalidatePath } from "next/cache";
+import { triggerIngest } from "@/lib/rag/realtime-ingest";
 
 // React Email template imports
 import { NewListingAlert } from "@/emails/NewListingAlert";
@@ -268,6 +269,9 @@ export async function generateAndQueueNewsletter(
     .single();
 
   if (error) return { error: error.message };
+
+  // Real-time RAG ingestion for the new newsletter
+  if (newsletter) triggerIngest("newsletters", newsletter.id);
 
   // Auto-send if in auto mode
   if (sendMode === "auto" && newsletter) {

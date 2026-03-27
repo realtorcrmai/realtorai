@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { listingSchema, type ListingFormData } from "@/lib/schemas";
 import { validateStageForType } from "@/lib/contact-consistency";
+import { triggerIngest } from "@/lib/rag/realtime-ingest";
 
 export async function createListing(formData: ListingFormData) {
   const parsed = listingSchema.safeParse(formData);
@@ -38,6 +39,9 @@ export async function createListing(formData: ListingFormData) {
   } catch {
     // Don't fail listing creation if blast fails
   }
+
+  // Real-time RAG ingestion
+  triggerIngest("listings", data.id);
 
   return { success: true, listing: data };
 }
@@ -86,15 +90,8 @@ export async function updateListing(
   revalidatePath(`/listings/${id}`);
   revalidatePath("/contacts");
 
-  // Fire price_change trigger if list_price changed on an active listing
-  if (priceChanged && updateData.list_price !== oldPrice) {
-    try {
-      const { executeListingBlastRules } = await import("@/lib/listing-blast-executor");
-      await executeListingBlastRules("price_change", id);
-    } catch {
-      // Don't fail listing update if blast fails
-    }
-  }
+  // Real-time RAG re-ingestion
+  triggerIngest("listings", id);
 
   return { success: true };
 }

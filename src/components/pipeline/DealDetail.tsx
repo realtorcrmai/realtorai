@@ -236,20 +236,29 @@ export function DealDetail({
                 {stages.map((stage, i) => {
                   const isPast = i < currentStageIndex;
                   const isCurrent = i === currentStageIndex;
+                  // A past stage is only fully "done" (blue) if all checklist items are
+                  // completed. If any checklist item remains open, past stages show amber
+                  // to signal the deal has unresolved work — even if we've moved forward.
+                  const hasIncompleteChecklist = checklist.length > 0 && completedCount < checklist.length;
+                  const isPastIncomplete = isPast && hasIncompleteChecklist;
                   return (
                     <button
                       key={stage}
                       onClick={() => updateDeal({ stage })}
                       disabled={saving}
+                      title={isPastIncomplete ? "Incomplete checklist items remain" : undefined}
                       className={`flex-1 min-w-[80px] px-2 py-2 rounded-lg text-xs font-medium text-center transition-all border ${
                         isCurrent
                           ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                          : isPast
-                            ? "bg-primary/10 text-primary border-primary/20"
-                            : "bg-muted/50 text-muted-foreground border-border/30 hover:bg-accent"
+                          : isPastIncomplete
+                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                            : isPast
+                              ? "bg-primary/10 text-primary border-primary/20"
+                              : "bg-muted/50 text-muted-foreground border-border/30 hover:bg-accent"
                       }`}
                     >
                       {STAGE_LABELS[stage]}
+                      {isPastIncomplete && <span className="ml-1 opacity-70">⚠</span>}
                     </button>
                   );
                 })}

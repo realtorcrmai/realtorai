@@ -1,6 +1,7 @@
 export const INTEGRATION_PROVIDERS = [
   "docusign",
   "mls",
+  "ddf",
   "email",
   "twilio",
 ] as const;
@@ -113,6 +114,58 @@ export const PROVIDER_META: Record<
         label: "Agent MLS ID",
         type: "text",
         placeholder: "Your agent MLS ID",
+      },
+    ],
+  },
+  ddf: {
+    label: "CREA DDF (Canada)",
+    description:
+      "CREA Data Distribution Facility — live listing data, agent lookup, and open houses from realtor.ca. Covers all Canadian MLS boards.",
+    icon: "Globe",
+    fields: [
+      {
+        key: "client_id",
+        label: "DDF Client ID (Username)",
+        type: "password",
+        placeholder: "Your DDF data feed username",
+        required: true,
+      },
+      {
+        key: "client_secret",
+        label: "DDF Client Secret (Password)",
+        type: "password",
+        placeholder: "Your DDF data feed password",
+        required: true,
+      },
+      {
+        key: "default_province",
+        label: "Default Province",
+        type: "select",
+        required: true,
+        options: [
+          { value: "British Columbia", label: "British Columbia" },
+          { value: "Alberta", label: "Alberta" },
+          { value: "Ontario", label: "Ontario" },
+          { value: "Quebec", label: "Quebec" },
+          { value: "Saskatchewan", label: "Saskatchewan" },
+          { value: "Manitoba", label: "Manitoba" },
+          { value: "Nova Scotia", label: "Nova Scotia" },
+          { value: "New Brunswick", label: "New Brunswick" },
+          { value: "Newfoundland and Labrador", label: "Newfoundland and Labrador" },
+          { value: "Prince Edward Island", label: "Prince Edward Island" },
+        ],
+      },
+      {
+        key: "default_city",
+        label: "Default City (optional)",
+        type: "text",
+        placeholder: "e.g. Vancouver",
+      },
+      {
+        key: "agent_mls_id",
+        label: "Agent MLS ID (optional)",
+        type: "text",
+        placeholder: "Your CREA agent ID for filtering own listings",
       },
     ],
   },

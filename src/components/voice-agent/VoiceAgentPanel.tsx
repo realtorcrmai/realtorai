@@ -181,10 +181,62 @@ export function VoiceAgentPanel() {
     };
   }, []);
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const ttsAbortRef = useRef(false);
+
   const speak = useCallback(
-    (text: string) => {
-      if (!ttsEnabled || typeof window === "undefined" || !window.speechSynthesis)
+    async (text: string) => {
+      if (!ttsEnabled || !text.trim()) return;
+
+      ttsAbortRef.current = false;
+
+      // Try Edge TTS first (high quality server-side)
+      try {
+        const sentences = text.match(/[^.!?]+[.!?]+[\s]?|[^.!?]+$/g) || [text];
+        setSpeaking(true);
+
+        for (const sentence of sentences) {
+          if (ttsAbortRef.current) break;
+          const trimmed = sentence.trim();
+          if (!trimmed) continue;
+
+          try {
+            const resp = await fetch(`${VOICE_AGENT_API}/api/tts`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: "Bearer va-bridge-secret-key-2026" },
+              body: JSON.stringify({ text: trimmed, voice: "en-US-AvaMultilingualNeural" }),
+              signal: AbortSignal.timeout(15000),
+            });
+            if (!resp.ok || ttsAbortRef.current) continue;
+            const audioData = await resp.arrayBuffer();
+            if (ttsAbortRef.current) break;
+
+            await new Promise<void>((resolve) => {
+              const blob = new Blob([audioData], { type: "audio/mpeg" });
+              const url = URL.createObjectURL(blob);
+              const audio = new Audio(url);
+              audioRef.current = audio;
+              audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+              audio.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+              audio.play().catch(() => resolve());
+            });
+          } catch {
+            continue; // skip this sentence if TTS fails
+          }
+        }
+
+        setSpeaking(false);
+        audioRef.current = null;
         return;
+      } catch {
+        // Fall through to browser TTS
+      }
+
+      // Browser TTS fallback
+      if (typeof window === "undefined" || !window.speechSynthesis) {
+        setSpeaking(false);
+        return;
+      }
       window.speechSynthesis.cancel();
       const clean = text
         .replace(/```[\s\S]*?```/g, "code block")
@@ -216,10 +268,15 @@ export function VoiceAgentPanel() {
   );
 
   const stopSpeaking = useCallback(() => {
+    ttsAbortRef.current = true;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
-      setSpeaking(false);
     }
+    setSpeaking(false);
   }, []);
 
   const toggleListening = useCallback(() => {
@@ -245,11 +302,16 @@ export function VoiceAgentPanel() {
     }
   }, [listening]);
 
+  const API_HEADERS: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer va-bridge-secret-key-2026",
+  };
+
   async function startSession() {
     try {
       const resp = await fetch(`${VOICE_AGENT_API}/api/session/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: API_HEADERS,
         body: JSON.stringify({ mode: "realtor" }),
       });
       const data = await resp.json();
@@ -303,7 +365,7 @@ export function VoiceAgentPanel() {
     try {
       const resp = await fetch(`${VOICE_AGENT_API}/api/chat/stream`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: API_HEADERS,
         body: JSON.stringify({ session_id: sid, message: text }),
       });
 
@@ -346,7 +408,7 @@ export function VoiceAgentPanel() {
             if (chunk.tool) {
               setMessages((prev) => [
                 ...prev,
-                { role: "tool", content: `Using: ${chunk.tool}` },
+                { role: "tool", content: `Working on it...` },
               ]);
               continue;
             }
@@ -423,12 +485,18 @@ export function VoiceAgentPanel() {
     setSending(false);
   }
 
-  // Auto-send after speech recognition
+  // Auto-send after speech recognition ends
+  const lastSpokenRef = useRef<string>("");
   useEffect(() => {
     if (!listening && input.trim() && recognitionRef.current) {
+      // Capture the text immediately before any state changes clear it
+      const captured = input.trim();
+      lastSpokenRef.current = captured;
       const timeout = setTimeout(() => {
-        if (input.trim()) sendMessage(input.trim());
-      }, 600);
+        if (captured) {
+          sendMessage(captured);
+        }
+      }, 1500);
       return () => clearTimeout(timeout);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

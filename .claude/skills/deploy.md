@@ -6,9 +6,10 @@ Run this skill to build and deploy all services locally.
 
 | Service | Port | Directory | Command |
 |---------|------|-----------|---------|
-| CRM (Next.js) | 3000 | `realestate-crm/` | `npm run dev` |
-| Website Agent | 8768 | `listingflow-agent/` | `npm run dev` |
+| CRM (Next.js) | 3000 | `.` (repo root) | `npm run dev` |
+| Voice Agent | 8768 | `voice_agent/server/` | `python voice_agent/server/main.py` |
 | Form Server | 8767 | Python server | `python server.py` |
+| Website Agent | 8769 | `listingflow-agent/` | `npm run dev` (optional, separate service) |
 
 ## Steps
 
@@ -18,30 +19,30 @@ Run this skill to build and deploy all services locally.
 lsof -ti :3000 2>/dev/null | xargs kill -9 2>/dev/null
 lsof -ti :8768 2>/dev/null | xargs kill -9 2>/dev/null
 lsof -ti :8767 2>/dev/null | xargs kill -9 2>/dev/null
+lsof -ti :8769 2>/dev/null | xargs kill -9 2>/dev/null
 sleep 1
 ```
 
 ### 2. Pull latest code
 
 ```bash
-cd "/Users/bigbear/reality crm/realestate-crm"
 git pull origin dev
 ```
 
 ### 3. Install dependencies
 
 ```bash
-cd "/Users/bigbear/reality crm/realestate-crm"
 npm install
 ```
 
 ### 4. Run new Supabase migrations
 
-Check for unapplied migrations and run them:
+Check for unapplied migrations and run them.
+
+> **Note:** `SUPABASE_ACCESS_TOKEN` must be set as an environment variable or in `.env.local`. Never hardcode it.
 
 ```bash
-cd "/Users/bigbear/reality crm/realestate-crm"
-SUPABASE_ACCESS_TOKEN=sbp_43f6400e99eebed61cb31330c485c5c9932bc0c8 \
+SUPABASE_ACCESS_TOKEN=$SUPABASE_ACCESS_TOKEN \
 npx supabase db query --linked --output json \
   "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename"
 ```
@@ -49,14 +50,13 @@ npx supabase db query --linked --output json \
 Then run any new migration files in `supabase/migrations/` that created tables not yet in the database:
 
 ```bash
-SUPABASE_ACCESS_TOKEN=sbp_43f6400e99eebed61cb31330c485c5c9932bc0c8 \
+SUPABASE_ACCESS_TOKEN=$SUPABASE_ACCESS_TOKEN \
 npx supabase db query --linked -f supabase/migrations/<new_migration>.sql
 ```
 
 ### 5. Build CRM
 
 ```bash
-cd "/Users/bigbear/reality crm/realestate-crm"
 npm run build
 ```
 
@@ -65,7 +65,6 @@ If build fails, fix TypeScript errors before proceeding.
 ### 6. Start CRM (port 3000)
 
 ```bash
-cd "/Users/bigbear/reality crm/realestate-crm"
 npm run dev &>/tmp/crm-server.log &
 
 # Wait for ready
@@ -77,17 +76,28 @@ done
 
 Verify: `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/auth/csrf` should return 200.
 
-### 7. Start Website Agent (port 8768) — Optional
+### 7. Start Voice Agent (port 8768) — Optional
 
-Only needed if working on website generation features:
+Only needed if working on voice agent features:
 
 ```bash
-cd "/Users/bigbear/reality crm/listingflow-agent"
+source voice_agent/venv/bin/activate
+python voice_agent/server/main.py &>/tmp/voice-agent-server.log &
+```
+
+Verify: `curl -s http://localhost:8768/api/health` should return 200.
+
+### 7b. Start Website Agent (port 8769) — Optional
+
+Only needed if working on website generation features (separate service):
+
+```bash
+cd ./listingflow-agent
 npm install
 npm run dev &>/tmp/agent-server.log &
 ```
 
-Verify: `curl -s http://localhost:8768/` should return HTML.
+Verify: `curl -s http://localhost:8769/` should return HTML.
 
 ### 8. Run /test
 
@@ -100,7 +110,6 @@ After all services are running, execute the test skill to validate everything:
 ### 9. Commit and push to dev
 
 ```bash
-cd "/Users/bigbear/reality crm/realestate-crm"
 git add -A
 git commit -m "your commit message
 

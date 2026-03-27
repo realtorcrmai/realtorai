@@ -3,31 +3,35 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-type SuccessStory = {
+interface SuccessStory {
   contactId: string;
   contactName: string;
   contactType: string;
   icon: string;
   story: string;
   score?: number;
-};
+}
 
-type UpcomingSend = {
+interface UpcomingSend {
   date: string;
   label: string;
   emailType: string;
   count: number;
-};
+}
 
-type Props = {
+interface AIWorkingForYouProps {
   totalSent: number;
   openRate: number;
   clickRate: number;
   hotLeadCount: number;
   successStories: SuccessStory[];
   upcomingSends: UpcomingSend[];
-};
+}
 
+/**
+ * AIWorkingForYou — hero card on the AI Agent tab showing
+ * AI performance summary, success stories, and upcoming sends.
+ */
 export function AIWorkingForYou({
   totalSent,
   openRate,
@@ -35,129 +39,113 @@ export function AIWorkingForYou({
   hotLeadCount,
   successStories,
   upcomingSends,
-}: Props) {
-  const timeSavedMinutes = totalSent * 15;
-  const timeSavedHours = Math.round(timeSavedMinutes / 60);
-  const timeSavedDisplay =
-    timeSavedHours >= 1
-      ? `${timeSavedHours}h`
-      : `${timeSavedMinutes}m`;
-
+}: AIWorkingForYouProps) {
   return (
-    <div className="space-y-4">
-      {/* Impact Stats */}
-      <Card>
-        <CardContent className="p-5">
-          <h3 className="text-base font-semibold mb-4">AI Working For You</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary">{totalSent}</div>
-              <div className="text-[10px] text-muted-foreground uppercase">Emails Sent</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-emerald-600">{timeSavedDisplay}</div>
-              <div className="text-[10px] text-muted-foreground uppercase">Time Saved</div>
-              <div className="text-[10px] text-muted-foreground">~15 min per email</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary">{openRate}%</div>
-              <div className="text-[10px] text-muted-foreground uppercase">Open Rate</div>
-              {openRate > 21 && (
-                <div className="text-[10px] text-emerald-600 font-medium">
-                  {(openRate / 21).toFixed(1)}x industry avg
-                </div>
-              )}
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-500">{hotLeadCount}</div>
-              <div className="text-[10px] text-muted-foreground uppercase">Hot Leads</div>
-              <div className="text-[10px] text-muted-foreground">from AI emails</div>
+    <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-indigo-50/50">
+      <CardContent className="p-5 space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl">🤖</span>
+            <div>
+              <h3 className="text-sm font-bold">AI Working For You</h3>
+              <p className="text-xs text-muted-foreground">
+                Your AI agent is nurturing contacts 24/7
+              </p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+          <Badge className="bg-green-100 text-green-800 hover:bg-green-100 text-[11px]">
+            Active
+          </Badge>
+        </div>
 
-      {/* Success Stories + Upcoming in a row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Success Stories */}
-        <Card>
-          <CardContent className="p-5">
-            <h4 className="text-sm font-semibold mb-3">AI Success Stories</h4>
-            {successStories.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                AI is learning your contacts. Stories will appear as engagement grows.
-              </p>
-            ) : (
-              successStories.map((story, i) => (
+        {/* Stats row */}
+        <div className="grid grid-cols-4 gap-2">
+          <div className="bg-white/60 rounded-lg p-2.5 border text-center">
+            <p className="text-lg font-bold text-primary">{totalSent}</p>
+            <p className="text-[10px] text-muted-foreground">Emails Sent</p>
+          </div>
+          <div className="bg-white/60 rounded-lg p-2.5 border text-center">
+            <p className="text-lg font-bold text-emerald-600">{openRate}%</p>
+            <p className="text-[10px] text-muted-foreground">Open Rate</p>
+          </div>
+          <div className="bg-white/60 rounded-lg p-2.5 border text-center">
+            <p className="text-lg font-bold text-purple-600">{clickRate}%</p>
+            <p className="text-[10px] text-muted-foreground">Click Rate</p>
+          </div>
+          <div className="bg-white/60 rounded-lg p-2.5 border text-center">
+            <p className="text-lg font-bold text-red-600">{hotLeadCount}</p>
+            <p className="text-[10px] text-muted-foreground">Hot Leads</p>
+          </div>
+        </div>
+
+        {/* Success stories */}
+        {successStories.length > 0 && (
+          <div>
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              Success Stories
+            </h4>
+            <div className="space-y-1.5">
+              {successStories.map((story, i) => (
                 <div
-                  key={story.contactId + i}
-                  className="flex items-start gap-2.5 py-2.5 border-b border-border last:border-0"
+                  key={`${story.contactId}-${i}`}
+                  className="flex items-center gap-2 bg-white/50 rounded-md p-2 border"
                 >
-                  <span className="text-lg shrink-0 mt-0.5">{story.icon}</span>
+                  <span className="text-sm shrink-0">{story.icon}</span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <a
-                        href={`/contacts/${story.contactId}`}
-                        className="text-sm font-medium hover:text-primary transition-colors truncate"
-                      >
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-semibold truncate">
                         {story.contactName}
-                      </a>
-                      <Badge variant="outline" className="text-[10px] shrink-0 capitalize">
-                        {story.contactType}
-                      </Badge>
-                      {typeof story.score === "number" && (
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] shrink-0 ${
-                            story.score >= 60
-                              ? "text-red-600 border-red-200"
-                              : "text-amber-600 border-amber-200"
-                          }`}
-                        >
-                          {story.score}
-                        </Badge>
+                      </span>
+                      <span
+                        className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
+                          story.contactType === "buyer"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-orange-100 text-orange-700"
+                        }`}
+                      >
+                        {story.contactType.toUpperCase()}
+                      </span>
+                      {story.score !== undefined && (
+                        <span className="text-[9px] text-muted-foreground">
+                          Score {story.score}
+                        </span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{story.story}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      {story.story}
+                    </p>
                   </div>
                 </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
-        {/* Coming Up Next */}
-        <Card>
-          <CardContent className="p-5">
-            <h4 className="text-sm font-semibold mb-3">Coming Up Next</h4>
-            {upcomingSends.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No emails scheduled. Enroll contacts to start journeys.
-              </p>
-            ) : (
-              upcomingSends.map((send, i) => (
+        {/* Upcoming sends */}
+        {upcomingSends.length > 0 && (
+          <div>
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              Upcoming Sends
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {upcomingSends.map((send, i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between py-2.5 border-b border-border last:border-0"
+                  className="inline-flex items-center gap-1.5 bg-white/50 rounded-md px-2.5 py-1.5 border text-xs"
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0">
-                      {send.count}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {send.emailType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{send.label}</p>
-                    </div>
-                  </div>
-                  <span className="text-xs text-muted-foreground shrink-0 ml-2">{send.date}</span>
+                  <span className="font-semibold text-primary">
+                    {send.date}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {send.count} {send.emailType.replace(/_/g, " ")}
+                  </span>
                 </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

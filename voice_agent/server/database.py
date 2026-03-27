@@ -420,3 +420,181 @@ def cleanup_expired_sessions():
     """Remove expired sessions."""
     with get_db() as conn:
         conn.execute("DELETE FROM sessions WHERE expires_at < datetime('now')")
+
+
+# ── Cost Tracking / Logbook ───────────────────────────────────────────────
+
+# Rates per 1K tokens / per minute / per 1K chars
+COST_RATES = {
+    "llm": {
+        "anthropic": {"input": 0.003, "output": 0.015},   # Sonnet per 1K tokens
+        "openai": {"input": 0.0025, "output": 0.010},     # GPT-4o per 1K tokens
+        "ollama": {"input": 0.0, "output": 0.0},          # Free (local)
+        "groq": {"input": 0.00059, "output": 0.00079},    # Llama 70B per 1K tokens
+    },
+    "llm_by_model": {
+        "claude-haiku-4-5-20251001": {"input": 0.0008, "output": 0.004},     # Haiku 4.5
+        "claude-sonnet-4-20250514": {"input": 0.003, "output": 0.015},       # Sonnet 4
+    },
+    "stt": {
+        "openai_whisper": 0.006,     # $ per minute of audio
+        "whisper_local": 0.0,        # Free
+    },
+    "tts": {
+        "openai_tts": 0.015,         # $ per 1K characters
+        "openai_tts_hd": 0.030,      # $ per 1K characters (HD)
+        "edge_tts": 0.0,             # Free
+        "piper": 0.0,                # Free
+        "elevenlabs": 0.018,         # $ per 1K characters (approx)
+    },
+}
+
+
+def log_cost(session_id, realtor_id, service, provider, model=None,
+             input_tokens=0, output_tokens=0, audio_seconds=0.0,
+             chars_processed=0, latency_ms=None, metadata=None):
+    """Log a cost entry and return the calculated cost."""
+    cost = calculate_cost(service, provider, input_tokens, output_tokens,
+                          audio_seconds, chars_processed, model=model)
+
+    with get_db() as conn:
+        conn.execute(
+            """INSERT INTO cost_log
+               (session_id, realtor_id, service, provider, model,
+                input_tokens, output_tokens, audio_seconds, chars_processed,
+                cost_usd, latency_ms, metadata)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (session_id, realtor_id, service, provider, model,
+             input_tokens, output_tokens, audio_seconds, chars_processed,
+             cost, latency_ms, json.dumps(metadata) if metadata else None)
+        )
+    return cost
+
+
+def calculate_cost(service, provider, input_tokens=0, output_tokens=0,
+                   audio_seconds=0.0, chars_processed=0, model=None):
+    """Calculate cost for a single API call."""
+    if service == "llm":
+        # Use model-specific rates if available, otherwise fall back to provider rates
+        if model and model in COST_RATES.get("llm_by_model", {}):
+            rates = COST_RATES["llm_by_model"][model]
+        else:
+            rates = COST_RATES["llm"].get(provider, {"input": 0, "output": 0})
+        return (input_tokens / 1000) * rates["input"] + (output_tokens / 1000) * rates["output"]
+    elif service == "stt":
+        rate = COST_RATES["stt"].get(provider, 0.0)
+        return (audio_seconds / 60) * rate
+    elif service == "tts":
+        rate = COST_RATES["tts"].get(provider, 0.0)
+        return (chars_processed / 1000) * rate
+    return 0.0
+
+
+def get_cost_summary(realtor_id="R001", days=30):
+    """Get cost summary for the dashboard."""
+    with get_db() as conn:
+        # Total costs by service
+        rows = conn.execute(
+            """SELECT
+                service,
+                provider,
+                COUNT(*) as calls,
+                SUM(cost_usd) as total_cost,
+                SUM(input_tokens) as total_input_tokens,
+                SUM(output_tokens) as total_output_tokens,
+                SUM(audio_seconds) as total_audio_seconds,
+                SUM(chars_processed) as total_chars,
+                AVG(latency_ms) as avg_latency_ms
+               FROM cost_log
+               WHERE realtor_id = ? AND created_at >= datetime('now', ?)
+               GROUP BY service, provider
+               ORDER BY total_cost DESC""",
+            (realtor_id, f"-{days} days")
+        ).fetchall()
+        by_service = [dict(r) for r in rows]
+
+        # Daily breakdown
+        daily = conn.execute(
+            """SELECT
+                DATE(created_at) as date,
+                COUNT(*) as calls,
+                SUM(cost_usd) as cost,
+                COUNT(DISTINCT session_id) as sessions
+               FROM cost_log
+               WHERE realtor_id = ? AND created_at >= datetime('now', ?)
+               GROUP BY DATE(created_at)
+               ORDER BY date DESC""",
+            (realtor_id, f"-{days} days")
+        ).fetchall()
+        daily_breakdown = [dict(r) for r in daily]
+
+        # Grand totals
+        totals = conn.execute(
+            """SELECT
+                COUNT(*) as total_calls,
+                SUM(cost_usd) as total_cost,
+                COUNT(DISTINCT session_id) as total_sessions,
+                SUM(audio_seconds) as total_audio_seconds
+               FROM cost_log
+               WHERE realtor_id = ? AND created_at >= datetime('now', ?)""",
+            (realtor_id, f"-{days} days")
+        ).fetchone()
+
+        # Top sessions by cost
+        top_sessions = conn.execute(
+            """SELECT
+                session_id,
+                COUNT(*) as calls,
+                SUM(cost_usd) as cost,
+                SUM(audio_seconds) as audio_seconds,
+                MIN(created_at) as started_at,
+                MAX(created_at) as ended_at
+               FROM cost_log
+               WHERE realtor_id = ? AND created_at >= datetime('now', ?)
+               GROUP BY session_id
+               ORDER BY cost DESC
+               LIMIT 10""",
+            (realtor_id, f"-{days} days")
+        ).fetchall()
+
+        return {
+            "period_days": days,
+            "totals": {
+                "cost_usd": round(totals["total_cost"] or 0, 4),
+                "sessions": totals["total_sessions"] or 0,
+                "api_calls": totals["total_calls"] or 0,
+                "audio_minutes": round((totals["total_audio_seconds"] or 0) / 60, 1),
+            },
+            "by_service": by_service,
+            "daily": daily_breakdown,
+            "top_sessions": [dict(r) for r in top_sessions],
+        }
+
+
+def get_session_cost(session_id):
+    """Get cost breakdown for a single session."""
+    with get_db() as conn:
+        rows = conn.execute(
+            """SELECT service, provider, model, cost_usd, input_tokens,
+                      output_tokens, audio_seconds, chars_processed, latency_ms, created_at
+               FROM cost_log
+               WHERE session_id = ?
+               ORDER BY created_at ASC""",
+            (session_id,)
+        ).fetchall()
+
+        entries = [dict(r) for r in rows]
+        total = sum(e["cost_usd"] for e in entries)
+        duration = 0
+        if len(entries) >= 2:
+            from datetime import datetime as dt
+            start = dt.fromisoformat(entries[0]["created_at"])
+            end = dt.fromisoformat(entries[-1]["created_at"])
+            duration = (end - start).total_seconds()
+
+        return {
+            "session_id": session_id,
+            "total_cost_usd": round(total, 4),
+            "duration_seconds": round(duration),
+            "entries": entries,
+        }
