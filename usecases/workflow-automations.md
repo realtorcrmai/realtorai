@@ -1,3 +1,13 @@
+---
+title: " Use Case: Workflow Automations"
+slug: "workflow-automations"
+owner: rahul
+last_reviewed: "2026-03-27"
+visibility: public
+related_routes: ["/automations"]
+changelog: []
+---
+
 # Use Case: Workflow Automations
 
 ## Problem Statement

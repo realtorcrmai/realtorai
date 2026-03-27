@@ -953,6 +953,7 @@ Append a row to `.claude/compliance-log.md`:
 4. **Honest logging** — ❌ is acceptable; missing entries are not
 5. **3+ consecutive ❌ from any developer** → mandatory process review before next task
 6. **No classification block in conversation = ❌** — the block proves you loaded the playbook
+7. **Reflexion rule** — After any ❌ entry: write a 1-sentence lesson in the Notes column (e.g., "Lesson: always check migration numbering before creating file"). Before starting a task of the SAME type, scan the last 5 compliance entries for that type — if ❌ entries exist, read their lessons and explicitly state how you'll avoid the same mistake. This is lightweight self-improvement at zero cost.
 7. **Weekly review** — scan log for patterns (which phases get skipped, which developers skip them)
 8. **The log tracks ALL developers equally** — human and AI, same rules, same accountability
 

@@ -1,3 +1,13 @@
+---
+title: " Usecase: Voice Agent"
+slug: "voice-agent"
+owner: rahul
+last_reviewed: "2026-03-27"
+visibility: public
+related_routes: []
+changelog: []
+---
+
 # Usecase: Voice Agent
 
 ## Problem Statement
