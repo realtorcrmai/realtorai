@@ -997,9 +997,11 @@ export function ListingWorkflow({
               {/* Content: clickable header + expandable substeps */}
               <div className="pb-2 min-w-0 pt-1.5 flex-1">
                 {/* Step header — clickable */}
-                <button
-                  type="button"
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => hasSubsteps && toggleStep(step.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); hasSubsteps && toggleStep(step.id); } }}
                   className={`w-full text-left ${hasSubsteps ? "cursor-pointer" : "cursor-default"}`}
                 >
                   <div className="flex items-center gap-2.5 flex-wrap">
@@ -1043,7 +1045,7 @@ export function ListingWorkflow({
                   <p className="text-sm text-muted-foreground mt-1 ml-7">
                     {step.desc}
                   </p>
-                </button>
+                </div>
 
                 {/* Expandable content: data panel for completed, substeps for in-progress/pending */}
                 {hasSubsteps && (
