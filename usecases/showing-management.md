@@ -1,3 +1,13 @@
+---
+title: " Usecase: Showing Management"
+slug: "showing-management"
+owner: rahul
+last_reviewed: "2026-03-27"
+visibility: public
+related_routes: ["/showings"]
+changelog: []
+---
+
 # Usecase: Showing Management
 
 ## Problem Statement

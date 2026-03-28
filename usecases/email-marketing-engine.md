@@ -1,3 +1,13 @@
+---
+title: " Usecase: Email Marketing Engine"
+slug: "email-marketing-engine"
+owner: rahul
+last_reviewed: "2026-03-27"
+visibility: public
+related_routes: ["/newsletters"]
+changelog: []
+---
+
 # Usecase: Email Marketing Engine
 
 ## Problem Statement

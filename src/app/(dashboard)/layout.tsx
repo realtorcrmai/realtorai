@@ -3,6 +3,8 @@ import { MobileNav } from "@/components/layout/MobileNav";
 import { VoiceAgentWidget } from "@/components/voice-agent/VoiceAgentWidget";
 import { Toaster } from "@/components/ui/sonner";
 import { NetworkErrorBanner } from "@/components/shared/NetworkErrorBanner";
+import { OnboardingChecklist } from "@/components/help/OnboardingChecklist";
+import { CommandPalette } from "@/components/help/CommandPalette";
 
 export default function DashboardLayout({
   children,
@@ -31,6 +33,12 @@ export default function DashboardLayout({
 
       {/* Floating Voice Agent Widget — opens chat on click */}
       <VoiceAgentWidget />
+
+      {/* Onboarding checklist (first 30 days) */}
+      <OnboardingChecklist />
+
+      {/* Cmd+K command palette */}
+      <CommandPalette />
 
       <Toaster />
     </div>

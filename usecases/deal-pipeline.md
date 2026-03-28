@@ -1,3 +1,13 @@
+---
+title: " Usecase: Deal Pipeline"
+slug: "deal-pipeline"
+owner: rahul
+last_reviewed: "2026-03-27"
+visibility: public
+related_routes: ["/pipeline"]
+changelog: []
+---
+
 # Usecase: Deal Pipeline
 
 ## Problem Statement

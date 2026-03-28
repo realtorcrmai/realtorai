@@ -3,12 +3,16 @@
  *
  * Parses usecases/*.md files into structured JSON for the help center.
  * Uses gray-matter for frontmatter + regex-based section extraction.
- * Runs at build time (server-side only).
+ * Server-side only — functions return empty results when called from client.
  */
 
-import fs from "fs";
-import path from "path";
-import matter from "gray-matter";
+// Dynamic imports to avoid bundling Node.js modules in client components
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const fs = typeof window === "undefined" ? require("fs") : null;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const path = typeof window === "undefined" ? require("path") : null;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const matter = typeof window === "undefined" ? require("gray-matter") : null;
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -38,7 +42,7 @@ export interface HelpFeature {
 
 // ── Constants ────────────────────────────────────────────────
 
-const USECASES_DIR = path.join(process.cwd(), "usecases");
+const USECASES_DIR = path ? path.join(process.cwd(), "usecases") : "";
 
 // emoji icons per feature (for cards)
 const FEATURE_ICONS: Record<string, string> = {
@@ -61,15 +65,17 @@ export function getFeatureIcon(slug: string): string {
 // ── Parsers ──────────────────────────────────────────────────
 
 function extractSection(content: string, heading: string): string {
-  // Find the section by heading (## heading)
-  const regex = new RegExp(
-    `^##\\s+${heading}[\\s\\S]*?(?=\\n##\\s|$)`,
-    "im"
-  );
-  const match = content.match(regex);
-  if (!match) return "";
-  // Remove the heading line itself
-  return match[0].replace(/^##\s+.*\n/, "").trim();
+  // Find a section whose heading CONTAINS the keyword (case-insensitive)
+  // Split by ## headings and find the matching one
+  const sections = content.split(/^(?=## )/m);
+  for (const section of sections) {
+    const firstLine = section.split("\n")[0] || "";
+    if (firstLine.startsWith("## ") && firstLine.toLowerCase().includes(heading.toLowerCase())) {
+      // Return everything after the heading line
+      return section.replace(/^##\s+.*\n/, "").trim();
+    }
+  }
+  return "";
 }
 
 function parseProblemStatement(content: string): string {
@@ -205,9 +211,9 @@ function parseFAQ(content: string): HelpFeature["faq"] {
 // ── Main API ─────────────────────────────────────────────────
 
 export function getAllFeatures(): HelpFeature[] {
-  if (!fs.existsSync(USECASES_DIR)) return [];
+  if (!fs || !fs.existsSync(USECASES_DIR)) return [];
 
-  const files = fs.readdirSync(USECASES_DIR).filter((f) => f.endsWith(".md"));
+  const files = (fs.readdirSync(USECASES_DIR) as string[]).filter((f: string) => f.endsWith(".md"));
   return files
     .map((file) => {
       const raw = fs.readFileSync(path.join(USECASES_DIR, file), "utf-8");
@@ -217,6 +223,7 @@ export function getAllFeatures(): HelpFeature[] {
 }
 
 export function getFeature(slug: string): HelpFeature | null {
+  if (!fs || !path) return null;
   const filePath = path.join(USECASES_DIR, `${slug}.md`);
   if (!fs.existsSync(filePath)) return null;
   const raw = fs.readFileSync(filePath, "utf-8");

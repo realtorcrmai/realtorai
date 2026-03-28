@@ -1,3 +1,13 @@
+---
+title: " Use Case: BC Forms Generation (BCREA)"
+slug: "bc-forms-generation"
+owner: rahul
+last_reviewed: "2026-03-27"
+visibility: public
+related_routes: ["/forms"]
+changelog: []
+---
+
 # Use Case: BC Forms Generation (BCREA)
 
 ## Problem Statement

@@ -6,6 +6,11 @@ export default auth((req) => {
   const pathname = req.nextUrl.pathname;
   const isOnLogin = pathname === "/login";
 
+  // Public pages — no auth required
+  if (pathname.startsWith("/docs")) {
+    return NextResponse.next();
+  }
+
   // Allow routes that handle their own auth
   if (
     pathname.startsWith("/api/auth") ||
