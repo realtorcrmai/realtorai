@@ -511,3 +511,259 @@ The voice agent (Python, Realtor Mode) calls the Next.js API bridge at `src/app/
 
 ### RAG Integration
 Every `createListing` and `updateListing` call triggers `triggerIngest("listings", id)` which pushes the listing record into the RAG knowledge base (`src/lib/rag/realtime-ingest.ts`). The voice agent's semantic search queries this index to find listings by natural language (e.g., "the two-bed condo in Kitsilano under a million").
+
+---
+
+## Business Value
+
+The listing workflow automates the legally mandated sequence of steps that every BC realtor must complete before a property goes live on MLS. Without it, agents track 12 separate forms in email, manually copy data between systems, miss compliance deadlines, and risk regulatory violations. Each phase automates data collection, cross-references enrichment sources, and generates pre-filled forms — reducing a typical 4-6 hour manual process to under 30 minutes. The workflow also provides an audit trail for brokerage compliance reviews.
+
+## Preconditions
+
+- User must be logged in with agent or admin role
+- At least one seller contact must exist in the CRM (or be created during intake)
+- Property address must be a valid BC location (for geocoding and ParcelMap lookup)
+- FINTRAC identity verification requires two government-issued IDs from the seller
+- For Phase 5 (Form Generation), the Python form server must be running on port 8767
+- For Phase 7 (MLS Prep), the Anthropic API key must be configured for AI content generation
+
+## Key Concepts
+
+| Term | Definition |
+|------|-----------|
+| Phase | One of 8 sequential steps in the listing pipeline. Phases must be completed in order. |
+| current_phase | Integer field (1-8) on the listing record tracking which phase the listing is in |
+| forms_status | JSONB field tracking which of the 12 BCREA forms have been generated |
+| envelopes | JSONB field tracking DocuSign e-signature status for each form |
+| enrichment | Property data pulled from 4 BC government APIs during Phase 2 |
+| CDM (Common Data Model) | Mapping layer that converts listing data into the format each BCREA form expects |
+| PDS | Property Disclosure Statement — seller's written disclosure of known defects |
+| DORTS | Disclosure of Representation in Trading Services — given to all parties at first contact |
+| Subject Clauses | Conditions in the Contract of Purchase and Sale that must be satisfied before the deal is firm |
+
+## Core Workflow
+
+1. Create a new listing and link it to a seller contact
+2. Complete seller intake: FINTRAC identity, property details, commissions, showing instructions
+3. Run data enrichment: BC Geocoder, ParcelMap BC, LTSA, BC Assessment
+4. Perform CMA analysis with comparable sales data
+5. Confirm and lock the list price
+6. Generate all 12 BCREA forms via the form server
+7. Send forms for e-signature via DocuSign
+8. Generate AI marketing content (MLS remarks, social media)
+9. Submit to MLS/Paragon (manual step)
+
+## Step-by-Step Procedures
+
+### Procedure: Create a new listing
+
+**When to use this:** When a new seller engagement begins and you need to set up the listing record.
+
+**Starting point:** Route: `/listings` → Click the + button → Select "Listing"
+
+**Steps:**
+1. Click the + button in the header and select Listing
+2. Search for the seller contact by name or create a new one
+3. Enter the property address in full (e.g., "1234 Maple St, Vancouver, BC V6K 2A1")
+4. Select the property type (Detached, Condo, Townhouse, Land, Commercial, Multi-Family)
+5. Enter an initial asking price (can be updated later)
+6. Add any notes about the listing
+7. Click Save
+
+**System validations:**
+- Seller contact is required — cannot create a listing without one
+- Address is required and must not be empty
+- Property type must be selected from the dropdown
+- Price must be a positive number
+
+**What happens next:**
+- A draft listing is created with current_phase = 1
+- The workflow stepper appears showing Phase 1 as active
+- The listing appears in the listings list with status "draft"
+- RAG system indexes the listing for voice agent search
+
+**Common mistakes:**
+- Creating a listing before adding the seller as a contact first
+- Entering an incomplete address (missing postal code) which causes enrichment to fail later
+- Setting the price to 0 or leaving it blank
+
+**How to recover:**
+- If wrong seller: edit the listing, remove the seller, and link the correct contact
+- If address is wrong: edit the listing address before running Phase 2 enrichment
+- If price is wrong: update in Phase 4 (Pricing) — price can be changed until locked
+
+### Procedure: Run Phase 2 data enrichment
+
+**When to use this:** After Phase 1 (seller intake) is complete, to pull property data from BC government sources.
+
+**Starting point:** Route: `/listings/[id]/workflow` → Phase 2 tab
+
+**Steps:**
+1. Navigate to the listing's workflow page
+2. Click on Phase 2 (Data Enrichment)
+3. Click "Run Enrichment" to start the automated API calls
+4. Wait for BC Geocoder to return the standardized address and PID
+5. Wait for ParcelMap BC to return parcel boundaries and legal description
+6. Review the LTSA data (manual entry if API not available)
+7. Review the BC Assessment data (manual entry if not auto-imported)
+8. Verify all four enrichment sources show green checkmarks
+
+**System validations:**
+- Address must be a valid BC address for geocoding
+- ParcelMap requires a valid PID (returned by geocoder)
+- LTSA and Assessment may require manual entry
+
+**What happens next:**
+- Enrichment data is stored as JSONB in the listing_enrichment table
+- Phase 2 status changes to complete
+- Phase 3 (CMA) becomes available
+
+**Common mistakes:**
+- Running enrichment with an incomplete or wrong address
+- Skipping manual LTSA review
+
+**How to recover:**
+- If enrichment fails: correct the address and re-run
+- If LTSA data is missing: enter it manually in the enrichment panel
+
+### Procedure: Generate BCREA forms (Phase 5)
+
+**When to use this:** After pricing is confirmed and locked in Phase 4.
+
+**Starting point:** Route: `/listings/[id]/workflow` → Phase 5 tab, or `/forms?listing=[id]`
+
+**Steps:**
+1. Navigate to the listing's Phase 5 or the Forms page
+2. Select which forms to generate (or click "Generate All 12")
+3. The system maps listing data to each form via the Common Data Model
+4. Forms are sent to the Python form server (port 8767) for HTML generation
+5. Review each generated form for accuracy
+6. Download or print forms as needed
+
+**System validations:**
+- Price must be locked (Phase 4 complete) before forms can be generated
+- Seller identity must be complete (Phase 1 FINTRAC data)
+- Form server must be running on port 8767
+
+**What happens next:**
+- Generated forms are stored in forms_status JSONB
+- Phase 5 status updates as forms are completed
+- Phase 6 (E-Signature) becomes available
+
+**Common mistakes:**
+- Trying to generate forms before locking the price
+- Form server not running (get connection error)
+
+**How to recover:**
+- Go back to Phase 4 and lock the price
+- Start the form server: run the Python server on port 8767
+
+## Validations and Rules
+
+- Listing address is required and cannot be empty
+- Seller contact must be linked before any phase can advance
+- Phases must be completed sequentially — cannot skip from Phase 1 to Phase 5
+- Price lock in Phase 4 prevents further price changes without explicit unlock
+- Unlocking price after forms are generated resets Phase 5 (forms must be regenerated)
+- FINTRAC identity requires two government-issued IDs — one must be a photo ID
+- All 12 BCREA forms must be generated before Phase 6 can begin
+- MLS remarks have a 500-character maximum
+- Listing status changes (Active, Conditional, Sold, etc.) are logged with timestamps
+
+## Role Differences
+
+| Role | Can View | Can Edit | Can Approve | Special Notes |
+|------|----------|----------|-------------|---------------|
+| Listing Agent | Yes | Yes (all phases) | No | Creates listings, advances phases, generates forms |
+| Transaction Coordinator | Yes | Yes (docs and status) | No | Manages documents, updates form status, tracks signatures |
+| Admin | Yes | Yes | Yes | Can override phase locks, force-advance phases, unlock prices |
+| Voice Agent | Yes (read) | Yes (limited) | No | Can update status, price, and notes via API bridge |
+
+## Edge Cases
+
+1. **Seller has no photo ID** — FINTRAC blocks Phase 1 completion. Agent must obtain photo ID before proceeding.
+2. **ParcelMap returns no data** — Property may be outside mapped areas. Agent enters parcel data manually.
+3. **Price change after forms generated** — Unlocking price resets Phase 5. All 12 forms must be regenerated with new price.
+4. **Form server down during Phase 5** — Show error message "Form server unavailable." Retry when server is running.
+5. **Duplicate listing for same address** — System warns but does not block. Agent must verify this is intentional (e.g., re-listing after expiry).
+6. **Seller refuses to sign (Phase 6)** — DocuSign envelope stays in "Delivered" state. Agent must follow up or withdraw.
+7. **MLS remarks exceed 500 characters** — AI truncates automatically. Agent can edit before submitting.
+8. **Listing expires before MLS submission** — Phase 8 shows "Expired" status. Agent must create a new listing agreement (MLC).
+
+## Troubleshooting
+
+| Symptom | Likely Cause | How to Verify | How to Fix | When to Escalate |
+|---------|-------------|---------------|-----------|-----------------|
+| Phase 2 enrichment fails | Invalid or incomplete address | Check address format in listing detail | Correct the address, re-run enrichment | If BC Geocoder API is down |
+| Forms won't generate | Form server not running | Check `localhost:8767/health` | Start the Python form server | If server crashes repeatedly |
+| Phase won't advance | Previous phase incomplete | Check workflow stepper for red items | Complete all required fields in the previous phase | If stepper shows complete but button is still disabled |
+| Price lock button missing | Phase 4 not yet reached | Check current_phase in listing record | Complete Phases 1-3 first | If phase tracking is out of sync |
+| DocuSign envelope stuck | Seller hasn't opened email | Check envelope status in Phase 6 panel | Resend the envelope or contact seller | If envelope shows "Declined" |
+| AI remarks are empty | Anthropic API key missing | Check .env.local for ANTHROPIC_API_KEY | Add the API key and restart dev server | If API returns errors consistently |
+| Listing not showing in search | RAG index not updated | Check if triggerIngest was called | Update the listing to trigger re-index | If RAG service is down |
+| Workflow stepper shows wrong phase | Database out of sync | Query listing.current_phase directly | Admin can force-update current_phase | If manual fix doesn't resolve |
+
+## FAQ
+
+### How do I create a new listing?
+Navigate to the Listings page and click the + button in the header. Select "Listing" from the menu. You'll need to link a seller contact (or create one) and enter the property address. The listing starts as a draft in Phase 1.
+
+### Can I skip a phase?
+No. Phases must be completed sequentially. Each phase builds on data from the previous one — for example, Phase 5 (Forms) needs the locked price from Phase 4, which needs the CMA data from Phase 3. Skipping would create incomplete or incorrect forms.
+
+### What happens if I change the price after generating forms?
+You'll need to unlock the price in Phase 4, which resets Phase 5. All 12 BCREA forms must be regenerated with the new price. Any previously signed envelopes in Phase 6 would also need to be re-sent.
+
+### How many BCREA forms are generated?
+12 forms: DORTS, MLC, PDS, FINTRAC, PRIVACY, C3, DRUP, MLS_INPUT, MKTAUTH, AGENCY, C3CONF, and FAIRHSG. Each is pre-filled from the listing data via the Common Data Model.
+
+### What is the form server and why does it need to be running?
+The form server is a Python application running on port 8767 that converts listing data into pre-filled BCREA form HTML. It uses the Common Data Model (CDM) to map listing fields to form fields. If it's not running, Phase 5 will show a connection error.
+
+### Can I edit AI-generated MLS remarks?
+Yes. Phase 7 generates draft remarks using Claude AI, but you can edit them before submission. Public remarks are limited to 500 characters. REALTOR remarks (agent-to-agent notes) are also limited to 500 characters.
+
+### What does "Subject Removal" status mean?
+It means all conditions in the Contract of Purchase and Sale (C3) have been waived by the buyer. The deal is now firm and unconditional. Backing out after subject removal typically results in forfeiture of the deposit.
+
+### How do I handle a listing that expired?
+If the MLC has lapsed, you'll need to create a new listing. The old listing can be changed to "Expired" status. You can reference the old listing's data when creating the new one, but forms must be regenerated under the new agreement.
+
+### Who can override a locked price?
+Only users with the Admin role can override price locks. Agents can request an unlock, which resets Phase 5 and requires form regeneration.
+
+### What data sources are used in Phase 2 enrichment?
+Four sources: BC Geocoder (standardizes address, returns PID and coordinates), ParcelMap BC (parcel boundaries, legal description, land use zone), LTSA (registered title, charges, covenants), and BC Assessment (assessed value, property class).
+
+## Related Features
+
+| Feature | Relationship | Impact |
+|---------|-------------|--------|
+| Contact Management | Seller contact must exist before creating a listing | Cannot proceed without seller linked |
+| FINTRAC Compliance | Identity verification is part of Phase 1 | Blocks phase advancement if incomplete |
+| BC Forms Generation | Phase 5 generates all 12 forms | Requires form server running |
+| Showing Management | Showings are linked to active listings | Lockbox code and instructions set in Phase 1 |
+| Deal Pipeline | Deals reference listings | Listing status affects deal stage |
+| AI Content Engine | Phase 7 uses Claude AI for remarks | Requires Anthropic API key |
+| Voice Agent | Can update listing status and price by voice | Uses API bridge for all mutations |
+
+## Escalation Guidance
+
+**What you can fix yourself:**
+- Address corrections, price changes, re-running enrichment, regenerating forms
+- Adding missing seller information, editing remarks, re-sending envelopes
+
+**What needs admin:**
+- Force-advancing a stuck phase
+- Overriding a price lock
+- Correcting current_phase if database is out of sync
+
+**Information to gather before escalating:**
+- Listing ID (from the URL: `/listings/[id]`)
+- Current phase number
+- Error message or screenshot
+- What you were trying to do when the issue occurred
+
+**How to escalate:**
+- Click the ? help button and select "Still need help?"
+- Or contact your brokerage admin directly with the listing ID

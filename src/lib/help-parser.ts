@@ -399,8 +399,13 @@ export function validateFeature(f: HelpFeature): ContentValidation {
   if (f.coreWorkflow.length === 0) { warnings.push("No core workflow steps"); score -= 3; }
 
   // Placeholder detection
-  const placeholders = /\b(tbd|todo|coming soon|lorem|placeholder|example text|sample content)\b/i;
-  if (placeholders.test(f.rawContent)) { errors.push("Contains placeholder text"); score -= 20; }
+  // Only flag lines that ARE placeholder text, not descriptions of placeholders
+  const placeholderLines = f.rawContent.split("\n").filter((line) => {
+    const trimmed = line.trim();
+    return /^(tbd|todo|coming soon|lorem ipsum|placeholder text|example text|sample content)[.!]?$/i.test(trimmed) ||
+      /^\[?(tbd|todo|coming soon)\]?$/i.test(trimmed);
+  });
+  if (placeholderLines.length > 0) { errors.push("Contains placeholder text: " + placeholderLines[0].trim()); score -= 20; }
 
   return { slug: f.slug, errors, warnings, score: Math.max(0, score) };
 }
