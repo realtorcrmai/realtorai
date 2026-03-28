@@ -97,10 +97,11 @@ test.describe("Help Center (authenticated)", () => {
     await page.goto(`${BASE}/help/listing-workflow`);
     await expect(page.locator("h1:has-text('Listing Workflow')")).toBeVisible();
 
-    // Tabs exist
+    // Tabs exist (new tab names: Overview, Use Cases, How-To, Troubleshooting, FAQ)
     await expect(page.locator("button[role='tab']:has-text('Overview')")).toBeVisible();
     await expect(page.locator("button[role='tab']:has-text('Use Cases')")).toBeVisible();
-    await expect(page.locator("button[role='tab']:has-text('Features')")).toBeVisible();
+    await expect(page.locator("button[role='tab']:has-text('How-To')")).toBeVisible();
+    await expect(page.locator("button[role='tab']:has-text('Troubleshooting')")).toBeVisible();
     await expect(page.locator("button[role='tab']:has-text('FAQ')")).toBeVisible();
 
     // Click Use Cases tab
@@ -114,8 +115,12 @@ test.describe("Help Center (authenticated)", () => {
   test("tab switching works", async ({ page }) => {
     await page.goto(`${BASE}/help/listing-workflow`);
 
-    // Click Features tab
-    await page.click("button[role='tab']:has-text('Features')");
+    // Click How-To tab
+    await page.click("button[role='tab']:has-text('How-To')");
+    await page.waitForTimeout(300);
+
+    // Click Troubleshooting tab
+    await page.click("button[role='tab']:has-text('Troubleshooting')");
     await page.waitForTimeout(300);
 
     // Click FAQ tab
