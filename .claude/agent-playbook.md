@@ -353,465 +353,46 @@ Commit: abc1234 pushed to dev
 
 ---
 
-## 4. Task Playbooks
-
-### 4.1 CODING
-
-**Phase 0 — Feature Fit & Existing System Check** *(CODING:feature only)*
-- Search codebase for similar capabilities: grep repo, search docs, check existing components
-- Summarize what already exists in 3-5 bullets
-- If overlap found → plan to EXTEND the existing feature, not create a parallel one
-- Answer: "Does this enhance an existing workflow or create a new one?"
-- If creating something new → complete Section 1.2 (Feature Evaluation) first
-- Document justification in `usecases/<feature-name>.md`
-
-**Phase 1 — Scope Analysis**
-- List files to CREATE and MODIFY
-- List DB tables affected (schema change? new columns? new constraints?)
-- List API routes affected
-- List UI components that render affected data
-- Check: does this overlap with existing features? (grep before coding)
-- Check: new migration needed? → determine next number (`ls supabase/migrations/`)
-- Check: new env vars needed? → list them
-- Check: could this break existing tests?
-- Check: another dev working on related files? (`git log --oneline -5`)
-- **FINTRAC**: if touching `contacts`, `seller_identities`, or listing Phase 1 → verify FINTRAC fields remain non-nullable
-- **RLS**: if adding new table → MUST include `ALTER TABLE x ENABLE ROW LEVEL SECURITY; CREATE POLICY...`
-- **Realtime**: if table needs live UI → add to Supabase realtime publication (migration 042 pattern)
-- **tsconfig**: if modifying → verify exclude contains `[app, app-backup, agent-pipeline, content-generator, listingflow-agent]`
-- **Migrations**: files 050-053 have duplicates — always check highest number
-
-**Phase 2 — Context Loading**
-- Read relevant existing files (only files from Phase 1)
-- Read type definitions in `src/types/database.ts`
-- Read relevant migration files if touching schema
-- Summarize current behavior in 3-5 bullets BEFORE modifying
-
-**Phase 3 — Plan**
-- Write short plan: entry points → data flow → new types/functions → error handling
-- If complex (5+ files or schema change) → present plan before coding
-- Run `bash scripts/save-state.sh` before large changes
-
-**Phase 4 — Implementation**
-
-*File Organization:*
-- Server Actions for mutations → `src/actions/`
-- API routes for GETs and webhooks → `src/app/api/`
-- Zod v4 for all validation (use `.min(1)` not `.nonempty()`)
-- JSONB columns for flexible structured data
-- `@/` path alias maps to `src/`
-
-*UI/Styling:*
-- Use `lf-*` CSS classes: `lf-card`, `lf-btn`, `lf-badge`, `lf-input`, `lf-select`, `lf-textarea`
-- No inline styles — use class names
-- Emoji icons on pages, Lucide only inside reusable components
-- `export const dynamic = 'force-dynamic'` on pages with live Supabase data
-- `revalidatePath()` after every mutation
-
-*Data Integrity:*
-- Validate inputs at ALL boundaries (API, forms, webhooks, server actions)
-- DB constraints: FK, NOT NULL, CHECK, UNIQUE — not just app validation
-- Transactions for multi-table mutations
-- Verify referenced records exist before linking (FK check)
-- Rollback/cleanup on partial failures
-- Parent status NEVER "complete" if any child subtask is incomplete
-- **CASL**: before ANY outbound message (email/SMS/WhatsApp) → check consent_status
-- **Twilio**: always use `lib/twilio.ts` formatter (adds +1, strips whitespace)
-- **Kling AI**: async — use `useKlingTask` hook, store task_id in media_assets with `status: 'pending'`
-
-*Security:*
-- No SQL injection, XSS, exposed secrets
-- Validate webhook signatures
-- Never commit `.env.local`
-
-**Phase 5 — Self-Check**
-- Re-read every modified file
-- Check: unused vars, unhandled branches, type mismatches
-- Check: missing error handling, edge cases (empty array, null, max length)
-- If `next.config.ts` modified → verify `turbopack.root` preserved
-- For new pages → verify `force-dynamic` present
-
-*Targeted Regression Testing:*
-- Identify impacted areas: same module, shared DB tables/columns, shared APIs or workflows
-- From `tests/<feature>.md` and `evals.md`, pick all tests covering impacted areas
-- Run: all tests for NEW functionality + all tests for IMPACTED existing functionality
-
-| Change Type | What to Run |
-|-------------|-------------|
-| Minor isolated (copy, styling, non-critical UI) | Smoke tests + targeted unit tests for changed component |
-| Shared flow touched (auth, RLS, email, RAG, workflows) | Full module tests + one e2e path through that flow |
-| Schema change or DATA_MIGRATION | Full `test-suite.sh` + validate critical paths from `tests/<feature>.md` |
-| DEPLOY or production release | Full `test-suite.sh` + `qa-test-email-engine.mjs` + relevant eval suite |
-
-**Mandatory Testing Thresholds (BLOCKING — code cannot be committed without meeting these):**
-
-| Lines Changed | Minimum Testing Required | Compliance |
-|--------------|-------------------------|------------|
-| ≤20 lines, single file | Smoke test + `tsc --noEmit` | Trivial fast path OK |
-| 21–100 lines | Targeted tests for every changed function/component + `tsc --noEmit` | Must list tests run in PR |
-| **101–500 lines** | **Full touchpoint analysis + targeted tests for ALL impacted modules + `test-suite.sh` + `tsc --noEmit`** | **Must document: (1) every file touched, (2) every module impacted, (3) tests run per module, (4) results** |
-| **500+ lines** | **Everything above + end-to-end test for every user-facing flow affected + manual walkthrough of UI changes** | **PR MUST include a "Test Report" section with pass/fail per touchpoint. PR will be REJECTED without it.** |
-
-**Touchpoint analysis (required for >100 lines):**
-
-Before testing, map every touchpoint the change could affect:
-1. **Direct**: files you modified
-2. **Data layer**: tables/columns your code reads from or writes to → find ALL other code that uses those same tables
-3. **API layer**: routes your code calls or exposes → find ALL consumers of those routes
-4. **UI layer**: components that render data you changed → verify they still display correctly
-5. **Workflow layer**: if your change is in a workflow phase → test phase transitions before AND after
-6. **Integration layer**: if your change touches Twilio/Resend/Calendar/Kling → verify those integrations still work
-
-**What "tested thoroughly" means (no ambiguity):**
-- Every new function has been called at least once with valid input and verified output
-- Every new API route has been hit with a request and returned expected response
-- Every new UI component has been rendered in the browser and visually verified
-- Every database query has been run and returned expected data
-- Edge cases tested: empty inputs, null values, missing records, duplicate submissions
-- Error paths tested: what happens when the API fails? When the DB is unreachable? When input is invalid?
-
-**"I tested it" without evidence = ❌.** The PR must show what was tested and what passed.
-
-**Zero-tolerance rule: Any change >100 lines that only received typo/lint testing is an automatic ❌ in the compliance log AND the PR must be reverted or re-tested before merge.**
-
-**Phase 6 — Documentation**
-- Update `usecases/<feature>.md` if feature behavior changed
-- Update `tests/<feature>.md` with new/modified test cases
-- Mark test cases as `[auto]`, `[manual]`, or `[pending]`
-
-**Phase 7 — Output**
-- Summarize changes, breaking changes, new env vars, new migrations
-- Commit to `dev`, push
-
-### 4.2 TESTING
-
-**Phase 1** — Determine level: unit / integration / e2e / eval
-- e2e: use Playwright (`playwright.config.ts`, run: `npx playwright test`)
-- Check existing tests + `evals.md` (200 QA test cases at repo root)
-- Check `scripts/eval-*.mjs` (8 eval suites) before creating new
-
-**Phase 1.5 — Test Documentation**
-
-Each core feature must have a `tests/<feature-name>.md` that:
-- Lists ALL test cases organized by: happy path, edge cases, error conditions, race conditions, cascade effects
-- Marks each as: `[auto]` (with file path), `[manual]` (with steps), `[pending]` (not yet implemented)
-- Tracks coverage: X of Y test cases automated
-
-When to update:
-- Adding functionality → add test cases to relevant MD file
-- Changing behavior → update affected test cases
-- Bug fix → add the test case that would have caught the bug
-
-Existing test inventory (check before creating new):
-- `evals.md` — 200 QA test cases (high-level)
-- `scripts/test-suite.sh` — 73+ automated tests
-- `scripts/qa-test-email-engine.mjs` — 28 email marketing tests
-- `scripts/eval-*.mjs` — 8 domain-specific eval suites
-- `tests/` — Playwright e2e tests
-
-**Phase 2** — Test plan covering: happy path, empty/null inputs, boundary values, duplicates, race conditions, cascade effects, permission denied, timeout/retry
-
-**Phase 3** — Implement with vitest. Deterministic, isolated, descriptive names.
-
-**Phase 4** — Failure analysis: environment / flaky / actual bug / wrong assertion
-
-**Phase 5** — Report: X/Y passing, gaps identified, recommendations
-
-### 4.3 DEBUGGING
-
-**Phase 1** — Restate symptom precisely. Error message? Stack trace? When? Scope?
-
-**Phase 2** — Reproduce. Trace call path. Check: data issue? env issue? race condition?
-
-**Phase 3** — Hypotheses (2-4), ordered by likelihood. Check most likely first.
-
-**Phase 4** — Minimal fix. No surrounding refactors.
-
-**Phase 5** — Write regression test. Grep for same anti-pattern elsewhere.
-
-### 4.4 DESIGN_SPEC
-
-**Phase 0 — Feature Justification**
-- Describe existing behavior and related components. Extension or new capability?
-- Answer: What problem does this solve for BC realtors? What measurable benefit?
-- Compare against 2-3 reference products (Follow Up Boss, LionDesk, kvCORE, Realvolve):
-  - What do they do here? Are we copying, differentiating, or staying simpler?
-  - What's our unique angle? (BC compliance, voice agent, AI content)
-- Conclude: "Does this fit ListingFlow's vision?" If unclear → ask the product owner.
-- Document in `usecases/<feature-name>.md` with problem statement + 3 scenarios + demo script
-
-**Phase 1** — Goals, non-goals, constraints, success metrics, dependencies
-
-**Phase 2** — Current state audit. What exists that we can reuse?
-
-**Phase 3** — 2+ design options with pros/cons/risks
-
-**Phase 4** — Detailed design: data model, API surface, components, data flow, error handling, security
-
-**Phase 5** — Operational: deployment plan, monitoring, failure modes, cost
-
-**Phase 6** — Implementation plan: phases, files per phase, test plan
-
-### 4.5 RAG_KB
-
-**Phase 1** — Use case: question types, data sources, privacy, freshness, accuracy bar
-
-**Phase 2** — Content prep: chunking strategy, metadata schema, embedding cost. Two RAG systems exist: TypeScript (`src/lib/rag/`) and Python (`listingflow-rag/`) — identify target
-
-**Phase 3** — Retrieval config: search mode, top_k, similarity threshold, context budget
-
-**Phase 4** — Prompting: system prompt, context layout, guardrails, fallback
-
-**Phase 5** — Evaluation: 20+ test queries, guardrail testing, cross-contact isolation, latency P95 < 5s
-
-### 4.6 ORCHESTRATION
-
-**Phase 1** — Workflow type: sequential, event-driven, state machine, fan-out. Map to existing: `trigger-engine.ts`, `workflow-engine.ts`, `contact-evaluator.ts`, `trust-gate.ts`, `send-governor.ts`
-
-**Phase 2** — States & transitions. Guard conditions. Dead state handling. Rollback.
-
-**Phase 3** — Error handling: timeouts, retries, human-in-the-loop, circuit breaker
-
-**Phase 4** — Observability: log decisions to `agent_decisions`, track latency, define alerts
-
-**Phase 5** — Output guardrails (required before any agent output reaches a user or external system):
-1. **PII check** — Output contains no PII beyond Section 14.2 allowlist (no phone numbers, emails, FINTRAC data)
-2. **Hallucination check** — Any contact names, listing addresses, or prices in the output MUST exist in Supabase (verify with a query, don't trust the model)
-3. **Consent check** — If output triggers an outbound message (email/SMS/WhatsApp) → verify CASL consent_status is active for that contact
-4. **Instruction leak check** — Output does not contain system prompt fragments, tool schemas, or internal playbook references
-5. If any check fails → suppress the output, log as `safety_flag`, return a safe fallback or escalate to human
-
-### 4.7 INTEGRATION
-
-**Phase 1** — Read API docs. Endpoints needed. Sandbox available? Existing similar integration?
-- **Third-party risk check** (for new services only): (1) Does the provider have SOC 2 or equivalent security certification? (2) Does the service process PII — if yes, Section 14.2 rules apply to all data sent to it. (3) Is there a data processing agreement covering Canadian data residency (PIPEDA)? (4) Pin API versions — never track `latest` or unversioned endpoints. (5) Check: if this service goes down, what breaks? Document the fallback (graceful degradation, cached data, or manual process).
-
-**Phase 2** — Data contracts. Request/response schemas. Field mapping.
-- Twilio: use `lib/twilio.ts` formatter for phones
-- Kling AI: async task_id → poll via `/api/kling/status`
-- Resend: verify svix webhook headers against `RESEND_WEBHOOK_SECRET`
-
-**Phase 3** — Error/retry: timeout values, exponential backoff, rate limiting (429), idempotency
-
-**Phase 4** — Security:
-- Keys in `.env.local` → encrypt with `vault.sh` → NEVER commit
-- Validate webhook signatures
-- **CASL**: verify consent before outbound messages
-- Vault workflow: `decrypt → edit → encrypt → commit .env.vault → tell team`
-
-**Phase 5** — Integration tests against sandbox/mock
-
-### 4.8 DOCS
-
-**Phase 1** — Audience (developer/user/admin). What action does it enable?
-
-**Phase 2** — Outline structure before writing
-
-**Phase 3** — Draft with real file paths, table names, commands
-
-**Phase 4** — Verify all paths exist, commands work, names are current
-
-**Phase 5** — Align terminology with CLAUDE.md
-
-### 4.9 EVAL
-
-**Phase 1** — Define metrics: accuracy, latency, cost, groundedness
-
-**Phase 2** — Check existing `evals.md` (200 cases) and `scripts/eval-*.mjs` (8 suites) first
-
-**Phase 3** — Scoring: automatic or manual review
-
-**Phase 4** — Run, record, identify failure patterns
-
-**Phase 5** — Decision: ship / iterate / redesign
-
-### 4.10 INFO_QA
-
-**Phase 1** — Restate question, identify sub-questions
-
-**Phase 2** — Research: codebase, CLAUDE.md, memory, git log
-
-**Phase 3** — Answer with citations (file:line), call out assumptions
-
-**Phase 4** — Examples and edge cases. State limitations.
-
-### 4.11 DEPLOY
-
-**Phase 1 — Pre-deploy**
-- `bash scripts/health-check.sh` — all green
-- Branch = `dev`, all changes committed
-- `npm run build` passes
-
-**Phase 2 — Migrations**
-- List pending: compare `supabase/migrations/` against last applied
-- Run in order: `SUPABASE_ACCESS_TOKEN=xxx npx supabase db query --linked -f <file>`
-- Verify each succeeded
-
-**Phase 3 — Service startup**
-1. Supabase (remote — always running)
-2. Next.js CRM: `npm run dev` → :3000
-3. Form Server (optional): Python → :8767
-4. Voice Agent (optional): `python3 voice_agent/server/main.py` → :8768
-5. Ollama (if voice agent uses it): `ollama serve` → :11434
-
-**Phase 4 — Netlify deploy**
-- Env vars must be set in Netlify dashboard (not just `.env.local`)
-- Required: `CRON_SECRET`, `ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXTAUTH_SECRET`, `DEMO_EMAIL`, `DEMO_PASSWORD`
-- Deploy: push to `main` triggers GitHub Actions → Netlify auto-deploy
-- Or manual: `npx netlify deploy --prod --dir=.next`
-
-**Phase 5 — Post-deploy validation**
-- `bash scripts/test-suite.sh`
-- Check Netlify deploy URL responds
-- `bash scripts/save-state.sh`
-
-**Phase 6 — Rollback**
-- Netlify: redeploy previous deploy from dashboard
-- Migration: run reverse SQL (must be prepared before running forward migration)
-- Git: `git revert HEAD` → push
-
-### 4.12 VOICE_AGENT
-
-**Phase 1 — Identify scope**
-- Backend: `voice_agent/server/` (Python 3.12+, aiohttp)
-- Frontend: `src/components/voice-agent/` (TypeScript/React)
-- Run with: `/opt/homebrew/bin/python3.14 voice_agent/server/main.py` (requires Python 3.12+ for edge-tts)
-
-**Phase 2 — Provider awareness**
-- 4 LLM providers: Ollama, OpenAI, Anthropic, Groq
-- Different tool-calling formats and token limits per provider
-- Config: `voice_agent/server/config.py` + `.env`
-- Fallback chain: `LLM_FALLBACK_CHAIN=anthropic,openai,ollama`
-- Anthropic prompt caching enabled (`cache_control: ephemeral` on system blocks) — saves ~90% on turns 2+
-
-**Phase 3 — Tool development** (for new voice commands)
-1. Create API endpoint: `src/app/api/voice-agent/<resource>/route.ts`
-2. Add tool schema to: `voice_agent/server/tools/realtor_tools.py` (REALTOR_TOOLS list)
-3. Add handler in: `handle_realtor_tool()` function
-4. 56 tools across 21 API routes
-5. **Dynamic tool selection**: tools are routed by message keywords (see `SessionState.get_tools()` in `main.py`)
-   - Core set (12 tools) always included
-   - Additional tools activated by keyword matching (e.g., "showing" → showing tools)
-   - Session focus (current contact/listing) also activates relevant tools
-   - This cuts tool tokens from ~8K to ~2.5K per turn
-
-**Phase 4 — System prompts**
-- `voice_agent/server/system_prompts.py` — 4 modes: realtor, client, generic, help
-- Voice-optimized: 10 strict rules (no markdown, concise, natural speech, contractions)
-- BC real estate knowledge embedded (forms, FINTRAC, terms, workflow phases)
-- Form-fill mode for structured data extraction (JSON at end of response)
-
-**Phase 5 — Key features to preserve**
-- Edge TTS endpoint (`/api/tts`) with LRU cache (100 entries) + 13 pre-rendered phrases
-- Session focus tracking (`SessionState.focus`) — tracks current contact/listing across turns
-- Context summarization — compresses old turns after 20 messages, keeps last 12 verbatim
-- `_clean_for_voice()` — strips markdown from responses before TTS
-- Empty response retry + fallback messages
-
-**Phase 6 — Testing**
-```bash
-# Create session
-curl -X POST localhost:8768/api/session/create -H "Content-Type: application/json" -H "Authorization: Bearer va-bridge-secret-key-2026" -d '{"mode":"realtor"}'
-# Send chat
-curl -X POST localhost:8768/api/chat -H "Content-Type: application/json" -H "Authorization: Bearer va-bridge-secret-key-2026" -d '{"session_id":"ID","message":"How many active listings?"}'
-# Test TTS
-curl -o /tmp/test.mp3 -X POST localhost:8768/api/tts -H "Content-Type: application/json" -H "Authorization: Bearer va-bridge-secret-key-2026" -d '{"text":"Hello testing"}'
-```
-
-**Phase 7 — Verify fallback chain**
-- Test with each provider active
-- Verify tool-calling works with selected provider
-- Check timeout handling for slow providers (Ollama can take 30s+)
-- Verify prompt caching: second turn should show `cache_read_input_tokens` > 0
-
-### 4.13 DATA_MIGRATION
-
-**Phase 1 — Numbering**
-- `ls supabase/migrations/ | tail -5` — check highest number
-- ⚠️ Files 050-053 have duplicates — always verify uniqueness
-
-**Phase 2 — Schema design**
-- RLS policy REQUIRED for every new table
-- FK constraints, CHECK constraints, indexes
-- Use JSONB for flexible data, NOT NULL on required fields
-
-**Phase 3 — Idempotency**
-- `IF NOT EXISTS`, `DO $$` blocks, `ON CONFLICT DO NOTHING`
-- Migration must be safe to run twice
-
-**Phase 4 — Seed data realism (BC)**
-- Postal codes: V-prefix (V6B 1A1, V5K 3E2)
-- Phone area codes: 604, 778, 236, 250
-- Prices: CAD $600K–$3M for detached, $400K–$1.2M for condos
-- Cities: Metro Vancouver / Fraser Valley
-- MLS numbers: R2xxxxxxx format
-
-**Phase 5 — Execute**
-```bash
-SUPABASE_ACCESS_TOKEN=xxx npx supabase db query --linked -f supabase/migrations/<file>.sql
-```
-
-**Phase 6 — Verify**
-- Query affected tables to confirm changes applied
-- Test constraints are enforced (try invalid inserts)
-
-**Phase 7 — Rollback plan**
-- Document the reverse SQL BEFORE running forward migration
-- For destructive migrations: export data first via Supabase SQL editor
-
-### 4.14 SECURITY_AUDIT
-
-**Phase 1 — RLS**
-- Every table must have: `ALTER TABLE x ENABLE ROW LEVEL SECURITY`
-- Policy: `CREATE POLICY x ON table FOR ALL USING (auth.role() = 'authenticated')`
-- Check: `SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename NOT IN (SELECT tablename FROM pg_policies)`
-
-**Phase 2 — Webhooks**
-- Resend: verify `svix-id`, `svix-timestamp`, `svix-signature` against `RESEND_WEBHOOK_SECRET`
-- Twilio: `twilio.validateRequest()` with `TWILIO_AUTH_TOKEN`
-- Check all routes in `src/app/api/webhooks/`
-
-**Phase 3 — Secrets**
-- `grep -r "sk-" src/` — should find ZERO matches
-- Verify `.env.local` in `.gitignore`
-- `./scripts/vault.sh status` — all keys masked, vault encrypted
-
-**Phase 4 — FINTRAC compliance**
-- `seller_identities` fields must be non-nullable: `full_name`, `dob`, `citizenship`, `id_type`, `id_number`, `id_expiry`
-- Verify identity collection in Phase 1 workflow
-
-**Phase 5 — CASL/TCPA**
-- Outbound messages must check `consent_status` before sending
-- `/api/cron/consent-expiry` processes expiring consents
-- Unsubscribe endpoint must work without auth
-
-**Phase 6 — Input sanitization**
-- Zod on all POST/PATCH endpoints
-- No raw SQL (use Supabase client parameterized queries)
-- No `dangerouslySetInnerHTML` without sanitization
-
-### 4.15 Use-Case Documentation
+## 4. Task Playbooks — Routing
+
+After classification (Section 3.1), load the per-type playbook file and follow its phases:
+
+| Task Type | Playbook File |
+|-----------|--------------|
+| CODING (feature, bugfix, refactor, script) | `.claude/playbooks/coding.md` |
+| TESTING (unit, integration, e2e, eval) | `.claude/playbooks/testing.md` |
+| DEBUGGING (error, performance, data_issue) | `.claude/playbooks/debugging.md` |
+| DESIGN_SPEC (architecture, feature, api, migration) | `.claude/playbooks/design-spec.md` |
+| ORCHESTRATION (workflow, trigger, pipeline, agent) | `.claude/playbooks/orchestration.md` |
+| INTEGRATION (api_connect, webhook, auth, data_sync) | `.claude/playbooks/integration.md` |
+| VOICE_AGENT (tool_dev, provider_switch, system_prompt, eval) | `.claude/playbooks/voice-agent.md` |
+| DATA_MIGRATION (schema, seed, bulk_fix, rollback) | `.claude/playbooks/data-migration.md` |
+| SECURITY_AUDIT (rls, webhooks, secrets, compliance) | `.claude/playbooks/security-audit.md` |
+| DEPLOY (local, production, rollback, migration_only) | `.claude/playbooks/deploy.md` |
+| DOCS, EVAL, INFO_QA, RAG_KB | `.claude/playbooks/simple-types.md` |
+
+**Routing protocol:**
+1. Output classification block (Section 3.1)
+2. Read the matching playbook file from the table above
+3. If the playbook references a template (e.g., `.claude/templates/detailed-design.md`) → read it
+4. Follow the phases in that playbook file
+5. Return to this core playbook for Section 6 (validation) and Section 11 (compliance)
+
+**Design-first rule (applies to all task types):**
+If the task is non-trivial (new page, new module, multi-step flow, >100 lines expected), the CODING and DESIGN_SPEC playbooks require a Detailed Design Document BEFORE implementation. See `.claude/playbooks/coding.md` for the full policy, gates, and placeholder prohibition rules.
+
+### Use-Case Documentation
 
 For every new feature or major enhancement, create or update `usecases/<feature-name>.md`.
 
 **Required sections**:
-
 1. **Problem Statement** — What user pain does this solve? (2-3 sentences)
 2. **User Roles** — Who uses this? (single realtor, team lead, admin, buyer client, seller client)
 3. **Existing System Context** — What related features already exist? How does this fit?
 4. **End-to-End Scenarios** (minimum 3):
-   - Scenario name
-   - Preconditions (user state, data state)
-   - Steps (numbered: user does X → system does Y → user sees Z)
-   - Expected outcome
-   - Edge cases / error conditions
-5. **Demo Script** — How to show this in a live demo:
-   - Setup (sample data, services running)
-   - Script (click X → say Y → show Z)
-   - Key talking points
-6. **Market Context** (for new features):
-   - How do 2-3 competitors handle this?
-   - Our differentiation
+   - Scenario name, preconditions, steps (user does X → system does Y → user sees Z), expected outcome, edge cases
+5. **Demo Script** — Setup, script, key talking points
+6. **Market Context** (new features): How do 2-3 competitors handle this? Our differentiation.
 
 **Naming**: `usecases/` + kebab-case (e.g., `usecases/voice-agent-showing-management.md`)
 
@@ -1196,27 +777,23 @@ CRM RULES (every CODING task)
 □ force-dynamic on live pages  □ Parent ≠ complete if child incomplete
 □ Twilio formatter  □ tsconfig exclude array intact
 
+LOAD PLAYBOOK (Section 4 — routing)
+□ Read .claude/playbooks/<task-type>.md for your classified type
+□ If playbook references a template → read from .claude/templates/
+
+DESIGN-FIRST GATE (CODING:feature — BLOCKING if non-trivial)
+□ Non-trivial? (new page, module, >100 lines, multi-step, user-facing)
+□ YES → Detailed Design Doc at docs/designs/<name>.md BEFORE coding
+□ All 10 sections filled  □ No placeholders  □ No TBD  □ Acceptance criteria present
+□ Underspecified request? → STOP, list gaps, expand design, then code
+
 FEATURE GATE (CODING:feature + DESIGN_SPEC)
 □ Search for existing capability  □ Summarize what exists
 □ What problem? What benefit?  □ Compare 2-3 competitors
 □ Fits ListingFlow vision?  □ If unclear → ask product owner
 
-DOCUMENTATION (every feature change)
-□ usecases/<feature>.md created/updated  □ 3+ scenarios + demo script
-□ tests/<feature>.md updated  □ Cases marked [auto]/[manual]/[pending]
-
-REGRESSION (every code change)
-□ Identify impacted areas  □ Pick relevant tests
-□ Minor → smoke  □ Shared flow → module tests  □ Schema → full suite
-
-TESTING THRESHOLDS (BLOCKING — by lines changed)
-□ ≤20 lines → smoke + tsc  □ 21-100 → targeted per function + tsc
-□ 101-500 → full touchpoint analysis + test-suite.sh + document results
-□ 500+ → all above + e2e + manual UI walkthrough + Test Report in PR
-□ >100 lines with only typo testing = automatic ❌ + revert or re-test
-
 EXECUTE
-→ Follow per-type checklist phase by phase
+→ Follow per-type playbook phase by phase
 → Model chain: Haiku classify → Sonnet code → Opus architect
 
 VALIDATE

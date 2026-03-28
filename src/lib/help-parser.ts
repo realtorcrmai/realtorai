@@ -353,7 +353,7 @@ function parseFAQ(content: string): HelpFeature["faq"] {
   if (!section) return [];
   return section.split(/\n###\s+/).filter(Boolean).map((block) => {
     const lines = block.split("\n");
-    const question = (lines[0]?.replace(/\?$/, "").trim() || "") + "?";
+    const question = (lines[0]?.replace(/^#+\s*/, "").replace(/\?$/, "").trim() || "") + "?";
     const answer = lines.slice(1).filter((l) => l.trim()).map((l) => l.trim()).join(" ");
     return { question, answer };
   }).filter((f) => f.question.length > 1 && f.answer);
