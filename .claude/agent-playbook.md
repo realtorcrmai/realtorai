@@ -1140,32 +1140,56 @@ Maintain adversarial test cases in `tests/agent-evals/safety-tests.md`:
 
 ### 14.5 Agent Observability & Telemetry
 
-**Per-task telemetry (logged in compliance entry Notes column):**
+**After every task, append a JSON line to `.claude/telemetry.jsonl`:**
 
+```json
+{"date":"2026-03-27","developer":"claude","task_summary":"Add lead_source field to contacts","task_type":"CODING:feature","model":"sonnet-4.6","tokens_in":12000,"tokens_out":3000,"tool_calls":8,"tool_errors":0,"latency_seconds":45,"safety_flags":0,"playbook_followed":true,"notes":""}
 ```
-Model: sonnet-4.6 | Tokens: ~12K in / ~3K out | Tools: 4 calls (Read×2, Edit×1, Bash×1)
-Latency: ~45s | Errors: 0 | Safety flags: 0
+
+**Required fields (every entry, no exceptions):**
+
+| Field | Type | Source | Example |
+|-------|------|--------|---------|
+| `date` | string | ISO date | `"2026-03-27"` |
+| `developer` | string | Who did the work | `"claude"` or `"rahul"` |
+| `task_summary` | string | 1-line description | `"Fix Twilio +1 prefix bug"` |
+| `task_type` | string | Classification block | `"CODING:bugfix"` |
+| `model` | string | Primary model used | `"sonnet-4.6"` |
+| `tokens_in` | number | Estimated input tokens | `12000` |
+| `tokens_out` | number | Estimated output tokens | `3000` |
+| `tool_calls` | number | Total tool invocations | `8` |
+| `tool_errors` | number | Failed tool calls | `0` |
+| `latency_seconds` | number | Task duration estimate | `45` |
+| `safety_flags` | number | Safety violations detected | `0` |
+| `playbook_followed` | boolean | All phases completed? | `true` |
+| `notes` | string | Lessons, escalations, anomalies | `""` |
+
+**How to log (agent instruction):**
+
+At the end of every task, BEFORE reporting completion to the user:
+1. Estimate tokens (rough: count of Read/Edit/Write calls × avg context size)
+2. Count tool calls from your conversation
+3. Append one JSON line to `.claude/telemetry.jsonl`
+4. This replaces the free-text Notes column in the compliance log — compliance log still required but Notes can reference "see telemetry"
+
+**Weekly report (automated):**
+
+```bash
+node scripts/telemetry-report.mjs              # last 7 days
+node scripts/telemetry-report.mjs --days 30    # last 30 days
+node scripts/telemetry-report.mjs --developer claude  # filter by dev
+node scripts/telemetry-report.mjs --json       # machine-readable
 ```
 
-**Structured telemetry fields (for future automation):**
-
-| Field | Source | Purpose |
-|-------|--------|---------|
-| `task_type` | Classification block | Track work distribution |
-| `model_used` | Agent selection | Cost analysis |
-| `tokens_in` / `tokens_out` | API response | Cost tracking |
-| `tools_called` | Tool invocations | Usage patterns, detect over-use |
-| `tool_errors` | Tool responses | Reliability tracking |
-| `latency_seconds` | Task start to completion | Performance monitoring |
-| `safety_flags` | Safety eval checks | Incident detection |
-| `eval_score` | Golden task scoring | Agent quality trend |
-
-**Alerting conditions (manual review today, automate when team >3):**
-- Any task with safety_flags > 0 → immediate review
-- Any task exceeding token budget by >50% → cost review
-- 3+ tool errors in a single task → investigate tool reliability
-- Compliance rate drops below 90% for any developer → process review
-- Weekly cost exceeds 2x rolling average → budget review
+The report auto-generates:
+- Tasks per developer with compliance rate
+- Token usage and estimated cost (USD) by developer and model
+- Task type distribution
+- **Alerts** (triggered automatically from the data):
+  - `CRITICAL`: Any task with safety_flags > 0
+  - `WARNING`: Token usage >150% of budget for task type
+  - `WARNING`: 3+ tool errors in a single task
+  - `WARNING`: Developer compliance rate below 90%
 
 ### 14.6 Feature Sunset & Decommission
 
