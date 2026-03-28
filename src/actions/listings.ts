@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { listingSchema, type ListingFormData } from "@/lib/schemas";
 import { validateStageForType } from "@/lib/contact-consistency";
+import { triggerIngest } from "@/lib/rag/realtime-ingest";
 
 export async function createListing(formData: ListingFormData) {
   const parsed = listingSchema.safeParse(formData);
@@ -31,7 +32,16 @@ export async function createListing(formData: ListingFormData) {
 
   revalidatePath("/listings");
 
-  // Lifecycle milestone advancement removed — StageBar is the single source of truth.
+  // Fire listing_created trigger for automation rules
+  try {
+    const { executeListingBlastRules } = await import("@/lib/listing-blast-executor");
+    await executeListingBlastRules("listing_created", data.id);
+  } catch {
+    // Don't fail listing creation if blast fails
+  }
+
+  // Real-time RAG ingestion
+  triggerIngest("listings", data.id);
 
   return { success: true, listing: data };
 }
@@ -59,6 +69,14 @@ export async function updateListing(
       Number(updateData.sold_price) * (Number(updateData.commission_rate) / 100);
   }
 
+  // Check if price changed (for blast automation trigger)
+  const priceChanged = updateData.list_price !== undefined;
+  let oldPrice: number | null = null;
+  if (priceChanged) {
+    const { data: current } = await supabase.from("listings").select("list_price, status").eq("id", id).single();
+    oldPrice = current?.list_price;
+  }
+
   const { error } = await supabase
     .from("listings")
     .update(updateData)
@@ -71,6 +89,10 @@ export async function updateListing(
   revalidatePath("/listings");
   revalidatePath(`/listings/${id}`);
   revalidatePath("/contacts");
+
+  // Real-time RAG re-ingestion
+  triggerIngest("listings", id);
+
   return { success: true };
 }
 
@@ -234,7 +256,15 @@ export async function updateListingStatus(
     }
   }
 
-  // Lifecycle milestone advancement removed — StageBar is the single source of truth.
+  // Fire listing_active trigger for blast automation rules
+  if (newStatus === "active") {
+    try {
+      const { executeListingBlastRules } = await import("@/lib/listing-blast-executor");
+      await executeListingBlastRules("listing_active", id);
+    } catch {
+      // Don't fail status update if blast fails
+    }
+  }
 
   // Fire listing_status_change trigger for workflow auto-enrollment (e.g., post-close workflows)
   if (newStatus === "sold") {

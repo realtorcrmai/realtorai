@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Mic,
   MicOff,
@@ -12,89 +13,197 @@ import {
   Volume2,
   VolumeX,
   Square,
+  ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Web Speech API types (not in default TS lib)
 type SpeechRecognitionType = any;
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 const VOICE_AGENT_API =
   process.env.NEXT_PUBLIC_VOICE_AGENT_URL || "http://127.0.0.1:8768";
 
+const API_HEADERS: Record<string, string> = {
+  "Content-Type": "application/json",
+  Authorization: "Bearer va-bridge-secret-key-2026",
+};
+
 type Message = {
-  role: "user" | "assistant" | "system" | "tool";
+  role: "user" | "assistant" | "system" | "tool" | "nav";
   content: string;
   streaming?: boolean;
 };
 
+// ── Navigation ──────────────────────────────────────────────
+
+const NAV_MAP: Record<string, { path: string; label: string }> = {
+  dashboard: { path: "/", label: "Dashboard" },
+  home: { path: "/", label: "Dashboard" },
+  contacts: { path: "/contacts", label: "Contacts" },
+  contact: { path: "/contacts", label: "Contacts" },
+  tasks: { path: "/tasks", label: "Tasks" },
+  task: { path: "/tasks", label: "Tasks" },
+  listings: { path: "/listings", label: "Listings" },
+  listing: { path: "/listings", label: "Listings" },
+  showings: { path: "/showings", label: "Showings" },
+  calendar: { path: "/calendar", label: "Calendar" },
+  newsletters: { path: "/newsletters", label: "Email Marketing" },
+  email: { path: "/newsletters", label: "Email Marketing" },
+  assistant: { path: "/assistant", label: "AI Assistant" },
+  knowledge: { path: "/assistant/knowledge", label: "Knowledge Base" },
+};
+
+const NAV_TRIGGERS = ["go to", "open", "show me", "navigate to", "take me to", "switch to", "show"];
+
+function parseNavigation(text: string): { path: string; label: string } | null {
+  const lower = text.toLowerCase().trim();
+  if (!NAV_TRIGGERS.some((t) => lower.includes(t))) return null;
+  for (const [keyword, dest] of Object.entries(NAV_MAP)) {
+    if (lower.includes(keyword)) return dest;
+  }
+  return null;
+}
+
+// ── Context-aware greetings ─────────────────────────────────
+
+const PAGE_LABELS: Record<string, string> = {
+  "/": "Dashboard",
+  "/contacts": "Contacts",
+  "/tasks": "Tasks",
+  "/listings": "Listings",
+  "/showings": "Showings",
+  "/calendar": "Calendar",
+  "/newsletters": "Email Marketing",
+  "/assistant": "AI Assistant",
+  "/assistant/knowledge": "Knowledge Base",
+};
+
+function getGreeting(pathname: string): string {
+  const hour = new Date().getHours();
+  const timeGreeting =
+    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  const contextHints: Record<string, string> = {
+    "/": `${timeGreeting}! I see your dashboard. Want me to check for hot leads or summarize today's activity?`,
+    "/contacts": `${timeGreeting}! You're on Contacts. I can search for anyone, score leads, or draft a message. Who do you need?`,
+    "/listings": `${timeGreeting}! You're viewing Listings. I can search properties, check active listings, or help prep one for MLS. What do you need?`,
+    "/showings": `${timeGreeting}! I can help manage your showings — check availability, send confirmations, or review feedback.`,
+    "/calendar": `${timeGreeting}! Let me help with your schedule. Want to see today's appointments or find a free slot?`,
+    "/newsletters": `${timeGreeting}! Email Marketing dashboard. I can check pending drafts, review hot leads, or generate a new campaign.`,
+    "/tasks": `${timeGreeting}! Let's tackle your tasks. Want me to prioritize them or check what's overdue?`,
+  };
+
+  if (contextHints[pathname]) return contextHints[pathname];
+
+  return `${timeGreeting}! I'm your AI realtor assistant. Ask me anything — search properties, manage contacts, draft emails, or navigate the CRM.`;
+}
+
+// ── Edge TTS helper ─────────────────────────────────────────
+
+async function fetchTTSAudio(text: string): Promise<ArrayBuffer | null> {
+  try {
+    const resp = await fetch(`${VOICE_AGENT_API}/api/tts`, {
+      method: "POST",
+      headers: API_HEADERS,
+      body: JSON.stringify({ text, voice: "en-US-AvaMultilingualNeural" }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!resp.ok) return null;
+    return await resp.arrayBuffer();
+  } catch {
+    return null;
+  }
+}
+
+// ── Sentence splitter for progressive TTS ────────────────────
+
+function splitIntoSentences(text: string): string[] {
+  // Split on sentence-ending punctuation followed by space or end
+  const sentences = text.match(/[^.!?]+[.!?]+[\s]?|[^.!?]+$/g);
+  if (!sentences) return text.trim() ? [text.trim()] : [];
+  return sentences.map((s) => s.trim()).filter(Boolean);
+}
+
+// ── Component ───────────────────────────────────────────────
+
 export function VoiceAgentWidget() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [connected, setConnected] = useState(false);
-  const [provider, setProvider] = useState("\u2014");
+  const [provider, setProvider] = useState("—");
   const [listening, setListening] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [speaking, setSpeaking] = useState(false);
+  const [continuousMode, setContinuousMode] = useState(true);
+  const [useEdgeTTS, setUseEdgeTTS] = useState(true); // prefer server TTS
+  const [useWhisperSTT, setUseWhisperSTT] = useState(true); // prefer server Whisper STT
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognitionType | null>(null);
-  const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const hasGreetedRef = useRef(false);
+  const spokenTextRef = useRef("");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const ttsAbortRef = useRef(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+  useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
+
+  // ── Request mic permission early (so browser doesn't block later) ──
 
   useEffect(() => {
-    if (open && inputRef.current) {
-      inputRef.current.focus();
+    if (typeof navigator !== "undefined" && navigator.mediaDevices) {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then((stream) => {
+          // Got permission — release the stream immediately
+          stream.getTracks().forEach((t) => t.stop());
+        })
+        .catch(() => {
+          // User denied — voice will fall back to text input
+        });
     }
-  }, [open]);
+  }, []);
 
-  // Health check — only poll when connected or on first mount
+  // ── Health check + auto-open ──────────────────────────────
+
   useEffect(() => {
     let stopped = false;
     let interval: ReturnType<typeof setInterval> | null = null;
-
     async function check() {
       try {
-        const resp = await fetch(`${VOICE_AGENT_API}/api/health`, {
-          signal: AbortSignal.timeout(3000),
-        });
+        const resp = await fetch(`${VOICE_AGENT_API}/api/health`, { signal: AbortSignal.timeout(3000) });
         const data = await resp.json();
         if (data.ok) {
           setConnected(true);
           setProvider(data.llm_provider);
-          // Continue polling while connected
-          if (!stopped && !interval) {
-            interval = setInterval(check, 30000);
-          }
+          // Auto-open the voice panel on first successful connection
+          setOpen((prev) => {
+            if (!prev && !hasGreetedRef.current) return true;
+            return prev;
+          });
+          if (!stopped && !interval) interval = setInterval(check, 30000);
         }
       } catch {
         setConnected(false);
-        // Stop polling if agent is offline — avoid console noise
-        if (interval) {
-          clearInterval(interval);
-          interval = null;
-        }
+        if (interval) { clearInterval(interval); interval = null; }
       }
     }
     check();
-    return () => {
-      stopped = true;
-      if (interval) clearInterval(interval);
-    };
+    return () => { stopped = true; if (interval) clearInterval(interval); };
   }, []);
 
-  // Initialize speech recognition
+  // ── Speech recognition ────────────────────────────────────
+
   useEffect(() => {
     const SpeechRecognitionAPI =
       typeof window !== "undefined"
@@ -103,199 +212,279 @@ export function VoiceAgentWidget() {
         : null;
 
     if (SpeechRecognitionAPI) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const recognition = new (SpeechRecognitionAPI as any)();
       recognition.continuous = false;
       recognition.interimResults = true;
       recognition.lang = "en-US";
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       recognition.onresult = (event: any) => {
         let finalTranscript = "";
         let interimTranscript = "";
-
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript;
-          } else {
-            interimTranscript += transcript;
-          }
+          const t = event.results[i][0].transcript;
+          if (event.results[i].isFinal) finalTranscript += t;
+          else interimTranscript += t;
         }
-
-        if (finalTranscript) {
-          setInput(finalTranscript);
-        } else if (interimTranscript) {
-          setInput(interimTranscript);
-        }
+        const text = finalTranscript || interimTranscript;
+        setInput(text);
+        if (finalTranscript) spokenTextRef.current = finalTranscript;
       };
 
-      recognition.onend = () => {
-        setListening(false);
-      };
-
-      recognition.onerror = () => {
-        setListening(false);
-      };
-
+      recognition.onend = () => setListening(false);
+      recognition.onerror = () => setListening(false);
       recognitionRef.current = recognition;
     }
-
-    return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch {
-          // ignore
-        }
-      }
-    };
+    return () => { try { recognitionRef.current?.abort(); } catch { /* */ } };
   }, []);
 
-  // Speak text using TTS
+  // ── TTS — speak text (Edge TTS with browser fallback) ─────
+
   const speak = useCallback(
-    (text: string) => {
-      if (!ttsEnabled || typeof window === "undefined" || !window.speechSynthesis) return;
+    async (text: string, onDone?: () => void) => {
+      if (!ttsEnabled || !text.trim()) {
+        onDone?.();
+        return;
+      }
 
-      // Cancel any ongoing speech
+      ttsAbortRef.current = false;
+
+      // Try Edge TTS first (high quality server-side)
+      if (useEdgeTTS) {
+        try {
+          // Split into sentences for progressive playback
+          const sentences = splitIntoSentences(text);
+          setSpeaking(true);
+
+          for (const sentence of sentences) {
+            if (ttsAbortRef.current) break;
+
+            const audioData = await fetchTTSAudio(sentence);
+            if (!audioData || ttsAbortRef.current) continue;
+
+            // Play the audio chunk
+            await new Promise<void>((resolve) => {
+              const blob = new Blob([audioData], { type: "audio/mpeg" });
+              const url = URL.createObjectURL(blob);
+              const audio = new Audio(url);
+              audioRef.current = audio;
+              audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+              audio.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+              audio.play().catch(() => resolve());
+            });
+          }
+
+          setSpeaking(false);
+          audioRef.current = null;
+          onDone?.();
+          return;
+        } catch {
+          // Fall through to browser TTS
+        }
+      }
+
+      // Browser TTS fallback
+      if (typeof window === "undefined" || !window.speechSynthesis) {
+        setSpeaking(false);
+        onDone?.();
+        return;
+      }
+
       window.speechSynthesis.cancel();
-
-      // Clean text for speech (remove markdown, code blocks, etc.)
-      const cleanText = text
+      const clean = text
         .replace(/```[\s\S]*?```/g, "code block")
-        .replace(/`[^`]+`/g, (match) => match.replace(/`/g, ""))
+        .replace(/`[^`]+`/g, (m) => m.replace(/`/g, ""))
         .replace(/\*\*([^*]+)\*\*/g, "$1")
         .replace(/\*([^*]+)\*/g, "$1")
         .replace(/#{1,6}\s/g, "")
         .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
         .replace(/[_~]/g, "");
 
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
-      utterance.lang = "en-US";
+      const u = new SpeechSynthesisUtterance(clean);
+      u.rate = 1.05;
+      u.pitch = 1.0;
+      u.lang = "en-US";
 
-      // Try to use a natural-sounding voice
       const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find(
-        (v) =>
-          v.name.includes("Samantha") ||
-          v.name.includes("Google") ||
-          v.name.includes("Natural") ||
-          (v.lang.startsWith("en") && v.localService)
+      const pref = voices.find(
+        (v) => v.name.includes("Samantha") || v.name.includes("Google") ||
+          v.name.includes("Natural") || (v.lang.startsWith("en") && v.localService)
       );
-      if (preferred) utterance.voice = preferred;
+      if (pref) u.voice = pref;
 
-      utterance.onstart = () => setSpeaking(true);
-      utterance.onend = () => setSpeaking(false);
-      utterance.onerror = () => setSpeaking(false);
-
-      synthRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
+      u.onstart = () => setSpeaking(true);
+      u.onend = () => { setSpeaking(false); onDone?.(); };
+      u.onerror = () => { setSpeaking(false); onDone?.(); };
+      window.speechSynthesis.speak(u);
     },
-    [ttsEnabled]
+    [ttsEnabled, useEdgeTTS]
   );
 
   const stopSpeaking = useCallback(() => {
+    ttsAbortRef.current = true;
+    // Stop Edge TTS audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    // Stop browser TTS
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
-      setSpeaking(false);
+    }
+    setSpeaking(false);
+  }, []);
+
+  // ── Whisper STT — record audio and send to server ────────
+
+  const startWhisperRecording = useCallback(() => {
+    if (listening || sending) return;
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        if (blob.size < 100) { setListening(false); return; }
+        // Send to Whisper
+        setInput("Transcribing...");
+        try {
+          const form = new FormData();
+          form.append("audio", blob, "recording.webm");
+          const resp = await fetch(`${VOICE_AGENT_API}/api/stt`, {
+            method: "POST",
+            headers: { Authorization: API_HEADERS.Authorization },
+            body: form,
+          });
+          const data = await resp.json();
+          if (data.ok && data.text) {
+            setInput(data.text);
+            spokenTextRef.current = data.text;
+          } else {
+            setInput("");
+          }
+        } catch {
+          setInput("");
+        }
+        setListening(false);
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setListening(true);
+      // Auto-stop after 15 seconds of silence detection isn't easy,
+      // so use a max recording time
+    }).catch(() => { setListening(false); });
+  }, [listening, sending]);
+
+  const stopWhisperRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop();
     }
   }, []);
 
-  const toggleListening = useCallback(() => {
-    if (!recognitionRef.current) return;
+  // ── Start listening (routes to Whisper or browser STT) ──
 
-    if (listening) {
-      recognitionRef.current.stop();
-      setListening(false);
-    } else {
-      try {
-        recognitionRef.current.start();
-        setListening(true);
-      } catch {
-        // If already started, stop and restart
-        recognitionRef.current.stop();
-        setTimeout(() => {
-          try {
-            recognitionRef.current?.start();
-            setListening(true);
-          } catch {
-            setListening(false);
-          }
-        }, 200);
-      }
+  const startListening = useCallback(() => {
+    if (useWhisperSTT) {
+      startWhisperRecording();
+      return;
     }
-  }, [listening]);
+    // Browser STT fallback
+    if (!recognitionRef.current || listening || sending) return;
+    try {
+      recognitionRef.current.start();
+      setListening(true);
+    } catch {
+      recognitionRef.current.stop();
+      setTimeout(() => {
+        try { recognitionRef.current?.start(); setListening(true); } catch { setListening(false); }
+      }, 200);
+    }
+  }, [listening, sending, useWhisperSTT, startWhisperRecording]);
 
-  async function startSession() {
+  const stopListening = useCallback(() => {
+    if (useWhisperSTT) {
+      stopWhisperRecording();
+      return;
+    }
+    if (!recognitionRef.current) return;
+    recognitionRef.current.stop();
+    setListening(false);
+  }, [useWhisperSTT, stopWhisperRecording]);
+
+  const toggleListening = useCallback(() => {
+    if (listening) stopListening();
+    else startListening();
+  }, [listening, startListening, stopListening]);
+
+  // ── Session creation ──────────────────────────────────────
+
+  async function createSession(): Promise<string | null> {
     try {
       const resp = await fetch(`${VOICE_AGENT_API}/api/session/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: API_HEADERS,
         body: JSON.stringify({ mode: "realtor" }),
       });
       const data = await resp.json();
       if (data.ok) {
         setSessionId(data.session_id);
-        const greeting =
-          "Hi! I'm your AI realtor assistant. I can help you search properties for buyers, create listings from seller info, manage your daily tasks, and much more. How can I help you today?";
-        setMessages([{ role: "assistant", content: greeting }]);
-        speak(greeting);
         return data.session_id;
       }
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Unknown error";
-      setMessages([{ role: "system", content: `Connection failed: ${msg}` }]);
-    }
+    } catch { /* offline */ }
     return null;
   }
+
+  // ── Send message ──────────────────────────────────────────
 
   async function sendMessage(overrideText?: string) {
     const text = (overrideText || input).trim();
     if (!text || sending) return;
-
     setInput("");
     setSending(true);
     stopSpeaking();
 
+    setMessages((prev) => [...prev, { role: "user", content: text }]);
+
+    // Navigation check
+    const navTarget = parseNavigation(text);
+    if (navTarget) {
+      router.push(navTarget.path);
+      const navMsg = `Navigating to ${navTarget.label}...`;
+      setMessages((prev) => [...prev, { role: "nav", content: navMsg }]);
+      speak(`Taking you to ${navTarget.label}`, () => {
+        if (continuousMode) setTimeout(startListening, 600);
+      });
+      setSending(false);
+      return;
+    }
+
+    // Ensure session
     let sid = sessionId;
     if (!sid) {
-      sid = await startSession();
+      sid = await createSession();
       if (!sid) {
+        setMessages((prev) => [...prev, { role: "system", content: "Voice agent offline. Try navigation: \"go to contacts\"" }]);
         setSending(false);
         return;
       }
     }
 
-    setMessages((prev) => [...prev, { role: "user", content: text }]);
-
     try {
       const resp = await fetch(`${VOICE_AGENT_API}/api/chat/stream`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: API_HEADERS,
         body: JSON.stringify({ session_id: sid, message: text }),
       });
 
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({}));
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "system",
-            content: `Error: ${errData.error || resp.statusText}`,
-          },
-        ]);
+        setMessages((prev) => [...prev, { role: "system", content: `Error: ${errData.error || resp.statusText}` }]);
         setSending(false);
         return;
       }
 
       const reader = resp.body?.getReader();
-      if (!reader) {
-        setSending(false);
-        return;
-      }
+      if (!reader) { setSending(false); return; }
       const decoder = new TextDecoder();
       let buffer = "";
       let fullContent = "";
@@ -304,7 +493,6 @@ export function VoiceAgentWidget() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
@@ -313,125 +501,121 @@ export function VoiceAgentWidget() {
           if (!line.startsWith("data: ")) continue;
           const jsonStr = line.slice(6).trim();
           if (!jsonStr) continue;
-
           try {
             const chunk = JSON.parse(jsonStr);
-
             if (chunk.tool) {
-              setMessages((prev) => [
-                ...prev,
-                { role: "tool", content: `Using: ${chunk.tool}` },
-              ]);
+              setMessages((prev) => [...prev, { role: "tool", content: `Working on it...` }]);
               continue;
             }
-
             if (chunk.error) {
-              setMessages((prev) => [
-                ...prev,
-                { role: "system", content: `Error: ${chunk.error}` },
-              ]);
+              setMessages((prev) => [...prev, { role: "system", content: `Error: ${chunk.error}` }]);
               continue;
             }
-
             const token = chunk.token || "";
             if (token || !chunk.done) {
               fullContent += token;
               if (!streamStarted) {
                 streamStarted = true;
-                setMessages((prev) => [
-                  ...prev,
-                  { role: "assistant", content: fullContent, streaming: true },
-                ]);
+                setMessages((prev) => [...prev, { role: "assistant", content: fullContent, streaming: true }]);
               } else {
                 setMessages((prev) => {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = {
-                    role: "assistant",
-                    content: fullContent,
-                    streaming: true,
-                  };
-                  return updated;
+                  const u = [...prev];
+                  u[u.length - 1] = { role: "assistant", content: fullContent, streaming: true };
+                  return u;
                 });
               }
             }
-
             if (chunk.done) {
               setMessages((prev) => {
-                const updated = [...prev];
-                if (updated.length > 0) {
-                  updated[updated.length - 1] = {
-                    role: "assistant",
-                    content: fullContent,
-                    streaming: false,
-                  };
-                }
-                return updated;
+                const u = [...prev];
+                if (u.length > 0) u[u.length - 1] = { role: "assistant", content: fullContent, streaming: false };
+                return u;
               });
-              // Speak the complete response
               if (fullContent) {
-                speak(fullContent);
+                speak(fullContent, () => {
+                  if (continuousMode) setTimeout(startListening, 600);
+                });
               }
               fullContent = "";
               streamStarted = false;
             }
-          } catch {
-            // skip parse errors
-          }
+          } catch { /* skip */ }
         }
       }
 
       // Finalize if stream ended without done
       if (streamStarted) {
         setMessages((prev) => {
-          const updated = [...prev];
-          if (updated.length > 0) {
-            updated[updated.length - 1] = {
-              role: "assistant",
-              content: fullContent,
-              streaming: false,
-            };
-          }
-          return updated;
+          const u = [...prev];
+          if (u.length > 0) u[u.length - 1] = { role: "assistant", content: fullContent, streaming: false };
+          return u;
         });
         if (fullContent) {
-          speak(fullContent);
+          speak(fullContent, () => {
+            if (continuousMode) setTimeout(startListening, 600);
+          });
         }
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Unknown error";
-      setMessages((prev) => [
-        ...prev,
-        { role: "system", content: `Network error: ${msg}` },
-      ]);
+      setMessages((prev) => [...prev, { role: "system", content: `Network error: ${msg}` }]);
     }
 
     setSending(false);
   }
 
-  function handleToggle() {
-    if (open) {
-      stopSpeaking();
-      if (listening) {
-        recognitionRef.current?.stop();
-        setListening(false);
-      }
-    }
-    setOpen((prev) => !prev);
-  }
+  // ── Auto-send after speech recognition ──────────────────
 
-  // Auto-send after speech recognition finishes
   useEffect(() => {
-    if (!listening && input.trim() && recognitionRef.current) {
-      // Small delay to ensure final transcript is captured
+    if (!listening && spokenTextRef.current) {
+      const captured = spokenTextRef.current;
+      spokenTextRef.current = "";
+      // Whisper: send immediately (already waited during transcription)
+      // Browser STT: 1.5s delay for user to collect thoughts
+      const delay = useWhisperSTT ? 100 : 1500;
       const timeout = setTimeout(() => {
-        if (input.trim()) {
-          sendMessage(input.trim());
-        }
-      }, 500);
+        if (captured) sendMessage(captured);
+      }, delay);
       return () => clearTimeout(timeout);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listening]);
+
+  // ── Auto-greet when panel opens ───────────────────────────
+
+  useEffect(() => {
+    if (open && connected && !hasGreetedRef.current) {
+      hasGreetedRef.current = true;
+      const greeting = getGreeting(pathname);
+      setMessages([{ role: "assistant", content: greeting }]);
+
+      // Create session in background
+      createSession();
+
+      // Speak greeting, then auto-listen
+      speak(greeting, () => {
+        if (continuousMode) setTimeout(startListening, 600);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, connected]);
+
+  // ── Toggle panel ──────────────────────────────────────────
+
+  function handleToggle() {
+    if (open) {
+      stopSpeaking();
+      stopListening();
+      // Reset greeting so re-opening will greet again
+      hasGreetedRef.current = false;
+    }
+    setOpen((prev) => !prev);
+  }
+
+  const currentPage =
+    PAGE_LABELS[pathname] ||
+    PAGE_LABELS[Object.keys(PAGE_LABELS).find((k) => k !== "/" && pathname.startsWith(k)) ?? ""] ||
+    "CRM";
 
   return (
     <>
@@ -440,9 +624,7 @@ export function VoiceAgentWidget() {
         onClick={handleToggle}
         className={cn(
           "fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all duration-300 hover:scale-105 md:bottom-8 md:right-8",
-          open
-            ? "bg-muted text-muted-foreground"
-            : "bg-primary text-primary-foreground",
+          open ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground",
           !connected && !open && "opacity-60"
         )}
         title={connected ? "Open Voice Assistant" : "Voice Agent offline"}
@@ -452,22 +634,15 @@ export function VoiceAgentWidget() {
         ) : (
           <div className="relative">
             <Bot className="h-6 w-6" />
-            <span
-              className={cn(
-                "absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-white",
-                connected ? "bg-green-500" : "bg-red-500"
-              )}
-            />
-            {speaking && (
-              <span className="absolute -right-1 -bottom-1 h-3 w-3 rounded-full bg-blue-500 border-2 border-white animate-pulse" />
-            )}
+            <span className={cn("absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-white", connected ? "bg-green-500" : "bg-red-500")} />
+            {speaking && <span className="absolute -right-1 -bottom-1 h-3 w-3 rounded-full bg-blue-500 border-2 border-white animate-pulse" />}
           </div>
         )}
       </button>
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 flex h-[520px] w-[400px] flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl md:bottom-28 md:right-8">
+        <div className="fixed bottom-24 right-6 z-50 flex h-[560px] w-[420px] flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl md:bottom-28 md:right-8">
           {/* Header */}
           <div className="flex items-center gap-3 border-b bg-primary px-4 py-3 text-primary-foreground">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-foreground/20">
@@ -476,201 +651,126 @@ export function VoiceAgentWidget() {
             <div className="flex-1">
               <p className="text-sm font-semibold">Realtor Assistant</p>
               <p className="text-[11px] opacity-70">
-                {connected
-                  ? `${provider} \u00b7 voice ${ttsEnabled ? "on" : "off"}`
-                  : "offline"}
+                {connected ? `${provider} · ${currentPage}` : "offline"}
               </p>
             </div>
             <div className="flex items-center gap-1">
+              {/* Continuous mode toggle */}
+              <button
+                onClick={() => setContinuousMode(!continuousMode)}
+                className={cn("rounded-md px-2 py-1 text-[10px] font-medium transition-colors",
+                  continuousMode ? "bg-primary-foreground/25 text-primary-foreground" : "bg-primary-foreground/10 text-primary-foreground/50"
+                )}
+                title={continuousMode ? "Continuous conversation ON" : "Continuous conversation OFF"}
+              >
+                {continuousMode ? "AUTO" : "MANUAL"}
+              </button>
               {/* TTS toggle */}
               <button
-                onClick={() => {
-                  if (ttsEnabled) stopSpeaking();
-                  setTtsEnabled(!ttsEnabled);
-                }}
+                onClick={() => { if (ttsEnabled) stopSpeaking(); setTtsEnabled(!ttsEnabled); }}
                 className="rounded-md p-1.5 hover:bg-primary-foreground/20 transition-colors"
-                title={ttsEnabled ? "Mute voice" : "Enable voice"}
               >
-                {ttsEnabled ? (
-                  <Volume2 className="h-4 w-4" />
-                ) : (
-                  <VolumeX className="h-4 w-4" />
-                )}
+                {ttsEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
               </button>
-              {/* Close */}
+              {/* Edge TTS toggle — long press or double-click to switch to browser TTS */}
               <button
-                onClick={handleToggle}
-                className="rounded-md p-1.5 hover:bg-primary-foreground/20 transition-colors"
+                onClick={() => setUseEdgeTTS(!useEdgeTTS)}
+                className={cn("rounded-md px-1.5 py-1 text-[9px] font-medium transition-colors",
+                  useEdgeTTS ? "bg-primary-foreground/25 text-primary-foreground" : "bg-primary-foreground/10 text-primary-foreground/50"
+                )}
+                title={useEdgeTTS ? "Using HD voice (Edge TTS)" : "Using browser voice"}
               >
+                {useEdgeTTS ? "HD" : "STD"}
+              </button>
+              <button onClick={handleToggle} className="rounded-md p-1.5 hover:bg-primary-foreground/20 transition-colors">
                 <X className="h-4 w-4" />
               </button>
             </div>
           </div>
 
+          {/* Speaking indicator */}
+          {speaking && (
+            <div className="flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b shrink-0">
+              <div className="flex items-center gap-0.5">
+                {[...Array(7)].map((_, i) => (
+                  <span key={i} className="w-1 bg-blue-500 rounded-full animate-pulse"
+                    style={{ height: `${6 + Math.random() * 12}px`, animationDelay: `${i * 0.08}s` }} />
+                ))}
+              </div>
+              <span className="text-xs text-blue-600 font-medium">Speaking...</span>
+              <button onClick={stopSpeaking} className="p-0.5 rounded hover:bg-blue-100">
+                <Square className="h-3 w-3 text-blue-600" />
+              </button>
+            </div>
+          )}
+
+          {/* Listening indicator */}
+          {listening && !speaking && (
+            <div className="flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-red-50 to-orange-50 border-b shrink-0">
+              <div className="relative">
+                <Mic className="h-4 w-4 text-red-500" />
+                <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-red-500 rounded-full animate-ping" />
+              </div>
+              <span className="text-xs text-red-600 font-medium">Listening — speak now...</span>
+            </div>
+          )}
+
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-3 space-y-3">
-            {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground px-4">
-                <div className="relative mb-4">
-                  <Bot className="h-12 w-12 opacity-30" />
-                  <Mic className="h-5 w-5 absolute -bottom-1 -right-1 text-primary opacity-60" />
-                </div>
-                <p className="text-sm font-medium">
-                  Hi! I&apos;m your AI Realtor Assistant.
-                </p>
-                <p className="text-xs mt-2 opacity-70 leading-relaxed">
-                  Ask me anything &mdash; search properties for buyers, create listings
-                  from seller info, manage your daily tasks, check calendar, or get
-                  market insights.
-                </p>
-                <p className="text-xs mt-3 opacity-50">
-                  Tap the mic button to speak, or type your message
-                </p>
-              </div>
-            )}
             {messages.map((msg, i) => (
-              <div
-                key={i}
-                className={cn("flex", {
-                  "justify-end": msg.role === "user",
-                  "justify-start": msg.role === "assistant",
-                  "justify-center": msg.role === "system",
-                })}
-              >
-                <div
-                  className={cn(
-                    "max-w-[85%] rounded-xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap",
-                    {
-                      "bg-primary text-primary-foreground rounded-br-sm":
-                        msg.role === "user",
-                      "bg-muted text-foreground rounded-bl-sm":
-                        msg.role === "assistant",
-                      "bg-transparent text-muted-foreground text-xs italic text-center":
-                        msg.role === "system",
-                      "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 text-xs font-mono border border-amber-200 dark:border-amber-800":
-                        msg.role === "tool",
-                    }
-                  )}
-                >
+              <div key={i} className={cn("flex", {
+                "justify-end": msg.role === "user",
+                "justify-start": msg.role === "assistant" || msg.role === "nav",
+                "justify-center": msg.role === "system" || msg.role === "tool",
+              })}>
+                <div className={cn("max-w-[88%] rounded-xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap", {
+                  "bg-primary text-primary-foreground rounded-br-sm": msg.role === "user",
+                  "bg-muted text-foreground rounded-bl-sm": msg.role === "assistant",
+                  "bg-primary/10 text-primary text-xs font-medium rounded-bl-sm flex items-center gap-1.5": msg.role === "nav",
+                  "bg-transparent text-muted-foreground text-xs italic": msg.role === "system",
+                  "bg-amber-50 text-amber-700 text-xs font-mono border border-amber-200 rounded-lg": msg.role === "tool",
+                })}>
+                  {msg.role === "nav" && <ArrowRight className="h-3 w-3 shrink-0" />}
                   {msg.content}
-                  {msg.streaming && (
-                    <span className="inline-block w-[2px] h-4 bg-primary ml-0.5 animate-pulse align-middle" />
-                  )}
+                  {msg.streaming && <span className="inline-block w-0.5 h-4 bg-primary ml-0.5 animate-pulse align-middle" />}
                 </div>
               </div>
             ))}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Speaking indicator */}
-          {speaking && (
-            <div className="flex items-center justify-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950 border-t border-blue-100 dark:border-blue-900">
-              <div className="flex items-center gap-1">
-                <span className="w-1 h-3 bg-blue-500 rounded-full animate-pulse" />
-                <span
-                  className="w-1 h-4 bg-blue-500 rounded-full animate-pulse"
-                  style={{ animationDelay: "0.1s" }}
-                />
-                <span
-                  className="w-1 h-2 bg-blue-500 rounded-full animate-pulse"
-                  style={{ animationDelay: "0.2s" }}
-                />
-                <span
-                  className="w-1 h-5 bg-blue-500 rounded-full animate-pulse"
-                  style={{ animationDelay: "0.3s" }}
-                />
-                <span
-                  className="w-1 h-3 bg-blue-500 rounded-full animate-pulse"
-                  style={{ animationDelay: "0.4s" }}
-                />
-              </div>
-              <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                Speaking...
-              </span>
-              <button
-                onClick={stopSpeaking}
-                className="ml-1 p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
-                title="Stop speaking"
-              >
-                <Square className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-              </button>
-            </div>
-          )}
-
-          {/* Listening indicator */}
-          {listening && (
-            <div className="flex items-center justify-center gap-2 px-3 py-1.5 bg-red-50 dark:bg-red-950 border-t border-red-100 dark:border-red-900">
-              <div className="relative">
-                <Mic className="h-4 w-4 text-red-500 animate-pulse" />
-                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-red-500 rounded-full animate-ping" />
-              </div>
-              <span className="text-xs text-red-600 dark:text-red-400 font-medium">
-                Listening...
-              </span>
-            </div>
-          )}
-
           {/* Input */}
-          <div className="border-t p-3">
+          <div className="border-t p-3 bg-card shrink-0">
             <div className="flex gap-2">
-              {/* Mic button */}
               <button
                 onClick={toggleListening}
                 disabled={!connected || sending || !recognitionRef.current}
                 className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-lg transition-colors shrink-0",
+                  "flex h-10 w-10 items-center justify-center rounded-xl transition-all shrink-0",
                   listening
-                    ? "bg-red-500 text-white animate-pulse"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80",
-                  (!connected || sending || !recognitionRef.current) &&
-                    "opacity-50 cursor-not-allowed"
+                    ? "bg-red-500 text-white shadow-md shadow-red-500/30 scale-110"
+                    : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  (!connected || sending || !recognitionRef.current) && "opacity-40 cursor-not-allowed"
                 )}
-                title={
-                  !recognitionRef.current
-                    ? "Speech recognition not available in this browser"
-                    : listening
-                      ? "Stop listening"
-                      : "Start speaking"
-                }
               >
-                {listening ? (
-                  <MicOff className="h-4 w-4" />
-                ) : (
-                  <Mic className="h-4 w-4" />
-                )}
+                {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </button>
-
               <input
                 ref={inputRef}
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-                placeholder={
-                  listening
-                    ? "Listening..."
-                    : connected
-                      ? "Ask anything or tap mic..."
-                      : "Voice agent offline"
-                }
-                disabled={!connected || sending}
-                className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary disabled:opacity-50 placeholder:text-muted-foreground"
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                placeholder={listening ? "Listening..." : "Ask anything or tap mic..."}
+                disabled={sending}
+                className="flex-1 rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 disabled:opacity-50 placeholder:text-muted-foreground transition-colors"
               />
               <button
                 onClick={() => sendMessage()}
-                disabled={!connected || sending || !input.trim()}
-                className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                disabled={sending || !input.trim()}
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-all hover:bg-primary/90 disabled:opacity-40 shadow-sm"
               >
-                {sending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
+                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </button>
             </div>
           </div>

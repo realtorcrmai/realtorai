@@ -2,6 +2,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createWithRetry } from "@/lib/anthropic/retry";
 import { z } from "zod";
 
 const anthropic = new Anthropic();
@@ -34,7 +35,7 @@ export async function adviseSend(
   // Fetch contact + recent data
   const { data: contact } = await supabase
     .from("contacts")
-    .select("name, type, stage_bar, lead_status, newsletter_intelligence, ai_lead_score, buyer_preferences")
+    .select("id, name, type, stage_bar, lead_status, newsletter_intelligence, ai_lead_score, buyer_preferences")
     .eq("id", contactId)
     .single();
 
@@ -99,12 +100,24 @@ Available email types to swap to: new_listing_alert, market_update, neighbourhoo
 Respond with JSON only:
 { "decision": "send|skip|swap", "swap_to": "email_type (if swap)", "reasoning": "Brief explanation", "urgency": "high|medium|low" }`;
 
+  // RAG: retrieve full engagement pattern history
+  let ragContext = '';
+  try {
+    const { retrieveContext } = await import('@/lib/rag/retriever');
+    const retrieved = await retrieveContext(
+      `${contact.name} email engagement open click history`,
+      { contact_id: contact.id, content_type: ['email', 'activity'] },
+      5
+    );
+    if (retrieved.formatted) ragContext = `\n\nFULL ENGAGEMENT HISTORY:\n${retrieved.formatted}`;
+  } catch { /* RAG not available */ }
+
   try {
     const model = process.env.AI_SCORING_MODEL || "claude-sonnet-4-20250514";
-    const message = await anthropic.messages.create({
+    const message = await createWithRetry(anthropic, {
       model,
       max_tokens: 300,
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: prompt + ragContext }],
     });
 
     const text = message.content[0].type === "text" ? message.content[0].text : "";

@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ListingSidebar } from "@/components/listings/ListingSidebar";
 import { ListingForm } from "@/components/listings/ListingForm";
+import { DDFImportModal } from "@/components/listings/DDFImportModal";
 import { MobileSidebarSheet } from "@/components/layout/MobileSidebarSheet";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,8 @@ export default async function ListingsLayout({
     <div className="flex h-full">
       {/* Left sidebar — desktop only */}
       <div className="hidden md:flex flex-col h-full w-[280px] shrink-0 border-r bg-card/50">
-        <div className="p-3 border-b bg-card/50 shrink-0">
+        <div className="p-3 border-b bg-card/50 shrink-0 space-y-2">
+          <DDFImportModal />
           <ListingForm sellers={(sellers ?? []) as any} />
         </div>
         <ListingSidebar

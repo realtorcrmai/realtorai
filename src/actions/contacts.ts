@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { contactSchema, type ContactFormData } from "@/lib/schemas";
 import type { Json } from "@/types/database";
 import { enforceConsistency } from "@/lib/contact-consistency";
+import { triggerIngest } from "@/lib/rag/realtime-ingest";
 
 export async function createContact(formData: ContactFormData, force = false) {
   const parsed = contactSchema.safeParse(formData);
@@ -80,21 +81,23 @@ export async function createContact(formData: ContactFormData, force = false) {
 
   revalidatePath("/contacts");
 
-  // Fire-and-forget: auto-enroll in workflows (e.g. speed_to_contact)
-  // and create agent notification via workflow-triggers
-  import("@/lib/workflow-triggers")
-    .then(({ fireTrigger }) =>
-      fireTrigger({
-        type: "new_lead",
-        contactId: data.id,
-        contactType: data.type,
-      })
-    )
-    .catch(() => {
-      // Don't fail contact creation if trigger fails
-    });
+  // Fire-and-forget: enroll in journey + trigger matching workflows
+  // Journey tracks phase (lead → active → contract → closed)
+  // Auto-enroll in journey (phase tracking only — no emails sent)
+  // Speed-to-Contact workflow is INACTIVE by default — realtor enables manually
+  // and enrolls contacts through the Automations UI (/automations/workflows/{id})
+  (async () => {
+    try {
+      await enrollInJourney(data.id, data.type, data.name);
+    } catch {
+      // Don't fail contact creation if enrollment fails
+    }
+  })();
 
   revalidatePath("/newsletters");
+
+  // Real-time RAG ingestion
+  triggerIngest("contacts", data.id);
 
   return { success: true, contact: data };
 }
@@ -230,6 +233,9 @@ export async function updateContact(
     // Don't fail update if triggers fail
   }
 
+  // Real-time RAG re-ingestion
+  triggerIngest("contacts", id);
+
   return { success: true };
 }
 
@@ -250,6 +256,8 @@ export async function addCommunicationNote(
   }
 
   revalidatePath(`/contacts/${contactId}`);
+  // Re-ingest contact profile with new communication data
+  triggerIngest("contacts", contactId);
   return { success: true };
 }
 
@@ -535,4 +543,180 @@ export async function deleteContactDocument(docId: string, contactId: string) {
 
   revalidatePath(`/contacts/${contactId}`);
   return { success: true };
+}
+
+// ── Convert Contact Type ─────────────────────────────────────
+
+/**
+ * Convert a customer (lead) to buyer or seller.
+ * - Updates contact type
+ * - Enrolls in appropriate journey (buyer or seller)
+ * - Fires trigger for matching workflows (e.g., Buyer Nurture)
+ */
+export async function convertContactType(
+  contactId: string,
+  newType: "buyer" | "seller"
+) {
+  const supabase = createAdminClient();
+
+  const { data: contact } = await supabase
+    .from("contacts")
+    .select("id, name, type")
+    .eq("id", contactId)
+    .single();
+
+  if (!contact) return { error: "Contact not found" };
+
+  // Update type
+  const { error } = await supabase
+    .from("contacts")
+    .update({ type: newType, lead_status: "qualified" })
+    .eq("id", contactId);
+
+  if (error) return { error: error.message };
+
+  // Re-enroll in correct journey
+  try {
+    await enrollInJourney(contactId, newType, contact.name);
+  } catch {}
+
+  // Fire trigger for workflow enrollment (e.g., Buyer Nurture)
+  try {
+    const { fireTrigger } = await import("@/lib/trigger-engine");
+    await fireTrigger("lead_status_change", contactId, { contactType: newType });
+  } catch {}
+
+  revalidatePath(`/contacts/${contactId}`);
+  revalidatePath("/contacts");
+  revalidatePath("/newsletters");
+  return { success: true, newType };
+}
+
+// ── Auto Journey Enrollment + Welcome Email ──────────────────
+
+/**
+ * Enroll contact in journey (phase tracking only — no welcome email).
+ * Welcome email comes from the "Speed to Contact" workflow via trigger engine.
+ */
+async function enrollInJourney(contactId: string, contactType: string, _name: string) {
+  const supabase = createAdminClient();
+  // Map contact type to journey type
+  const journeyMap: Record<string, string> = {
+    buyer: "buyer", seller: "seller", customer: "customer", agent: "agent",
+  };
+  const journeyType = journeyMap[contactType] || "customer";
+
+  // Check if already enrolled
+  const { data: existing } = await supabase
+    .from("contact_journeys")
+    .select("id")
+    .eq("contact_id", contactId)
+    .eq("journey_type", journeyType)
+    .maybeSingle();
+
+  if (existing) return; // Already enrolled
+
+  await supabase.from("contact_journeys").insert({
+    contact_id: contactId,
+    journey_type: journeyType,
+    current_phase: "lead",
+    phase_entered_at: new Date().toISOString(),
+    next_email_at: new Date(Date.now() + 3 * 86400000).toISOString(),
+    emails_sent_in_phase: 0,
+    send_mode: "review",
+    is_paused: false,
+    agent_mode: "schedule",
+    trust_level: 0,
+  });
+
+  console.log(`[journey] Enrolled ${name} in ${journeyType} journey (lead phase)`);
+}
+
+/** @deprecated Use enrollInJourney + trigger engine instead */
+async function autoEnrollAndWelcome(
+  contactId: string,
+  contactType: string,
+  name: string,
+  email: string | null,
+  notes: string | null
+) {
+  const supabase = createAdminClient();
+  const journeyType = contactType === "seller" ? "seller" : "buyer";
+
+  // 1. Check if already enrolled
+  const { data: existing } = await supabase
+    .from("contact_journeys")
+    .select("id")
+    .eq("contact_id", contactId)
+    .eq("journey_type", journeyType)
+    .limit(1);
+
+  if (existing && existing.length > 0) return;
+
+  // 2. Enroll in journey
+  const nextEmailAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+  await supabase.from("contact_journeys").insert({
+    contact_id: contactId,
+    journey_type: journeyType,
+    current_phase: "lead",
+    is_paused: false,
+    next_email_at: nextEmailAt,
+    send_mode: "review",
+  });
+
+  // 3. Generate welcome email draft (skip if no email address)
+  if (!email) return;
+
+  const firstName = name?.split(" ")[0] || "there";
+
+  // Extract context from notes for personalization
+  const areaMatch = notes?.match(/(?:in|near|around)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/);
+  const area = areaMatch?.[1] || "Vancouver";
+  const budgetMatch = notes?.match(/\$?([\d,]+)[Kk]?\s*[-\u2013]\s*\$?([\d,]+)[Kk]?/);
+  const budget = budgetMatch ? `$${budgetMatch[1]}K - $${budgetMatch[2]}K` : null;
+
+  // Use Apple-quality block-based email builder with pre-send checks + dynamic brand
+  const { assembleEmail, runPreSendChecks, getBrandConfig } = await import("@/lib/email-blocks");
+  const brand = await getBrandConfig();
+  const isBuyer = journeyType === "buyer";
+  let subject = isBuyer
+    ? `Welcome! Let's find your dream home${area !== "Vancouver" ? " in " + area : ""}`
+    : `Let's get your home sold — here's the plan`;
+  let introText = isBuyer
+    ? `I'm excited to help you find your perfect home${area !== "Vancouver" ? " in " + area : ""}. I'll be sending you personalized listing alerts, neighbourhood guides, and market updates${budget ? " matched to your " + budget + " budget" : ""}.`
+    : `Thank you for considering me to help sell your property. I'll keep you updated with showing reports, market data, and comparable sales to ensure we get you the best price.`;
+
+  // Run pre-send text checks
+  const checks = await runPreSendChecks(subject, introText, contactId, name || "there", contactType, "welcome");
+  subject = checks.subject;
+  introText = checks.body;
+
+  const htmlBody = assembleEmail("welcome", {
+    contact: { name: name || "there", firstName, type: contactType },
+    agent: brand,
+    content: {
+      subject,
+      intro: introText,
+      body: "Feel free to reply to this email anytime — I'm here to help!",
+      ctaText: isBuyer ? "View Listings" : "Get Started",
+    },
+  });
+
+  await supabase.from("newsletters").insert({
+    contact_id: contactId,
+    subject,
+    email_type: "welcome",
+    status: "draft",
+    html_body: htmlBody,
+    ai_context: {
+      journey_phase: "lead",
+      contact_type: contactType,
+      auto_generated: true,
+      area,
+      budget,
+      reasoning: area
+        ? `Welcome email for new ${contactType} lead interested in ${area}${budget ? ` with budget $${budget}` : ""}. Using personalized template with area-specific content.`
+        : `Welcome email for new ${contactType} lead. Using generic welcome template — no area preferences specified yet.`,
+    },
+  });
 }

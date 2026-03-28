@@ -495,7 +495,9 @@ export default function WorkflowDetail({
               <div className="absolute left-[23px] top-[28px] bottom-[28px] w-[2px] bg-gradient-to-b from-[var(--lf-indigo)] via-[var(--lf-indigo)]/40 to-[var(--lf-indigo)]/10 rounded-full" />
 
               <div className="space-y-0">
-                {steps.map((step, idx) => {
+                {(() => {
+                  let actionNum = 0;
+                  return steps.map((step, idx) => {
                   const colors = actionColors(step.action_type);
                   const icon =
                     ACTION_TYPE_ICONS[
@@ -506,17 +508,26 @@ export default function WorkflowDetail({
                       step.action_type as keyof typeof ACTION_TYPE_LABELS
                     ] || step.action_type;
                   const tplName = templateName(step.template_id);
-                  const delay = formatDelay(
-                    step.delay_value,
-                    step.delay_unit || "minutes"
-                  );
                   const isWait = step.action_type === "wait";
                   const isMilestone = step.action_type === "milestone";
+                  if (!isWait && !isMilestone) actionNum++;
+
+                  // Compute delay display from delay_minutes as fallback
+                  function delayDisplay(s: WorkflowStep): string {
+                    if (s.delay_value > 0) return formatDelay(s.delay_value, s.delay_unit || "minutes");
+                    if (s.delay_minutes > 0) {
+                      if (s.delay_minutes >= 1440 && s.delay_minutes % 1440 === 0) return formatDelay(s.delay_minutes / 1440, "days");
+                      if (s.delay_minutes >= 60 && s.delay_minutes % 60 === 0) return formatDelay(s.delay_minutes / 60, "hours");
+                      return formatDelay(s.delay_minutes, "minutes");
+                    }
+                    return "Immediate";
+                  }
+                  const delay = delayDisplay(step);
 
                   return (
                     <div key={step.id} className="relative group">
                       {/* Delay indicator between steps */}
-                      {idx > 0 && step.delay_value > 0 && !isWait && (
+                      {idx > 0 && (step.delay_value > 0 || step.delay_minutes > 0) && !isWait && (
                         <div className="flex items-center gap-2 py-1.5 pl-[38px] text-xs text-muted-foreground">
                           <Clock className="w-3 h-3" />
                           <span>Wait {delay}</span>
@@ -539,7 +550,7 @@ export default function WorkflowDetail({
                           ) : isMilestone ? (
                             <span className="text-lg">🏁</span>
                           ) : (
-                            idx + 1
+                            actionNum
                           )}
                         </div>
 
@@ -580,12 +591,7 @@ export default function WorkflowDetail({
 
                           {isWait && (
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              Wait{" "}
-                              {formatDelay(
-                                step.delay_value,
-                                step.delay_unit || "minutes"
-                              )}{" "}
-                              before next step
+                              Wait {delay} before next step
                             </p>
                           )}
 
@@ -657,7 +663,8 @@ export default function WorkflowDetail({
                       </div>
                     </div>
                   );
-                })}
+                });
+                })()}
               </div>
 
               {/* Add step button at bottom */}

@@ -90,5 +90,5 @@ export const FEATURE_HREF: Record<FeatureKey, string> = {
   forms: "/forms",
   automations: "/automations",
   newsletters: "/newsletters",
-  website: "http://localhost:3001",
+  website: "/websites",
 };

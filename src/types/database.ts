@@ -15,7 +15,7 @@ export interface Database {
           name: string;
           phone: string;
           email: string | null;
-          type: "buyer" | "seller" | "partner" | "other";
+          type: "buyer" | "seller" | "customer" | "agent" | "partner" | "other";
           pref_channel: "whatsapp" | "sms";
           notes: string | null;
           family_members: Json | null;
@@ -45,7 +45,7 @@ export interface Database {
           name: string;
           phone: string;
           email?: string | null;
-          type: "buyer" | "seller" | "partner" | "other";
+          type: "buyer" | "seller" | "customer" | "agent" | "partner" | "other";
           pref_channel?: "whatsapp" | "sms";
           notes?: string | null;
           family_members?: Json | null;
@@ -75,7 +75,7 @@ export interface Database {
           name?: string;
           phone?: string;
           email?: string | null;
-          type?: "buyer" | "seller" | "partner" | "other";
+          type?: "buyer" | "seller" | "customer" | "agent" | "partner" | "other";
           pref_channel?: "whatsapp" | "sms";
           notes?: string | null;
           family_members?: Json | null;
@@ -649,7 +649,7 @@ export interface Database {
           description: string | null;
           trigger_type: string;
           trigger_config: Json;
-          contact_type: "buyer" | "seller" | "any" | null;
+          contact_type: "buyer" | "seller" | "customer" | "agent" | "partner" | "any" | null;
           is_active: boolean;
           max_enrollments: number;
           created_at: string;
@@ -662,7 +662,7 @@ export interface Database {
           description?: string | null;
           trigger_type: string;
           trigger_config?: Json;
-          contact_type?: "buyer" | "seller" | "any" | null;
+          contact_type?: "buyer" | "seller" | "customer" | "agent" | "partner" | "any" | null;
           is_active?: boolean;
           max_enrollments?: number;
           created_at?: string;
@@ -675,7 +675,7 @@ export interface Database {
           description?: string | null;
           trigger_type?: string;
           trigger_config?: Json;
-          contact_type?: "buyer" | "seller" | "any" | null;
+          contact_type?: "buyer" | "seller" | "customer" | "agent" | "partner" | "any" | null;
           is_active?: boolean;
           max_enrollments?: number;
           created_at?: string;

@@ -34,6 +34,7 @@ yarn-error.log*
 # env files
 .env*
 !.env.local.example
+!.env.vault
 
 # vercel
 .vercel
@@ -54,3 +55,4 @@ guides/screenshots/*.png
 
 # Health check state snapshot
 .claude-state.json
+.env.local

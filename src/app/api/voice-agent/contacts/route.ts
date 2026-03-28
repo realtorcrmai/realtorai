@@ -7,7 +7,7 @@ const createContactSchema = z.object({
   name: z.string().min(1).max(200),
   phone: z.string().max(30).optional(),
   email: z.string().email().optional(),
-  type: z.enum(["buyer", "seller"]).optional(),
+  type: z.enum(["buyer", "seller", "customer", "agent", "partner", "other"]).optional(),
   pref_channel: z.enum(["sms", "whatsapp", "email"]).optional(),
   notes: z.string().optional(),
 });

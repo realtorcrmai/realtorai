@@ -15,7 +15,7 @@ export function PropertyHistoryPanel({
   contactType,
 }: {
   listings: Listing[];
-  contactType: "buyer" | "seller";
+  contactType: string;
 }) {
   if (listings.length === 0) return null;
 

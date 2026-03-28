@@ -1,6 +1,6 @@
 import { BUYER_STAGES, SELLER_STAGES } from "@/lib/constants/contacts";
 
-type ContactType = "buyer" | "seller" | "partner" | "other";
+type ContactType = "buyer" | "seller" | "customer" | "agent" | "partner" | "other";
 
 const BUYER_STAGE_SET = new Set<string>(BUYER_STAGES);
 const SELLER_STAGE_SET = new Set<string>(SELLER_STAGES);

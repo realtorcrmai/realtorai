@@ -43,7 +43,24 @@ export async function POST(req: NextRequest) {
     }
 
     // Load the template PDF bytes
-    const pdfBytes = await loadPdfFromUrl(template.pdf_url);
+    if (!template.pdf_url) {
+      return NextResponse.json(
+        { error: `No PDF URL configured for template "${formKey}". Upload a PDF template first.` },
+        { status: 422 }
+      );
+    }
+
+    let pdfBytes: Uint8Array;
+    try {
+      pdfBytes = await loadPdfFromUrl(template.pdf_url);
+    } catch (fetchErr) {
+      const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+      console.error(`[/api/forms/fill] PDF fetch failed for ${formKey}:`, msg);
+      return NextResponse.json(
+        { error: `Could not load PDF template: ${msg}. Check that the PDF URL is accessible.` },
+        { status: 502 }
+      );
+    }
 
     // Check for existing draft
     const { data: draft } = await supabase
@@ -105,9 +122,10 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("[/api/forms/fill]", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[/api/forms/fill]", msg, err);
     return NextResponse.json(
-      { error: "Failed to fill PDF form" },
+      { error: `Failed to fill PDF form: ${msg}` },
       { status: 500 }
     );
   }

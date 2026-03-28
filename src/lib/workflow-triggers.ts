@@ -146,8 +146,8 @@ export async function fireTrigger(event: TriggerEvent): Promise<{
     // Auto-sync stage_bar based on workflow type
     const stageMapping = WORKFLOW_STAGE_MAP[workflow.slug];
     if (stageMapping) {
-      const contactType = contact.type as "buyer" | "seller";
-      const newStage = stageMapping[contactType] || stageMapping.buyer;
+      const contactType = contact.type || "buyer";
+      const newStage = stageMapping[contactType as keyof typeof stageMapping] || stageMapping.buyer;
       await supabase
         .from("contacts")
         .update({ stage_bar: newStage })

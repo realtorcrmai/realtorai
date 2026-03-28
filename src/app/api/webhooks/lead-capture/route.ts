@@ -9,7 +9,7 @@ const leadCaptureSchema = z.object({
     .min(10, "Phone must be at least 10 digits")
     .regex(/^[\d\s\-\(\)\+\.]+$/, "Invalid phone format"),
   email: z.string().email().optional().or(z.literal("")),
-  type: z.enum(["buyer", "seller", "partner", "other"]).default("buyer"),
+  type: z.enum(["buyer", "seller", "customer", "agent", "partner", "other"]).default("customer"),
   source: z.string().optional(),
   notes: z.string().optional(),
 });

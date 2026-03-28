@@ -401,7 +401,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
               <CardContent className="p-6">
                 <PropertyHistoryPanel
                   listings={isSeller ? listings : buyerListings}
-                  contactType={contact.type as "buyer" | "seller"}
+                  contactType={contact.type}
                 />
               </CardContent>
             </Card>

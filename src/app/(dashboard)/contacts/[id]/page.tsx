@@ -14,6 +14,11 @@ import { TagEditor } from "@/components/contacts/TagEditor";
 import { StageBar, type StageData } from "@/components/contacts/StageBar";
 import EmailComposer from "@/components/contacts/EmailComposer";
 import { ContactDetailTabs } from "@/components/contacts/ContactDetailTabs";
+import { JourneyProgressBar } from "@/components/contacts/JourneyProgressBar";
+import { EmailHistoryTimeline } from "@/components/contacts/EmailHistoryTimeline";
+import { IntelligencePanel } from "@/components/contacts/IntelligencePanel";
+import { ContextLog } from "@/components/contacts/ContextLog";
+import { WebsiteActivityLoader } from "@/components/contacts/WebsiteActivityLoader";
 import { DeleteContactButton } from "@/components/contacts/DeleteContactButton";
 import { Button } from "@/components/ui/button";
 import type { Contact, Communication, Listing, ContactDate, ContactDocument, BuyerPreferences, SellerPreferences, Demographics } from "@/types";
@@ -67,6 +72,9 @@ export default async function ContactDetailPage({
     { data: householdData },
     { data: householdMembersData },
     { data: allWorkflowSteps },
+    { data: contactJourney },
+    { data: contactNewsletters },
+    { data: contactContextEntries },
   ] = await Promise.all([
     // 1. Communications — limit to recent 50
     supabase
@@ -176,11 +184,49 @@ export default async function ContactDetailPage({
       .from("workflow_steps")
       .select("id, workflow_id, step_order, name, action_type, delay_minutes, delay_unit, delay_value, exit_on_reply")
       .order("step_order", { ascending: true }),
+    // 20. Contact journey (for Prospect 360 progress bar)
+    supabase
+      .from("contact_journeys")
+      .select("id, journey_type, current_phase, phase_entered_at, next_email_at, is_paused, send_mode, trust_level, created_at")
+      .eq("contact_id", id)
+      .limit(1)
+      .maybeSingle(),
+    // 21. Newsletters sent to this contact (for email history timeline)
+    supabase
+      .from("newsletters")
+      .select("id, subject, email_type, status, html_body, sent_at, created_at, quality_score, ai_context")
+      .eq("contact_id", id)
+      .order("created_at", { ascending: false })
+      .limit(30),
+    // 22. Contact context entries (objections, preferences, timeline)
+    supabase
+      .from("contact_context")
+      .select("id, context_type, text, is_resolved, resolved_note, created_at")
+      .eq("contact_id", id)
+      .order("created_at", { ascending: false }),
   ]);
 
   const referredByName = referredByContact?.name ?? null;
   const household = householdData;
   const householdMembers = (householdMembersData ?? []) as { id: string; name: string; type: string }[];
+
+  // Fetch newsletter events for email history timeline
+  const newsletterIds = (contactNewsletters ?? []).map((n: { id: string }) => n.id);
+  const { data: newsletterEvents } = newsletterIds.length > 0
+    ? await supabase
+        .from("newsletter_events")
+        .select("id, newsletter_id, event_type, metadata, created_at")
+        .in("newsletter_id", newsletterIds)
+    : { data: [] };
+
+  // Merge events into newsletters
+  const newslettersWithEvents = (contactNewsletters ?? []).map((nl: Record<string, unknown>) => ({
+    ...nl,
+    events: (newsletterEvents ?? []).filter((e: { newsletter_id: string }) => e.newsletter_id === nl.id),
+  }));
+
+  // Parse intelligence
+  const intel = contact.newsletter_intelligence as Record<string, unknown> | null;
 
   // Filter workflow steps to only active/paused enrollment workflows (client-side)
   const activeEnrollmentWorkflowIds = (workflowEnrollments ?? [])
@@ -534,14 +580,34 @@ export default async function ContactDetailPage({
                   </div>
                 </div>
 
-                {/* Row 2: Pipeline bar */}
+                {/* Row 2: Pipeline bar or Convert button */}
                 <div className="mt-4 pt-3 border-t border-indigo-50 dark:border-indigo-900/20">
-                  <StageBar
-                    contactId={id}
-                    contactType={contact.type as "buyer" | "seller"}
-                    currentStage={contact.stage_bar as string | null}
-                    stageData={stageData}
-                  />
+                  {contact.type === "customer" ? (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <span className="text-sm text-green-800 font-medium flex-1">This is an unqualified lead. Convert when ready:</span>
+                      <form action={async () => {
+                        "use server";
+                        const { convertContactType } = await import("@/actions/contacts");
+                        await convertContactType(id, "buyer");
+                      }}>
+                        <button type="submit" className="text-xs px-3 py-1.5 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700">Convert to Buyer</button>
+                      </form>
+                      <form action={async () => {
+                        "use server";
+                        const { convertContactType } = await import("@/actions/contacts");
+                        await convertContactType(id, "seller");
+                      }}>
+                        <button type="submit" className="text-xs px-3 py-1.5 rounded-md bg-purple-600 text-white font-medium hover:bg-purple-700">Convert to Seller</button>
+                      </form>
+                    </div>
+                  ) : (
+                    <StageBar
+                      contactId={id}
+                      contactType={contact.type}
+                      currentStage={contact.stage_bar as string | null}
+                      stageData={stageData}
+                    />
+                  )}
                 </div>
                 {contact.notes && (
                   <p className="text-xs text-muted-foreground mt-2">{contact.notes}</p>
@@ -588,6 +654,43 @@ export default async function ContactDetailPage({
               contactEmail={contact.email}
             />
           </div>
+
+          {/* Journey Progress Bar (Prospect 360) */}
+          {contactJourney && (
+            <JourneyProgressBar
+              contactType={contact.type}
+              currentPhase={contactJourney.current_phase}
+              engagementScore={(intel?.engagement_score as number) || 0}
+              phaseEnteredAt={contactJourney.phase_entered_at}
+              enrolledAt={contactJourney.created_at}
+            />
+          )}
+
+          {/* Email History + Intelligence (Prospect 360) */}
+          {newslettersWithEvents.length > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="text-sm font-semibold mb-3">Email History</h3>
+                <EmailHistoryTimeline newsletters={newslettersWithEvents as any} />
+              </CardContent>
+            </Card>
+          )}
+
+          {intel && (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <IntelligencePanel
+                  intelligence={intel}
+                  totalEmails={newslettersWithEvents.length}
+                />
+                <ContextLog
+                  contactId={id}
+                  entries={(contactContextEntries ?? []) as Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>}
+                />
+              </div>
+              <WebsiteActivityLoader contactId={id} />
+            </>
+          )}
 
           {/* Tabbed Content */}
           <ContactDetailTabs

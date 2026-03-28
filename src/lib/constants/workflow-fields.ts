@@ -42,6 +42,16 @@ export const STEP_FIELDS: Record<string, StepFieldConfig[]> = {
 
   "data-enrichment": [
     {
+      sectionTitle: "Location",
+      fields: [
+        { key: "city", label: "City", type: "text" },
+        { key: "province", label: "Province", type: "text" },
+        { key: "postal_code", label: "Postal Code", type: "text" },
+        { key: "latitude", label: "Latitude", type: "text" },
+        { key: "longitude", label: "Longitude", type: "text" },
+      ],
+    },
+    {
       sectionTitle: "Property Assessment",
       fields: [
         { key: "assessed_value", label: "Assessed Value", type: "currency" },
@@ -103,6 +113,7 @@ export const STEP_FIELDS: Record<string, StepFieldConfig[]> = {
         { key: "roof_type", label: "Roof", type: "select", options: ["Asphalt Shingle", "Metal", "Tile", "Flat/Built-Up", "Cedar Shake", "Other"] },
         { key: "exterior_finish", label: "Exterior Finish", type: "select", options: ["Vinyl Siding", "Wood", "Stucco", "Brick", "Stone", "Cement/Fibre", "Mixed", "Other"] },
         { key: "heating_type", label: "Heating", type: "select", options: ["Forced Air", "Baseboard", "Radiant/In-Floor", "Heat Pump", "Fireplace Only", "Other"] },
+        { key: "cooling_type", label: "Cooling", type: "select", options: ["Central Air", "Wall Unit", "Heat Pump", "None", "Other"] },
         { key: "fuel_type", label: "Fuel", type: "select", options: ["Natural Gas", "Electric", "Oil", "Propane", "Wood", "Other"] },
         { key: "hot_water", label: "Hot Water", type: "select", options: ["Natural Gas", "Electric", "Tankless", "Solar", "Other"] },
       ],
@@ -135,6 +146,16 @@ export const STEP_FIELDS: Record<string, StepFieldConfig[]> = {
       fields: [
         { key: "bylaws_restrictions", label: "Bylaws & Restrictions", type: "textarea", colSpan: 2 },
         { key: "easements", label: "Easements & Rights of Way", type: "textarea", colSpan: 2 },
+      ],
+    },
+    {
+      sectionTitle: "DDF / MLS Sync",
+      fields: [
+        { key: "ddf_listing_key", label: "DDF Listing Key", type: "text" },
+        { key: "ddf_list_agent_key", label: "Listing Agent Key", type: "text" },
+        { key: "ddf_list_office_key", label: "Listing Office Key", type: "text" },
+        { key: "ddf_last_synced", label: "Last Synced", type: "text" },
+        { key: "ddf_modification_timestamp", label: "DDF Last Modified", type: "text" },
       ],
     },
   ],

@@ -17,6 +17,7 @@ import {
   Wand2,
   Zap,
   Mail,
+  Globe,
   LogOut,
   Home,
   ChevronDown,
@@ -33,6 +34,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { QuickAddButton } from "@/components/layout/QuickAddButton";
+import { ContextualHelpButton } from "@/components/help/ContextualHelpButton";
 
 import type { FeatureKey } from "@/lib/features";
 
@@ -52,6 +54,7 @@ const moreItems: { href: string; label: string; icon: typeof Building2; featureK
   { href: "/import", label: "Excel Import", icon: Upload, featureKey: "import" },
   { href: "/forms", label: "BC Forms", icon: FileText, featureKey: "forms" },
   { href: "/newsletters", label: "Email Marketing", icon: Mail, featureKey: "newsletters" },
+  { href: "/websites", label: "Website Marketing", icon: Globe, featureKey: "website" },
 ];
 
 export function AppHeader() {
@@ -202,6 +205,9 @@ export function AppHeader() {
             <span className="hidden lg:inline">Admin</span>
           </Link>
         )}
+
+        {/* Help */}
+        <ContextualHelpButton />
 
         {/* Quick Add */}
         <QuickAddButton />

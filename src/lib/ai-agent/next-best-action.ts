@@ -2,13 +2,14 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createWithRetry } from "@/lib/anthropic/retry";
 import { z } from "zod";
 
 const anthropic = new Anthropic();
 
 const RecommendationSchema = z.object({
   contact_id: z.string(),
-  action_type: z.enum(["call", "send_email", "send_sms", "enroll_workflow", "advance_stage", "add_tag", "create_task", "reengage"]),
+  action_type: z.enum(["call", "send_email", "send_sms", "send_greeting", "enroll_workflow", "advance_stage", "add_tag", "create_task", "reengage"]),
   reasoning: z.string(),
   priority: z.enum(["hot", "warm", "info"]),
   action_config: z.record(z.string(), z.unknown()).optional(),
@@ -76,12 +77,24 @@ Respond with a JSON array:
 
 Only recommend actions where the data clearly supports it. Don't recommend calling everyone.`;
 
+  // RAG: retrieve outcomes from past recommendations
+  let ragContext = '';
+  try {
+    const { retrieveContext } = await import('@/lib/rag/retriever');
+    const retrieved = await retrieveContext(
+      'successful recommendations outcomes accepted actions',
+      { content_type: ['recommendation', 'activity'] },
+      5
+    );
+    if (retrieved.formatted) ragContext = `\n\nPAST RECOMMENDATION OUTCOMES:\n${retrieved.formatted}`;
+  } catch { /* RAG not available */ }
+
   try {
     const model = process.env.AI_SCORING_MODEL || "claude-sonnet-4-20250514";
-    const message = await anthropic.messages.create({
+    const message = await createWithRetry(anthropic, {
       model,
       max_tokens: 1000,
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: prompt + ragContext }],
     });
 
     const text = message.content[0].type === "text" ? message.content[0].text : "";

@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   if (search) {
     query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`);
   }
-  if (type && (type === "buyer" || type === "seller")) {
+  if (type && ["buyer", "seller", "customer", "agent", "partner", "other"].includes(type)) {
     query = query.eq("type", type);
   }
 

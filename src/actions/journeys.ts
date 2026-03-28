@@ -3,7 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
-type JourneyType = "buyer" | "seller";
+type JourneyType = "buyer" | "seller" | "customer" | "agent";
 type JourneyPhase = "lead" | "active" | "under_contract" | "past_client" | "dormant";
 
 // Journey phase email schedules (delays in hours)
@@ -53,6 +53,31 @@ const JOURNEY_SCHEDULES: Record<JourneyType, Record<JourneyPhase, Array<{ emailT
       { emailType: "reengagement", delayHours: 0 },
       { emailType: "market_update", delayHours: 336 },
     ],
+  },
+  customer: {
+    lead: [
+      { emailType: "welcome", delayHours: 0 },
+      { emailType: "market_update", delayHours: 168 },
+    ],
+    active: [
+      { emailType: "market_update", delayHours: 504 },
+    ],
+    under_contract: [],
+    past_client: [
+      { emailType: "market_update", delayHours: 720 },
+    ],
+    dormant: [
+      { emailType: "reengagement", delayHours: 0 },
+    ],
+  },
+  agent: {
+    lead: [
+      { emailType: "welcome", delayHours: 0 },
+    ],
+    active: [],
+    under_contract: [],
+    past_client: [],
+    dormant: [],
   },
 };
 
@@ -113,6 +138,17 @@ export async function advanceJourneyPhase(
     .eq("journey_type", journeyType);
 
   if (error) return { error: error.message };
+
+  // Fire phase_changed trigger — pauses irrelevant workflows, enrolls new ones
+  try {
+    const { fireTrigger } = await import("@/lib/trigger-engine");
+    await fireTrigger("phase_changed", contactId, {
+      contactType: journeyType,
+      newPhase,
+    });
+  } catch {
+    // Don't fail phase advancement if trigger fails
+  }
 
   revalidatePath("/newsletters");
   return { success: true };
@@ -292,6 +328,10 @@ export async function processJourneyQueue() {
   return { processed };
 }
 
-export async function autoEnrollNewContact(contactId: string, contactType: "buyer" | "seller") {
-  return enrollContactInJourney(contactId, contactType);
+export async function autoEnrollNewContact(contactId: string, contactType: string) {
+  // Only enroll types that have journey schedules
+  if (["buyer", "seller", "customer", "agent"].includes(contactType)) {
+    return enrollContactInJourney(contactId, contactType as JourneyType);
+  }
+  return { error: "No journey defined for this contact type" };
 }

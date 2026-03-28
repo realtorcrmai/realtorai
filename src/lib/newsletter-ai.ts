@@ -1,6 +1,7 @@
 "use server";
 
 import Anthropic from "@anthropic-ai/sdk";
+import { createWithRetry } from "@/lib/anthropic/retry";
 import { z } from "zod";
 
 const anthropic = new Anthropic();
@@ -36,7 +37,7 @@ export interface NewsletterContext {
   contact: {
     name: string;
     firstName: string;
-    type: "buyer" | "seller";
+    type: "buyer" | "seller" | "customer" | "agent" | "partner" | "other";
     email: string;
     areas?: string[];
     preferences?: {
@@ -91,6 +92,7 @@ interface GeneratedContent {
   stats?: Array<{ label: string; value: string; change?: string }>;
   tips?: string[];
   funFact?: string;
+  reasoning?: string;
 }
 
 export async function generateNewsletterContent(
@@ -99,12 +101,32 @@ export async function generateNewsletterContent(
   const systemPrompt = buildSystemPrompt(context);
   const userPrompt = buildUserPrompt(context);
 
+  // RAG augmentation: retrieve relevant past interactions + successful emails
+  let ragContext = '';
+  try {
+    const { retrieveContext } = await import('@/lib/rag/retriever');
+    const contactId = (context as any).contact?.id;
+    const retrieved = await retrieveContext(
+      `${context.contact?.name} ${context.emailType} ${context.contact?.areas?.join(' ') ?? ''}`,
+      {
+        contact_id: contactId,
+        content_type: ['message', 'activity', 'email'],
+      },
+      5
+    );
+    if (retrieved.formatted) {
+      ragContext = `\n\nRELEVANT CONTEXT FROM CRM (use to personalize):\n${retrieved.formatted}`;
+    }
+  } catch {
+    // RAG not available — continue without
+  }
+
   const model = process.env.NEWSLETTER_AI_MODEL || "claude-sonnet-4-20250514";
 
-  const message = await anthropic.messages.create({
+  const message = await createWithRetry(anthropic, {
     model,
     max_tokens: 2000,
-    system: systemPrompt,
+    system: systemPrompt + ragContext,
     messages: [{ role: "user", content: userPrompt }],
   });
 
@@ -181,10 +203,11 @@ Rules:
   "highlights": ["Optional bullet points for key info"],
   "stats": [{"label": "Stat name", "value": "$X", "change": "+X%"}],
   "tips": ["Optional tips or advice"],
-  "funFact": "Optional interesting neighbourhood fact"
+  "funFact": "Optional interesting neighbourhood fact",
+  "reasoning": "1-2 sentences explaining WHY you chose this content, tone, and angle for this specific contact. Reference their click history, preferences, or journey phase."
 }
 
-Only include fields relevant to the email type. Omit optional fields if not needed.`;
+Always include the "reasoning" field. The realtor sees this to understand why the AI chose this content. Omit other optional fields if not needed.`;
 }
 
 function buildUserPrompt(context: NewsletterContext): string {

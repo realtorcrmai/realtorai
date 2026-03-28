@@ -19,6 +19,7 @@ import {
   syncLeadStatusAndStage,
   filterInvalidTags,
 } from "@/lib/contact-consistency";
+import { checkSendGovernor } from "@/lib/send-governor";
 import type { Json } from "@/types/database";
 
 type Contact = {
@@ -210,31 +211,63 @@ async function executeAutoMessage(
     }
 
     try {
-      const { sendEmail } = await import("@/lib/gmail");
+      // Run pre-send checks + build Apple-quality HTML with dynamic brand
+      const { assembleEmail, runPreSendChecks, getBrandConfig } = await import("@/lib/email-blocks");
+      const brand = await getBrandConfig();
+      const checks = await runPreSendChecks(subject || step.name, body, contact.id, contact.name, contact.type, step.template_id || "welcome");
+      subject = checks.subject;
+      body = checks.body;
+      const emailType = step.template_id || "welcome";
+      const emailSubject = subject || step.name;
+      const htmlBody = assembleEmail(emailType, {
+        contact: { name: contact.name, firstName: contact.name?.split(" ")[0] || "there", type: contact.type },
+        agent: brand,
+        content: { subject: emailSubject, intro: body, body: "", ctaText: "View Details" },
+      });
+
+      // Send via Resend (not Gmail) for tracking + deliverability
+      const { sendEmail } = await import("@/lib/resend");
       const result = await sendEmail({
         to: contact.email,
-        subject: subject || step.name,
-        body,
+        subject: emailSubject,
+        html: htmlBody,
+        tags: [
+          { name: "contact_id", value: contact.id },
+          { name: "email_type", value: emailType },
+        ],
       });
+
+      // Save to newsletters table for tracking in AI Agent tab
+      await supabase.from("newsletters").insert({
+        contact_id: contact.id,
+        subject: emailSubject,
+        email_type: emailType,
+        status: "sent",
+        html_body: htmlBody,
+        sent_at: new Date().toISOString(),
+        resend_message_id: result.messageId || null,
+        send_mode: "auto",
+        ai_context: { source: "workflow", step_name: step.name, workflow_id: step.workflow_id },
+      }); // Best effort — don't fail workflow if this errors
 
       // Log to communications
       await supabase.from("communications").insert({
         contact_id: contact.id,
         direction: "outbound",
         channel: "email",
-        body: subject ? `Subject: ${subject}\n\n${body}` : body,
+        body: `Subject: ${emailSubject}\n\n${body}`,
       });
 
       return { success: true, result: { channel: "email", messageId: result.messageId } };
     } catch (emailErr) {
-      // Fallback: log as communication even if Gmail API fails
+      // Fallback: log as communication even if send fails
       await supabase.from("communications").insert({
         contact_id: contact.id,
         direction: "outbound",
         channel: "email",
         body: subject ? `Subject: ${subject}\n\n${body}` : body,
       });
-      return { success: true, result: { channel: "email", logged: true, gmailError: String(emailErr) } };
+      return { success: true, result: { channel: "email", logged: true, sendError: String(emailErr) } };
     }
   }
 
@@ -319,9 +352,10 @@ async function executeSystemAction(
   switch (action) {
     case "change_lead_status": {
       // Sync stage_bar when lead_status changes
-      const contactType = contact.type as "buyer" | "seller" | "partner" | "other";
+      const contactType = contact.type || "other";
       const stageBar = contact.stage_bar ?? null;
-      const synced = syncLeadStatusAndStage(value, stageBar, contactType);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const synced = syncLeadStatusAndStage(value, stageBar, contactType as any);
       const { error } = await supabase
         .from("contacts")
         .update({ lead_status: synced.lead_status, stage_bar: synced.stage_bar })
@@ -333,8 +367,8 @@ async function executeSystemAction(
       const currentTags = Array.isArray(contact.tags) ? (contact.tags as string[]) : [];
       if (!currentTags.includes(value)) {
         const newTags = [...currentTags, value];
-        const contactTypeForTag = contact.type as "buyer" | "seller" | "partner" | "other";
-        const cleanTags = filterInvalidTags(newTags, contactTypeForTag, contact.lead_status);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const cleanTags = filterInvalidTags(newTags, contact.type as any, contact.lead_status);
         const { error } = await supabase
           .from("contacts")
           .update({ tags: cleanTags })
@@ -345,9 +379,10 @@ async function executeSystemAction(
     }
     case "change_stage": {
       // Validate stage for contact type and sync lead_status
-      const stageContactType = contact.type as "buyer" | "seller" | "partner" | "other";
-      const validStage = validateStageForType(stageContactType, value);
-      const stageSynced = syncLeadStatusAndStage(contact.lead_status, validStage, stageContactType);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const validStage = validateStageForType(contact.type as any, value);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const stageSynced = syncLeadStatusAndStage(contact.lead_status, validStage, contact.type as any);
       const { error } = await supabase
         .from("contacts")
         .update({ stage_bar: stageSynced.stage_bar, lead_status: stageSynced.lead_status })
@@ -377,10 +412,10 @@ export async function executeStep(
 ): Promise<{ success: boolean; result?: Record<string, unknown>; error?: string }> {
   const supabase = createAdminClient();
 
-  // Fetch contact
+  // Fetch contact (include newsletter_intelligence for send governor)
   const { data: contact } = await supabase
     .from("contacts")
-    .select("id, name, phone, email, type, pref_channel, lead_status, tags, stage_bar")
+    .select("id, name, phone, email, type, pref_channel, lead_status, tags, stage_bar, newsletter_intelligence")
     .eq("id", enrollment.contact_id)
     .single();
 
@@ -398,6 +433,67 @@ export async function executeStep(
   }
 
   const variables = buildVariableContext(contact as Contact, listing);
+
+  // For message-sending steps, check the send governor first
+  const isMessageStep = ["auto_sms", "auto_whatsapp", "auto_email"].includes(step.action_type);
+
+  if (isMessageStep) {
+    // Resolve journey phase from contact_journeys (default to lead_status)
+    let journeyPhase = contact.lead_status || "lead";
+    const { data: journey } = await supabase
+      .from("contact_journeys")
+      .select("current_phase")
+      .eq("contact_id", contact.id)
+      .eq("status", "active")
+      .limit(1)
+      .single();
+    if (journey?.current_phase) {
+      journeyPhase = journey.current_phase;
+    }
+
+    // Extract engagement data from newsletter_intelligence
+    const intel = (contact.newsletter_intelligence as Record<string, unknown>) || {};
+    const engagementScore = (typeof intel.engagement_score === "number" ? intel.engagement_score : 0);
+    const engagementTrend = (typeof intel.engagement_trend === "string" ? intel.engagement_trend : "stable");
+
+    const governorResult = await checkSendGovernor({
+      contactId: contact.id,
+      contactType: contact.type,
+      journeyPhase,
+      engagementScore,
+      engagementTrend,
+    });
+
+    if (!governorResult.allowed) {
+      console.log(
+        `[workflow-engine] Send governor blocked for contact ${contact.id}: ${governorResult.reason}`,
+        governorResult.adjustments,
+      );
+
+      // Write suppressed record so it's visible in AI Agent tab
+      try {
+        await supabase.from("newsletters").insert({
+          contact_id: contact.id,
+          subject: `[Suppressed] ${step.action_type} — ${step.template_id || "auto"}`,
+          email_type: step.template_id || step.action_type,
+          status: "suppressed",
+          html_body: "<p>Email suppressed by AI — not generated.</p>",
+          ai_context: {
+            suppression_reason: governorResult.reason,
+            adjustments: governorResult.adjustments,
+            suggested_delay_hours: governorResult.suggestedDelay,
+            journey_phase: journeyPhase,
+            contact_type: contact.type,
+            suppressed_at: new Date().toISOString(),
+          },
+        });
+      } catch {
+        // Don't fail the workflow if suppression logging fails
+      }
+
+      return { success: false, error: `Send governor: ${governorResult.reason}` };
+    }
+  }
 
   // Execute based on action type
   switch (step.action_type) {
