@@ -80,21 +80,79 @@ If content depth is not available → STOP and mark the design incomplete. Do no
 
 ---
 
-## Gate 1: Pre-Implementation (BLOCKING)
+## Sequential Expansion Protocol (for non-trivial CODING:feature)
 
-Implementation CANNOT start unless ALL are true:
+**Why this exists:** Gates that say "check if design is complete" let the agent self-certify. Sequential expansion makes shallow output structurally impossible — each step's output is the required input for the next step. You cannot skip ahead because step N needs step N-1's concrete output.
 
-- [ ] Detailed Design Document exists at `docs/designs/<feature-name>.md`
-- [ ] All 10 sections are filled (no empty sections, no "TBD")
-- [ ] User roles and permissions defined
-- [ ] All screens/routes have state definitions (empty, loading, success, error)
-- [ ] Validation rules defined per field
-- [ ] Edge cases listed with expected behavior
-- [ ] Content requirements written (not placeholders)
-- [ ] Acceptance criteria present (GIVEN/WHEN/THEN format)
-- [ ] Traceability table maps design → implementation → tests
+**The agent MUST execute these steps in order, outputting each before proceeding to the next. No step may be skipped or combined.**
 
-If any item is missing → complete the design first. Do not start coding.
+### Step 1 → Output: Problem & Scope Statement
+Write and output:
+- What problem does this solve? (2-3 sentences of real user pain, not abstract)
+- Who uses this? (list specific roles and what each does differently)
+- What's in scope? What's explicitly NOT in scope?
+- What existing features does this interact with? (grep the codebase, list them)
+
+**You must output this before proceeding to Step 2.**
+
+### Step 2 → Output: User Journey Map (requires Step 1's roles)
+For each role identified in Step 1, write:
+- **Happy path**: numbered steps (user does X → system does Y → user sees Z)
+- **Failure path**: what happens when the API fails, validation fails, permission denied
+- **Abandon path**: what state is the system left in if user leaves mid-flow
+
+Minimum 3 journeys. Each must reference specific routes, components, or API endpoints from the codebase.
+
+**You must output all journeys before proceeding to Step 3.**
+
+### Step 3 → Output: Screen-by-Screen Spec (requires Step 2's routes)
+For every route/screen mentioned in Step 2's journeys:
+- Layout (sections, cards, tabs, modals)
+- Every button: what it does, where it navigates, what state it changes
+- **Five mandatory states**: empty, loading, success, error, partial — each with specific UI behavior and copy
+- Mobile behavior differences
+
+If a screen has no empty state defined → the spec is incomplete. If a button has no error state → the spec is incomplete.
+
+**You must output all screens before proceeding to Step 4.**
+
+### Step 4 → Output: Data & Validation Contract (requires Step 3's fields)
+For every field visible in Step 3's screens:
+- DB table and column (existing or new)
+- Type, nullable, default, constraints
+- Validation rule (min/max, format, uniqueness, cross-field)
+- Error message when validation fails (exact copy, not "show error")
+
+For every API route referenced:
+- Method, path, request schema, response schema
+- What happens on 400, 401, 404, 500
+
+**You must output all data contracts before proceeding to Step 5.**
+
+### Step 5 → Output: Edge Cases & Content (requires Steps 3-4)
+- Every edge case from the template (missing data, duplicates, network failure, partial completion, stale state, permission denial) — with expected behavior for THIS feature, not generic
+- Every content slot from Step 3's screens — exact copy for headlines, descriptions, CTAs, error messages, empty states, tooltips
+- **No placeholders.** If final copy isn't known, write realistic draft copy marked `[DRAFT]`
+
+**You must output all edge cases and content before proceeding to Step 6.**
+
+### Step 6 → Output: Acceptance Criteria & Traceability (requires Steps 1-5)
+- One `GIVEN/WHEN/THEN` per journey from Step 2
+- One `GIVEN/WHEN/THEN` per edge case from Step 5
+- Traceability table: every design section → implementation file → test case
+
+**You must output this, then save the full document to `docs/designs/<feature-name>.md`, before writing any implementation code.**
+
+### Why this works without human verification
+
+Each step requires concrete details from the previous step:
+- Step 2 needs Step 1's roles (can't write journeys without knowing who the users are)
+- Step 3 needs Step 2's routes (can't design screens without knowing the user flows)
+- Step 4 needs Step 3's fields (can't write validation rules without knowing what's on screen)
+- Step 5 needs Steps 3-4's specifics (can't write edge cases without knowing the data and UI)
+- Step 6 needs all of the above (can't write acceptance criteria for undefined behavior)
+
+An agent that tries to shortcut Step 3 by writing "add a settings page" will fail at Step 4 because there are no fields to write validation rules for. The chain self-enforces.
 
 ---
 
@@ -222,14 +280,34 @@ If any item is missing → complete the design first. Do not start coding.
 
 ---
 
-## Gate 2: Pre-Merge (BLOCKING)
+## Pre-Merge Self-Verification (automated — no human needed)
 
-Work CANNOT be marked complete unless ALL are true:
+Before marking the task complete, the agent MUST run these checks itself. These are objective, not subjective — each produces a pass/fail.
 
-- [ ] All design sections are implemented (not just layout — behavior, states, content)
-- [ ] No placeholder content remains in production code
-- [ ] All required UI states present (empty, loading, success, error)
-- [ ] Tests cover design scenarios (check traceability table)
-- [ ] Content depth requirements met (no "Coming soon", no stub sections)
-- [ ] Acceptance criteria from design document are verifiable
-- [ ] Implementation matches design intent, not just structure
+```
+VERIFY (run each, output result):
+
+1. DESIGN-TO-CODE TRACE — For every row in the design doc's traceability table (Step 6):
+   → Does the implementation file exist? (glob for it)
+   → Does it contain the function/component named in the design? (grep for it)
+   → If any row has no matching code → task is INCOMPLETE
+
+2. PLACEHOLDER SCAN — Run: grep -r "Coming soon\|Content goes here\|TODO\|PLACEHOLDER\|Lorem ipsum" src/
+   → 0 matches in files created/modified by this task = PASS
+   → Any match = FAIL — fix before committing
+
+3. STATE COMPLETENESS — For every screen in the design doc (Step 3):
+   → grep the component file for: loading, error, empty (or equivalent state names)
+   → If any screen is missing any of the 5 states → INCOMPLETE
+
+4. ACCEPTANCE CRITERIA — For every GIVEN/WHEN/THEN in Step 6:
+   → Can you point to a test case in tests/<feature>.md that covers it?
+   → If any criterion has no test → write the test or mark [pending] with reason
+
+5. CONTENT DEPTH — For every content slot in Step 5:
+   → Does the implementation contain the actual copy (or [DRAFT] copy)?
+   → grep for empty strings "", generic "Click here", "Untitled" in new components
+   → Any generic placeholder = FAIL
+```
+
+**Output the verification results in the PR description. Any FAIL = fix before creating PR.**

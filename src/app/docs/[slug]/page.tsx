@@ -19,10 +19,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const feature = getFeature(slug);
   if (!feature) return { title: "Not Found" };
   return {
-    title: `${feature.title} — ListingFlow Help`,
+    title: `${feature.title} — RealtorAI Help`,
     description: feature.problem.slice(0, 160),
     openGraph: {
-      title: `${feature.title} — ListingFlow Help`,
+      title: `${feature.title} — RealtorAI Help`,
       description: feature.problem.slice(0, 160),
       type: "article",
     },
@@ -40,7 +40,7 @@ export default async function PublicDocsPage({ params }: Props) {
       <header className="border-b border-border py-4 px-6">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <Link href="/docs" className="font-bold text-lg text-foreground">
-            ListingFlow Help
+            RealtorAI Help
           </Link>
           <Link href="/login" className="text-sm text-primary hover:underline">
             Sign in
@@ -57,8 +57,8 @@ export default async function PublicDocsPage({ params }: Props) {
             "@type": "Article",
             headline: feature.title,
             description: feature.problem.slice(0, 160),
-            author: { "@type": "Organization", name: "ListingFlow" },
-            publisher: { "@type": "Organization", name: "ListingFlow" },
+            author: { "@type": "Organization", name: "RealtorAI" },
+            publisher: { "@type": "Organization", name: "RealtorAI" },
             ...(feature.faq.length > 0 && {
               mainEntity: feature.faq.map((q) => ({
                 "@type": "Question",
@@ -131,7 +131,7 @@ export default async function PublicDocsPage({ params }: Props) {
         <div className="mt-12 p-8 rounded-xl bg-primary/5 border border-primary/10 text-center">
           <h2 className="text-xl font-bold text-foreground mb-2">Ready to automate your listing workflow?</h2>
           <p className="text-muted-foreground mb-4">
-            ListingFlow handles FINTRAC, BCREA forms, MLS prep, and showing management for BC realtors.
+            RealtorAI handles FINTRAC, BCREA forms, MLS prep, and showing management for BC realtors.
           </p>
           <Link href="/login" className="lf-btn inline-flex">
             Get Started

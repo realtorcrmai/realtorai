@@ -781,11 +781,14 @@ LOAD PLAYBOOK (Section 4 — routing)
 □ Read .claude/playbooks/<task-type>.md for your classified type
 □ If playbook references a template → read from .claude/templates/
 
-DESIGN-FIRST GATE (CODING:feature — BLOCKING if non-trivial)
-□ Non-trivial? (new page, module, >100 lines, multi-step, user-facing)
-□ YES → Detailed Design Doc at docs/designs/<name>.md BEFORE coding
-□ All 10 sections filled  □ No placeholders  □ No TBD  □ Acceptance criteria present
-□ Underspecified request? → STOP, list gaps, expand design, then code
+DESIGN-FIRST (CODING:feature — non-trivial → 6-step expansion BEFORE coding)
+□ Step 1: Problem & scope (output before Step 2)
+□ Step 2: User journeys per role (output before Step 3)
+□ Step 3: Screen-by-screen spec with 5 states each (output before Step 4)
+□ Step 4: Data & validation per field (output before Step 5)
+□ Step 5: Edge cases & exact content copy (output before Step 6)
+□ Step 6: Acceptance criteria + traceability → save to docs/designs/<name>.md
+□ THEN code. Skipping any step = the chain breaks = shallow output.
 
 FEATURE GATE (CODING:feature + DESIGN_SPEC)
 □ Search for existing capability  □ Summarize what exists

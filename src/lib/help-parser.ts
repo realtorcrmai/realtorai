@@ -80,7 +80,9 @@ export interface ContentValidation {
 
 // ── Constants ────────────────────────────────────────────────
 
-const USECASES_DIR = path ? path.join(process.cwd(), "usecases") : "";
+// Help content lives in help-content/ (user-facing articles)
+// usecases/ is developer reference — NOT parsed for help center
+const HELP_CONTENT_DIR = path ? path.join(process.cwd(), "help-content") : "";
 
 const FEATURE_ICONS: Record<string, string> = {
   "listing-workflow": "🏠",
@@ -413,16 +415,16 @@ export function validateFeature(f: HelpFeature): ContentValidation {
 // ── Main API ─────────────────────────────────────────────────
 
 export function getAllFeatures(): HelpFeature[] {
-  if (!fs || !fs.existsSync(USECASES_DIR)) return [];
-  return fs.readdirSync(USECASES_DIR)
+  if (!fs || !fs.existsSync(HELP_CONTENT_DIR)) return [];
+  return fs.readdirSync(HELP_CONTENT_DIR)
     .filter((f: string) => f.endsWith(".md"))
-    .map((file: string) => parseUseCaseFile(fs.readFileSync(path.join(USECASES_DIR, file), "utf-8"), file.replace(".md", "")))
+    .map((file: string) => parseUseCaseFile(fs.readFileSync(path.join(HELP_CONTENT_DIR, file), "utf-8"), file.replace(".md", "")))
     .filter(Boolean) as HelpFeature[];
 }
 
 export function getFeature(slug: string): HelpFeature | null {
   if (!fs || !path) return null;
-  const fp = path.join(USECASES_DIR, `${slug}.md`);
+  const fp = path.join(HELP_CONTENT_DIR, `${slug}.md`);
   if (!fs.existsSync(fp)) return null;
   return parseUseCaseFile(fs.readFileSync(fp, "utf-8"), slug);
 }
