@@ -20,6 +20,7 @@ import { IntelligencePanel } from "@/components/contacts/IntelligencePanel";
 import { ContextLog } from "@/components/contacts/ContextLog";
 import { WebsiteActivityLoader } from "@/components/contacts/WebsiteActivityLoader";
 import { DeleteContactButton } from "@/components/contacts/DeleteContactButton";
+import { ImportantDatesPanel } from "@/components/contacts/ImportantDatesPanel";
 import { Button } from "@/components/ui/button";
 import type { Contact, Communication, Listing, ContactDate, ContactDocument, BuyerPreferences, SellerPreferences, Demographics } from "@/types";
 import {
@@ -628,11 +629,21 @@ export default async function ContactDetailPage({
 
           {/* Mobile: Details button to open right panel in sheet */}
           <MobileDetailSheet title="Details">
-            <ContactContextPanel
-              contact={contact}
-              communications={typedCommunications}
-              contactDates={(contactDates ?? []) as ContactDate[]}
-            />
+            {intel && (
+              <IntelligencePanel
+                intelligence={intel}
+                totalEmails={newslettersWithEvents.length}
+              />
+            )}
+            <div className={intel ? "border-t pt-5" : ""}>
+              <ContextLog
+                contactId={id}
+                entries={(contactContextEntries ?? []) as Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>}
+              />
+            </div>
+            <div className="border-t pt-5">
+              <ImportantDatesPanel contactId={contact.id} dates={(contactDates ?? []) as ContactDate[]} />
+            </div>
             <div className="border-t pt-5">
               <RelationshipManager
                 contactId={contact.id}
@@ -677,19 +688,7 @@ export default async function ContactDetailPage({
           )}
 
           {intel && (
-            <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <IntelligencePanel
-                  intelligence={intel}
-                  totalEmails={newslettersWithEvents.length}
-                />
-                <ContextLog
-                  contactId={id}
-                  entries={(contactContextEntries ?? []) as Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>}
-                />
-              </div>
-              <WebsiteActivityLoader contactId={id} />
-            </>
+            <WebsiteActivityLoader contactId={id} />
           )}
 
           {/* Tabbed Content */}
@@ -729,11 +728,26 @@ export default async function ContactDetailPage({
 
       {/* RIGHT PANEL -- fixed, own scroll */}
       <aside className="hidden lg:block w-[340px] shrink-0 border-l overflow-y-auto p-6 space-y-5 bg-gradient-to-b from-slate-50 via-white to-teal-50/30 dark:from-card/50 dark:via-card/30 dark:to-teal-950/10">
-        <ContactContextPanel
-          contact={contact}
-          communications={typedCommunications}
-          contactDates={(contactDates ?? []) as ContactDate[]}
-        />
+        {/* Engagement (Intelligence) */}
+        {intel && (
+          <IntelligencePanel
+            intelligence={intel}
+            totalEmails={newslettersWithEvents.length}
+          />
+        )}
+
+        {/* Realtor Context */}
+        <div className={intel ? "border-t pt-5" : ""}>
+          <ContextLog
+            contactId={id}
+            entries={(contactContextEntries ?? []) as Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>}
+          />
+        </div>
+
+        {/* Important Dates */}
+        <div className="border-t pt-5">
+          <ImportantDatesPanel contactId={contact.id} dates={(contactDates ?? []) as ContactDate[]} />
+        </div>
 
         {/* Relationships */}
         <div className="border-t pt-5">
