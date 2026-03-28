@@ -627,6 +627,7 @@ export function VoiceAgentWidget() {
           open ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground",
           !connected && !open && "opacity-60"
         )}
+        data-tour="voice-agent-btn"
         title={connected ? "Open Voice Assistant" : "Voice Agent offline"}
       >
         {open ? (

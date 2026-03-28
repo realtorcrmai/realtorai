@@ -494,7 +494,23 @@ Every new feature MUST include all of the following before it is considered comp
 
 **All task execution follows `.claude/agent-playbook.md` — the single source of truth.**
 
-Read it before every task. It covers: pre-flight, task classification, per-type checklists (14 task types), model chaining, post-task validation, compliance logging, and production incident protocol.
+Read it before every task. It covers: pre-flight, task classification, model chaining, post-task validation, compliance logging, and production incident protocol.
+
+**After classification, load the per-type playbook from `.claude/playbooks/<type>.md`** (see Section 4 routing table). Per-type playbooks contain phase-by-phase checklists for each of the 14 task types.
+
+**For non-trivial features (CODING:feature):** A Detailed Design Document is MANDATORY before implementation. Use template at `.claude/templates/detailed-design.md`. See `.claude/playbooks/coding.md` for design-first policy, gates, and placeholder prohibition rules.
+
+```
+.claude/
+├── agent-playbook.md          ← core (read ALWAYS)
+├── playbooks/                 ← per-type (read AFTER classification)
+│   ├── coding.md              ← includes design-first policy + gates
+│   ├── design-spec.md, testing.md, debugging.md, orchestration.md
+│   ├── integration.md, voice-agent.md, data-migration.md
+│   ├── security-audit.md, deploy.md, simple-types.md
+├── templates/
+│   └── detailed-design.md     ← 10-section design doc template
+```
 
 ---
 

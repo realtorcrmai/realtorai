@@ -23,7 +23,7 @@ export default function HelpPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground">Help Center</h1>
         <p className="text-muted-foreground mt-1">
-          Learn how to use ListingFlow — guides, scenarios, and walkthroughs for every feature.
+          Learn how to use RealtorAI — guides, scenarios, and walkthroughs for every feature.
         </p>
       </div>
 

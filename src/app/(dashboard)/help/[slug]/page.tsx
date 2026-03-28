@@ -2,6 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getFeature, getAllFeatures, getFeatureIcon } from "@/lib/help-parser";
 import { HelpDetailClient } from "@/components/help/HelpDetailClient";
+import { FeedbackControls } from "@/components/help/FeedbackControls";
+import { TourLauncher } from "@/components/help/TourLauncher";
+import { getToursForFeature } from "@/components/help/TourDefinitions";
 
 export const dynamic = "force-dynamic";
 
@@ -47,9 +50,23 @@ export default async function HelpDetailPage({ params }: Props) {
         </div>
       </div>
 
+      {/* Tours for this feature */}
+      {getToursForFeature(slug).length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {getToursForFeature(slug).map((tour) => (
+            <TourLauncher key={tour.id} tour={tour} className="lf-btn-ghost text-sm">
+              ▶ {tour.title} ({tour.duration})
+            </TourLauncher>
+          ))}
+        </div>
+      )}
+
       <div id="help-detail">
         <HelpDetailClient feature={feature} />
       </div>
+
+      {/* Feedback */}
+      <FeedbackControls slug={slug} />
     </div>
   );
 }

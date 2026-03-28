@@ -1,3 +1,13 @@
+---
+title: " Use Case: FINTRAC Compliance & Seller Identity Verification"
+slug: "fintrac-compliance"
+owner: rahul
+last_reviewed: "2026-03-27"
+visibility: public
+related_routes: ["/contacts"]
+changelog: []
+---
+
 # Use Case: FINTRAC Compliance & Seller Identity Verification
 
 ## Problem Statement

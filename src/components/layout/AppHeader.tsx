@@ -134,6 +134,7 @@ export function AppHeader() {
             <Link
               key={tab.href}
               href={tab.href}
+              data-tour={`nav-${tab.featureKey}`}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                 isActive(tab.href)
@@ -173,6 +174,7 @@ export function AppHeader() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    data-tour={`nav-${item.featureKey}`}
                     onClick={() => setMoreOpen(false)}
                     className={cn(
                       "flex items-center gap-3 px-4 py-2.5 text-sm transition-colors mx-1.5 rounded-lg",

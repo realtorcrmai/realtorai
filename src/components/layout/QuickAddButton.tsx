@@ -88,15 +88,15 @@ export function QuickAddButton() {
           <Plus className="h-4.5 w-4.5" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="center" side="top" sideOffset={12} className="w-48">
-          <DropdownMenuItem onClick={() => openDialog("contact")}>
+          <DropdownMenuItem data-tour="create-contact" onClick={() => openDialog("contact")}>
             <Users className="h-4 w-4" />
             <span>Contact</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => openDialog("listing")}>
+          <DropdownMenuItem data-tour="create-listing" onClick={() => openDialog("listing")}>
             <Building2 className="h-4 w-4" />
             <span>Listing</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => openDialog("showing")}>
+          <DropdownMenuItem data-tour="create-showing" onClick={() => openDialog("showing")}>
             <Clock className="h-4 w-4" />
             <span>Showing</span>
           </DropdownMenuItem>

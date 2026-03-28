@@ -1,3 +1,13 @@
+---
+title: " Contact Management"
+slug: "contact-management"
+owner: rahul
+last_reviewed: "2026-03-27"
+visibility: public
+related_routes: ["/contacts"]
+changelog: []
+---
+
 # Contact Management
 
 ## Problem Statement
