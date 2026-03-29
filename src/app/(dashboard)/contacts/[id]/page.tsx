@@ -1,12 +1,12 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
+import { NetworkLink } from "@/components/contacts/NetworkLink";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, MessageSquare, Edit } from "lucide-react";
 import { ContactForm } from "@/components/contacts/ContactForm";
-import { ContactContextPanel } from "@/components/contacts/ContactContextPanel";
 import { MobileDetailSheet } from "@/components/layout/MobileDetailSheet";
-import { type ReferralRow } from "@/components/contacts/ReferralsPanel";
+import { ReferralsPanel, type ReferralRow } from "@/components/contacts/ReferralsPanel";
 import { HouseholdBanner } from "@/components/contacts/HouseholdBanner";
 import { RelationshipManager } from "@/components/contacts/RelationshipManager";
 import { QuickActionBar } from "@/components/contacts/QuickActionBar";
@@ -18,6 +18,9 @@ import { JourneyProgressBar } from "@/components/contacts/JourneyProgressBar";
 import { EmailHistoryTimeline } from "@/components/contacts/EmailHistoryTimeline";
 import { IntelligencePanel } from "@/components/contacts/IntelligencePanel";
 import { ContextLog } from "@/components/contacts/ContextLog";
+import { ImportantDatesPanel } from "@/components/contacts/ImportantDatesPanel";
+import RelationshipGraph from "@/components/contacts/RelationshipGraph";
+import { NetworkStatsCard } from "@/components/contacts/NetworkStatsCard";
 import { WebsiteActivityLoader } from "@/components/contacts/WebsiteActivityLoader";
 import { DeleteContactButton } from "@/components/contacts/DeleteContactButton";
 import { Button } from "@/components/ui/button";
@@ -628,17 +631,56 @@ export default async function ContactDetailPage({
 
           {/* Mobile: Details button to open right panel in sheet */}
           <MobileDetailSheet title="Details">
-            <ContactContextPanel
-              contact={contact}
-              communications={typedCommunications}
-              contactDates={(contactDates ?? []) as ContactDate[]}
-            />
-            <div className="border-t pt-5">
-              <RelationshipManager
-                contactId={contact.id}
-                relationships={relationships}
-                allContacts={allContacts?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })) ?? []}
-              />
+            <div className="space-y-5">
+              {/* Engagement */}
+              <div className="rounded-xl border border-indigo-200/40 bg-gradient-to-br from-indigo-50/60 via-white/70 to-violet-50/40 backdrop-blur-sm p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-3">
+                  <span>💬</span> Engagement
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-[#f8f7fd] rounded-lg p-3 text-center">
+                    <p className="text-lg font-bold text-indigo-600">{typedCommunications.length}</p>
+                    <p className="text-[11px] text-muted-foreground">Messages</p>
+                  </div>
+                  <div className="bg-[#f8f7fd] rounded-lg p-3 text-center">
+                    <p className="text-lg font-bold text-violet-600">{typedCommunications.filter(c => c.direction === "inbound").length}</p>
+                    <p className="text-[11px] text-muted-foreground">Inbound</p>
+                  </div>
+                  <div className="bg-[#f8f7fd] rounded-lg p-3 text-center">
+                    <p className="text-lg font-bold text-rose-600">{typedCommunications.filter(c => c.direction === "outbound").length}</p>
+                    <p className="text-[11px] text-muted-foreground">Outbound</p>
+                  </div>
+                  <div className="bg-[#f8f7fd] rounded-lg p-3 text-center">
+                    <p className="text-sm font-bold text-teal-600">
+                      {typedCommunications.length > 0
+                        ? (() => {
+                            const days = Math.round((Date.now() - new Date(typedCommunications[0].created_at).getTime()) / 86400000);
+                            return days === 0 ? "Today" : days === 1 ? "Yesterday" : `${days}d ago`;
+                          })()
+                        : "Never"}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">Last Contact</p>
+                  </div>
+                </div>
+              </div>
+              {/* Network Stats */}
+              <div className="rounded-xl border border-indigo-200/40 bg-gradient-to-br from-indigo-50/60 via-white/70 to-violet-50/40 backdrop-blur-sm p-4 shadow-sm">
+                <NetworkStatsCard
+                  connectionCount={relationships.length}
+                  referralCount={allReferrals.length}
+                  networkValue={networkValue}
+                  dataScore={dataScore}
+                  demographics={demographics}
+                  dateCount={(contactDates ?? []).length}
+                  hasPreferences={!!(buyerPreferences || sellerPreferences)}
+                />
+                <a
+                  href={`/contacts/${id}?tab=intelligence`}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors mt-3"
+                >
+                  View full network & intelligence →
+                </a>
+              </div>
             </div>
           </MobileDetailSheet>
 
@@ -677,19 +719,7 @@ export default async function ContactDetailPage({
           )}
 
           {intel && (
-            <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <IntelligencePanel
-                  intelligence={intel}
-                  totalEmails={newslettersWithEvents.length}
-                />
-                <ContextLog
-                  contactId={id}
-                  entries={(contactContextEntries ?? []) as Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>}
-                />
-              </div>
-              <WebsiteActivityLoader contactId={id} />
-            </>
+            <WebsiteActivityLoader contactId={id} />
           )}
 
           {/* Tabbed Content */}
@@ -708,6 +738,9 @@ export default async function ContactDetailPage({
             sellerPreferences={sellerPreferences}
             allListings={(allListings ?? []) as { id: string; address: string; list_price: number | null }[]}
             tasks={typedTasks}
+            intelligence={intel}
+            totalEmails={newslettersWithEvents.length}
+            contextEntries={(contactContextEntries ?? []) as Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>}
             demographics={demographics}
             graphNodes={graphNodes}
             graphEdges={graphEdges}
@@ -729,14 +762,70 @@ export default async function ContactDetailPage({
 
       {/* RIGHT PANEL -- fixed, own scroll */}
       <aside className="hidden lg:block w-[340px] shrink-0 border-l overflow-y-auto p-6 space-y-5 bg-gradient-to-b from-slate-50 via-white to-teal-50/30 dark:from-card/50 dark:via-card/30 dark:to-teal-950/10">
-        <ContactContextPanel
-          contact={contact}
-          communications={typedCommunications}
-          contactDates={(contactDates ?? []) as ContactDate[]}
-        />
+        {/* 1. Engagement */}
+        <div className="rounded-xl border-l-4 border-l-sky-400 border border-indigo-200/40 dark:border-indigo-800/30 bg-gradient-to-br from-indigo-50/60 via-white/70 to-violet-50/40 dark:from-indigo-950/20 dark:via-card/70 dark:to-violet-950/10 backdrop-blur-sm p-4 shadow-sm">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-3">
+            <span>💬</span> Engagement
+          </h3>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-[#f8f7fd] rounded-lg p-3 text-center">
+              <p className="text-lg font-bold text-indigo-600">{typedCommunications.length}</p>
+              <p className="text-[11px] text-muted-foreground">Messages</p>
+            </div>
+            <div className="bg-[#f8f7fd] rounded-lg p-3 text-center">
+              <p className="text-lg font-bold text-violet-600">{typedCommunications.filter(c => c.direction === "inbound").length}</p>
+              <p className="text-[11px] text-muted-foreground">Inbound</p>
+            </div>
+            <div className="bg-[#f8f7fd] rounded-lg p-3 text-center">
+              <p className="text-lg font-bold text-rose-600">{typedCommunications.filter(c => c.direction === "outbound").length}</p>
+              <p className="text-[11px] text-muted-foreground">Outbound</p>
+            </div>
+            <div className="bg-[#f8f7fd] rounded-lg p-3 text-center">
+              <p className="text-sm font-bold text-teal-600">
+                {typedCommunications.length > 0
+                  ? (() => {
+                      const days = Math.round((Date.now() - new Date(typedCommunications[0].created_at).getTime()) / 86400000);
+                      return days === 0 ? "Today" : days === 1 ? "Yesterday" : `${days}d ago`;
+                    })()
+                  : "Never"}
+              </p>
+              <p className="text-[11px] text-muted-foreground">Last Contact</p>
+            </div>
+          </div>
+        </div>
 
-        {/* Relationships */}
-        <div className="border-t pt-5">
+        {/* 2. Network Stats with link to Intelligence */}
+        <div className="rounded-xl border-l-4 border-l-teal-400 border border-indigo-200/40 dark:border-indigo-800/30 bg-gradient-to-br from-indigo-50/60 via-white/70 to-violet-50/40 dark:from-indigo-950/20 dark:via-card/70 dark:to-violet-950/10 backdrop-blur-sm p-4 shadow-sm">
+          <NetworkStatsCard
+            connectionCount={relationships.length}
+            referralCount={allReferrals.length}
+            networkValue={networkValue}
+            dataScore={dataScore}
+            demographics={demographics}
+            dateCount={(contactDates ?? []).length}
+            hasPreferences={!!(buyerPreferences || sellerPreferences)}
+          />
+          {graphNodes.length > 1 && <NetworkLink />}
+        </div>
+
+        {/* Important Dates */}
+        <div className="rounded-xl border-l-4 border-l-amber-400 border border-indigo-200/40 dark:border-indigo-800/30 bg-gradient-to-br from-indigo-50/60 via-white/70 to-violet-50/40 dark:from-indigo-950/20 dark:via-card/70 dark:to-violet-950/10 backdrop-blur-sm p-4 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+          <ImportantDatesPanel contactId={contact.id} dates={(contactDates ?? []) as ContactDate[]} />
+        </div>
+
+        {/* Referrals */}
+        <div className="rounded-xl border-l-4 border-l-emerald-400 border border-indigo-200/40 dark:border-indigo-800/30 bg-gradient-to-br from-indigo-50/60 via-white/70 to-violet-50/40 dark:from-indigo-950/20 dark:via-card/70 dark:to-violet-950/10 backdrop-blur-sm p-4 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
+          <ReferralsPanel
+            contact={contact}
+            referredByName={referredByName}
+            referralsAsReferrer={(referralsAsReferrer ?? []) as ReferralRow[]}
+            referralsAsReferred={(referralsAsReferred ?? []) as ReferralRow[]}
+            allContacts={(allContacts ?? []) as { id: string; name: string }[]}
+          />
+        </div>
+
+        {/* Relationships (add/manage) */}
+        <div className="rounded-xl border-l-4 border-l-violet-400 border border-indigo-200/40 dark:border-indigo-800/30 bg-gradient-to-br from-indigo-50/60 via-white/70 to-violet-50/40 dark:from-indigo-950/20 dark:via-card/70 dark:to-violet-950/10 backdrop-blur-sm p-4 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
           <RelationshipManager
             contactId={contact.id}
             relationships={relationships}

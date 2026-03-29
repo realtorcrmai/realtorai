@@ -1,5 +1,7 @@
 # CLAUDE.md — ListingFlow Real Estate CRM
 
+> **Before every task, read `.claude/agent-playbook.md`.** Classify the task (Tier + Type) before any code changes. No exceptions — new session or old.
+
 ## Project Overview
 
 ListingFlow is a real estate transaction management CRM for licensed BC realtors. It automates the full property listing lifecycle — from seller intake through closing — with integrated showing management, BCREA form generation, AI content creation, and regulatory compliance tracking.
@@ -492,9 +494,11 @@ Every new feature MUST include all of the following before it is considered comp
 
 ## Agent Playbook
 
-**All task execution follows `.claude/agent-playbook.md` — the single source of truth.**
+**All task execution follows `.claude/agent-playbook.md` — the single source of truth for process.**
 
-Read it before every task. It covers: pre-flight, task classification, per-type checklists (14 task types), model chaining, post-task validation, compliance logging, and production incident protocol.
+CLAUDE.md = project facts (tech stack, schema, file paths). Playbook = process rules (how to work). On conflict: playbook wins for process, CLAUDE.md wins for tech details.
+
+The playbook uses **proportional process** — 4 tiers (Micro/Small/Medium/Large) with different ceremony levels. It covers: classification, 6 task types, coding checklist, validation, compliance, governance, and incident protocol. PRD template lives at `docs/templates/PRD_TEMPLATE.md`.
 
 ---
 

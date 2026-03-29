@@ -140,7 +140,8 @@ export function VoiceAgentWidget() {
   const [listening, setListening] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [speaking, setSpeaking] = useState(false);
-  const [continuousMode, setContinuousMode] = useState(true);
+  const [continuousMode, setContinuousMode] = useState(false);
+  const initialGreetRef = useRef(true); // auto-listen only after first greeting
   const [useEdgeTTS, setUseEdgeTTS] = useState(true); // prefer server TTS
   const [useWhisperSTT, setUseWhisperSTT] = useState(true); // prefer server Whisper STT
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -592,9 +593,12 @@ export function VoiceAgentWidget() {
       // Create session in background
       createSession();
 
-      // Speak greeting, then auto-listen
+      // Speak greeting, then auto-listen only on initial load
       speak(greeting, () => {
-        if (continuousMode) setTimeout(startListening, 600);
+        if (initialGreetRef.current) {
+          initialGreetRef.current = false;
+          setTimeout(startListening, 600);
+        }
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

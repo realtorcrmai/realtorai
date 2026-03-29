@@ -11,5 +11,19 @@
       "Bash(git -C /Users/rahulmittal/Library/CloudStorage/OneDrive-Personal/CoWork log --oneline origin/main)",
       "Bash(git checkout:*)"
     ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/playbook-gate.sh",
+            "timeout": 5,
+            "statusMessage": "Checking playbook compliance..."
+          }
+        ]
+      }
+    ]
   }
 }

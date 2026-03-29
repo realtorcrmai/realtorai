@@ -18,6 +18,8 @@ import { ContactDocumentsPanel } from "@/components/contacts/ContactDocumentsPan
 import { PropertiesOfInterestPanel } from "@/components/contacts/PropertiesOfInterestPanel";
 import { WorkflowStepperCard } from "@/components/contacts/WorkflowStepperCard";
 import ActivityTimeline from "@/components/contacts/ActivityTimeline";
+import { IntelligencePanel } from "@/components/contacts/IntelligencePanel";
+import { ContextLog } from "@/components/contacts/ContextLog";
 import type {
   Contact,
   Communication,
@@ -111,6 +113,9 @@ export type ContactDetailTabsProps = {
   tasks: TaskRow[];
 
   // Intelligence tab
+  intelligence: Record<string, unknown> | null;
+  totalEmails: number;
+  contextEntries: Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>;
   demographics: Demographics | null;
   graphNodes: GraphNode[];
   graphEdges: GraphEdge[];
@@ -150,6 +155,9 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
     allListings,
     tasks,
     // Intelligence
+    intelligence,
+    totalEmails,
+    contextEntries,
     demographics,
     graphNodes,
     graphEdges,
@@ -222,6 +230,16 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             </Card>
           ))}
 
+          {/* Realtor Context */}
+          <Card className="border-l-4 border-l-amber-400 bg-amber-50/15 dark:bg-amber-950/10">
+            <CardContent className="p-6">
+              <ContextLog
+                contactId={contactId}
+                entries={contextEntries}
+              />
+            </CardContent>
+          </Card>
+
 
           {/* Seller / Buyer Preferences */}
           {isSeller ? (
@@ -263,26 +281,6 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             </Card>
           )}
 
-          {/* Tasks & Follow-ups */}
-          <Card className="border-l-4 border-l-orange-400 bg-orange-50/15 dark:bg-orange-950/10">
-            <CardContent className="p-6">
-              <ContactTasksPanel contactId={contactId} tasks={tasks} />
-            </CardContent>
-          </Card>
-
-          {/* Referrals */}
-          <Card className="bg-white/60 dark:bg-card/40">
-            <CardContent className="p-6">
-              <ReferralsPanel
-                contact={contact}
-                referredByName={referredByName}
-                referralsAsReferrer={referralsAsReferrer}
-                referralsAsReferred={referralsAsReferred}
-                allContacts={allContacts}
-              />
-            </CardContent>
-          </Card>
-
           {/* Contact Documents */}
           <Card className="bg-white/60 dark:bg-card/40">
             <CardContent className="p-6">
@@ -298,6 +296,21 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
       {/* ── INTELLIGENCE TAB ─────────────────────────────────── */}
       <TabsContent value="intelligence">
         <div className="space-y-5">
+          {/* Network — Relationship Graph */}
+          {graphNodes.length > 1 && (
+            <Card className="border-l-4 border-l-indigo-400 bg-indigo-50/15 dark:bg-indigo-950/10">
+              <CardContent className="p-6">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mb-3">
+                  <span>🕸️</span> Network
+                </h3>
+                <RelationshipGraph
+                  nodes={graphNodes as any}
+                  edges={graphEdges as any}
+                />
+              </CardContent>
+            </Card>
+          )}
+
           {/* Demographics Panel */}
           <Card className="border-l-4 border-l-violet-400 bg-violet-50/20 dark:bg-violet-950/10">
             <CardContent className="p-6">
@@ -307,18 +320,6 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
               />
             </CardContent>
           </Card>
-
-          {/* Relationship Graph */}
-          {graphNodes.length > 1 && (
-            <Card className="border-l-4 border-l-indigo-400 bg-indigo-50/15 dark:bg-indigo-950/10">
-              <CardContent className="p-6">
-                <RelationshipGraph
-                  nodes={graphNodes as any}
-                  edges={graphEdges as any}
-                />
-              </CardContent>
-            </Card>
-          )}
 
           {/* Network Stats + Upcoming Events */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -351,6 +352,13 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
       {/* ── ACTIVITY TAB ─────────────────────────────────────── */}
       <TabsContent value="activity">
         <div className="space-y-5">
+          {/* Tasks & Follow-ups */}
+          <Card className="border-l-4 border-l-orange-400 bg-orange-50/15 dark:bg-orange-950/10">
+            <CardContent className="p-6">
+              <ContactTasksPanel contactId={contactId} tasks={tasks} />
+            </CardContent>
+          </Card>
+
           {/* Communication Timeline */}
           <Card className="border-l-4 border-l-sky-400 bg-sky-50/15 dark:bg-sky-950/10">
             <CardContent className="p-6">

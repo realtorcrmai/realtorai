@@ -96,7 +96,7 @@ export function IntelligencePanel({ intelligence, totalEmails = 0 }: Props) {
   return (
     <div className="space-y-4">
       {/* Engagement Score */}
-      <Card>
+      <Card className="bg-gradient-to-br from-indigo-50/60 via-white/70 to-violet-50/40 dark:from-indigo-950/20 dark:via-card/70 dark:to-violet-950/10 backdrop-blur-sm border-indigo-200/40 dark:border-indigo-800/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -150,7 +150,7 @@ export function IntelligencePanel({ intelligence, totalEmails = 0 }: Props) {
 
       {/* Interested In */}
       {(interests.areas?.length || interests.property_types?.length) && (
-        <Card>
+        <Card className="bg-gradient-to-br from-indigo-50/60 via-white/70 to-violet-50/40 dark:from-indigo-950/20 dark:via-card/70 dark:to-violet-950/10 backdrop-blur-sm border-indigo-200/40 dark:border-indigo-800/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
           <CardContent className="p-4">
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
               Interested In
@@ -205,7 +205,7 @@ export function IntelligencePanel({ intelligence, totalEmails = 0 }: Props) {
 
       {/* Content Preferences */}
       {bestContent.length > 0 && (
-        <Card>
+        <Card className="bg-gradient-to-br from-indigo-50/60 via-white/70 to-violet-50/40 dark:from-indigo-950/20 dark:via-card/70 dark:to-violet-950/10 backdrop-blur-sm border-indigo-200/40 dark:border-indigo-800/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
           <CardContent className="p-4">
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
               Content Effectiveness
@@ -248,7 +248,7 @@ export function IntelligencePanel({ intelligence, totalEmails = 0 }: Props) {
 
       {/* Best Send Time */}
       {timing.best_day && (
-        <Card>
+        <Card className="bg-gradient-to-br from-indigo-50/60 via-white/70 to-violet-50/40 dark:from-indigo-950/20 dark:via-card/70 dark:to-violet-950/10 backdrop-blur-sm border-indigo-200/40 dark:border-indigo-800/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
           <CardContent className="p-4">
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
               Best Send Time
@@ -286,7 +286,7 @@ export function IntelligencePanel({ intelligence, totalEmails = 0 }: Props) {
 
       {/* Direct Interactions */}
       {intel.last_direct_contact && (
-        <Card>
+        <Card className="bg-gradient-to-br from-indigo-50/60 via-white/70 to-violet-50/40 dark:from-indigo-950/20 dark:via-card/70 dark:to-violet-950/10 backdrop-blur-sm border-indigo-200/40 dark:border-indigo-800/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
           <CardContent className="p-4">
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
               Last Direct Contact

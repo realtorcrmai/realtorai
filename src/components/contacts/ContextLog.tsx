@@ -24,13 +24,13 @@ type Props = {
 
 const TYPE_CONFIG: Record<
   string,
-  { icon: typeof AlertTriangle; color: string; label: string }
+  { icon: typeof AlertTriangle; color: string; label: string; border: string }
 > = {
-  objection: { icon: AlertTriangle, color: "text-amber-600", label: "Objection" },
-  preference: { icon: Heart, color: "text-blue-600", label: "Preference" },
-  concern: { icon: AlertTriangle, color: "text-red-600", label: "Concern" },
-  info: { icon: Info, color: "text-gray-600", label: "Info" },
-  timeline: { icon: Clock, color: "text-purple-600", label: "Timeline" },
+  objection: { icon: AlertTriangle, color: "text-amber-600", label: "Objection", border: "border-l-amber-400" },
+  preference: { icon: Heart, color: "text-blue-600", label: "Preference", border: "border-l-blue-400" },
+  concern: { icon: AlertTriangle, color: "text-red-600", label: "Concern", border: "border-l-red-400" },
+  info: { icon: Info, color: "text-gray-600", label: "Info", border: "border-l-gray-300" },
+  timeline: { icon: Clock, color: "text-purple-600", label: "Timeline", border: "border-l-purple-400" },
 };
 
 export function ContextLog({ contactId, entries, onAdd, onResolve }: Props) {
@@ -78,7 +78,7 @@ export function ContextLog({ contactId, entries, onAdd, onResolve }: Props) {
   const resolved = entries.filter((e) => e.is_resolved);
 
   return (
-    <Card>
+    <Card className="bg-gradient-to-br from-indigo-50/60 via-white/70 to-violet-50/40 dark:from-indigo-950/20 dark:via-card/70 dark:to-violet-950/10 backdrop-blur-sm border-indigo-200/40 dark:border-indigo-800/30 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200">
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-3">
           <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -150,7 +150,7 @@ export function ContextLog({ contactId, entries, onAdd, onResolve }: Props) {
             return (
               <div
                 key={entry.id}
-                className="flex items-start gap-2 text-xs group"
+                className={`flex items-start gap-2 text-xs group pl-2.5 border-l-2 ${config.border} rounded-r-md py-1`}
               >
                 <Icon className={`w-3 h-3 mt-0.5 flex-shrink-0 ${config.color}`} />
                 <div className="flex-1 min-w-0">
