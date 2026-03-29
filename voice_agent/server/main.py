@@ -566,22 +566,43 @@ async def handle_chat(request):
             },
         )
 
-        tool_calls = result.get("tool_calls")
-        if tool_calls:
+        # Multi-round tool call loop (up to 3 rounds, matching streaming handler)
+        max_tool_rounds = 3
+        for _round in range(max_tool_rounds):
+            tool_calls = result.get("tool_calls")
+            if not tool_calls:
+                break
+
+            # Build tool_result blocks (Anthropic format)
+            raw_blocks = result.get("raw_content_blocks", [])
+            if raw_blocks:
+                session.messages.append({"role": "assistant_tool_use", "content": raw_blocks})
+
+            tool_result_blocks = []
             for tc in tool_calls:
                 fn = tc.get("function", {})
                 tool_name = fn.get("name", "")
+                tool_use_id = tc.get("id", "")
                 tool_args = fn.get("arguments", {})
                 if isinstance(tool_args, str):
                     tool_args = json.loads(tool_args)
-                tool_result = await session.handle_tool_call(tool_name, tool_args)
-                session.messages.append({"role": "tool", "content": tool_result})
+                try:
+                    tool_result = await session.handle_tool_call(tool_name, tool_args)
+                except Exception as te:
+                    tool_result = json.dumps({"error": f"Tool {tool_name} failed: {te}"})
+                tool_result_blocks.append({
+                    "type": "tool_result",
+                    "tool_use_id": tool_use_id,
+                    "content": tool_result,
+                })
+
+            session.messages.append({"role": "tool_result", "content": tool_result_blocks})
 
             _t1 = _time.time()
-            result2 = await provider.chat(session.get_messages_with_focus())
-            content = result2["content"]
+            result = await provider.chat(session.get_messages_with_focus())
+            content = result["content"]
             _latency2 = int((_time.time() - _t1) * 1000)
-            _usage2 = result2.get("usage", {})
+            _usage2 = result.get("usage", {})
             log_cost(
                 session_id=sid, realtor_id=session.realtor_id,
                 service="llm", provider=provider.name,
@@ -589,7 +610,8 @@ async def handle_chat(request):
                 input_tokens=_usage2.get("input_tokens", 0),
                 output_tokens=_usage2.get("output_tokens", len(content) // 4),
                 latency_ms=_latency2,
-                metadata={"type": "tool_followup", "tools": [tc.get("function", {}).get("name") for tc in tool_calls]},
+                metadata={"type": "tool_followup", "round": _round + 1,
+                          "tools": [tc.get("function", {}).get("name") for tc in tool_calls]},
             )
 
         # Handle empty response — retry once

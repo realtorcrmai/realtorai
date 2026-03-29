@@ -621,6 +621,30 @@ def get_active_provider() -> LLMProvider:
     return get_llm_provider(LLM_PROVIDER)
 
 
+async def chat_with_fallback(provider: LLMProvider, messages, tools=None) -> dict:
+    """Call provider.chat() with runtime fallback to next provider on error."""
+    try:
+        return await provider.chat(messages, tools)
+    except Exception as primary_err:
+        print(f"[LLM] Primary provider {provider.name} failed: {primary_err}")
+        # Try each fallback provider
+        for fallback_name in LLM_FALLBACK_CHAIN:
+            fallback_name = fallback_name.strip()
+            if fallback_name == provider.name:
+                continue  # Skip the one that just failed
+            if fallback_name in _PROVIDERS:
+                fallback = _PROVIDERS[fallback_name]()
+                if fallback.is_available():
+                    try:
+                        print(f"[LLM] Trying runtime fallback: {fallback_name}")
+                        return await fallback.chat(messages, tools)
+                    except Exception as fb_err:
+                        print(f"[LLM] Fallback {fallback_name} also failed: {fb_err}")
+                        continue
+        # All fallbacks exhausted — re-raise original error
+        raise primary_err
+
+
 def get_provider_for_query(message: str) -> LLMProvider:
     """Smart routing: use Haiku for simple queries, Sonnet for complex ones.
     Only applies when the active provider is Anthropic.

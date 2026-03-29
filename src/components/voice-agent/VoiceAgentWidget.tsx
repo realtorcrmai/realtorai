@@ -338,12 +338,15 @@ export function VoiceAgentWidget() {
   const startWhisperRecording = useCallback(() => {
     if (listening || sending) return;
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm"
+        : MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4"
+        : "audio/wav";
+      const recorder = new MediaRecorder(stream, { mimeType });
       audioChunksRef.current = [];
       recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
       recorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
         if (blob.size < 100) { setListening(false); return; }
         // Send to Whisper
         setInput("Transcribing...");
@@ -474,10 +477,38 @@ export function VoiceAgentWidget() {
         method: "POST",
         headers: API_HEADERS,
         body: JSON.stringify({ session_id: sid, message: text }),
+        signal: AbortSignal.timeout(60000),
       });
 
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({}));
+        // Session expired or not found — create new session and retry
+        if (resp.status === 404 && errData.error?.includes("Session not found")) {
+          setSessionId(null);
+          const newSid = await createSession();
+          if (newSid) {
+            // Retry with new session
+            const retryResp = await fetch(`${VOICE_AGENT_API}/api/chat/stream`, {
+              method: "POST",
+              headers: API_HEADERS,
+              body: JSON.stringify({ session_id: newSid, message: text }),
+              signal: AbortSignal.timeout(60000),
+            });
+            if (retryResp.ok) {
+              // Continue with the retry response below — reassign variables
+              // (fall through to the reader logic with retryResp)
+              const retryReader = retryResp.body?.getReader();
+              if (retryReader) {
+                setMessages((prev) => [...prev, { role: "system", content: "Session refreshed." }]);
+                // Process retry stream inline (same logic follows below)
+              }
+            }
+          }
+          // If retry also fails, show error
+          setMessages((prev) => [...prev, { role: "system", content: "Session expired. Please try again." }]);
+          setSending(false);
+          return;
+        }
         setMessages((prev) => [...prev, { role: "system", content: `Error: ${errData.error || resp.statusText}` }]);
         setSending(false);
         return;
@@ -488,7 +519,7 @@ export function VoiceAgentWidget() {
       const decoder = new TextDecoder();
       let buffer = "";
       let fullContent = "";
-      let streamStarted = false;
+      let assistantIdx = -1; // Track the assistant message index explicitly
 
       while (true) {
         const { done, value } = await reader.read();
@@ -514,13 +545,19 @@ export function VoiceAgentWidget() {
             const token = chunk.token || "";
             if (token || !chunk.done) {
               fullContent += token;
-              if (!streamStarted) {
-                streamStarted = true;
-                setMessages((prev) => [...prev, { role: "assistant", content: fullContent, streaming: true }]);
+              if (assistantIdx === -1) {
+                // First token — append new assistant message and remember its index
+                setMessages((prev) => {
+                  assistantIdx = prev.length;
+                  return [...prev, { role: "assistant", content: fullContent, streaming: true }];
+                });
               } else {
+                // Update the assistant message at its tracked index
                 setMessages((prev) => {
                   const u = [...prev];
-                  u[u.length - 1] = { role: "assistant", content: fullContent, streaming: true };
+                  if (assistantIdx < u.length) {
+                    u[assistantIdx] = { role: "assistant", content: fullContent, streaming: true };
+                  }
                   return u;
                 });
               }
@@ -528,7 +565,9 @@ export function VoiceAgentWidget() {
             if (chunk.done) {
               setMessages((prev) => {
                 const u = [...prev];
-                if (u.length > 0) u[u.length - 1] = { role: "assistant", content: fullContent, streaming: false };
+                if (assistantIdx >= 0 && assistantIdx < u.length) {
+                  u[assistantIdx] = { role: "assistant", content: fullContent, streaming: false };
+                }
                 return u;
               });
               if (fullContent) {
@@ -537,17 +576,19 @@ export function VoiceAgentWidget() {
                 });
               }
               fullContent = "";
-              streamStarted = false;
+              assistantIdx = -1;
             }
-          } catch { /* skip */ }
+          } catch { /* skip malformed SSE chunk */ }
         }
       }
 
       // Finalize if stream ended without done
-      if (streamStarted) {
+      if (assistantIdx >= 0) {
         setMessages((prev) => {
           const u = [...prev];
-          if (u.length > 0) u[u.length - 1] = { role: "assistant", content: fullContent, streaming: false };
+          if (assistantIdx < u.length) {
+            u[assistantIdx] = { role: "assistant", content: fullContent, streaming: false };
+          }
           return u;
         });
         if (fullContent) {

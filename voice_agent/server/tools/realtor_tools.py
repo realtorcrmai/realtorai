@@ -874,7 +874,7 @@ REALTOR_TOOLS = [
                     "contact_id": {"type": "string", "description": "ID of the contact to log the activity against"},
                     "activity_type": {
                         "type": "string",
-                        "enum": ["call", "email", "meeting", "showing", "note", "task", "sms", "whatsapp", "social_media", "open_house", "referral", "follow_up", "other"],
+                        "enum": ["call", "email", "sms", "whatsapp", "meeting", "note", "property_showing", "open_house", "website_visit", "email_open", "link_click", "form_submission", "document_signed", "offer_submitted", "offer_received"],
                         "description": "Type of activity",
                     },
                     "description": {"type": "string", "description": "Description or summary of the activity"},
@@ -1331,9 +1331,9 @@ async def handle_realtor_tool(tool_name: str, args: dict, realtor_id: str = "R00
             result = await api.post("/api/voice-agent/households", payload)
 
         elif tool_name == "add_to_household":
-            result = await api.post(
+            result = await api.patch(
                 f"/api/voice-agent/households/{args['household_id']}",
-                {"contact_id": args["contact_id"]},
+                {"action": "add_member", "contact_id": args["contact_id"]},
             )
 
         elif tool_name == "remove_from_household":
