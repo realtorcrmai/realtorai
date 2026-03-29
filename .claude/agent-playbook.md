@@ -62,7 +62,7 @@ Read/Grep/Glob are allowed before classification.
 | **Micro** | ≤20 lines, 1-2 files, no schema, no new route | Classify | `tsc --noEmit` → Commit |
 | **Small** | 20-100 lines, 2-5 files, no new tables | Classify → Scope | `tsc --noEmit` → Targeted tests → Commit |
 | **Medium** | 100-500 lines, 5-15 files, may have migration | Classify → Scope → Plan | `tsc --noEmit` → `test-suite.sh` → Docs → Commit → Compliance log |
-| **Large** | 500+ lines, 15+ files, new tables/subsystem | PRD → Classify → Scope → Plan | `tsc --noEmit` → `test-suite.sh` → Full docs → Commit → Compliance log |
+| **Large** | 500+ lines, 15+ files, new tables/subsystem | PRD → **User Review** → Classify → Scope → Plan | `tsc --noEmit` → `test-suite.sh` → Full docs → Commit → Compliance log |
 
 - **If unsure** → classify one tier higher
 - **If the task grows beyond your tier** → STOP, re-classify, backfill missing ceremony
@@ -71,6 +71,8 @@ Read/Grep/Glob are allowed before classification.
 ### 2.2 PRD Triggers (Large tier only)
 
 New database table(s), new page route + subsystem (3+ files in new directory), new external integration (OAuth, API), or product owner requests it. Template: `docs/templates/PRD_TEMPLATE.md`.
+
+**User review is mandatory before implementation.** After writing the PRD, present it to the user and wait for explicit approval. Do NOT proceed to Classify/Scope/Code until the user says to go ahead. If the user requests changes to the PRD, update it and re-present.
 
 ### 2.3 PR Description (all tiers with PRs)
 
@@ -442,13 +444,14 @@ Tier: Large | Type: CODING:feature
 Affected: New tables (offers, offer_conditions), new page route, new actions, new components (10+ files)
 ```
 
-**Step 1 — PRD:** Write `docs/PRD_Offer_Management.md` using `docs/templates/PRD_TEMPLATE.md`. 10 sections. Get user review before proceeding.
-**Step 2 — Classify & Scope:** List all files, tables, routes. Check existing patterns (how listings/showings work).
-**Step 3 — Plan:** Present numbered plan to user. Get approval.
-**Step 4 — Implement in phases:** Migration first → Types → Server actions → Components → Page → Tests. Checkpoint after each phase (`wip:` commits).
-**Step 5 — Validate:** `tsc --noEmit` + `test-suite.sh` + e2e walkthrough. Write Test Report in PR.
-**Step 6 — Docs:** Create `usecases/offer-management.md`. Update CLAUDE.md if new tables/routes.
-**Step 7 — Compliance log + PR** with full description.
+**Step 1 — PRD:** Write `docs/PRD_Offer_Management.md` using `docs/templates/PRD_TEMPLATE.md`. 10 sections.
+**Step 2 — User Review (BLOCKING):** Present PRD to user. Wait for explicit approval. Update if changes requested. Do NOT proceed until user says go.
+**Step 3 — Classify & Scope:** List all files, tables, routes. Check existing patterns (how listings/showings work).
+**Step 4 — Plan:** Present numbered plan to user. Get approval.
+**Step 5 — Implement in phases:** Migration first → Types → Server actions → Components → Page → Tests. Checkpoint after each phase (`wip:` commits).
+**Step 6 — Validate:** `tsc --noEmit` + `test-suite.sh` + e2e walkthrough. Write Test Report in PR.
+**Step 7 — Docs:** Create `usecases/offer-management.md`. Update CLAUDE.md if new tables/routes.
+**Step 8 — Compliance log + PR** with full description.
 
 ### Example E — Deploy
 
