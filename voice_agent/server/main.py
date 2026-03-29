@@ -839,9 +839,32 @@ async def on_startup(app):
     # Pre-render common TTS phrases for instant playback
     await _prerender_common_phrases()
 
+    # Start periodic session cleanup (every 10 minutes)
+    app["_cleanup_task"] = asyncio.ensure_future(_periodic_session_cleanup())
+
+
+async def _periodic_session_cleanup():
+    """Evict expired sessions from in-memory dict every 10 minutes."""
+    while True:
+        await asyncio.sleep(600)  # 10 minutes
+        now = datetime.now()
+        expiry_delta = timedelta(hours=SESSION_EXPIRY_HOURS)
+        expired_ids = [
+            sid for sid, session in _sessions.items()
+            if hasattr(session, "created_at") and (now - session.created_at) > expiry_delta
+        ]
+        for sid in expired_ids:
+            del _sessions[sid]
+        if expired_ids:
+            print(f"[CLEANUP] Evicted {len(expired_ids)} expired session(s) from memory")
+        # Also clean SQLite
+        cleanup_expired_sessions()
+
 
 async def on_shutdown(app):
-    """Clean up the API client session on server shutdown."""
+    """Clean up the API client session and background tasks on server shutdown."""
+    if "_cleanup_task" in app:
+        app["_cleanup_task"].cancel()
     await listingflow_api.close()
 
 

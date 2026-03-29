@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireVoiceAgentAuth } from "@/lib/voice-agent-auth";
+import { z } from "zod/v4";
 
 /**
  * GET /api/voice-agent/listings
@@ -58,4 +59,59 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ listings: data ?? [], count: data?.length ?? 0 });
+}
+
+const createListingSchema = z.object({
+  address: z.string().min(1),
+  seller_id: z.string().uuid().optional(),
+  list_price: z.number().optional(),
+  status: z.enum(["active", "pending", "sold", "conditional", "subject_removal", "withdrawn", "expired"]).optional(),
+  property_type: z.string().optional(),
+  bedrooms: z.number().optional(),
+  bathrooms: z.number().optional(),
+  sqft: z.number().optional(),
+  notes: z.string().optional(),
+});
+
+/**
+ * POST /api/voice-agent/listings
+ * Create a new listing.
+ * Body: { address, seller_id?, list_price?, status?, property_type?, bedrooms?, bathrooms?, sqft?, notes? }
+ */
+export async function POST(req: NextRequest) {
+  const auth = requireVoiceAgentAuth(req);
+  if (!auth.authorized) return auth.error;
+
+  const body = await req.json();
+  const parsed = createListingSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", issues: parsed.error.issues },
+      { status: 400 }
+    );
+  }
+
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from("listings")
+    .insert({
+      address: parsed.data.address,
+      seller_id: parsed.data.seller_id || null,
+      list_price: parsed.data.list_price || null,
+      status: parsed.data.status || "active",
+      property_type: parsed.data.property_type || null,
+      bedrooms: parsed.data.bedrooms || null,
+      bathrooms: parsed.data.bathrooms || null,
+      sqft: parsed.data.sqft || null,
+      notes: parsed.data.notes || null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true, id: data.id, address: data.address }, { status: 201 });
 }

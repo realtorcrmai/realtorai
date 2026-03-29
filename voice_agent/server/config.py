@@ -69,7 +69,9 @@ MAX_CONVERSATION_HISTORY = 50   # Max messages to keep in context
 PERSONALIZATION_ENABLED = True  # Track queries for personalization
 
 # ── API Security ──────────────────────────────────────────────────────────────
-VOICE_AGENT_API_KEY = os.getenv("VOICE_AGENT_API_KEY", "")  # Empty = no auth required
+VOICE_AGENT_API_KEY = os.getenv("VOICE_AGENT_API_KEY", "")
+if not VOICE_AGENT_API_KEY:
+    print("[WARN] VOICE_AGENT_API_KEY is not set — auth will be DISABLED. Set it in .env for security.")
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*")  # Comma-separated origins or "*"
 
 # ── Session Management ────────────────────────────────────────────────────────

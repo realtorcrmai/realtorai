@@ -26,7 +26,7 @@ const VOICE_AGENT_API =
 
 const API_HEADERS: Record<string, string> = {
   "Content-Type": "application/json",
-  Authorization: "Bearer va-bridge-secret-key-2026",
+  Authorization: `Bearer ${process.env.NEXT_PUBLIC_VOICE_AGENT_KEY || ""}`,
 };
 
 type Message = {

@@ -203,7 +203,7 @@ export function VoiceAgentPanel() {
           try {
             const resp = await fetch(`${VOICE_AGENT_API}/api/tts`, {
               method: "POST",
-              headers: { "Content-Type": "application/json", Authorization: "Bearer va-bridge-secret-key-2026" },
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.NEXT_PUBLIC_VOICE_AGENT_KEY || ""}` },
               body: JSON.stringify({ text: trimmed, voice: "en-US-AvaMultilingualNeural" }),
               signal: AbortSignal.timeout(15000),
             });
@@ -304,7 +304,7 @@ export function VoiceAgentPanel() {
 
   const API_HEADERS: Record<string, string> = {
     "Content-Type": "application/json",
-    "Authorization": "Bearer va-bridge-secret-key-2026",
+    "Authorization": `Bearer ${process.env.NEXT_PUBLIC_VOICE_AGENT_KEY || ""}`,
   };
 
   async function startSession() {

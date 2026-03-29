@@ -115,3 +115,29 @@ export async function PATCH(
 
   return NextResponse.json({ ok: true, listing: data });
 }
+
+/**
+ * DELETE /api/voice-agent/listings/[id]
+ * Delete a listing by ID.
+ */
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = requireVoiceAgentAuth(req);
+  if (!auth.authorized) return auth.error;
+
+  const { id } = await params;
+  const supabase = createAdminClient();
+
+  const { error } = await supabase
+    .from("listings")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return new NextResponse(null, { status: 204 });
+}

@@ -71,6 +71,23 @@ class ListingFlowAPI:
         except Exception as e:
             return {"error": f"API error: {e}"}
 
+    async def delete(self, path: str) -> dict:
+        """HTTP DELETE request. Returns parsed JSON response or empty dict on 204."""
+        session = await self._get_session()
+        url = f"{self.base_url}{path}"
+        try:
+            async with session.delete(url, headers=self.headers, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                if resp.status == 204:
+                    return {"ok": True}
+                result = await resp.json()
+                if resp.status >= 400:
+                    return {"error": result.get("error", f"HTTP {resp.status}"), "_status": resp.status}
+                return result
+        except aiohttp.ClientError as e:
+            return {"error": f"API connection error: {e}"}
+        except Exception as e:
+            return {"error": f"API error: {e}"}
+
     async def close(self):
         """Close the underlying aiohttp session."""
         if self._session and not self._session.closed:
