@@ -128,17 +128,23 @@ class OpenAIProvider(LLMProvider):
     """OpenAI API provider."""
 
     name = "openai"
+    _client = None  # Class-level cached client
 
     def __init__(self, api_key: str = OPENAI_API_KEY, model: str = OPENAI_MODEL):
         self.api_key = api_key
         self.model = model
 
+    def _get_client(self):
+        if OpenAIProvider._client is None:
+            from openai import AsyncOpenAI
+            OpenAIProvider._client = AsyncOpenAI(api_key=self.api_key)
+        return OpenAIProvider._client
+
     def is_available(self) -> bool:
         return bool(self.api_key)
 
     async def chat(self, messages: list, tools: list | None = None) -> dict:
-        from openai import AsyncOpenAI
-        client = AsyncOpenAI(api_key=self.api_key)
+        client = self._get_client()
 
         kwargs = {"model": self.model, "messages": messages}
         if tools:
@@ -171,8 +177,7 @@ class OpenAIProvider(LLMProvider):
         }
 
     async def chat_stream(self, messages: list, tools: list | None = None) -> AsyncGenerator[dict, None]:
-        from openai import AsyncOpenAI
-        client = AsyncOpenAI(api_key=self.api_key)
+        client = self._get_client()
 
         kwargs = {"model": self.model, "messages": messages, "stream": True}
         if tools:
@@ -211,10 +216,17 @@ class AnthropicProvider(LLMProvider):
     """Anthropic Claude API provider."""
 
     name = "anthropic"
+    _client = None  # Class-level cached client
 
     def __init__(self, api_key: str = ANTHROPIC_API_KEY, model: str = ANTHROPIC_MODEL):
         self.api_key = api_key
         self.model = model
+
+    def _get_client(self):
+        if AnthropicProvider._client is None:
+            import anthropic
+            AnthropicProvider._client = anthropic.AsyncAnthropic(api_key=self.api_key)
+        return AnthropicProvider._client
 
     def is_available(self) -> bool:
         return bool(self.api_key)
@@ -308,8 +320,7 @@ class AnthropicProvider(LLMProvider):
         return converted
 
     async def chat(self, messages: list, tools: list | None = None) -> dict:
-        import anthropic
-        client = anthropic.AsyncAnthropic(api_key=self.api_key)
+        client = self._get_client()
 
         system_blocks, converted_msgs = self._convert_messages(messages)
 
@@ -366,8 +377,7 @@ class AnthropicProvider(LLMProvider):
         }
 
     async def chat_stream(self, messages: list, tools: list | None = None) -> AsyncGenerator[dict, None]:
-        import anthropic
-        client = anthropic.AsyncAnthropic(api_key=self.api_key)
+        client = self._get_client()
 
         system_blocks, converted_msgs = self._convert_messages(messages)
 
@@ -476,17 +486,23 @@ class GroqProvider(LLMProvider):
     """Groq API provider (fast inference)."""
 
     name = "groq"
+    _client = None  # Class-level cached client
 
     def __init__(self, api_key: str = GROQ_API_KEY, model: str = GROQ_MODEL):
         self.api_key = api_key
         self.model = model
 
+    def _get_client(self):
+        if GroqProvider._client is None:
+            from groq import AsyncGroq
+            GroqProvider._client = AsyncGroq(api_key=self.api_key)
+        return GroqProvider._client
+
     def is_available(self) -> bool:
         return bool(self.api_key)
 
     async def chat(self, messages: list, tools: list | None = None) -> dict:
-        from groq import AsyncGroq
-        client = AsyncGroq(api_key=self.api_key)
+        client = self._get_client()
 
         kwargs = {"model": self.model, "messages": messages}
         if tools:
@@ -519,8 +535,7 @@ class GroqProvider(LLMProvider):
         }
 
     async def chat_stream(self, messages: list, tools: list | None = None) -> AsyncGenerator[dict, None]:
-        from groq import AsyncGroq
-        client = AsyncGroq(api_key=self.api_key)
+        client = self._get_client()
 
         kwargs = {"model": self.model, "messages": messages, "stream": True}
         if tools:

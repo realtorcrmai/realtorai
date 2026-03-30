@@ -24,51 +24,56 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireVoiceAgentAuth(req);
-  if (!auth.authorized) return auth.error;
+  try {
+    const auth = requireVoiceAgentAuth(req);
+    if (!auth.authorized) return auth.error;
 
-  const { id } = await params;
-  if (!id) {
-    return NextResponse.json({ error: "Deal ID required" }, { status: 400 });
+    const { id } = await params;
+    if (!id) {
+      return NextResponse.json({ error: "Deal ID required" }, { status: 400 });
+    }
+
+    const supabase = createAdminClient();
+
+    const { data: deal, error } = await supabase
+      .from("deals")
+      .select(`
+        *,
+        contacts(id, name, phone, email),
+        listings(id, address, status, list_price)
+      `)
+      .eq("id", id)
+      .single();
+
+    if (error || !deal) {
+      return NextResponse.json({ error: "Deal not found" }, { status: 404 });
+    }
+
+    // Fetch checklist and parties in parallel
+    const [checklistRes, partiesRes] = await Promise.all([
+      supabase
+        .from("deal_checklist")
+        .select("id, item, due_date, completed, completed_at, sort_order")
+        .eq("deal_id", id)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("deal_parties")
+        .select("id, role, name, phone, email, company")
+        .eq("deal_id", id)
+        .order("created_at", { ascending: true }),
+    ]);
+
+    return NextResponse.json({
+      deal: {
+        ...deal,
+        checklist: checklistRes.data ?? [],
+        parties: partiesRes.data ?? [],
+      },
+    });
+  } catch (err) {
+    console.error("[voice-agent] deals/[id] GET error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  const supabase = createAdminClient();
-
-  const { data: deal, error } = await supabase
-    .from("deals")
-    .select(`
-      *,
-      contacts(id, name, phone, email),
-      listings(id, address, status, list_price)
-    `)
-    .eq("id", id)
-    .single();
-
-  if (error || !deal) {
-    return NextResponse.json({ error: "Deal not found" }, { status: 404 });
-  }
-
-  // Fetch checklist and parties in parallel
-  const [checklistRes, partiesRes] = await Promise.all([
-    supabase
-      .from("deal_checklist")
-      .select("id, item, due_date, completed, completed_at, sort_order")
-      .eq("deal_id", id)
-      .order("sort_order", { ascending: true }),
-    supabase
-      .from("deal_parties")
-      .select("id, role, name, phone, email, company")
-      .eq("deal_id", id)
-      .order("created_at", { ascending: true }),
-  ]);
-
-  return NextResponse.json({
-    deal: {
-      ...deal,
-      checklist: checklistRes.data ?? [],
-      parties: partiesRes.data ?? [],
-    },
-  });
 }
 
 /**
@@ -79,44 +84,52 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireVoiceAgentAuth(req);
-  if (!auth.authorized) return auth.error;
+  try {
+    const auth = requireVoiceAgentAuth(req);
+    if (!auth.authorized) return auth.error;
 
-  const { id } = await params;
-  if (!id) {
-    return NextResponse.json({ error: "Deal ID required" }, { status: 400 });
-  }
-
-  const body = await req.json();
-  const parsed = updateDealSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Validation failed", issues: parsed.error.issues },
-      { status: 400 }
-    );
-  }
-
-  if (Object.keys(parsed.data).length === 0) {
-    return NextResponse.json({ error: "No fields to update" }, { status: 400 });
-  }
-
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from("deals")
-    .update(parsed.data)
-    .eq("id", id)
-    .select("id, title, type, stage, status, value, commission_pct, close_date, updated_at")
-    .single();
-
-  if (error) {
-    if (error.code === "PGRST116") {
-      return NextResponse.json({ error: "Deal not found" }, { status: 404 });
+    const { id } = await params;
+    if (!id) {
+      return NextResponse.json({ error: "Deal ID required" }, { status: 400 });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
 
-  return NextResponse.json({ ok: true, deal: data }, { status: 200 });
+    const body = await req.json();
+    const parsed = updateDealSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", issues: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+
+    if (Object.keys(parsed.data).length === 0) {
+      return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+    }
+
+    const supabase = createAdminClient();
+
+    const { data, error } = await supabase
+      .from("deals")
+      .update(parsed.data)
+      .eq("id", id)
+      .select("id, title, type, stage, status, value, commission_pct, close_date, updated_at")
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return NextResponse.json({ error: "Deal not found" }, { status: 404 });
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, deal: data }, { status: 200 });
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+    console.error("[voice-agent] deals/[id] PATCH error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }
 
 /**
@@ -127,21 +140,26 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireVoiceAgentAuth(req);
-  if (!auth.authorized) return auth.error;
+  try {
+    const auth = requireVoiceAgentAuth(req);
+    if (!auth.authorized) return auth.error;
 
-  const { id } = await params;
-  if (!id) {
-    return NextResponse.json({ error: "Deal ID required" }, { status: 400 });
+    const { id } = await params;
+    if (!id) {
+      return NextResponse.json({ error: "Deal ID required" }, { status: 400 });
+    }
+
+    const supabase = createAdminClient();
+
+    const { error } = await supabase.from("deals").delete().eq("id", id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return new NextResponse(null, { status: 204 });
+  } catch (err) {
+    console.error("[voice-agent] deals/[id] DELETE error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  const supabase = createAdminClient();
-
-  const { error } = await supabase.from("deals").delete().eq("id", id);
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return new NextResponse(null, { status: 204 });
 }

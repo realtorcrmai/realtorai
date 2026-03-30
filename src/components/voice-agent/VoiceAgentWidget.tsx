@@ -152,6 +152,7 @@ export function VoiceAgentWidget() {
   const ttsAbortRef = useRef(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -159,26 +160,21 @@ export function VoiceAgentWidget() {
 
   useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
 
-  // ── Request mic permission early (so browser doesn't block later) ──
+  // Mic permission is deferred to first use (startWhisperRecording or browser STT)
+  // to avoid prompting the user before they interact with the mic button.
 
-  useEffect(() => {
-    if (typeof navigator !== "undefined" && navigator.mediaDevices) {
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then((stream) => {
-          // Got permission — release the stream immediately
-          stream.getTracks().forEach((t) => t.stop());
-        })
-        .catch(() => {
-          // User denied — voice will fall back to text input
-        });
-    }
-  }, []);
-
-  // ── Health check + auto-open ──────────────────────────────
+  // ── Health check with connection recovery ─────────────────
 
   useEffect(() => {
     let stopped = false;
     let interval: ReturnType<typeof setInterval> | null = null;
+
+    function schedulePolling(ms: number) {
+      if (stopped) return;
+      if (interval) clearInterval(interval);
+      interval = setInterval(check, ms);
+    }
+
     async function check() {
       try {
         const resp = await fetch(`${VOICE_AGENT_API}/api/health`, { signal: AbortSignal.timeout(3000) });
@@ -186,21 +182,32 @@ export function VoiceAgentWidget() {
         if (data.ok) {
           setConnected(true);
           setProvider(data.llm_provider);
-          // Auto-open the voice panel on first successful connection
-          setOpen((prev) => {
-            if (!prev && !hasGreetedRef.current) return true;
-            return prev;
-          });
-          if (!stopped && !interval) interval = setInterval(check, 30000);
+          // Connected — poll at normal 30s cadence
+          schedulePolling(30000);
         }
       } catch {
         setConnected(false);
-        if (interval) { clearInterval(interval); interval = null; }
+        // Disconnected — poll every 10s to detect recovery
+        schedulePolling(10000);
       }
     }
     check();
     return () => { stopped = true; if (interval) clearInterval(interval); };
   }, []);
+
+  // ── Escape key to close panel ──────────────────────────────
+
+  useEffect(() => {
+    if (!open) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        handleToggle();
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // ── Speech recognition ────────────────────────────────────
 
@@ -335,6 +342,16 @@ export function VoiceAgentWidget() {
 
   // ── Whisper STT — record audio and send to server ────────
 
+  const stopWhisperRecording = useCallback(() => {
+    if (recordingTimeoutRef.current) {
+      clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop();
+    }
+  }, []);
+
   const startWhisperRecording = useCallback(() => {
     if (listening || sending) return;
     navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
@@ -373,16 +390,12 @@ export function VoiceAgentWidget() {
       mediaRecorderRef.current = recorder;
       recorder.start();
       setListening(true);
-      // Auto-stop after 15 seconds of silence detection isn't easy,
-      // so use a max recording time
+      // Auto-stop recording after 30 seconds as a safety limit
+      recordingTimeoutRef.current = setTimeout(() => {
+        stopWhisperRecording();
+      }, 30000);
     }).catch(() => { setListening(false); });
-  }, [listening, sending]);
-
-  const stopWhisperRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.stop();
-    }
-  }, []);
+  }, [listening, sending, stopWhisperRecording]);
 
   // ── Start listening (routes to Whisper or browser STT) ──
 
@@ -664,10 +677,11 @@ export function VoiceAgentWidget() {
       <button
         onClick={handleToggle}
         className={cn(
-          "fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all duration-300 hover:scale-105 md:bottom-8 md:right-8",
+          "fixed bottom-20 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all duration-300 hover:scale-105 sm:bottom-6 md:bottom-8 md:right-8",
           open ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground",
           !connected && !open && "opacity-60"
         )}
+        aria-label={open ? "Close voice assistant" : "Open voice assistant"}
         title={connected ? "Open Voice Assistant" : "Voice Agent offline"}
       >
         {open ? (
@@ -683,7 +697,7 @@ export function VoiceAgentWidget() {
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 flex h-[560px] w-[420px] flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl md:bottom-28 md:right-8">
+        <div className="fixed bottom-36 right-4 z-50 flex h-[calc(100vh-8rem)] w-[calc(100vw-2rem)] max-w-[420px] flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl sm:bottom-24 sm:h-[560px] sm:right-6 md:bottom-28 md:right-8">
           {/* Header */}
           <div className="flex items-center gap-3 border-b bg-primary px-4 py-3 text-primary-foreground">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-foreground/20">
@@ -723,7 +737,7 @@ export function VoiceAgentWidget() {
               >
                 {useEdgeTTS ? "HD" : "STD"}
               </button>
-              <button onClick={handleToggle} className="rounded-md p-1.5 hover:bg-primary-foreground/20 transition-colors">
+              <button onClick={handleToggle} aria-label="Close voice assistant" className="rounded-md p-1.5 hover:bg-primary-foreground/20 transition-colors">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -757,7 +771,7 @@ export function VoiceAgentWidget() {
           )}
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
+          <div className="flex-1 overflow-y-auto p-3 space-y-3" role="log" aria-live="polite" aria-label="Conversation messages">
             {messages.map((msg, i) => (
               <div key={i} className={cn("flex", {
                 "justify-end": msg.role === "user",
@@ -786,6 +800,7 @@ export function VoiceAgentWidget() {
               <button
                 onClick={toggleListening}
                 disabled={!connected || sending || !recognitionRef.current}
+                aria-label={listening ? "Stop recording" : "Start recording"}
                 className={cn(
                   "flex h-10 w-10 items-center justify-center rounded-xl transition-all shrink-0",
                   listening
@@ -809,6 +824,7 @@ export function VoiceAgentWidget() {
               <button
                 onClick={() => sendMessage()}
                 disabled={sending || !input.trim()}
+                aria-label="Send message"
                 className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-all hover:bg-primary/90 disabled:opacity-40 shadow-sm"
               >
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

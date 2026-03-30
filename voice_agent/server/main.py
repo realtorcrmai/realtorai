@@ -42,6 +42,47 @@ from tools import (
 from llm_providers import get_active_provider, get_llm_provider, get_provider_for_query
 from stt_providers import get_stt_provider
 from api_client import api as listingflow_api
+import logger
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  RATE LIMITING — In-memory per-session and global request tracking
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_rate_limiter: dict[str, list[float]] = {}  # session_id -> list of timestamps
+_RATE_LIMIT_PER_SESSION = 30   # Max requests per minute per session
+_RATE_LIMIT_GLOBAL = 120       # Max requests per minute globally
+_RATE_LIMIT_GLOBAL_KEY = "__global__"
+
+
+def _check_rate_limit(session_id: str) -> str | None:
+    """Check rate limits. Returns an error message if exceeded, None if OK."""
+    import time
+    now = time.time()
+    window = 60.0  # 1-minute window
+
+    # Clean old entries and check global
+    if _RATE_LIMIT_GLOBAL_KEY not in _rate_limiter:
+        _rate_limiter[_RATE_LIMIT_GLOBAL_KEY] = []
+    global_ts = _rate_limiter[_RATE_LIMIT_GLOBAL_KEY]
+    _rate_limiter[_RATE_LIMIT_GLOBAL_KEY] = [t for t in global_ts if now - t < window]
+    if len(_rate_limiter[_RATE_LIMIT_GLOBAL_KEY]) >= _RATE_LIMIT_GLOBAL:
+        logger.warn("RATE", f"Global rate limit exceeded ({_RATE_LIMIT_GLOBAL}/min)")
+        return "Too Many Requests — server is busy, please try again shortly"
+
+    # Check per-session
+    if session_id:
+        if session_id not in _rate_limiter:
+            _rate_limiter[session_id] = []
+        session_ts = _rate_limiter[session_id]
+        _rate_limiter[session_id] = [t for t in session_ts if now - t < window]
+        if len(_rate_limiter[session_id]) >= _RATE_LIMIT_PER_SESSION:
+            logger.warn("RATE", f"Session {session_id} rate limit exceeded ({_RATE_LIMIT_PER_SESSION}/min)")
+            return "Too Many Requests — slow down, max 30 requests per minute"
+        _rate_limiter[session_id].append(now)
+
+    _rate_limiter[_RATE_LIMIT_GLOBAL_KEY].append(now)
+    return None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -422,7 +463,7 @@ try:
     AIOHTTP_AVAILABLE = True
 except ImportError:
     AIOHTTP_AVAILABLE = False
-    print("[WARN] aiohttp not installed. Install with: pip install aiohttp")
+    logger.warn("INIT", "aiohttp not installed. Install with: pip install aiohttp")
 
 
 def _check_auth(request) -> bool:
@@ -432,16 +473,32 @@ def _check_auth(request) -> bool:
     return auth == f"Bearer {VOICE_AGENT_API_KEY}"
 
 
-def _cors_headers():
+def _cors_headers(request=None):
+    """Build CORS headers. When CORS_ORIGINS is a comma-separated list,
+    check the request Origin against allowed origins and reflect it back."""
+    origin = "*"
+    if CORS_ORIGINS == "*":
+        origin = "*"
+    elif request:
+        req_origin = request.headers.get("Origin", "")
+        allowed = [o.strip() for o in CORS_ORIGINS.split(",")]
+        if req_origin in allowed:
+            origin = req_origin
+        else:
+            origin = allowed[0] if allowed else "*"
+    else:
+        # No request context — use first allowed origin
+        allowed = [o.strip() for o in CORS_ORIGINS.split(",")]
+        origin = allowed[0] if allowed else "*"
     return {
-        "Access-Control-Allow-Origin": CORS_ORIGINS,
+        "Access-Control-Allow-Origin": origin,
         "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type,Authorization",
     }
 
 
 async def handle_options(request):
-    return web.Response(status=204, headers=_cors_headers())
+    return web.Response(status=204, headers=_cors_headers(request))
 
 
 async def handle_health(request):
@@ -452,18 +509,18 @@ async def handle_health(request):
         "llm_provider": provider.name,
         "llm_available": provider.is_available(),
         "version": "2.0.0",
-    }, headers=_cors_headers())
+    }, headers=_cors_headers(request))
 
 
 async def handle_sessions_list(request):
     if not _check_auth(request):
-        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers())
+        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers(request))
     return web.json_response({
         "sessions": [
             {"id": sid, "mode": s.mode, "messages": len(s.messages)}
             for sid, s in _sessions.items()
         ]
-    }, headers=_cors_headers())
+    }, headers=_cors_headers(request))
 
 
 async def handle_providers(request):
@@ -479,12 +536,12 @@ async def handle_providers(request):
         "llm": {"providers": llm_status, "active": get_active_provider().name},
         "tts": {"providers": tts_status, "active": get_tts_provider().name},
         "stt": {"providers": stt_status, "active": get_stt_provider().name},
-    }, headers=_cors_headers())
+    }, headers=_cors_headers(request))
 
 
 async def handle_session_create(request):
     if not _check_auth(request):
-        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers())
+        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers(request))
 
     body = await request.json() if request.content_length else {}
     mode = body.get("mode", MODE)
@@ -498,7 +555,7 @@ async def handle_session_create(request):
                 "ok": True, "session_id": session.session_id,
                 "mode": session.mode, "resumed": True,
                 "message_count": len(session.messages),
-            }, headers=_cors_headers())
+            }, headers=_cors_headers(request))
         persisted = load_session(resume_id)
         if persisted:
             session = SessionState.from_persisted(persisted)
@@ -507,22 +564,27 @@ async def handle_session_create(request):
                 "ok": True, "session_id": session.session_id,
                 "mode": session.mode, "resumed": True,
                 "message_count": len(session.messages),
-            }, headers=_cors_headers())
+            }, headers=_cors_headers(request))
 
     session = SessionState(mode=mode, realtor_id=CURRENT_REALTOR_ID, listing_context=listing_context)
     _sessions[session.session_id] = session
     return web.json_response({
         "ok": True, "session_id": session.session_id, "mode": mode, "resumed": False,
-    }, headers=_cors_headers())
+    }, headers=_cors_headers(request))
 
 
 async def handle_chat(request):
     if not _check_auth(request):
-        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers())
+        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers(request))
 
     body = await request.json()
     sid = body.get("session_id")
     message = body.get("message", "").strip()
+
+    # Rate limit check
+    rate_err = _check_rate_limit(sid or "anonymous")
+    if rate_err:
+        return web.json_response({"error": rate_err}, status=429, headers=_cors_headers(request))
 
     # Empty message guard — return helpful prompt instead of hanging
     if not message:
@@ -532,10 +594,10 @@ async def handle_chat(request):
             "fields": {},
             "session_id": sid,
             "provider": "none",
-        }, headers=_cors_headers())
+        }, headers=_cors_headers(request))
 
     if sid not in _sessions:
-        return web.json_response({"error": "Session not found"}, status=404, headers=_cors_headers())
+        return web.json_response({"error": "Session not found"}, status=404, headers=_cors_headers(request))
 
     session = _sessions[sid]
     session.add_message("user", message)
@@ -628,21 +690,26 @@ async def handle_chat(request):
         return web.json_response({
             "ok": True, "response": clean_response,
             "fields": fields, "session_id": sid, "provider": provider.name,
-        }, headers=_cors_headers())
+        }, headers=_cors_headers(request))
 
     except Exception as e:
         return web.json_response({
             "error": str(e), "hint": f"Provider: {provider.name}. Is it running?",
-        }, status=500, headers=_cors_headers())
+        }, status=500, headers=_cors_headers(request))
 
 
 async def handle_chat_stream(request):
     if not _check_auth(request):
-        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers())
+        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers(request))
 
     body = await request.json()
     sid = body.get("session_id")
     message = body.get("message", "").strip()
+
+    # Rate limit check
+    rate_err = _check_rate_limit(sid or "anonymous")
+    if rate_err:
+        return web.json_response({"error": rate_err}, status=429, headers=_cors_headers(request))
 
     # Empty message guard
     if not message:
@@ -652,10 +719,10 @@ async def handle_chat_stream(request):
             "fields": {},
             "session_id": sid,
             "provider": "none",
-        }, headers=_cors_headers())
+        }, headers=_cors_headers(request))
 
     if sid not in _sessions:
-        return web.json_response({"error": "Session not found"}, status=404, headers=_cors_headers())
+        return web.json_response({"error": "Session not found"}, status=404, headers=_cors_headers(request))
 
     session = _sessions[sid]
     session.add_message("user", message)
@@ -663,7 +730,7 @@ async def handle_chat_stream(request):
 
     response = web.StreamResponse(
         status=200, reason="OK",
-        headers={**_cors_headers(), "Content-Type": "text/event-stream",
+        headers={**_cors_headers(request), "Content-Type": "text/event-stream",
                  "Cache-Control": "no-cache", "Connection": "keep-alive"},
     )
     await response.prepare(request)
@@ -800,7 +867,7 @@ async def handle_chat_stream(request):
 
 async def handle_tool(request):
     if not _check_auth(request):
-        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers())
+        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers(request))
 
     body = await request.json()
     sid = body.get("session_id")
@@ -812,14 +879,14 @@ async def handle_tool(request):
     else:
         result = await handle_generic_tool(tool_name, tool_args, CURRENT_REALTOR_ID)
 
-    return web.json_response(json.loads(result), headers=_cors_headers())
+    return web.json_response(json.loads(result), headers=_cors_headers(request))
 
 
 async def handle_reminders(request):
     if not _check_auth(request):
-        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers())
+        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers(request))
     from database import get_reminders
-    return web.json_response({"reminders": get_reminders(realtor_id=CURRENT_REALTOR_ID)}, headers=_cors_headers())
+    return web.json_response({"reminders": get_reminders(realtor_id=CURRENT_REALTOR_ID)}, headers=_cors_headers(request))
 
 
 async def on_startup(app):
@@ -844,19 +911,19 @@ async def on_startup(app):
     if VOICE_AGENT_API_KEY:
         headers["Authorization"] = f"Bearer {VOICE_AGENT_API_KEY}"
 
-    print("[WARMUP] Pinging Next.js voice-agent routes to trigger Turbopack compilation...")
+    logger.info("WARMUP", "Pinging Next.js voice-agent routes to trigger Turbopack compilation...")
     try:
         async with aiohttp.ClientSession() as session:
             for path in warmup_paths:
                 url = f"{base}{path}"
                 try:
                     async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=20)) as resp:
-                        print(f"[WARMUP] {path} → HTTP {resp.status}")
+                        logger.info("WARMUP", f"{path} -> HTTP {resp.status}")
                 except Exception as e:
-                    print(f"[WARMUP] {path} → error: {e}")
+                    logger.warn("WARMUP", f"{path} -> error: {e}")
     except Exception as e:
-        print(f"[WARMUP] Session error: {e}")
-    print("[WARMUP] Done.")
+        logger.error("WARMUP", f"Session error: {e}")
+    logger.info("WARMUP", "Done.")
 
     # Pre-render common TTS phrases for instant playback
     await _prerender_common_phrases()
@@ -870,11 +937,11 @@ async def on_shutdown(app):
 async def handle_costs(request):
     """GET /api/costs — Cost logbook dashboard."""
     if not _check_auth(request):
-        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers())
+        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers(request))
 
     days = int(request.query.get("days", "30"))
     summary = get_cost_summary(realtor_id=CURRENT_REALTOR_ID, days=days)
-    return web.json_response(summary, headers=_cors_headers())
+    return web.json_response(summary, headers=_cors_headers(request))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -948,7 +1015,7 @@ async def _prerender_common_phrases(voice: str = "en-US-AvaMultilingualNeural"):
     try:
         import edge_tts  # noqa: F401
     except ImportError:
-        print("[TTS] edge-tts not installed, skipping pre-render.")
+        logger.warn("TTS", "edge-tts not installed, skipping pre-render.")
         return
 
     count = 0
@@ -956,35 +1023,35 @@ async def _prerender_common_phrases(voice: str = "en-US-AvaMultilingualNeural"):
         result = await _synthesize_and_cache(phrase, voice)
         if result:
             count += 1
-    print(f"[TTS] Pre-rendered {count}/{len(_TTS_PRERENDER_PHRASES)} common phrases.")
+    logger.info("TTS", f"Pre-rendered {count}/{len(_TTS_PRERENDER_PHRASES)} common phrases.")
 
 
 async def handle_tts(request):
     """POST /api/tts — Convert text to speech using Edge TTS with caching."""
     if not _check_auth(request):
-        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers())
+        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers(request))
 
     body = await request.json()
     text = body.get("text", "").strip()
     voice = body.get("voice", "en-US-AvaMultilingualNeural")
 
     if not text:
-        return web.json_response({"error": "No text provided"}, status=400, headers=_cors_headers())
+        return web.json_response({"error": "No text provided"}, status=400, headers=_cors_headers(request))
 
     # Clean the text for speech
     clean_text = _clean_for_voice(text)
     if not clean_text:
-        return web.json_response({"error": "No speakable text after cleanup"}, status=400, headers=_cors_headers())
+        return web.json_response({"error": "No speakable text after cleanup"}, status=400, headers=_cors_headers(request))
 
     audio_bytes = await _synthesize_and_cache(clean_text, voice)
 
     if not audio_bytes:
-        return web.json_response({"error": "TTS failed or edge-tts not installed"}, status=500, headers=_cors_headers())
+        return web.json_response({"error": "TTS failed or edge-tts not installed"}, status=500, headers=_cors_headers(request))
 
     return web.Response(
         body=audio_bytes,
         content_type="audio/mpeg",
-        headers={**_cors_headers(), "Content-Length": str(len(audio_bytes))},
+        headers={**_cors_headers(request), "Content-Length": str(len(audio_bytes))},
     )
 
 
@@ -998,9 +1065,9 @@ async def handle_tts_voices(request):
             {"name": v["Name"], "gender": v["Gender"], "locale": v["Locale"]}
             for v in voices if v["Locale"].startswith("en-")
         ]
-        return web.json_response({"voices": en_voices}, headers=_cors_headers())
+        return web.json_response({"voices": en_voices}, headers=_cors_headers(request))
     except Exception as e:
-        return web.json_response({"error": str(e)}, status=500, headers=_cors_headers())
+        return web.json_response({"error": str(e)}, status=500, headers=_cors_headers(request))
 
 
 async def handle_quick(request):
@@ -1010,12 +1077,18 @@ async def handle_quick(request):
     Returns: {"response": "You have 15 active listings...", "session_id": "..."}
     """
     if not _check_auth(request):
-        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers())
+        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers(request))
 
     body = await request.json()
     message = body.get("message", "").strip()
     if not message:
-        return web.json_response({"error": "No message provided"}, status=400, headers=_cors_headers())
+        return web.json_response({"error": "No message provided"}, status=400, headers=_cors_headers(request))
+
+    # Rate limit check
+    quick_sid = body.get("session_id", "quick_anonymous")
+    rate_err = _check_rate_limit(quick_sid)
+    if rate_err:
+        return web.json_response({"error": rate_err}, status=429, headers=_cors_headers(request))
 
     # Reuse existing Siri session or create new one
     siri_sid = body.get("session_id")
@@ -1102,12 +1175,12 @@ async def handle_quick(request):
             "session_id": siri_sid,
             "tools_used": _tools_used,
             "provider": provider.name,
-        }, headers=_cors_headers())
+        }, headers=_cors_headers(request))
 
     except Exception as e:
         return web.json_response({
             "error": str(e), "hint": "Voice agent error"
-        }, status=500, headers=_cors_headers())
+        }, status=500, headers=_cors_headers(request))
 
 
 async def handle_stt(request):
@@ -1116,7 +1189,7 @@ async def handle_stt(request):
     Returns: {"text": "transcribed text", "provider": "whisper_local"}
     """
     if not _check_auth(request):
-        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers())
+        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers(request))
 
     import time as _time
     _t0 = _time.time()
@@ -1138,7 +1211,7 @@ async def handle_stt(request):
         language = request.query.get("language", "en")
 
     if not audio_bytes:
-        return web.json_response({"error": "No audio provided"}, status=400, headers=_cors_headers())
+        return web.json_response({"error": "No audio provided"}, status=400, headers=_cors_headers(request))
 
     try:
         stt = get_stt_provider()
@@ -1160,23 +1233,23 @@ async def handle_stt(request):
             "text": text,
             "provider": stt.name,
             "latency_ms": _latency,
-        }, headers=_cors_headers())
+        }, headers=_cors_headers(request))
 
     except Exception as e:
         return web.json_response({
             "error": f"STT failed: {e}",
             "provider": get_stt_provider().name,
-        }, status=500, headers=_cors_headers())
+        }, status=500, headers=_cors_headers(request))
 
 
 async def handle_session_costs(request):
     """GET /api/costs/:session_id — Cost breakdown for a single session."""
     if not _check_auth(request):
-        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers())
+        return web.json_response({"error": "Unauthorized"}, status=401, headers=_cors_headers(request))
 
     sid = request.match_info["session_id"]
     breakdown = get_session_cost(sid)
-    return web.json_response(breakdown, headers=_cors_headers())
+    return web.json_response(breakdown, headers=_cors_headers(request))
 
 
 def create_app():
@@ -1207,20 +1280,20 @@ def main():
     port = int(os.getenv("VOICE_AGENT_PORT", "8768"))
 
     provider = get_active_provider()
-    print(f"[MAIN] LLM Provider: {provider.name} (available: {provider.is_available()})")
-    print(f"[MAIN] Mode: {MODE}")
+    logger.info("MAIN", f"LLM Provider: {provider.name} (available: {provider.is_available()})")
+    logger.info("MAIN", f"Mode: {MODE}")
 
     if not AIOHTTP_AVAILABLE:
-        print("[ERROR] aiohttp is required. Install with: pip install aiohttp")
+        logger.error("MAIN", "aiohttp is required. Install with: pip install aiohttp")
         sys.exit(1)
 
     app = create_app()
-    print(f"[MAIN] Starting aiohttp server on http://127.0.0.1:{port}")
-    print(f"[MAIN] Endpoints: /api/health, /api/providers, /api/session/create, /api/chat, /api/chat/stream, /api/tool, /api/reminders, /api/costs")
+    logger.info("MAIN", f"Starting aiohttp server on http://127.0.0.1:{port}")
+    logger.info("MAIN", f"Endpoints: /api/health, /api/providers, /api/session/create, /api/chat, /api/chat/stream, /api/tool, /api/reminders, /api/costs")
     if VOICE_AGENT_API_KEY:
-        print(f"[MAIN] API key authentication: ENABLED")
+        logger.info("MAIN", "API key authentication: ENABLED")
     else:
-        print(f"[MAIN] API key authentication: DISABLED (set VOICE_AGENT_API_KEY to enable)")
+        logger.warn("MAIN", "API key authentication: DISABLED (set VOICE_AGENT_API_KEY to enable)")
     web.run_app(app, host="127.0.0.1", port=port, print=None)
 
 

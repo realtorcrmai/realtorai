@@ -20,54 +20,62 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireVoiceAgentAuth(req);
-  if (!auth.authorized) return auth.error;
+  try {
+    const auth = requireVoiceAgentAuth(req);
+    if (!auth.authorized) return auth.error;
 
-  const { id } = await params;
-  if (!id) {
-    return NextResponse.json({ error: "Task ID required" }, { status: 400 });
-  }
-
-  const body = await req.json();
-  const parsed = updateTaskSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Validation failed", issues: parsed.error.issues },
-      { status: 400 }
-    );
-  }
-
-  if (Object.keys(parsed.data).length === 0) {
-    return NextResponse.json({ error: "No fields to update" }, { status: 400 });
-  }
-
-  const supabase = createAdminClient();
-
-  // Mark completed_at when status transitions to done/completed
-  const updatePayload: Record<string, unknown> = { ...parsed.data };
-  if (
-    parsed.data.status &&
-    ["done", "completed"].includes(parsed.data.status) &&
-    !updatePayload.completed_at
-  ) {
-    updatePayload.completed_at = new Date().toISOString();
-  }
-
-  const { data, error } = await supabase
-    .from("tasks")
-    .update(updatePayload)
-    .eq("id", id)
-    .select("id, title, description, status, priority, due_date, category, completed_at, updated_at")
-    .single();
-
-  if (error) {
-    if (error.code === "PGRST116") {
-      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    const { id } = await params;
+    if (!id) {
+      return NextResponse.json({ error: "Task ID required" }, { status: 400 });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
 
-  return NextResponse.json({ ok: true, task: data }, { status: 200 });
+    const body = await req.json();
+    const parsed = updateTaskSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", issues: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+
+    if (Object.keys(parsed.data).length === 0) {
+      return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+    }
+
+    const supabase = createAdminClient();
+
+    // Mark completed_at when status transitions to done/completed
+    const updatePayload: Record<string, unknown> = { ...parsed.data };
+    if (
+      parsed.data.status &&
+      ["done", "completed"].includes(parsed.data.status) &&
+      !updatePayload.completed_at
+    ) {
+      updatePayload.completed_at = new Date().toISOString();
+    }
+
+    const { data, error } = await supabase
+      .from("tasks")
+      .update(updatePayload)
+      .eq("id", id)
+      .select("id, title, description, status, priority, due_date, category, completed_at, updated_at")
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return NextResponse.json({ error: "Task not found" }, { status: 404 });
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, task: data }, { status: 200 });
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+    console.error("[voice-agent] tasks/[id] PATCH error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }
 
 /**
@@ -78,21 +86,26 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireVoiceAgentAuth(req);
-  if (!auth.authorized) return auth.error;
+  try {
+    const auth = requireVoiceAgentAuth(req);
+    if (!auth.authorized) return auth.error;
 
-  const { id } = await params;
-  if (!id) {
-    return NextResponse.json({ error: "Task ID required" }, { status: 400 });
+    const { id } = await params;
+    if (!id) {
+      return NextResponse.json({ error: "Task ID required" }, { status: 400 });
+    }
+
+    const supabase = createAdminClient();
+
+    const { error } = await supabase.from("tasks").delete().eq("id", id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return new NextResponse(null, { status: 204 });
+  } catch (err) {
+    console.error("[voice-agent] tasks/[id] DELETE error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  const supabase = createAdminClient();
-
-  const { error } = await supabase.from("tasks").delete().eq("id", id);
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return new NextResponse(null, { status: 204 });
 }

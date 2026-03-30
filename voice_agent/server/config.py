@@ -70,7 +70,7 @@ PERSONALIZATION_ENABLED = True  # Track queries for personalization
 
 # ── API Security ──────────────────────────────────────────────────────────────
 VOICE_AGENT_API_KEY = os.getenv("VOICE_AGENT_API_KEY", "")  # Empty = no auth required
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*")  # Comma-separated origins or "*"
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")  # Comma-separated origins or "*"
 
 # ── Session Management ────────────────────────────────────────────────────────
 SESSION_EXPIRY_HOURS = int(os.getenv("SESSION_EXPIRY_HOURS", "24"))

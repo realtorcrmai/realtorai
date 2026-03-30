@@ -18,44 +18,49 @@ const createCommunicationSchema = z.object({
  * Returns most recent first.
  */
 export async function GET(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
-  if (!auth.authorized) return auth.error;
+  try {
+    const auth = requireVoiceAgentAuth(req);
+    if (!auth.authorized) return auth.error;
 
-  const supabase = createAdminClient();
-  const params = req.nextUrl.searchParams;
+    const supabase = createAdminClient();
+    const params = req.nextUrl.searchParams;
 
-  // contact_id is required
-  const contactId = params.get("contact_id");
-  if (!contactId) {
-    return NextResponse.json(
-      { error: "contact_id query parameter is required" },
-      { status: 400 }
-    );
+    // contact_id is required
+    const contactId = params.get("contact_id");
+    if (!contactId) {
+      return NextResponse.json(
+        { error: "contact_id query parameter is required" },
+        { status: 400 }
+      );
+    }
+
+    let query = supabase
+      .from("communications")
+      .select("id, contact_id, direction, channel, body, related_id, created_at")
+      .eq("contact_id", contactId)
+      .order("created_at", { ascending: false });
+
+    // Filter by channel
+    const channel = params.get("channel");
+    if (channel) {
+      query = query.eq("channel", channel);
+    }
+
+    // Limit
+    const limit = params.get("limit");
+    query = query.limit(limit ? Number(limit) : 20);
+
+    const { data, error } = await query;
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ communications: data ?? [], count: data?.length ?? 0 });
+  } catch (err) {
+    console.error("[voice-agent] communications GET error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  let query = supabase
-    .from("communications")
-    .select("id, contact_id, direction, channel, body, related_id, created_at")
-    .eq("contact_id", contactId)
-    .order("created_at", { ascending: false });
-
-  // Filter by channel
-  const channel = params.get("channel");
-  if (channel) {
-    query = query.eq("channel", channel);
-  }
-
-  // Limit
-  const limit = params.get("limit");
-  query = query.limit(limit ? Number(limit) : 20);
-
-  const { data, error } = await query;
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ communications: data ?? [], count: data?.length ?? 0 });
 }
 
 /**
@@ -64,36 +69,44 @@ export async function GET(req: NextRequest) {
  * Body: { contact_id, direction: "inbound"|"outbound", channel: "sms"|"whatsapp"|"email"|"note", body, related_id? }
  */
 export async function POST(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
-  if (!auth.authorized) return auth.error;
+  try {
+    const auth = requireVoiceAgentAuth(req);
+    if (!auth.authorized) return auth.error;
 
-  const body = await req.json();
+    const body = await req.json();
 
-  const parsed = createCommunicationSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Validation failed", issues: parsed.error.issues },
-      { status: 400 }
-    );
+    const parsed = createCommunicationSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", issues: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createAdminClient();
+
+    const { data, error } = await supabase
+      .from("communications")
+      .insert({
+        contact_id: parsed.data.contact_id,
+        direction: parsed.data.direction,
+        channel: parsed.data.channel,
+        body: parsed.data.body,
+        related_id: parsed.data.related_id || null,
+      })
+      .select("id, contact_id, direction, channel, created_at")
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, id: data.id, contact_id: data.contact_id }, { status: 201 });
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+    console.error("[voice-agent] communications POST error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from("communications")
-    .insert({
-      contact_id: parsed.data.contact_id,
-      direction: parsed.data.direction,
-      channel: parsed.data.channel,
-      body: parsed.data.body,
-      related_id: parsed.data.related_id || null,
-    })
-    .select("id, contact_id, direction, channel, created_at")
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ ok: true, id: data.id, contact_id: data.contact_id }, { status: 201 });
 }
