@@ -202,11 +202,11 @@ If complex (5+ files or schema change) → present plan to user before coding.
 
 ---
 
-## 5. Analysis & Design Tasks (3-Pass Process)
+## 5. Analysis & Design Tasks (5-Pass Process)
 
-Every gap analysis, design document, PRD, or major analysis MUST go through 3 iterative passes. Never present a single-pass output as final.
+Every gap analysis, design document, PRD, or major analysis MUST go through 5 iterative passes. Never present a single-pass output as final. Each pass must take **2-5 minutes of genuine thinking** — not a 30-second skim.
 
-### 5.1 When to Use 3-Pass
+### 5.1 When to Use 5-Pass
 
 - Gap analysis of any system or codebase
 - PRD for a new feature (Large tier)
@@ -216,40 +216,52 @@ Every gap analysis, design document, PRD, or major analysis MUST go through 3 it
 
 Does NOT apply to: INFO tasks, simple code changes, bug fixes.
 
-### 5.2 The 3 Passes
+### 5.2 The 5 Passes
 
-**Pass 1 — Analyze and find gaps yourself**
+**Pass 1 — Analyze and find all gaps yourself**
 - Read the subject thoroughly (every file, every line)
 - Document all findings with file:line references
 - Categorize by severity (Critical/High/Medium/Low)
 - Fix what you found. Update the document.
 
-**Pass 2 — Compare with best practices, find what Pass 1 missed**
+**Pass 2 — Compare with best-in-market practices, find what Pass 1 missed**
 - Re-read the Pass 1 output with fresh eyes
 - Compare against best-in-market implementations and industry practices
 - Verify Pass 1 findings (confirm or reject with evidence)
 - Find new gaps that Pass 1 missed
 - Fix what you found. Update the document.
 
-**Pass 3 — Final read, final gap check, produce final version**
-- Re-read the Pass 2 output
-- Find any remaining gaps
-- Apply final fixes
+**Pass 3 — Verify claims against actual code, find inconsistencies**
+- Re-read the document and cross-check every claim against the actual codebase
+- Are file paths real? Do referenced functions exist? Are stats accurate?
+- Find contradictions between sections
+- Fix what you found. Update the document.
+
+**Pass 4 — Check depth, find surface-level sections**
+- Re-read looking specifically for sections that are brief bullet points instead of deep analysis
+- Every section should demonstrate knowledge, not just list items
+- Are acceptance criteria specific enough to test? Are technical designs complete enough to implement?
+- Fix what you found. Update the document.
+
+**Pass 5 — Final read, final gap check, produce final version**
+- One complete read-through looking for anything remaining
+- Check formatting, numbering, cross-references
 - Mark as final with pass count in the header
 
 ### 5.3 Rules
 
-- Each pass MUST read the output of the previous pass — not just rubber-stamp it
+- **Each pass takes 2-5 minutes of genuine thinking.** If a pass takes 30 seconds, it wasn't a real pass. The whole point is to catch what speed misses.
+- Each pass MUST read the output of the previous pass — not rubber-stamp it
 - Passes are sequential — each builds on the previous
-- Present the final version only after all 3 passes complete
-- Note the pass count in the document header (e.g., "3-pass iterative analysis")
-- For Pass 2, use model chaining when possible: different model or agent for the review to get a fresh perspective
+- Present the final version only after all 5 passes complete
+- Note the pass count in the document header (e.g., "5-pass iterative analysis")
+- For at least one pass, use model chaining: different model or agent for fresh perspective
 
 ---
 
 ## 6. Validation
 
-### 5.1 Per-Tier Checklist
+### 6.1 Per-Tier Checklist
 
 | Tier | What to Run |
 |------|-------------|
