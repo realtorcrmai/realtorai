@@ -78,6 +78,7 @@ Before editing source code, you must classify the task by writing .claude/curren
   "phases": {
     "classified": true,
     "scope": false,
+    "downside_check": false,
     "plan": false,
     "plan_approved": false,
     "validated": false,
@@ -96,6 +97,7 @@ fi
 TIER=$(jq -r '.tier // empty' "$TASK_FILE")
 CLASSIFIED=$(jq -r '.phases.classified // false' "$TASK_FILE")
 SCOPE=$(jq -r '.phases.scope // false' "$TASK_FILE")
+DOWNSIDE=$(jq -r '.phases.downside_check // false' "$TASK_FILE")
 PLAN=$(jq -r '.phases.plan // false' "$TASK_FILE")
 PLAN_APPROVED=$(jq -r '.phases.plan_approved // false' "$TASK_FILE")
 
@@ -113,10 +115,18 @@ case "$TIER" in
             echo "BLOCKED: Small tier requires scope phase. Write your scope paragraph, then set phases.scope=true in .claude/current-task.json." >&2
             exit 2
         fi
+        if [[ "$DOWNSIDE" != "true" ]]; then
+            echo "BLOCKED: Small tier requires downside check. Answer Q1-Q3 (What do we lose? What if wrong? What assumptions?), then set phases.downside_check=true in .claude/current-task.json." >&2
+            exit 2
+        fi
         ;;
     medium)
         if [[ "$SCOPE" != "true" ]]; then
             echo "BLOCKED: Medium tier requires scope phase. Write your scope, then set phases.scope=true in .claude/current-task.json." >&2
+            exit 2
+        fi
+        if [[ "$DOWNSIDE" != "true" ]]; then
+            echo "BLOCKED: Medium tier requires downside check. Answer Q1-Q5 (all 5 questions), then set phases.downside_check=true in .claude/current-task.json." >&2
             exit 2
         fi
         if [[ "$PLAN" != "true" ]]; then
@@ -127,6 +137,10 @@ case "$TIER" in
     large)
         if [[ "$SCOPE" != "true" ]]; then
             echo "BLOCKED: Large tier requires scope phase. Write scope first." >&2
+            exit 2
+        fi
+        if [[ "$DOWNSIDE" != "true" ]]; then
+            echo "BLOCKED: Large tier requires downside check. Answer Q1-Q5 + mitigations, present to user, then set phases.downside_check=true in .claude/current-task.json." >&2
             exit 2
         fi
         if [[ "$PLAN" != "true" ]]; then

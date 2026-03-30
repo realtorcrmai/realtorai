@@ -57,9 +57,9 @@ The system uses a **state file** (`.claude/current-task.json`) to track which pl
 | Tier | Required phases before coding |
 |------|------------------------------|
 | **Micro** | `classified` |
-| **Small** | `classified` + `scope` |
-| **Medium** | `classified` + `scope` + `plan` |
-| **Large** | `classified` + `scope` + `plan` + `plan_approved` |
+| **Small** | `classified` + `scope` + `downside_check` |
+| **Medium** | `classified` + `scope` + `downside_check` + `plan` |
+| **Large** | `classified` + `scope` + `downside_check` + `plan` + `plan_approved` |
 
 ### What's Exempt (Not Blocked)
 
