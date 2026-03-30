@@ -3,13 +3,55 @@
     "allow": [
       "Bash(gh issue:*)",
       "Bash(gh pr:*)",
-      "Bash(git -C /Users/rahulmittal/Library/CloudStorage/OneDrive-Personal/CoWork remote add origin https://github.com/realtorcrmai/realtorai.git)",
-      "Bash(git -C /Users/rahulmittal/Library/CloudStorage/OneDrive-Personal/CoWork fetch origin)",
-      "Bash(git -C /Users/rahulmittal/Library/CloudStorage/OneDrive-Personal/CoWork log --oneline HEAD...origin/main)",
-      "Bash(git -C /Users/rahulmittal/Library/CloudStorage/OneDrive-Personal/CoWork status)",
-      "Bash(git -C /Users/rahulmittal/Library/CloudStorage/OneDrive-Personal/CoWork pull origin main --allow-unrelated-histories)",
-      "Bash(git -C /Users/rahulmittal/Library/CloudStorage/OneDrive-Personal/CoWork log --oneline origin/main)",
       "Bash(git checkout:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/playbook-gate.sh\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/git-protection.sh\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/playbook-reminder.sh\"",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/completion-gate.sh\"",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }
