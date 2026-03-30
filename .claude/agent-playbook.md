@@ -202,7 +202,52 @@ If complex (5+ files or schema change) → present plan to user before coding.
 
 ---
 
-## 5. Validation
+## 5. Analysis & Design Tasks (3-Pass Process)
+
+Every gap analysis, design document, PRD, or major analysis MUST go through 3 iterative passes. Never present a single-pass output as final.
+
+### 5.1 When to Use 3-Pass
+
+- Gap analysis of any system or codebase
+- PRD for a new feature (Large tier)
+- Architecture or design spec
+- Audit or review document
+- Any document that will drive implementation decisions
+
+Does NOT apply to: INFO tasks, simple code changes, bug fixes.
+
+### 5.2 The 3 Passes
+
+**Pass 1 — Analyze and find gaps yourself**
+- Read the subject thoroughly (every file, every line)
+- Document all findings with file:line references
+- Categorize by severity (Critical/High/Medium/Low)
+- Fix what you found. Update the document.
+
+**Pass 2 — Compare with best practices, find what Pass 1 missed**
+- Re-read the Pass 1 output with fresh eyes
+- Compare against best-in-market implementations and industry practices
+- Verify Pass 1 findings (confirm or reject with evidence)
+- Find new gaps that Pass 1 missed
+- Fix what you found. Update the document.
+
+**Pass 3 — Final read, final gap check, produce final version**
+- Re-read the Pass 2 output
+- Find any remaining gaps
+- Apply final fixes
+- Mark as final with pass count in the header
+
+### 5.3 Rules
+
+- Each pass MUST read the output of the previous pass — not just rubber-stamp it
+- Passes are sequential — each builds on the previous
+- Present the final version only after all 3 passes complete
+- Note the pass count in the document header (e.g., "3-pass iterative analysis")
+- For Pass 2, use model chaining when possible: different model or agent for the review to get a fresh perspective
+
+---
+
+## 6. Validation
 
 ### 5.1 Per-Tier Checklist
 
@@ -267,7 +312,7 @@ Resend API error          → Check RESEND_API_KEY. Check from email is verified
 
 ---
 
-## 6. Domain Rules
+## 7. Domain Rules
 
 ### 6.1 Contacts
 - Phone: E.164 format (+1XXXXXXXXXX). Always use `lib/twilio.ts` formatter.
@@ -311,7 +356,7 @@ Resend API error          → Check RESEND_API_KEY. Check from email is verified
 
 ---
 
-## 7. Session Management
+## 8. Session Management
 
 ### 7.1 When to Checkpoint
 
@@ -343,7 +388,7 @@ Include in your final message:
 
 ---
 
-## 8. Safety Levels for Bash Commands
+## 9. Safety Levels for Bash Commands
 
 **Level 1 — Safe (execute freely):** `cat`, `grep`, `ls`, `find`, `git status/log/diff`, `npx tsc --noEmit`, `bash scripts/test-suite.sh`, `curl -s` (GET only)
 
@@ -355,7 +400,7 @@ Include in your final message:
 
 ---
 
-## 9. Compliance & Governance
+## 10. Compliance & Governance
 
 ### 9.1 Compliance Log (Medium+ tiers only)
 
@@ -394,7 +439,7 @@ Micro, Small, and INFO are exempt. Append-only — never edit past entries.
 
 ---
 
-## 10. Production Incidents
+## 11. Production Incidents
 
 | Step | Action |
 |------|--------|
@@ -409,7 +454,7 @@ Micro, Small, and INFO are exempt. Append-only — never edit past entries.
 
 ---
 
-## 11. Secret Rotation
+## 12. Secret Rotation
 
 1. Generate new key in provider dashboard
 2. `./scripts/vault.sh decrypt` → edit `.env.local` → `./scripts/vault.sh encrypt`
@@ -420,7 +465,7 @@ Micro, Small, and INFO are exempt. Append-only — never edit past entries.
 
 ---
 
-## 12. Worked Examples
+## 13. Worked Examples
 
 ### Example A — Micro (CSS fix)
 
@@ -497,7 +542,7 @@ Tier: Medium | Type: DEPLOY
 
 ---
 
-## 13. Commit Message Convention
+## 14. Commit Message Convention
 
 Use Conventional Commits format:
 
@@ -516,7 +561,7 @@ For WIP commits: `wip: offer-management — migration and types done, components
 
 ---
 
-## 14. References
+## 15. References
 
 - **Infrastructure, tech stack, project structure:** See CLAUDE.md
 - **PRD template:** `docs/templates/PRD_TEMPLATE.md`
