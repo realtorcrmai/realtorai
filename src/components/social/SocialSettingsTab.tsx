@@ -8,7 +8,7 @@ import type {
   VoiceTone,
   EmojiPreference,
 } from "@/lib/social/types";
-import { saveBrandKit } from "@/actions/social-content";
+import { saveBrandKit, disconnectSocialAccount } from "@/actions/social-content";
 
 interface Props {
   brandKit: SocialBrandKit | null;
@@ -790,7 +790,21 @@ export function SocialSettingsTab({ brandKit, accounts }: Props) {
                     </p>
                   </div>
 
-                  <button className="lf-btn-ghost lf-btn-sm text-xs text-red-500 border-red-200 hover:bg-red-50">
+                  <button
+                    className="lf-btn-ghost lf-btn-sm text-xs text-red-500 border-red-200 hover:bg-red-50"
+                    disabled={isPending}
+                    onClick={() => {
+                      if (!confirm(`Disconnect ${PLATFORM_LABEL[account.platform]}? You can reconnect later.`)) return;
+                      startTransition(async () => {
+                        try {
+                          await disconnectSocialAccount(account.id);
+                          setSaveMessage(`${PLATFORM_LABEL[account.platform]} disconnected.`);
+                        } catch {
+                          setSaveMessage("Failed to disconnect account.");
+                        }
+                      });
+                    }}
+                  >
                     Disconnect
                   </button>
                 </div>
@@ -819,10 +833,16 @@ export function SocialSettingsTab({ brandKit, accounts }: Props) {
                   }`}
                   onClick={() => {
                     if (!comingSoon && !alreadyConnected) {
-                      // Placeholder for OAuth flow
-                      alert(
-                        `OAuth flow for ${PLATFORM_LABEL[platform]} will open here.`
-                      );
+                      if (platform === "facebook" || platform === "instagram") {
+                        const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID || "";
+                        const redirectUri = `${window.location.origin}/api/social/oauth`;
+                        const scopes = "pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish";
+                        window.location.href = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scopes}&state=${platform}&response_type=code`;
+                      } else {
+                        alert(
+                          `${PLATFORM_LABEL[platform]} integration is coming soon.`
+                        );
+                      }
                     }
                   }}
                 >

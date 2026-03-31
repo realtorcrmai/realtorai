@@ -8,7 +8,7 @@ import type {
   ContentType,
   SocialPlatform,
 } from "@/lib/social/types";
-import { approvePost, skipPost, regeneratePost } from "@/actions/social-content";
+import { approvePost, skipPost, regeneratePost, updatePostCaption, bulkApprovePosts, createCustomDraft } from "@/actions/social-content";
 
 // ============================================================
 // Constants
@@ -143,9 +143,20 @@ export function SocialStudioTab({ brandKit, pendingDrafts, templates }: Props) {
                   <button
                     key={ct.type}
                     className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-[var(--lf-indigo)]/5 transition-colors flex items-center gap-2"
+                    disabled={isPending}
                     onClick={() => {
                       setShowContentTypes(false);
-                      // Future: trigger content generation with selected type
+                      startTransition(async () => {
+                        const result = await createCustomDraft({
+                          brandKitId: brandKit.id,
+                          caption: `[Draft] New ${ct.label} post — edit this caption`,
+                          contentType: ct.type,
+                          targetPlatforms: ["instagram", "facebook"],
+                        });
+                        if (result?.error) {
+                          console.error("Failed to create draft:", result.error);
+                        }
+                      });
                     }}
                   >
                     <span>{ct.emoji}</span>
@@ -177,9 +188,29 @@ export function SocialStudioTab({ brandKit, pendingDrafts, templates }: Props) {
                     <button
                       key={tpl.id}
                       className="w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-[var(--lf-indigo)]/5 transition-colors flex items-center gap-2"
+                      disabled={isPending}
                       onClick={() => {
                         setShowTemplateSelect(false);
-                        // Future: open template editor with selected template
+                        const caption = tpl.caption_template
+                          .replace(/\{\{property_address\}\}/g, "[Property Address]")
+                          .replace(/\{\{price\}\}/g, "[Price]")
+                          .replace(/\{\{bedrooms\}\}/g, "[Beds]")
+                          .replace(/\{\{bathrooms\}\}/g, "[Baths]")
+                          .replace(/\{\{agent_name\}\}/g, brandKit.agent_name || "[Agent]")
+                          .replace(/\{\{brokerage\}\}/g, brandKit.brokerage_name || "[Brokerage]")
+                          .replace(/\{\{date\}\}/g, new Date().toLocaleDateString("en-CA"))
+                          .replace(/\{\{[^}]+\}\}/g, "[...]");
+                        startTransition(async () => {
+                          const result = await createCustomDraft({
+                            brandKitId: brandKit.id,
+                            caption,
+                            contentType: tpl.category,
+                            targetPlatforms: tpl.supported_platforms,
+                          });
+                          if (result?.error) {
+                            console.error("Failed to create draft from template:", result.error);
+                          }
+                        });
                       }}
                     >
                       <span>{info.emoji}</span>
@@ -238,9 +269,27 @@ export function SocialStudioTab({ brandKit, pendingDrafts, templates }: Props) {
                 </button>
                 <button
                   className="lf-btn text-sm"
-                  disabled={!customCaption.trim()}
+                  disabled={!customCaption.trim() || isPending}
+                  onClick={() => {
+                    const caption = customCaption.trim();
+                    if (!caption) return;
+                    startTransition(async () => {
+                      const result = await createCustomDraft({
+                        brandKitId: brandKit.id,
+                        caption,
+                        contentType: "custom",
+                        targetPlatforms: ["instagram", "facebook"],
+                      });
+                      if (result?.error) {
+                        console.error("Failed to create custom draft:", result.error);
+                      } else {
+                        setCustomCaption("");
+                        setShowCustomEditor(false);
+                      }
+                    });
+                  }}
                 >
-                  🚀 Create Draft
+                  {isPending ? "Creating..." : "🚀 Create Draft"}
                 </button>
               </div>
             </div>
@@ -416,13 +465,24 @@ export function SocialStudioTab({ brandKit, pendingDrafts, templates }: Props) {
                 {isEditing ? (
                   <>
                     <button
+                      disabled={isPending}
                       onClick={() => {
-                        // Future: save edited caption via server action
-                        cancelEditing();
+                        const newCaption = editedCaptions[post.id];
+                        if (newCaption == null) {
+                          cancelEditing();
+                          return;
+                        }
+                        startTransition(async () => {
+                          const result = await updatePostCaption(post.id, newCaption);
+                          if (result?.error) {
+                            console.error("Failed to save caption:", result.error);
+                          }
+                          cancelEditing();
+                        });
                       }}
                       className="lf-btn text-sm flex items-center gap-1"
                     >
-                      💾 Save
+                      {isPending ? "Saving..." : "💾 Save"}
                     </button>
                     <button
                       onClick={cancelEditing}

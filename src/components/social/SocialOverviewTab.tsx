@@ -1,5 +1,6 @@
 "use client";
 
+import { useTransition } from "react";
 import type {
   SocialPost,
   SocialAccount,
@@ -8,6 +9,7 @@ import type {
   ContentType,
   ConnectionStatus,
 } from "@/lib/social/types";
+import { approvePost, skipPost } from "@/actions/social-content";
 
 interface Props {
   stats: {
@@ -169,6 +171,22 @@ function DraftRow({
   onApprove: () => void;
   onSkip: () => void;
 }) {
+  const [isPending, startTransition] = useTransition();
+
+  function handleApprove() {
+    startTransition(async () => {
+      await approvePost(post.id);
+      onApprove();
+    });
+  }
+
+  function handleSkip() {
+    startTransition(async () => {
+      await skipPost(post.id);
+      onSkip();
+    });
+  }
+
   return (
     <div className="flex items-center gap-3 py-3 border-b border-[var(--lf-text)]/5 last:border-0">
       <span className="text-lg" title={post.content_type}>
@@ -190,11 +208,11 @@ function DraftRow({
       </div>
 
       <div className="flex gap-1.5 shrink-0">
-        <button onClick={onApprove} className="lf-btn-sm lf-btn-success text-xs px-3 py-1">
-          Approve
+        <button onClick={handleApprove} disabled={isPending} className="lf-btn-sm lf-btn-success text-xs px-3 py-1">
+          {isPending ? "..." : "Approve"}
         </button>
-        <button onClick={onSkip} className="lf-btn-sm lf-btn-ghost text-xs px-3 py-1">
-          Skip
+        <button onClick={handleSkip} disabled={isPending} className="lf-btn-sm lf-btn-ghost text-xs px-3 py-1">
+          {isPending ? "..." : "Skip"}
         </button>
       </div>
     </div>

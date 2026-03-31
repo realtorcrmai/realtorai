@@ -81,13 +81,14 @@ const MEDIA_DISPLAY: Record<MediaType, { emoji: string; label: string; colour: s
 
 interface Props {
   templates: SocialTemplate[];
+  onUseTemplate?: (template: SocialTemplate) => void;
 }
 
 // ============================================================
 // Component
 // ============================================================
 
-export function SocialTemplatesTab({ templates }: Props) {
+export function SocialTemplatesTab({ templates, onUseTemplate }: Props) {
   const [selectedCategory, setSelectedCategory] = useState<ContentType | "all">("all");
 
   // Sort: system templates first, then by usage_count descending
@@ -252,7 +253,18 @@ export function SocialTemplatesTab({ templates }: Props) {
 
                   {/* Action */}
                   <div className="mt-auto">
-                    <button className="lf-btn w-full text-sm flex items-center justify-center gap-1.5">
+                    <button
+                      className="lf-btn w-full text-sm flex items-center justify-center gap-1.5"
+                      onClick={() => {
+                        if (onUseTemplate) {
+                          onUseTemplate(template);
+                        } else {
+                          // Fallback: navigate to studio tab via hash
+                          window.location.hash = "#studio";
+                          alert(`Template "${template.name}" selected.\n\nCaption preview:\n${template.caption_template.slice(0, 200)}${template.caption_template.length > 200 ? "..." : ""}`);
+                        }
+                      }}
+                    >
                       ✨ Use Template
                     </button>
                   </div>

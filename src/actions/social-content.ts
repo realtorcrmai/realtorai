@@ -348,3 +348,93 @@ export async function bulkApprovePosts(postIds: string[]) {
   revalidatePath("/social");
   return { success: true, count: postIds.length };
 }
+
+// ============================================================
+// Custom Draft Creation
+// ============================================================
+
+export async function createCustomDraft(params: {
+  brandKitId: string;
+  caption: string;
+  contentType: ContentType;
+  targetPlatforms: SocialPlatform[];
+}) {
+  const supabase = createAdminClient();
+
+  const { data: post, error } = await supabase
+    .from("social_posts")
+    .insert({
+      brand_kit_id: params.brandKitId,
+      content_type: params.contentType,
+      caption: params.caption,
+      caption_original: params.caption,
+      hashtags: [],
+      media_urls: [],
+      media_type: "image",
+      source_type: "manual",
+      target_platforms: params.targetPlatforms,
+      platform_variants: {},
+      status: "draft" as PostStatus,
+      ai_generated: false,
+    })
+    .select()
+    .single();
+
+  if (error) return { error: error.message };
+
+  // Log to audit trail
+  await supabase.from("social_audit_log").insert({
+    brand_kit_id: params.brandKitId,
+    post_id: post.id,
+    action: "created",
+    actor: "demo@realtors360.com",
+    metadata: { content_type: params.contentType, platforms: params.targetPlatforms, source: "manual_draft" },
+  });
+
+  revalidatePath("/social");
+  return { success: true, post };
+}
+
+// ============================================================
+// Disconnect Social Account
+// ============================================================
+
+export async function disconnectSocialAccount(accountId: string) {
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+
+  // Get account info before updating for audit log
+  const { data: account } = await supabase
+    .from("social_accounts")
+    .select("brand_kit_id, platform, account_name")
+    .eq("id", accountId)
+    .single();
+
+  const { error } = await supabase
+    .from("social_accounts")
+    .update({
+      connection_status: "disconnected",
+      is_active: false,
+      updated_at: now,
+    })
+    .eq("id", accountId);
+
+  if (error) return { error: error.message };
+
+  // Log to audit trail
+  if (account) {
+    await supabase.from("social_audit_log").insert({
+      brand_kit_id: account.brand_kit_id,
+      action: "account_disconnected",
+      actor: "demo@realtors360.com",
+      metadata: {
+        account_id: accountId,
+        platform: account.platform,
+        account_name: account.account_name,
+      },
+    });
+  }
+
+  revalidatePath("/social");
+  return { success: true };
+}

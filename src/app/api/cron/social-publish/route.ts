@@ -66,8 +66,24 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
+      let accessToken: string;
       try {
-        const accessToken = decrypt(account.access_token_encrypted);
+        accessToken = decrypt(account.access_token_encrypted);
+      } catch (decryptErr) {
+        const decryptErrMsg = decryptErr instanceof Error ? decryptErr.message : "Unknown decryption error";
+        console.error(`[social-publish] Token decryption failed for account ${account.id} (${platform}):`, decryptErrMsg);
+        await supabase.from("social_post_publishes").insert({
+          post_id: post.id,
+          account_id: account.id,
+          platform,
+          status: "failed",
+          error_message: `Token decryption failed for ${platform} account — reconnect required`,
+        });
+        failedCount++;
+        continue;
+      }
+
+      try {
         const variant = post.platform_variants?.[platform] || {};
         const caption = variant.caption || post.caption || "";
         const hashtags = variant.hashtags || post.hashtags || [];
