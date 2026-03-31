@@ -473,9 +473,9 @@ export default async function NewsletterDashboard() {
   );
 }
 
-function HotContactCard({ title, contacts, warningText, emptyText, bottomStat, gradientFrom, gradientTo }: {
+function HotContactCard({ title, contacts, warningText, emptyText, bottomStat, gradientFrom, gradientTo, now }: {
   title: string; contacts: any[]; warningText: string; emptyText: string; bottomStat: string;
-  gradientFrom: string; gradientTo: string;
+  gradientFrom: string; gradientTo: string; now?: number;
 }) {
   return (
     <Card className={contacts.length > 0 ? "border-red-200 bg-red-50/30" : ""}>
@@ -495,7 +495,7 @@ function HotContactCard({ title, contacts, warningText, emptyText, bottomStat, g
         ) : contacts.slice(0, 5).map((lead: any) => {
           const score = lead.newsletter_intelligence?.engagement_score || 0;
           const lastClicked = lead.newsletter_intelligence?.last_clicked;
-          const daysSinceClick = lastClicked ? Math.floor((_now - new Date(lastClicked).getTime()) / 86400000) : null;
+          const daysSinceClick = lastClicked ? Math.floor(((now || Date.now()) - new Date(lastClicked).getTime()) / 86400000) : null;
           const isUrgent = daysSinceClick !== null && daysSinceClick <= 2;
           return (
             <div key={lead.id} className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
