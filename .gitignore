@@ -56,3 +56,6 @@ guides/screenshots/*.png
 # Health check state snapshot
 .claude-state.json
 .env.local
+tests/browser/.auth/
+test-results/
+playwright-report/
