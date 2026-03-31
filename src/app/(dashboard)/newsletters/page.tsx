@@ -31,7 +31,9 @@ export default async function NewsletterDashboard() {
     getGreetingRules(),
   ]);
 
-  const sevenDaysFromNow = new Date(Date.now() + 7 * 86400000).toISOString();
+  // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is safe
+  const _now = Date.now();
+  const sevenDaysFromNow = new Date(_now + 7 * 86400000).toISOString();
 
   const [
     { data: journeys },
@@ -94,7 +96,7 @@ export default async function NewsletterDashboard() {
   });
   const dormantContacts = allContacts.filter((c: any) => (c.newsletter_intelligence?.engagement_score || 0) < 15);
 
-  const now = Date.now();
+  const now = _now;
 
   // AI Success Stories — build from contacts with newsletter_intelligence + sent emails
   const successStories: Array<{ contactId: string; contactName: string; contactType: string; icon: string; story: string; score?: number }> = [];
@@ -164,7 +166,7 @@ export default async function NewsletterDashboard() {
     const d = new Date(uj.next_email_at);
     const dateKey = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
     const isToday = d.toDateString() === new Date().toDateString();
-    const isTomorrow = d.toDateString() === new Date(Date.now() + 86400000).toDateString();
+    const isTomorrow = d.toDateString() === new Date(_now + 86400000).toDateString();
     const label = isToday ? "Today" : isTomorrow ? "Tomorrow" : dateKey;
 
     // Determine email type from journey schedule
@@ -232,7 +234,7 @@ export default async function NewsletterDashboard() {
                         {urgent.map((c: any) => {
                           const score = c.newsletter_intelligence?.engagement_score || 0;
                           const lastClicked = c.newsletter_intelligence?.last_clicked;
-                          const daysSince = lastClicked ? Math.floor((Date.now() - new Date(lastClicked).getTime()) / 86400000) : null;
+                          const daysSince = lastClicked ? Math.floor((_now - new Date(lastClicked).getTime()) / 86400000) : null;
                           const isBuyer = c.type === "buyer" || c.type === "customer";
                           return (
                             <div key={c.id} className="flex items-center justify-between p-2.5 bg-white/70 rounded-lg border border-red-100">
@@ -493,7 +495,7 @@ function HotContactCard({ title, contacts, warningText, emptyText, bottomStat, g
         ) : contacts.slice(0, 5).map((lead: any) => {
           const score = lead.newsletter_intelligence?.engagement_score || 0;
           const lastClicked = lead.newsletter_intelligence?.last_clicked;
-          const daysSinceClick = lastClicked ? Math.floor((Date.now() - new Date(lastClicked).getTime()) / 86400000) : null;
+          const daysSinceClick = lastClicked ? Math.floor((_now - new Date(lastClicked).getTime()) / 86400000) : null;
           const isUrgent = daysSinceClick !== null && daysSinceClick <= 2;
           return (
             <div key={lead.id} className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
