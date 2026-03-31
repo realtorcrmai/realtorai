@@ -34,7 +34,7 @@ export default function EmailComposer({
   const [isSyncing, startSyncTransition] = useTransition();
   const router = useRouter();
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { requestAnimationFrame(() => setMounted(true)); }, []);
 
   if (!mounted) return null;
 

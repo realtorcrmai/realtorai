@@ -14,7 +14,8 @@ export function NetworkErrorBanner() {
   const { isOnline, wasOffline } = useNetworkStatus();
   const [hideSuccess, setHideSuccess] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- mount detection needed to prevent hydration mismatch
+  useEffect(() => { requestAnimationFrame(() => setMounted(true)); }, []);
 
   // Auto-hide success banner after 3 seconds; reset when going offline
   useEffect(() => {
