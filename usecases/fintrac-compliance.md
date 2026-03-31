@@ -14,7 +14,7 @@ changelog: []
 
 BC realtors are legally required under the *Proceeds of Crime (Money Laundering) and Terrorist Financing Act* to verify the identity of every seller client before a transaction proceeds. Failure to collect, record, and retain FINTRAC identity information exposes the agent and brokerage to regulatory fines, licence suspension, and criminal liability. Manually managing this paperwork — collecting government IDs, tracking expiry dates, flagging missing fields — is error-prone and creates compliance gaps that surface at audit time.
 
-ListingFlow solves this by embedding FINTRAC identity collection directly into Phase 1 (Seller Intake) of the listing workflow, making it impossible to advance without a complete identity record, and surfacing compliance status at a glance on the listing dashboard.
+Realtors360 solves this by embedding FINTRAC identity collection directly into Phase 1 (Seller Intake) of the listing workflow, making it impossible to advance without a complete identity record, and surfacing compliance status at a glance on the listing dashboard.
 
 ---
 

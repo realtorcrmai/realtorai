@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the CASL (Canada's Anti-Spam Legislation) and TCPA (Telephone Consumer Protection Act) compliance features added to ListingFlow CRM to protect user privacy and ensure legal compliance when sending SMS, WhatsApp, and email messages.
+This document outlines the CASL (Canada's Anti-Spam Legislation) and TCPA (Telephone Consumer Protection Act) compliance features added to Realtors360 CRM to protect user privacy and ensure legal compliance when sending SMS, WhatsApp, and email messages.
 
 **Implementation Date:** March 23, 2026
 

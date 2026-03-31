@@ -1,4 +1,4 @@
-# ListingFlow CRM — Production Test Plan (1000+ Test Cases)
+# Realtors360 CRM — Production Test Plan (1000+ Test Cases)
 
 **Version:** 1.0
 **Date:** 2026-03-26
@@ -1202,8 +1202,8 @@ node scripts/test-workflow-emails.mjs
 
 ### WEB-001: SDK Script Loading
 **User Story:** US-WEB-001
-**Steps:** Add `<script src="/sdk/listingflow.js" data-key="lf_test">` to test HTML page
-**Expected:** Script loads async, `window.ListingFlow` available, no page blocking
+**Steps:** Add `<script src="/sdk/realtors360.js" data-key="lf_test">` to test HTML page
+**Expected:** Script loads async, `window.Realtors360` available, no page blocking
 **Automated:** Manual
 
 ### WEB-002: API Key Authentication — Valid

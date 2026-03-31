@@ -1,4 +1,4 @@
-# ListingFlow Email Marketing Engine — Functional Specification
+# Realtors360 Email Marketing Engine — Functional Specification
 
 **Version:** 1.0
 **Date:** March 21, 2026
@@ -31,7 +31,7 @@
 
 ## 1. System Overview
 
-The ListingFlow Email Marketing Engine automates relationship nurturing for BC realtors. It replaces manual email writing with an AI-powered system that generates personalized, event-driven emails for every contact in the CRM.
+The Realtors360 Email Marketing Engine automates relationship nurturing for BC realtors. It replaces manual email writing with an AI-powered system that generates personalized, event-driven emails for every contact in the CRM.
 
 ### Architecture
 

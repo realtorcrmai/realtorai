@@ -1,4 +1,4 @@
-# ListingFlow — Local Deployment Guide
+# Realtors360 — Local Deployment Guide
 
 **For developers pulling the latest changes and setting up locally.**
 
@@ -232,7 +232,7 @@ Expected: 27/28 pass
 | CRM (Next.js) | 3000 | Main application |
 | Voice Agent | 8768 | Python voice agent (`voice_agent/server/main.py`, optional) |
 | Form Server | 8767 | BCREA form generation (Python, optional) |
-| Website Agent | 8769 | AI website generator (`listingflow-agent/`, optional, separate service) |
+| Website Agent | 8769 | AI website generator (`realtors360-agent/`, optional, separate service) |
 
 ### Start Voice Agent (optional)
 ```bash
@@ -243,7 +243,7 @@ python voice_agent/server/main.py
 
 ### Start Website Agent (optional)
 ```bash
-cd ./listingflow-agent
+cd ./realtors360-agent
 npm install
 npm run dev
 # → http://localhost:8769
@@ -304,7 +304,7 @@ realtorai/                      ← Git repo root
 ├── supabase/migrations/        ← Database migrations (40 files)
 ├── scripts/                    ← QA test runner
 ├── docs/functional-specs/      ← Technical documentation
-├── listingflow-agent/          ← Website generator service
+├── realtors360-agent/          ← Website generator service
 ├── CLAUDE.md                   ← AI assistant instructions
 ├── deploy.md                   ← This file
 ├── evals.md                    ← 200 QA test cases
@@ -346,16 +346,16 @@ Add `RESEND_API_KEY` to `.env.local`. Get a free key at resend.com.
 ```bash
 npm run build
 ```
-If you see errors from `listingflow-agent/` code, sync the agent files:
+If you see errors from `realtors360-agent/` code, sync the agent files:
 ```bash
-cp ../listingflow-agent/src/tools/screenshot.ts listingflow-agent/src/tools/screenshot.ts
+cp ../realtors360-agent/src/tools/screenshot.ts realtors360-agent/src/tools/screenshot.ts
 ```
 
 ### Turbopack workspace root warning
 Harmless warning caused by multiple `package-lock.json` files. Fixed via `turbopack.root` in `next.config.ts`.
 
 ### Build picks up files from app-backup/ or agent-pipeline/
-These directories are excluded in `tsconfig.json`. If you see errors from them, check that `"exclude"` in `tsconfig.json` includes: `["node_modules", "app", "app-backup", "agent-pipeline", "content-generator", "listingflow-agent"]`
+These directories are excluded in `tsconfig.json`. If you see errors from them, check that `"exclude"` in `tsconfig.json` includes: `["node_modules", "app", "app-backup", "agent-pipeline", "content-generator", "realtors360-agent"]`
 
 ### Contact tabs not switching (Intelligence, Activity, Deals)
 The tabs component was upgraded from Base UI to Radix. Run `npm install` to get `@radix-ui/react-tabs`.
@@ -374,7 +374,7 @@ rm -rf node_modules .next && npm install && npm run build
 | Framework | Next.js 16 (App Router, Turbopack) |
 | Database | Supabase (PostgreSQL + RLS) |
 | Auth | NextAuth v5 (JWT sessions) |
-| Styling | Tailwind CSS v4 + ListingFlow design system |
+| Styling | Tailwind CSS v4 + Realtors360 design system |
 | Email | Resend API + React Email templates |
 | AI | Anthropic Claude SDK (content generation + lead scoring) |
 | SMS/WhatsApp | Twilio |

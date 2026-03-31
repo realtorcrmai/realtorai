@@ -289,7 +289,7 @@ function WelcomeEmail({ firstName, area, ctaUrl }) {
         <Container style={{ maxWidth: 600, margin: "0 auto", background: "#fff", borderRadius: 12 }}>
           {/* Header */}
           <Section style={{ padding: "28px 32px", textAlign: "center" }}>
-            <Heading style={{ color: "#4f35d2" }}>ListingFlow</Heading>
+            <Heading style={{ color: "#4f35d2" }}>Realtors360</Heading>
           </Section>
           {/* Body */}
           <Section style={{ padding: "0 32px 24px" }}>
@@ -425,7 +425,7 @@ const digestHtml = buildDigestHtml(digest);
 
 await sendEmail({
   to: "demo@realestatecrm.com", // realtor's email
-  subject: `ListingFlow Daily: ${digest.emails_sent} emails sent, ${digest.hot_leads.length} hot leads`,
+  subject: `Realtors360 Daily: ${digest.emails_sent} emails sent, ${digest.hot_leads.length} hot leads`,
   html: digestHtml,
 });
 
@@ -445,7 +445,7 @@ function buildDigestHtml(digest) {
 ```
 
 ### Test
-1. Call the cron endpoint: `curl http://localhost:3000/api/cron/daily-digest -H "Authorization: Bearer listingflow-cron-secret-2026"`
+1. Call the cron endpoint: `curl http://localhost:3000/api/cron/daily-digest -H "Authorization: Bearer realtors360-cron-secret-2026"`
 2. Check: response includes digest data
 3. Check: email sent to realtor's email (check Resend dashboard or use delivered@resend.dev)
 4. Check: email contains correct stats (sent count, open rate, hot leads)
@@ -514,7 +514,7 @@ Create a comprehensive seed script that populates the CRM with realistic demo da
 - 55 newsletters with open/click events
 - Realtor agent config with voice rules and learned settings
 - Context entries, instructions, and direct contact logs
-- Demo login: `demo@listingflow.com` / `demo2026`
+- Demo login: `demo@realtors360.com` / `demo2026`
 
 ### Test
 1. Run seed script

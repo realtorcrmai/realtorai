@@ -14,7 +14,7 @@ changelog: []
 
 Real estate transactions are high-stakes and time-sensitive. A realtor working multiple buyers and sellers simultaneously needs a single place to see every deal's stage, track all parties involved (buyer agent, seller agent, lawyers), manage competing offers, monitor subject conditions with hard deadlines, and calculate commission at close.
 
-Without a structured pipeline, deals fall through cracks: a subject removal deadline is missed, a counter-offer isn't relayed in time, or the deposit amount is misremembered. ListingFlow's Deal Pipeline provides a stage-managed Kanban view, full offer lifecycle management (create, counter, accept, reject, withdraw), subject condition tracking with due dates, per-deal party records, checklist items for closing tasks, and commission calculation — all connected to the contact and listing records.
+Without a structured pipeline, deals fall through cracks: a subject removal deadline is missed, a counter-offer isn't relayed in time, or the deposit amount is misremembered. Realtors360's Deal Pipeline provides a stage-managed Kanban view, full offer lifecycle management (create, counter, accept, reject, withdraw), subject condition tracking with due dates, per-deal party records, checklist items for closing tasks, and commission calculation — all connected to the contact and listing records.
 
 ---
 

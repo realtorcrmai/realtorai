@@ -1,15 +1,15 @@
-# PRD: AI Newsletter & Journey Engine — ListingFlow CRM
+# PRD: AI Newsletter & Journey Engine — Realtors360 CRM
 
 **Version:** 1.0
 **Date:** March 18, 2026
-**Author:** ListingFlow Team
+**Author:** Realtors360 Team
 **Status:** Approved for Implementation
 
 ---
 
 ## 1. Executive Summary
 
-ListingFlow's AI Newsletter & Journey Engine automates relationship nurturing for BC realtors. Instead of generic email blasts, the system creates **personalized, event-driven email journeys** for every contact — powered by Claude AI, sent via Resend, and adapted based on recipient behaviour (clicks, opens, replies).
+Realtors360's AI Newsletter & Journey Engine automates relationship nurturing for BC realtors. Instead of generic email blasts, the system creates **personalized, event-driven email journeys** for every contact — powered by Claude AI, sent via Resend, and adapted based on recipient behaviour (clicks, opens, replies).
 
 **Key differentiator:** Every email is unique. Claude AI writes content using the contact's actual CRM data — their preferred area, budget, showing history, transaction stage — producing emails that feel personally written, not templated.
 

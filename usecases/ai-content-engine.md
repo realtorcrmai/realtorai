@@ -14,7 +14,7 @@ changelog: []
 
 Creating compelling marketing content for every listing is time-intensive. Writing MLS remarks that are accurate, engaging, and within the 500-character limit; crafting Instagram captions with the right hashtags; and producing cinematic video and image assets — each task can take hours per listing. Most agents either skip this content entirely or publish generic, low-effort copy that undersells the property.
 
-ListingFlow's AI Content Engine eliminates this bottleneck. Claude AI generates MLS remarks and social captions from listing data in seconds. Kling AI produces broadcast-quality 4K video (9:16 for Instagram Reels/TikTok) and 8K images (1:1 for Instagram posts) from a single hero photo and text prompt. The entire workflow — Prompts → Generate → Gallery — lives inside the CRM.
+Realtors360's AI Content Engine eliminates this bottleneck. Claude AI generates MLS remarks and social captions from listing data in seconds. Kling AI produces broadcast-quality 4K video (9:16 for Instagram Reels/TikTok) and 8K images (1:1 for Instagram posts) from a single hero photo and text prompt. The entire workflow — Prompts → Generate → Gallery — lives inside the CRM.
 
 ---
 
@@ -138,7 +138,7 @@ All generated assets are stored in the `media_assets` table with `status` (pendi
 3. **Show character counter** on Public Remarks — 498/500 chars
 4. **Show REALTOR Remarks** — showing instructions, lockbox code, offer presentation
 5. **Click "Generate Prompts"** → Claude returns video prompt, image prompt, IG caption
-6. **Read Instagram caption aloud** — show hashtags (#SurreyRealEstate, #ListingFlow, etc.)
+6. **Read Instagram caption aloud** — show hashtags (#SurreyRealEstate, #Realtors360, etc.)
 7. **Advance to Generate Step** → click "Generate Video" and "Generate Image" simultaneously
 8. **Show progress bars** polling in real time — "Processing... 40%"
 9. **Video completes** → 5-second 4K clip plays in browser

@@ -1,9 +1,9 @@
-# PRD: ListingFlow Website Integration Platform
+# PRD: Realtors360 Website Integration Platform
 
 **Version:** 1.0
 **Date:** 2026-03-26
 **Status:** Approved
-**Author:** ListingFlow Team
+**Author:** Realtors360 Team
 
 ---
 
@@ -15,7 +15,7 @@ Realtors invest in custom websites (WordPress, Squarespace, custom-built) but th
 
 ### 1.2 Solution
 
-An **integration SDK** — a lightweight JavaScript library and set of API endpoints that connect ANY realtor website to the ListingFlow CRM. The realtor adds a single `<script>` tag to their website and gets: analytics tracking, AI chatbot, lead capture, newsletter signup, live listings feed, session recording, and appointment booking — all managed from the CRM dashboard.
+An **integration SDK** — a lightweight JavaScript library and set of API endpoints that connect ANY realtor website to the Realtors360 CRM. The realtor adds a single `<script>` tag to their website and gets: analytics tracking, AI chatbot, lead capture, newsletter signup, live listings feed, session recording, and appointment booking — all managed from the CRM dashboard.
 
 ### 1.3 Non-Goals
 
@@ -44,13 +44,13 @@ An **integration SDK** — a lightweight JavaScript library and set of API endpo
 #### US-WEB-001: SDK Script Loading
 **As a** realtor with an existing website,
 **I want to** add a single script tag to my website,
-**So that** all ListingFlow integrations are automatically available.
+**So that** all Realtors360 integrations are automatically available.
 
 **Acceptance Criteria:**
-- [ ] Script loads from `<script src="https://app.listingflow.com/sdk/listingflow.js" data-key="lf_xxx"></script>`
+- [ ] Script loads from `<script src="https://app.realtors360.com/sdk/realtors360.js" data-key="lf_xxx"></script>`
 - [ ] Script is < 5KB gzipped
 - [ ] Script auto-initializes on DOM ready
-- [ ] `window.ListingFlow` object is available after load
+- [ ] `window.Realtors360` object is available after load
 - [ ] Script does not block page rendering (async load)
 - [ ] Script works on any website platform (WordPress, Squarespace, Wix, custom HTML, React, etc.)
 - [ ] Invalid or missing API key shows console warning, does not break page
@@ -144,7 +144,7 @@ An **integration SDK** — a lightweight JavaScript library and set of API endpo
 **So that** visitors can subscribe from any page on my website.
 
 **Acceptance Criteria:**
-- [ ] `ListingFlow.mountNewsletter(elementId)` renders signup form in specified div
+- [ ] `Realtors360.mountNewsletter(elementId)` renders signup form in specified div
 - [ ] Widget includes: email input, CASL consent checkbox, submit button
 - [ ] Styled with CSS custom properties (realtor can override colors)
 - [ ] Success/error states with smooth animations
@@ -186,7 +186,7 @@ An **integration SDK** — a lightweight JavaScript library and set of API endpo
 **So that** I can get instant answers about properties, neighborhoods, and the buying/selling process.
 
 **Acceptance Criteria:**
-- [ ] `ListingFlow.mountChat(elementId)` renders floating chat bubble (bottom-right)
+- [ ] `Realtors360.mountChat(elementId)` renders floating chat bubble (bottom-right)
 - [ ] Chat opens as expandable panel (400px wide, 600px tall)
 - [ ] Greeting message configurable by realtor
 - [ ] Messages stream in real-time (SSE)
@@ -265,7 +265,7 @@ An **integration SDK** — a lightweight JavaScript library and set of API endpo
 
 **Acceptance Criteria:**
 - [ ] SDK tracks events: `listing_click`, `form_start`, `form_submit`, `chat_open`, `chat_message`, `cta_click`, `newsletter_signup`, `phone_click`
-- [ ] `ListingFlow.trackEvent(type, metadata)` available for custom events
+- [ ] `Realtors360.trackEvent(type, metadata)` available for custom events
 - [ ] Analytics tab shows: top pages, click heatmap data, interaction counts
 - [ ] Events linked to session (cookie-based session ID)
 
@@ -361,7 +361,7 @@ An **integration SDK** — a lightweight JavaScript library and set of API endpo
 **So that** visitors see my current inventory without me updating the site manually.
 
 **Acceptance Criteria:**
-- [ ] `ListingFlow.mountListings(elementId, options)` renders property card grid
+- [ ] `Realtors360.mountListings(elementId, options)` renders property card grid
 - [ ] Options: `{ type, area, maxPrice, minPrice, limit, columns }`
 - [ ] Cards show: photo, address, price, beds/baths/sqft, status badge
 - [ ] Cards link to property detail (configurable URL pattern)
@@ -376,7 +376,7 @@ An **integration SDK** — a lightweight JavaScript library and set of API endpo
 **So that** visitors can schedule meetings from any page.
 
 **Acceptance Criteria:**
-- [ ] `ListingFlow.mountBooking(elementId)` renders booking form
+- [ ] `Realtors360.mountBooking(elementId)` renders booking form
 - [ ] Shows: date picker, available time slots, appointment type, name/phone/email
 - [ ] Checks realtor's Google Calendar for availability
 - [ ] Creates contact + task in CRM on submission
@@ -388,7 +388,7 @@ An **integration SDK** — a lightweight JavaScript library and set of API endpo
 **So that** visitors see social proof of my activity.
 
 **Acceptance Criteria:**
-- [ ] `ListingFlow.mountSocialProof(elementId)` renders notification toasts
+- [ ] `Realtors360.mountSocialProof(elementId)` renders notification toasts
 - [ ] Shows recent CRM activity: "Sarah just booked a showing", "New listing in Kitsilano"
 - [ ] Notifications appear as slide-in toasts (bottom-left)
 - [ ] Data from CRM activity feed (last 24h of relevant events)
@@ -549,23 +549,23 @@ All `/api/websites/*` endpoints require `X-LF-Key` header with valid API key.
 
 ```javascript
 // Auto-initialized from script tag
-// <script src=".../listingflow.js" data-key="lf_xxx"></script>
+// <script src=".../realtors360.js" data-key="lf_xxx"></script>
 
 // Analytics
-ListingFlow.trackPageView()                    // Auto-called on load
-ListingFlow.trackEvent("listing_click", { listing_id: "xxx", page: "/properties" })
+Realtors360.trackPageView()                    // Auto-called on load
+Realtors360.trackEvent("listing_click", { listing_id: "xxx", page: "/properties" })
 
 // Lead capture
-ListingFlow.submitLead({ name, phone, email, message, source_page })
+Realtors360.submitLead({ name, phone, email, message, source_page })
 
 // Widgets
-ListingFlow.mountChat("chat-container")        // AI chatbot
-ListingFlow.mountNewsletter("newsletter-div")  // Email signup
-ListingFlow.mountListings("listings-div", { type: "condo", limit: 6 })
-ListingFlow.mountBooking("booking-div")        // Appointment form
+Realtors360.mountChat("chat-container")        // AI chatbot
+Realtors360.mountNewsletter("newsletter-div")  // Email signup
+Realtors360.mountListings("listings-div", { type: "condo", limit: 6 })
+Realtors360.mountBooking("booking-div")        // Appointment form
 
 // Configuration
-ListingFlow.configure({ theme: { accent: "#c9a96e" } })
+Realtors360.configure({ theme: { accent: "#c9a96e" } })
 ```
 
 ---

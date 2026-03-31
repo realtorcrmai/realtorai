@@ -32,6 +32,7 @@ export default auth((req) => {
     pathname.startsWith("/api/contacts/export") ||
     pathname.startsWith("/api/contacts/import") ||
     pathname.startsWith("/api/websites/") ||
+    pathname.startsWith("/api/social/oauth") ||
     pathname.startsWith("/sdk/")
   ) {
     return NextResponse.next();

@@ -1,10 +1,10 @@
 ---
 name: test
-description: Run the full ListingFlow test suite — navigation, CRUD, constraints, auth, cascade, sample data validation
+description: Run the full Realtors360 test suite — navigation, CRUD, constraints, auth, cascade, sample data validation
 user_invocable: true
 ---
 
-Run the comprehensive test suite for ListingFlow CRM.
+Run the comprehensive test suite for Realtors360 CRM.
 
 ## Steps
 

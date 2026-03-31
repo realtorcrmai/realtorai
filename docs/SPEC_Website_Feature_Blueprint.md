@@ -1,7 +1,7 @@
-# Website Feature Blueprint — ListingFlow Sites
+# Website Feature Blueprint — Realtors360 Sites
 
 > Reference specification derived from the 24K Realty website (24krealty.vercel.app).
-> Use this as the feature blueprint when generating realtor websites via the ListingFlow Sites module.
+> Use this as the feature blueprint when generating realtor websites via the Realtors360 Sites module.
 
 ---
 

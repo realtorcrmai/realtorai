@@ -1,4 +1,4 @@
-# ListingFlow AI Email Marketing — Master Implementation Plan
+# Realtors360 AI Email Marketing — Master Implementation Plan
 
 ## Document Purpose
 
@@ -22,7 +22,7 @@ An autonomous AI email marketing system where each contact gets their own AI age
 
 ### What Makes This Different From Mailchimp/HubSpot
 
-| Traditional | ListingFlow |
+| Traditional | Realtors360 |
 |---|---|
 | One campaign → blast to segment | One agent per contact → unique email per person |
 | Static drip sequences | Dynamic sequences that adapt from behavior |
@@ -739,7 +739,7 @@ GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, TWILIO_*
 
 # New (add when needed)
 RESEND_WEBHOOK_SECRET     # For webhook signature verification
-CANARY_EMAIL_DOMAIN       # listingflow.com for canary addresses
+CANARY_EMAIL_DOMAIN       # realtors360.com for canary addresses
 AI_SEND_ADVISOR=true      # Un-feature-flag the send advisor
 ```
 
@@ -886,7 +886,7 @@ main (protected) ← production releases only
 | No RLS policies defined for new tables | Security gap | Every new table needs: `ALTER TABLE x ENABLE ROW LEVEL SECURITY; CREATE POLICY x_auth ON x FOR ALL USING (auth.role() = 'authenticated');` |
 | Content assembler needs market data but no MLS feed exists | Data gap | Sprint 1 can work with CRM's own listings table. MLS feed integration is a separate project — use manual listing entry for now |
 | Brand config references logo_url but no file upload exists | Feature gap | Sprint 5 should include Supabase Storage upload for logo + headshot. Or use URL input initially |
-| Canary email domain (canary+{id}@listingflow.com) requires domain setup | Infra gap | Use delivered@resend.dev for canary in development. Production needs verified domain |
+| Canary email domain (canary+{id}@realtors360.com) requires domain setup | Infra gap | Use delivered@resend.dev for canary in development. Production needs verified domain |
 | Daily digest cron schedule says "0 15 * * *" which is 3 PM UTC, not 8 AM local | Wrong timezone | Should be dynamic per realtor timezone, or use "0 15 * * *" for PST (8 AM = 15:00 UTC in winter, 14:00 in summer). Note: Vercel cron is UTC only — may need timezone-aware wrapper |
 | Vercel hobby plan only supports 2 cron jobs | Pricing gap | Need Vercel Pro ($20/mo) for 7 cron jobs, or consolidate into fewer routes with internal routing |
 | No data backup/export strategy | Data safety | Add: Supabase automatic daily backups (included in Pro), plus weekly pg_dump to S3 for disaster recovery |
@@ -926,7 +926,7 @@ An integration SDK that connects ANY realtor website to the CRM — not a websit
 
 | Sprint | What | Days |
 |--------|------|------|
-| 20 | Public APIs + JS SDK (`listingflow.js`) — 7 endpoints, API key auth, analytics beacon | 3 |
+| 20 | Public APIs + JS SDK (`realtors360.js`) — 7 endpoints, API key auth, analytics beacon | 3 |
 | 21 | CRM `/websites` dashboard — 4 tabs, embed code generator, settings | 3 |
 | 22 | AI chatbot widget — Claude + tool_use, streaming, shadow DOM | 3-4 |
 | 23 | Analytics dashboard — visitor charts, lead funnel, UTM tracking | 2-3 |
@@ -934,7 +934,7 @@ An integration SDK that connects ANY realtor website to the CRM — not a websit
 | 25 | Listings feed + advanced widgets — property cards, newsletter, booking | 2-3 |
 
 **Key deliverables:**
-- `realestate-crm/public/sdk/listingflow.js` — <5KB embeddable SDK
+- `realestate-crm/public/sdk/realtors360.js` — <5KB embeddable SDK
 - 7 new API routes at `/api/websites/*`
 - CRM dashboard at `/websites` with analytics + embed codes
 - AI chatbot with property search, scheduling, lead capture

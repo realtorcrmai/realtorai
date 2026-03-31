@@ -80,7 +80,7 @@ cp .env.local.example .env.local
 | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_PHONE_NUMBER` | SMS/WhatsApp showing notifications |
 | `ANTHROPIC_API_KEY` | AI-generated MLS remarks and content |
 | `VOICE_AGENT_API_KEY` | Voice assistant integration |
-| `LISTINGFLOW_URL` | BCREA form server (default: `http://127.0.0.1:8767`) |
+| `REALTORS360_URL` | BCREA form server (default: `http://127.0.0.1:8767`) |
 
 See `.env.local.example` for the full list with descriptions.
 
@@ -192,8 +192,8 @@ src/
 supabase/
 └── migrations/                   # SQL migration files (apply in order)
 voice_agent/                      # Python voice agent backend
-listingflow-agent/                # AI website generation agent
-listingflow-sites/                # Pre-built website components
+realtors360-agent/                # AI website generation agent
+realtors360-sites/                # Pre-built website components
 ```
 
 ## Important Notes
