@@ -8,7 +8,7 @@ import { requireVoiceAgentAuth } from "@/lib/voice-agent-auth";
  * Body: { contact_id?, client_name, client_phone?, listing_id?, feedback, sentiment?, follow_up? }
  */
 export async function POST(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const body = await req.json();

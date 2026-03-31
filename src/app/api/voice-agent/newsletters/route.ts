@@ -14,7 +14,7 @@ const updateNewsletterSchema = z.object({
  * Query params: status (draft|sent|approved|sending|failed|skipped), contact_id, limit
  */
 export async function GET(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const supabase = createAdminClient();
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
  * Body: { newsletter_id, action: "approve"|"skip" }
  */
 export async function PATCH(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const body = await req.json();

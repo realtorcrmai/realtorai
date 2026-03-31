@@ -19,7 +19,7 @@ const createDealSchema = z.object({
  * Query params: stage, type, contact_id, listing_id, status, limit
  */
 export async function GET(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const supabase = createAdminClient();
@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
  * Body: { title, type?, stage?, contact_id?, listing_id?, value?, commission_pct? }
  */
 export async function POST(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const body = await req.json();

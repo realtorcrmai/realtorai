@@ -8,7 +8,7 @@ import { requireVoiceAgentAuth } from "@/lib/voice-agent-auth";
  * Query params: listing_id, status, date
  */
 export async function GET(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const supabase = createAdminClient();
@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
  * Body: { listing_id, buyer_agent_name, buyer_agent_phone, buyer_agent_email?, start_time, end_time, notes? }
  */
 export async function POST(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const body = await req.json();

@@ -18,7 +18,7 @@ const createCommunicationSchema = z.object({
  * Returns most recent first.
  */
 export async function GET(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const supabase = createAdminClient();
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
  * Body: { contact_id, direction: "inbound"|"outbound", channel: "sms"|"whatsapp"|"email"|"note", body, related_id? }
  */
 export async function POST(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const body = await req.json();

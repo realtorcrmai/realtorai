@@ -20,7 +20,7 @@ const createTaskSchema = z.object({
  * Query params: status, priority, contact_id, listing_id, limit
  */
 export async function GET(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const supabase = createAdminClient();
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
  * Body: { title, status?, priority?, due_date?, contact_id?, listing_id?, category?, description? }
  */
 export async function POST(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const body = await req.json();

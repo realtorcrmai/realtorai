@@ -20,7 +20,7 @@ const createRelationshipSchema = z.object({
  * Query param: contact_id (required)
  */
 export async function GET(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const supabase = createAdminClient();
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
  * Create a relationship between two contacts.
  */
 export async function POST(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const body = await req.json();
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
  * Delete a relationship by id (query param: id).
  */
 export async function DELETE(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const params = req.nextUrl.searchParams;
