@@ -27,34 +27,36 @@ const DEFAULT_ITEMS: Omit<ChecklistItem, "complete">[] = [
  * Persistent onboarding checklist that tracks real CRM actions.
  * Shows for 30 days after first use. State persisted in localStorage.
  */
-export function OnboardingChecklist() {
-  const [items, setItems] = useState<ChecklistItem[]>([]);
-  const [minimized, setMinimized] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-
-  // Load state from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem("lf-onboarding");
-    if (stored) {
-      try {
-        const data = JSON.parse(stored);
-        if (data.dismissed) { setDismissed(true); setLoaded(true); return; }
-        if (data.minimized) setMinimized(data.minimized);
-        // Merge stored completion state with default items
-        setItems(DEFAULT_ITEMS.map((item) => ({
+function loadOnboardingState() {
+  if (typeof window === "undefined") return { items: [], minimized: false, dismissed: false, loaded: false };
+  const stored = localStorage.getItem("lf-onboarding");
+  if (stored) {
+    try {
+      const data = JSON.parse(stored);
+      if (data.dismissed) return { items: [], minimized: false, dismissed: true, loaded: true };
+      return {
+        items: DEFAULT_ITEMS.map((item) => ({
           ...item,
           complete: data.completed?.includes(item.id) || false,
-        })));
-      } catch {
-        setItems(DEFAULT_ITEMS.map((item) => ({ ...item, complete: false })));
-      }
-    } else {
-      setItems(DEFAULT_ITEMS.map((item) => ({ ...item, complete: false })));
-      localStorage.setItem("lf-onboarding", JSON.stringify({ started: new Date().toISOString(), completed: [], dismissed: false }));
+        })),
+        minimized: !!data.minimized,
+        dismissed: false,
+        loaded: true,
+      };
+    } catch {
+      return { items: DEFAULT_ITEMS.map((item) => ({ ...item, complete: false })), minimized: false, dismissed: false, loaded: true };
     }
-    setLoaded(true);
-  }, []);
+  }
+  localStorage.setItem("lf-onboarding", JSON.stringify({ started: new Date().toISOString(), completed: [], dismissed: false }));
+  return { items: DEFAULT_ITEMS.map((item) => ({ ...item, complete: false })), minimized: false, dismissed: false, loaded: true };
+}
+
+export function OnboardingChecklist() {
+  const [initialState] = useState(loadOnboardingState);
+  const [items, setItems] = useState<ChecklistItem[]>(initialState.items);
+  const [minimized, setMinimized] = useState(initialState.minimized);
+  const [dismissed, setDismissed] = useState(initialState.dismissed);
+  const [loaded] = useState(initialState.loaded);
 
   // Save state on change
   useEffect(() => {

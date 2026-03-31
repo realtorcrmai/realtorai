@@ -11,14 +11,20 @@ import { useNetworkStatus } from "@/hooks/useNetworkStatus";
  */
 export function NetworkErrorBanner() {
   const { isOnline, wasOffline } = useNetworkStatus();
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [hideSuccess, setHideSuccess] = useState(false);
 
+  // Derive showSuccess from external state
+  const showSuccess = isOnline && wasOffline && !hideSuccess;
+
+  // Auto-hide success banner after 3 seconds; reset when going offline
   useEffect(() => {
     if (isOnline && wasOffline) {
-      setShowSuccess(true);
-      const timer = setTimeout(() => setShowSuccess(false), 3000);
+      const timer = setTimeout(() => setHideSuccess(true), 3000);
       return () => clearTimeout(timer);
     }
+    // Reset hide flag asynchronously when not in reconnection state
+    const raf = requestAnimationFrame(() => setHideSuccess(false));
+    return () => cancelAnimationFrame(raf);
   }, [isOnline, wasOffline]);
 
   if (isOnline && !showSuccess) return null;

@@ -23,6 +23,8 @@ import { BackfillButton } from "@/components/automations/BackfillButton";
 export const dynamic = "force-dynamic";
 
 export default async function AutomationsPage() {
+  // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is safe
+  const now = Date.now();
   const supabase = createAdminClient();
 
   // Fetch all data in parallel (was sequential — 4x faster now)
@@ -82,7 +84,7 @@ export default async function AutomationsPage() {
   }
 
   function getRelativeTime(dateStr: string): string {
-    const diff = Date.now() - new Date(dateStr).getTime();
+    const diff = now - new Date(dateStr).getTime();
     const minutes = Math.floor(diff / 60000);
     if (minutes < 1) return "just now";
     if (minutes < 60) return `${minutes}m ago`;

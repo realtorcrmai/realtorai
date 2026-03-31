@@ -32,6 +32,8 @@ function getGreeting(): string {
 export default async function DashboardPage() {
   const session = await auth();
   const userName = session?.user?.name ?? "there";
+  // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is safe
+  const now = Date.now();
 
   const supabase = createAdminClient();
 
@@ -59,7 +61,7 @@ export default async function DashboardPage() {
       .gte(
         "start_time",
         new Date(
-          Date.now() - new Date().getDay() * 24 * 60 * 60 * 1000
+          now - new Date().getDay() * 24 * 60 * 60 * 1000
         ).toISOString()
       ),
     supabase

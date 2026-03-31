@@ -176,14 +176,19 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
   const [activitiesLoading, setActivitiesLoading] = useState(false);
 
   useEffect(() => {
-    if (currentTab === "activity" && !lazyActivities && !activitiesLoading) {
-      setActivitiesLoading(true);
-      fetch(`/api/contacts/${contactId}/activities`)
-        .then((r) => r.json())
-        .then((data) => setLazyActivities(data))
-        .catch(() => setLazyActivities([]))
-        .finally(() => setActivitiesLoading(false));
-    }
+    if (currentTab !== "activity" || lazyActivities || activitiesLoading) return;
+    let cancelled = false;
+    // Use a ref-style flag via the cancelled variable; mark loading in the promise chain
+    const loadPromise = Promise.resolve().then(() => {
+      if (!cancelled) setActivitiesLoading(true);
+      return fetch(`/api/contacts/${contactId}/activities`);
+    });
+    loadPromise
+      .then((r) => r.json())
+      .then((data) => { if (!cancelled) setLazyActivities(data); })
+      .catch(() => { if (!cancelled) setLazyActivities([]); })
+      .finally(() => { if (!cancelled) setActivitiesLoading(false); });
+    return () => { cancelled = true; };
   }, [currentTab, contactId, lazyActivities, activitiesLoading]);
 
   return (
