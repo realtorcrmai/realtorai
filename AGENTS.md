@@ -1,4 +1,4 @@
-# AGENTS.md — ListingFlow Real Estate CRM
+# AGENTS.md — RealtorAI Real Estate CRM
 
 > Cross-tool agent instructions (compatible with Claude Code, GitHub Copilot, Cursor, Windsurf, OpenAI Codex)
 

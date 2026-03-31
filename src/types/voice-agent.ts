@@ -206,3 +206,34 @@ export interface VoiceSSEEvent {
   type: "notification" | "heartbeat" | "session_update";
   data: VoiceNotification | { status: "alive" } | { session_id: string; status: VoiceSessionStatus };
 }
+
+// ── Contact Consent ────────────────────────────────────────────────────────
+
+export type ConsentType = "voice" | "recording" | "sms" | "email";
+export type ConsentStatus = "granted" | "denied" | "withdrawn" | "pending";
+export type ConsentMethod = "verbal" | "written" | "electronic";
+
+export interface ContactConsent {
+  id: string;
+  contact_id: string;
+  consent_type: ConsentType;
+  status: ConsentStatus;
+  granted_at: string | null;
+  withdrawn_at: string | null;
+  method: ConsentMethod | null;
+  compliance_notes: string | null;
+  ip_address: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ── Call Disposition ────────────────────────────────────────────────────────
+
+export type CallDisposition =
+  | "interested"
+  | "not_interested"
+  | "callback_requested"
+  | "wrong_number"
+  | "left_voicemail"
+  | "no_answer"
+  | "do_not_call";

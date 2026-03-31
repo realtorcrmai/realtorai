@@ -6,7 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "bash scripts/test-suite.sh",
+    "test:quick": "npx vitest run",
+    "test:all": "bash scripts/run-all-tests.sh",
+    "health": "bash scripts/health-check.sh",
+    "seed": "node scripts/seed-demo.mjs",
+    "audit": "npm audit --audit-level=high",
+    "preflight": "npm run typecheck && npm run lint && npm run audit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

@@ -59,3 +59,9 @@ guides/screenshots/*.png
 tests/browser/.auth/
 test-results/
 playwright-report/
+listingflow-sites/supabase/.temp/
+
+# Voice agent SQLite (migrated to Supabase)
+voice_agent/server/data/*.db
+voice_agent/venv/
+voice_agent/server/__pycache__/
