@@ -5,7 +5,8 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
-import { MODELS, TIMEOUTS } from './constants';
+import { MODELS } from './constants';
+const SUMMARIZE_TIMEOUT = 30000;
 
 const anthropic = new Anthropic();
 
@@ -99,7 +100,7 @@ ${timeline}`;
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), TIMEOUTS.TIER1_PLANNER);
+    const timeout = setTimeout(() => controller.abort(), SUMMARIZE_TIMEOUT);
 
     const response = await anthropic.messages.create(
       {

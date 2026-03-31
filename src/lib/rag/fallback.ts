@@ -4,7 +4,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 import type { SearchResult, SearchFilters, QueryPlan } from './types';
-import type { FreshnessAnnotatedResult } from './retriever';
+// Use SearchResult with optional freshness field
+type FreshnessAnnotatedResult = SearchResult & { freshness?: 'fresh' | 'stale' | 'unknown' };
 import { RETRIEVAL } from './constants';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
