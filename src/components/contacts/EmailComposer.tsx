@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { sendContactEmail, syncContactEmailHistory } from "@/actions/contacts";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ export default function EmailComposer({
   contactId,
   contactEmail,
 }: EmailComposerProps) {
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -32,6 +33,10 @@ export default function EmailComposer({
   const [isSending, startSendTransition] = useTransition();
   const [isSyncing, startSyncTransition] = useTransition();
   const router = useRouter();
+
+  useEffect(() => { requestAnimationFrame(() => setMounted(true)); }, []);
+
+  if (!mounted) return null;
 
   function handleSend() {
     setError(null);
@@ -67,29 +72,26 @@ export default function EmailComposer({
   const disabled = !contactEmail;
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(value) => {
-        setOpen(value);
-        if (!value) {
-          setError(null);
-          setSyncResult(null);
-        }
-      }}
-    >
-      <DialogTrigger
-        render={
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-            title={disabled ? "No email address" : `Email ${contactEmail}`}
-          >
-            <Mail className="h-4 w-4 mr-1.5" />
-            Email
-          </Button>
-        }
-      />
+    <>
+      <button
+        onClick={() => !disabled && setOpen(true)}
+        disabled={disabled}
+        title={disabled ? "No email address" : `Email ${contactEmail}`}
+        className="inline-flex items-center justify-center rounded-md border px-3 h-8 text-xs font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800"
+      >
+        <Mail className="h-3.5 w-3.5 mr-1.5" />
+        Email
+      </button>
+      <Dialog
+        open={open}
+        onOpenChange={(value) => {
+          setOpen(value);
+          if (!value) {
+            setError(null);
+            setSyncResult(null);
+          }
+        }}
+      >
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -174,5 +176,6 @@ export default function EmailComposer({
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 }

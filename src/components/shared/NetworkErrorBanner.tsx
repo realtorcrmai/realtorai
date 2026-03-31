@@ -10,11 +10,12 @@ import { useNetworkStatus } from "@/hooks/useNetworkStatus";
  * message when connectivity is restored.
  */
 export function NetworkErrorBanner() {
+  const [mounted, setMounted] = useState(false);
   const { isOnline, wasOffline } = useNetworkStatus();
   const [hideSuccess, setHideSuccess] = useState(false);
 
-  // Derive showSuccess from external state
-  const showSuccess = isOnline && wasOffline && !hideSuccess;
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- mount detection needed to prevent hydration mismatch
+  useEffect(() => { requestAnimationFrame(() => setMounted(true)); }, []);
 
   // Auto-hide success banner after 3 seconds; reset when going offline
   useEffect(() => {
@@ -22,11 +23,14 @@ export function NetworkErrorBanner() {
       const timer = setTimeout(() => setHideSuccess(true), 3000);
       return () => clearTimeout(timer);
     }
-    // Reset hide flag asynchronously when not in reconnection state
     const raf = requestAnimationFrame(() => setHideSuccess(false));
     return () => cancelAnimationFrame(raf);
   }, [isOnline, wasOffline]);
 
+  // All hooks called above — safe to return early now
+  if (!mounted) return null;
+
+  const showSuccess = isOnline && wasOffline && !hideSuccess;
   if (isOnline && !showSuccess) return null;
 
   return (
@@ -34,9 +38,7 @@ export function NetworkErrorBanner() {
       role="alert"
       className={cn(
         "flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white",
-        isOnline
-          ? "bg-emerald-600"
-          : "bg-destructive"
+        isOnline ? "bg-emerald-600" : "bg-destructive"
       )}
     >
       {isOnline ? (

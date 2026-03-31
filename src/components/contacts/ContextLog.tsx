@@ -78,10 +78,10 @@ export function ContextLog({ contactId, entries, onAdd, onResolve }: Props) {
   const resolved = entries.filter((e) => e.is_resolved);
 
   return (
-    <Card>
-      <CardContent className="p-4">
+    <Card className="border-l-4 border-l-slate-400 bg-slate-50/20 dark:bg-slate-950/10">
+      <CardContent className="p-6">
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
             Realtor Context
           </h4>
           <Button
