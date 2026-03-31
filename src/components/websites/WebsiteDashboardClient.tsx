@@ -27,10 +27,9 @@ interface Props {
 export function WebsiteDashboardClient({ config, analytics, leads, sessions }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>("codes");
 
-  const newLeads = leads.filter(l => {
-    const d = new Date(l.created_at);
-    return d > new Date(Date.now() - 7 * 86400000);
-  }).length;
+  // eslint-disable-next-line react-hooks/purity
+  const [sevenDaysAgo] = useState(() => new Date(Date.now() - 7 * 86400000));
+  const newLeads = leads.filter(l => new Date(l.created_at) > sevenDaysAgo).length;
 
   return (
     <div style={{ marginTop: 100, padding: "0 18px 40px" }}>

@@ -1,0 +1,24 @@
+{
+  "tier": "large",
+  "type": "CODING:feature",
+  "phase": "IMPLEMENT",
+  "description": "Implement Phase 1 of Multi-Tenant Voice Agent PRD (F0-F6): tenants table, tenant_id migration, OAuth2+PKCE, Python Supabase migration, API key management, OpenAPI spec, security fixes",
+  "prd": "docs/PRD_Multi_Tenant_Voice_Agent_External_Assistants.md",
+  "affected": {
+    "migrations": ["061_multi_tenant_voice.sql", "062_oauth_clients.sql"],
+    "tables_new": ["tenants", "tenant_memberships", "tenant_api_keys", "voice_conversation_logs", "voice_preferences", "voice_notes", "voice_reminders", "tenant_audit_log", "oauth_clients", "oauth_auth_codes", "oauth_refresh_tokens", "oauth_consent_records"],
+    "tables_altered": ["voice_sessions", "voice_calls", "voice_notifications"],
+    "api_routes_new": ["/api/oauth/authorize", "/api/oauth/token", "/api/oauth/revoke", "/api/voice-agent/keys", "/api/voice-agent/openapi.json"],
+    "api_routes_updated": "all 26 existing voice-agent routes (tenant extraction)",
+    "lib_new": ["src/lib/oauth/server.ts", "src/lib/oauth/pkce.ts", "src/lib/oauth/consent.ts", "src/lib/tenant-context.ts"],
+    "lib_updated": ["src/lib/voice-agent-auth.ts"],
+    "actions_new": ["src/actions/voice-keys.ts"],
+    "components_updated": ["src/components/voice-agent/VoiceAgentWidget.tsx"],
+    "python_rewrite": ["voice_agent/server/database.py", "voice_agent/server/tools/*.py"],
+    "python_new": ["voice_agent/server/supabase_client.py", "voice_agent/server/tenant_context.py"],
+    "types_updated": ["src/types/voice-agent.ts"]
+  },
+  "estimated_files": "40+",
+  "estimated_lines": "3000+",
+  "created_at": "2026-03-30T00:00:00Z"
+}

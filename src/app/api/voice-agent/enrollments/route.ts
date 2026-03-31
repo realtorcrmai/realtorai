@@ -21,7 +21,7 @@ const ACTION_TO_STATUS: Record<string, string> = {
  * Query params: contact_id OR workflow_id (at least one required), status, limit
  */
 export async function GET(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const supabase = createAdminClient();
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
  * Body: { enrollment_id, action: "pause"|"resume"|"exit", exit_reason? }
  */
 export async function PATCH(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const body = await req.json();

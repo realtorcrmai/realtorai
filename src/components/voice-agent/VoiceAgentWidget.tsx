@@ -26,7 +26,7 @@ const VOICE_AGENT_API =
 
 const API_HEADERS: Record<string, string> = {
   "Content-Type": "application/json",
-  Authorization: "Bearer va-bridge-secret-key-2026",
+  Authorization: `Bearer ${process.env.NEXT_PUBLIC_VOICE_AGENT_API_KEY || ""}`,
 };
 
 type Message = {
@@ -136,6 +136,12 @@ export function VoiceAgentWidget() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [connected, setConnected] = useState(false);
+  // Track if user manually stopped the voice agent this session.
+  // Once stopped, don't auto-open until a new session starts.
+  const [userStopped, setUserStopped] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return sessionStorage.getItem("voice-agent-stopped") === "true";
+  });
   const [provider, setProvider] = useState("—");
   const [listening, setListening] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);
@@ -186,9 +192,9 @@ export function VoiceAgentWidget() {
         if (data.ok) {
           setConnected(true);
           setProvider(data.llm_provider);
-          // Auto-open the voice panel on first successful connection
+          // Auto-open only on first connection AND if user hasn't manually stopped
           setOpen((prev) => {
-            if (!prev && !hasGreetedRef.current) return true;
+            if (!prev && !hasGreetedRef.current && sessionStorage.getItem("voice-agent-stopped") !== "true") return true;
             return prev;
           });
           if (!stopped && !interval) interval = setInterval(check, 30000);
@@ -606,10 +612,23 @@ export function VoiceAgentWidget() {
     if (open) {
       stopSpeaking();
       stopListening();
+      // Mark that user manually stopped — don't auto-open again this session
+      setUserStopped(true);
+      sessionStorage.setItem("voice-agent-stopped", "true");
       // Reset greeting so re-opening will greet again
       hasGreetedRef.current = false;
+    } else {
+      // User is manually re-opening — that's intentional, allow it
     }
     setOpen((prev) => !prev);
+  }
+
+  /** Call this to start a fresh session (clears the stopped state) */
+  function startNewSession() {
+    setUserStopped(false);
+    sessionStorage.removeItem("voice-agent-stopped");
+    hasGreetedRef.current = false;
+    setOpen(true);
   }
 
   const currentPage =
@@ -621,13 +640,13 @@ export function VoiceAgentWidget() {
     <>
       {/* Floating button */}
       <button
-        onClick={handleToggle}
+        onClick={userStopped && !open ? startNewSession : handleToggle}
         className={cn(
           "fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all duration-300 hover:scale-105 md:bottom-8 md:right-8",
           open ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground",
           !connected && !open && "opacity-60"
         )}
-        title={connected ? "Open Voice Assistant" : "Voice Agent offline"}
+        title={userStopped ? "Start New Voice Session" : connected ? "Open Voice Assistant" : "Voice Agent offline"}
       >
         {open ? (
           <X className="h-6 w-6" />

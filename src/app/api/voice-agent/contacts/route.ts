@@ -18,7 +18,7 @@ const createContactSchema = z.object({
  * Query params: name (partial match), id, type (buyer/seller)
  */
 export async function GET(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const supabase = createAdminClient();
@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
  * Body: { name, phone?, email?, type: "buyer"|"seller", notes?, pref_channel? }
  */
 export async function POST(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const body = await req.json();

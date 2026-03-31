@@ -113,22 +113,25 @@ type SortMode = "recent" | "alpha";
 export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const stageParam = searchParams.get("stage");
+  const initialStage = stageParam && PIPELINE_TO_STAGE[stageParam] ? PIPELINE_TO_STAGE[stageParam] : "all";
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
-  const [stageFilter, setStageFilter] = useState<StageFilter>("all");
-  const [showFilters, setShowFilters] = useState(false);
+  const [stageFilter, setStageFilter] = useState<StageFilter>(initialStage);
+  const [showFilters, setShowFilters] = useState(initialStage !== "all");
   const [sortMode, setSortMode] = useState<SortMode>("recent");
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
 
-  // Auto-apply stage filter from ?stage= query param (from pipeline click)
+  // Sync stage filter when searchParams change after initial render
   useEffect(() => {
-    const stageParam = searchParams.get("stage");
-    if (stageParam && PIPELINE_TO_STAGE[stageParam]) {
+    if (!stageParam || !PIPELINE_TO_STAGE[stageParam]) return;
+    const raf = requestAnimationFrame(() => {
       setStageFilter(PIPELINE_TO_STAGE[stageParam]);
       setShowFilters(true);
-    }
-  }, [searchParams]);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [stageParam]);
 
   const hasActiveFilter = typeFilter !== "all" || stageFilter !== "all";
 

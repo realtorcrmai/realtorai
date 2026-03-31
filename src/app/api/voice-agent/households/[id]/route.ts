@@ -21,7 +21,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const { id } = await params;
@@ -64,7 +64,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const { id } = await params;
@@ -173,7 +173,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const { id } = await params;

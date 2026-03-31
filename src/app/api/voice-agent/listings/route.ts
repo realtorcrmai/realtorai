@@ -8,7 +8,7 @@ import { requireVoiceAgentAuth } from "@/lib/voice-agent-auth";
  * Query params: address, mls_number, min_price, max_price, status
  */
 export async function GET(req: NextRequest) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const supabase = createAdminClient();
