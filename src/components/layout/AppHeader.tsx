@@ -35,6 +35,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { QuickAddButton } from "@/components/layout/QuickAddButton";
 import { ContextualHelpButton } from "@/components/help/ContextualHelpButton";
+import { VoiceStatusIndicator } from "@/components/voice-agent/VoiceStatusIndicator";
 
 import type { FeatureKey } from "@/lib/features";
 
@@ -205,6 +206,9 @@ export function AppHeader() {
             <span className="hidden lg:inline">Admin</span>
           </Link>
         )}
+
+        {/* Voice Agent Status */}
+        <VoiceStatusIndicator />
 
         {/* Help */}
         <ContextualHelpButton />

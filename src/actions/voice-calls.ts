@@ -26,8 +26,8 @@ export async function logVoiceCall(call: VoiceCallInsert) {
     await supabase.from("communications").insert({
       contact_id: call.contact_id,
       direction: "outbound",
-      channel: "note",
-      body: `[Voice Call] ${summary}`,
+      channel: "voice",
+      body: summary,
       related_type: call.listing_id ? "listing" : null,
       related_id: call.listing_id ?? null,
     });

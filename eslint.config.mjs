@@ -31,6 +31,7 @@ const eslintConfig = defineConfig([
     "agent-pipeline/**",
     "content-generator/**",
     "listingflow-agent/**",
+    "listingflow-sites/**",
   ]),
   // Downgrade pre-existing violations to warnings — they shouldn't block CI
   // TODO: Fix these properly and re-enable as errors

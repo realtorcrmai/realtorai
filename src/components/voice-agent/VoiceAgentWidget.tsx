@@ -16,6 +16,9 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ConsentModal } from "./ConsentModal";
+import { checkConsent } from "@/actions/consent";
+import { logVoiceCall } from "@/actions/voice-calls";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type SpeechRecognitionType = any;
@@ -149,6 +152,9 @@ export function VoiceAgentWidget() {
   const [continuousMode, setContinuousMode] = useState(true);
   const [useEdgeTTS, setUseEdgeTTS] = useState(true); // prefer server TTS
   const [useWhisperSTT, setUseWhisperSTT] = useState(true); // prefer server Whisper STT
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [consentGranted, setConsentGranted] = useState(false);
+  const sessionStartTimeRef = useRef<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognitionType | null>(null);
@@ -422,7 +428,7 @@ export function VoiceAgentWidget() {
     else startListening();
   }, [listening, startListening, stopListening]);
 
-  // ── Session creation ──────────────────────────────────────
+  // ── Session creation (with consent check) ─────────────────
 
   async function createSession(): Promise<string | null> {
     try {
@@ -434,10 +440,38 @@ export function VoiceAgentWidget() {
       const data = await resp.json();
       if (data.ok) {
         setSessionId(data.session_id);
+        sessionStartTimeRef.current = Date.now();
         return data.session_id;
       }
     } catch { /* offline */ }
     return null;
+  }
+
+  // ── Log call when session ends ───────────────────────────
+
+  async function logSessionCall() {
+    if (!sessionId || !sessionStartTimeRef.current) return;
+    const durationSeconds = Math.round((Date.now() - sessionStartTimeRef.current) / 1000);
+    // Build transcript from user + assistant messages
+    const transcript = messages
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m) => `${m.role}: ${m.content}`)
+      .join("\n");
+
+    const toolsUsed = messages
+      .filter((m) => m.role === "tool")
+      .map((m) => m.content);
+
+    await logVoiceCall({
+      tenant_id: "00000000-0000-0000-0000-000000000001",
+      session_id: sessionId,
+      direction: "outbound",
+      duration_seconds: durationSeconds,
+      transcript: transcript || null,
+      tool_calls_used: toolsUsed,
+      llm_provider: provider,
+      cost_usd: 0,
+    });
   }
 
   // ── Send message ──────────────────────────────────────────
@@ -587,10 +621,22 @@ export function VoiceAgentWidget() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listening]);
 
-  // ── Auto-greet when panel opens ───────────────────────────
+  // ── Auto-greet when panel opens (with consent check) ──────
 
   useEffect(() => {
     if (open && connected && !hasGreetedRef.current) {
+      // Check consent before proceeding
+      if (!consentGranted) {
+        checkConsent("00000000-0000-0000-0000-000000000000", "voice").then((result) => {
+          if (result.consent?.status === "granted") {
+            setConsentGranted(true);
+          } else {
+            setShowConsentModal(true);
+          }
+        });
+        return;
+      }
+
       hasGreetedRef.current = true;
       const greeting = getGreeting(pathname);
       setMessages([{ role: "assistant", content: greeting }]);
@@ -604,7 +650,7 @@ export function VoiceAgentWidget() {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, connected]);
+  }, [open, connected, consentGranted]);
 
   // ── Toggle panel ──────────────────────────────────────────
 
@@ -612,6 +658,8 @@ export function VoiceAgentWidget() {
     if (open) {
       stopSpeaking();
       stopListening();
+      // Log the call before closing
+      logSessionCall();
       // Mark that user manually stopped — don't auto-open again this session
       setUserStopped(true);
       sessionStorage.setItem("voice-agent-stopped", "true");
@@ -638,6 +686,22 @@ export function VoiceAgentWidget() {
 
   return (
     <>
+      {/* Consent modal */}
+      {showConsentModal && (
+        <ConsentModal
+          contactId="00000000-0000-0000-0000-000000000000"
+          consentType="voice"
+          onConsented={() => {
+            setConsentGranted(true);
+            setShowConsentModal(false);
+          }}
+          onDenied={() => {
+            setShowConsentModal(false);
+            setOpen(false);
+          }}
+        />
+      )}
+
       {/* Floating button */}
       <button
         onClick={userStopped && !open ? startNewSession : handleToggle}

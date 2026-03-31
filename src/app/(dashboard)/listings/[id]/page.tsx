@@ -9,6 +9,7 @@ import { ConveyancingPackButton } from "@/components/listings/ConveyancingPackBu
 import { ShowingRequestForm } from "@/components/showings/ShowingRequestForm";
 import { ShowingStatusBadge } from "@/components/showings/ShowingStatusBadge";
 import { AlertBanner } from "@/components/shared/AlertBanner";
+import { ClickToVoiceButton } from "@/components/voice-agent/ClickToVoiceButton";
 import { NeighborhoodButton } from "@/components/listings/NeighborhoodButton";
 import { DDFSyncButton } from "@/components/listings/DDFSyncButton";
 import { formatDistanceToNow } from "date-fns";
@@ -99,6 +100,13 @@ export default async function ListingDetailPage({
                     <ManualStatusOverride
                       listingId={id}
                       currentStatus={listing.status}
+                    />
+                    <ClickToVoiceButton
+                      agentEmail=""
+                      focusType="listing"
+                      focusId={id}
+                      label="Voice"
+                      size="sm"
                     />
                   </div>
                   <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
