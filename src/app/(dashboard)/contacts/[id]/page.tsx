@@ -6,7 +6,8 @@ import { Phone, Mail, MessageSquare, Edit } from "lucide-react";
 import { ContactForm } from "@/components/contacts/ContactForm";
 import { ContactContextPanel } from "@/components/contacts/ContactContextPanel";
 import { MobileDetailSheet } from "@/components/layout/MobileDetailSheet";
-import { type ReferralRow } from "@/components/contacts/ReferralsPanel";
+import { ReferralsPanel, type ReferralRow } from "@/components/contacts/ReferralsPanel";
+import { NetworkStatsCard } from "@/components/contacts/NetworkStatsCard";
 import { HouseholdBanner } from "@/components/contacts/HouseholdBanner";
 import { RelationshipManager } from "@/components/contacts/RelationshipManager";
 import { QuickActionBar } from "@/components/contacts/QuickActionBar";
@@ -546,7 +547,7 @@ export default async function ContactDetailPage({
         <div className="space-y-4">
           {/* B3 Floating Card Header */}
           <div id="section-contact-info" className="animate-float-in relative z-20">
-            <Card className="shadow-md border border-indigo-100/50 dark:border-indigo-900/30 overflow-visible">
+            <Card className="shadow-md border border-violet-200/60 dark:border-violet-900/30 overflow-visible bg-gradient-to-r from-violet-50/50 via-indigo-50/40 to-teal-50/30 dark:from-violet-950/20 dark:via-indigo-950/20 dark:to-teal-950/10">
               <CardContent className="p-5">
                 {/* Row 1: Avatar + Name + Badges + Actions */}
                 <div className="flex items-center gap-4">
@@ -666,7 +667,7 @@ export default async function ContactDetailPage({
             />
           )}
 
-          {/* Email History + Intelligence (Prospect 360) */}
+          {/* Email History */}
           {newslettersWithEvents.length > 0 && (
             <Card>
               <CardContent className="p-4">
@@ -674,22 +675,6 @@ export default async function ContactDetailPage({
                 <EmailHistoryTimeline newsletters={newslettersWithEvents as any} />
               </CardContent>
             </Card>
-          )}
-
-          {intel && (
-            <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <IntelligencePanel
-                  intelligence={intel}
-                  totalEmails={newslettersWithEvents.length}
-                />
-                <ContextLog
-                  contactId={id}
-                  entries={(contactContextEntries ?? []) as Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>}
-                />
-              </div>
-              <WebsiteActivityLoader contactId={id} />
-            </>
           )}
 
           {/* Tabbed Content */}
@@ -723,20 +708,49 @@ export default async function ContactDetailPage({
             referralsAsReferred={(referralsAsReferred ?? []) as ReferralRow[]}
             allContacts={(allContacts ?? []) as { id: string; name: string }[]}
             documents={typedDocuments}
+            contextEntries={(contactContextEntries ?? []) as Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>}
           />
         </div>
       </div>
 
       {/* RIGHT PANEL -- fixed, own scroll */}
       <aside className="hidden lg:block w-[340px] shrink-0 border-l overflow-y-auto p-6 space-y-5 bg-gradient-to-b from-slate-50 via-white to-teal-50/30 dark:from-card/50 dark:via-card/30 dark:to-teal-950/10">
-        <ContactContextPanel
-          contact={contact}
-          communications={typedCommunications}
-          contactDates={(contactDates ?? []) as ContactDate[]}
-        />
+        {/* Engagement — 1st section */}
+        {intel && (
+          <div className="pb-5 border-b border-indigo-100 dark:border-indigo-900/30 border-l-4 border-l-indigo-400 pl-4 rounded-sm">
+            <IntelligencePanel
+              intelligence={intel}
+              totalEmails={newslettersWithEvents.length}
+            />
+          </div>
+        )}
+
+        {/* Network Stats — 2nd section */}
+        <div className="border-b border-teal-100 dark:border-teal-900/30 pb-5 pt-5 border-l-4 border-l-teal-400 pl-4 rounded-sm">
+          <NetworkStatsCard
+            connectionCount={relationships.length}
+            referralCount={allReferrals.length}
+            networkValue={networkValue}
+            dataScore={dataScore}
+            demographics={demographics}
+            dateCount={(contactDates ?? []).length}
+            hasPreferences={!!(buyerPreferences || sellerPreferences)}
+          />
+        </div>
+
+        {/* Referrals */}
+        <div className="border-b border-orange-100 dark:border-orange-900/30 pb-5 pt-5 border-l-4 border-l-orange-400 pl-4 rounded-sm">
+          <ReferralsPanel
+            contact={contact}
+            referredByName={referredByName}
+            referralsAsReferrer={(referralsAsReferrer ?? []) as ReferralRow[]}
+            referralsAsReferred={(referralsAsReferred ?? []) as ReferralRow[]}
+            allContacts={(allContacts ?? []) as { id: string; name: string }[]}
+          />
+        </div>
 
         {/* Relationships */}
-        <div className="border-t pt-5">
+        <div className="pt-5 border-l-4 border-l-violet-400 pl-4 rounded-sm">
           <RelationshipManager
             contactId={contact.id}
             relationships={relationships}

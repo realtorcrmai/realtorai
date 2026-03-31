@@ -96,63 +96,70 @@ export function IntelligencePanel({ intelligence, totalEmails = 0 }: Props) {
   return (
     <div className="space-y-4">
       {/* Engagement Score */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Engagement
-            </span>
-            <Badge className={scoreColor}>
-              {scoreLabel} {trendArrow}
-            </Badge>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Engagement
+          </span>
+          <Badge className={scoreColor}>
+            {scoreLabel} {trendArrow}
+          </Badge>
+        </div>
+
+        {/* Score hero — colored background card */}
+        <div className={`rounded-xl p-4 ${
+          score >= 70 ? "bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200" :
+          score >= 40 ? "bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200" :
+          "bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200"
+        }`}>
+          <div className="flex items-baseline gap-2 mb-3">
+            <span className={`text-3xl font-bold ${
+              score >= 70 ? "text-emerald-700" : score >= 40 ? "text-amber-700" : "text-blue-700"
+            }`}>{score}</span>
+            <span className="text-sm text-muted-foreground">/100</span>
+            <span className={`text-sm font-medium ml-auto ${trendColor}`}>{trend}</span>
           </div>
-          <div className="flex items-end gap-3">
-            <span className="text-4xl font-bold text-foreground">{score}</span>
-            <span className="text-sm text-muted-foreground mb-1">/100</span>
-            <span className={`text-sm font-medium mb-1 ${trendColor}`}>
-              {trend}
-            </span>
-          </div>
-          {/* Score bar */}
-          <div className="w-full bg-muted rounded-full h-2 mt-3">
+
+          {/* Progress bar */}
+          <div className="w-full bg-white/60 rounded-full h-2.5 overflow-hidden">
             <div
-              className={`h-2 rounded-full transition-all ${
-                score >= 60 ? "bg-red-500" : score >= 40 ? "bg-amber-500" : "bg-blue-400"
+              className={`h-full rounded-full transition-all duration-500 ${
+                score >= 70 ? "bg-gradient-to-r from-emerald-400 to-emerald-600" :
+                score >= 40 ? "bg-gradient-to-r from-amber-400 to-orange-500" :
+                "bg-gradient-to-r from-blue-400 to-indigo-500"
               }`}
-              style={{ width: `${score}%` }}
+              style={{ width: `${Math.max(score, 3)}%` }}
             />
           </div>
-          <div className="flex justify-between mt-1 text-[10px] text-muted-foreground">
+          <div className="flex justify-between text-[10px] text-muted-foreground mt-1 px-0.5">
             <span>Cold</span>
-            <span>Warming</span>
-            <span>Engaged</span>
+            <span>Warm</span>
             <span>Hot</span>
             <span>Ready</span>
           </div>
+        </div>
 
-          {/* Quick stats */}
-          <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-border">
-            <div className="text-center">
-              <p className="text-lg font-semibold">{intel.email_opens || 0}</p>
-              <p className="text-[10px] text-muted-foreground">Opens</p>
-            </div>
-            <div className="text-center">
-              <p className="text-lg font-semibold">{intel.email_clicks || 0}</p>
-              <p className="text-[10px] text-muted-foreground">Clicks</p>
-            </div>
-            <div className="text-center">
-              <p className="text-lg font-semibold">{totalEmails}</p>
-              <p className="text-[10px] text-muted-foreground">Emails</p>
-            </div>
+        {/* Stats grid — colored */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-violet-50 border border-violet-100 rounded-lg p-2.5 text-center">
+            <p className="text-base font-bold text-violet-700">{intel.email_opens || 0}</p>
+            <p className="text-[10px] text-violet-500 font-medium">Opens</p>
           </div>
-        </CardContent>
-      </Card>
+          <div className="bg-sky-50 border border-sky-100 rounded-lg p-2.5 text-center">
+            <p className="text-base font-bold text-sky-700">{intel.email_clicks || 0}</p>
+            <p className="text-[10px] text-sky-500 font-medium">Clicks</p>
+          </div>
+          <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-2.5 text-center">
+            <p className="text-base font-bold text-indigo-700">{totalEmails}</p>
+            <p className="text-[10px] text-indigo-500 font-medium">Sent</p>
+          </div>
+        </div>
+      </div>
 
       {/* Interested In */}
       {(interests.areas?.length || interests.property_types?.length) && (
-        <Card>
-          <CardContent className="p-4">
-            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+        <div className="pt-3 border-t border-border">
+            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               Interested In
             </h4>
             <div className="space-y-2">
@@ -199,15 +206,13 @@ export function IntelligencePanel({ intelligence, totalEmails = 0 }: Props) {
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
+        </div>
       )}
 
       {/* Content Preferences */}
       {bestContent.length > 0 && (
-        <Card>
-          <CardContent className="p-4">
-            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+        <div className="pt-3 border-t border-border">
+            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               Content Effectiveness
             </h4>
             <div className="grid grid-cols-2 gap-3">
@@ -242,15 +247,13 @@ export function IntelligencePanel({ intelligence, totalEmails = 0 }: Props) {
                   ))}
               </div>
             </div>
-          </CardContent>
-        </Card>
+        </div>
       )}
 
       {/* Best Send Time */}
       {timing.best_day && (
-        <Card>
-          <CardContent className="p-4">
-            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+        <div className="pt-3 border-t border-border">
+            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               Best Send Time
             </h4>
             <div className="flex gap-1">
@@ -280,15 +283,13 @@ export function IntelligencePanel({ intelligence, totalEmails = 0 }: Props) {
                 Avg open speed: {timing.open_velocity_minutes} min after send
               </p>
             )}
-          </CardContent>
-        </Card>
+        </div>
       )}
 
       {/* Direct Interactions */}
       {intel.last_direct_contact && (
-        <Card>
-          <CardContent className="p-4">
-            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+        <div className="pt-3 border-t border-border">
+            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               Last Direct Contact
             </h4>
             <p className="text-sm">
@@ -303,8 +304,7 @@ export function IntelligencePanel({ intelligence, totalEmails = 0 }: Props) {
                 {intel.last_direct_contact_outcome}
               </Badge>
             )}
-          </CardContent>
-        </Card>
+        </div>
       )}
     </div>
   );
