@@ -427,7 +427,7 @@ Affected: [single file]
 
 If in doubt → it's not trivial. Use the full playbook.
 
-### 14 Task Types
+### 15 Task Types
 
 | Type | Subtypes | When |
 |------|----------|------|
@@ -435,6 +435,7 @@ If in doubt → it's not trivial. Use the full playbook.
 | TESTING | unit, integration, e2e, eval | Write or run tests |
 | DEBUGGING | error, performance, data_issue | Investigate failures |
 | DESIGN_SPEC | architecture, feature, api, migration | Plan before building |
+| **GAP_ANALYSIS** | codebase, playbook, feature, security | Audit & gap assessment (Section 4.4.2) |
 | RAG_KB | pipeline, tuning, evaluation, content | RAG system work |
 | ORCHESTRATION | workflow, trigger, pipeline, agent | AI agent workflows |
 | INTEGRATION | api_connect, webhook, auth, data_sync | Wire external services |
@@ -495,6 +496,32 @@ Commit: abc1234 pushed to dev
 - If parallel agents modify the same file → resolve conflicts before committing
 - If one task breaks another → fix the regression before reporting completion
 - Maximum parallel agents: 5 (to avoid context/resource exhaustion)
+- **When multiple tasks in a single prompt → create a task list first, track each as it completes**
+
+### 3.4 Sprint Verification Gates (Mandatory)
+
+When implementing multiple changes (sprints, batches, or multi-step tasks):
+
+**After EACH sprint/batch, STOP and verify before proceeding to the next:**
+
+```
+SPRINT N VERIFICATION GATE:
+1. List every change made in this sprint
+2. For each change: verify it exists in the target file (grep, read, or run)
+3. Run health check: `npx tsc --noEmit` (no new TypeScript errors)
+4. Run relevant tests: `bash scripts/test-suite.sh` or targeted tests
+5. If any verification fails → fix before proceeding to Sprint N+1
+6. Report: "Sprint N: X/Y verified ✅" or "Sprint N: X/Y verified, Z failed ❌"
+```
+
+**This applies to ALL multi-step work:**
+- Feature implementation sprints
+- Playbook enhancement batches
+- Gap analysis → fix cycles
+- Migration sequences
+- Test-then-fix loops
+
+**Never proceed to the next sprint if the current one has unverified changes.**
 
 ---
 
@@ -691,9 +718,9 @@ Existing test inventory (check before creating new):
 
 **Phase 3** — 2+ design options with pros/cons/risks
 
-**Phase 4** — Detailed design: data model, API surface, components, data flow, error handling, security
+**Phase 4** — Detailed design: data model, API surface, components, data flow, error handling, security. **Verify against Architectural Principles (Section 1.2.1):** UI accessibility, data model documentation, persona mapping, rollout operations.
 
-**Phase 5** — Operational: deployment plan, monitoring, failure modes, cost
+**Phase 5** — Operational: deployment plan, monitoring, failure modes, cost. **Verify against Principle 4 (Rollout & Operations).**
 
 **Phase 6** — Implementation plan: phases, files per phase, test plan
 
@@ -704,7 +731,7 @@ Every gap analysis, PRD, architecture doc, or design spec MUST go through 7 iter
 | Pass | Focus | Key Question |
 |------|-------|-------------|
 | **1. Self-Analysis** | Read the subject thoroughly (every file, every line). Document findings with file:line references. Categorize by severity. | "What gaps exist right now?" |
-| **2. Best-in-Market** | Compare against industry best practices and competitor implementations. Find what Pass 1 missed. | "What would the best version look like?" |
+| **2. Best-in-Market** | Compare against industry best practices and competitor implementations. Use structured frameworks (SWOT, COBIT, CMMI, MoSCoW, RACI) for each section. Find what Pass 1 missed. | "What would the best version look like?" |
 | **3. Code Verification** | Cross-check EVERY claim against actual source code. Are file paths real? Do referenced functions exist? Are stats accurate? Find contradictions. **HC-13 enforced here.** | "Is what I wrote actually true in the code?" |
 | **4. Depth Check** | Re-read looking for surface-level sections. Every section should demonstrate deep knowledge, not just list items. Are acceptance criteria testable? Are designs implementable? | "Did I go deep enough or just skim?" |
 | **5. Completeness** | Final read-through for gaps, formatting, numbering, cross-references. Check nothing was missed. | "Is anything still missing?" |
@@ -749,6 +776,16 @@ Gap analysis is a distinct task type with its own rules:
 | Feature | Completeness | Production Ready | Evidence (file:line) | Critical Gap |
 ```
 
+**Auditor philosophy:**
+Think like a professional auditor examining every section systematically. For each section use industry frameworks:
+- **SWOT** — Strengths, Weaknesses, Opportunities, Threats
+- **COBIT** — Are controls defined? Executed? Measurable?
+- **CMMI** — What maturity level (1-5)? What's the target?
+- **MoSCoW** — Must have / Should have / Could have / Won't have
+- **RACI** — Who is Responsible, Accountable, Consulted, Informed?
+
+Every gap must have: evidence (file:line or command output), framework classification, priority, and implementation approach with effort estimate.
+
 **What NOT to do:**
 - Trust previous gap analyses without re-verifying
 - Mark items "FIXED" based on agent reports
@@ -759,7 +796,7 @@ Gap analysis is a distinct task type with its own rules:
 
 **Phase 1** — Use case: question types, data sources, privacy, freshness, accuracy bar
 
-**Phase 2** — Content prep: chunking strategy, metadata schema, embedding cost. Two RAG systems exist: TypeScript (`src/lib/rag/`) and Python (`realtors360-rag/`) — identify target
+**Phase 2** — Content prep: chunking strategy, metadata schema, embedding cost. Primary RAG system: TypeScript (`src/lib/rag/`). Python RAG (`realtors360-rag/`) is planned but not yet created.
 
 **Phase 3** — Retrieval config: search mode, top_k, similarity threshold, context budget
 
@@ -966,7 +1003,7 @@ SUPABASE_ACCESS_TOKEN=xxx npx supabase db query --linked -f supabase/migrations/
 
 **Phase 1 — RLS**
 - Every table must have: `ALTER TABLE x ENABLE ROW LEVEL SECURITY`
-- Policy: `CREATE POLICY x ON table FOR ALL USING (auth.role() = 'authenticated')`
+- Policy: `CREATE POLICY tenant_rls_x ON table FOR ALL USING (realtor_id = auth.uid()::uuid)` (multi-tenant scoping per Section 1.7)
 - Check: `SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename NOT IN (SELECT tablename FROM pg_policies)`
 
 **Phase 2 — Webhooks**
@@ -1362,7 +1399,7 @@ When two developers modify the same file:
 | CRM | `src/` | Next.js 16 App Router, Turbopack |
 | Voice Agent | `voice_agent/server/` | Python aiohttp, 60 tools, 21 API routes |
 | Form Server | external :8767 | Python BCREA form generation |
-| Migrations | `supabase/migrations/` | 61 SQL files |
+| Migrations | `supabase/migrations/` | 75 SQL files (001-065, some duplicates at 050-055, 058, 062-063) |
 | Health Check | `scripts/health-check.sh` | Pre-session diagnostic |
 | Test Suite | `scripts/test-suite.sh` | 73+ functional tests |
 | Save State | `scripts/save-state.sh` | Snapshot before risky ops |
@@ -1372,7 +1409,7 @@ When two developers modify the same file:
 | QA Cases | `evals.md` | 200 QA test cases |
 | Playwright | `playwright.config.ts` + `tests/` | Browser e2e tests |
 | RAG (TS) | `src/lib/rag/` | TypeScript RAG module |
-| RAG (Python) | `realtors360-rag/` | Separate FastAPI service |
+| RAG (Python) | `realtors360-rag/` | **NOT YET CREATED** — planned separate FastAPI service |
 | Content Gen | `content-generator/` | Separate package (excluded from build) |
 | Agent Pipeline | `agent-pipeline/` | Research/build pipeline (excluded) |
 

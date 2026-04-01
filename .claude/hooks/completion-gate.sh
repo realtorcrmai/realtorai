@@ -95,6 +95,18 @@ if [[ "$TIER" == "medium" || "$TIER" == "large" ]]; then
     fi
 fi
 
+# Auto-append compliance log entry
+if [[ -f "$TASK_FILE" ]]; then
+    COMPLIANCE_LOG="$PROJECT_DIR/.claude/compliance-log.md"
+    DATE=$(date +%Y-%m-%d)
+    DESCRIPTION=$(jq -r '.description // "unknown"' "$TASK_FILE" | head -c 80)
+    PHASES_DONE=$(jq -r '[.phases | to_entries[] | select(.value == true) | .key] | join(", ")' "$TASK_FILE" 2>/dev/null)
+
+    if [[ -f "$COMPLIANCE_LOG" ]]; then
+        echo "| $DATE | claude | $DESCRIPTION | $TYPE | ✅ | $PHASES_DONE | — | Auto-logged by completion-gate |" >> "$COMPLIANCE_LOG"
+    fi
+fi
+
 # All checks passed — archive the task file
 if [[ -f "$TASK_FILE" ]]; then
     ARCHIVE_DIR="$PROJECT_DIR/.claude/task-archive"
