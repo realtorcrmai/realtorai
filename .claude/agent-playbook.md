@@ -74,14 +74,24 @@ These apply to EVERY task. Violation = automatic revert.
 
 ### 1.2 Feature Evaluation & Market Fit
 
-Before building any **new feature**, answer:
-- What problem does this solve for BC realtors using Realtors360?
-- What measurable benefit does it create? (time saved, better leads, fewer errors, compliance)
-- Does a similar capability already exist in the codebase? (grep, search docs, check specs)
-- How do 2-3 competitors handle this? (Follow Up Boss, LionDesk, kvCORE, Realvolve)
-- Are we copying, differentiating, or deliberately staying simpler?
-- Does this fit Realtors360's vision as a BC realtor transaction CRM?
-- If unclear → **pause and ask the product owner**.
+**Before building any new feature (CODING:feature or DESIGN_SPEC), complete this checklist. The scope paragraph in Phase 1 MUST reference these answers.**
+
+| # | Question | Required Output |
+|---|----------|----------------|
+| FE-1 | What problem does this solve for BC realtors? | 1-2 sentence problem statement |
+| FE-2 | What measurable benefit? (time saved, leads, errors, compliance) | Specific metric or outcome |
+| FE-3 | Does similar capability already exist? | `grep` result or "searched, none found" |
+| FE-4 | How do 2-3 competitors handle this? | Table: competitor → approach → our angle |
+| FE-5 | Are we copying, differentiating, or staying simpler? | One of three choices with justification |
+| FE-6 | Does this fit Realtors360's vision as a BC realtor CRM? | YES + reason, or PAUSE + ask product owner |
+
+**Enforcement:** The CODING:feature scope paragraph (Section 4.1 Phase 1) must include "Feature Eval: FE-1 through FE-6 answered" or the task is under-scoped. Skip = ❌ in compliance log.
+
+**Quick competitor check (30 seconds):** Search these products for the feature name:
+- Follow Up Boss (followupboss.com) — lead/contact management
+- kvCORE (kvcore.com) — brokerage platform
+- LionDesk (liondesk.com) — agent CRM
+- Realvolve (realvolve.com) — workflow CRM
 
 ### 1.2.1 Architectural Principles (Apply to Every Feature)
 
@@ -133,29 +143,26 @@ Every feature must be evaluated against these 4 principles. They are non-negotia
 
 ### 1.3 Documentation Requirements
 
-Every significant feature must have:
-- **Use-case doc**: `usecases/<feature-name>.md` — problem, scenarios, demo script
-- **Test doc**: `tests/<feature-name>.md` — all test cases (auto/manual/pending)
+Every feature change must produce or update these deliverables:
 
-When modifying an existing feature → update its use-case and test docs.
+| Deliverable | Location | When Required | Verification |
+|------------|----------|---------------|-------------|
+| Use-case doc | `usecases/<feature>.md` | New feature or major enhancement | Problem + 3 scenarios + demo script |
+| Test doc | `tests/<feature>.md` | Behavior change | Cases marked `[auto]`/`[manual]`/`[pending]` |
+| Gap analysis | `docs/gap-analysis/<area>/` | Audit or assessment task | 7-pass, versioned, code-verified |
+| PRD | `docs/PRD_<feature>.md` | Large tier tasks | 10 sections, user-approved |
+
+**Enforcement:** PR checklist includes "docs updated" checkbox. Completion-gate checks if task type requires docs.
 
 ### 1.4 Onboarding — New Developers
 
-**First 15 minutes:**
-1. Read `CONTRIBUTING.md` (git workflow, branch naming, PR process)
-2. Read this section (1.1-1.3) — understand the zero-tolerance policy
-3. Read Section 10 (Quick Reference Card) — print it, keep it visible
-4. Run `bash scripts/health-check.sh` — verify your environment works
+| Phase | Duration | Actions | Verification |
+|-------|----------|---------|-------------|
+| **Setup** | 15 min | Read `CONTRIBUTING.md`, run `health-check.sh`, load `.claude/quick-reference.md` | Health check all green |
+| **First task** | 1 hour | Pick a micro task, follow Quick Reference card step by step, PR to dev | PR merged with classification block |
+| **First week** | Ongoing | Read full playbook, read `CLAUDE.md`, read relevant `usecases/*.md` | Complete 3 tasks with full compliance |
 
-**First task:**
-5. Pick a small task (typo fix, docs update)
-6. Follow the Quick Reference Card step by step
-7. Create a feature branch, PR, merge — feel the full flow
-
-**First week:**
-8. Read the full playbook (Sections 2-14)
-9. Read `CLAUDE.md` for project architecture
-10. Read the relevant `usecases/*.md` for features you'll work on
+**AI agent onboarding:** Load `.claude/quick-reference.md` at session start. This IS the onboarding.
 
 ### 1.5 Human vs AI Developer Tracks
 
@@ -334,37 +341,18 @@ Examples: `rahul/voice-agent-tts`, `claude/playbook-enforcement`, `alex/contact-
 | Voice Agent | 8768 | `curl -s localhost:8768/api/health` |
 | Form Server | 8767 | `curl -s localhost:8767/health` |
 
-### 2.4 Memory
-- Read `MEMORY.md` for behavioral rules
-- Check for task-relevant memory entries
+### 2.4 Memory & Context
 
-### 2.5 Memory & Context Policies
+Read `MEMORY.md` at session start. Key rules:
 
-**What can be written to long-term memory (`MEMORY.md` + memory files):**
-- User preferences, feedback, workflow corrections
-- Project decisions, branch models, deployment targets
-- References to external systems (Linear, Slack, Grafana)
+| Allowed in Memory | NEVER in Memory |
+|-------------------|----------------|
+| User preferences, feedback | PII (names, phones, emails, FINTRAC data) |
+| Project decisions, deployment targets | API keys, tokens, secrets |
+| External system references | Listing prices, addresses, DB query results |
+| Workflow corrections | Tenant-specific data, conversation debug state |
 
-**What MUST NOT be in long-term memory:**
-- PII (contact names, phone numbers, email addresses, FINTRAC identity data)
-- API keys, tokens, secrets (even masked)
-- Listing prices, addresses, or seller details from the database
-- Conversation-specific debugging state
-
-**Retention & redaction:**
-- Memory entries older than 90 days without access → review for relevance, archive or delete
-- If a memory references a contact or listing by name → redact to generic reference
-- Never store raw Supabase query results in memory
-
-**Cross-tenant isolation:**
-- Realtors360 is **multi-tenant** — every data row belongs to a `realtor_id`
-- Never store tenant-identifying data in memory files
-- Agent context windows MUST NOT carry data from one contact/listing into prompts for another unless explicitly required by the task
-
-**RAG-specific rules:**
-- **Do not index zones**: `.env.local`, `.env.vault`, `seller_identities` table data, `google_tokens` table data
-- Embedding logs and retrieval results MUST NOT persist beyond the task that created them
-- Quarterly audit: review what's indexed, remove stale/sensitive content
+**Cross-tenant:** Never store tenant data in memory. Never carry data from one contact/listing into prompts for another. **RAG:** Never index `.env.local`, `.env.vault`, `seller_identities`, `google_tokens`.
 
 ---
 
@@ -1160,9 +1148,11 @@ Agents can enter expensive loops (tool fails → retry → fail → retry). Thes
 **Never:** Auto-retry indefinitely. Auto-escalate model tier to "solve" a loop. Ignore budget overruns because "the task is almost done."
 
 **Cost tracking:**
-- Log model used + estimated tokens in compliance log Notes column
+- Log model used + estimated tokens in compliance log Notes column (auto-logged by completion-gate)
 - Weekly: sum token usage by developer, task type, model
 - If weekly cost exceeds 2x previous week → review for waste (repeated failures, wrong model tier, bloated context)
+
+**Runtime enforcement:** The `completion-gate.sh` hook auto-logs task type and model. The self-healing loop (Section 6.2) enforces the "3 retries per error, 5 total" circuit breaker at the conversation level. For token budgets, agents must self-monitor: if a task is approaching 80% of its budget, reduce scope or ask to split the task.
 
 ---
 
@@ -1322,14 +1312,62 @@ These errors indicate a systemic problem. Do NOT attempt self-heal. HALT and esc
 
 ## 7. Production Incident Protocol
 
-| Step | Action | Check |
-|------|--------|-------|
-| 1 | Netlify status | app.netlify.com/projects/realtorai-crm |
-| 2 | Supabase status | supabase.com/dashboard |
-| 3 | Cron jobs | `curl -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/cron/process-workflows` |
-| 4 | Resend delivery | resend.com/dashboard |
-| 5 | Rollback | Redeploy previous Netlify deploy from dashboard |
-| 6 | DB restore | Supabase Dashboard → Database → Backups |
+### 7.0 Monitoring Checklist
+
+| Service | Health Check | Dashboard | Alert Trigger |
+|---------|-------------|-----------|--------------|
+| CRM (Next.js) | `curl -s localhost:3000` → 200 | Netlify dashboard | Deploy fails, 5xx errors |
+| Supabase | Dashboard → Health | supabase.com/dashboard | Connection refused, RLS errors |
+| Cron jobs | `curl -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/cron/process-workflows` | Vercel cron logs | Cron returns non-200 |
+| Resend (email) | resend.com/dashboard → Delivery | Resend dashboard | Bounce rate >5%, delivery drops |
+| Voice Agent | `curl -s localhost:8768/api/health` | Server logs | Health check fails |
+
+### 7.0.1 Incident Response Steps
+
+| Step | Action | SLA |
+|------|--------|-----|
+| 1 | **Detect** — Check monitoring dashboard or user report | — |
+| 2 | **Triage** — Is it CRM, DB, external service, or infra? | 5 min |
+| 3 | **Communicate** — Post in team channel: "Incident: [description], investigating" | 5 min |
+| 4 | **Mitigate** — Rollback if possible (Netlify redeploy, git revert, DB restore) | 15 min |
+| 5 | **Fix** — Root cause fix on feature branch → PR → CI → merge | 30 min |
+| 6 | **Verify** — Run `test-suite.sh`, check dashboards, confirm resolution | 10 min |
+| 7 | **Post-mortem** — Document: what happened, root cause, fix, prevention | 1 day |
+
+### 7.0.2 Post-Mortem Template
+
+```markdown
+# Incident Post-Mortem: [Title]
+**Date:** YYYY-MM-DD | **Duration:** X minutes | **Severity:** P0/P1/P2
+
+## What happened
+[1-2 sentences]
+
+## Root cause
+[Technical explanation]
+
+## Timeline
+- HH:MM — Incident detected
+- HH:MM — Mitigation applied
+- HH:MM — Fix deployed
+- HH:MM — Verified resolved
+
+## What we'll do differently
+- [ ] Action item 1 (owner, due date)
+- [ ] Action item 2 (owner, due date)
+```
+
+Save to `docs/incidents/YYYY-MM-DD_<title>.md`.
+
+### 7.0.3 Rollback Procedures
+
+| Component | Rollback Method | Time |
+|-----------|----------------|------|
+| CRM deploy | Netlify: redeploy previous build from dashboard | 2 min |
+| Migration | Run reverse SQL from `supabase/rollbacks/` | 5 min |
+| Code change | `git revert <commit>` → PR → merge | 10 min |
+| Cron job | Comment out in `vercel.json`, redeploy | 5 min |
+| DB data | Supabase Dashboard → Database → Backups → Point-in-time restore | 15 min |
 
 ---
 
@@ -1590,11 +1628,15 @@ Before starting any task, announce what you're working on in `.claude/WIP.md`:
 
 ### 12.2 Rules
 
-- **Add your row BEFORE starting work** — this is how other devs know you're touching those files
-- **Remove your row AFTER your PR is merged** — not before
-- **Check WIP.md BEFORE starting** — if someone else is touching the same files, coordinate first
-- If WIP.md shows a conflict → message the other developer before creating your branch
-- Stale entries (>3 days old, no matching open PR) can be removed by anyone
+| Rule | Why | Verification |
+|------|-----|-------------|
+| Add your row BEFORE starting work | Other devs know you're touching those files | Pre-flight check in Quick Reference |
+| Remove your row AFTER PR merged | Prevents stale entries | Check after `gh pr merge` |
+| Check WIP.md BEFORE starting | Detect file conflicts early | `cat .claude/WIP.md` in pre-flight |
+| Conflict detected → coordinate first | Prevents merge conflicts | Message the other developer |
+| Stale entries (>3 days, no open PR) → remove | Keep board current | Weekly cleanup |
+
+**AI agent integration:** The `playbook-reminder.sh` hook outputs task status. Agents should check WIP.md before creating branches. The Quick Reference Card includes "check WIP.md for conflicts" in pre-flight.
 
 ### 12.3 Why Not Use GitHub Issues/Projects?
 
@@ -1800,12 +1842,16 @@ Maintain adversarial test cases in `tests/agent-evals/safety-tests.md`:
 
 ### 14.5 Agent Observability & Telemetry
 
-**Per-task telemetry (logged in compliance entry Notes column):**
+**Per-task telemetry (auto-logged by `completion-gate.sh` + manual enrichment):**
+
+The completion-gate hook auto-logs: date, developer, task summary, type, status, phases completed. Agents should add telemetry to the Notes column:
 
 ```
 Model: sonnet-4.6 | Tokens: ~12K in / ~3K out | Tools: 4 calls (Read×2, Edit×1, Bash×1)
 Latency: ~45s | Errors: 0 | Safety flags: 0
 ```
+
+**Current enforcement:** Auto-logging is active via `completion-gate.sh`. Token/latency tracking is self-reported by agents. Weekly compliance review should check Notes column completeness.
 
 **Structured telemetry fields (for future automation):**
 
