@@ -2,23 +2,133 @@
 
 > **Last Updated:** April 1, 2026
 > **Current Release:** R1 (CRM + Email Marketing)
-> **Deploy Target:** Vercel + Supabase
+> **Deploy Target:** Netlify (frontend) + Supabase (database)
 > **Read by:** Any Claude client or developer deploying this app
+
+---
+
+## Environment Separation
+
+| Service | Dev | Production | Shared? |
+|---------|-----|-----------|---------|
+| **Supabase DB** | `ybgiljuclpsuhbmdhust` (dev) | NEW — separate project | NO — isolated |
+| **Netlify** | localhost:3000 | Netlify auto-deploy from `main` | NO — isolated |
+| **Resend (email)** | Same API key | Same API key | YES |
+| **Twilio (SMS)** | Same account | Same account | YES |
+| **Anthropic (Claude)** | Same API key | Same API key | YES |
+| **Google OAuth** | Same client ID (add prod redirect URI) | Same client ID | YES |
+| **Kling AI** | Same API key | Same API key | YES |
+
+### Why Separate DB?
+- Dev has demo/test data (517 contacts, seed data) — must not appear in production
+- Schema changes tested on dev first, then migrated to prod
+- Prod DB can have stricter RLS, connection limits, and backups
+
+### Why Shared API Services?
+- Resend, Twilio, Anthropic charge per usage — no cost benefit to separate accounts
+- Google OAuth supports multiple redirect URIs on one client ID
+- Keeps management simple — one dashboard per service
+
+---
+
+## Setting Up Production Supabase
+
+### Step 1: Create New Supabase Project
+1. Go to https://supabase.com/dashboard
+2. Click "New Project"
+3. Name: `realtors360-prod`
+4. Region: `ca-central-1` (same as dev, closest to BC)
+5. Generate a strong database password — save it securely
+6. Wait for project to be ready (~2 min)
+
+### Step 2: Get Production Credentials
+From the new project dashboard → Settings → API:
+- `NEXT_PUBLIC_SUPABASE_URL` = `https://<new-project-ref>.supabase.co`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` = the `anon` `public` key
+- `SUPABASE_SERVICE_ROLE_KEY` = the `service_role` key (keep secret)
+
+### Step 3: Run All Migrations on Production DB
+The combined migration file is at: `Desktop/PROD_DB_FULL_SCHEMA.sql` (7,753 lines)
+
+**Option A: Via Supabase CLI**
+```bash
+SUPABASE_ACCESS_TOKEN=<prod-token> npx supabase db query \
+  --project-ref <new-project-ref> \
+  -f PROD_DB_FULL_SCHEMA.sql
+```
+
+**Option B: Via SQL Editor**
+1. Open: `https://supabase.com/dashboard/project/<new-project-ref>/sql/new`
+2. Paste contents of `PROD_DB_FULL_SCHEMA.sql`
+3. Click Run
+4. Note: May need to run in chunks if file is too large for editor
+
+### Step 4: Verify Production DB
+Run in SQL Editor:
+```sql
+-- Should return 70+ tables
+SELECT COUNT(*) FROM pg_tables WHERE schemaname = 'public';
+
+-- Should return 65+ (realtor_id columns)
+SELECT COUNT(*) FROM information_schema.columns
+WHERE table_schema = 'public' AND column_name = 'realtor_id';
+
+-- Should return 0 (no data yet — clean prod)
+SELECT COUNT(*) FROM contacts;
+```
+
+### Step 5: Update Netlify Environment Variables
+In Netlify dashboard → Site settings → Environment variables:
+
+Set these to the **PRODUCTION** Supabase values:
+```
+NEXT_PUBLIC_SUPABASE_URL=https://<prod-project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<prod anon key>
+SUPABASE_SERVICE_ROLE_KEY=<prod service role key>
+```
+
+Keep these the same (shared services):
+```
+RESEND_API_KEY=<same as dev>
+ANTHROPIC_API_KEY=<same as dev>
+TWILIO_ACCOUNT_SID=<same as dev>
+TWILIO_AUTH_TOKEN=<same as dev>
+# ... etc
+```
+
+### Step 6: Add Production Google OAuth Redirect
+1. Go to https://console.cloud.google.com → Credentials → your OAuth client
+2. Add redirect URI: `https://your-netlify-site.netlify.app/api/auth/callback/google`
+3. Save
+
+### Step 7: Redeploy on Netlify
+Trigger a redeploy in Netlify dashboard (or push to `main`) so it picks up the new env vars.
+
+### Step 8: Verify Production
+```bash
+# Login page loads
+curl -s -o /dev/null -w "%{http_code}" https://your-site.netlify.app/login
+# Should return 200
+
+# API requires auth
+curl -s -o /dev/null -w "%{http_code}" https://your-site.netlify.app/api/contacts
+# Should return 401
+```
 
 ---
 
 ## Quick Reference
 
 ```bash
-# Build and verify locally
+# Build and verify locally (uses DEV Supabase via .env.local)
 npm run build                    # must pass with 0 errors
 node scripts/test-multi-tenancy.mjs  # 61 tests must pass
 node scripts/test-social-media.mjs   # 194 tests must pass
 
-# Deploy
-git push origin dev              # CI runs automatically
+# Deploy to production (uses PROD Supabase via Netlify env vars)
+git push origin dev              # CI runs on dev
 # Create PR: dev → main
-# Merge → Vercel auto-deploys from main
+# Merge → Netlify auto-deploys from main
 ```
 
 ---
@@ -132,7 +242,7 @@ KLING_IMAGE_API_BASE_URL=<kling image endpoint>
 # Run: bash scripts/vault.sh decrypt
 ```
 
-### Setting Env Vars in Vercel
+### Setting Env Vars in Netlify
 
 1. Go to https://vercel.com → your project → Settings → Environment Variables
 2. Add each variable above
@@ -176,7 +286,7 @@ WHERE table_schema = 'public' AND column_name = 'realtor_id';
 
 ## 4. Cron Jobs
 
-Configured in `vercel.json`. These run automatically on Vercel.
+Configured in `vercel.json`. On Netlify, cron jobs must be set up separately using Netlify Scheduled Functions or an external cron service (e.g., cron-job.org, Upstash QStash).
 
 ### R1 Crons (Active)
 
@@ -200,7 +310,7 @@ Configured in `vercel.json`. These run automatically on Vercel.
 { "path": "/api/cron/rag-backfill", "schedule": "0 2 * * *" }
 ```
 
-All crons require `Authorization: Bearer $CRON_SECRET` header. Vercel sends this automatically.
+All crons require `Authorization: Bearer $CRON_SECRET` header. Netlify sends this automatically.
 
 ---
 
@@ -216,7 +326,7 @@ All crons require `Authorization: Bearer $CRON_SECRET` header. Vercel sends this
 
 ### First-Time Production Deploy
 
-- [ ] All env vars set in Vercel dashboard
+- [ ] All env vars set in Netlify dashboard
 - [ ] `NEXT_PUBLIC_APP_URL` set to production domain (NOT localhost)
 - [ ] `CRON_SECRET` set (strong random string)
 - [ ] Supabase migrations applied (through 065)
@@ -234,7 +344,7 @@ All crons require `Authorization: Bearer $CRON_SECRET` header. Vercel sends this
 - [ ] Can create a contact
 - [ ] Can create a listing
 - [ ] Newsletter page loads
-- [ ] Cron jobs running (check Vercel dashboard → Cron Jobs tab)
+- [ ] Cron jobs running (check Netlify dashboard → Cron Jobs tab)
 
 ---
 
@@ -257,7 +367,7 @@ git push origin dev
 # 4. Create PR: dev → main
 gh pr create --base main --title "Release: <description>" --body "..."
 
-# 5. Merge PR (triggers Vercel auto-deploy)
+# 5. Merge PR (triggers Netlify auto-deploy)
 gh pr merge <number> --merge
 
 # 6. Verify production
@@ -312,12 +422,12 @@ WHERE email = 'beta-tester@example.com';
 
 1. Add cron entry to `vercel.json`
 2. Commit and deploy
-3. Verify in Vercel dashboard → Cron Jobs
+3. Verify in Netlify dashboard → Cron Jobs
 
 ### Adding New Env Vars for a Module
 
-1. Add to Vercel dashboard → Settings → Environment Variables
-2. Redeploy (Vercel requires redeploy to pick up new env vars)
+1. Add to Netlify dashboard → Settings → Environment Variables
+2. Redeploy (Netlify requires redeploy to pick up new env vars)
 
 ---
 
@@ -327,7 +437,7 @@ WHERE email = 'beta-tester@example.com';
 
 | Service | URL |
 |---------|-----|
-| Vercel Dashboard | https://vercel.com/dashboard |
+| Netlify Dashboard | https://vercel.com/dashboard |
 | Supabase Dashboard | https://supabase.com/dashboard/project/ybgiljuclpsuhbmdhust |
 | Resend Dashboard | https://resend.com/dashboard |
 | Supabase SQL Editor | https://supabase.com/dashboard/project/ybgiljuclpsuhbmdhust/sql/new |
@@ -339,12 +449,12 @@ WHERE email = 'beta-tester@example.com';
 - Most common: implicit `any` types from tenant client — add `: any` annotation
 
 **Cron jobs not running:**
-- Check Vercel dashboard → Cron Jobs tab
+- Check Netlify dashboard → Cron Jobs tab
 - Verify `CRON_SECRET` env var is set
 - Test manually: `curl -H "Authorization: Bearer $CRON_SECRET" https://your-app.vercel.app/api/cron/process-workflows`
 
 **Email links point to localhost:**
-- Set `NEXT_PUBLIC_APP_URL` in Vercel env vars
+- Set `NEXT_PUBLIC_APP_URL` in Netlify env vars
 - Redeploy
 
 **User can't see a feature:**
@@ -357,7 +467,7 @@ WHERE email = 'beta-tester@example.com';
 
 ### Rollback
 
-1. Vercel: Redeploy previous deployment from Vercel dashboard → Deployments → click "..." → "Redeploy"
+1. Netlify: Redeploy previous deployment from Netlify dashboard → Deployments → click "..." → "Redeploy"
 2. Database: Migrations are additive — no rollback needed for column additions
 3. Code: `git revert HEAD && git push origin main`
 
@@ -380,7 +490,7 @@ WHERE email = 'beta-tester@example.com';
 ## 10. Architecture Overview
 
 ```
-Browser → Vercel (Next.js 16) → Supabase (PostgreSQL)
+Browser → Netlify (Next.js 16) → Supabase (PostgreSQL)
                 ↓                       ↓
            Server Actions          RLS Policies
            (tenant-scoped)        (defense-in-depth)
