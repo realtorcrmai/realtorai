@@ -14,9 +14,11 @@ STRICT POLICY: No step below can be skipped. No exceptions. No bypass.
 □ health-check.sh  □ check WIP.md for conflicts  □ feature branch from dev
 □ pull latest  □ load memory  □ services up (if needed)
 
-═══ UNDERSTAND FIRST (Section 3.0 — BLOCKING) ═══
-□ Read FULL prompt  □ Decompose steps  □ Map dependencies  □ Reorder correctly
-□ Multiple tasks? → Create task list, track each
+═══ THINK BEFORE ACTING (HC-15, Section 3.0 — BLOCKING) ═══
+□ Read FULL request TWICE  □ Decompose steps  □ Map dependencies  □ Reorder correctly
+□ Consider 2+ approaches before picking one  □ Multiple tasks? → Create task list
+□ During execution: "Am I rushing or thinking?"  □ Before presenting: re-read own output
+□ Speed ≠ quality. Hours of thinking > minutes of garbage.
 
 ═══ CLASSIFY (BLOCKING — no code changes until block is outputted) ═══
 □ type:subtype (15 types)  □ tier (micro/small/medium/large)

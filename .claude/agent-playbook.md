@@ -71,6 +71,7 @@ These apply to EVERY task. Violation = automatic revert.
 | HC-12 | **Multi-tenant: use `getAuthenticatedTenantClient()`** for all user data — never raw admin client |
 | HC-13 | **Verify against code, not reports.** All analysis, gap reports, and status claims MUST be verified by reading actual source code. Never trust previous reports, agent outputs, or documentation alone. "Code written" ≠ "Feature works." |
 | HC-14 | **Every new table MUST have `realtor_id`** column with index and RLS policy |
+| HC-15 | **Think before acting.** Read the full request twice. Consider 2+ approaches before picking one. Re-read your output before presenting. Speed is never more important than correctness. Taking hours for critical thinking is better than delivering fast garbage. |
 
 ### 1.2 Feature Evaluation & Market Fit
 
@@ -358,21 +359,40 @@ Read `MEMORY.md` at session start. Key rules:
 
 ## 3. Task Classification
 
-### 3.0 MANDATORY — Understand Before Executing
+### 3.0 MANDATORY — Think Before Acting (HC-15)
 
 **No Read, Edit, Write, Bash, or Agent tool call is permitted until this section is complete.**
 
-1. **Read the FULL prompt** — every sentence, not just the first request
+**Speed is never more important than correctness.** Taking hours for critical thinking is better than delivering fast garbage. The user explicitly does not want fast responses — they want foolproof ones.
+
+#### Phase 1: Understand (before any tool call)
+
+1. **Read the FULL request TWICE** — first to understand, second to catch what you missed
 2. **Decompose** into discrete steps — list them
 3. **Map dependencies** — does step B need step A's output? Does file X require file Y first?
 4. **Reorder** into correct execution sequence — users write in thought order, NOT dependency order
-5. **Output the classification block** (Section 3.1) — this proves you completed steps 1-4
-6. **Only then** proceed to execution
+5. **Consider 2+ approaches** — never take the first idea. What are the alternatives? Which is more robust?
+6. **Output the classification block** (Section 3.1) — this proves you completed steps 1-5
+7. **Only then** proceed to execution
 
 Example: User writes "update the frontend, then fix the backend API, then add the database column."
 Correct execution order: database column → backend API → frontend. **Always reorder by dependency.**
 
 If the correct order is unclear → ask ONE clarifying question. Do not guess.
+
+#### Phase 2: Execute with care (during work)
+
+- Before each significant action, ask: "Is this the right approach, or am I rushing?"
+- Before writing code, read the existing code first — understand before modifying
+- Before marking something "done", verify it actually works (HC-13)
+- If you feel the urge to skip a step → that's the signal to STOP and follow the step
+
+#### Phase 3: Review before presenting (before responding to user)
+
+- Re-read your own output — would a senior engineer approve this?
+- Check: did you answer what was ASKED, or what you assumed was asked?
+- Check: did you verify against code, or against your memory/assumptions?
+- If the output feels "good enough" → it probably isn't. Make it thorough.
 
 **This step is NOT optional. It applies to:**
 - Every new task
@@ -380,6 +400,7 @@ If the correct order is unclear → ask ONE clarifying question. Do not guess.
 - Every "small fix"
 - Every task in a multi-task session
 - Tasks where you "already know what to do"
+- Especially tasks where you feel the urge to move fast
 
 ### 3.1 Classification Output
 
