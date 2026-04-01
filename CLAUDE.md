@@ -227,8 +227,14 @@ The UI uses a custom glassmorphism design language. All custom styles are define
 | `media_assets` | Generated content files | listing_id, asset_type, status, output_url |
 | `google_tokens` | Google Calendar tokens | user_email, access_token, refresh_token |
 
-### RLS Policy
-All tables: `auth.role() = 'authenticated'` — single-tenant, all rows visible to logged-in users.
+### Multi-Tenancy & RLS
+
+Realtors360 is **multi-tenant**. Every data table has a `realtor_id` column scoped to the authenticated user.
+
+- **App-level isolation:** `getAuthenticatedTenantClient()` from `src/lib/supabase/tenant.ts` auto-injects `.eq("realtor_id", userId)` on all queries
+- **DB-level defense:** RLS policies on 60+ tables enforce `realtor_id` scoping
+- **Server actions:** MUST use tenant client, never raw `createAdminClient()` for user data
+- **Global tables** (exempt from scoping): `google_tokens`, `newsletter_templates`, `workflow_blueprints`, `knowledge_articles`
 
 ---
 

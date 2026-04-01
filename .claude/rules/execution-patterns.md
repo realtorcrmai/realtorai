@@ -19,12 +19,14 @@ paths:
 
 1. Create or extend file in `src/actions/[domain].ts`
 2. Define Zod v4 schema for inputs (use `.min(1)` not `.nonempty()`)
-3. Use `supabaseAdmin` for database operations (server-side, bypasses RLS)
+3. Use `getAuthenticatedTenantClient()` for database operations (auto-scopes by realtor_id)
 4. Call `revalidatePath('/affected-route')` after mutations
 5. Return typed response — never throw, return `{ error: string }` objects
 6. Verify: action callable, data persists, path revalidated
 
-**Common mistakes:** Forgetting `revalidatePath` (UI shows stale data). Using `supabase` client instead of `supabaseAdmin` on server (fails silently due to RLS). Throwing errors instead of returning them (breaks error UI).
+**Multi-tenancy:** Always use `const tc = await getAuthenticatedTenantClient()` — never raw `createAdminClient()` for user data. The tenant client auto-injects `realtor_id` on inserts and auto-filters on selects.
+
+**Common mistakes:** Forgetting `revalidatePath` (UI shows stale data). Using raw admin client instead of tenant client (bypasses tenant isolation). Throwing errors instead of returning them (breaks error UI).
 
 ## Add a Database Table
 
