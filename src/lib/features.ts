@@ -20,6 +20,27 @@ export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
 export const ALL_FEATURES = [...FEATURE_KEYS] as FeatureKey[];
 
+/** Release-gated feature sets — controls what users see per release */
+export const R1_FEATURES: FeatureKey[] = [
+  "listings", "contacts", "showings", "calendar",
+  "tasks", "forms", "newsletters", "automations",
+];
+
+export const R2_FEATURES: FeatureKey[] = [
+  ...R1_FEATURES, "social",
+];
+
+export const R3_FEATURES: FeatureKey[] = [
+  ...R2_FEATURES, "website", "content", "import", "workflow",
+];
+
+export const R4_FEATURES: FeatureKey[] = [
+  ...R3_FEATURES, "assistant", "search",
+];
+
+/** Current release — change this to roll out features to new users */
+export const CURRENT_RELEASE_FEATURES = R1_FEATURES;
+
 export const FEATURE_META: Record<
   FeatureKey,
   { label: string; description: string }

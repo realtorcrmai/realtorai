@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ALL_FEATURES } from "@/lib/features";
+import { ALL_FEATURES, CURRENT_RELEASE_FEATURES } from "@/lib/features";
 import {
   getClientIp,
   recordFailedAttempt,
@@ -125,7 +125,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (tableMissing) {
             usersTableExists = false;
             token.role = token.role ?? "realtor";
-            token.enabledFeatures = token.enabledFeatures ?? ALL_FEATURES;
+            token.enabledFeatures = token.enabledFeatures ?? CURRENT_RELEASE_FEATURES;
           } else {
             usersTableExists = true;
             if (fetchError && fetchError.code !== "PGRST116") {
@@ -153,7 +153,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               }
 
               token.role = newUser?.role ?? "realtor";
-              token.enabledFeatures = newUser?.enabled_features ?? ALL_FEATURES;
+              token.enabledFeatures = newUser?.enabled_features ?? CURRENT_RELEASE_FEATURES;
               token.userId = newUser?.id;
             }
           }
