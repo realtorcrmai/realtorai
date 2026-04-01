@@ -35,6 +35,12 @@ STRICT POLICY: No step below can be skipped. No exceptions. No bypass.
 □ P3 Personas: Roles gated, workflow transitions documented, all 6 contact types
 □ P4 Rollout: Feature flag, error handling, migration rollback, <3s page load
 
+═══ THINKING GATE (L3 — at every phase boundary, Section 15.3) ═══
+□ Output checkpoint: "What I completed | What I'm about to do | Am I rushing?"
+□ "Did I read the relevant code?" □ "Alternative approach considered?"
+□ If rushing → STOP, re-read HC-15, slow down
+□ This is the layer that prevents auto-piloting. Never skip it.
+
 ═══ CRM RULES (every CODING task) ═══
 □ FINTRAC fields non-nullable  □ CASL consent before outbound
 □ RLS on new tables  □ lf-* design classes  □ Zod v4 validation

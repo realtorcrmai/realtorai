@@ -1913,3 +1913,87 @@ Latency: ~45s | Errors: 0 | Safety flags: 0
 4. Remove code in a dedicated PR with task type `CODING:refactor`
 5. Update CLAUDE.md and relevant `usecases/*.md` to reflect removal
 6. Archive related golden tasks from Section 13.2 (don't delete — useful for regression if feature returns)
+
+---
+
+## 15. Layered Enforcement System — Why the Playbook Never Fails
+
+> The playbook fails when a single enforcement layer is bypassed. This section defines 5 independent layers that check at different points. **All 5 must pass. No single layer is sufficient alone.**
+
+### 15.1 The 5 Layers
+
+```
+User Message → L1 (Reminder) → L2 (Gate) → L3 (Self-Check) → L4 (Completion) → L5 (Verification)
+```
+
+| Layer | When | Mechanism | What It Catches | Bypass Risk |
+|-------|------|-----------|----------------|-------------|
+| **L1: Prompt Checkpoint** | Before first thought | `playbook-reminder.sh` (UserPromptSubmit) | Skipping pipeline, forgetting active task | Low — hook fires automatically |
+| **L2: Edit Gate** | Before code changes | `playbook-gate.sh` (PreToolUse Edit/Write) | Coding without classification/scope | Low — hook blocks the edit |
+| **L3: Thinking Gate** | During execution | Mandatory conversation output (see 15.3) | Auto-piloting, skipping phases, rushing | **HIGH** — only self-enforced |
+| **L4: Completion Gate** | Before finishing | `completion-gate.sh` (Stop) | Broken code, missing compliance | Low — hook runs tsc + checks |
+| **L5: Sprint Gate** | After batch of changes | Sprint Verification (Section 3.4) | Unverified changes, scope drift | Medium — requires discipline |
+
+**Layer 3 is the critical gap.** Layers 1, 2, 4, 5 are mechanically enforced by hooks. Layer 3 relies on the agent consciously pausing to think — which is where auto-piloting happens.
+
+### 15.2 Layer 1 — Prompt Checkpoint (Automated)
+
+**Hook:** `playbook-reminder.sh` fires on every UserPromptSubmit.
+
+**What it outputs:**
+- If active task: `[Task] tier | type | Done: phases`
+- If no task: nothing (saves tokens)
+
+**What the agent must do BEFORE any tool call:**
+1. Read the hook output — is there an active task?
+2. If new request → run pipeline first (HC-15: read request twice)
+3. If continuation → verify current phase matches next action
+
+### 15.3 Layer 3 — Thinking Gate (Self-Enforced, Critical)
+
+**This is the layer that prevents auto-piloting.** At each phase boundary, the agent MUST output a thinking checkpoint in the conversation before proceeding.
+
+**Mandatory output format at phase transitions:**
+
+```markdown
+### Phase [N] → Phase [N+1] Checkpoint
+
+**What I just completed:** [1 sentence]
+**What I'm about to do:** [1 sentence]  
+**Am I rushing?** [yes/no — if yes, STOP and re-read HC-15]
+**Did I read the relevant code/files?** [yes + which files, or no → read first]
+**Alternative approach considered:** [what else could I do? why is my choice better?]
+```
+
+**When to output this checkpoint:**
+- Before starting execution (after classification)
+- Before each sprint in multi-step work
+- Before presenting final output to user
+- Whenever you feel the urge to skip a step (that's the signal to STOP)
+
+**Rules:**
+- Skipping this checkpoint = the playbook failed for this task
+- "Am I rushing?" answered honestly = the most important question
+- If you can't articulate an alternative approach, you haven't thought enough
+- This checkpoint is NOT optional even for small tasks — the format can be shorter but must exist
+
+### 15.4 Layer Interaction — Defense in Depth
+
+No single layer is trusted alone. Each layer catches what others miss:
+
+| Failure Mode | L1 | L2 | L3 | L4 | L5 |
+|-------------|----|----|----|----|-----|
+| Skip pipeline | ✅ Catches | — | — | — | — |
+| Code without classify | — | ✅ Catches | — | — | — |
+| Classify but skip thinking | — | — | ✅ Catches | — | — |
+| Think but code is broken | — | — | — | ✅ Catches | — |
+| Code works but wrong approach | — | — | ✅ Catches | — | ✅ Catches |
+| Unverified batch changes | — | — | — | — | ✅ Catches |
+| Rush through phases | — | — | ✅ Catches | — | — |
+| Mark done without testing | — | — | — | ✅ Catches | ✅ Catches |
+
+### 15.5 When the System Fails — Honest Assessment
+
+If all 5 layers were followed and the work still has problems, the issue is in task understanding, not process compliance. That's a legitimate knowledge gap — ask for help.
+
+If any layer was skipped and the work has problems — that's a process violation. Log ❌ in compliance, identify which layer failed, and fix the root cause (usually Layer 3 — the thinking was skipped).
