@@ -51,6 +51,27 @@ There is NO scenario where the playbook can be skipped, partially followed, or b
 - [ ] Post-task validation completed (tests pass, no TS errors)
 - [ ] Compliance log entry appended to `.claude/compliance-log.md`
 
+### 1.1.1 Absolute Rules (Hard Constraints)
+
+These apply to EVERY task. Violation = automatic revert.
+
+| # | Rule |
+|---|------|
+| HC-1 | **No `any` type** — no `as any`, no `@ts-ignore`, no `@ts-expect-error` without comment |
+| HC-2 | **No inline styles** — use `lf-*` CSS classes from design system |
+| HC-3 | **Server Actions for mutations** — API routes only for GETs and webhooks |
+| HC-4 | **RLS required on every table** with tenant-scoped policy |
+| HC-5 | **CASL consent check** before every outbound message |
+| HC-6 | **FINTRAC PII fields non-nullable** on `seller_identities` |
+| HC-7 | **Never push directly to `main` or `dev`** — PRs only |
+| HC-8 | **Never `git push --force`**, `git reset --hard`, `rm -rf /`, `DROP DATABASE` |
+| HC-9 | **Never commit `.env.local`** — use `scripts/vault.sh` |
+| HC-10 | **Zod v4 validation** on all form/API/webhook inputs |
+| HC-11 | **No PII in AI prompts** beyond approved fields (Section 14) |
+| HC-12 | **Multi-tenant: use `getAuthenticatedTenantClient()`** for all user data — never raw admin client |
+| HC-13 | **Verify against code, not reports.** All analysis, gap reports, and status claims MUST be verified by reading actual source code. Never trust previous reports, agent outputs, or documentation alone. "Code written" ≠ "Feature works." |
+| HC-14 | **Every new table MUST have `realtor_id`** column with index and RLS policy |
+
 ### 1.2 Feature Evaluation & Market Fit
 
 Before building any **new feature**, answer:
@@ -61,6 +82,54 @@ Before building any **new feature**, answer:
 - Are we copying, differentiating, or deliberately staying simpler?
 - Does this fit Realtors360's vision as a BC realtor transaction CRM?
 - If unclear → **pause and ask the product owner**.
+
+### 1.2.1 Architectural Principles (Apply to Every Feature)
+
+Every feature must be evaluated against these 4 principles. They are non-negotiable quality standards.
+
+**Principle 1: UI Design — Touch-Friendly, Accessible**
+
+| Requirement | Standard | How to Verify |
+|-------------|----------|--------------|
+| Touch targets | Minimum 44x44px on all interactive elements | Inspect element dimensions on mobile viewport |
+| Responsive | Works on mobile (375px), tablet (768px), desktop (1280px) | Test all 3 viewports |
+| Keyboard | All actions completable via keyboard (Tab, Enter, Escape) | Navigate with keyboard only |
+| ARIA | Interactive elements have `aria-label` or visible text | axe-core scan returns 0 violations |
+| Forms | Autofocus on first field, Enter submits, validation on blur | Test keyboard flow |
+| Empty states | Helpful message + action when no data | Navigate to page with zero records |
+
+**Principle 2: Data Model — Documented, Business-Aligned**
+
+| Requirement | Standard | How to Verify |
+|-------------|----------|--------------|
+| Schema | Every table has ERD entry or schema comment | Check migration file has column comments |
+| Types | All table types in `src/types/database.ts` | grep for table name in types file |
+| JSONB | Every JSONB column has documented schema | Check for type definition or inline doc |
+| Constraints | FK, NOT NULL, CHECK, UNIQUE where business rules require | Read migration constraints |
+| `realtor_id` | Every user-data table has `realtor_id` NOT NULL + index | Check migration (HC-14) |
+| Relationships | FK to parent tables, CASCADE/RESTRICT documented | Check ON DELETE clause |
+
+**Principle 3: Persona Mapping — Roles & Workflows**
+
+| Requirement | Standard | How to Verify |
+|-------------|----------|--------------|
+| User roles | Feature knows which role uses it (admin, realtor, buyer, seller) | Check auth gates in page/action |
+| Entry/exit | Workflow states have documented transitions | Check state machine or phase logic |
+| Contact types | Feature handles all 6 contact types gracefully | Test with buyer, seller, customer, agent, partner, other |
+| Stage awareness | Feature respects contact stage (new→qualified→active→closed) | Check stage-dependent rendering |
+| Error paths | What happens when user does wrong thing? | Test invalid inputs, missing data |
+
+**Principle 4: Rollout & Operations**
+
+| Requirement | Standard | How to Verify |
+|-------------|----------|--------------|
+| Feature flag | New features behind `enabledFeatures` toggle | Check `src/lib/features.ts` |
+| Monitoring | Errors are catchable (try/catch, error boundaries) | Check error handling in page/action |
+| Rollback | Feature can be disabled without data loss | Verify feature flag disables cleanly |
+| Migration safety | New migrations are idempotent and have rollback | Check `IF NOT EXISTS`, write rollback SQL |
+| Performance | Page loads in <3s with 100+ records | Test with production-like data |
+
+**When to apply:** Every CODING:feature, DESIGN_SPEC, and INTEGRATION task. Check each principle in the scope paragraph.
 
 ### 1.3 Documentation Requirements
 
@@ -131,6 +200,82 @@ The same rules apply to both, but enforcement differs:
 - ORCHESTRATION: workflow steps = tools. `workflow-engine.ts` orchestrates.
 - VOICE_AGENT: `realtor_tools.py` entries = tools. `handle_realtor_tool()` = dispatch.
 - RAG_KB: retrieval + generation = separate tools with distinct schemas.
+
+---
+
+## 1.7 Multi-Tenancy — Data Isolation Rules
+
+Realtors360 is **multi-tenant**. Every data row belongs to a `realtor_id`. This is the #1 data integrity rule.
+
+### Data Access Pattern
+
+**ALWAYS use the tenant client for user-initiated operations:**
+
+```typescript
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
+
+// In server actions and server components:
+const tc = await getAuthenticatedTenantClient();
+const { data } = await tc.from("contacts").select("*");
+// ↑ Automatically adds .eq("realtor_id", currentUserId)
+
+// Inserts automatically inject realtor_id:
+await tc.from("contacts").insert({ name: "John", phone: "+1..." });
+// ↑ realtor_id is auto-set, never pass it manually
+```
+
+**NEVER use raw `createAdminClient()` for user data.** Admin client bypasses tenant isolation. Use it ONLY for:
+- Global config tables (in `GLOBAL_TABLES` set)
+- Cron jobs that process all tenants
+- Migration scripts
+- Webhook handlers that identify tenant from payload
+
+### Hard Rules
+
+| Rule | Why |
+|------|-----|
+| Every new table MUST have `realtor_id uuid NOT NULL` column | Tenant isolation |
+| Every new migration MUST add index on `realtor_id` | Query performance |
+| Every new RLS policy MUST scope by `realtor_id` | DB-level defense |
+| Every server action MUST use `getAuthenticatedTenantClient()` | App-level isolation |
+| Raw admin client ONLY for global/system operations | Prevent data leakage |
+| NEVER hardcode or assume a single tenant | Multi-tenant by default |
+
+### Tenant Client API
+
+```typescript
+const tc = await getAuthenticatedTenantClient();
+
+tc.from("table").select("*")           // Auto-filtered by realtor_id
+tc.from("table").insert({ ... })       // Auto-injects realtor_id
+tc.from("table").insertAndSelect(...)  // Insert + return row
+tc.from("table").update({ ... })       // Scoped update
+tc.from("table").delete()              // Scoped delete
+tc.from("table").upsert({ ... })       // Scoped upsert
+tc.raw                                 // Escape hatch (use sparingly)
+tc.realtorId                           // Current tenant ID
+```
+
+### Migrations
+
+```sql
+-- Every new table:
+CREATE TABLE new_table (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  realtor_id uuid NOT NULL REFERENCES auth.users(id),
+  -- ... other columns
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX idx_new_table_realtor ON new_table(realtor_id);
+ALTER TABLE new_table ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_rls_new_table ON new_table
+  FOR ALL USING (realtor_id = auth.uid()::uuid);
+```
+
+### Global Tables (exempt from tenant scoping)
+
+These tables are NOT scoped by realtor_id: `google_tokens`, `newsletter_templates`, `workflow_blueprints`, `help_articles`, `knowledge_articles`, `feature_flags`.
 
 ---
 
@@ -212,7 +357,7 @@ Examples: `rahul/voice-agent-tts`, `claude/playbook-enforcement`, `alex/contact-
 - Never store raw Supabase query results in memory
 
 **Cross-tenant isolation:**
-- Realtors360 is single-tenant today, but memory policies MUST assume multi-tenant
+- Realtors360 is **multi-tenant** — every data row belongs to a `realtor_id`
 - Never store tenant-identifying data in memory files
 - Agent context windows MUST NOT carry data from one contact/listing into prompts for another unless explicitly required by the task
 
@@ -551,6 +696,64 @@ Existing test inventory (check before creating new):
 **Phase 5** — Operational: deployment plan, monitoring, failure modes, cost
 
 **Phase 6** — Implementation plan: phases, files per phase, test plan
+
+### 4.4.1 7-Pass Iterative Analysis (Mandatory for DESIGN_SPEC & GAP_ANALYSIS)
+
+Every gap analysis, PRD, architecture doc, or design spec MUST go through 7 iterative passes. Never present a single-pass output as final. Each pass takes **2-5 minutes of genuine thinking** — not a 30-second skim.
+
+| Pass | Focus | Key Question |
+|------|-------|-------------|
+| **1. Self-Analysis** | Read the subject thoroughly (every file, every line). Document findings with file:line references. Categorize by severity. | "What gaps exist right now?" |
+| **2. Best-in-Market** | Compare against industry best practices and competitor implementations. Find what Pass 1 missed. | "What would the best version look like?" |
+| **3. Code Verification** | Cross-check EVERY claim against actual source code. Are file paths real? Do referenced functions exist? Are stats accurate? Find contradictions. **HC-13 enforced here.** | "Is what I wrote actually true in the code?" |
+| **4. Depth Check** | Re-read looking for surface-level sections. Every section should demonstrate deep knowledge, not just list items. Are acceptance criteria testable? Are designs implementable? | "Did I go deep enough or just skim?" |
+| **5. Completeness** | Final read-through for gaps, formatting, numbering, cross-references. Check nothing was missed. | "Is anything still missing?" |
+| **6. Gap Reconciliation** | Compare the document against the ORIGINAL requirements/spec. Identify any requirement that was asked for but not addressed. List remaining gaps explicitly. | "Does this actually cover everything that was asked?" |
+| **7. Implementation Sanity** | For every recommendation/fix proposed: Does it actually make sense? Is it feasible? Is the effort estimate realistic? Would a senior engineer agree with this approach? Challenge your own suggestions. | "Would I bet my reputation on these recommendations?" |
+
+**Rules:**
+- Each pass MUST read the output of the previous pass — not rubber-stamp it
+- Passes are sequential — each builds on the previous
+- Present the final version only after all 7 passes
+- Note the pass count in the document header
+- For at least one pass, use a different model/agent for fresh perspective
+- "Each pass takes 2-5 minutes" means real thinking — if a pass takes 30 seconds, redo it
+
+**When to use 7-pass:** Gap analyses, PRDs, architecture specs, audit documents, any document that drives implementation decisions.
+
+**When NOT to use:** INFO tasks, simple code changes, bug fixes, micro/small tier tasks.
+
+### 4.4.2 GAP_ANALYSIS Task Type
+
+**Classification:** `Type: GAP_ANALYSIS` | Tier: typically Medium or Large
+
+Gap analysis is a distinct task type with its own rules:
+
+**Mandatory process:**
+1. Read actual source code for every feature being assessed — NOT previous reports, docs, or summaries (HC-13)
+2. For each feature: verify imports, exports, rendering, DB wiring, and integration
+3. "Code written" ≠ "Feature works" — check that components are rendered in pages, actions are called from components, migrations are applied
+4. Save as versioned file: `docs/gap-analysis/<area>/v<N>_<date>.md`
+5. Follow the 7-pass process (Section 4.4.1)
+
+**Verification checklist per feature:**
+- [ ] Read the page component — does it render the feature?
+- [ ] Read the server action — does it do real CRUD?
+- [ ] Check the API route — does it handle auth, validation, errors?
+- [ ] Check the migration — does the table exist with correct columns?
+- [ ] Check the component — is it imported and rendered somewhere?
+- [ ] Check integration — does data flow end-to-end?
+
+**Output format:**
+```markdown
+| Feature | Completeness | Production Ready | Evidence (file:line) | Critical Gap |
+```
+
+**What NOT to do:**
+- Trust previous gap analyses without re-verifying
+- Mark items "FIXED" based on agent reports
+- Assess features by listing files without reading them
+- Copy findings from documentation instead of code
 
 ### 4.5 RAG_KB
 
