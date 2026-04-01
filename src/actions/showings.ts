@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { sendShowingRequest } from "@/lib/twilio";
 import { fetchBusyBlocks, isSlotAvailable } from "@/lib/google-calendar";
 import { revalidatePath } from "next/cache";
@@ -23,10 +24,11 @@ export async function createShowingRequest(
     buyerAgentEmail,
   } = parsed.data;
 
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
+  const adminSupabase = createAdminClient();
 
   // Fetch listing and seller
-  const { data: listing, error: listingError } = await supabase
+  const { data: listing, error: listingError } = await tc
     .from("listings")
     .select("*, contacts(*)")
     .eq("id", listingId)
@@ -47,10 +49,10 @@ export async function createShowingRequest(
     return { error: "No seller contact found for this listing" };
   }
 
-  // Check Google Calendar availability
+  // Check Google Calendar availability (google_tokens uses user_email, keep admin)
   let calendarWarning: string | undefined;
 
-  const { data: tokenData } = await supabase
+  const { data: tokenData } = await adminSupabase
     .from("google_tokens")
     .select("*")
     .limit(1);
@@ -83,9 +85,9 @@ export async function createShowingRequest(
   }
 
   // Create appointment
-  const { data: appointment, error: apptError } = await supabase
+  const { data: apptRows, error: apptError } = await tc
     .from("appointments")
-    .insert({
+    .insertAndSelect({
       listing_id: listingId,
       start_time: startTime,
       end_time: endTime,
@@ -93,9 +95,8 @@ export async function createShowingRequest(
       buyer_agent_phone: buyerAgentPhone,
       buyer_agent_email: buyerAgentEmail,
       status: "requested",
-    })
-    .select()
-    .single();
+    });
+  const appointment = apptRows?.[0] ?? null;
 
   if (apptError) {
     return { error: "Failed to create appointment" };
@@ -111,12 +112,12 @@ export async function createShowingRequest(
       buyerAgentName,
     });
 
-    await supabase
+    await tc
       .from("appointments")
       .update({ twilio_message_sid: messageSid })
       .eq("id", appointment.id);
 
-    await supabase.from("communications").insert({
+    await tc.from("communications").insert({
       contact_id: seller.id,
       direction: "outbound",
       channel: seller.pref_channel,
@@ -125,7 +126,7 @@ export async function createShowingRequest(
     });
   } catch (err) {
     console.error("Failed to send Twilio notification:", err);
-    await supabase
+    await tc
       .from("appointments")
       .update({
         notification_status: "failed",
@@ -148,9 +149,9 @@ export async function updateShowingStatus(
   appointmentId: string,
   status: "confirmed" | "denied" | "cancelled"
 ) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { error } = await supabase
+  const { error } = await tc
     .from("appointments")
     .update({ status })
     .eq("id", appointmentId);
@@ -162,14 +163,14 @@ export async function updateShowingStatus(
   // Fire showing_completed trigger for buyer contacts when showing is confirmed
   if (status === "confirmed") {
     try {
-      const { data: appointment } = await supabase
+      const { data: appointment } = await tc
         .from("appointments")
         .select("listing_id")
         .eq("id", appointmentId)
         .single();
 
       if (appointment?.listing_id) {
-        const { data: listing } = await supabase
+        const { data: listing } = await tc
           .from("listings")
           .select("buyer_id")
           .eq("id", appointment.listing_id)

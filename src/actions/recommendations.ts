@@ -1,12 +1,12 @@
 "use server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 
 export async function getRecommendations() {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { data } = await supabase
+  const { data } = await tc
     .from("agent_recommendations")
     .select("*, contacts(id, name, email, phone, type, stage_bar)")
     .eq("status", "pending")
@@ -18,9 +18,9 @@ export async function getRecommendations() {
 }
 
 export async function dismissRecommendation(id: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  await supabase
+  await tc
     .from("agent_recommendations")
     .update({ status: "dismissed" })
     .eq("id", id);
@@ -30,9 +30,9 @@ export async function dismissRecommendation(id: string) {
 }
 
 export async function acceptRecommendation(id: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { data: rec } = await supabase
+  const { data: rec } = await tc
     .from("agent_recommendations")
     .select("*")
     .eq("id", id)
@@ -52,12 +52,12 @@ export async function acceptRecommendation(id: string) {
     case "advance_stage": {
       const newStage = (rec.action_config as any)?.new_stage;
       if (newStage) {
-        await supabase.from("contacts").update({ stage_bar: newStage }).eq("id", rec.contact_id);
+        await tc.from("contacts").update({ stage_bar: newStage }).eq("id", rec.contact_id);
       }
       break;
     }
     case "create_task": {
-      await supabase.from("tasks").insert({
+      await tc.from("tasks").insert({
         contact_id: rec.contact_id,
         title: (rec.action_config as any)?.title || `Follow up: ${rec.reasoning.slice(0, 50)}`,
         priority: rec.priority === "hot" ? "urgent" : "medium",
@@ -69,10 +69,10 @@ export async function acceptRecommendation(id: string) {
     case "add_tag": {
       const tag = (rec.action_config as any)?.tag;
       if (tag) {
-        const { data: contact } = await supabase.from("contacts").select("tags").eq("id", rec.contact_id).single();
+        const { data: contact } = await tc.from("contacts").select("tags").eq("id", rec.contact_id).single();
         const tags = Array.isArray(contact?.tags) ? contact.tags : [];
         if (!tags.includes(tag)) {
-          await supabase.from("contacts").update({ tags: [...tags, tag] }).eq("id", rec.contact_id);
+          await tc.from("contacts").update({ tags: [...tags, tag] }).eq("id", rec.contact_id);
         }
       }
       break;
@@ -80,7 +80,7 @@ export async function acceptRecommendation(id: string) {
   }
 
   // Mark as accepted
-  await supabase
+  await tc
     .from("agent_recommendations")
     .update({ status: "accepted" })
     .eq("id", id);

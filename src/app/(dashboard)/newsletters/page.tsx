@@ -17,12 +17,12 @@ import { AIWorkingForYou } from "@/components/newsletters/AIWorkingForYou";
 import { ListingBlastAutomation } from "@/components/newsletters/ListingBlastAutomation";
 import { GreetingAutomations } from "@/components/newsletters/GreetingAutomations";
 import { sendNewsletter, skipNewsletter, bulkApproveNewsletters, sendListingBlast, sendCampaign } from "@/actions/newsletters";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { WORKFLOW_BLUEPRINTS } from "@/lib/constants";
 import { getRealtorConfig, getAutomationRules, getGreetingRules } from "@/actions/config";
 
 export default async function NewsletterDashboard() {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
   const [dashboard, queue, realtorConfig, automationRules, greetingRules] = await Promise.all([
     getJourneyDashboard(),
     getApprovalQueue(),
@@ -44,13 +44,13 @@ export default async function NewsletterDashboard() {
     { data: sentRaw },
     { data: upcomingJourneys },
   ] = await Promise.all([
-    supabase.from("contact_journeys").select("id, contact_id, journey_type, current_phase, is_paused, next_email_at, send_mode, contacts(name, type, email)").order("created_at", { ascending: false }),
-    supabase.from("workflows").select("id, name, slug, description, is_active, trigger_type, contact_type, workflow_steps(id)").order("name"),
-    supabase.from("listings").select("id, address, list_price, status").eq("status", "active").order("created_at", { ascending: false }).limit(10),
-    supabase.from("contacts").select("id, name, phone, type, newsletter_intelligence").not("newsletter_intelligence", "is", null).order("created_at", { ascending: false }).limit(50),
-    supabase.from("newsletters").select("id, subject, email_type, status, ai_context, contact_id, created_at, contacts(name, type, email, phone)").eq("status", "suppressed").order("created_at", { ascending: false }).limit(10),
-    supabase.from("newsletters").select("id, subject, email_type, status, sent_at, contact_id, html_body, contacts(name, type), newsletter_events(event_type, metadata, created_at)").eq("status", "sent").order("sent_at", { ascending: false }).limit(20),
-    supabase.from("contact_journeys").select("id, contact_id, journey_type, current_phase, next_email_at, emails_sent_in_phase, contacts(name, type)").eq("is_paused", false).not("next_email_at", "is", null).lte("next_email_at", sevenDaysFromNow).order("next_email_at").limit(50),
+    tc.from("contact_journeys").select("id, contact_id, journey_type, current_phase, is_paused, next_email_at, send_mode, contacts(name, type, email)").order("created_at", { ascending: false }),
+    tc.from("workflows").select("id, name, slug, description, is_active, trigger_type, contact_type, workflow_steps(id)").order("name"),
+    tc.from("listings").select("id, address, list_price, status").eq("status", "active").order("created_at", { ascending: false }).limit(10),
+    tc.from("contacts").select("id, name, phone, type, newsletter_intelligence").not("newsletter_intelligence", "is", null).order("created_at", { ascending: false }).limit(50),
+    tc.from("newsletters").select("id, subject, email_type, status, ai_context, contact_id, created_at, contacts(name, type, email, phone)").eq("status", "suppressed").order("created_at", { ascending: false }).limit(10),
+    tc.from("newsletters").select("id, subject, email_type, status, sent_at, contact_id, html_body, contacts(name, type), newsletter_events(event_type, metadata, created_at)").eq("status", "sent").order("sent_at", { ascending: false }).limit(20),
+    tc.from("contact_journeys").select("id, contact_id, journey_type, current_phase, next_email_at, emails_sent_in_phase, contacts(name, type)").eq("is_paused", false).not("next_email_at", "is", null).lte("next_email_at", sevenDaysFromNow).order("next_email_at").limit(50),
   ]);
 
   // Filter hot leads: engagement score >= 60, split by type

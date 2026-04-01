@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 
 type JourneyType = "buyer" | "seller" | "customer" | "agent";
@@ -82,7 +83,7 @@ const JOURNEY_SCHEDULES: Record<JourneyType, Record<JourneyPhase, Array<{ emailT
 };
 
 export async function enrollContactInJourney(contactId: string, journeyType: JourneyType) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Get first email schedule
   const schedule = JOURNEY_SCHEDULES[journeyType].lead;
@@ -90,7 +91,7 @@ export async function enrollContactInJourney(contactId: string, journeyType: Jou
     ? new Date(Date.now() + schedule[0].delayHours * 3600000).toISOString()
     : null;
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("contact_journeys")
     .upsert(
       {
@@ -118,14 +119,14 @@ export async function advanceJourneyPhase(
   journeyType: JourneyType,
   newPhase: JourneyPhase
 ) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   const schedule = JOURNEY_SCHEDULES[journeyType][newPhase];
   const nextEmailAt = schedule.length > 0
     ? new Date(Date.now() + schedule[0].delayHours * 3600000).toISOString()
     : null;
 
-  const { error } = await supabase
+  const { error } = await tc
     .from("contact_journeys")
     .update({
       current_phase: newPhase,
@@ -155,9 +156,9 @@ export async function advanceJourneyPhase(
 }
 
 export async function pauseJourney(contactId: string, journeyType: JourneyType, reason?: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { error } = await supabase
+  const { error } = await tc
     .from("contact_journeys")
     .update({
       is_paused: true,
@@ -173,9 +174,9 @@ export async function pauseJourney(contactId: string, journeyType: JourneyType, 
 }
 
 export async function resumeJourney(contactId: string, journeyType: JourneyType) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { error } = await supabase
+  const { error } = await tc
     .from("contact_journeys")
     .update({
       is_paused: false,
@@ -192,10 +193,10 @@ export async function resumeJourney(contactId: string, journeyType: JourneyType)
 }
 
 export async function getJourneyDashboard() {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Get all journey enrollments with contact info
-  const { data: journeys } = await supabase
+  const { data: journeys } = await tc
     .from("contact_journeys")
     .select("*, contacts(id, name, email, type)")
     .order("updated_at", { ascending: false });
@@ -213,31 +214,31 @@ export async function getJourneyDashboard() {
   }
 
   // Get newsletter stats
-  const { count: totalSent } = await supabase
+  const { count: totalSent } = await tc
     .from("newsletters")
     .select("id", { count: "exact", head: true })
     .eq("status", "sent");
 
-  const { count: pendingApproval } = await supabase
+  const { count: pendingApproval } = await tc
     .from("newsletters")
     .select("id", { count: "exact", head: true })
     .eq("status", "draft")
     .eq("send_mode", "review");
 
   // Get recent events
-  const { data: recentEvents } = await supabase
+  const { data: recentEvents } = await tc
     .from("newsletter_events")
     .select("*, contacts(name), newsletters(subject)")
     .order("created_at", { ascending: false })
     .limit(20);
 
   // Calculate engagement rates
-  const { count: totalOpens } = await supabase
+  const { count: totalOpens } = await tc
     .from("newsletter_events")
     .select("id", { count: "exact", head: true })
     .eq("event_type", "opened");
 
-  const { count: totalClicks } = await supabase
+  const { count: totalClicks } = await tc
     .from("newsletter_events")
     .select("id", { count: "exact", head: true })
     .eq("event_type", "clicked");
@@ -258,10 +259,10 @@ export async function getJourneyDashboard() {
 }
 
 export async function processJourneyQueue() {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Find journeys that need an email sent
-  const { data: dueJourneys } = await supabase
+  const { data: dueJourneys } = await tc
     .from("contact_journeys")
     .select("*, contacts(id, name, email, type, newsletter_intelligence, newsletter_unsubscribed, buyer_preferences)")
     .eq("is_paused", false)
@@ -282,7 +283,7 @@ export async function processJourneyQueue() {
 
     if (emailIndex >= schedule.length) {
       // No more emails in this phase — wait for event to advance
-      await supabase
+      await tc
         .from("contact_journeys")
         .update({ next_email_at: null })
         .eq("id", journey.id);
@@ -309,7 +310,7 @@ export async function processJourneyQueue() {
         ? new Date(Date.now() + schedule[nextIndex].delayHours * 3600000).toISOString()
         : null;
 
-      await supabase
+      await tc
         .from("contact_journeys")
         .update({
           emails_sent_in_phase: nextIndex,

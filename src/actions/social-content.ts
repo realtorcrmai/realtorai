@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import type {
   SocialBrandKit,
   ContentType,
@@ -16,22 +17,22 @@ import type {
 // ============================================================
 
 export async function saveBrandKit(data: Partial<SocialBrandKit>) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { data: existing } = await supabase
+  const { data: existing } = await tc
     .from("social_brand_kits")
     .select("id")
     .limit(1)
     .single();
 
   if (existing) {
-    const { error } = await supabase
+    const { error } = await tc
       .from("social_brand_kits")
       .update({ ...data, updated_at: new Date().toISOString() })
       .eq("id", existing.id);
     if (error) return { error: error.message };
   } else {
-    const { error } = await supabase
+    const { error } = await tc
       .from("social_brand_kits")
       .insert({
         user_email: data.email || "demo@realtors360.com",
@@ -45,8 +46,8 @@ export async function saveBrandKit(data: Partial<SocialBrandKit>) {
 }
 
 export async function getBrandKit(): Promise<SocialBrandKit | null> {
-  const supabase = createAdminClient();
-  const { data } = await supabase
+  const tc = await getAuthenticatedTenantClient();
+  const { data } = await tc
     .from("social_brand_kits")
     .select("*")
     .limit(1)
@@ -59,14 +60,14 @@ export async function getBrandKit(): Promise<SocialBrandKit | null> {
 // ============================================================
 
 export async function generateSocialContent(request: ContentGenerationRequest) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   try {
     const { generateContentForPlatforms } = await import("@/lib/social/content-generator");
     const generated = await generateContentForPlatforms(request);
 
     // Create draft post
-    const { data: post, error } = await supabase
+    const { data: post, error } = await tc
       .from("social_posts")
       .insert({
         brand_kit_id: request.brand_kit.id,
@@ -96,7 +97,7 @@ export async function generateSocialContent(request: ContentGenerationRequest) {
     try {
       const { scoreContent } = await import("@/lib/social/content-scorer");
       const score = await scoreContent(post.caption || "", request.brand_kit);
-      await supabase
+      await tc
         .from("social_posts")
         .update({
           content_score: score.overall,
@@ -108,7 +109,7 @@ export async function generateSocialContent(request: ContentGenerationRequest) {
     }
 
     // Log to audit
-    await supabase.from("social_audit_log").insert({
+    await tc.from("social_audit_log").insert({
       brand_kit_id: request.brand_kit.id,
       post_id: post.id,
       action: "generated",
@@ -120,7 +121,7 @@ export async function generateSocialContent(request: ContentGenerationRequest) {
     // Track usage
     const month = new Date().toISOString().slice(0, 7) + "-01";
     try {
-      await supabase
+      await tc
         .from("social_usage_tracking")
         .upsert(
           {
@@ -146,9 +147,9 @@ export async function generateSocialContent(request: ContentGenerationRequest) {
 // ============================================================
 
 export async function approvePost(postId: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { error } = await supabase
+  const { error } = await tc
     .from("social_posts")
     .update({
       status: "approved" as PostStatus,
@@ -161,8 +162,8 @@ export async function approvePost(postId: string) {
   if (error) return { error: error.message };
 
   // Log approval
-  await supabase.from("social_audit_log").insert({
-    brand_kit_id: (await supabase.from("social_posts").select("brand_kit_id").eq("id", postId).single()).data?.brand_kit_id,
+  await tc.from("social_audit_log").insert({
+    brand_kit_id: (await tc.from("social_posts").select("brand_kit_id").eq("id", postId).single()).data?.brand_kit_id,
     post_id: postId,
     action: "approved",
     actor: "demo@realtors360.com",
@@ -173,9 +174,9 @@ export async function approvePost(postId: string) {
 }
 
 export async function skipPost(postId: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { error } = await supabase
+  const { error } = await tc
     .from("social_posts")
     .update({
       status: "skipped" as PostStatus,
@@ -185,8 +186,8 @@ export async function skipPost(postId: string) {
 
   if (error) return { error: error.message };
 
-  await supabase.from("social_audit_log").insert({
-    brand_kit_id: (await supabase.from("social_posts").select("brand_kit_id").eq("id", postId).single()).data?.brand_kit_id,
+  await tc.from("social_audit_log").insert({
+    brand_kit_id: (await tc.from("social_posts").select("brand_kit_id").eq("id", postId).single()).data?.brand_kit_id,
     post_id: postId,
     action: "skipped",
     actor: "demo@realtors360.com",
@@ -197,10 +198,10 @@ export async function skipPost(postId: string) {
 }
 
 export async function regeneratePost(postId: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Get original post data
-  const { data: post } = await supabase
+  const { data: post } = await tc
     .from("social_posts")
     .select("*")
     .eq("id", postId)
@@ -209,7 +210,7 @@ export async function regeneratePost(postId: string) {
   if (!post) return { error: "Post not found" };
 
   // Get brand kit
-  const { data: brandKit } = await supabase
+  const { data: brandKit } = await tc
     .from("social_brand_kits")
     .select("*")
     .eq("id", post.brand_kit_id)
@@ -232,7 +233,7 @@ export async function regeneratePost(postId: string) {
 
     const newCaption = generated.facebook?.caption || generated.instagram?.caption || "";
 
-    await supabase
+    await tc
       .from("social_posts")
       .update({
         caption: newCaption,
@@ -245,7 +246,7 @@ export async function regeneratePost(postId: string) {
       })
       .eq("id", postId);
 
-    await supabase.from("social_audit_log").insert({
+    await tc.from("social_audit_log").insert({
       brand_kit_id: post.brand_kit_id,
       post_id: postId,
       action: "regenerated",
@@ -262,10 +263,10 @@ export async function regeneratePost(postId: string) {
 }
 
 export async function updatePostCaption(postId: string, newCaption: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Get original for voice learning
-  const { data: post } = await supabase
+  const { data: post } = await tc
     .from("social_posts")
     .select("caption, caption_original, brand_kit_id")
     .eq("id", postId)
@@ -273,7 +274,7 @@ export async function updatePostCaption(postId: string, newCaption: string) {
 
   if (!post) return { error: "Post not found" };
 
-  await supabase
+  await tc
     .from("social_posts")
     .update({
       caption: newCaption,
@@ -283,7 +284,7 @@ export async function updatePostCaption(postId: string, newCaption: string) {
 
   // Log edit for voice learning
   if (post.caption_original && post.caption_original !== newCaption) {
-    await supabase.from("social_audit_log").insert({
+    await tc.from("social_audit_log").insert({
       brand_kit_id: post.brand_kit_id,
       post_id: postId,
       action: "edited",
@@ -298,9 +299,9 @@ export async function updatePostCaption(postId: string, newCaption: string) {
 }
 
 export async function schedulePost(postId: string, scheduledAt: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { error } = await supabase
+  const { error } = await tc
     .from("social_posts")
     .update({
       status: "scheduled" as PostStatus,
@@ -316,9 +317,9 @@ export async function schedulePost(postId: string, scheduledAt: string) {
 }
 
 export async function deletePost(postId: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { error } = await supabase
+  const { error } = await tc
     .from("social_posts")
     .delete()
     .eq("id", postId);
@@ -330,10 +331,10 @@ export async function deletePost(postId: string) {
 }
 
 export async function bulkApprovePosts(postIds: string[]) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
   const now = new Date().toISOString();
 
-  const { error } = await supabase
+  const { error } = await tc
     .from("social_posts")
     .update({
       status: "approved" as PostStatus,

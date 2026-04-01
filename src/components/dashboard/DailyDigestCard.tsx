@@ -23,7 +23,7 @@ export function DailyDigestCard() {
     async function fetchDigest() {
       try {
         const res = await fetch("/api/cron/daily-digest", {
-          headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || "listingflow-cron-secret-2026"}` },
+          headers: { "X-Digest-Request": "true" },
         });
         if (res.ok) {
           const data = await res.json();

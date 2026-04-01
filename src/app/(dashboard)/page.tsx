@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import Link from "next/link";
 import {
   Building2,
@@ -35,7 +35,7 @@ export default async function DashboardPage() {
   // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is safe
   const now = Date.now();
 
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   const [
     { count: activeListings },
@@ -46,15 +46,17 @@ export default async function DashboardPage() {
     { data: pipelineListings },
     { data: allDocs },
   ] = await Promise.all([
-    supabase
+    tc.raw
       .from("listings")
       .select("*", { count: "exact", head: true })
+      .eq("realtor_id", tc.realtorId)
       .eq("status", "active"),
-    supabase
+    tc.raw
       .from("appointments")
       .select("*", { count: "exact", head: true })
+      .eq("realtor_id", tc.realtorId)
       .eq("status", "requested"),
-    supabase
+    tc
       .from("appointments")
       .select("id")
       .eq("status", "confirmed")
@@ -64,32 +66,32 @@ export default async function DashboardPage() {
           now - new Date().getDay() * 24 * 60 * 60 * 1000
         ).toISOString()
       ),
-    supabase
+    tc
       .from("tasks")
       .select("id, status, priority")
       .neq("status", "completed")
       .order("created_at", { ascending: false })
       .limit(5),
-    supabase.from("contacts").select("id, stage_bar, type"),
-    supabase.from("listings").select("id, seller_id, buyer_id, list_price, sold_price, commission_rate, commission_amount, status"),
-    supabase.from("listing_documents").select("listing_id, doc_type"),
+    tc.from("contacts").select("id, stage_bar, type"),
+    tc.from("listings").select("id, seller_id, buyer_id, list_price, sold_price, commission_rate, commission_amount, status"),
+    tc.from("listing_documents").select("listing_id, doc_type"),
   ]);
 
   // Derive active listing IDs from pipelineListings (avoids redundant query)
-  const activeListingIds = (pipelineListings ?? []).filter((l) => l.status === "active");
+  const activeListingIds = (pipelineListings ?? []).filter((l: any) => l.status === "active");
 
   const requiredTypes = ["FINTRAC", "DORTS", "PDS"];
-  const listingsWithMissing = activeListingIds.filter((listing) => {
-    const docs = (allDocs ?? []).filter((d) => d.listing_id === listing.id);
-    const docTypes = docs.map((d) => d.doc_type);
-    return requiredTypes.some((t) => !docTypes.includes(t));
+  const listingsWithMissing = activeListingIds.filter((listing: any) => {
+    const docs = (allDocs ?? []).filter((d: any) => d.listing_id === listing.id);
+    const docTypes = docs.map((d: any) => d.doc_type);
+    return requiredTypes.some((t: any) => !docTypes.includes(t));
   });
 
   const pendingTasks = (tasks ?? []).filter(
-    (t) => t.status === "pending"
+    (t: any) => t.status === "pending"
   ).length;
   const inProgressTasks = (tasks ?? []).filter(
-    (t) => t.status === "in_progress"
+    (t: any) => t.status === "in_progress"
   ).length;
   const openTasksCount = pendingTasks + inProgressTasks;
 

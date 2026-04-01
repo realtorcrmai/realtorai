@@ -1,21 +1,23 @@
 "use server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 
 /**
  * Find potential duplicate contacts by matching email or phone.
  */
 export async function findDuplicates() {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Get all contacts with email or phone
-  const { data: contacts } = await supabase
+  const { data: contactsRaw } = await tc
     .from("contacts")
     .select("id, name, email, phone, type, created_at, stage_bar, lead_status")
     .order("created_at", { ascending: true });
 
-  if (!contacts || contacts.length === 0) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const contacts = (contactsRaw ?? []) as any[];
+  if (contacts.length === 0) return [];
 
   const groups: Map<string, typeof contacts> = new Map();
 
@@ -62,12 +64,12 @@ export async function findDuplicates() {
  * Primary keeps its own fields but fills in blanks from secondary.
  */
 export async function mergeContacts(primaryId: string, secondaryId: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Fetch both contacts
   const [{ data: primary }, { data: secondary }] = await Promise.all([
-    supabase.from("contacts").select("*").eq("id", primaryId).single(),
-    supabase.from("contacts").select("*").eq("id", secondaryId).single(),
+    tc.from("contacts").select("*").eq("id", primaryId).single(),
+    tc.from("contacts").select("*").eq("id", secondaryId).single(),
   ]);
 
   if (!primary || !secondary) {
@@ -110,7 +112,7 @@ export async function mergeContacts(primaryId: string, secondaryId: string) {
 
   // Update primary with merged fields
   if (Object.keys(updates).length > 0) {
-    await supabase.from("contacts").update(updates).eq("id", primaryId);
+    await tc.from("contacts").update(updates).eq("id", primaryId);
   }
 
   // Move all related records from secondary to primary
@@ -128,32 +130,32 @@ export async function mergeContacts(primaryId: string, secondaryId: string) {
   ];
 
   for (const table of tables) {
-    await supabase
+    await tc
       .from(table)
       .update({ contact_id: primaryId })
       .eq("contact_id", secondaryId);
   }
 
   // Move appointments (buyer_contact_id)
-  await supabase
+  await tc
     .from("appointments")
     .update({ buyer_contact_id: primaryId })
     .eq("buyer_contact_id", secondaryId);
 
   // Move listings (seller_id)
-  await supabase
+  await tc
     .from("listings")
     .update({ seller_id: primaryId })
     .eq("seller_id", secondaryId);
 
   // Move referrals
-  await supabase
+  await tc
     .from("contacts")
     .update({ referred_by_id: primaryId })
     .eq("referred_by_id", secondaryId);
 
   // Delete secondary
-  await supabase.from("contacts").delete().eq("id", secondaryId);
+  await tc.from("contacts").delete().eq("id", secondaryId);
 
   revalidatePath("/contacts");
   revalidatePath(`/contacts/${primaryId}`);

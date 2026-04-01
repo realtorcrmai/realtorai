@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 import { contactSchema, type ContactFormData } from "@/lib/schemas";
 import type { Json } from "@/types/database";
@@ -13,19 +14,19 @@ export async function createContact(formData: ContactFormData, force = false) {
     return { error: "Invalid form data", issues: parsed.error.issues };
   }
 
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   if (!force) {
     // Strip non-digit characters and take the last 10 digits for phone comparison
     const rawPhone = (parsed.data.phone ?? "").replace(/\D/g, "");
     const last10 = rawPhone.slice(-10);
 
-    const { data: existing } = await supabase
+    const { data: existing } = await tc
       .from("contacts")
       .select("id, name, phone, email");
 
     if (existing && existing.length > 0) {
-      const duplicates = existing.filter((c) => {
+      const duplicates = existing.filter((c: any) => {
         const phoneMatch =
           last10.length === 10 &&
           (c.phone ?? "").replace(/\D/g, "").slice(-10) === last10;
@@ -39,7 +40,7 @@ export async function createContact(formData: ContactFormData, force = false) {
       if (duplicates.length > 0) {
         return {
           error: "Duplicate contact detected",
-          duplicates: duplicates.map((c) => ({
+          duplicates: duplicates.map((c: any) => ({
             id: c.id,
             name: c.name,
             phone: c.phone,
@@ -50,7 +51,7 @@ export async function createContact(formData: ContactFormData, force = false) {
     }
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("contacts")
     .insert({
       name: parsed.data.name,
@@ -115,7 +116,7 @@ export async function updateContact(
     household_id?: string | null;
   }
 ) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Fetch current contact for trigger comparison and consistency enforcement
   const needsConsistency =
@@ -132,7 +133,7 @@ export async function updateContact(
   } | null = null;
 
   if (needsConsistency) {
-    const { data } = await supabase
+    const { data } = await tc
       .from("contacts")
       .select("type, lead_status, stage_bar, tags")
       .eq("id", id)
@@ -180,7 +181,7 @@ export async function updateContact(
     Object.assign(updatePayload, cleanPayload);
   }
 
-  const { error } = await supabase
+  const { error } = await tc
     .from("contacts")
     .update(updatePayload)
     .eq("id", id);
@@ -243,8 +244,8 @@ export async function addCommunicationNote(
   contactId: string,
   body: string
 ) {
-  const supabase = createAdminClient();
-  const { error } = await supabase.from("communications").insert({
+  const tc = await getAuthenticatedTenantClient();
+  const { error } = await tc.from("communications").insert({
     contact_id: contactId,
     direction: "outbound",
     channel: "note",
@@ -267,8 +268,8 @@ export async function addContactDate(
   contactId: string,
   data: { label: string; date: string; recurring: boolean; notes?: string }
 ) {
-  const supabase = createAdminClient();
-  const { error } = await supabase.from("contact_dates").insert({
+  const tc = await getAuthenticatedTenantClient();
+  const { error } = await tc.from("contact_dates").insert({
     contact_id: contactId,
     label: data.label,
     date: data.date,
@@ -289,8 +290,8 @@ export async function updateContactDate(
   contactId: string,
   data: Partial<{ label: string; date: string; recurring: boolean; notes: string }>
 ) {
-  const supabase = createAdminClient();
-  const { error } = await supabase
+  const tc = await getAuthenticatedTenantClient();
+  const { error } = await tc
     .from("contact_dates")
     .update(data)
     .eq("id", dateId);
@@ -304,8 +305,8 @@ export async function updateContactDate(
 }
 
 export async function deleteContactDate(dateId: string, contactId: string) {
-  const supabase = createAdminClient();
-  const { error } = await supabase
+  const tc = await getAuthenticatedTenantClient();
+  const { error } = await tc
     .from("contact_dates")
     .delete()
     .eq("id", dateId);
@@ -321,10 +322,10 @@ export async function deleteContactDate(dateId: string, contactId: string) {
 // ── Quick Action: Send Message ───────────────────────────────
 
 export async function sendContactMessage(contactId: string, body: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Fetch contact to get phone and channel
-  const { data: contact, error: fetchError } = await supabase
+  const { data: contact, error: fetchError } = await tc
     .from("contacts")
     .select("phone, pref_channel")
     .eq("id", contactId)
@@ -346,7 +347,7 @@ export async function sendContactMessage(contactId: string, body: string) {
   }
 
   // Log to communications
-  const { error: logError } = await supabase.from("communications").insert({
+  const { error: logError } = await tc.from("communications").insert({
     contact_id: contactId,
     direction: "outbound",
     channel: contact.pref_channel,
@@ -368,9 +369,9 @@ export async function sendContactEmail(
   subject: string,
   body: string
 ) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { data: contact, error: fetchError } = await supabase
+  const { data: contact, error: fetchError } = await tc
     .from("contacts")
     .select("email")
     .eq("id", contactId)
@@ -388,7 +389,7 @@ export async function sendContactEmail(
   }
 
   // Log to communications
-  await supabase.from("communications").insert({
+  await tc.from("communications").insert({
     contact_id: contactId,
     direction: "outbound",
     channel: "email",
@@ -402,9 +403,9 @@ export async function sendContactEmail(
 // ── Gmail Sync ──────────────────────────────────────────────
 
 export async function syncContactEmailHistory(contactId: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { data: contact } = await supabase
+  const { data: contact } = await tc
     .from("contacts")
     .select("email")
     .eq("id", contactId)
@@ -436,8 +437,8 @@ export async function createContactTask(
     notes?: string;
   }
 ) {
-  const supabase = createAdminClient();
-  const { error } = await supabase.from("tasks").insert({
+  const tc = await getAuthenticatedTenantClient();
+  const { error } = await tc.from("tasks").insert({
     contact_id: contactId,
     title: data.title,
     due_date: data.due_date || null,
@@ -468,8 +469,8 @@ export async function updateContactTask(
     completed_at: string | null;
   }>
 ) {
-  const supabase = createAdminClient();
-  const { error } = await supabase
+  const tc = await getAuthenticatedTenantClient();
+  const { error } = await tc
     .from("tasks")
     .update(data)
     .eq("id", taskId);
@@ -483,8 +484,8 @@ export async function updateContactTask(
 }
 
 export async function deleteContactTask(taskId: string, contactId: string) {
-  const supabase = createAdminClient();
-  const { error } = await supabase.from("tasks").delete().eq("id", taskId);
+  const tc = await getAuthenticatedTenantClient();
+  const { error } = await tc.from("tasks").delete().eq("id", taskId);
 
   if (error) {
     return { error: "Failed to delete task" };
@@ -501,10 +502,10 @@ export async function deleteContact(id: string) {
     return { error: "Invalid contact ID" };
   }
 
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Check for active listings where this contact is the seller
-  const { data: activeListings, error: listingsError } = await supabase
+  const { data: activeListings, error: listingsError } = await tc
     .from("listings")
     .select("id, status")
     .eq("seller_id", id)
@@ -518,7 +519,7 @@ export async function deleteContact(id: string) {
     return { error: "Cannot delete contact with active listings" };
   }
 
-  const { error } = await supabase.from("contacts").delete().eq("id", id);
+  const { error } = await tc.from("contacts").delete().eq("id", id);
 
   if (error) {
     return { error: "Failed to delete contact" };
@@ -531,8 +532,8 @@ export async function deleteContact(id: string) {
 // ── Contact Documents ────────────────────────────────────────
 
 export async function deleteContactDocument(docId: string, contactId: string) {
-  const supabase = createAdminClient();
-  const { error } = await supabase
+  const tc = await getAuthenticatedTenantClient();
+  const { error } = await tc
     .from("contact_documents")
     .delete()
     .eq("id", docId);
@@ -557,9 +558,9 @@ export async function convertContactType(
   contactId: string,
   newType: "buyer" | "seller"
 ) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { data: contact } = await supabase
+  const { data: contact } = await tc
     .from("contacts")
     .select("id, name, type")
     .eq("id", contactId)
@@ -568,7 +569,7 @@ export async function convertContactType(
   if (!contact) return { error: "Contact not found" };
 
   // Update type
-  const { error } = await supabase
+  const { error } = await tc
     .from("contacts")
     .update({ type: newType, lead_status: "qualified" })
     .eq("id", contactId);
@@ -599,7 +600,7 @@ export async function convertContactType(
  * Welcome email comes from the "Speed to Contact" workflow via trigger engine.
  */
 async function enrollInJourney(contactId: string, contactType: string, _name: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
   // Map contact type to journey type
   const journeyMap: Record<string, string> = {
     buyer: "buyer", seller: "seller", customer: "customer", agent: "agent",
@@ -607,7 +608,7 @@ async function enrollInJourney(contactId: string, contactType: string, _name: st
   const journeyType = journeyMap[contactType] || "customer";
 
   // Check if already enrolled
-  const { data: existing } = await supabase
+  const { data: existing } = await tc
     .from("contact_journeys")
     .select("id")
     .eq("contact_id", contactId)
@@ -616,7 +617,7 @@ async function enrollInJourney(contactId: string, contactType: string, _name: st
 
   if (existing) return; // Already enrolled
 
-  await supabase.from("contact_journeys").insert({
+  await tc.from("contact_journeys").insert({
     contact_id: contactId,
     journey_type: journeyType,
     current_phase: "lead",
@@ -640,11 +641,11 @@ async function autoEnrollAndWelcome(
   email: string | null,
   notes: string | null
 ) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
   const journeyType = contactType === "seller" ? "seller" : "buyer";
 
   // 1. Check if already enrolled
-  const { data: existing } = await supabase
+  const { data: existing } = await tc
     .from("contact_journeys")
     .select("id")
     .eq("contact_id", contactId)
@@ -655,7 +656,7 @@ async function autoEnrollAndWelcome(
 
   // 2. Enroll in journey
   const nextEmailAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
-  await supabase.from("contact_journeys").insert({
+  await tc.from("contact_journeys").insert({
     contact_id: contactId,
     journey_type: journeyType,
     current_phase: "lead",
@@ -702,7 +703,7 @@ async function autoEnrollAndWelcome(
     },
   });
 
-  await supabase.from("newsletters").insert({
+  await tc.from("newsletters").insert({
     contact_id: contactId,
     subject,
     email_type: "welcome",

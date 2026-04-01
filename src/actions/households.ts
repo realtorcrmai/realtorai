@@ -1,12 +1,12 @@
 "use server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 
 export async function getHouseholds() {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("households")
     .select("id, name")
     .order("name");
@@ -23,9 +23,9 @@ export async function createHousehold(data: {
   address?: string;
   notes?: string;
 }) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { data: household, error } = await supabase
+  const { data: household, error } = await tc
     .from("households")
     .insert({
       name: data.name,
@@ -51,7 +51,7 @@ export async function updateHousehold(
     notes: string | null;
   }>
 ) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   const updatePayload: Record<string, unknown> = {};
   if (data.name !== undefined) updatePayload.name = data.name;
@@ -59,7 +59,7 @@ export async function updateHousehold(
   if (data.notes !== undefined) updatePayload.notes = data.notes;
   updatePayload.updated_at = new Date().toISOString();
 
-  const { error } = await supabase
+  const { error } = await tc
     .from("households")
     .update(updatePayload)
     .eq("id", id);
@@ -76,10 +76,10 @@ export async function addContactToHousehold(
   contactId: string,
   householdId: string
 ) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Verify the household exists before updating the contact
-  const { data: household, error: householdError } = await supabase
+  const { data: household, error: householdError } = await tc
     .from("households")
     .select("id")
     .eq("id", householdId)
@@ -89,7 +89,7 @@ export async function addContactToHousehold(
     return { error: "Household not found" };
   }
 
-  const { error } = await supabase
+  const { error } = await tc
     .from("contacts")
     .update({ household_id: householdId })
     .eq("id", contactId);
@@ -104,9 +104,9 @@ export async function addContactToHousehold(
 }
 
 export async function removeContactFromHousehold(contactId: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { error } = await supabase
+  const { error } = await tc
     .from("contacts")
     .update({ household_id: null })
     .eq("id", contactId);
@@ -121,9 +121,9 @@ export async function removeContactFromHousehold(contactId: string) {
 }
 
 export async function getHouseholdMembers(householdId: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("contacts")
     .select("id, name, type")
     .eq("household_id", householdId);

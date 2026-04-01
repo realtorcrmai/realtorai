@@ -1,6 +1,6 @@
 "use server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 
 // Step order for cascade reset — changing step N clears all steps after N
@@ -17,7 +17,7 @@ const STEP_ORDER = [
 ];
 
 async function cascadeResetLaterSteps(
-  supabase: ReturnType<typeof createAdminClient>,
+  tc: Awaited<ReturnType<typeof getAuthenticatedTenantClient>>,
   listingId: string,
   stepId: string
 ) {
@@ -28,7 +28,7 @@ async function cascadeResetLaterSteps(
   const laterStepKeys = STEP_ORDER.slice(stepIndex + 1).map((id) => `step-${id}`);
 
   // Delete form_submissions for later steps
-  await supabase
+  await tc
     .from("form_submissions")
     .delete()
     .eq("listing_id", listingId)
@@ -38,21 +38,21 @@ async function cascadeResetLaterSteps(
   const laterStepPrefixes = STEP_ORDER.slice(stepIndex + 1).map((id) => `step-${id}_`);
 
   // Get files that belong to later steps
-  const { data: laterFiles } = await supabase
+  const { data: laterFiles } = await tc
     .from("listing_documents")
     .select("id, file_name, file_url")
     .eq("listing_id", listingId)
     .eq("doc_type", "OTHER");
 
   if (laterFiles && laterFiles.length > 0) {
-    const filesToDelete = laterFiles.filter((f) =>
+    const filesToDelete = laterFiles.filter((f: any) =>
       laterStepPrefixes.some((prefix) => f.file_name.startsWith(prefix))
     );
 
     if (filesToDelete.length > 0) {
       // Remove from storage
       const storagePaths = filesToDelete
-        .map((f) => {
+        .map((f: any) => {
           try {
             const url = new URL(f.file_url);
             const match = url.pathname.match(/listing-documents\/(.+)$/);
@@ -61,19 +61,19 @@ async function cascadeResetLaterSteps(
             return null;
           }
         })
-        .filter((p): p is string => p !== null);
+        .filter((p: any): p is string => p !== null);
 
       if (storagePaths.length > 0) {
-        await supabase.storage.from("listing-documents").remove(storagePaths);
+        await tc.raw.storage.from("listing-documents").remove(storagePaths);
       }
 
       // Remove DB records
-      await supabase
+      await tc
         .from("listing_documents")
         .delete()
         .in(
           "id",
-          filesToDelete.map((f) => f.id)
+          filesToDelete.map((f: any) => f.id)
         );
     }
   }
@@ -84,11 +84,11 @@ export async function saveStepData(
   stepId: string,
   data: Record<string, unknown>
 ) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   if (stepId === "seller-intake") {
     // Seller-intake writes directly to contacts + listings tables
-    const { data: listing } = await supabase
+    const { data: listing } = await tc
       .from("listings")
       .select("seller_id")
       .eq("id", listingId)
@@ -100,7 +100,7 @@ export async function saveStepData(
       if (data.phone) contactUpdate.phone = data.phone;
       if (data.email) contactUpdate.email = data.email;
 
-      await supabase
+      await tc
         .from("contacts")
         .update(contactUpdate)
         .eq("id", listing.seller_id);
@@ -114,7 +114,7 @@ export async function saveStepData(
     if (data.notes !== undefined) listingUpdate.notes = data.notes;
 
     if (Object.keys(listingUpdate).length > 0) {
-      await supabase.from("listings").update(listingUpdate).eq("id", listingId);
+      await tc.from("listings").update(listingUpdate).eq("id", listingId);
     }
 
     // Also save extra fields (seller_type, etc.) that don't map to real columns
@@ -126,7 +126,7 @@ export async function saveStepData(
       }
     }
     if (Object.keys(extraData).length > 0) {
-      await supabase.from("form_submissions").upsert(
+      await tc.from("form_submissions").upsert(
         {
           listing_id: listingId,
           form_key: `step-${stepId}`,
@@ -138,7 +138,7 @@ export async function saveStepData(
     }
   } else {
     // All other steps → upsert form_submissions with JSON form_data
-    await supabase.from("form_submissions").upsert(
+    await tc.from("form_submissions").upsert(
       {
         listing_id: listingId,
         form_key: `step-${stepId}`,
@@ -150,7 +150,7 @@ export async function saveStepData(
   }
 
   // Cascade: delete all later steps' data when this step is saved
-  await cascadeResetLaterSteps(supabase, listingId, stepId);
+  await cascadeResetLaterSteps(tc, listingId, stepId);
 
   revalidatePath(`/listings/${listingId}`);
   return { success: true };
@@ -166,9 +166,9 @@ export async function saveStepData(
  * For form-driven phases, all required form_submissions are upserted as completed.
  */
 export async function markStepComplete(listingId: string, stepId: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { data: listing } = await supabase
+  const { data: listing } = await tc
     .from("listings")
     .select("list_price, mls_number")
     .eq("id", listingId)
@@ -186,7 +186,7 @@ export async function markStepComplete(listingId: string, stepId: string) {
     case "pricing-review":
       // These phases become "completed" once a list_price is set.
       if (!listing.list_price) {
-        await supabase
+        await tc
           .from("listings")
           .update({ list_price: 0 })
           .eq("id", listingId);
@@ -198,7 +198,7 @@ export async function markStepComplete(listingId: string, stepId: string) {
       // Complete all required forms via upsert.
       const requiredForms = ["fintrac", "dorts", "pds", "mlc"];
       for (const formKey of requiredForms) {
-        await supabase.from("form_submissions").upsert(
+        await tc.from("form_submissions").upsert(
           {
             listing_id: listingId,
             form_key: formKey,
@@ -215,7 +215,7 @@ export async function markStepComplete(listingId: string, stepId: string) {
     case "mls-submission":
       // These phases become "completed" once an mls_number is set.
       if (!listing.mls_number) {
-        await supabase
+        await tc
           .from("listings")
           .update({ mls_number: "PENDING" })
           .eq("id", listingId);
@@ -238,10 +238,10 @@ export async function deleteStepFile(
   listingId: string,
   documentId: string
 ) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Get the file path from the document record
-  const { data: doc } = await supabase
+  const { data: doc } = await tc
     .from("listing_documents")
     .select("file_url")
     .eq("id", documentId)
@@ -252,11 +252,11 @@ export async function deleteStepFile(
     const url = new URL(doc.file_url);
     const pathMatch = url.pathname.match(/listing-documents\/(.+)$/);
     if (pathMatch) {
-      await supabase.storage.from("listing-documents").remove([pathMatch[1]]);
+      await tc.raw.storage.from("listing-documents").remove([pathMatch[1]]);
     }
   }
 
-  await supabase.from("listing_documents").delete().eq("id", documentId);
+  await tc.from("listing_documents").delete().eq("id", documentId);
 
   revalidatePath(`/listings/${listingId}`);
   return { success: true };

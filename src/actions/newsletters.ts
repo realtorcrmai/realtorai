@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { sendEmail } from "@/lib/resend";
 import { validatedSend } from "@/lib/validated-send";
 import { generateNewsletterContent, NewsletterContext } from "@/lib/newsletter-ai";
@@ -150,11 +151,11 @@ export async function generateAndQueueNewsletter(
   journeyId?: string,
   sendMode: string = "review"
 ) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Frequency cap: max 1 email per 24 hours per contact
   const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
-  const { count: recentCount } = await supabase
+  const { count: recentCount } = await tc
     .from("newsletters")
     .select("id", { count: "exact", head: true })
     .eq("contact_id", contactId)
@@ -167,7 +168,7 @@ export async function generateAndQueueNewsletter(
 
   // Deduplication: don't send same email type to same contact in same phase within 7 days
   const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-  const { count: dupeCount } = await supabase
+  const { count: dupeCount } = await tc
     .from("newsletters")
     .select("id", { count: "exact", head: true })
     .eq("contact_id", contactId)
@@ -181,7 +182,7 @@ export async function generateAndQueueNewsletter(
   }
 
   // Fetch contact data
-  const { data: contact } = await supabase
+  const { data: contact } = await tc
     .from("contacts")
     .select("*")
     .eq("id", contactId)
@@ -196,7 +197,7 @@ export async function generateAndQueueNewsletter(
   }
 
   // Fetch relevant listings with full data
-  const { data: listings } = await supabase
+  const { data: listings } = await tc
     .from("listings")
     .select("id, address, list_price, status, hero_image_url, bedrooms, bathrooms, square_footage")
     .eq("status", "active")
@@ -226,7 +227,7 @@ export async function generateAndQueueNewsletter(
       phone: branding.phone,
       email: branding.email,
     },
-    listings: listings?.map(l => ({
+    listings: listings?.map((l: any) => ({
       address: l.address,
       price: l.list_price || 0,
       beds: (l as any).bedrooms || 0,
@@ -251,7 +252,7 @@ export async function generateAndQueueNewsletter(
   );
 
   // Save newsletter record
-  const { data: newsletter, error } = await supabase
+  const { data: newsletter, error } = await tc
     .from("newsletters")
     .insert({
       contact_id: contactId,
@@ -283,10 +284,10 @@ export async function generateAndQueueNewsletter(
 }
 
 export async function sendNewsletter(newsletterId: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Fetch newsletter with full contact data (including buyer_preferences and type)
-  const { data: newsletter } = await supabase
+  const { data: newsletter } = await tc
     .from("newsletters")
     .select("*, contacts(id, email, name, type, buyer_preferences)")
     .eq("id", newsletterId)
@@ -304,7 +305,7 @@ export async function sendNewsletter(newsletterId: string) {
   const budgetMax: number | null = buyerPrefs.budget_max || buyerPrefs.max_price || null;
 
   // Fetch journey data for trust level and phase
-  const { data: journey } = await supabase
+  const { data: journey } = await tc
     .from("contact_journeys")
     .select("current_phase, trust_level")
     .eq("contact_id", contact.id)
@@ -316,7 +317,7 @@ export async function sendNewsletter(newsletterId: string) {
 
   // Fetch recent subjects for deduplication check
   const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-  const { data: recentNewsletters } = await supabase
+  const { data: recentNewsletters } = await tc
     .from("newsletters")
     .select("subject")
     .eq("contact_id", contact.id)
@@ -325,12 +326,12 @@ export async function sendNewsletter(newsletterId: string) {
     .order("sent_at", { ascending: false })
     .limit(5);
 
-  const lastSubjects = recentNewsletters?.map((n) => n.subject).filter(Boolean) || [];
+  const lastSubjects = recentNewsletters?.map((n: any) => n.subject).filter(Boolean) || [];
 
   // Capture the current status so we can roll back if needed
   const previousStatus = newsletter.status as string;
 
-  await supabase
+  await tc
     .from("newsletters")
     .update({ status: "sending" })
     .eq("id", newsletterId);
@@ -358,7 +359,7 @@ export async function sendNewsletter(newsletterId: string) {
       });
 
       if (textResult.blocked) {
-        await supabase.from("newsletters").update({
+        await tc.from("newsletters").update({
           status: "failed",
           ai_context: { pipeline_blocked: true, block_reason: textResult.blockReason, warnings: textResult.warnings },
         }).eq("id", newsletterId);
@@ -370,7 +371,7 @@ export async function sendNewsletter(newsletterId: string) {
       if (textResult.corrections.length > 0) {
         finalSubject = textResult.subject;
         // Store corrections for learning
-        await supabase.from("newsletters").update({
+        await tc.from("newsletters").update({
           ai_context: {
             ...((newsletter.ai_context as object) || {}),
             pipeline_corrections: textResult.corrections,
@@ -405,7 +406,7 @@ export async function sendNewsletter(newsletterId: string) {
       await recordQualityOutcome(newsletterId, qualityScore.overall, qualityScore.dimensions);
 
       if (decision.action === "block") {
-        await supabase.from("newsletters").update({
+        await tc.from("newsletters").update({
           status: "failed",
           quality_score: qualityScore.overall,
           ai_context: {
@@ -422,7 +423,7 @@ export async function sendNewsletter(newsletterId: string) {
 
       // Auto-regeneration: if score is low, mark for realtor review instead of sending
       if (decision.action === "regenerate") {
-        await supabase.from("newsletters").update({
+        await tc.from("newsletters").update({
           status: "draft", // Keep as draft — realtor should review low-quality emails
           ai_context: {
             ...((newsletter.ai_context as object) || {}),
@@ -461,7 +462,7 @@ export async function sendNewsletter(newsletterId: string) {
 
     if (result.sent) {
       // Log to communications
-      await supabase.from("communications").insert({
+      await tc.from("communications").insert({
         contact_id: newsletter.contact_id,
         direction: "outbound",
         channel: "email",
@@ -483,7 +484,7 @@ export async function sendNewsletter(newsletterId: string) {
     };
   } catch (e) {
     // Roll back status to what it was before we set it to "sending"
-    await supabase
+    await tc
       .from("newsletters")
       .update({
         status: previousStatus,
@@ -503,8 +504,8 @@ export async function approveNewsletter(newsletterId: string) {
 }
 
 export async function skipNewsletter(newsletterId: string) {
-  const supabase = createAdminClient();
-  await supabase
+  const tc = await getAuthenticatedTenantClient();
+  await tc
     .from("newsletters")
     .update({ status: "skipped", updated_at: new Date().toISOString() })
     .eq("id", newsletterId);
@@ -513,9 +514,9 @@ export async function skipNewsletter(newsletterId: string) {
 }
 
 export async function getApprovalQueue() {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { data } = await supabase
+  const { data } = await tc
     .from("newsletters")
     .select("*, contacts(id, name, email, type)")
     .eq("status", "draft")
@@ -526,25 +527,25 @@ export async function getApprovalQueue() {
 }
 
 export async function getNewsletterAnalytics(days: number = 30) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
   const since = new Date(Date.now() - days * 86400000).toISOString();
 
-  const { data: newsletters } = await supabase
+  const { data: newsletters } = await tc
     .from("newsletters")
     .select("id, email_type, status, sent_at")
     .eq("status", "sent")
     .gte("sent_at", since);
 
-  const { data: events } = await supabase
+  const { data: events } = await tc
     .from("newsletter_events")
     .select("event_type, newsletter_id, link_type")
     .gte("created_at", since);
 
   const sent = newsletters?.length || 0;
-  const opens = events?.filter(e => e.event_type === "opened").length || 0;
-  const clicks = events?.filter(e => e.event_type === "clicked").length || 0;
-  const bounces = events?.filter(e => e.event_type === "bounced").length || 0;
-  const unsubscribes = events?.filter(e => e.event_type === "unsubscribed").length || 0;
+  const opens = events?.filter((e: any) => e.event_type === "opened").length || 0;
+  const clicks = events?.filter((e: any) => e.event_type === "clicked").length || 0;
+  const bounces = events?.filter((e: any) => e.event_type === "bounced").length || 0;
+  const unsubscribes = events?.filter((e: any) => e.event_type === "unsubscribed").length || 0;
 
   // Group by email type
   const byType: Record<string, { sent: number; opens: number; clicks: number }> = {};
@@ -553,7 +554,7 @@ export async function getNewsletterAnalytics(days: number = 30) {
     byType[n.email_type].sent++;
   }
   for (const e of events || []) {
-    const newsletter = newsletters?.find(n => n.id === e.newsletter_id);
+    const newsletter = newsletters?.find((n: any) => n.id === e.newsletter_id);
     if (newsletter && byType[newsletter.email_type]) {
       if (e.event_type === "opened") byType[newsletter.email_type].opens++;
       if (e.event_type === "clicked") byType[newsletter.email_type].clicks++;
@@ -586,10 +587,10 @@ export async function bulkApproveNewsletters(ids: string[]) {
 }
 
 export async function sendCampaign(emailType: string, recipients: string, subject: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Build recipient query based on selection
-  let query = supabase
+  let query = tc
     .from("contacts")
     .select("id, name, email, type")
     .eq("newsletter_unsubscribed", false)

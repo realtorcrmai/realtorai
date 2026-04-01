@@ -1,13 +1,15 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { fetchCalendarEvents } from "@/lib/google-calendar";
 
 export async function getCalendarEvents(start: string, end: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
+  const adminSupabase = createAdminClient();
 
-  // Get Google Calendar events
-  const { data: tokenData } = await supabase
+  // Get Google Calendar events (google_tokens uses user_email, keep admin)
+  const { data: tokenData } = await adminSupabase
     .from("google_tokens")
     .select("*")
     .limit(1);
@@ -44,23 +46,24 @@ export async function getCalendarEvents(start: string, end: string) {
   }
 
   // Get CRM showings
-  const { data: showings } = await supabase
+  const { data: showings } = await tc
     .from("appointments")
     .select("*")
     .gte("start_time", start)
     .lte("end_time", end);
 
   // Fetch listing addresses
-  const listingIds = [...new Set((showings ?? []).map((s: { listing_id: string }) => s.listing_id))];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const showingsArr = (showings ?? []) as any[];
+  const listingIds = [...new Set(showingsArr.map((s) => s.listing_id as string))];
   const { data: listingsData } = listingIds.length > 0
-    ? await supabase.from("listings").select("id, address").in("id", listingIds)
-    : { data: [] };
+    ? await tc.from("listings").select("id, address").in("id", listingIds)
+    : { data: [] as any[] };
 
-  const listingMap = new Map(
-    (listingsData ?? []).map((l: { id: string; address: string }) => [l.id, l.address])
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const listingMap = new Map((listingsData ?? []).map((l: any) => [l.id, l.address]));
 
-  const showingEvents = (showings ?? []).map((s: Record<string, string>) => ({
+  const showingEvents = showingsArr.map((s) => ({
     id: s.id,
     title: `Showing: ${listingMap.get(s.listing_id) ?? "Unknown"}`,
     start: s.start_time,

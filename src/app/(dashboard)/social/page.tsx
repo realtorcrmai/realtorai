@@ -1,20 +1,20 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { SocialDashboardClient } from "@/components/social/SocialDashboardClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function SocialPage() {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Fetch brand kit
-  const { data: brandKit } = await supabase
+  const { data: brandKit } = await tc
     .from("social_brand_kits")
     .select("*")
     .limit(1)
     .single();
 
   // Fetch connected accounts
-  const { data: accounts } = await supabase
+  const { data: accounts } = await tc
     .from("social_accounts")
     .select("*")
     .order("connected_at", { ascending: false });
@@ -22,7 +22,7 @@ export default async function SocialPage() {
   // Fetch recent posts (last 30 days)
   // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is safe
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
-  const { data: recentPosts } = await supabase
+  const { data: recentPosts } = await tc
     .from("social_posts")
     .select("*")
     .gte("created_at", thirtyDaysAgo)
@@ -30,7 +30,7 @@ export default async function SocialPage() {
     .limit(50);
 
   // Fetch pending drafts
-  const { data: pendingDrafts } = await supabase
+  const { data: pendingDrafts } = await tc
     .from("social_posts")
     .select("*")
     .in("status", ["draft", "approved"])
@@ -38,7 +38,7 @@ export default async function SocialPage() {
     .limit(20);
 
   // Fetch scheduled posts
-  const { data: scheduledPosts } = await supabase
+  const { data: scheduledPosts } = await tc
     .from("social_posts")
     .select("*")
     .eq("status", "scheduled")
@@ -47,7 +47,7 @@ export default async function SocialPage() {
     .limit(20);
 
   // Fetch templates
-  const { data: templates } = await supabase
+  const { data: templates } = await tc
     .from("social_templates")
     .select("*")
     .eq("is_active", true)
@@ -55,16 +55,16 @@ export default async function SocialPage() {
     .limit(50);
 
   // Compute stats
-  const published = recentPosts?.filter(p => p.status === "published") || [];
+  const published = (recentPosts ?? []).filter((p: any) => p.status === "published");
   const stats = {
     totalPosts30d: published.length,
-    totalImpressions: published.reduce((sum, p) => sum + (p.total_impressions || 0), 0),
-    totalEngagement: published.reduce((sum, p) => sum + (p.total_engagement || 0), 0),
-    totalClicks: published.reduce((sum, p) => sum + (p.total_clicks || 0), 0),
-    totalLeads: published.reduce((sum, p) => sum + (p.total_leads || 0), 0),
+    totalImpressions: published.reduce((sum: number, p: any) => sum + (p.total_impressions || 0), 0),
+    totalEngagement: published.reduce((sum: number, p: any) => sum + (p.total_engagement || 0), 0),
+    totalClicks: published.reduce((sum: number, p: any) => sum + (p.total_clicks || 0), 0),
+    totalLeads: published.reduce((sum: number, p: any) => sum + (p.total_leads || 0), 0),
     pendingCount: pendingDrafts?.length || 0,
     scheduledCount: scheduledPosts?.length || 0,
-    connectedPlatforms: accounts?.filter(a => a.connection_status === "connected").length || 0,
+    connectedPlatforms: accounts?.filter((a: any) => a.connection_status === "connected").length || 0,
   };
 
   return (

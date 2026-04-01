@@ -10,8 +10,8 @@ import {
   resetRateLimit,
 } from "@/lib/rate-limit";
 
-const DEMO_EMAIL = process.env.DEMO_EMAIL || "demo@realestatecrm.com";
-const DEMO_PASSWORD = process.env.DEMO_PASSWORD || "demo1234";
+const DEMO_EMAIL = process.env.DEMO_EMAIL;
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
 // Cache whether users table exists to avoid hitting Supabase on every session check
@@ -172,6 +172,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.accessToken = token.accessToken as string;
       session.user.role = token.role as "admin" | "realtor" | undefined;
       session.user.enabledFeatures = token.enabledFeatures as string[] | undefined;
+      // Multi-tenancy: userId = realtorId (the tenant identifier)
+      session.user.id = (token.userId as string) || (token.sub as string) || "";
+      (session.user as unknown as Record<string, unknown>).realtorId = (token.userId as string) || (token.sub as string) || "";
       return session;
     },
   },
