@@ -1,7 +1,7 @@
 import { AppHeader } from "@/components/layout/AppHeader";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { VoiceAgentWidget } from "@/components/voice-agent/VoiceAgentWidget";
-import ChatWidget from "@/components/rag/ChatWidget";
+import { UnifiedAgentWidget } from "@/components/agent/UnifiedAgentWidget";
 import { Toaster } from "@/components/ui/sonner";
 import { NetworkErrorBanner } from "@/components/shared/NetworkErrorBanner";
 import { OnboardingChecklist } from "@/components/help/OnboardingChecklist";
@@ -32,11 +32,11 @@ export default function DashboardLayout({
       {/* Mobile bottom nav */}
       <MobileNav />
 
-      {/* Floating Voice Agent Widget — opens chat on click */}
-      <VoiceAgentWidget />
+      {/* Unified AI Agent — single button for text + voice, replaces ChatWidget + VoiceAgentWidget */}
+      <UnifiedAgentWidget />
 
-      {/* RAG Chat Widget — AI assistant grounded in CRM data */}
-      <ChatWidget />
+      {/* Legacy Voice Agent Widget — keep until unified agent has voice mode fully working */}
+      {/* <VoiceAgentWidget /> */}
 
       {/* Onboarding checklist (first 30 days) */}
       <OnboardingChecklist />
