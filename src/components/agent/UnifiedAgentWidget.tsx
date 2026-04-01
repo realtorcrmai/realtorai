@@ -45,6 +45,16 @@ export function UnifiedAgentWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Listen for "Ask AI" from CommandPalette
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      setOpen(true);
+      setInputValue(e.detail.query);
+    };
+    window.addEventListener("open-agent", handler as EventListener);
+    return () => window.removeEventListener("open-agent", handler as EventListener);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || isLoading) return;
@@ -58,7 +68,7 @@ export function UnifiedAgentWidget() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-lg transition-all hover:scale-110 bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-2xl"
+        className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 w-14 h-14 rounded-full shadow-lg transition-all hover:scale-110 bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-2xl"
         aria-label="Open AI Assistant"
         title="AI Assistant"
       >
@@ -69,7 +79,7 @@ export function UnifiedAgentWidget() {
 
   // Expanded chat panel
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-[400px] h-[600px] bg-white dark:bg-card rounded-2xl shadow-2xl border border-border flex flex-col overflow-hidden">
+    <div className="fixed z-50 inset-x-0 bottom-0 h-[80vh] md:inset-auto md:bottom-6 md:right-6 md:w-[400px] md:h-[600px] bg-white dark:bg-card rounded-t-2xl md:rounded-2xl shadow-2xl border border-border flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white shrink-0">
         <div className="flex items-center gap-2">
