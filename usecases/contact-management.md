@@ -12,7 +12,7 @@ changelog: []
 
 ## Problem Statement
 
-BC realtors manage dozens of buyers, sellers, and professional partners simultaneously, each at different lifecycle stages and with different communication preferences. Without a structured system, leads fall through the cracks, follow-up is inconsistent, and family/referral networks go untapped. ListingFlow's contact management solves this by providing a unified profile per person — covering their pipeline stage, communication history, preferences, household groupings, and relationship graph — so a realtor can see the full picture at a glance and act immediately.
+BC realtors manage dozens of buyers, sellers, and professional partners simultaneously, each at different lifecycle stages and with different communication preferences. Without a structured system, leads fall through the cracks, follow-up is inconsistent, and family/referral networks go untapped. Realtors360's contact management solves this by providing a unified profile per person — covering their pipeline stage, communication history, preferences, household groupings, and relationship graph — so a realtor can see the full picture at a glance and act immediately.
 
 ## User Roles
 

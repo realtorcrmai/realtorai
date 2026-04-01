@@ -1,4 +1,4 @@
-# ListingFlow CRM — Comprehensive Evaluation Tests
+# Realtors360 CRM — Comprehensive Evaluation Tests
 
 **Last Updated:** March 2026
 **Total Test Cases:** 200
@@ -320,7 +320,7 @@ Each test is a manual verification. Navigate to the URL, perform the action, ver
 | 11.5 | Preview button | Click "Preview" on variant | New tab opens with full rendered HTML site | |
 | 11.6 | Approve variant | Click "Select" on variant | Variant approved, success banner shown | |
 | 11.7 | Open website button | After approval → "Open Your Website" | New tab opens with approved site | |
-| 11.8 | Health check | `GET /health` | `{"status":"ok","service":"listingflow-agent"}` | |
+| 11.8 | Health check | `GET /health` | `{"status":"ok","service":"realtors360-agent"}` | |
 
 ---
 
@@ -376,7 +376,7 @@ Each test is a manual verification. Navigate to the URL, perform the action, ver
 | 15.3 | Empty states | View pages with no data | Helpful empty state messages (not blank) | |
 | 15.4 | Error handling | Trigger API error (e.g., bad contactId) | User-friendly error message, no crash | |
 | 15.5 | Navigation | Click through all nav items | All pages load without errors | |
-| 15.6 | Glass/gradient design | Check dashboard, newsletters | ListingFlow glassmorphism design applied | |
+| 15.6 | Glass/gradient design | Check dashboard, newsletters | Realtors360 glassmorphism design applied | |
 | 15.7 | Email preview iframe | Queue → preview email | Iframe renders email correctly, sandbox applied | |
 | 15.8 | Walkthrough buttons | Newsletter guide → Previous/Next | Buttons visible, navigation works, progress bar updates | |
 

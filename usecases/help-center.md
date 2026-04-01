@@ -15,7 +15,7 @@ changelog:
 
 ## Problem Statement
 
-BC realtors using ListingFlow need to understand features, see examples, and get answers without leaving the CRM. Knowledge lives in markdown files that users never see, and onboarding requires 1:1 training. The help center turns existing use cases, test scenarios, and AI agent knowledge into a self-service documentation system.
+BC realtors using Realtors360 need to understand features, see examples, and get answers without leaving the CRM. Knowledge lives in markdown files that users never see, and onboarding requires 1:1 training. The help center turns existing use cases, test scenarios, and AI agent knowledge into a self-service documentation system.
 
 ## User Roles
 
@@ -91,7 +91,7 @@ Agent finds answer in <30 seconds without leaving CRM context.
 - Prospective buyer searches Google for "FINTRAC requirements BC realtor CRM"
 
 **Steps:**
-1. Google shows ListingFlow /docs/fintrac-compliance with FAQ rich snippet
+1. Google shows Realtors360 /docs/fintrac-compliance with FAQ rich snippet
 2. User clicks → sees public article with scenarios and FAQ
 3. Reads content → clicks "Get Started" CTA
 4. Redirected to /login

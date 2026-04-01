@@ -14,7 +14,7 @@ changelog: []
 
 Real estate agents lose clients to competitors not because of bad service but because of delayed follow-up. A new buyer lead that doesn't get a response within an hour is often already in conversation with another agent. A past client who never hears from their agent again stops referring business. Manually scheduling SMS check-ins, drip emails, and task reminders across a full contact database is impossible — agents either over-communicate with whoever is top of mind or under-communicate with everyone else.
 
-ListingFlow's Workflow Automation engine solves this with a visual workflow builder (React Flow), a step execution engine, contact segment-based bulk enrollment, and a cron-driven processor that runs every 1–2 minutes. Agents define sequences once and the system executes them reliably — sending the right message to the right contact at the right time.
+Realtors360's Workflow Automation engine solves this with a visual workflow builder (React Flow), a step execution engine, contact segment-based bulk enrollment, and a cron-driven processor that runs every 1–2 minutes. Agents define sequences once and the system executes them reliably — sending the right message to the right contact at the right time.
 
 ---
 
@@ -115,7 +115,7 @@ Sequences of wait → message → wait → message nodes create time-delayed dri
 1. Agent navigates to `/automations` → clicks "New Workflow."
 2. Names it "New Buyer Welcome Drip" and opens the React Flow canvas.
 3. Drags 5 nodes onto the canvas:
-   - Node 1: `auto_sms` — "Hi {{contact_first_name}}, this is {{agent_name}} from ListingFlow Realty! Excited to help you find your perfect home. I'll be in touch shortly."
+   - Node 1: `auto_sms` — "Hi {{contact_first_name}}, this is {{agent_name}} from Realtors360 Realty! Excited to help you find your perfect home. I'll be in touch shortly."
    - Node 2: `wait` — 3 days
    - Node 3: `auto_email` — Subject: "Are you pre-approved?" — Body with link to mortgage broker partner
    - Node 4: `wait` — 4 days

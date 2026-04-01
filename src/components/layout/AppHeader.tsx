@@ -56,6 +56,7 @@ const moreItems: { href: string; label: string; icon: typeof Building2; featureK
   { href: "/forms", label: "BC Forms", icon: FileText, featureKey: "forms" },
   { href: "/newsletters", label: "Email Marketing", icon: Mail, featureKey: "newsletters" },
   { href: "/websites", label: "Website Marketing", icon: Globe, featureKey: "website" },
+  { href: "/social", label: "Social Media", icon: Globe, featureKey: "social" },
 ];
 
 export function AppHeader() {

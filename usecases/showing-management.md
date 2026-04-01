@@ -14,7 +14,7 @@ changelog: []
 
 Coordinating property showings requires rapid communication between buyer agents, listing agents, and sellers. Without automation, a realtor must manually phone or text the seller for every showing request, wait for confirmation, then relay the lockbox code to the buyer agent — a process that can delay access by hours and create gaps in the audit trail. Missed or unconfirmed showings erode seller trust and cost deals.
 
-ListingFlow automates this entire flow: showing requests are logged instantly, sellers are notified via their preferred channel (SMS or WhatsApp), their YES/NO reply is processed by webhook, Google Calendar is checked for conflicts, lockbox codes are delivered automatically on confirmation, and every exchange is recorded in the communications timeline.
+Realtors360 automates this entire flow: showing requests are logged instantly, sellers are notified via their preferred channel (SMS or WhatsApp), their YES/NO reply is processed by webhook, Google Calendar is checked for conflicts, lockbox codes are delivered automatically on confirmation, and every exchange is recorded in the communications timeline.
 
 ---
 

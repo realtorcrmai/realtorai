@@ -14,7 +14,7 @@ changelog: []
 
 BC realtors must shepherd a property listing through a legally mandated sequence of steps — FINTRAC identity verification, BCREA form completion, DocuSign routing, and MLS submission — before a listing can go live. This process involves at least 12 standard forms, data from 4 external sources (BC Geocoder, ParcelMap BC, LTSA, BC Assessment), AI-generated marketing content, and coordination across seller, agent, and regulatory systems. Without automation, agents manage this in disconnected tools: spreadsheets for tracking, email for forms, manual copy-paste into MLS. Errors cause compliance gaps and delayed listings.
 
-ListingFlow collapses this into a single 9-step pipeline (8 active phases + post-listing) with status derived automatically from real data — form completions, MLS number presence, list price entry — rather than manual checkbox-ticking.
+Realtors360 collapses this into a single 9-step pipeline (8 active phases + post-listing) with status derived automatically from real data — form completions, MLS number presence, list price entry — rather than manual checkbox-ticking.
 
 ---
 
@@ -37,7 +37,7 @@ ListingFlow collapses this into a single 9-step pipeline (8 active phases + post
 - **Workflow UI component:** `src/components/listings/ListingWorkflow.tsx`
 - **Step logic:** `src/components/listings/listingWorkflowUtils.ts` — `WORKFLOW_STEPS`, `deriveStepStatuses()`, `formatPrice()`
 - **Server actions:** `src/actions/listings.ts` (CRUD, status, override), `src/actions/workflow.ts` (step data, mark complete, cascade reset)
-- **Forms panel:** `src/components/listings/BCFormsPanel.tsx` — 8 BCREA forms rendered via Python server at `LISTINGFLOW_URL`
+- **Forms panel:** `src/components/listings/BCFormsPanel.tsx` — 8 BCREA forms rendered via Python server at `REALTORS360_URL`
 - **Form readiness:** `src/components/listings/FormReadinessPanel.tsx`
 - **Status override:** `src/components/listings/ManualStatusOverride.tsx`
 - **RAG ingestion:** every `createListing` and `updateListing` call triggers `triggerIngest("listings", id)` for voice agent search
@@ -120,7 +120,7 @@ Fields stored in `form_submissions` with `form_key = "step-pricing-review"`. Lis
 
 Substeps: fill FINTRAC, fill DORTS, fill PDS, fill MLC.
 
-8 BCREA forms rendered by the Python ListingFlow server (`LISTINGFLOW_URL`, default `http://127.0.0.1:8767`):
+8 BCREA forms rendered by the Python Realtors360 server (`REALTORS360_URL`, default `http://127.0.0.1:8767`):
 
 | Key | Label | Purpose |
 |-----|-------|---------|
@@ -289,7 +289,7 @@ Step order for cascade: `seller-intake → data-enrichment → cma → pricing-r
 3. Agent clicks "FINTRAC" → `openForm("fintrac")`:
    - Opens blank tab
    - `POST /api/forms/generate` with payload `{ formKey: "fintrac", listing: { propAddress, listPrice, mlsNumber, agentName, brokerage, sellers: [{ fullName, phone, email }] } }`
-   - Next.js route proxies to Python server `POST /api/form/html` at `LISTINGFLOW_URL`
+   - Next.js route proxies to Python server `POST /api/form/html` at `REALTORS360_URL`
    - Returns pre-filled HTML → written to new tab via `document.open()` + `document.write(html)`
 4. Agent reviews, prints/saves, uploads signed copy to `listing_documents` with `doc_type = "FINTRAC"`
 5. Agent repeats for DORTS (`doc_type = "DORTS"`) and PDS (`doc_type = "PDS"`)

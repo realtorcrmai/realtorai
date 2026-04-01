@@ -1,4 +1,4 @@
-# Contributing to ListingFlow CRM
+# Contributing to Realtors360 CRM
 
 ## Git Workflow
 
@@ -102,7 +102,7 @@ bash scripts/health-check.sh         # Environment check
 
 - **TypeScript** for all frontend/API code
 - **Python** for voice agent (`voice_agent/server/`)
-- Use `lf-*` CSS classes (ListingFlow design system)
+- Use `lf-*` CSS classes (Realtors360 design system)
 - Server Actions for mutations (`src/actions/`)
 - API routes for GETs and webhooks (`src/app/api/`)
 - Zod v4 for all validation

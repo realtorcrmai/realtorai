@@ -1,4 +1,4 @@
-# Deploy Skill — ListingFlow CRM
+# Deploy Skill — Realtors360 CRM
 
 Run this skill to build and deploy all services locally.
 
@@ -9,7 +9,7 @@ Run this skill to build and deploy all services locally.
 | CRM (Next.js) | 3000 | `.` (repo root) | `npm run dev` |
 | Voice Agent | 8768 | `voice_agent/server/` | `python voice_agent/server/main.py` |
 | Form Server | 8767 | Python server | `python server.py` |
-| Website Agent | 8769 | `listingflow-agent/` | `npm run dev` (optional, separate service) |
+| Website Agent | 8769 | `realtors360-agent/` | `npm run dev` (optional, separate service) |
 
 ## Steps
 
@@ -92,7 +92,7 @@ Verify: `curl -s http://localhost:8768/api/health` should return 200.
 Only needed if working on website generation features (separate service):
 
 ```bash
-cd ./listingflow-agent
+cd ./realtors360-agent
 npm install
 npm run dev &>/tmp/agent-server.log &
 ```

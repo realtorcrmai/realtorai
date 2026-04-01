@@ -4,7 +4,7 @@
 
 Separate Python microservice that ingests competitor emails, embeds them with vector search, analyzes patterns with Claude, and feeds insights back to the CRM.
 
-**Service:** `listingflow-rag/` (new directory at monorepo root)
+**Service:** `realtors360-rag/` (new directory at monorepo root)
 **Stack:** Python + FastAPI + Voyage AI + pgvector + Claude
 **Deploy:** Railway or Fly.io (Dockerized, independent from CRM)
 **Communicates with CRM via:** shared Supabase DB + REST API
@@ -21,7 +21,7 @@ Monitoring Inbox → RAG Agent (Python) → pgvector (Supabase) → CRM reads in
 
 ### Data Flow
 
-1. Competitor emails arrive at `monitor+{source}@listingflow.com`
+1. Competitor emails arrive at `monitor+{source}@realtors360.com`
 2. RAG agent ingests: parse HTML → extract text → embed → store in pgvector
 3. Weekly research cron: analyze all stored emails → find patterns → write insights
 4. CRM reads: `competitive_insights` + `agent_recommendations` tables
@@ -32,7 +32,7 @@ Monitoring Inbox → RAG Agent (Python) → pgvector (Supabase) → CRM reads in
 ## Phase 1: Infrastructure (2 days)
 
 ### 1.1 Project Setup
-- Create `listingflow-rag/` directory
+- Create `realtors360-rag/` directory
 - FastAPI app with health check
 - Dockerfile + docker-compose for local dev
 - `.env` with: SUPABASE_URL, SUPABASE_KEY, ANTHROPIC_API_KEY, VOYAGE_API_KEY
@@ -235,7 +235,7 @@ RAG_SERVICE_URL=https://lf-rag.fly.dev # Production
 ## Phase 5: Email Monitoring (1 day)
 
 ### 5.1 Monitoring Inbox Setup
-- Create email aliases: `monitor+compass@listingflow.com`, etc.
+- Create email aliases: `monitor+compass@realtors360.com`, etc.
 - Subscribe to competitor newsletters manually (one-time)
 - Forward rule: all monitor+ emails → RAG agent webhook
 
@@ -270,7 +270,7 @@ async def email_webhook(email: InboundEmail):
 ## File Structure
 
 ```
-listingflow-rag/
+realtors360-rag/
 ├── main.py
 ├── config.py
 ├── services/
@@ -322,7 +322,7 @@ python-dotenv==1.*
 
 ### Local Dev
 ```bash
-cd listingflow-rag
+cd realtors360-rag
 pip install -r requirements.txt
 uvicorn main:app --port 8769 --reload
 ```
@@ -509,7 +509,7 @@ class CRMSync:
 ### 6.7 Updated File Structure
 
 ```
-listingflow-rag/
+realtors360-rag/
 ├── main.py
 ├── config.py
 ├── services/

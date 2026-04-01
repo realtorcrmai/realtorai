@@ -14,7 +14,7 @@ changelog: []
 
 Realtors need to stay top-of-mind with buyers and sellers throughout long transaction cycles — sometimes years. Manual email campaigns are inconsistent, generic, and time-consuming. Without automation, a realtor misses the moment a buyer clicks a listing link at 11pm, or forgets to send a market update to their farming area, or sends the same generic newsletter to a hot buyer who is already under contract.
 
-ListingFlow's Email Marketing Engine solves this with six event-triggered email types, Claude AI content generation, React Email HTML templates, lifecycle-driven contact journeys, granular click tracking via Resend webhooks, engagement scoring, and a visual automation builder (React Flow). Every email is personalized using the contact's `newsletter_intelligence` JSONB profile — AI reads their full click history, inferred interests, price range, and areas before generating new content.
+Realtors360's Email Marketing Engine solves this with six event-triggered email types, Claude AI content generation, React Email HTML templates, lifecycle-driven contact journeys, granular click tracking via Resend webhooks, engagement scoring, and a visual automation builder (React Flow). Every email is personalized using the contact's `newsletter_intelligence` JSONB profile — AI reads their full click history, inferred interests, price range, and areas before generating new content.
 
 ---
 

@@ -14,7 +14,7 @@ changelog: []
 
 A realtor's hands are often occupied — driving between showings, walking through a property with a client, or in back-to-back calls. Switching to a laptop to log a note, create a task, or look up a contact breaks flow and loses context. Repetitive data entry (seller intake, showing booking, deal stage updates) is time-consuming when done via mouse-and-keyboard.
 
-ListingFlow's Voice Agent solves this with a floating chat-and-voice widget embedded in every CRM page. The realtor can speak or type naturally to search the database, create and update records, navigate the app, fill seller intake forms by dictation, confirm showings, check the pipeline, and get contextual help — all without leaving the current page. The same agent works in three modes: realtor (full internal CRM access), client (brand-safe public representative), and generic (general-purpose assistant).
+Realtors360's Voice Agent solves this with a floating chat-and-voice widget embedded in every CRM page. The realtor can speak or type naturally to search the database, create and update records, navigate the app, fill seller intake forms by dictation, confirm showings, check the pipeline, and get contextual help — all without leaving the current page. The same agent works in three modes: realtor (full internal CRM access), client (brand-safe public representative), and generic (general-purpose assistant).
 
 ---
 
@@ -248,7 +248,7 @@ Tools are dispatched in `handle_realtor_tool()` in `realtor_tools.py`. All CRM t
 | Tool | Notes | Description |
 |------|-------|-------------|
 | `navigate_to` | Client-side only | Navigate to CRM page; `page` enum + optional `id` and `tab` |
-| `get_crm_help` | SQLite + prompt | Answer "how do I..." questions about ListingFlow |
+| `get_crm_help` | SQLite + prompt | Answer "how do I..." questions about Realtors360 |
 | `configure_client_call` | SQLite | Set up automated client outreach playbook |
 | `get_conversation_history` | SQLite | Retrieve past session history for context |
 
@@ -450,7 +450,7 @@ VOICE_AGENT_PORT=8768
 VOICE_AGENT_API_KEY=                # Empty = no auth
 AGENT_MODE=realtor                  # realtor | client | generic
 REALTOR_ID=R001
-LISTINGFLOW_API=http://127.0.0.1:3000
+REALTORS360_API=http://127.0.0.1:3000
 
 # Session
 SESSION_EXPIRY_HOURS=24

@@ -1,10 +1,17 @@
-# ListingFlow CRM — Production Deployment Guide
+# Realtors360 CRM — Production Deployment Guide
 
 ## Pre-Deployment Checklist
 
 ### Critical Blockers (Must Fix Before Production)
 
-- [ ] **RLS Policies**: Remove anon full-access policies from all tables. Implement user-scoped RLS (migration 003 grants anon CRUD on everything — the `NEXT_PUBLIC_SUPABASE_ANON_KEY` is exposed in client JS)
+**MULTI-TENANCY (P0 — Launch Blocker, found 2026-03-30):**
+- [ ] **Add `realtor_id` column** to ALL core tables (contacts, listings, appointments, communications, newsletters, contact_journeys, tasks, deals, etc.)
+- [ ] **Rewrite ALL RLS policies** — change `auth.role() = 'authenticated'` → `auth.uid() = realtor_id` on every table
+- [ ] **Remove anon access** — DROP all policies from migration 003 (anon full access on contacts, listings, appointments, communications, listing_documents)
+- [ ] **Remove `USING (true)` policies** on: agent_events, agent_decisions, contact_instructions, rag_embeddings, competitive_emails
+- [ ] **Without these fixes:** Realtor A can see all of Realtor B's contacts, listings, emails, and data
+
+**API SECURITY (P0):**
 - [ ] **Unauthenticated API Routes**: Add auth checks to these middleware-bypassed routes that have write access:
   - `POST /api/contacts/log-interaction` — writes to communications + activity_log
   - `POST /api/contacts/context` — modifies contact records
@@ -13,8 +20,18 @@
   - `POST /api/contacts/journey` — modifies journey data
   - `POST /api/newsletters/edit` — modifies newsletters
   - `POST /api/listings/blast` — sends bulk emails to any address
+- [ ] **Remove hardcoded CRON secret** from `src/components/dashboard/DailyDigestCard.tsx` — fallback `"listingflow-cron-secret-2026"` is exposed in client JS
+- [ ] **Remove hardcoded demo credentials** from `src/lib/auth.ts` — fallback `demo@realestatecrm.com / demo1234`
+- [ ] **HMAC-signed unsubscribe links** — current implementation uses plain contact UUID (enumeration risk)
+
+**ENVIRONMENT:**
 - [ ] **Set `NEXT_PUBLIC_APP_URL`**: Without this, all email links point to `http://localhost:3000`
 - [ ] **Remove test endpoint**: Delete or gate `src/app/api/test/generate-newsletter/route.ts`
+
+**PRIVACY/COMPLIANCE (P1):**
+- [ ] **Cookie consent banner** — PIPEDA/CASL requires consent before tracking
+- [ ] **Data deletion endpoint** — PIPEDA right-to-erasure requirement
+- [ ] **CASL consent expiry** — cron exists but logic incomplete
 
 ### High Priority
 
@@ -96,7 +113,7 @@ AI_SCORING_MODEL=claude-sonnet-4-20250514
 # External services
 CONTENT_GENERATOR_URL=https://your-content-service.com
 NEXT_PUBLIC_VOICE_AGENT_URL=https://your-voice-agent.com
-LISTINGFLOW_URL=https://your-form-server.com
+REALTORS360_URL=https://your-form-server.com
 ```
 
 ---

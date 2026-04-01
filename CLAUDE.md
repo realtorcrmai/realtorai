@@ -1,8 +1,8 @@
-# CLAUDE.md — ListingFlow Real Estate CRM
+# CLAUDE.md — Realtors360 Real Estate CRM
 
 ## Project Overview
 
-ListingFlow is a real estate transaction management CRM for licensed BC realtors. It automates the full property listing lifecycle — from seller intake through closing — with integrated showing management, BCREA form generation, AI content creation, and regulatory compliance tracking.
+Realtors360 is a real estate transaction management CRM for licensed BC realtors. It automates the full property listing lifecycle — from seller intake through closing — with integrated showing management, BCREA form generation, AI content creation, and regulatory compliance tracking.
 
 **Live URL:** localhost:3000 (dev)
 **Repo root:** `/Users/rahulmittal/Library/CloudStorage/OneDrive-Personal/CoWork/realtorai/`
@@ -28,7 +28,7 @@ feature branch → PR → dev (integration) → PR → main (production)
 | Service | Port | Command |
 |---------|------|---------|
 | CRM (Next.js) | 3000 | `npm run dev` from repo root |
-| Website Agent | 8768 | `npm run dev` from `listingflow-agent/` |
+| Website Agent | 8768 | `npm run dev` from `realtors360-agent/` |
 | Form Server | 8767 | Python server (separate) |
 
 ### Secrets — Encrypted Vault
@@ -66,7 +66,7 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 | Language | TypeScript | 5.x |
 | Database | Supabase (PostgreSQL + RLS) | latest |
 | Auth | NextAuth v5 (beta.30) | JWT sessions |
-| Styling | Tailwind CSS v4 + custom ListingFlow design system | 4.x |
+| Styling | Tailwind CSS v4 + custom Realtors360 design system | 4.x |
 | UI Components | shadcn/ui v4 + custom LF components | 4.x |
 | State | Zustand + TanStack React Query v5 | 5.x |
 | Forms | React Hook Form + Zod v4 | 7.x / 4.x |
@@ -74,7 +74,7 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 | Calendar | Google Calendar API (googleapis) | 171.x |
 | AI | Anthropic Claude SDK | 0.78.x |
 | Video/Image | Kling AI API | custom |
-| Form Engine | ListingFlow Python server | localhost:8767 |
+| Form Engine | Realtors360 Python server | localhost:8767 |
 
 ---
 
@@ -166,7 +166,7 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 
 ---
 
-## Design System — ListingFlow
+## Design System — Realtors360
 
 The UI uses a custom glassmorphism design language. All custom styles are defined as CSS custom properties in `globals.css`.
 
@@ -242,7 +242,7 @@ The CRM implements an 8-phase listing workflow (stored as `current_phase` on lis
 | 2 | Data Enrichment | BC Geocoder (API), ParcelMap BC (API), LTSA (manual), BC Assessment (manual) |
 | 3 | CMA Analysis | Comparable market analysis fields |
 | 4 | Pricing & Review | List price confirmation, price lock, marketing tier |
-| 5 | Form Generation | 12 BCREA forms auto-filled via Python ListingFlow server |
+| 5 | Form Generation | 12 BCREA forms auto-filled via Python Realtors360 server |
 | 6 | E-Signature | DocuSign envelope tracking (UI exists, integration partial) |
 | 7 | MLS Preparation | Claude AI remarks generation, photo management |
 | 8 | MLS Submission | Manual submission step (no Paragon API integration) |
@@ -277,8 +277,8 @@ Phase advancement is sequential with audit trail logging.
 - Text-to-Image: prompt → 8K image (1:1 for Instagram)
 - Async task polling via /api/kling/status
 
-### ListingFlow Python Server
-- Endpoint: `LISTINGFLOW_URL` (default: `http://127.0.0.1:8767`)
+### Realtors360 Python Server
+- Endpoint: `REALTORS360_URL` (default: `http://127.0.0.1:8767`)
 - `POST /api/form/html` — accepts CDM payload, returns pre-filled HTML form
 - 12 BCREA forms: DORTS, MLC, PDS, FINTRAC, PRIVACY, C3, DRUP, MLS_INPUT, MKTAUTH, AGENCY, C3CONF, FAIRHSG
 
@@ -312,8 +312,8 @@ ANTHROPIC_API_KEY=
 # App
 NEXT_PUBLIC_APP_URL=
 
-# ListingFlow Form Server
-LISTINGFLOW_URL=          # defaults to http://127.0.0.1:8767
+# Realtors360 Form Server
+REALTORS360_URL=          # defaults to http://127.0.0.1:8767
 
 # Kling AI
 KLING_API_BASE_URL=
@@ -343,7 +343,7 @@ npm run build
 # Lint
 npm run lint
 
-# Start ListingFlow form server (separate terminal)
+# Start Realtors360 form server (separate terminal)
 # python server at localhost:8767
 ```
 
@@ -397,9 +397,9 @@ Located in repo root:
 
 | Document | Description |
 |----------|-------------|
-| `ListingFlow_Realtor_Workflow_Design_Document.docx` | Complete 12-phase BC realtor listing lifecycle specification |
-| `ListingFlow_Gap_Analysis_Report.docx` | Comparative analysis: design doc vs current implementation |
-| `ListingFlow_Gap_Analysis_Report.md` | Same gap analysis in Markdown format |
+| `Realtors360_Realtor_Workflow_Design_Document.docx` | Complete 12-phase BC realtor listing lifecycle specification |
+| `Realtors360_Gap_Analysis_Report.docx` | Comparative analysis: design doc vs current implementation |
+| `Realtors360_Gap_Analysis_Report.md` | Same gap analysis in Markdown format |
 | `PRD_Newsletter_Journey_Engine.md` | Full PRD for AI newsletter & journey engine |
 | `PLAN_Email_Marketing_Engine.md` | 12-deliverable implementation plan (4 phases) |
 | `PLAN_AI_Agent.md` | AI agent layer plan (lead scoring, send advisor, recommendations) |
@@ -467,7 +467,7 @@ RESEND_API_KEY=<key> ANTHROPIC_API_KEY=<key> CRON_SECRET=<secret> \
 - **Zod v4** for all form/API validation
 - **JSONB columns** for flexible structured data (forms_status, envelopes, enrichment data, stakeholders)
 - **Path alias:** `@/` maps to `src/`
-- **CSS:** Use `lf-*` classes for ListingFlow design system, avoid inline styles
+- **CSS:** Use `lf-*` classes for Realtors360 design system, avoid inline styles
 - **No Lucide icons on pages** — use emoji icons for UI consistency
 - **Supabase admin client** (`supabase/admin.ts`) for server-side operations that bypass RLS
 - **force-dynamic** on pages that need real-time data
@@ -638,14 +638,14 @@ vercel --prod
 
 ---
 
-## ListingFlow Sites — AI Website Generation Platform
+## Realtors360 Sites — AI Website Generation Platform
 
 ### Architecture
 
 **Pre-built components + Claude Agent SDK + Cloudflare Pages**
 
 ```
-listingflow-sites (Admin Panel) → listingflow-agent (Cloud Agent) → Cloudflare Pages (Static Sites)
+realtors360-sites (Admin Panel) → realtors360-agent (Cloud Agent) → Cloudflare Pages (Static Sites)
                                          ↕
                                    Supabase (Data) + Claude API (Anthropic)
 ```
@@ -654,7 +654,7 @@ The platform generates unique realtor websites automatically:
 1. Realtor clicks **"Generate My Website"** in the admin panel
 2. **Cloud agent** autonomously searches for top realtor sites in the agent's market, scrapes 3-5 for design inspiration (hidden from user)
 3. Agent generates **3 site config JSONs** — each a different style (dark luxury, light modern, bold warm) — by blending scraped design patterns with the realtor's content
-4. **Pre-built React components** (`listingflow-sites/src/components/sections/`) render each config into static HTML
+4. **Pre-built React components** (`realtors360-sites/src/components/sections/`) render each config into static HTML
 5. All 3 variants deploy to **Cloudflare Pages** as preview URLs
 6. **Playwright** screenshots each variant at desktop + mobile
 7. Realtor sees **3 preview cards** with screenshots — picks their favorite
@@ -686,7 +686,7 @@ Same components render all 3 style variants — the difference is the theme conf
 
 ### Agent Service
 
-- **Location:** `listingflow-agent/` (separate package in monorepo root)
+- **Location:** `realtors360-agent/` (separate package in monorepo root)
 - **Stack:** Node.js + Express + Anthropic SDK + Playwright
 - **API:**
   - `POST /api/generate` — start generation (kicks off autonomous agent)

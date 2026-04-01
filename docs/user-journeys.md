@@ -1,4 +1,4 @@
-# ListingFlow — User Journey Maps
+# Realtors360 — User Journey Maps
 
 ## 5 Personas
 1. **Prospect** — potential buyer or seller discovering the realtor
@@ -531,4 +531,4 @@ flowchart TD
 
 ---
 
-*Generated 2026-03-23 — ListingFlow CRM*
+*Generated 2026-03-23 — Realtors360 CRM*

@@ -14,7 +14,7 @@ changelog: []
 
 Every BC real estate listing requires a set of standardized BCREA forms that must be completed, signed, and retained as part of the transaction file. Manually filling these forms is repetitive and error-prone — the same address, seller name, agent details, and list price get typed into 12 different documents. One typo or outdated field can create legal exposure or delay a deal.
 
-ListingFlow automates this entirely. By Phase 5, all listing and seller data is already in the CRM. The Python ListingFlow form server at port 8767 uses this data to generate all 12 BCREA forms pre-filled as editable HTML — ready for review and e-signature — in a single click.
+Realtors360 automates this entirely. By Phase 5, all listing and seller data is already in the CRM. The Python Realtors360 form server at port 8767 uses this data to generate all 12 BCREA forms pre-filled as editable HTML — ready for review and e-signature — in a single click.
 
 ---
 
@@ -30,7 +30,7 @@ ListingFlow automates this entirely. By Phase 5, all listing and seller data is 
 
 ## Existing System Context
 
-- **Python Form Server:** `LISTINGFLOW_URL` (default `http://127.0.0.1:8767`); endpoint `POST /api/form/html` — accepts CDM payload, returns pre-filled HTML form
+- **Python Form Server:** `REALTORS360_URL` (default `http://127.0.0.1:8767`); endpoint `POST /api/form/html` — accepts CDM payload, returns pre-filled HTML form
 - **CDM Mapper:** `src/lib/cdm-mapper.ts` — converts a listing record (with seller and agent data) into the Common Data Model payload consumed by the form server
 - **Form Definitions:** `src/lib/forms/definitions.ts` — local TypeScript definitions for all 12 form schemas used for the in-app renderer fallback
 - **Form Renderer:** `src/lib/forms/renderer.ts` — renders form definitions to HTML when the Python server is unavailable
@@ -146,7 +146,7 @@ If the Python form server is unavailable, `src/lib/forms/renderer.ts` renders th
 ### Scenario 6: Voice Agent Explains Forms
 1. Agent is in a client meeting and asks the voice agent: "What forms do we sign today?"
 2. Voice agent calls `get_crm_help` with topic `forms`.
-3. Response: "ListingFlow generates 12 BCREA forms automatically from listing data: DORTS, MLC, PDS, FINTRAC, PRIVACY, C3, DRUP, MLS_INPUT, MKTAUTH, AGENCY, C3CONF, FAIRHSG. Forms are generated in Phase 5 via the Python ListingFlow server. Navigate to the listing workflow and reach Phase 5 to generate all forms."
+3. Response: "Realtors360 generates 12 BCREA forms automatically from listing data: DORTS, MLC, PDS, FINTRAC, PRIVACY, C3, DRUP, MLS_INPUT, MKTAUTH, AGENCY, C3CONF, FAIRHSG. Forms are generated in Phase 5 via the Python Realtors360 server. Navigate to the listing workflow and reach Phase 5 to generate all forms."
 
 ---
 
@@ -222,4 +222,4 @@ If the Python form server is unavailable, `src/lib/forms/renderer.ts` renders th
 - "How do I mark a form complete?" → `get_crm_help` describes the Phase 5 form completion flow
 
 ### Knowledge Base Entry (voice agent `get_crm_help`)
-Topic: `forms` — "ListingFlow generates 12 BCREA forms automatically from listing data: DORTS (Disclosure of Representation), MLC (Multiple Listing Contract), PDS (Property Disclosure Statement), FINTRAC (Identity Verification), PRIVACY (PIPA Consent), C3 (Working with a REALTOR), DRUP (Disclosure of Remuneration), MLS_INPUT (MLS Data Entry), MKTAUTH (Marketing Authorization), AGENCY (Agency Relationships), C3CONF (Confirmation of Representation), FAIRHSG (Fair Housing Declaration). Forms are generated in Phase 5 via the Python ListingFlow server at port 8767. Go to a listing's workflow, reach Phase 5, and click 'Generate Forms'. You can also browse form templates at /forms/templates."
+Topic: `forms` — "Realtors360 generates 12 BCREA forms automatically from listing data: DORTS (Disclosure of Representation), MLC (Multiple Listing Contract), PDS (Property Disclosure Statement), FINTRAC (Identity Verification), PRIVACY (PIPA Consent), C3 (Working with a REALTOR), DRUP (Disclosure of Remuneration), MLS_INPUT (MLS Data Entry), MKTAUTH (Marketing Authorization), AGENCY (Agency Relationships), C3CONF (Confirmation of Representation), FAIRHSG (Fair Housing Declaration). Forms are generated in Phase 5 via the Python Realtors360 server at port 8767. Go to a listing's workflow, reach Phase 5, and click 'Generate Forms'. You can also browse form templates at /forms/templates."

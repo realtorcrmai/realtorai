@@ -34,7 +34,7 @@
 
 ### What We're Building
 
-A **RAG-powered AI assistant** embedded in the ListingFlow CRM that:
+A **RAG-powered AI assistant** embedded in the Realtors360 CRM that:
 
 1. **Answers realtor questions** grounded in their CRM data, marketing content, and knowledge base
 2. **Generates personalized content** (follow-up emails, newsletter drafts, social posts) using retrieved context
@@ -68,7 +68,7 @@ A **RAG-powered AI assistant** embedded in the ListingFlow CRM that:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         LISTINGFLOW CRM                              │
+│                         REALTORS360 CRM                              │
 │                                                                      │
 │  ┌──────────────────── USER ENTRY POINTS ─────────────────────────┐ │
 │  │                                                                 │ │

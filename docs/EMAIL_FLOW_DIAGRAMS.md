@@ -1,4 +1,4 @@
-# ListingFlow CRM — Email Flow Diagrams
+# Realtors360 CRM — Email Flow Diagrams
 
 > To render these diagrams, open in GitHub (renders natively) or paste into [mermaid.live](https://mermaid.live)
 
@@ -272,7 +272,7 @@ flowchart LR
 %%{init: {'theme': 'base', 'themeVariables': {'actorBkg': '#e8e0ff', 'actorBorder': '#4f35d2', 'actorTextColor': '#1a1535', 'signalColor': '#4f35d2', 'signalTextColor': '#1a1535', 'noteBkgColor': '#f4f2ff', 'noteBorderColor': '#d8b4fe', 'noteTextColor': '#1a1535', 'activationBkgColor': '#e8e0ff', 'activationBorderColor': '#4f35d2', 'sequenceNumberColor': '#ffffff', 'background': '#ffffff'}}}%%
 sequenceDiagram
     participant Lead as New Lead
-    participant CRM as ListingFlow CRM
+    participant CRM as Realtors360 CRM
     participant Agent as Realtor
     participant Twilio as Twilio
     participant Resend as Resend
@@ -311,7 +311,7 @@ sequenceDiagram
 %%{init: {'theme': 'base', 'themeVariables': {'actorBkg': '#e8e0ff', 'actorBorder': '#4f35d2', 'actorTextColor': '#1a1535', 'signalColor': '#4f35d2', 'signalTextColor': '#1a1535', 'noteBkgColor': '#f4f2ff', 'noteBorderColor': '#d8b4fe', 'noteTextColor': '#1a1535', 'activationBkgColor': '#e8e0ff', 'activationBorderColor': '#4f35d2', 'sequenceNumberColor': '#ffffff', 'background': '#ffffff'}}}%%
 sequenceDiagram
     participant Buyer as Buyer
-    participant CRM as ListingFlow CRM
+    participant CRM as Realtors360 CRM
     participant Agent as Realtor
     participant Resend as Resend
     participant Twilio as Twilio
@@ -361,7 +361,7 @@ sequenceDiagram
 %%{init: {'theme': 'base', 'themeVariables': {'actorBkg': '#e8e0ff', 'actorBorder': '#4f35d2', 'actorTextColor': '#1a1535', 'signalColor': '#4f35d2', 'signalTextColor': '#1a1535', 'noteBkgColor': '#f4f2ff', 'noteBorderColor': '#d8b4fe', 'noteTextColor': '#1a1535', 'activationBkgColor': '#e8e0ff', 'activationBorderColor': '#4f35d2', 'sequenceNumberColor': '#ffffff', 'background': '#ffffff'}}}%%
 sequenceDiagram
     participant Buyer as Buyer Lead
-    participant CRM as ListingFlow CRM
+    participant CRM as Realtors360 CRM
     participant Agent as Realtor
     participant Resend as Resend
     participant Twilio as Twilio
@@ -422,7 +422,7 @@ sequenceDiagram
 %%{init: {'theme': 'base', 'themeVariables': {'actorBkg': '#e8e0ff', 'actorBorder': '#4f35d2', 'actorTextColor': '#1a1535', 'signalColor': '#4f35d2', 'signalTextColor': '#1a1535', 'noteBkgColor': '#f4f2ff', 'noteBorderColor': '#d8b4fe', 'noteTextColor': '#1a1535', 'activationBkgColor': '#e8e0ff', 'activationBorderColor': '#4f35d2', 'sequenceNumberColor': '#ffffff', 'background': '#ffffff'}}}%%
 sequenceDiagram
     participant Seller as Seller
-    participant CRM as ListingFlow CRM
+    participant CRM as Realtors360 CRM
     participant Agent as Realtor
     participant Resend as Resend
     participant Twilio as Twilio
@@ -472,7 +472,7 @@ sequenceDiagram
 %%{init: {'theme': 'base', 'themeVariables': {'actorBkg': '#e8e0ff', 'actorBorder': '#4f35d2', 'actorTextColor': '#1a1535', 'signalColor': '#4f35d2', 'signalTextColor': '#1a1535', 'noteBkgColor': '#f4f2ff', 'noteBorderColor': '#d8b4fe', 'noteTextColor': '#1a1535', 'activationBkgColor': '#e8e0ff', 'activationBorderColor': '#4f35d2', 'sequenceNumberColor': '#ffffff', 'background': '#ffffff'}}}%%
 sequenceDiagram
     participant Contact as Dormant Contact
-    participant CRM as ListingFlow CRM
+    participant CRM as Realtors360 CRM
     participant Agent as Realtor
     participant Resend as Resend
     participant Twilio as Twilio
@@ -510,7 +510,7 @@ sequenceDiagram
 %%{init: {'theme': 'base', 'themeVariables': {'actorBkg': '#e8e0ff', 'actorBorder': '#4f35d2', 'actorTextColor': '#1a1535', 'signalColor': '#4f35d2', 'signalTextColor': '#1a1535', 'noteBkgColor': '#f4f2ff', 'noteBorderColor': '#d8b4fe', 'noteTextColor': '#1a1535', 'activationBkgColor': '#e8e0ff', 'activationBorderColor': '#4f35d2', 'sequenceNumberColor': '#ffffff', 'background': '#ffffff'}}}%%
 sequenceDiagram
     participant Buyer as Buyer
-    participant CRM as ListingFlow CRM
+    participant CRM as Realtors360 CRM
     participant Agent as Realtor
     participant Resend as Resend
     participant Twilio as Twilio
@@ -548,7 +548,7 @@ sequenceDiagram
 %%{init: {'theme': 'base', 'themeVariables': {'actorBkg': '#e8e0ff', 'actorBorder': '#4f35d2', 'actorTextColor': '#1a1535', 'signalColor': '#4f35d2', 'signalTextColor': '#1a1535', 'noteBkgColor': '#f4f2ff', 'noteBorderColor': '#d8b4fe', 'noteTextColor': '#1a1535', 'activationBkgColor': '#e8e0ff', 'activationBorderColor': '#4f35d2', 'sequenceNumberColor': '#ffffff', 'background': '#ffffff'}}}%%
 sequenceDiagram
     participant Partner as Referral Partner
-    participant CRM as ListingFlow CRM
+    participant CRM as Realtors360 CRM
     participant Agent as Realtor
     participant Resend as Resend
     participant Twilio as Twilio
@@ -669,7 +669,7 @@ flowchart TD
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#e8e0ff', 'primaryBorderColor': '#4f35d2', 'primaryTextColor': '#1a1535', 'lineColor': '#4f35d2', 'secondaryColor': '#f4f2ff', 'tertiaryColor': '#fff', 'background': '#ffffff', 'mainBkg': '#f4f2ff', 'nodeBorder': '#4f35d2', 'clusterBkg': '#faf8ff', 'clusterBorder': '#d8b4fe', 'edgeLabelBackground': '#ffffff'}}}%%
 graph TD
     subgraph LISTING_ALERT["🏠 New Listing Alert"]
-        LA1["Header: ListingFlow branding"]
+        LA1["Header: Realtors360 branding"]
         LA2["Hero: Full-width property photo\nwith dark overlay + address"]
         LA3["Price Bar: $1,290,000\n3 BD · 2 BA · 1,847 sqft"]
         LA4["Personal Note: AI-written\n'This ground floor unit just hit...'"]

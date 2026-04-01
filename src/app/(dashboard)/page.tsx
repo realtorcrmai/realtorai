@@ -283,14 +283,13 @@ export default async function DashboardPage() {
     },
     {
       key: "website",
-      href: process.env.NEXT_PUBLIC_VOICE_AGENT_URL || "http://127.0.0.1:8768",
+      href: "/websites",
       title: "Website Marketing",
       description: "AI-powered realtor website generation",
       icon: Globe,
       gradient: "gradient-amber",
       count: null,
       countLabel: null,
-      external: true,
     },
   ];
 

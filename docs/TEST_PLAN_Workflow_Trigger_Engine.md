@@ -47,7 +47,7 @@
 **US-006: Welcome email has Apple-quality HTML**
 - Given: Welcome email draft created
 - When: I read the html_body
-- Then: HTML contains "ListingFlow" header, gradient hero, pill CTA button, agent card, unsubscribe footer
+- Then: HTML contains "Realtors360" header, gradient hero, pill CTA button, agent card, unsubscribe footer
 - AC: html_body.length > 3000 bytes, contains "border-radius:980px" (pill button), contains "Unsubscribe"
 - Test: Parse HTML, assert key elements
 

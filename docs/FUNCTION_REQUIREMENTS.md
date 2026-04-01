@@ -235,7 +235,7 @@ string[]  // Array of new voice rules extracted, e.g.:
 
 **Input:**
 ```typescript
-url: string;  // The clicked URL, e.g., "https://listingflow.com/listings/kits-3br"
+url: string;  // The clicked URL, e.g., "https://realtors360.com/listings/kits-3br"
 ```
 
 **Output:**
