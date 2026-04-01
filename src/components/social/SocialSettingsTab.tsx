@@ -204,6 +204,7 @@ export function SocialSettingsTab({ brandKit, accounts }: Props) {
     );
   }, []);
 
+  // eslint-disable-next-line react-compiler/react-compiler -- complex form state callback
   const handleSave = useCallback(() => {
     startTransition(async () => {
       try {

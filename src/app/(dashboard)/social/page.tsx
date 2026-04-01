@@ -20,6 +20,7 @@ export default async function SocialPage() {
     .order("connected_at", { ascending: false });
 
   // Fetch recent posts (last 30 days)
+  // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is safe
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
   const { data: recentPosts } = await supabase
     .from("social_posts")
