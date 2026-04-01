@@ -22,12 +22,11 @@ export const ALL_FEATURES = [...FEATURE_KEYS] as FeatureKey[];
 
 /** Release-gated feature sets — controls what users see per release */
 export const R1_FEATURES: FeatureKey[] = [
-  "listings", "contacts", "showings", "calendar",
-  "tasks", "forms", "newsletters", "automations",
+  "contacts", "calendar", "tasks", "newsletters", "automations",
 ];
 
 export const R2_FEATURES: FeatureKey[] = [
-  ...R1_FEATURES, "social",
+  ...R1_FEATURES, "listings", "showings", "forms", "social",
 ];
 
 export const R3_FEATURES: FeatureKey[] = [
