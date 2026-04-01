@@ -18,6 +18,7 @@ import {
   Zap,
   Mail,
   Globe,
+  BookOpen,
   LogOut,
   Home,
   ChevronDown,
@@ -57,6 +58,7 @@ const moreItems: { href: string; label: string; icon: typeof Building2; featureK
   { href: "/newsletters", label: "Email Marketing", icon: Mail, featureKey: "newsletters" },
   { href: "/websites", label: "Website Marketing", icon: Globe, featureKey: "website" },
   { href: "/social", label: "Social Media", icon: Globe, featureKey: "social" },
+  { href: "/assistant/knowledge", label: "Knowledge Base", icon: BookOpen, featureKey: "assistant" },
 ];
 
 export function AppHeader() {

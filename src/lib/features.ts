@@ -13,6 +13,7 @@ export const FEATURE_KEYS = [
   "newsletters",
   "website",
   "social",
+  "assistant",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -79,6 +80,10 @@ export const FEATURE_META: Record<
     label: "Social Media",
     description: "AI content studio — auto-generate & publish to all platforms",
   },
+  assistant: {
+    label: "AI Assistant",
+    description: "RAG-powered chat — ask questions about your CRM data",
+  },
 };
 
 /** Map feature keys to their nav href */
@@ -97,4 +102,5 @@ export const FEATURE_HREF: Record<FeatureKey, string> = {
   newsletters: "/newsletters",
   website: "/websites",
   social: "/social",
+  assistant: "/assistant",
 };
