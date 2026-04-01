@@ -14,3 +14,4 @@
 | 2026-03-27 | claude | Commit and push all session changes to dev | DEPLOY:local | ✅ YES | 3.0, 3.1, git status/diff/log, stage, commit, push, compliance log | — | Commit 63e5efc pushed to dev. 26 files, +4966/-1059 lines. |
 
 | 2026-04-01 | claude | R1 production deployment prep — feature gating + deployment guide | DEPLOY:production | ✅ YES | 0,1,2,3,4,5,6,7 | None | Feature gating via CURRENT_RELEASE_FEATURES. New users get R1 only. Deployment doc rewritten. |
+| 2026-04-01 | claude | Update CLAUDE.md + memory to enforce playbook execution | DOCS:guide | ✅ YES | 0,1,4,6,7 | 2,3,5 (no code changes, no plan needed, no tests) | User flagged that playbook was not being followed. Added mandatory playbook section to both CLAUDE.md files and memory feedback entry. |

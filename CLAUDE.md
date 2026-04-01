@@ -496,11 +496,20 @@ Every new feature MUST include all of the following before it is considered comp
 
 ---
 
-## Agent Playbook
+## Agent Playbook — MANDATORY (Read Before Every Task)
 
-**All task execution follows `.claude/agent-playbook.md` — the single source of truth.**
+**All task execution MUST follow `.claude/agent-playbook.md` — the single source of truth.**
 
-Read it before every task. It covers: pre-flight, task classification, per-type checklists (14 task types), model chaining, post-task validation, compliance logging, and production incident protocol.
+**STRICT REQUIREMENT:** Every task, every developer (human and AI), every time:
+1. **Pre-Flight** — check branch, run health check, load memory
+2. **Classify** — output classification block (task type, confidence, affected files) BEFORE any code changes
+3. **Execute** — follow the per-type checklist for your task type (14 types: CODING, TESTING, DEPLOY, etc.)
+4. **Validate** — run tests, verify build, check TypeScript
+5. **Log** — append compliance log entry to `.claude/compliance-log.md`
+
+**A task without a classification block is an unauthorized change. A task without a compliance log entry did not happen.**
+
+Read the playbook before every task. It covers: pre-flight, task classification, per-type checklists (14 task types), model chaining, post-task validation, compliance logging, and production incident protocol.
 
 ---
 
