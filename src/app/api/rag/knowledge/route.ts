@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { createClient } from '@supabase/supabase-js';
+import { getAuthenticatedTenantClient } from '@/lib/supabase/tenant';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { ingestRecord } from '@/lib/rag/ingestion';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 // GET: List all knowledge articles
 export async function GET() {
@@ -16,7 +12,12 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    const isAdmin = (session.user as { role?: string }).role === 'admin';
+    const db = isAdmin
+      ? createAdminClient()
+      : (await getAuthenticatedTenantClient()).raw;
+
+    const { data, error } = await db
       .from('knowledge_articles')
       .select('*')
       .order('created_at', { ascending: false });
@@ -37,6 +38,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const isAdmin = (session.user as { role?: string }).role === 'admin';
+    const db = isAdmin
+      ? createAdminClient()
+      : (await getAuthenticatedTenantClient()).raw;
+
     const body = await req.json();
     const { title, body: articleBody, category, audience_type, tags } = body;
 
@@ -49,7 +55,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `category must be one of: ${validCategories.join(', ')}` }, { status: 400 });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('knowledge_articles')
       .insert({
         title,
@@ -65,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     // Auto-embed the new article
     try {
-      await ingestRecord('knowledge_articles', data.id);
+      await ingestRecord(db, 'knowledge_articles', data.id);
     } catch (embedErr) {
       console.warn('Auto-embed failed (article saved):', embedErr);
     }

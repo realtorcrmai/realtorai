@@ -2,6 +2,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createWithRetry } from "@/lib/anthropic/retry";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 
 const anthropic = new Anthropic();
@@ -106,7 +107,9 @@ export async function generateNewsletterContent(
   try {
     const { retrieveContext } = await import('@/lib/rag/retriever');
     const contactId = (context as any).contact?.id;
+    const db = createAdminClient();
     const retrieved = await retrieveContext(
+      db,
       `${context.contact?.name} ${context.emailType} ${context.contact?.areas?.join(' ') ?? ''}`,
       {
         contact_id: contactId,

@@ -1,13 +1,10 @@
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { ingestRecord, deleteEmbeddings } from '@/lib/rag/ingestion';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabase = createAdminClient();
 
 export async function getKnowledgeArticles(category?: string) {
   let query = supabase
@@ -57,7 +54,7 @@ export async function createKnowledgeArticle(article: {
 
   // Auto-embed
   try {
-    await ingestRecord('knowledge_articles', data.id);
+    await ingestRecord(supabase, 'knowledge_articles', data.id);
   } catch (err) {
     console.warn('KB auto-embed failed:', err);
   }
@@ -88,7 +85,7 @@ export async function updateKnowledgeArticle(
 
   // Re-embed with updated content
   try {
-    await ingestRecord('knowledge_articles', id);
+    await ingestRecord(supabase, 'knowledge_articles', id);
   } catch (err) {
     console.warn('KB re-embed failed:', err);
   }
@@ -98,7 +95,7 @@ export async function updateKnowledgeArticle(
 }
 
 export async function deleteKnowledgeArticle(id: string) {
-  await deleteEmbeddings('knowledge_articles', id);
+  await deleteEmbeddings(supabase, 'knowledge_articles', id);
 
   const { error } = await supabase
     .from('knowledge_articles')

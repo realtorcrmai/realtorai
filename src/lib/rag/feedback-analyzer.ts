@@ -2,14 +2,7 @@
 // Feedback Analyzer — pattern detection & improvement suggestions
 // ============================================================
 
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-function getAdmin() {
-  return createClient(supabaseUrl, supabaseKey);
-}
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export interface FeedbackPattern {
   dimension: 'intent' | 'source_table' | 'low_similarity';
@@ -30,14 +23,14 @@ export interface ImprovementSuggestion {
  * Returns the top 3 problem areas.
  */
 export async function analyzeFeedbackPatterns(
+  db: SupabaseClient,
   daysBack = 7,
   limit = 3
 ): Promise<FeedbackPattern[]> {
-  const admin = getAdmin();
   const since = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
 
   // Get negative feedback joined with audit log to get intent & source info
-  const { data: feedbackRows } = await admin
+  const { data: feedbackRows } = await db
     .from('rag_feedback')
     .select('id, session_id, created_at')
     .eq('rating', 'negative')
@@ -48,7 +41,7 @@ export async function analyzeFeedbackPatterns(
   const sessionIds = [...new Set(feedbackRows.map((r: { session_id: string }) => r.session_id))];
 
   // Get audit log entries for these sessions to find intents and retrieved sources
-  const { data: auditRows } = await admin
+  const { data: auditRows } = await db
     .from('rag_audit_log')
     .select('session_id, intent, retrieved_ids, retrieved_scores')
     .in('session_id', sessionIds.slice(0, 100));
@@ -103,9 +96,10 @@ export async function analyzeFeedbackPatterns(
  * Generate actionable improvement suggestions based on feedback patterns.
  */
 export async function getImprovementSuggestions(
+  db: SupabaseClient,
   daysBack = 7
 ): Promise<ImprovementSuggestion[]> {
-  const patterns = await analyzeFeedbackPatterns(daysBack, 10);
+  const patterns = await analyzeFeedbackPatterns(db, daysBack, 10);
   const suggestions: ImprovementSuggestion[] = [];
 
   for (const pattern of patterns) {
@@ -152,17 +146,16 @@ export async function getImprovementSuggestions(
  * Returns the intents that triggered an alert (empty if none).
  */
 export async function checkFeedbackSpike(
+  db: SupabaseClient,
   sessionId: string,
   currentIntent?: string
 ): Promise<string[]> {
   if (!currentIntent) return [];
-
-  const admin = getAdmin();
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
   // Count recent negative feedback across all sessions
   // that share the same intent in audit logs
-  const { data: recentAudit } = await admin
+  const { data: recentAudit } = await db
     .from('rag_audit_log')
     .select('session_id, intent')
     .eq('intent', currentIntent)
@@ -172,7 +165,7 @@ export async function checkFeedbackSpike(
 
   const recentSessionIds = [...new Set(recentAudit.map((r: { session_id: string }) => r.session_id))];
 
-  const { count } = await admin
+  const { count } = await db
     .from('rag_feedback')
     .select('id', { count: 'exact', head: true })
     .eq('rating', 'negative')
@@ -181,7 +174,7 @@ export async function checkFeedbackSpike(
 
   if ((count ?? 0) >= 3) {
     // Log alert to audit log
-    await admin.from('rag_audit_log').insert({
+    await db.from('rag_audit_log').insert({
       session_id: sessionId,
       query_text: `[FEEDBACK ALERT] 3+ negative ratings in last hour for intent: ${currentIntent}`,
       intent: currentIntent,

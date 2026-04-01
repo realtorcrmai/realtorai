@@ -104,7 +104,9 @@ Respond with JSON only:
   let ragContext = '';
   try {
     const { retrieveContext } = await import('@/lib/rag/retriever');
+    const db = createAdminClient();
     const retrieved = await retrieveContext(
+      db,
       `${contact.name} email engagement open click history`,
       { contact_id: contact.id, content_type: ['email', 'activity'] },
       5

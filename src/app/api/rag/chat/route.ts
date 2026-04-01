@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
+import { getAuthenticatedTenantClient } from '@/lib/supabase/tenant';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { planQuery } from '@/lib/rag/query-planner';
 import { retrieveContext } from '@/lib/rag/retriever';
 import { synthesize, generateDirect } from '@/lib/rag/synthesizer';
@@ -23,9 +25,17 @@ export async function POST(req: NextRequest) {
     }
 
     const userEmail = session.user.email;
+    const isAdmin = (session.user as { role?: string }).role === 'admin';
+
+    // Create tenant-scoped or admin DB client
+    // Admin sees all data; realtor sees only their own
+    const db = isAdmin
+      ? createAdminClient()
+      : (await getAuthenticatedTenantClient()).raw;
 
     // 1. Get or create chat session
     const chatSession = await getOrCreateSession(
+      db,
       body.session_id,
       userEmail,
       body.ui_context,
@@ -34,7 +44,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Add user message
     const userMsg = buildUserMessage(body.message);
-    await addMessage(chatSession.id, userMsg);
+    await addMessage(db, chatSession.id, userMsg);
 
     // 3. Check guardrails
     const guardrail = checkGuardrails(body.message);
@@ -58,8 +68,9 @@ export async function POST(req: NextRequest) {
       responseText = result.text;
       modelTier = result.model_tier;
     } else {
-      // 6. Retrieve context (Tier 2: pgvector)
+      // 6. Retrieve context (Tier 2: pgvector) — scoped by tenant
       const retrieved = await retrieveContext(
+        db,
         plan.search_text,
         plan.filters,
         plan.top_k
@@ -89,18 +100,18 @@ export async function POST(req: NextRequest) {
 
     // 9. Save assistant message
     const assistantMsg = buildAssistantMessage(responseText, sources);
-    await addMessage(chatSession.id, assistantMsg);
+    await addMessage(db, chatSession.id, assistantMsg);
 
     // 9b. Summarize old messages if session is getting long
     const updatedSession = { ...chatSession, messages: [...chatSession.messages, userMsg, assistantMsg] };
     if (needsSummarization(updatedSession)) {
-      summarizeHistory(chatSession.id).catch(() => {}); // fire-and-forget
+      summarizeHistory(db, chatSession.id).catch(() => {}); // fire-and-forget
     }
 
     const latencyMs = Date.now() - startTime;
 
-    // 10. Audit log
-    await logAudit({
+    // 10. Audit log — scoped by tenant
+    await logAudit(db, {
       sessionId: chatSession.id,
       userEmail,
       queryText: body.message,

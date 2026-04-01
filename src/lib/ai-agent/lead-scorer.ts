@@ -67,7 +67,9 @@ export async function scoreContact(contactId: string): Promise<LeadScore | null>
   let ragContext = '';
   try {
     const { retrieveContext } = await import('@/lib/rag/retriever');
+    const db = createAdminClient();
     const retrieved = await retrieveContext(
+      db,
       `${contact.name} engagement history preferences intent`,
       {
         contact_id: contactId,
