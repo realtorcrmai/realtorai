@@ -1,16 +1,20 @@
-export const CONTACT_TYPES = ["buyer", "seller", "partner", "other"] as const;
+export const CONTACT_TYPES = ["buyer", "seller", "customer", "agent", "partner", "other"] as const;
 export type ContactType = (typeof CONTACT_TYPES)[number];
 
 export const CONTACT_TYPE_COLORS: Record<ContactType, string> = {
-  seller: "bg-purple-100 text-purple-800",
+  customer: "bg-green-100 text-green-800",
   buyer: "bg-blue-100 text-blue-800",
+  seller: "bg-purple-100 text-purple-800",
+  agent: "bg-orange-100 text-orange-800",
   partner: "bg-teal-100 text-teal-800",
   other: "bg-gray-100 text-gray-800",
 };
 
 export const CONTACT_TYPE_LABELS: Record<ContactType, string> = {
+  customer: "Customer (Lead)",
   buyer: "Buyer",
   seller: "Seller",
+  agent: "Agent",
   partner: "Partner",
   other: "Other",
 };

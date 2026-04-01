@@ -1,11 +1,11 @@
 "use server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 
 export async function getTemplates(category?: string) {
-  const supabase = createAdminClient();
-  let query = supabase
+  const tc = await getAuthenticatedTenantClient();
+  let query = tc
     .from("message_templates")
     .select("*")
     .eq("channel", "email")
@@ -21,8 +21,8 @@ export async function getTemplates(category?: string) {
 }
 
 export async function getTemplate(id: string) {
-  const supabase = createAdminClient();
-  const { data } = await supabase
+  const tc = await getAuthenticatedTenantClient();
+  const { data } = await tc
     .from("message_templates")
     .select("*")
     .eq("id", id)
@@ -37,10 +37,10 @@ export async function createTemplate(input: {
   category?: string;
   builder_json?: Record<string, unknown>;
 }) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
   const variables = extractVariables(input.body + " " + (input.subject || ""));
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("message_templates")
     .insert({
       name: input.name,
@@ -68,14 +68,14 @@ export async function updateTemplate(id: string, input: {
   builder_json?: Record<string, unknown>;
   html_preview?: string;
 }) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
   const updateData: Record<string, unknown> = { ...input, updated_at: new Date().toISOString() };
 
   if (input.body || input.subject) {
     updateData.variables = extractVariables((input.body || "") + " " + (input.subject || ""));
   }
 
-  const { error } = await supabase
+  const { error } = await tc
     .from("message_templates")
     .update(updateData)
     .eq("id", id);
@@ -86,15 +86,15 @@ export async function updateTemplate(id: string, input: {
 }
 
 export async function deleteTemplate(id: string) {
-  const supabase = createAdminClient();
-  await supabase.from("message_templates").update({ is_active: false }).eq("id", id);
+  const tc = await getAuthenticatedTenantClient();
+  await tc.from("message_templates").update({ is_active: false }).eq("id", id);
   revalidatePath("/automations/templates");
   return { success: true };
 }
 
 export async function duplicateTemplate(id: string) {
-  const supabase = createAdminClient();
-  const { data: original } = await supabase
+  const tc = await getAuthenticatedTenantClient();
+  const { data: original } = await tc
     .from("message_templates")
     .select("*")
     .eq("id", id)
@@ -102,7 +102,7 @@ export async function duplicateTemplate(id: string) {
 
   if (!original) return { error: "Template not found" };
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("message_templates")
     .insert({
       name: `${original.name} (Copy)`,
@@ -124,8 +124,8 @@ export async function duplicateTemplate(id: string) {
 }
 
 export async function previewTemplate(id: string, sampleData?: Record<string, string>) {
-  const supabase = createAdminClient();
-  const { data: template } = await supabase
+  const tc = await getAuthenticatedTenantClient();
+  const { data: template } = await tc
     .from("message_templates")
     .select("body, subject, builder_json")
     .eq("id", id)

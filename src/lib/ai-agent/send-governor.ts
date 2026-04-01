@@ -1,3 +1,6 @@
+// Agent-level send caps: weekly, daily, minimum gap between sends.
+// Complements src/lib/send-governor.ts which handles engagement-based throttling,
+// auto-sunset, and per-phase caps for workflow-driven sends.
 import { createAdminClient } from "@/lib/supabase/admin";
 
 interface GovernorResult {

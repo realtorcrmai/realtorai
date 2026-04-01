@@ -1,0 +1,27 @@
+{
+  "name": "RealtorAI",
+  "short_name": "RealtorAI",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#4f35d2",
+  "background_color": "#f4f2ff",
+  "icons": [
+    {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"}
+  ],
+  "shortcuts": [
+    {"name": "New Lead", "url": "/contacts?new=1", "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]},
+    {"name": "Showings", "url": "/showings", "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]},
+    {"name": "Pipeline", "url": "/deals", "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]},
+    {"name": "Voice Agent", "url": "/voice-agent", "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]}
+  ],
+  "share_target": {
+    "action": "/api/share-target",
+    "method": "POST",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {"title": "title", "text": "text", "url": "url"}
+  },
+  "protocol_handlers": [
+    {"protocol": "web+realtorai", "url": "/%s"}
+  ]
+}

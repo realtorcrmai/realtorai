@@ -30,7 +30,9 @@ export function QuickAddButton() {
   const [loading, setLoading] = useState(false);
 
   // Prevent hydration mismatch from base-ui auto-generated IDs
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    requestAnimationFrame(() => setMounted(true));
+  }, []);
 
   const openDialog = useCallback(async (type: ActiveDialog) => {
     if (!type) return;

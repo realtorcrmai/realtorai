@@ -1,10 +1,10 @@
 ---
 name: test
-description: Run the full ListingFlow test suite — navigation, CRUD, constraints, auth, cascade, sample data validation
+description: Run the full Realtors360 test suite — navigation, CRUD, constraints, auth, cascade, sample data validation
 user_invocable: true
 ---
 
-Run the comprehensive test suite for ListingFlow CRM.
+Run the comprehensive test suite for Realtors360 CRM.
 
 ## Steps
 
@@ -27,3 +27,24 @@ Run the comprehensive test suite for ListingFlow CRM.
 - **Cron Auth (4):** Bearer token required, rejects invalid/missing tokens
 - **Cascade Delete (1):** Contact deletion cascades to communications
 - **Sample Data (7):** Property type diversity, status variety, CASL consent, households, relationships
+
+## When to Run
+
+| Trigger | Scope |
+|---------|-------|
+| After any code change | `npx vitest run` (unit tests only — fast) |
+| After 5+ files changed | Full suite: `bash scripts/test-suite.sh` |
+| Before every build/deploy | Full suite (mandatory — see CLAUDE.md) |
+| After schema migration | Full suite + verify migration constraints |
+| After new feature complete | Full suite + any new feature-specific tests |
+
+## Post-Feature Validation Checklist
+
+When a new feature is built, the test run must also verify:
+
+1. **New routes return 200** — add the page route to the navigation test list in test-suite.sh
+2. **New API endpoints work** — test CRUD operations for any new server actions
+3. **Data integrity holds** — test FK constraints, NOT NULL, CHECK for new columns/tables
+4. **Integration points work** — if feature touches Twilio/Resend/Calendar, verify the call path
+5. **Existing tests still pass** — zero regressions from the new feature
+6. **Edge cases covered** — empty inputs, null values, duplicates, concurrent ops, invalid state transitions

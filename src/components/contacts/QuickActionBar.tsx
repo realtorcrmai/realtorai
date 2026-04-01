@@ -10,9 +10,11 @@ import {
   Send,
   X,
   Loader2,
+  Mic,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { sendContactMessage, addCommunicationNote } from "@/actions/contacts";
+import { ClickToVoiceButton } from "@/components/voice-agent/ClickToVoiceButton";
 
 export function QuickActionBar({
   contactId,
@@ -142,6 +144,13 @@ export function QuickActionBar({
         <Phone className="h-3.5 w-3.5 mr-1.5" />
         Call
       </Button>
+      <ClickToVoiceButton
+        agentEmail=""
+        focusType="contact"
+        focusId={contactId}
+        label="Voice"
+        size="sm"
+      />
       <Button
         variant="outline"
         size="sm"

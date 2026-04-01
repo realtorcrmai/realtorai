@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Check, X, Upload, Loader2, FileText, FileCheck, Pencil } from "lucide-react";
+import { Check, X, Upload, Loader2, FileText, FileCheck, Pencil, Download, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -213,6 +213,40 @@ export function FormReadinessPanel({
           Click to open form editor. Fill, save drafts, and download as PDF.
         </p>
       </div>
+
+      {/* Attached Documents (OTHER, CONTRACT, TITLE, etc.) */}
+      {(() => {
+        const otherDocs = documents.filter(
+          (d) => !["FINTRAC", "DORTS", "PDS"].includes(d.doc_type)
+        );
+        if (otherDocs.length === 0) return null;
+        return (
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <Download className="h-3.5 w-3.5" />
+              Attached Documents
+            </p>
+            <div className="space-y-2">
+              {otherDocs.map((doc) => (
+                <a
+                  key={doc.id}
+                  href={doc.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2.5 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group"
+                >
+                  <FileText className="h-4 w-4 text-primary shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{doc.file_name}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{doc.doc_type.toLowerCase()}</p>
+                  </div>
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary shrink-0" />
+                </a>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -1,0 +1,14 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAMID.com.realtorai.app",
+        "paths": ["/contacts/*", "/listings/*", "/showings/*", "/voice-agent/*"]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["TEAMID.com.realtorai.app"]
+  }
+}

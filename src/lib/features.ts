@@ -12,11 +12,34 @@ export const FEATURE_KEYS = [
   "automations",
   "newsletters",
   "website",
+  "social",
+  "assistant",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
 export const ALL_FEATURES = [...FEATURE_KEYS] as FeatureKey[];
+
+/** Release-gated feature sets — controls what users see per release */
+export const R1_FEATURES: FeatureKey[] = [
+  "listings", "contacts", "showings", "calendar",
+  "tasks", "forms", "newsletters", "automations",
+];
+
+export const R2_FEATURES: FeatureKey[] = [
+  ...R1_FEATURES, "social",
+];
+
+export const R3_FEATURES: FeatureKey[] = [
+  ...R2_FEATURES, "website", "content", "import", "workflow",
+];
+
+export const R4_FEATURES: FeatureKey[] = [
+  ...R3_FEATURES, "assistant", "search",
+];
+
+/** Current release — change this to roll out features to new users */
+export const CURRENT_RELEASE_FEATURES = R1_FEATURES;
 
 export const FEATURE_META: Record<
   FeatureKey,
@@ -74,6 +97,14 @@ export const FEATURE_META: Record<
     label: "Website Marketing",
     description: "Build & manage your realtor website",
   },
+  social: {
+    label: "Social Media",
+    description: "AI content studio — auto-generate & publish to all platforms",
+  },
+  assistant: {
+    label: "AI Assistant",
+    description: "RAG-powered chat — ask questions about your CRM data",
+  },
 };
 
 /** Map feature keys to their nav href */
@@ -90,5 +121,7 @@ export const FEATURE_HREF: Record<FeatureKey, string> = {
   forms: "/forms",
   automations: "/automations",
   newsletters: "/newsletters",
-  website: "http://localhost:3001",
+  website: "/websites",
+  social: "/social",
+  assistant: "/assistant",
 };

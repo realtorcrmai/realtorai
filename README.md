@@ -12,7 +12,7 @@ RealtorAI is an AI-powered CRM built for BC (British Columbia) real estate agent
 
 ### Key Features
 
-- **Listing Workflow** — 9-step guided process from Seller Intake through Post-Listing, with real-time progress tracking
+- **Listing Workflow** — 8-phase guided process from Seller Intake through MLS Submission, with real-time progress tracking
 - **Document Management** — Upload and track required documents (FINTRAC, DORTS, PDS) with readiness indicators
 - **BC Standard Forms** — Auto-fill 12 BCREA forms (DORTS, MLC, PDS, Privacy, C3, and more) from listing data
 - **Showing Automation** — Request, confirm, and manage property showings with seller SMS/WhatsApp notifications
@@ -78,9 +78,9 @@ cp .env.local.example .env.local
 |----------|---------|
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth login + Calendar |
 | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_PHONE_NUMBER` | SMS/WhatsApp showing notifications |
-| `CLAUDE_API_KEY` | AI-generated MLS remarks and content |
+| `ANTHROPIC_API_KEY` | AI-generated MLS remarks and content |
 | `VOICE_AGENT_API_KEY` | Voice assistant integration |
-| `FORM_SERVER_URL` | BCREA form server (default: `http://127.0.0.1:8767`) |
+| `REALTORS360_URL` | BCREA form server (default: `http://127.0.0.1:8767`) |
 
 See `.env.local.example` for the full list with descriptions.
 
@@ -138,6 +138,7 @@ Apply all migrations **in order** to your Supabase project via the SQL Editor (o
 | 46 | `046_under_contract_workflow.sql` | Under-contract workflow seeds |
 | 47 | `047_data_integrity_fixes.sql` | Constraints, indexes, enforcement triggers |
 | 48 | `048_drop_english_tutor.sql` | Drop unused tutor tables |
+| 49–56+ | Additional migrations | Voice agent, AI agent enhancements, and further schema updates |
 
 **Quick apply with Supabase CLI** (if linked):
 
@@ -191,17 +192,17 @@ src/
 supabase/
 └── migrations/                   # SQL migration files (apply in order)
 voice_agent/                      # Python voice agent backend
-listingflow-agent/                # AI website generation agent
-listingflow-sites/                # Pre-built website components
+realtors360-agent/                # AI website generation agent
+realtors360-sites/                # Pre-built website components
 ```
 
 ## Important Notes
 
 - **Auth**: Uses NextAuth v5 (NOT Supabase Auth). Browser-side Supabase uses the anon key.
-- **RLS**: All tables allow anon role access (single-tenant). Migration `003` is required.
+- **RLS**: RLS uses `auth.role() = 'authenticated'` for all tables (migration `003` additionally grants anon access for NextAuth compatibility). Migration `003` is required.
 - **Server Actions**: Use `createAdminClient()` from `@/lib/supabase/admin` for all server-side DB operations.
 - **Styling**: Tailwind CSS 4 with semantic tokens (`text-primary`, `bg-card`). See `CLAUDE.md` for full conventions.
-- **Icons**: `lucide-react` only.
+- **Icons**: Emoji on pages, `lucide-react` only inside reusable components.
 
 ## License
 

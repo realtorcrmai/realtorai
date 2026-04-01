@@ -18,6 +18,7 @@ import { ContactDocumentsPanel } from "@/components/contacts/ContactDocumentsPan
 import { PropertiesOfInterestPanel } from "@/components/contacts/PropertiesOfInterestPanel";
 import { WorkflowStepperCard } from "@/components/contacts/WorkflowStepperCard";
 import ActivityTimeline from "@/components/contacts/ActivityTimeline";
+import { ContextLog } from "@/components/contacts/ContextLog";
 import type {
   Contact,
   Communication,
@@ -130,6 +131,7 @@ export type ContactDetailTabsProps = {
   referralsAsReferred: ReferralRow[];
   allContacts: { id: string; name: string }[];
   documents: ContactDocument[];
+  contextEntries: Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>;
 };
 
 // ── Inner component (needs useSearchParams wrapped in Suspense) ──
@@ -167,6 +169,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
     referralsAsReferred,
     allContacts,
     documents,
+    contextEntries,
   } = props;
 
   const [currentTab, setCurrentTab] = useState("overview");
@@ -176,14 +179,19 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
   const [activitiesLoading, setActivitiesLoading] = useState(false);
 
   useEffect(() => {
-    if (currentTab === "activity" && !lazyActivities && !activitiesLoading) {
-      setActivitiesLoading(true);
-      fetch(`/api/contacts/${contactId}/activities`)
-        .then((r) => r.json())
-        .then((data) => setLazyActivities(data))
-        .catch(() => setLazyActivities([]))
-        .finally(() => setActivitiesLoading(false));
-    }
+    if (currentTab !== "activity" || lazyActivities || activitiesLoading) return;
+    let cancelled = false;
+    // Use a ref-style flag via the cancelled variable; mark loading in the promise chain
+    const loadPromise = Promise.resolve().then(() => {
+      if (!cancelled) setActivitiesLoading(true);
+      return fetch(`/api/contacts/${contactId}/activities`);
+    });
+    loadPromise
+      .then((r) => r.json())
+      .then((data) => { if (!cancelled) setLazyActivities(data); })
+      .catch(() => { if (!cancelled) setLazyActivities([]); })
+      .finally(() => { if (!cancelled) setActivitiesLoading(false); });
+    return () => { cancelled = true; };
   }, [currentTab, contactId, lazyActivities, activitiesLoading]);
 
   return (
@@ -250,9 +258,15 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             </Card>
           )}
 
+          {/* Realtor Context — Metadata */}
+          <ContextLog
+            contactId={contactId}
+            entries={contextEntries}
+          />
+
           {/* Properties of Interest (buyers only) */}
           {!isSeller && (
-            <Card id="section-properties-interest" className="bg-sky-50/20 dark:bg-sky-950/10">
+            <Card id="section-properties-interest" className="border-l-4 border-l-sky-400 bg-sky-50/20 dark:bg-sky-950/10">
               <CardContent className="p-6">
                 <PropertiesOfInterestPanel
                   contactId={contactId}
@@ -263,28 +277,8 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             </Card>
           )}
 
-          {/* Tasks & Follow-ups */}
-          <Card className="border-l-4 border-l-orange-400 bg-orange-50/15 dark:bg-orange-950/10">
-            <CardContent className="p-6">
-              <ContactTasksPanel contactId={contactId} tasks={tasks} />
-            </CardContent>
-          </Card>
-
-          {/* Referrals */}
-          <Card className="bg-white/60 dark:bg-card/40">
-            <CardContent className="p-6">
-              <ReferralsPanel
-                contact={contact}
-                referredByName={referredByName}
-                referralsAsReferrer={referralsAsReferrer}
-                referralsAsReferred={referralsAsReferred}
-                allContacts={allContacts}
-              />
-            </CardContent>
-          </Card>
-
           {/* Contact Documents */}
-          <Card className="bg-white/60 dark:bg-card/40">
+          <Card className="border-l-4 border-l-amber-400 bg-amber-50/10 dark:bg-amber-950/10">
             <CardContent className="p-6">
               <ContactDocumentsPanel
                 contactId={contactId}
@@ -298,17 +292,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
       {/* ── INTELLIGENCE TAB ─────────────────────────────────── */}
       <TabsContent value="intelligence">
         <div className="space-y-5">
-          {/* Demographics Panel */}
-          <Card className="border-l-4 border-l-violet-400 bg-violet-50/20 dark:bg-violet-950/10">
-            <CardContent className="p-6">
-              <DemographicsPanel
-                contactId={contactId}
-                demographics={demographics}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Relationship Graph */}
+          {/* Relationship Network */}
           {graphNodes.length > 1 && (
             <Card className="border-l-4 border-l-indigo-400 bg-indigo-50/15 dark:bg-indigo-950/10">
               <CardContent className="p-6">
@@ -320,37 +304,39 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             </Card>
           )}
 
-          {/* Network Stats + Upcoming Events */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="border-l-4 border-l-teal-400 bg-teal-50/15 dark:bg-teal-950/10">
-              <CardContent className="p-6">
-                <NetworkStatsCard
-                  connectionCount={connectionCount}
-                  referralCount={referralCount}
-                  networkValue={networkValue}
-                  dataScore={dataScore}
-                  demographics={demographics}
-                  dateCount={contactDates.length}
-                  hasPreferences={!!(buyerPreferences || sellerPreferences)}
-                />
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-amber-400 bg-amber-50/15 dark:bg-amber-950/10">
-              <CardContent className="p-6">
-                <UpcomingEventsCard
-                  contactDates={contactDates}
-                  demographics={demographics}
-                  contactName={contactName}
-                />
-              </CardContent>
-            </Card>
-          </div>
+          {/* Demographics Panel */}
+          <Card className="border-l-4 border-l-violet-400 bg-violet-50/20 dark:bg-violet-950/10">
+            <CardContent className="p-6">
+              <DemographicsPanel
+                contactId={contactId}
+                demographics={demographics}
+              />
+            </CardContent>
+          </Card>
         </div>
       </TabsContent>
 
       {/* ── ACTIVITY TAB ─────────────────────────────────────── */}
       <TabsContent value="activity">
         <div className="space-y-5">
+          {/* Tasks & Follow-ups */}
+          <Card className="border-l-4 border-l-orange-400 bg-orange-50/15 dark:bg-orange-950/10">
+            <CardContent className="p-6">
+              <ContactTasksPanel contactId={contactId} tasks={tasks} />
+            </CardContent>
+          </Card>
+
+          {/* Upcoming Events */}
+          <Card className="border-l-4 border-l-amber-400 bg-amber-50/15 dark:bg-amber-950/10">
+            <CardContent className="p-6">
+              <UpcomingEventsCard
+                contactDates={contactDates}
+                demographics={demographics}
+                contactName={contactName}
+              />
+            </CardContent>
+          </Card>
+
           {/* Communication Timeline */}
           <Card className="border-l-4 border-l-sky-400 bg-sky-50/15 dark:bg-sky-950/10">
             <CardContent className="p-6">
@@ -401,7 +387,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
               <CardContent className="p-6">
                 <PropertyHistoryPanel
                   listings={isSeller ? listings : buyerListings}
-                  contactType={contact.type as "buyer" | "seller"}
+                  contactType={contact.type}
                 />
               </CardContent>
             </Card>

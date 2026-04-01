@@ -20,9 +20,18 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await processWorkflowQueue();
+
+    // Also check for inactive contacts and move to dormant
+    let dormantCount = 0;
+    try {
+      const { checkInactivity } = await import("@/lib/trigger-engine");
+      dormantCount = await checkInactivity(60);
+    } catch {}
+
     return NextResponse.json({
       ok: true,
       ...result,
+      dormantCount,
       processedAt: new Date().toISOString(),
     });
   } catch (e) {

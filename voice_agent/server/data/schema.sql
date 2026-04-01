@@ -131,6 +131,49 @@ CREATE TABLE IF NOT EXISTS reminders (
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- ═══════════════════════════════════════════════════════════════════════════════
+--  Cost Tracking / Logbook
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+-- Cost log: tracks every paid API call (LLM, STT, TTS) with token counts and cost
+CREATE TABLE IF NOT EXISTS cost_log (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id      TEXT NOT NULL,
+    realtor_id      TEXT NOT NULL,
+    service         TEXT NOT NULL,    -- 'llm', 'stt', 'tts'
+    provider        TEXT NOT NULL,    -- 'anthropic', 'openai', 'ollama', 'edge_tts', etc.
+    model           TEXT,             -- 'claude-sonnet-4-20250514', 'whisper-1', 'tts-1-hd', etc.
+    input_tokens    INTEGER DEFAULT 0,
+    output_tokens   INTEGER DEFAULT 0,
+    audio_seconds   REAL DEFAULT 0,   -- for STT: input audio duration; for TTS: output audio duration
+    chars_processed INTEGER DEFAULT 0, -- for TTS: characters converted to speech
+    cost_usd        REAL NOT NULL,    -- estimated cost in USD
+    latency_ms      INTEGER,          -- response time
+    metadata        TEXT,             -- JSON: extra context (message preview, tool calls, etc.)
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Daily cost summary view helper
+CREATE TABLE IF NOT EXISTS cost_daily_cache (
+    date            TEXT NOT NULL,     -- YYYY-MM-DD
+    realtor_id      TEXT NOT NULL,
+    total_cost_usd  REAL DEFAULT 0,
+    llm_cost        REAL DEFAULT 0,
+    stt_cost        REAL DEFAULT 0,
+    tts_cost        REAL DEFAULT 0,
+    conversations   INTEGER DEFAULT 0,
+    messages        INTEGER DEFAULT 0,
+    audio_minutes   REAL DEFAULT 0,
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (date, realtor_id)
+);
+
+-- Indexes for common queries
+CREATE INDEX IF NOT EXISTS idx_cost_session ON cost_log(session_id);
+CREATE INDEX IF NOT EXISTS idx_cost_realtor ON cost_log(realtor_id);
+CREATE INDEX IF NOT EXISTS idx_cost_service ON cost_log(service);
+CREATE INDEX IF NOT EXISTS idx_cost_created ON cost_log(created_at);
+
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_buyers_realtor ON buyers(realtor_id);
 CREATE INDEX IF NOT EXISTS idx_listings_realtor ON listings(realtor_id);

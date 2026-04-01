@@ -1,6 +1,6 @@
 "use server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 
 interface SegmentRule {
@@ -10,8 +10,8 @@ interface SegmentRule {
 }
 
 export async function getSegments() {
-  const supabase = createAdminClient();
-  const { data } = await supabase
+  const tc = await getAuthenticatedTenantClient();
+  const { data } = await tc
     .from("contact_segments")
     .select("*")
     .order("created_at", { ascending: false });
@@ -24,12 +24,12 @@ export async function createSegment(input: {
   rules: SegmentRule[];
   rule_operator?: string;
 }) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Count matching contacts
   const count = await evaluateSegmentRules(input.rules, input.rule_operator || "AND");
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("contact_segments")
     .insert({
       name: input.name,
@@ -47,15 +47,15 @@ export async function createSegment(input: {
 }
 
 export async function deleteSegment(id: string) {
-  const supabase = createAdminClient();
-  await supabase.from("contact_segments").delete().eq("id", id);
+  const tc = await getAuthenticatedTenantClient();
+  await tc.from("contact_segments").delete().eq("id", id);
   revalidatePath("/contacts/segments");
   return { success: true };
 }
 
 export async function evaluateSegment(segmentId: string): Promise<{ contactIds: string[]; count: number }> {
-  const supabase = createAdminClient();
-  const { data: segment } = await supabase
+  const tc = await getAuthenticatedTenantClient();
+  const { data: segment } = await tc
     .from("contact_segments")
     .select("rules, rule_operator")
     .eq("id", segmentId)
@@ -67,7 +67,7 @@ export async function evaluateSegment(segmentId: string): Promise<{ contactIds: 
   const contactIds = await getMatchingContactIds(rules, segment.rule_operator || "AND");
 
   // Update count
-  await supabase
+  await tc
     .from("contact_segments")
     .update({ contact_count: contactIds.length, updated_at: new Date().toISOString() })
     .eq("id", segmentId);
@@ -76,14 +76,14 @@ export async function evaluateSegment(segmentId: string): Promise<{ contactIds: 
 }
 
 export async function bulkEnroll(contactIds: string[], workflowId: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
   let enrolled = 0;
   let failed = 0;
   const errors: string[] = [];
 
   for (const contactId of contactIds) {
     // Check if already enrolled
-    const { data: existing } = await supabase
+    const { data: existing } = await tc
       .from("workflow_enrollments")
       .select("id")
       .eq("contact_id", contactId)
@@ -93,7 +93,7 @@ export async function bulkEnroll(contactIds: string[], workflowId: string) {
 
     if (existing) continue;
 
-    const { error: insertError } = await supabase.from("workflow_enrollments").insert({
+    const { error: insertError } = await tc.from("workflow_enrollments").insert({
       contact_id: contactId,
       workflow_id: workflowId,
       status: "active",
@@ -120,18 +120,18 @@ async function evaluateSegmentRules(rules: SegmentRule[], operator: string): Pro
 }
 
 async function getMatchingContactIds(rules: SegmentRule[], operator: string): Promise<string[]> {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   if (rules.length === 0) {
-    const { data } = await supabase.from("contacts").select("id");
-    return (data || []).map(c => c.id);
+    const { data } = await tc.from("contacts").select("id");
+    return (data || []).map((c: any) => c.id);
   }
 
   // For AND: intersect results. For OR: union results.
   const ruleSets: Set<string>[] = [];
 
   for (const rule of rules) {
-    let query = supabase.from("contacts").select("id");
+    let query = tc.from("contacts").select("id");
 
     switch (rule.field) {
       case "type":
@@ -157,7 +157,7 @@ async function getMatchingContactIds(rules: SegmentRule[], operator: string): Pr
     }
 
     const { data } = await query;
-    ruleSets.push(new Set((data || []).map(c => c.id)));
+    ruleSets.push(new Set((data || []).map((c: any) => c.id)));
   }
 
   if (ruleSets.length === 0) return [];

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, X, ArrowDownAZ, Clock } from "lucide-react";
+import { Search, Filter, X, ArrowDownAZ, Clock, Upload, Download, GitMerge } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Contact } from "@/types";
 import { CONTACT_TYPE_COLORS, type ContactType } from "@/lib/constants";
@@ -51,7 +51,10 @@ function MiniStageDots({
   return (
     <div className="flex items-center gap-0.5 mt-1">
       {stages.map((s, i) => {
-        const isCompleted = !isCold && currentIndex > i;
+        // Past stages use neutral gray-500 (visited), NOT green (complete).
+        // We have no subtask data here, so green would falsely imply "all tasks done".
+        // Only the full StageBar (which receives stage data) should ever show green/amber.
+        const isVisited = !isCold && currentIndex > i;
         const isCurrent = !isCold && stage === s;
         const colors = STAGE_COLORS[s];
 
@@ -62,8 +65,8 @@ function MiniStageDots({
             className={`
               w-1.5 h-1.5 rounded-full transition-all
               ${
-                isCompleted
-                  ? "bg-emerald-500"
+                isVisited
+                  ? "bg-gray-500"
                   : isCurrent
                   ? `${colors.dot} ring-1 ring-offset-0.5 ring-current`
                   : "bg-gray-200"
@@ -83,13 +86,15 @@ function MiniStageDots({
 }
 
 // Filter chip types
-type TypeFilter = "all" | "buyer" | "seller" | "partner" | "other";
+type TypeFilter = "all" | "buyer" | "seller" | "customer" | "agent" | "partner" | "other";
 type StageFilter = "all" | string;
 
 const TYPE_FILTERS: { value: TypeFilter; label: string; color: string }[] = [
   { value: "all", label: "All", color: "bg-gray-100 text-gray-700" },
+  { value: "customer", label: "Lead", color: "bg-green-100 text-green-700" },
   { value: "buyer", label: "Buyer", color: "bg-blue-100 text-blue-700" },
   { value: "seller", label: "Seller", color: "bg-purple-100 text-purple-700" },
+  { value: "agent", label: "Agent", color: "bg-orange-100 text-orange-700" },
   { value: "partner", label: "Partner", color: "bg-teal-100 text-teal-700" },
 ];
 
@@ -108,20 +113,25 @@ type SortMode = "recent" | "alpha";
 export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const stageParam = searchParams.get("stage");
+  const initialStage = stageParam && PIPELINE_TO_STAGE[stageParam] ? PIPELINE_TO_STAGE[stageParam] : "all";
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
-  const [stageFilter, setStageFilter] = useState<StageFilter>("all");
-  const [showFilters, setShowFilters] = useState(false);
+  const [stageFilter, setStageFilter] = useState<StageFilter>(initialStage);
+  const [showFilters, setShowFilters] = useState(initialStage !== "all");
   const [sortMode, setSortMode] = useState<SortMode>("recent");
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<string | null>(null);
 
-  // Auto-apply stage filter from ?stage= query param (from pipeline click)
+  // Sync stage filter when searchParams change after initial render
   useEffect(() => {
-    const stageParam = searchParams.get("stage");
-    if (stageParam && PIPELINE_TO_STAGE[stageParam]) {
+    if (!stageParam || !PIPELINE_TO_STAGE[stageParam]) return;
+    const raf = requestAnimationFrame(() => {
       setStageFilter(PIPELINE_TO_STAGE[stageParam]);
       setShowFilters(true);
-    }
-  }, [searchParams]);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [stageParam]);
 
   const hasActiveFilter = typeFilter !== "all" || stageFilter !== "all";
 
@@ -183,20 +193,74 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
               ({sorted.length})
             </span>
           </h2>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`
-              p-1.5 rounded-md transition-colors relative
-              ${showFilters || hasActiveFilter ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}
-            `}
-            title="Filter contacts"
-          >
-            <Filter className="h-4 w-4" />
-            {hasActiveFilter && (
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />
-            )}
-          </button>
+          <div className="flex items-center gap-0.5">
+            <a
+              href="/api/contacts/export"
+              className="p-1.5 rounded-md text-muted-foreground hover:bg-muted transition-colors"
+              title="Export CSV"
+            >
+              <Download className="h-3.5 w-3.5" />
+            </a>
+            <label
+              className={cn(
+                "p-1.5 rounded-md transition-colors cursor-pointer",
+                importing ? "opacity-50 pointer-events-none" : "text-muted-foreground hover:bg-muted"
+              )}
+              title="Import CSV"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              <input
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setImporting(true);
+                  setImportResult(null);
+                  try {
+                    const fd = new FormData();
+                    fd.append("file", file);
+                    const res = await fetch("/api/contacts/import", { method: "POST", body: fd });
+                    const data = await res.json();
+                    setImportResult(`Imported ${data.imported}, skipped ${data.skipped}`);
+                    if (data.imported > 0) window.location.reload();
+                  } catch {
+                    setImportResult("Import failed");
+                  }
+                  setImporting(false);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            <a
+              href="/contacts/merge"
+              className="p-1.5 rounded-md text-muted-foreground hover:bg-muted transition-colors"
+              title="Find duplicates"
+            >
+              <GitMerge className="h-3.5 w-3.5" />
+            </a>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`
+                p-1.5 rounded-md transition-colors relative
+                ${showFilters || hasActiveFilter ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}
+              `}
+              title="Filter contacts"
+            >
+              <Filter className="h-4 w-4" />
+              {hasActiveFilter && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />
+              )}
+            </button>
+          </div>
         </div>
+        {importResult && (
+          <div className="text-xs text-emerald-600 bg-emerald-50 rounded px-2 py-1 flex items-center justify-between">
+            <span>{importResult}</span>
+            <button onClick={() => setImportResult(null)} className="text-emerald-400 hover:text-emerald-600"><X className="h-3 w-3" /></button>
+          </div>
+        )}
 
         {/* Search + sort toggle */}
         <div className="flex gap-1.5">
@@ -320,6 +384,10 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                   ? "bg-purple-500"
                   : contact.type === "partner"
                   ? "bg-teal-500"
+                  : contact.type === "customer"
+                  ? "bg-green-500"
+                  : contact.type === "agent"
+                  ? "bg-orange-500"
                   : "bg-blue-500";
               const contactStage = (contact as Record<string, unknown>)
                 .stage_bar as string | null;

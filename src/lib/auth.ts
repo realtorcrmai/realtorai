@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ALL_FEATURES } from "@/lib/features";
+import { ALL_FEATURES, CURRENT_RELEASE_FEATURES } from "@/lib/features";
 import {
   getClientIp,
   recordFailedAttempt,
@@ -10,8 +10,8 @@ import {
   resetRateLimit,
 } from "@/lib/rate-limit";
 
-const DEMO_EMAIL = process.env.DEMO_EMAIL || "demo@realestatecrm.com";
-const DEMO_PASSWORD = process.env.DEMO_PASSWORD || "demo1234";
+const DEMO_EMAIL = process.env.DEMO_EMAIL;
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
 // Cache whether users table exists to avoid hitting Supabase on every session check
@@ -125,7 +125,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (tableMissing) {
             usersTableExists = false;
             token.role = token.role ?? "realtor";
-            token.enabledFeatures = token.enabledFeatures ?? ALL_FEATURES;
+            token.enabledFeatures = token.enabledFeatures ?? CURRENT_RELEASE_FEATURES;
           } else {
             usersTableExists = true;
             if (fetchError && fetchError.code !== "PGRST116") {
@@ -153,7 +153,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               }
 
               token.role = newUser?.role ?? "realtor";
-              token.enabledFeatures = newUser?.enabled_features ?? ALL_FEATURES;
+              token.enabledFeatures = newUser?.enabled_features ?? CURRENT_RELEASE_FEATURES;
               token.userId = newUser?.id;
             }
           }
@@ -172,6 +172,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.accessToken = token.accessToken as string;
       session.user.role = token.role as "admin" | "realtor" | undefined;
       session.user.enabledFeatures = token.enabledFeatures as string[] | undefined;
+      // Multi-tenancy: userId = realtorId (the tenant identifier)
+      session.user.id = (token.userId as string) || (token.sub as string) || "";
+      (session.user as unknown as Record<string, unknown>).realtorId = (token.userId as string) || (token.sub as string) || "";
       return session;
     },
   },

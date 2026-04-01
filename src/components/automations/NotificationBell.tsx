@@ -41,10 +41,15 @@ export function NotificationBell() {
   }
 
   useEffect(() => {
-    fetchNotifications();
+    const controller = new AbortController();
+    getNotifications().then((result) => {
+      if (!controller.signal.aborted && result.notifications) {
+        setNotifications(result.notifications);
+      }
+    });
     // Poll every 30 seconds
     const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    return () => { controller.abort(); clearInterval(interval); };
   }, []);
 
   function handleMarkRead(id: string) {

@@ -10,6 +10,7 @@ import {
   Mail,
   StickyNote,
   Send,
+  Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,11 +19,12 @@ import { Button } from "@/components/ui/button";
 import { addCommunicationNote } from "@/actions/contacts";
 import type { Communication } from "@/types";
 
-const channelIcons = {
+const channelIcons: Record<string, typeof MessageSquare> = {
   whatsapp: MessageCircle,
   sms: MessageSquare,
   email: Mail,
   note: StickyNote,
+  voice: Phone,
 };
 
 const channelBadgeStyles: Record<string, string> = {
@@ -30,6 +32,7 @@ const channelBadgeStyles: Record<string, string> = {
   sms: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
   email: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400",
   note: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
+  voice: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400",
 };
 
 const channelLabels: Record<string, string> = {
@@ -37,9 +40,10 @@ const channelLabels: Record<string, string> = {
   sms: "SMS",
   email: "Email",
   note: "Note",
+  voice: "Voice",
 };
 
-type FilterType = "all" | "sms" | "whatsapp" | "email" | "note";
+type FilterType = "all" | "sms" | "whatsapp" | "email" | "note" | "voice";
 
 const FILTERS: { key: FilterType; label: string }[] = [
   { key: "all", label: "All" },
@@ -47,6 +51,7 @@ const FILTERS: { key: FilterType; label: string }[] = [
   { key: "whatsapp", label: "WhatsApp" },
   { key: "email", label: "Email" },
   { key: "note", label: "Notes" },
+  { key: "voice", label: "Voice" },
 ];
 
 export function CommunicationTimeline({

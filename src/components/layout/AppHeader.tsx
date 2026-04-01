@@ -17,6 +17,8 @@ import {
   Wand2,
   Zap,
   Mail,
+  Globe,
+  BookOpen,
   LogOut,
   Home,
   ChevronDown,
@@ -33,6 +35,8 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { QuickAddButton } from "@/components/layout/QuickAddButton";
+import { ContextualHelpButton } from "@/components/help/ContextualHelpButton";
+import { VoiceStatusIndicator } from "@/components/voice-agent/VoiceStatusIndicator";
 
 import type { FeatureKey } from "@/lib/features";
 
@@ -52,6 +56,9 @@ const moreItems: { href: string; label: string; icon: typeof Building2; featureK
   { href: "/import", label: "Excel Import", icon: Upload, featureKey: "import" },
   { href: "/forms", label: "BC Forms", icon: FileText, featureKey: "forms" },
   { href: "/newsletters", label: "Email Marketing", icon: Mail, featureKey: "newsletters" },
+  { href: "/websites", label: "Website Marketing", icon: Globe, featureKey: "website" },
+  { href: "/social", label: "Social Media", icon: Globe, featureKey: "social" },
+  { href: "/assistant/knowledge", label: "Knowledge Base", icon: BookOpen, featureKey: "assistant" },
 ];
 
 export function AppHeader() {
@@ -202,6 +209,12 @@ export function AppHeader() {
             <span className="hidden lg:inline">Admin</span>
           </Link>
         )}
+
+        {/* Voice Agent Status */}
+        <VoiceStatusIndicator />
+
+        {/* Help */}
+        <ContextualHelpButton />
 
         {/* Quick Add */}
         <QuickAddButton />

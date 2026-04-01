@@ -2,6 +2,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createWithRetry } from "@/lib/anthropic/retry";
 import { z } from "zod";
 
 const anthropic = new Anthropic();
@@ -62,14 +63,35 @@ export async function scoreContact(contactId: string): Promise<LeadScore | null>
   const intel = (contact.newsletter_intelligence as Record<string, any>) || {};
   const context = buildScoringContext(contact, communications || [], newsletterEvents || [], activities || [], showings || [], intel);
 
+  // RAG augmentation: retrieve full interaction history beyond 30-day window
+  let ragContext = '';
+  try {
+    const { retrieveContext } = await import('@/lib/rag/retriever');
+    const db = createAdminClient();
+    const retrieved = await retrieveContext(
+      db,
+      `${contact.name} engagement history preferences intent`,
+      {
+        contact_id: contactId,
+        content_type: ['message', 'activity', 'email', 'recommendation'],
+      },
+      5
+    );
+    if (retrieved.formatted) {
+      ragContext = `\n\nADDITIONAL CONTEXT FROM FULL HISTORY:\n${retrieved.formatted}`;
+    }
+  } catch {
+    // RAG not available — continue with standard 30-day window
+  }
+
   const model = process.env.AI_SCORING_MODEL || "claude-sonnet-4-20250514";
 
   try {
-    const message = await anthropic.messages.create({
+    const message = await createWithRetry(anthropic, {
       model,
       max_tokens: 800,
       system: SCORING_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: context }],
+      messages: [{ role: "user", content: context + ragContext }],
     });
 
     const text = message.content[0].type === "text" ? message.content[0].text : "";

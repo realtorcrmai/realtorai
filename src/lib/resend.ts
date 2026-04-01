@@ -22,6 +22,17 @@ interface SendEmailParams {
   replyTo?: string;
   tags?: { name: string; value: string }[];
   headers?: Record<string, string>;
+  /** Metadata injected as a banner at the top of the email for BCC monitoring */
+  metadata?: {
+    workflowName?: string;
+    stepName?: string;
+    emailType?: string;
+    journeyPhase?: string;
+    contactName?: string;
+    contactType?: string;
+    contactId?: string;
+    triggeredBy?: string;
+  };
 }
 
 async function sendWithRetry(
@@ -49,13 +60,43 @@ export async function sendEmail(params: SendEmailParams) {
   const resend = getResend();
   const fromEmail = params.from || process.env.RESEND_FROM_EMAIL || "newsletters@listingflow.com";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const monitorEmail = process.env.EMAIL_MONITOR_BCC || "";
+
+  // Inject metadata banner into HTML for BCC monitoring
+  let html = params.html;
+  if (monitorEmail && params.metadata) {
+    const m = params.metadata;
+    const rows = [
+      m.workflowName && `<tr><td style="padding:2px 8px;font-weight:600;color:#6b21a8;">Workflow</td><td style="padding:2px 8px;">${m.workflowName}</td></tr>`,
+      m.stepName && `<tr><td style="padding:2px 8px;font-weight:600;color:#6b21a8;">Step</td><td style="padding:2px 8px;">${m.stepName}</td></tr>`,
+      m.emailType && `<tr><td style="padding:2px 8px;font-weight:600;color:#6b21a8;">Email Type</td><td style="padding:2px 8px;">${m.emailType}</td></tr>`,
+      m.journeyPhase && `<tr><td style="padding:2px 8px;font-weight:600;color:#6b21a8;">Journey Phase</td><td style="padding:2px 8px;">${m.journeyPhase}</td></tr>`,
+      m.contactName && `<tr><td style="padding:2px 8px;font-weight:600;color:#6b21a8;">Contact</td><td style="padding:2px 8px;">${m.contactName} (${m.contactType || "unknown"})</td></tr>`,
+      m.triggeredBy && `<tr><td style="padding:2px 8px;font-weight:600;color:#6b21a8;">Triggered By</td><td style="padding:2px 8px;">${m.triggeredBy}</td></tr>`,
+      `<tr><td style="padding:2px 8px;font-weight:600;color:#6b21a8;">Sent To</td><td style="padding:2px 8px;">${params.to}</td></tr>`,
+      `<tr><td style="padding:2px 8px;font-weight:600;color:#6b21a8;">Sent At</td><td style="padding:2px 8px;">${new Date().toISOString()}</td></tr>`,
+    ].filter(Boolean).join("");
+
+    const banner = `<div style="background:#faf5ff;border:2px solid #d8b4fe;border-radius:8px;padding:12px;margin-bottom:16px;font-family:sans-serif;font-size:12px;color:#374151;">
+      <div style="font-weight:700;color:#6b21a8;margin-bottom:6px;font-size:13px;">ListingFlow Test Metadata</div>
+      <table style="border-collapse:collapse;width:100%;">${rows}</table>
+    </div>`;
+
+    // Insert after <body> tag or at the start
+    if (html.includes("<body")) {
+      html = html.replace(/(<body[^>]*>)/i, `$1${banner}`);
+    } else {
+      html = banner + html;
+    }
+  }
 
   const { data, error } = await sendWithRetry(() =>
     resend.emails.send({
       from: fromEmail,
       to: params.to,
+      ...(monitorEmail ? { bcc: monitorEmail } : {}),
       subject: params.subject,
-      html: params.html,
+      html,
       text: params.text,
       replyTo: params.replyTo,
       tags: params.tags?.filter(t => t.value != null && t.value !== ""),

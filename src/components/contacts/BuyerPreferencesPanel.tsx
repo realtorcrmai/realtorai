@@ -130,8 +130,8 @@ export function BuyerPreferencesPanel({
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Home className="h-5 w-5 text-muted-foreground" />
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <Home className="h-4 w-4" />
             Buyer Preferences
           </h3>
         </div>
@@ -156,8 +156,8 @@ export function BuyerPreferencesPanel({
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Home className="h-5 w-5 text-muted-foreground" />
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <Home className="h-4 w-4" />
             Buyer Preferences
           </h3>
           <button
@@ -333,8 +333,8 @@ export function BuyerPreferencesPanel({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Home className="h-5 w-5 text-muted-foreground" />
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+          <Home className="h-4 w-4" />
           Buyer Preferences
         </h3>
       </div>

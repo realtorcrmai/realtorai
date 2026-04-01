@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useSyncExternalStore } from "react";
 import { Calendar, dateFnsLocalizer, View } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay, addDays, subDays } from "date-fns";
 import { enCA } from "date-fns/locale/en-CA";
@@ -98,20 +98,34 @@ function EventComponent({ event }: { event: CalendarEvent }) {
   );
 }
 
+// Use matchMedia to determine initial view for responsive behavior
+const mql = typeof window !== "undefined" ? window.matchMedia("(max-width: 767px)") : null;
+function subscribeToMql(cb: () => void) {
+  mql?.addEventListener("change", cb);
+  return () => mql?.removeEventListener("change", cb);
+}
+function getIsMobile() {
+  return mql?.matches ?? false;
+}
+function getIsMobileServer() {
+  return false;
+}
+
 export function CRMCalendar() {
+  const isMobile = useSyncExternalStore(subscribeToMql, getIsMobile, getIsMobileServer);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [view, setView] = useState<View>("week");
+  const [view, setView] = useState<View>(() => isMobile ? "agenda" : "week");
   const [date, setDate] = useState(new Date());
 
-  const fetchEvents = useCallback(async (rangeStart: Date, rangeEnd: Date) => {
+  const fetchEvents = useCallback(async (rangeStart: Date, rangeEnd: Date): Promise<CalendarEvent[]> => {
     try {
       const res = await fetch(
         `/api/calendar/events?start=${rangeStart.toISOString()}&end=${rangeEnd.toISOString()}`
       );
-      if (!res.ok) return;
+      if (!res.ok) return [];
       const data = await res.json();
 
-      const allEvents: CalendarEvent[] = [
+      return [
         ...(data.googleEvents ?? []).map(
           (e: { id: string; title: string; start: string; end: string }) => ({
             id: e.id,
@@ -144,25 +158,28 @@ export function CRMCalendar() {
           })
         ),
       ];
-
-      setEvents(allEvents);
     } catch (err) {
       console.error("Failed to fetch calendar events:", err);
+      return [];
     }
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     const start = subDays(date, 30);
     const end = addDays(date, 30);
-    fetchEvents(start, end);
+    fetchEvents(start, end).then((result) => {
+      if (!cancelled) setEvents(result);
+    });
+    return () => { cancelled = true; };
   }, [date, fetchEvents]);
 
-  // Responsive: default to agenda on small screens
+  // Sync view when screen size changes from desktop to mobile
   useEffect(() => {
-    if (window.innerWidth < 768) {
-      setView("agenda");
-    }
-  }, []);
+    if (!isMobile) return;
+    const raf = requestAnimationFrame(() => setView("agenda"));
+    return () => cancelAnimationFrame(raf);
+  }, [isMobile]);
 
   return (
     <div className="space-y-4">

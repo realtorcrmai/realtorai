@@ -13,6 +13,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from database import save_note, get_notes, save_reminder, get_reminders
+from api_client import api
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  TOOL SCHEMAS
@@ -259,7 +260,7 @@ def _parse_relative_time(when_str: str) -> datetime:
         raise ValueError(f"Cannot parse time: {when_str}. Use ISO format or relative (e.g. '30m', '2h', '1d').")
 
 
-def handle_generic_tool(tool_name: str, args: dict, realtor_id: str = "R001") -> str:
+async def handle_generic_tool(tool_name: str, args: dict, realtor_id: str = "R001") -> str:
     """Dispatch a generic tool call and return a JSON string result."""
     try:
         if tool_name == "get_current_time":
@@ -308,7 +309,16 @@ def handle_generic_tool(tool_name: str, args: dict, realtor_id: str = "R001") ->
                 tags=args.get("tags", []),
                 realtor_id=realtor_id,
             )
-            result = {"ok": True, "note_id": note_id, "message": f"Note '{args['title']}' saved."}
+            # Also log as CRM activity so it shows up in the system
+            crm_result = None
+            try:
+                crm_result = await api.post("/api/voice-agent/activities", {
+                    "type": "note",
+                    "description": f"{args['title']}: {args['content']}",
+                })
+            except Exception:
+                pass  # Local note is saved, CRM is best-effort
+            result = {"ok": True, "note_id": note_id, "crm_activity": crm_result, "message": f"Note '{args['title']}' saved."}
 
         elif tool_name == "get_notes":
             notes = get_notes(
@@ -321,15 +331,28 @@ def handle_generic_tool(tool_name: str, args: dict, realtor_id: str = "R001") ->
 
         elif tool_name == "set_reminder":
             when = _parse_relative_time(args["when"])
+            # Save to local SQLite as backup
             reminder_id = save_reminder(
                 message=args["message"],
                 remind_at=when.isoformat(),
                 realtor_id=realtor_id,
             )
+            # Also create a real CRM task so it shows up in the system
+            crm_result = None
+            try:
+                crm_result = await api.post("/api/voice-agent/tasks", {
+                    "title": args["message"],
+                    "due_date": when.isoformat(),
+                    "priority": "medium",
+                    "category": "follow_up",
+                })
+            except Exception as e:
+                crm_result = {"error": f"Local reminder saved but CRM task failed: {e}"}
             result = {
                 "ok": True,
                 "reminder_id": reminder_id,
-                "message": f"Reminder set for {when.strftime('%I:%M %p on %B %d')}.",
+                "crm_task": crm_result,
+                "message": f"Reminder set for {when.strftime('%I:%M %p on %B %d')} and added to your CRM tasks.",
                 "remind_at": when.isoformat(),
             }
 

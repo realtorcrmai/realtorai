@@ -1,12 +1,59 @@
-# CLAUDE.md — ListingFlow Real Estate CRM
+# CLAUDE.md — Realtors360 Real Estate CRM
 
 ## Project Overview
 
-ListingFlow is a real estate transaction management CRM for licensed BC realtors. It automates the full property listing lifecycle — from seller intake through closing — with integrated showing management, BCREA form generation, AI content creation, and regulatory compliance tracking.
+Realtors360 is a real estate transaction management CRM for licensed BC realtors. It automates the full property listing lifecycle — from seller intake through closing — with integrated showing management, BCREA form generation, AI content creation, and regulatory compliance tracking.
 
 **Live URL:** localhost:3000 (dev)
-**Monorepo root:** `/Users/bigbear/reality crm/`
-**App directory:** `/Users/bigbear/reality crm/realestate-crm/`
+**Repo root:** `/Users/rahulmittal/Library/CloudStorage/OneDrive-Personal/CoWork/realtorai/`
+**App files:** `src/`, `package.json`, `next.config.ts` are at repo root (flat monorepo — no nested `realestate-crm/` subdirectory)
+
+### Git Workflow — Feature Branch Model
+
+```
+feature branch → PR → dev (integration) → PR → main (production)
+```
+
+- **Feature branches** — `<developer>/<description>` (e.g. `rahul/voice-tts`, `claude/playbook-fix`)
+- **`dev`** — integration branch, protected (PR required, 0 approvals — merge your own)
+- **`main`** — production, protected (PR required, 1 approval)
+- **Never push directly to `dev` or `main`** — always use PRs
+- Branch from `dev`, create PR back to `dev`, merge, delete feature branch
+- To release: create PR from `dev → main`, get 1 approval, merge
+
+### Deployment — Use `/deploy`
+
+**Run `/deploy` to build and start all services locally.** The deploy skill at `.claude/skills/deploy.md` handles: pull latest, install deps, run migrations, build, start servers, and validate.
+
+| Service | Port | Command |
+|---------|------|---------|
+| CRM (Next.js) | 3000 | `npm run dev` from repo root |
+| Website Agent | 8768 | `npm run dev` from `realtors360-agent/` |
+| Form Server | 8767 | Python server (separate) |
+
+### Secrets — Encrypted Vault
+
+API keys are stored encrypted in `.env.vault` (committed to git). **Never commit `.env.local` or put API keys in code/CLAUDE.md.**
+
+```bash
+# First time setup — decrypt secrets
+./scripts/vault.sh decrypt        # passphrase from team lead
+
+# After adding a new API key
+./scripts/vault.sh encrypt        # re-encrypt and commit .env.vault
+
+# Check what's stored
+./scripts/vault.sh status         # shows keys with masked values
+
+# Change passphrase
+./scripts/vault.sh rotate
+```
+
+When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.vault` → tell team to `decrypt` after pull.
+
+### Testing — Use `/test`
+
+**After every build or deploy, run `/test` to validate the application.** The test skill at `.claude/skills/test.md` runs 7 categories: Navigation (35 routes), API Auth, CRUD (7 entities), Data Integrity (7 constraints), Cron Auth (4 tests), Cascade Delete, Sample Data Validation — 73+ tests total. Do NOT deploy without a passing test run.
 
 ---
 
@@ -19,7 +66,7 @@ ListingFlow is a real estate transaction management CRM for licensed BC realtors
 | Language | TypeScript | 5.x |
 | Database | Supabase (PostgreSQL + RLS) | latest |
 | Auth | NextAuth v5 (beta.30) | JWT sessions |
-| Styling | Tailwind CSS v4 + custom ListingFlow design system | 4.x |
+| Styling | Tailwind CSS v4 + custom Realtors360 design system | 4.x |
 | UI Components | shadcn/ui v4 + custom LF components | 4.x |
 | State | Zustand + TanStack React Query v5 | 5.x |
 | Forms | React Hook Form + Zod v4 | 7.x / 4.x |
@@ -27,14 +74,14 @@ ListingFlow is a real estate transaction management CRM for licensed BC realtors
 | Calendar | Google Calendar API (googleapis) | 171.x |
 | AI | Anthropic Claude SDK | 0.78.x |
 | Video/Image | Kling AI API | custom |
-| Form Engine | ListingFlow Python server | localhost:8767 |
+| Form Engine | Realtors360 Python server | localhost:8767 |
 
 ---
 
 ## Project Structure
 
 ```
-realestate-crm/
+/  (repo root)
 ├── src/
 │   ├── app/
 │   │   ├── (auth)/login/          # Login page (demo + Google OAuth)
@@ -111,14 +158,7 @@ realestate-crm/
 │       ├── database.ts            # Supabase table types
 │       └── index.ts               # Exported type aliases
 ├── supabase/migrations/
-│   ├── 001_initial_schema.sql     # contacts, listings, appointments, communications, documents
-│   ├── 002-009_*.sql              # tasks, forms, content engine, contacts, workflows
-│   ├── 010_newsletter_journey_engine.sql  # newsletters, newsletter_events, contact_journeys
-│   ├── 011_unify_email_engine.sql # merge journey into workflow_enrollments
-│   ├── 012_email_template_builder.sql # builder_json, is_ai_template columns
-│   ├── 013_visual_workflow_builder.sql # flow_json for React Flow editor
-│   ├── 014_segments_ab_testing.sql # contact_segments table
-│   └── 015_ai_agent.sql          # ai_lead_score, agent_recommendations, ai_decision
+│   └── 56+ migration files (001 through 056)
 ├── scripts/
 │   └── qa-test-email-engine.mjs   # Automated QA test runner (27 tests)
 └── package.json
@@ -126,7 +166,7 @@ realestate-crm/
 
 ---
 
-## Design System — ListingFlow
+## Design System — Realtors360
 
 The UI uses a custom glassmorphism design language. All custom styles are defined as CSS custom properties in `globals.css`.
 
@@ -161,7 +201,7 @@ The UI uses a custom glassmorphism design language. All custom styles are define
 - Horizontal pill navigation: 40px height
 - Content area: `margin-top: 100px` (header + nav), `padding: 18px`
 - Animated gradient background canvas (`.wf-canvas`)
-- No vertical sidebar (converted to horizontal nav)
+- Sidebar components exist (`Sidebar.tsx`, `SidebarLayout.tsx`, `MobileSidebarSheet.tsx`) but the default layout uses `AppHeader` with horizontal nav + `MobileNav` bottom bar
 
 ### Conventions
 - Emoji icons throughout UI (no Lucide icons on pages, only in some components)
@@ -187,8 +227,14 @@ The UI uses a custom glassmorphism design language. All custom styles are define
 | `media_assets` | Generated content files | listing_id, asset_type, status, output_url |
 | `google_tokens` | Google Calendar tokens | user_email, access_token, refresh_token |
 
-### RLS Policy
-All tables: `auth.role() = 'authenticated'` — single-tenant, all rows visible to logged-in users.
+### Multi-Tenancy & RLS
+
+Realtors360 is **multi-tenant**. Every data table has a `realtor_id` column scoped to the authenticated user.
+
+- **App-level isolation:** `getAuthenticatedTenantClient()` from `src/lib/supabase/tenant.ts` auto-injects `.eq("realtor_id", userId)` on all queries
+- **DB-level defense:** RLS policies on 60+ tables enforce `realtor_id` scoping
+- **Server actions:** MUST use tenant client, never raw `createAdminClient()` for user data
+- **Global tables** (exempt from scoping): `google_tokens`, `newsletter_templates`, `workflow_blueprints`, `knowledge_articles`
 
 ---
 
@@ -202,7 +248,7 @@ The CRM implements an 8-phase listing workflow (stored as `current_phase` on lis
 | 2 | Data Enrichment | BC Geocoder (API), ParcelMap BC (API), LTSA (manual), BC Assessment (manual) |
 | 3 | CMA Analysis | Comparable market analysis fields |
 | 4 | Pricing & Review | List price confirmation, price lock, marketing tier |
-| 5 | Form Generation | 12 BCREA forms auto-filled via Python ListingFlow server |
+| 5 | Form Generation | 12 BCREA forms auto-filled via Python Realtors360 server |
 | 6 | E-Signature | DocuSign envelope tracking (UI exists, integration partial) |
 | 7 | MLS Preparation | Claude AI remarks generation, photo management |
 | 8 | MLS Submission | Manual submission step (no Paragon API integration) |
@@ -237,8 +283,8 @@ Phase advancement is sequential with audit trail logging.
 - Text-to-Image: prompt → 8K image (1:1 for Instagram)
 - Async task polling via /api/kling/status
 
-### ListingFlow Python Server
-- Endpoint: `LISTINGFLOW_URL` (default: `http://127.0.0.1:8767`)
+### Realtors360 Python Server
+- Endpoint: `REALTORS360_URL` (default: `http://127.0.0.1:8767`)
 - `POST /api/form/html` — accepts CDM payload, returns pre-filled HTML form
 - 12 BCREA forms: DORTS, MLC, PDS, FINTRAC, PRIVACY, C3, DRUP, MLS_INPUT, MKTAUTH, AGENCY, C3CONF, FAIRHSG
 
@@ -272,8 +318,8 @@ ANTHROPIC_API_KEY=
 # App
 NEXT_PUBLIC_APP_URL=
 
-# ListingFlow Form Server
-LISTINGFLOW_URL=          # defaults to http://127.0.0.1:8767
+# Realtors360 Form Server
+REALTORS360_URL=          # defaults to http://127.0.0.1:8767
 
 # Kling AI
 KLING_API_BASE_URL=
@@ -294,7 +340,7 @@ RESEND_WEBHOOK_SECRET=
 ## Development Commands
 
 ```bash
-# Start dev server (from realestate-crm/)
+# Start dev server (from repo root)
 npm run dev
 
 # Build for production
@@ -303,7 +349,7 @@ npm run build
 # Lint
 npm run lint
 
-# Start ListingFlow form server (separate terminal)
+# Start Realtors360 form server (separate terminal)
 # python server at localhost:8767
 ```
 
@@ -322,13 +368,13 @@ bash scripts/test-suite.sh
 npm run build
 
 # 4. Only if build passes → deploy (auto via CI on push to main)
-git add -A && git commit && git push origin main
+git add -A && git commit && git push origin dev
 
 # 5. Save known-good state after successful deploy
 bash scripts/save-state.sh
 ```
 
-**Test suite covers (85+ tests):**
+**Test suite covers (73+ tests):**
 - Navigation: All 35+ page routes return 200
 - CRUD: Create/Read/Update/Delete for contacts, listings, tasks, deals, households, communications
 - Data Integrity: NOT NULL, CHECK constraints, UNIQUE, self-relationship, cascade delete
@@ -341,10 +387,11 @@ bash scripts/save-state.sh
 Configured in `.claude/launch.json`:
 ```json
 {
-  "name": "dev",
+  "name": "nextjs",
   "runtimeExecutable": "npm",
-  "runtimeArgs": ["run", "dev", "--prefix", "/Users/bigbear/reality crm/realestate-crm"],
-  "port": 3000
+  "runtimeArgs": ["run", "dev"],
+  "port": 3000,
+  "cwd": "<repo root>"
 }
 ```
 
@@ -352,13 +399,13 @@ Configured in `.claude/launch.json`:
 
 ## Design Documents
 
-Located in project root (`/Users/bigbear/reality crm/`):
+Located in repo root:
 
 | Document | Description |
 |----------|-------------|
-| `ListingFlow_Realtor_Workflow_Design_Document.docx` | Complete 12-phase BC realtor listing lifecycle specification |
-| `ListingFlow_Gap_Analysis_Report.docx` | Comparative analysis: design doc vs current implementation |
-| `ListingFlow_Gap_Analysis_Report.md` | Same gap analysis in Markdown format |
+| `Realtors360_Realtor_Workflow_Design_Document.docx` | Complete 12-phase BC realtor listing lifecycle specification |
+| `Realtors360_Gap_Analysis_Report.docx` | Comparative analysis: design doc vs current implementation |
+| `Realtors360_Gap_Analysis_Report.md` | Same gap analysis in Markdown format |
 | `PRD_Newsletter_Journey_Engine.md` | Full PRD for AI newsletter & journey engine |
 | `PLAN_Email_Marketing_Engine.md` | 12-deliverable implementation plan (4 phases) |
 | `PLAN_AI_Agent.md` | AI agent layer plan (lead scoring, send advisor, recommendations) |
@@ -426,92 +473,194 @@ RESEND_API_KEY=<key> ANTHROPIC_API_KEY=<key> CRON_SECRET=<secret> \
 - **Zod v4** for all form/API validation
 - **JSONB columns** for flexible structured data (forms_status, envelopes, enrichment data, stakeholders)
 - **Path alias:** `@/` maps to `src/`
-- **CSS:** Use `lf-*` classes for ListingFlow design system, avoid inline styles
+- **CSS:** Use `lf-*` classes for Realtors360 design system, avoid inline styles
 - **No Lucide icons on pages** — use emoji icons for UI consistency
 - **Supabase admin client** (`supabase/admin.ts`) for server-side operations that bypass RLS
 - **force-dynamic** on pages that need real-time data
 - **Revalidate paths** after mutations: `revalidatePath('/route')`
 
+### New Feature Deliverables (Mandatory)
+
+Every new feature MUST include all of the following before it is considered complete:
+
+1. **Skill file** — If the feature introduces a new user-invocable workflow, create a `.claude/skills/<name>.md` describing how to use/test it
+2. **Use cases** — Add user stories / use case descriptions to `docs/user-journeys.md` or the relevant spec file
+3. **Test scenarios** — Write comprehensive tests (see TESTING checklist below) covering:
+   - Happy path for every new function/endpoint/page
+   - Edge cases: empty inputs, nulls, boundaries, duplicates, invalid state transitions
+   - Error conditions: network failure, missing data, auth failures
+   - Data integration: FK integrity, cascade effects, cross-table consistency
+4. **Navigation test** — Add new page routes to `scripts/test-suite.sh` navigation section
+5. **Seed data** — If the feature introduces a new table, add representative seed data to the seed migration
+6. **Documentation** — Update CLAUDE.md sections (Project Structure, Database Schema) if new files/tables added
+
 ---
 
-## AI Newsletter & Journey Engine
+## Agent Playbook — MANDATORY (Read Before Every Task)
 
-### Architecture
+**All task execution MUST follow `.claude/agent-playbook.md` — the single source of truth.**
+
+**STRICT REQUIREMENT:** Every task, every developer (human and AI), every time:
+1. **Pre-Flight** — check branch, run health check, load memory
+2. **Classify** — output classification block (task type, confidence, affected files) BEFORE any code changes
+3. **Execute** — follow the per-type checklist for your task type (14 types: CODING, TESTING, DEPLOY, etc.)
+4. **Validate** — run tests, verify build, check TypeScript
+5. **Log** — append compliance log entry to `.claude/compliance-log.md`
+
+**A task without a classification block is an unauthorized change. A task without a compliance log entry did not happen.**
+
+Read the playbook before every task. It covers: pre-flight, task classification, per-type checklists (14 task types), model chaining, post-task validation, compliance logging, and production incident protocol.
+
+---
+
+## AI Email Marketing Engine
+
+### How It Works (Simple)
 
 ```
-Contact Events (CRM) → Journey Engine → Claude AI → Resend API → Email
-                              ↑                                      │
-                              └── Click/Open Webhooks ←──────────────┘
-                                        │
-                                  Contact Intelligence
+Contact added → AI writes email → Realtor approves → Email sent → Track engagement → Repeat
 ```
 
-### Email Types (6)
-| Type | Trigger | Content |
-|------|---------|---------|
-| New Listing Alert | Listing matches buyer prefs | Property details, photos, showing CTA |
-| Market Update | Monthly schedule | Area stats, price trends, recent sales |
-| Just Sold | Listing status → sold | Sale price, days on market |
-| Open House Invite | Showing created | Date, time, address, RSVP |
-| Neighbourhood Guide | New lead enters CRM | Local spots, schools, lifestyle |
-| Home Anniversary | Annual close anniversary | Current value estimate, tips |
+### Email Flow (All Paths)
 
-### Contact Journeys (Lifecycle-Driven)
-Buyer: Lead → Active (showing) → Under Contract → Past Client → Dormant
-Seller: Lead → Active Listing → Under Contract → Past Client → Dormant
+Every email in the system goes through the same process:
 
-Phase transitions are **event-driven** (showing booked, offer accepted, deal closed) — not time-based.
+```
+1. SOURCE generates content (auto-enroll, workflow cron, AI agent, manual blast)
+2. TEXT PIPELINE (src/lib/text-pipeline.ts)
+   → Personalization, voice rules, compliance check, subject dedup, length check
+3. HTML RENDER (src/lib/email-blocks.ts)
+   → Pick blocks based on email type → assemble Apple-quality HTML
+4. QUALITY SCORE (src/lib/quality-pipeline.ts)
+   → Claude Haiku rates 7 dimensions (1-10) → block if <4, regenerate if <6
+5. SAVE as draft in newsletters table → appears in AI Agent approval queue
+6. REALTOR approves → sendNewsletter() → validated send via Resend
+7. TRACK → Resend webhooks → update contact intelligence → adapt next email
+```
 
-### Click-Driven Adaptation
-Every link tracked via Resend webhooks. Clicks update `contacts.newsletter_intelligence` (JSONB):
-- Engagement score, click history, inferred interests (areas, property types, price range)
-- AI reads full profile before generating next email
-- High-intent clicks (book showing, CMA) → alert realtor immediately
+### Email Block System (src/lib/email-blocks.ts)
 
-### Key Tables
-| Table | Purpose |
+Modular blocks assembled per email type. Apple-quality design: SF Pro font, 20px radius, pill CTAs, dark mode.
+
+| Block | Purpose |
 |-------|---------|
-| `newsletters` | Email drafts, sends, AI context |
-| `newsletter_templates` | React Email template registry |
-| `newsletter_events` | Open/click/bounce tracking |
-| `contact_journeys` | Journey enrollment, phase tracking |
+| `heroImage` | Full-width photo with overlay text |
+| `heroGradient` | Gradient background for non-listing emails |
+| `priceBar` | Price + beds/baths/sqft specs |
+| `personalNote` | AI-written personalized text |
+| `featureList` | Icon + title + description rows |
+| `photoGallery` | 2x2 image grid |
+| `statsRow` | Market stats with trend arrows |
+| `recentSales` | Sold properties table |
+| `priceComparison` | This listing vs area average |
+| `openHouse` | Event card with date/time |
+| `cta` | Pill-shaped call-to-action button |
+| `agentCard` | Realtor photo + name + phone |
+| `footer` | Unsubscribe + physical address (CASL) |
 
-### Pages
-| Route | Purpose |
-|-------|---------|
-| `/newsletters` | Dashboard (pipeline, brand reach, actions) |
-| `/newsletters/queue` | AI draft approval queue |
-| `/newsletters/analytics` | Performance + attribution |
+Usage: `assembleEmail("listing_alert", { contact, agent, content, listing, market })`
+
+### Cron Jobs (Automated via Vercel Cron — vercel.json)
+
+| Cron | Schedule | What It Does |
+|------|----------|-------------|
+| `/api/cron/process-workflows` | Daily 9 AM | Check journeys + workflows → generate email drafts → AI Agent queue |
+| `/api/cron/daily-digest` | Daily 8 AM | Email realtor: overnight summary, hot buyers, pending drafts |
+| `/api/cron/consent-expiry` | Weekly Mon 6 AM | Check CASL consent expiring → queue re-confirmation |
+
+All crons require `Authorization: Bearer CRON_SECRET` header.
+
+### Email Marketing UI (Single Page — /newsletters)
+
+7 tabs on one page:
+
+| Tab | Purpose |
+|-----|---------|
+| Overview | Stat pills, hot buyers/sellers, pipeline, AI activity |
+| AI Agent | Approval queue + sent emails with engagement + held back |
+| Campaigns | Listing blast automation + custom campaigns + blast history |
+| Relationships | Health snapshot, pipeline drilldown, activity velocity |
+| Journeys | Contact journey list with search/filter/expand |
+| Analytics | Open/click rates, brand score, AI insights, email log |
+| Settings | Master switch, frequency cap, quiet hours, compliance |
 
 ### Key Files
+
 | File | Purpose |
 |------|---------|
-| `src/actions/newsletters.ts` | Newsletter CRUD, AI generation, send |
+| `src/lib/email-blocks.ts` | Modular email block builder (Apple-quality) |
+| `src/lib/text-pipeline.ts` | Pre-send text processing (personalize, voice, compliance) |
+| `src/lib/quality-pipeline.ts` | 7-dimension quality scoring via Claude Haiku |
+| `src/lib/validated-send.ts` | Full validation wrapper around Resend send |
+| `src/lib/send-governor.ts` | Frequency caps, engagement throttle, auto-sunset |
+| `src/lib/newsletter-ai.ts` | Claude content generation with reasoning |
+| `src/lib/workflow-engine.ts` | Workflow step executor (sends via blocks + Resend) |
+| `src/actions/newsletters.ts` | Newsletter CRUD, send, approve, bulk, skip |
 | `src/actions/journeys.ts` | Journey enrollment, phase advancement |
-| `src/lib/resend.ts` | Resend API wrapper |
-| `src/emails/*.tsx` | React Email templates (6 types) |
-| `src/app/api/webhooks/resend/route.ts` | Click/open/bounce webhook handler |
+| `src/lib/validators/*.ts` | 4 validators: content, design, compliance-gate, quality-scorer |
+| `src/lib/voice-learning.ts` | Extract writing rules from realtor edits |
+| `src/lib/learning-engine.ts` | Weekly learning cycle — analyze outcomes, adjust config |
+| `src/app/api/webhooks/resend/route.ts` | Click/open/bounce tracking (12 click categories) |
+| `src/app/api/templates/preview/route.ts` | Apple-quality template previews (3 designs) |
+| `src/app/api/listings/blast/route.ts` | Listing blast batch send to agents |
+| `src/app/api/cron/daily-digest/route.ts` | Morning digest email to realtor |
+| `src/app/api/cron/consent-expiry/route.ts` | CASL consent expiry checker |
+| `src/components/newsletters/*.tsx` | All 7 tab components + PipelineCard |
+| `scripts/seed-demo.mjs` | Demo seed data (29 contacts, 84 emails, 129 events) |
 
-### Environment Variables
-```
-RESEND_API_KEY=              # Resend API key
-RESEND_FROM_EMAIL=           # Verified sender (e.g. hello@listingflow.com)
-RESEND_WEBHOOK_SECRET=       # Webhook signature verification
+### Seed Data
+
+Single source of truth: `scripts/seed-demo.mjs`. Run: `node scripts/seed-demo.mjs`
+
+All demo contacts use phone prefix `+1604555` for easy cleanup. Idempotent — safe to run multiple times.
+
+### Production Deployment
+
+```bash
+# 1. Deploy to Vercel (includes cron jobs from vercel.json)
+vercel --prod
+
+# 2. Set env vars in Vercel dashboard (from vault)
+./scripts/vault.sh status  # see all keys
+
+# 3. Configure Resend webhook in Resend dashboard
+# URL: https://your-app.vercel.app/api/webhooks/resend
+# Events: email.opened, email.clicked, email.bounced, email.delivered
 ```
 
-### PRD
-Full specification: `/Users/bigbear/reality crm/PRD_Newsletter_Journey_Engine.md`
+### Key Tables
+
+| Table | Purpose |
+|-------|---------|
+| `newsletters` | Email drafts, sent, suppressed — with quality_score + ai_context |
+| `newsletter_events` | Open/click/bounce with link_type classification |
+| `contact_journeys` | Journey enrollment, phase, trust_level, next_email_at |
+| `contacts.newsletter_intelligence` | Per-contact engagement score, click history, interests |
+| `realtor_agent_config` | Voice rules, frequency caps, brand config |
+| `competitive_insights` | RAG-generated insights (future) |
+
+### Specs & Plans
+
+| Document | Location |
+|----------|----------|
+| Master Implementation Plan | `docs/MASTER_IMPLEMENTATION_PLAN.md` |
+| Prospect 360 Spec | `docs/SPEC_Prospect_360.md` |
+| Content Intelligence Spec | `docs/SPEC_Email_Content_Intelligence.md` |
+| Validation Pipeline Spec | `docs/SPEC_Validation_Pipeline.md` |
+| Competitive RAG Plan | `docs/PLAN_Competitive_RAG.md` |
+| User Journey Maps | `docs/user-journeys.md` |
+| Pending Work | `pendingwork.md` (repo root) |
 
 ---
 
-## ListingFlow Sites — AI Website Generation Platform
+## Realtors360 Sites — AI Website Generation Platform
 
 ### Architecture
 
 **Pre-built components + Claude Agent SDK + Cloudflare Pages**
 
 ```
-listingflow-sites (Admin Panel) → listingflow-agent (Cloud Agent) → Cloudflare Pages (Static Sites)
+realtors360-sites (Admin Panel) → realtors360-agent (Cloud Agent) → Cloudflare Pages (Static Sites)
                                          ↕
                                    Supabase (Data) + Claude API (Anthropic)
 ```
@@ -520,7 +669,7 @@ The platform generates unique realtor websites automatically:
 1. Realtor clicks **"Generate My Website"** in the admin panel
 2. **Cloud agent** autonomously searches for top realtor sites in the agent's market, scrapes 3-5 for design inspiration (hidden from user)
 3. Agent generates **3 site config JSONs** — each a different style (dark luxury, light modern, bold warm) — by blending scraped design patterns with the realtor's content
-4. **Pre-built React components** (`listingflow-sites/src/components/sections/`) render each config into static HTML
+4. **Pre-built React components** (`realtors360-sites/src/components/sections/`) render each config into static HTML
 5. All 3 variants deploy to **Cloudflare Pages** as preview URLs
 6. **Playwright** screenshots each variant at desktop + mobile
 7. Realtor sees **3 preview cards** with screenshots — picks their favorite
@@ -552,7 +701,7 @@ Same components render all 3 style variants — the difference is the theme conf
 
 ### Agent Service
 
-- **Location:** `listingflow-agent/` (separate package in monorepo root)
+- **Location:** `realtors360-agent/` (separate package in monorepo root)
 - **Stack:** Node.js + Express + Anthropic SDK + Playwright
 - **API:**
   - `POST /api/generate` — start generation (kicks off autonomous agent)

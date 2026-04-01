@@ -87,8 +87,8 @@ export function PropertiesOfInterestPanel({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-muted-foreground" />
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+          <MapPin className="h-4 w-4" />
           Properties of Interest
           {properties.length > 0 && (
             <span className="ml-1 px-2 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary">

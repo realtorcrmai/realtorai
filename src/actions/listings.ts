@@ -1,9 +1,11 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 import { listingSchema, type ListingFormData } from "@/lib/schemas";
 import { validateStageForType } from "@/lib/contact-consistency";
+import { triggerIngest } from "@/lib/rag/realtime-ingest";
 
 export async function createListing(formData: ListingFormData) {
   const parsed = listingSchema.safeParse(formData);
@@ -11,8 +13,8 @@ export async function createListing(formData: ListingFormData) {
     return { error: "Invalid form data", issues: parsed.error.issues };
   }
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
+  const tc = await getAuthenticatedTenantClient();
+  const { data, error } = await tc
     .from("listings")
     .insert({
       ...parsed.data,
@@ -31,7 +33,16 @@ export async function createListing(formData: ListingFormData) {
 
   revalidatePath("/listings");
 
-  // Lifecycle milestone advancement removed — StageBar is the single source of truth.
+  // Fire listing_created trigger for automation rules
+  try {
+    const { executeListingBlastRules } = await import("@/lib/listing-blast-executor");
+    await executeListingBlastRules("listing_created", data.id);
+  } catch {
+    // Don't fail listing creation if blast fails
+  }
+
+  // Real-time RAG ingestion
+  triggerIngest("listings", data.id);
 
   return { success: true, listing: data };
 }
@@ -46,7 +57,7 @@ export async function updateListing(
     commission_amount?: number | null;
   }
 ) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Auto-calculate commission if sold_price and commission_rate are provided
   const updateData = { ...formData };
@@ -59,7 +70,15 @@ export async function updateListing(
       Number(updateData.sold_price) * (Number(updateData.commission_rate) / 100);
   }
 
-  const { error } = await supabase
+  // Check if price changed (for blast automation trigger)
+  const priceChanged = updateData.list_price !== undefined;
+  let oldPrice: number | null = null;
+  if (priceChanged) {
+    const { data: current } = await tc.from("listings").select("list_price, status").eq("id", id).single();
+    oldPrice = current?.list_price;
+  }
+
+  const { error } = await tc
     .from("listings")
     .update(updateData)
     .eq("id", id);
@@ -71,6 +90,10 @@ export async function updateListing(
   revalidatePath("/listings");
   revalidatePath(`/listings/${id}`);
   revalidatePath("/contacts");
+
+  // Real-time RAG re-ingestion
+  triggerIngest("listings", id);
+
   return { success: true };
 }
 
@@ -98,9 +121,9 @@ export async function overrideListingStatus(
   id: string,
   newStatus: ListingStatusOverride
 ) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { error } = await supabase
+  const { error } = await tc
     .from("listings")
     .update({ status: newStatus })
     .eq("id", id);
@@ -119,14 +142,14 @@ export async function overrideListingStatus(
   const newSellerStage = stageMap[newStatus];
   if (newSellerStage) {
     try {
-      const { data: stageListing } = await supabase
+      const { data: stageListing } = await tc
         .from("listings")
         .select("seller_id")
         .eq("id", id)
         .single();
 
       if (stageListing?.seller_id) {
-        const { data: seller } = await supabase
+        const { data: seller } = await tc
           .from("contacts")
           .select("stage_bar, type")
           .eq("id", stageListing.seller_id)
@@ -140,7 +163,7 @@ export async function overrideListingStatus(
             const stageUpdates: Record<string, unknown> = { stage_bar: newSellerStage };
             if (newSellerStage === "closed") stageUpdates.lead_status = "closed";
             if (newSellerStage === "under_contract") stageUpdates.lead_status = "under_contract";
-            await supabase
+            await tc
               .from("contacts")
               .update(stageUpdates)
               .eq("id", stageListing.seller_id);
@@ -159,10 +182,10 @@ export async function updateListingStatus(
   id: string,
   newStatus: "active" | "pending" | "sold"
 ) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   // Fetch current listing to validate transition
-  const { data: listing } = await supabase
+  const { data: listing } = await tc
     .from("listings")
     .select("status")
     .eq("id", id)
@@ -177,7 +200,7 @@ export async function updateListingStatus(
     };
   }
 
-  const { error } = await supabase
+  const { error } = await tc
     .from("listings")
     .update({ status: newStatus })
     .eq("id", id);
@@ -197,15 +220,14 @@ export async function updateListingStatus(
   const newSellerStage = stageMap[newStatus];
   if (newSellerStage) {
     try {
-      const supabaseStage = createAdminClient();
-      const { data: stageListing } = await supabaseStage
+      const { data: stageListing } = await tc
         .from("listings")
         .select("seller_id")
         .eq("id", id)
         .single();
 
       if (stageListing?.seller_id) {
-        const { data: seller } = await supabaseStage
+        const { data: seller } = await tc
           .from("contacts")
           .select("stage_bar, type, lead_status")
           .eq("id", stageListing.seller_id)
@@ -222,7 +244,7 @@ export async function updateListingStatus(
             const stageUpdates: Record<string, unknown> = { stage_bar: validStage };
             if (newSellerStage === "closed") stageUpdates.lead_status = "closed";
             if (newSellerStage === "under_contract") stageUpdates.lead_status = "under_contract";
-            await supabaseStage
+            await tc
               .from("contacts")
               .update(stageUpdates)
               .eq("id", stageListing.seller_id);
@@ -234,13 +256,20 @@ export async function updateListingStatus(
     }
   }
 
-  // Lifecycle milestone advancement removed — StageBar is the single source of truth.
+  // Fire listing_active trigger for blast automation rules
+  if (newStatus === "active") {
+    try {
+      const { executeListingBlastRules } = await import("@/lib/listing-blast-executor");
+      await executeListingBlastRules("listing_active", id);
+    } catch {
+      // Don't fail status update if blast fails
+    }
+  }
 
   // Fire listing_status_change trigger for workflow auto-enrollment (e.g., post-close workflows)
   if (newStatus === "sold") {
     try {
-      const supabase2 = createAdminClient();
-      const { data: fullListing } = await supabase2
+      const { data: fullListing } = await tc
         .from("listings")
         .select("seller_id, buyer_id")
         .eq("id", id)

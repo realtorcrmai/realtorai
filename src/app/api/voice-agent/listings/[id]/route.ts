@@ -11,7 +11,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const { id } = await params;
@@ -50,7 +50,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = requireVoiceAgentAuth(req);
+  const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
   const { id } = await params;
@@ -61,7 +61,7 @@ export async function PATCH(
 
   // Status update
   if (body.status) {
-    const validStatuses = ["active", "pending", "sold"];
+    const validStatuses = ["active", "pending", "sold", "conditional", "subject_removal", "withdrawn", "expired"];
     if (!validStatuses.includes(body.status.toLowerCase())) {
       return NextResponse.json(
         { error: `Invalid status. Must be one of: ${validStatuses.join(", ")}` },
