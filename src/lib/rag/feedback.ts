@@ -2,22 +2,14 @@
 // Feedback — thumbs up/down + audit logging
 // ============================================================
 
-import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { FeedbackRequest, QueryPlan } from './types';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-function getAdmin() {
-  return createClient(supabaseUrl, supabaseKey);
-}
 
 /**
  * Save user feedback (thumbs up/down) for a chat response.
  */
-export async function saveFeedback(feedback: FeedbackRequest): Promise<string> {
-  const admin = getAdmin();
-  const { data, error } = await admin
+export async function saveFeedback(db: SupabaseClient, feedback: FeedbackRequest): Promise<string> {
+  const { data, error } = await db
     .from('rag_feedback')
     .insert({
       session_id: feedback.session_id,
@@ -56,7 +48,7 @@ function estimateCost(
   return (inputTokens / 1000) * rates.input + (outputTokens / 1000) * rates.output;
 }
 
-export async function logAudit(params: {
+export async function logAudit(db: SupabaseClient, params: {
   sessionId?: string;
   userEmail?: string;
   queryText: string;
@@ -69,7 +61,6 @@ export async function logAudit(params: {
   latencyMs?: number;
   guardrailTriggered?: string;
 }): Promise<void> {
-  const admin = getAdmin();
 
   const cost = params.modelTier
     ? estimateCost(
@@ -79,7 +70,7 @@ export async function logAudit(params: {
       )
     : null;
 
-  await admin.from('rag_audit_log').insert({
+  await db.from('rag_audit_log').insert({
     session_id: params.sessionId || null,
     user_email: params.userEmail || null,
     query_text: params.queryText,
@@ -98,13 +89,12 @@ export async function logAudit(params: {
 /**
  * Get feedback stats for a session.
  */
-export async function getFeedbackStats(sessionId: string): Promise<{
+export async function getFeedbackStats(db: SupabaseClient, sessionId: string): Promise<{
   positive: number;
   negative: number;
   total: number;
 }> {
-  const admin = getAdmin();
-  const { data } = await admin
+  const { data } = await db
     .from('rag_feedback')
     .select('rating')
     .eq('session_id', sessionId);

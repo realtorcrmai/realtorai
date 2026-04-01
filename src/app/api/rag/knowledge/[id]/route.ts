@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { createClient } from '@supabase/supabase-js';
+import { getAuthenticatedTenantClient } from '@/lib/supabase/tenant';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { ingestRecord, deleteEmbeddings } from '@/lib/rag/ingestion';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 // PATCH: Update a knowledge article (re-embeds)
 export async function PATCH(
@@ -19,10 +15,15 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const isAdmin = (session.user as { role?: string }).role === 'admin';
+    const db = isAdmin
+      ? createAdminClient()
+      : (await getAuthenticatedTenantClient()).raw;
+
     const { id } = await params;
     const body = await req.json();
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('knowledge_articles')
       .update({
         ...body,
@@ -39,7 +40,7 @@ export async function PATCH(
 
     // Re-embed with updated content
     try {
-      await ingestRecord('knowledge_articles', id);
+      await ingestRecord(db, 'knowledge_articles', id);
     } catch (embedErr) {
       console.warn('Re-embed failed (article updated):', embedErr);
     }
@@ -62,13 +63,18 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const isAdmin = (session.user as { role?: string }).role === 'admin';
+    const db = isAdmin
+      ? createAdminClient()
+      : (await getAuthenticatedTenantClient()).raw;
+
     const { id } = await params;
 
     // Delete embeddings first
-    await deleteEmbeddings('knowledge_articles', id);
+    await deleteEmbeddings(db, 'knowledge_articles', id);
 
     // Delete article
-    const { error } = await supabase
+    const { error } = await db
       .from('knowledge_articles')
       .delete()
       .eq('id', id);

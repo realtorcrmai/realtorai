@@ -2,18 +2,11 @@
 // Fallback Module — degraded-mode responses when services are down
 // ============================================================
 
-import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { SearchResult, SearchFilters, QueryPlan } from './types';
 // Use SearchResult with optional freshness field
 type FreshnessAnnotatedResult = SearchResult & { freshness?: 'fresh' | 'stale' | 'unknown' };
 import { RETRIEVAL } from './constants';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-function getAdmin() {
-  return createClient(supabaseUrl, supabaseKey);
-}
 
 // ---------- Scenario 1: Claude API down ----------
 
@@ -49,11 +42,11 @@ export function formatRawResultsAsFallback(
  * when Voyage embedding API is unavailable.
  */
 export async function fullTextSearch(
+  db: SupabaseClient,
   query: string,
   filters: SearchFilters = {},
   topK: number = RETRIEVAL.DEFAULT_TOP_K
 ): Promise<FreshnessAnnotatedResult[]> {
-  const admin = getAdmin();
 
   // Build a tsquery from the user's query: split words, join with &
   const words = query
@@ -67,7 +60,7 @@ export async function fullTextSearch(
   const tsquery = words.join(' & ');
 
   // Build a raw SQL query via Supabase RPC or direct query
-  let rpcQuery = admin
+  let rpcQuery = db
     .from('rag_embeddings')
     .select('id, content_text, content_summary, source_table, source_id, content_type, contact_id, listing_id, source_created_at, created_at')
     .textSearch('content_text', tsquery, { type: 'plain', config: 'english' })

@@ -3,40 +3,32 @@
 // Uses Claude Haiku for fast summarization of comms timeline
 // ============================================================
 
+import type { SupabaseClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
-import { createClient } from '@supabase/supabase-js';
 import { MODELS } from './constants';
 const SUMMARIZE_TIMEOUT = 30000;
 
 const anthropic = new Anthropic();
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-function getAdmin() {
-  return createClient(supabaseUrl, supabaseKey);
-}
-
 /**
  * Summarize a contact's full communication history into 3-5 bullet points.
  * Fetches communications + appointments, builds a timeline, and sends to Haiku.
  */
-export async function summarizeContactHistory(contactId: string): Promise<string> {
-  const admin = getAdmin();
-
+export async function summarizeContactHistory(db: SupabaseClient, contactId: string): Promise<string> {
   // 1. Fetch contact info + communications + appointments in parallel
   const [contactRes, commsRes, appointmentsRes] = await Promise.all([
-    admin
+    db
       .from('contacts')
       .select('id, name, email, phone, type, created_at')
       .eq('id', contactId)
       .single(),
-    admin
+    db
       .from('communications')
       .select('id, direction, channel, body, created_at')
       .eq('contact_id', contactId)
       .order('created_at', { ascending: true })
       .limit(100),
-    admin
+    db
       .from('appointments')
       .select('id, listing_id, start_time, status, buyer_agent_name, listings(address)')
       .or(`buyer_agent_name.ilike.%${contactId}%`)

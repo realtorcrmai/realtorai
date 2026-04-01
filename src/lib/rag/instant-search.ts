@@ -3,13 +3,7 @@
 // Returns results within ~100ms for Cmd+K CommandPalette
 // ============================================================
 
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-function getAdmin() {
-  return createClient(supabaseUrl, supabaseKey);
-}
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export interface InstantResult {
   id: string;
@@ -25,27 +19,26 @@ export interface InstantResult {
  * No AI, no embeddings — just ilike queries in parallel.
  * Target: <100ms response time.
  */
-export async function instantSearch(query: string): Promise<InstantResult[]> {
+export async function instantSearch(db: SupabaseClient, query: string): Promise<InstantResult[]> {
   if (!query || query.trim().length < 2) return [];
 
-  const admin = getAdmin();
   const q = query.trim();
 
   // Run all three queries in parallel
   const [contactsRes, listingsRes, appointmentsRes] = await Promise.all([
-    admin
+    db
       .from('contacts')
       .select('id, name, email, phone, type')
       .or(`name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`)
       .order('name')
       .limit(5),
-    admin
+    db
       .from('listings')
       .select('id, address, status, list_price')
       .ilike('address', `%${q}%`)
       .order('created_at', { ascending: false })
       .limit(5),
-    admin
+    db
       .from('appointments')
       .select('id, listing_id, start_time, status, buyer_agent_name, listings(address)')
       .or(`buyer_agent_name.ilike.%${q}%`)

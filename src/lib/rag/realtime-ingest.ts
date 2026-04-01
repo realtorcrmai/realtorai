@@ -3,6 +3,7 @@
 // ============================================================
 
 import type { SourceTable } from './types';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 /**
  * Trigger RAG embedding for a record after a CRM mutation.
@@ -18,7 +19,8 @@ export function triggerIngest(sourceTable: SourceTable, sourceId: string): void 
 
 async function ingestAsync(sourceTable: SourceTable, sourceId: string): Promise<void> {
   const { ingestRecord } = await import('./ingestion');
-  await ingestRecord(sourceTable, sourceId);
+  const db = createAdminClient();
+  await ingestRecord(db, sourceTable, sourceId);
 }
 
 /**
@@ -32,5 +34,6 @@ export function triggerDelete(sourceTable: SourceTable, sourceId: string): void 
 
 async function deleteAsync(sourceTable: SourceTable, sourceId: string): Promise<void> {
   const { deleteEmbeddings } = await import('./ingestion');
-  await deleteEmbeddings(sourceTable, sourceId);
+  const db = createAdminClient();
+  await deleteEmbeddings(db, sourceTable, sourceId);
 }

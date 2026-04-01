@@ -2,7 +2,7 @@
 // Ingestion Pipeline — chunk → embed → upsert to rag_embeddings
 // ============================================================
 
-import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { embedText, embedBatch, contentHash } from './embeddings';
 import { chunkRecord } from './chunker';
 import type {
@@ -14,13 +14,6 @@ import type {
 } from './types';
 import { SOURCE_TO_CONTENT_TYPE } from './types';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-function getAdmin() {
-  return createClient(supabaseUrl, supabaseKey);
-}
-
 // ---------- Core ingest function ----------
 
 /**
@@ -28,13 +21,12 @@ function getAdmin() {
  * Returns result with chunk count or skip reason.
  */
 export async function ingestRecord(
+  db: SupabaseClient,
   sourceTable: SourceTable,
   sourceId: string
 ): Promise<IngestResult> {
-  const admin = getAdmin();
-
   // 1. Fetch the source record
-  const { data: record, error } = await admin
+  const { data: record, error } = await db
     .from(sourceTable)
     .select('*')
     .eq('id', sourceId)
@@ -44,18 +36,18 @@ export async function ingestRecord(
     return { embedded: false, chunks: 0, skipped: true, reason: `Record not found: ${sourceTable}/${sourceId}` };
   }
 
-  return ingestFromRecord(sourceTable, sourceId, record);
+  return ingestFromRecord(db, sourceTable, sourceId, record);
 }
 
 /**
  * Ingest from an already-fetched record (avoids double fetch when called from actions).
  */
 export async function ingestFromRecord(
+  db: SupabaseClient,
   sourceTable: SourceTable,
   sourceId: string,
   record: Record<string, unknown>
 ): Promise<IngestResult> {
-  const admin = getAdmin();
 
   // 1. Chunk the record
   const chunks = chunkRecord(sourceTable, record);
@@ -65,7 +57,7 @@ export async function ingestFromRecord(
 
   // 2. Check for existing embeddings by content hash (dedup)
   const hashes = chunks.map((c) => contentHash(c.text));
-  const { data: existing } = await admin
+  const { data: existing } = await db
     .from('rag_embeddings')
     .select('content_hash')
     .eq('source_table', sourceTable)
@@ -117,14 +109,14 @@ export async function ingestFromRecord(
   }));
 
   // 6. Delete old embeddings for this source (handles updates/re-chunking)
-  await admin
+  await db
     .from('rag_embeddings')
     .delete()
     .eq('source_table', sourceTable)
     .eq('source_id', sourceId);
 
   // 7. Insert new embeddings
-  const { error: insertError } = await admin
+  const { error: insertError } = await db
     .from('rag_embeddings')
     .insert(
       rows.map((r) => ({
@@ -180,14 +172,14 @@ export interface BackfillResult {
  * Processes in batches to avoid memory issues.
  */
 export async function backfillAll(
+  db: SupabaseClient,
   batchSize: number = 50
 ): Promise<BackfillResult> {
-  const admin = getAdmin();
   const result: BackfillResult = { processed: 0, skipped: 0, errors: 0, details: [] };
 
   for (const { table } of BACKFILL_TABLES) {
     // Get all IDs from source table
-    const { data: sourceRows, error: fetchError } = await admin
+    const { data: sourceRows, error: fetchError } = await db
       .from(table)
       .select('id')
       .order('created_at', { ascending: true })
@@ -196,7 +188,7 @@ export async function backfillAll(
     if (fetchError || !sourceRows) continue;
 
     // Get already-embedded IDs for this table
-    const { data: embeddedRows } = await admin
+    const { data: embeddedRows } = await db
       .from('rag_embeddings')
       .select('source_id')
       .eq('source_table', table);
@@ -216,7 +208,7 @@ export async function backfillAll(
 
       for (const row of batch) {
         try {
-          const res = await ingestRecord(table, row.id);
+          const res = await ingestRecord(db, table, row.id);
           if (res.skipped) {
             result.skipped++;
           } else {
@@ -246,13 +238,13 @@ export async function backfillAll(
  * Backfill a single table.
  */
 export async function backfillTable(
+  db: SupabaseClient,
   table: SourceTable,
   batchSize: number = 50
 ): Promise<BackfillResult> {
-  const admin = getAdmin();
   const result: BackfillResult = { processed: 0, skipped: 0, errors: 0, details: [] };
 
-  const { data: sourceRows } = await admin
+  const { data: sourceRows } = await db
     .from(table)
     .select('id')
     .order('created_at', { ascending: true })
@@ -260,7 +252,7 @@ export async function backfillTable(
 
   if (!sourceRows) return result;
 
-  const { data: embeddedRows } = await admin
+  const { data: embeddedRows } = await db
     .from('rag_embeddings')
     .select('source_id')
     .eq('source_table', table);
@@ -277,7 +269,7 @@ export async function backfillTable(
     const batch = unembedded.slice(i, i + batchSize);
     for (const row of batch) {
       try {
-        const res = await ingestRecord(table, row.id);
+        const res = await ingestRecord(db, table, row.id);
         if (res.skipped) result.skipped++;
         else result.processed++;
       } catch (err) {
@@ -298,11 +290,11 @@ export async function backfillTable(
  * Delete all embeddings for a source record (used when source is deleted).
  */
 export async function deleteEmbeddings(
+  db: SupabaseClient,
   sourceTable: SourceTable,
   sourceId: string
 ): Promise<void> {
-  const admin = getAdmin();
-  await admin
+  await db
     .from('rag_embeddings')
     .delete()
     .eq('source_table', sourceTable)
@@ -312,16 +304,17 @@ export async function deleteEmbeddings(
 /**
  * Get ingestion stats: total embeddings per source table.
  */
-export async function getIngestionStats(): Promise<
+export async function getIngestionStats(
+  db: SupabaseClient
+): Promise<
   Array<{ source_table: string; count: number }>
 > {
-  const admin = getAdmin();
-  const { data } = await admin.rpc('rag_stats');
+  const { data } = await db.rpc('rag_stats');
   // Fallback: manual count if RPC doesn't exist
   if (!data) {
     const stats: Array<{ source_table: string; count: number }> = [];
     for (const { table } of BACKFILL_TABLES) {
-      const { count } = await admin
+      const { count } = await db
         .from('rag_embeddings')
         .select('*', { count: 'exact', head: true })
         .eq('source_table', table);

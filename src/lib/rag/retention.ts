@@ -13,14 +13,7 @@
 //   - Embeddings: indefinite (kept as long as source record exists)
 // ============================================================
 
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-function getAdmin() {
-  return createClient(supabaseUrl, supabaseKey);
-}
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export const RETENTION_POLICY = {
   chat_sessions: 90,       // days — delete sessions older than 90 days
@@ -33,17 +26,16 @@ export const RETENTION_POLICY = {
  * Delete records older than their retention period.
  * Returns counts of deleted records per table.
  */
-export async function enforceRetention(): Promise<{
+export async function enforceRetention(db: SupabaseClient): Promise<{
   sessions_deleted: number;
   audits_deleted: number;
   feedback_deleted: number;
 }> {
-  const admin = getAdmin();
   const now = new Date();
 
   // Chat sessions older than 90 days
   const sessionCutoff = new Date(now.getTime() - RETENTION_POLICY.chat_sessions * 24 * 60 * 60 * 1000);
-  const { data: deletedSessions } = await admin
+  const { data: deletedSessions } = await db
     .from('rag_chat_sessions')
     .delete()
     .lt('created_at', sessionCutoff.toISOString())
@@ -51,7 +43,7 @@ export async function enforceRetention(): Promise<{
 
   // Audit logs older than 365 days
   const auditCutoff = new Date(now.getTime() - RETENTION_POLICY.audit_logs * 24 * 60 * 60 * 1000);
-  const { data: deletedAudits } = await admin
+  const { data: deletedAudits } = await db
     .from('rag_audit_log')
     .delete()
     .lt('created_at', auditCutoff.toISOString())
@@ -59,7 +51,7 @@ export async function enforceRetention(): Promise<{
 
   // Feedback older than 365 days
   const feedbackCutoff = new Date(now.getTime() - RETENTION_POLICY.feedback * 24 * 60 * 60 * 1000);
-  const { data: deletedFeedback } = await admin
+  const { data: deletedFeedback } = await db
     .from('rag_feedback')
     .delete()
     .lt('created_at', feedbackCutoff.toISOString())

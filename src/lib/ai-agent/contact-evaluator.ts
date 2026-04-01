@@ -265,7 +265,9 @@ Return ONLY valid JSON:
   let ragContext = '';
   try {
     const { retrieveContext } = await import('@/lib/rag/retriever');
+    const db = createAdminClient();
     const retrieved = await retrieveContext(
+      db,
       `${contact.name} journey interactions preferences`,
       { contact_id: contact.id, content_type: ['message', 'activity', 'email'] },
       3

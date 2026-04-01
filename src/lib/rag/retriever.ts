@@ -2,34 +2,27 @@
 // Retriever — hybrid semantic + structured search over rag_embeddings
 // ============================================================
 
-import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { embedQuery } from './embeddings';
 import { RETRIEVAL } from './constants';
 import type { SearchResult, SearchFilters, SourceReference } from './types';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-function getAdmin() {
-  return createClient(supabaseUrl, supabaseKey);
-}
 
 /**
  * Perform semantic search with optional structured filters.
  * Returns top-K results sorted by similarity.
  */
 export async function searchEmbeddings(
+  db: SupabaseClient,
   query: string,
   filters: SearchFilters = {},
   topK: number = RETRIEVAL.DEFAULT_TOP_K
 ): Promise<SearchResult[]> {
-  const admin = getAdmin();
 
   // 1. Embed the query (asymmetric: input_type='query')
   const queryEmbedding = await embedQuery(query);
 
   // 2. Call the rag_search function
-  const { data, error } = await admin.rpc('rag_search', {
+  const { data, error } = await db.rpc('rag_search', {
     query_embedding: `[${queryEmbedding.join(',')}]`,
     filter_types: filters.content_type ?? null,
     filter_contact_id: filters.contact_id ?? null,
@@ -89,11 +82,12 @@ export function extractSourceRefs(results: SearchResult[]): SourceReference[] {
  * Returns both the formatted prompt context and the source references.
  */
 export async function retrieveContext(
+  db: SupabaseClient,
   query: string,
   filters: SearchFilters = {},
   topK: number = RETRIEVAL.DEFAULT_TOP_K
 ): Promise<{ formatted: string; sources: SourceReference[]; results: SearchResult[] }> {
-  const results = await searchEmbeddings(query, filters, topK);
+  const results = await searchEmbeddings(db, query, filters, topK);
   return {
     formatted: formatContextChunks(results),
     sources: extractSourceRefs(results),

@@ -2,14 +2,7 @@
 // Mention Parser — @-mention detection and resolution (A19)
 // ============================================================
 
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-function getAdmin() {
-  return createClient(supabaseUrl, supabaseKey);
-}
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export interface Mention {
   type: 'contact' | 'listing';
@@ -50,16 +43,15 @@ export function parseMentionsFromText(
  * Used by the @-mention dropdown in ChatInput.
  */
 export async function searchMentionCandidates(
+  db: SupabaseClient,
   query: string,
   limit = 8
 ): Promise<Mention[]> {
   if (!query || query.length < 2) return [];
-
-  const admin = getAdmin();
   const results: Mention[] = [];
 
   // Search contacts by name
-  const { data: contacts } = await admin
+  const { data: contacts } = await db
     .from('contacts')
     .select('id, name')
     .ilike('name', `%${query}%`)
@@ -72,7 +64,7 @@ export async function searchMentionCandidates(
   }
 
   // Search listings by address
-  const { data: listings } = await admin
+  const { data: listings } = await db
     .from('listings')
     .select('id, address')
     .ilike('address', `%${query}%`)

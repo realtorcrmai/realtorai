@@ -81,7 +81,9 @@ Only recommend actions where the data clearly supports it. Don't recommend calli
   let ragContext = '';
   try {
     const { retrieveContext } = await import('@/lib/rag/retriever');
+    const db = createAdminClient();
     const retrieved = await retrieveContext(
+      db,
       'successful recommendations outcomes accepted actions',
       { content_type: ['recommendation', 'activity'] },
       5

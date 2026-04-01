@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
+import { getAuthenticatedTenantClient } from '@/lib/supabase/tenant';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { ingestRecord } from '@/lib/rag/ingestion';
 import type { SourceTable } from '@/lib/rag/types';
 
@@ -16,6 +18,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const isAdmin = (session.user as { role?: string }).role === 'admin';
+    const db = isAdmin
+      ? createAdminClient()
+      : (await getAuthenticatedTenantClient()).raw;
+
     const body = await req.json();
     const { source_table, source_id } = body as { source_table: string; source_id: string };
 
@@ -27,7 +34,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Invalid source_table: ${source_table}` }, { status: 400 });
     }
 
-    const result = await ingestRecord(source_table as SourceTable, source_id);
+    const result = await ingestRecord(db, source_table as SourceTable, source_id);
     return NextResponse.json(result);
   } catch (err) {
     console.error('RAG ingest error:', err);

@@ -2,28 +2,21 @@
 // Conversation Manager — session CRUD + multi-turn chat
 // ============================================================
 
-import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import { SESSION, MODELS, MAX_TOKENS } from './constants';
 import type { RagSession, RagMessage, UIContext, SourceReference } from './types';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-function getAdmin() {
-  return createClient(supabaseUrl, supabaseKey);
-}
 
 /**
  * Create a new chat session.
  */
 export async function createSession(
+  db: SupabaseClient,
   userEmail: string,
   uiContext: UIContext = {},
   tonePreference: string = 'professional'
 ): Promise<RagSession> {
-  const admin = getAdmin();
-  const { data, error } = await admin
+  const { data, error } = await db
     .from('rag_sessions')
     .insert({
       user_email: userEmail,
@@ -42,9 +35,8 @@ export async function createSession(
 /**
  * Get an active session by ID. Returns null if not found or inactive.
  */
-export async function getSession(sessionId: string): Promise<RagSession | null> {
-  const admin = getAdmin();
-  const { data, error } = await admin
+export async function getSession(db: SupabaseClient, sessionId: string): Promise<RagSession | null> {
+  const { data, error } = await db
     .from('rag_sessions')
     .select('*')
     .eq('id', sessionId)
@@ -58,7 +50,7 @@ export async function getSession(sessionId: string): Promise<RagSession | null> 
     const lastUpdate = new Date(session.updated_at).getTime();
     const now = Date.now();
     if (now - lastUpdate > SESSION.IDLE_TIMEOUT_MS) {
-      await closeSession(sessionId);
+      await closeSession(db, sessionId);
       return null;
     }
   }
@@ -71,36 +63,41 @@ export async function getSession(sessionId: string): Promise<RagSession | null> 
  * Otherwise create a new one.
  */
 export async function getOrCreateSession(
+  db: SupabaseClient,
   sessionId: string | undefined,
   userEmail: string,
   uiContext: UIContext = {},
   tonePreference: string = 'professional'
 ): Promise<RagSession> {
   if (sessionId) {
-    const existing = await getSession(sessionId);
+    const existing = await getSession(db, sessionId);
     if (existing) {
+      // Security: verify session belongs to requesting user (prevent session hijacking)
+      if (existing.user_email !== userEmail) {
+        // Session belongs to different user — create new session instead
+        return createSession(db, userEmail, uiContext, tonePreference);
+      }
       // Update UI context if it changed
       if (Object.keys(uiContext).length > 0) {
-        await updateUIContext(sessionId, uiContext);
+        await updateUIContext(db, sessionId, uiContext);
         existing.ui_context = uiContext;
       }
       return existing;
     }
   }
-  return createSession(userEmail, uiContext, tonePreference);
+  return createSession(db, userEmail, uiContext, tonePreference);
 }
 
 /**
  * Append a message to the session.
  */
 export async function addMessage(
+  db: SupabaseClient,
   sessionId: string,
   message: RagMessage
 ): Promise<void> {
-  const admin = getAdmin();
-
   // Get current messages
-  const { data: session } = await admin
+  const { data: session } = await db
     .from('rag_sessions')
     .select('messages')
     .eq('id', sessionId)
@@ -110,7 +107,7 @@ export async function addMessage(
 
   const messages = [...(session.messages as RagMessage[]), message];
 
-  await admin
+  await db
     .from('rag_sessions')
     .update({ messages, updated_at: new Date().toISOString() })
     .eq('id', sessionId);
@@ -120,11 +117,11 @@ export async function addMessage(
  * Update UI context (e.g., user navigated to different page).
  */
 export async function updateUIContext(
+  db: SupabaseClient,
   sessionId: string,
   uiContext: UIContext
 ): Promise<void> {
-  const admin = getAdmin();
-  await admin
+  await db
     .from('rag_sessions')
     .update({ ui_context: uiContext, updated_at: new Date().toISOString() })
     .eq('id', sessionId);
@@ -133,9 +130,8 @@ export async function updateUIContext(
 /**
  * Close a session (mark inactive).
  */
-export async function closeSession(sessionId: string): Promise<void> {
-  const admin = getAdmin();
-  await admin
+export async function closeSession(db: SupabaseClient, sessionId: string): Promise<void> {
+  await db
     .from('rag_sessions')
     .update({ is_active: false, updated_at: new Date().toISOString() })
     .eq('id', sessionId);
@@ -161,9 +157,8 @@ export function needsSummarization(session: RagSession): boolean {
  * Compresses all messages except the last MAX_HISTORY_TURNS into a single summary.
  * Replaces the session's messages array with [summary, ...recent].
  */
-export async function summarizeHistory(sessionId: string): Promise<void> {
-  const admin = getAdmin();
-  const { data: session } = await admin
+export async function summarizeHistory(db: SupabaseClient, sessionId: string): Promise<void> {
+  const { data: session } = await db
     .from('rag_sessions')
     .select('messages')
     .eq('id', sessionId)
@@ -207,7 +202,7 @@ export async function summarizeHistory(sessionId: string): Promise<void> {
 
     const condensed = [summaryMessage, ...toKeep];
 
-    await admin
+    await db
       .from('rag_sessions')
       .update({ messages: condensed, updated_at: new Date().toISOString() })
       .eq('id', sessionId);

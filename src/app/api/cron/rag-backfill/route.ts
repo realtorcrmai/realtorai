@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { backfillAll } from '@/lib/rag/ingestion';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,8 +15,9 @@ export async function POST(req: NextRequest) {
     }
 
     const batchSize = Number(req.nextUrl.searchParams.get('batch_size')) || 50;
+    const db = createAdminClient();
 
-    const result = await backfillAll(batchSize);
+    const result = await backfillAll(db, batchSize);
 
     return NextResponse.json({
       ...result,

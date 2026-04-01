@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createWithRetry } from "@/lib/anthropic/retry";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const anthropic = new Anthropic();
 
@@ -42,7 +43,9 @@ Return ONLY valid JSON, no markdown.`;
     const { retrieveContext } = await import('@/lib/rag/retriever');
     const contactId = (contact as any).id;
     if (contactId) {
+      const db = createAdminClient();
       const retrieved = await retrieveContext(
+        db,
         `${contact.name} ${intent}`,
         { contact_id: contactId, content_type: ['message', 'activity'] },
         3
