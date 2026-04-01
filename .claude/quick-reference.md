@@ -58,6 +58,13 @@ STRICT POLICY: No step below can be skipped. No exceptions. No bypass.
 □ Think like professional auditor
 □ Save to docs/gap-analysis/<area>/v<N>_<date>.md
 
+═══ DELIVERABLES (BLOCKING — task NOT done without these) ═══
+□ CODING:feature → usecases/<feature>.md created/updated BEFORE coding
+□ CODING:feature/bugfix/refactor → tests written or updated AFTER coding
+□ Any code change → tests RUN (not just tsc — actual test execution)
+□ DESIGN_SPEC → PRD or spec doc with acceptance criteria
+□ GAP_ANALYSIS → versioned doc in docs/gap-analysis/, 7-pass, deep not surface-level
+
 ═══ EXECUTE ═══
 → Follow per-type checklist phase by phase
 → Model chain: Haiku classify → Sonnet code → Opus architect

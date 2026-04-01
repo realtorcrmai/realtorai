@@ -75,6 +75,26 @@ EOF
             MISSING="$MISSING\n- Write compliance log entry in .claude/compliance-log.md, then set phases.compliance_logged=true"
         fi
 
+        # Deliverable check (soft warning — helps build habit)
+        DELIVERABLE_WARNINGS=""
+        if [[ "$TYPE" == "CODING:feature" ]]; then
+            # Check if any usecases/ file was modified in this git session
+            USECASE_CHANGES=$(cd "$PROJECT_DIR" && git diff --cached --name-only 2>/dev/null | grep "usecases/" | wc -l | tr -d ' ')
+            if [[ "$USECASE_CHANGES" == "0" ]]; then
+                DELIVERABLE_WARNINGS="$DELIVERABLE_WARNINGS\n  ⚠ No usecases/<feature>.md created/updated (CODING:feature requires this)"
+            fi
+        fi
+        if [[ "$TYPE" == CODING:* ]]; then
+            # Check if tests were modified
+            TEST_CHANGES=$(cd "$PROJECT_DIR" && git diff --cached --name-only 2>/dev/null | grep -E "tests/|__tests__/|\.test\.|\.spec\." | wc -l | tr -d ' ')
+            if [[ "$TEST_CHANGES" == "0" ]]; then
+                DELIVERABLE_WARNINGS="$DELIVERABLE_WARNINGS\n  ⚠ No test files created/updated (CODING tasks should include tests)"
+            fi
+        fi
+        if [[ -n "$DELIVERABLE_WARNINGS" ]]; then
+            echo "[Deliverable Check]$DELIVERABLE_WARNINGS"
+        fi
+
         if [[ -n "$MISSING" ]]; then
             cat <<EOF
 {

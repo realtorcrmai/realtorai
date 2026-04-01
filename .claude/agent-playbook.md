@@ -153,7 +153,24 @@ Every feature change must produce or update these deliverables:
 | Gap analysis | `docs/gap-analysis/<area>/` | Audit or assessment task | 7-pass, versioned, code-verified |
 | PRD | `docs/PRD_<feature>.md` | Large tier tasks | 10 sections, user-approved |
 
-**Enforcement:** PR checklist includes "docs updated" checkbox. Completion-gate checks if task type requires docs.
+**Deliverable requirements by task type:**
+
+| Task Type | Use-Case Doc | Test Doc/Code | Run Tests | When |
+|-----------|-------------|--------------|-----------|------|
+| CODING:feature | **REQUIRED** — create before coding | **REQUIRED** — write after coding | **REQUIRED** | Every new feature |
+| CODING:bugfix | UPDATE if exists | **REQUIRED** — regression test | **REQUIRED** | Every bug fix |
+| CODING:refactor | UPDATE if exists | **REQUIRED** — verify no breaks | **REQUIRED** | Every refactor |
+| DESIGN_SPEC | **REQUIRED** — defines the feature | Acceptance criteria in spec | N/A | Every spec |
+| GAP_ANALYSIS | N/A | N/A | N/A | — |
+| TESTING | N/A | **IS the deliverable** | **REQUIRED** | — |
+| DATA_MIGRATION | N/A | Rollback SQL | Verify migration | Every migration |
+| SECURITY_AUDIT | N/A | Security test cases | **REQUIRED** | Every audit |
+| INFO_QA | N/A | N/A | N/A | — |
+| DOCS | N/A | N/A | N/A | — |
+
+**Key rule:** Use-case doc BEFORE coding (defines what you're building). Tests AFTER coding (verifies what you built). This is not optional — deliverables are part of "done", not afterthoughts.
+
+**Enforcement:** Completion-gate checks deliverables by task type. L3 Thinking Gate checkpoint includes deliverable status. Quick Reference Card lists deliverables as BLOCKING.
 
 ### 1.4 Onboarding — New Developers
 
@@ -795,11 +812,15 @@ Think like a professional auditor examining every section systematically. For ea
 
 Every gap must have: evidence (file:line or command output), framework classification, priority, and implementation approach with effort estimate.
 
+**Depth rule: No surface-level analysis.**
+Every finding must go deep — not just "what" but "why" and "what's the root cause." If a section took <1 minute to write, it's surface-level — go back and add evidence, root cause analysis, and specific recommendations. A gap analysis that just lists problems without explaining their cause is useless.
+
 **What NOT to do:**
 - Trust previous gap analyses without re-verifying
 - Mark items "FIXED" based on agent reports
 - Assess features by listing files without reading them
 - Copy findings from documentation instead of code
+- Write surface-level bullet points instead of deep analysis with root causes
 
 ### 4.5 RAG_KB
 
@@ -1963,6 +1984,7 @@ User Message → L1 (Reminder) → L2 (Gate) → L3 (Self-Check) → L4 (Complet
 **Am I rushing?** [yes/no — if yes, STOP and re-read HC-15]
 **Did I read the relevant code/files?** [yes + which files, or no → read first]
 **Alternative approach considered:** [what else could I do? why is my choice better?]
+**Deliverables status:** [usecases/ doc: created/updated/N/A | tests: written/run/N/A | compliance: logged/pending]
 ```
 
 **When to output this checkpoint:**
