@@ -24,6 +24,7 @@ function routeQuery(query: string): "help" | "action" | "mixed" {
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
   const features = typeof window === "undefined" ? [] : (() => { try { return getAllFeatures(); } catch { return []; } })();
 
@@ -61,6 +62,7 @@ export function CommandPalette() {
               placeholder="Search help, CRM, or type a command..."
               className="flex-1 py-3 text-sm bg-transparent outline-none placeholder:text-muted-foreground"
               autoFocus
+              onValueChange={setSearchQuery}
             />
             <kbd className="text-[10px] text-muted-foreground/50 bg-muted px-1.5 py-0.5 rounded">ESC</kbd>
           </div>
@@ -104,6 +106,24 @@ export function CommandPalette() {
                 </Command.Item>
               ))}
             </Command.Group>
+
+            {/* Ask AI — always visible when there is a query */}
+            {searchQuery.trim() && (
+              <Command.Group heading="AI" className="mb-2">
+                <Command.Item
+                  value={`ask ai ${searchQuery}`}
+                  onSelect={() => {
+                    setOpen(false);
+                    window.dispatchEvent(new CustomEvent("open-agent", { detail: { query: searchQuery } }));
+                  }}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm cursor-pointer data-[selected=true]:bg-accent transition-colors"
+                >
+                  <span className="text-lg shrink-0">✨</span>
+                  <span className="text-foreground">Ask AI: &ldquo;{searchQuery.length > 50 ? searchQuery.slice(0, 50) + "..." : searchQuery}&rdquo;</span>
+                  <ArrowRight className="h-3 w-3 text-muted-foreground/50 shrink-0 ml-auto" />
+                </Command.Item>
+              </Command.Group>
+            )}
           </Command.List>
 
           <div className="px-4 py-2 border-t border-border flex items-center justify-between">
