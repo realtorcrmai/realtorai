@@ -204,8 +204,7 @@ export function SocialSettingsTab({ brandKit, accounts }: Props) {
     );
   }, []);
 
-  // eslint-disable-next-line react-compiler/react-compiler -- complex form state callback
-  const handleSave = useCallback(() => {
+  const handleSave = () => {
     startTransition(async () => {
       try {
         await saveBrandKit({
@@ -246,33 +245,7 @@ export function SocialSettingsTab({ brandKit, accounts }: Props) {
         setSaveMessage("Failed to save brand kit. Please try again.");
       }
     });
-  }, [
-    brandKit?.id,
-    agentName,
-    brokerageName,
-    licenseNumber,
-    phone,
-    email,
-    bio,
-    serviceAreas,
-    logoPreview,
-    headshotPreview,
-    primaryColour,
-    secondaryColour,
-    accentColour,
-    headingFont,
-    bodyFont,
-    voiceTone,
-    voiceCustomDescription,
-    emojiPreference,
-    defaultCta,
-    defaultHashtags,
-    preferredPlatforms,
-    quietHoursStart,
-    quietHoursEnd,
-    postingDays,
-    startTransition,
-  ]);
+  };
 
   return (
     <div className="space-y-8">
