@@ -2,36 +2,34 @@
 
 ## Pre-Deployment Checklist
 
-### Critical Blockers (Must Fix Before Production)
+### Critical Blockers Status (Updated 2026-04-01)
 
-**MULTI-TENANCY (P0 — Launch Blocker, found 2026-03-30):**
-- [ ] **Add `realtor_id` column** to ALL core tables (contacts, listings, appointments, communications, newsletters, contact_journeys, tasks, deals, etc.)
-- [ ] **Rewrite ALL RLS policies** — change `auth.role() = 'authenticated'` → `auth.uid() = realtor_id` on every table
-- [ ] **Remove anon access** — DROP all policies from migration 003 (anon full access on contacts, listings, appointments, communications, listing_documents)
-- [ ] **Remove `USING (true)` policies** on: agent_events, agent_decisions, contact_instructions, rag_embeddings, competitive_emails
-- [ ] **Without these fixes:** Realtor A can see all of Realtor B's contacts, listings, emails, and data
+**MULTI-TENANCY — DONE (Fixed 2026-03-31):**
+- [x] `realtor_id` added to 75 tables (migrations 062-065)
+- [x] `tenantClient` wrapper auto-injects `.eq("realtor_id")` on all queries
+- [x] 15 server action files + 3 dashboard pages updated
+- [x] Anon access policies dropped, tenant RLS policies added
+- [x] `USING(true)` policies replaced
+- [x] 61 isolation tests passing
 
-**API SECURITY (P0):**
-- [ ] **Unauthenticated API Routes**: Add auth checks to these middleware-bypassed routes that have write access:
-  - `POST /api/contacts/log-interaction` — writes to communications + activity_log
-  - `POST /api/contacts/context` — modifies contact records
-  - `POST /api/contacts/instructions` — modifies handling instructions
-  - `POST /api/contacts/watchlist` — modifies watchlist
-  - `POST /api/contacts/journey` — modifies journey data
-  - `POST /api/newsletters/edit` — modifies newsletters
-  - `POST /api/listings/blast` — sends bulk emails to any address
-- [ ] **Remove hardcoded CRON secret** from `src/components/dashboard/DailyDigestCard.tsx` — fallback `"listingflow-cron-secret-2026"` is exposed in client JS
-- [ ] **Remove hardcoded demo credentials** from `src/lib/auth.ts` — fallback `demo@realestatecrm.com / demo1234`
-- [ ] **HMAC-signed unsubscribe links** — current implementation uses plain contact UUID (enumeration risk)
+**SECURITY — MOSTLY DONE:**
+- [x] Hardcoded CRON secret removed from `DailyDigestCard.tsx`
+- [x] Hardcoded demo credentials removed from `auth.ts`
+- [ ] **Unauthenticated API Routes** — Still bypassed in middleware: `/api/contacts/log-interaction`, `/api/contacts/context`, `/api/contacts/instructions`, `/api/contacts/watchlist`, `/api/contacts/journey`, `/api/newsletters/edit`, `/api/listings/blast`
+- [ ] **HMAC-signed unsubscribe links** — still uses plain contact UUID
 
-**ENVIRONMENT:**
-- [ ] **Set `NEXT_PUBLIC_APP_URL`**: Without this, all email links point to `http://localhost:3000`
-- [ ] **Remove test endpoint**: Delete or gate `src/app/api/test/generate-newsletter/route.ts`
+**ENVIRONMENT — BEFORE DEPLOY:**
+- [ ] **Set `NEXT_PUBLIC_APP_URL`** in Vercel dashboard — without this, email links point to localhost
+- [ ] **Set all env vars** in Vercel (see list below)
+- [ ] **Remove test endpoint**: Delete `src/app/api/test/generate-newsletter/route.ts`
 
 **PRIVACY/COMPLIANCE (P1):**
 - [ ] **Cookie consent banner** — PIPEDA/CASL requires consent before tracking
 - [ ] **Data deletion endpoint** — PIPEDA right-to-erasure requirement
-- [ ] **CASL consent expiry** — cron exists but logic incomplete
+
+**DATABASE — BEFORE DEPLOY:**
+- [ ] **Run migrations 058-065** on Supabase (social media + multi-tenancy)
+- [ ] **Verify backfill** — confirm all rows have `realtor_id` set
 
 ### High Priority
 
