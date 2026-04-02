@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { createHash } from "crypto";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveTenantFromRequest, DEFAULT_TENANT_ID } from "@/lib/tenant-context";
 
 export interface VoiceAuthResult {
@@ -16,28 +18,23 @@ export interface VoiceAuthError {
 }
 
 /**
+ * Hash an API key for secure comparison against stored hashes.
+ */
+function hashKey(key: string): string {
+  return createHash("sha256").update(key).digest("hex");
+}
+
+/**
  * Require Bearer token authentication for voice agent API routes.
  * Resolves tenant context from the token and returns tenant_id.
  *
- * Supports:
- *   - Legacy VOICE_AGENT_API_KEY (single shared key, maps to default tenant)
- *   - Per-tenant API keys (looked up in tenant_api_keys table)
- *   - OAuth2 JWT tokens with tenant_id claim (future)
+ * Auth flow (checked in order):
+ *   1. Per-tenant API key (looked up by hash in tenant_api_keys table)
+ *   2. Legacy VOICE_AGENT_API_KEY (single shared key, maps to default tenant)
  */
 export async function requireVoiceAgentAuth(
   request: Request
 ): Promise<VoiceAuthResult | VoiceAuthError> {
-  const key = process.env.VOICE_AGENT_API_KEY;
-  if (!key) {
-    return {
-      authorized: false as const,
-      error: NextResponse.json(
-        { error: "Voice agent API not configured — set VOICE_AGENT_API_KEY" },
-        { status: 503 }
-      ),
-    };
-  }
-
   const auth = request.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) {
     return {
@@ -49,35 +46,70 @@ export async function requireVoiceAgentAuth(
     };
   }
 
-  // Resolve tenant from the token
-  const resolved = await resolveTenantFromRequest(request);
-  if (resolved.error && !resolved.tenantId) {
-    return {
-      authorized: false as const,
-      error: NextResponse.json(
-        { error: resolved.error },
-        { status: 401 }
-      ),
-    };
+  const token = auth.slice(7);
+
+  // 1. Check per-tenant API keys first
+  const tenantAuth = await checkTenantApiKey(token);
+  if (tenantAuth) {
+    return tenantAuth;
   }
 
-  // Legacy check: match against VOICE_AGENT_API_KEY
-  const token = auth.slice(7);
-  if (token !== key) {
-    // TODO: Check per-tenant API keys in tenant_api_keys table (Step 5)
+  // 2. Fallback: legacy shared key
+  const legacyKey = process.env.VOICE_AGENT_API_KEY;
+  if (legacyKey && token === legacyKey) {
+    const resolved = await resolveTenantFromRequest(request);
     return {
-      authorized: false as const,
-      error: NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      ),
+      authorized: true as const,
+      error: null,
+      tenantId: resolved.tenantId ?? DEFAULT_TENANT_ID,
+      agentEmail: resolved.agentEmail,
     };
   }
 
   return {
-    authorized: true as const,
-    error: null,
-    tenantId: resolved.tenantId ?? DEFAULT_TENANT_ID,
-    agentEmail: resolved.agentEmail,
+    authorized: false as const,
+    error: NextResponse.json(
+      { error: "Unauthorized — invalid API key" },
+      { status: 401 }
+    ),
   };
+}
+
+/**
+ * Look up a per-tenant API key by hash.
+ * Returns auth result if found + active, null otherwise.
+ */
+async function checkTenantApiKey(
+  token: string
+): Promise<VoiceAuthResult | null> {
+  try {
+    const db = createAdminClient();
+    const keyHash = hashKey(token);
+
+    const { data } = await db
+      .from("tenant_api_keys")
+      .select("realtor_id, is_active, expires_at, scopes")
+      .eq("key_hash", keyHash)
+      .single();
+
+    if (!data) return null;
+    if (!data.is_active) return null;
+    if (data.expires_at && new Date(data.expires_at) < new Date()) return null;
+    if (!data.scopes?.includes("voice-agent")) return null;
+
+    // Update last_used_at (fire-and-forget)
+    db.from("tenant_api_keys")
+      .update({ last_used_at: new Date().toISOString() })
+      .eq("key_hash", keyHash)
+      .then(() => {});
+
+    return {
+      authorized: true as const,
+      error: null,
+      tenantId: data.realtor_id,
+      agentEmail: null,
+    };
+  } catch {
+    return null;
+  }
 }

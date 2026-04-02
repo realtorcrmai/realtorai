@@ -192,10 +192,10 @@ User Message → L1 (Reminder) → L2 (Gate) → L3 (Self-Check) → L4 (Complet
 
 ### 15.3 Layer 3 — Thinking Gate (Self-Enforced, Critical)
 
-**At each phase boundary, output a thinking checkpoint:**
+**Output a thinking checkpoint at EVERY phase boundary. No exceptions.**
 
 ```markdown
-### Phase [N] -> Phase [N+1] Checkpoint
+### [Context] Phase [N] -> Phase [N+1] Checkpoint
 
 **What I just completed:** [1 sentence]
 **What I'm about to do:** [1 sentence]
@@ -205,9 +205,36 @@ User Message → L1 (Reminder) → L2 (Gate) → L3 (Self-Check) → L4 (Complet
 **Deliverables status:** [usecases/ doc | tests | compliance]
 ```
 
-**When to output:** Before execution, before each sprint, before presenting final output, whenever you feel the urge to skip a step.
+**L3 is MANDATORY at these specific points:**
 
-**Rules:** Skipping = playbook failed. "Am I rushing?" must be answered honestly. If you can't articulate an alternative, you haven't thought enough.
+| Task Context | Checkpoint Required Between |
+|-------------|---------------------------|
+| **CODING (7 phases)** | Phase 0→1, 1→2, 2→3, 3→4, 4→5, 5→6, 6→7 |
+| **TESTING (5 phases)** | Phase 1→1.5, 1.5→2, 2→3, 3→4, 4→5 |
+| **DEBUGGING (5 phases)** | Phase 1→2, 2→3, 3→4, 4→5 |
+| **DESIGN_SPEC (6 phases)** | Phase 0→1, 1→2, 2→3, 3→4, 4→5, 5→6 |
+| **7-Pass Analysis** | Pass 1→2, 2→3, 3→4, 4→5, 5→6, 6→7 |
+| **Multi-task** | Between each task in the list |
+| **Sprint batches** | After each sprint before starting next |
+| **All other task types** | Between each numbered phase |
+
+**7-Pass L3 checkpoint format (between each pass):**
+
+```markdown
+### Pass [N] -> Pass [N+1] Checkpoint
+
+**Pass N findings:** [key finding count, top 3 findings]
+**What Pass N+1 should look for:** [what the previous pass might have missed]
+**Am I rubber-stamping?** [yes/no — if yes, re-read Pass N output carefully]
+**Time spent on Pass N:** [honest estimate — if <1 min, redo the pass]
+```
+
+**Rules:**
+- Skipping ANY L3 checkpoint = the playbook failed for this task
+- "Am I rushing?" answered honestly = the most important question
+- If you can't articulate an alternative approach, you haven't thought enough
+- For 7-pass: if "Am I rubber-stamping?" is yes, the pass doesn't count — redo it
+- L3 checkpoints are NOT optional even for small tasks — the format can be shorter but must exist
 
 ### 15.4 Layer Interaction — Defense in Depth
 
