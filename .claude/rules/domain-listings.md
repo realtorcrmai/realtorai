@@ -21,3 +21,4 @@ paths:
 - Each advancement logs to audit trail
 - Parent listing status NEVER "complete" if any child subtask is incomplete
 - Data enrichment (Phase 2) uses external APIs (BC Geocoder, ParcelMap) — handle timeouts gracefully
+- **Multi-tenant:** Always use `getAuthenticatedTenantClient()` — never raw admin client (HC-12)

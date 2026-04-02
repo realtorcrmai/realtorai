@@ -14,11 +14,13 @@ STRICT POLICY: No step below can be skipped. No exceptions. No bypass.
 □ health-check.sh  □ check WIP.md for conflicts  □ feature branch from dev
 □ pull latest  □ load memory  □ services up (if needed)
 
-═══ THINK BEFORE ACTING (HC-15, Section 3.0 — BLOCKING) ═══
-□ Read FULL request TWICE  □ Decompose steps  □ Map dependencies  □ Reorder correctly
-□ Consider 2+ approaches before picking one  □ Multiple tasks? → Create task list
-□ During execution: "Am I rushing or thinking?"  □ Before presenting: re-read own output
+═══ THINK BEFORE ACTING (HC-15, HC-17, Section 3.0 — BLOCKING) ═══
+□ Read FULL request TWICE  □ Decompose into numbered tasks
+□ Map dependencies between tasks  □ REORDER by dependency (NOT prompt order)
+□ Create task list (TodoWrite) BEFORE any work  □ Verify task list at END
+□ Consider 2+ approaches  □ "Am I rushing?"  □ Re-read output before presenting
 □ Speed ≠ quality. Hours of thinking > minutes of garbage.
+□ HC-16: No MD file >550 lines — split into modules if needed
 
 ═══ CLASSIFY (BLOCKING — no code changes until block is outputted) ═══
 □ type:subtype (15 types)  □ tier (micro/small/medium/large)

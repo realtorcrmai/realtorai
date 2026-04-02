@@ -72,6 +72,8 @@ These apply to EVERY task. Violation = automatic revert.
 | HC-13 | **Verify against code, not reports.** All analysis, gap reports, and status claims MUST be verified by reading actual source code. Never trust previous reports, agent outputs, or documentation alone. "Code written" ≠ "Feature works." |
 | HC-14 | **Every new table MUST have `realtor_id`** column with index and RLS policy |
 | HC-15 | **Think before acting.** Read the full request twice. Consider 2+ approaches before picking one. Re-read your output before presenting. Speed is never more important than correctness. Taking hours for critical thinking is better than delivering fast garbage. |
+| HC-16 | **No MD file >550 lines.** Split into focused modules that reference each other. Agent skips content in long files. Never delete functionality — restructure into smaller files. |
+| HC-17 | **Multi-task prompts: create task list first, verify at end.** Decompose → map dependencies → reorder → numbered task list → work in order → verify all complete at end. |
 
 ### 1.2 Feature Evaluation & Market Fit
 
@@ -385,15 +387,24 @@ Read `MEMORY.md` at session start. Key rules:
 #### Phase 1: Understand (before any tool call)
 
 1. **Read the FULL request TWICE** — first to understand, second to catch what you missed
-2. **Decompose** into discrete steps — list them
-3. **Map dependencies** — does step B need step A's output? Does file X require file Y first?
-4. **Reorder** into correct execution sequence — users write in thought order, NOT dependency order
-5. **Consider 2+ approaches** — never take the first idea. What are the alternatives? Which is more robust?
-6. **Output the classification block** (Section 3.1) — this proves you completed steps 1-5
-7. **Only then** proceed to execution
+2. **Decompose** into discrete tasks — number them
+3. **Map dependencies** — does task B need task A's output? Does file X require file Y first?
+4. **Reorder by dependency** — users write in thought order, NOT dependency order. Output the reordered list.
+5. **Create a task list** using TodoWrite — this IS your work tracker for this prompt. Verify it at the END.
+6. **Consider 2+ approaches** — never take the first idea. What are the alternatives?
+7. **Output the classification block** (Section 3.1) — this proves you completed steps 1-6
+8. **Only then** proceed to execution, working through the task list in order
+
+**Multi-task ordering is MANDATORY.** When a prompt has multiple tasks:
+```
+WRONG: Split tasks → work on them in prompt order
+RIGHT: Split tasks → map dependencies → reorder → create numbered task list → work in dependency order → verify at end
+```
 
 Example: User writes "update the frontend, then fix the backend API, then add the database column."
 Correct execution order: database column → backend API → frontend. **Always reorder by dependency.**
+
+**Task list bookending:** Create the list at START. Verify the list at END. This is not optional even for "obvious" orderings.
 
 If the correct order is unclear → ask ONE clarifying question. Do not guess.
 
