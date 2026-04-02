@@ -5,7 +5,7 @@
 Realtors360 is a real estate transaction management CRM for licensed BC realtors. It automates the full property listing lifecycle — from seller intake through closing — with integrated showing management, BCREA form generation, AI content creation, and regulatory compliance tracking.
 
 **Live URL:** localhost:3000 (dev)
-**Repo root:** `/Users/rahulmittal/Library/CloudStorage/OneDrive-Personal/CoWork/realtorai/`
+**Repo root:** Current working directory (auto-detected by Claude Code via `$CLAUDE_PROJECT_DIR`)
 **App files:** `src/`, `package.json`, `next.config.ts` are at repo root (flat monorepo — no nested `realestate-crm/` subdirectory)
 
 ### Git Workflow — Feature Branch Model

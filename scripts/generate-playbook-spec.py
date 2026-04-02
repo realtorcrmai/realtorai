@@ -1112,7 +1112,9 @@ bold_para('MODEL CHAIN')
 para('Haiku=search/classify  Sonnet=code/tests/docs  Opus=architecture/review/debug')
 
 # ── Save ──────────────────────────────────────────────────
-output_path = os.path.expanduser('~/Library/CloudStorage/OneDrive-Personal/CoWork/realtorai/docs/SPEC_Agent_Playbook.docx')
+script_dir = os.path.dirname(os.path.abspath(__file__))
+repo_root = os.path.dirname(script_dir)
+output_path = os.path.join(repo_root, 'docs', 'SPEC_Agent_Playbook.docx')
 doc.save(output_path)
 print(f"✅ Saved to: {output_path}")
 print(f"   Pages: ~{len(doc.paragraphs) // 40} (estimated)")

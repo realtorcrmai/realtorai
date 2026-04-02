@@ -7,7 +7,7 @@
 STRICT POLICY: No step below can be skipped. No exceptions. No bypass.
 
 ═══ PIPELINE FIRST ═══
-□ Run agent-pipeline: cd /Users/rahulmittal/agent-pipeline && npx tsx src/pipeline.ts --dry-run "<task>"
+□ Run agent-pipeline: cd "${AGENT_PIPELINE_DIR:-../agent-pipeline}" && npx tsx src/pipeline.ts --dry-run "<task>"
 □ Wait for result before proceeding
 
 ═══ PRE-FLIGHT (BLOCKING — nothing runs until green) ═══
