@@ -206,7 +206,88 @@ Existing test inventory (check before creating new):
 
 **Phase 5** — Operational: deployment plan, monitoring, failure modes, cost. **Verify against Principle 4 (Rollout & Operations).**
 
-**Phase 6** — Implementation plan: phases, files per phase, test plan
+**Phase 6** — Implementation plan (use template below)
+
+### 4.4.0 PRD Template (10 Sections — Required for Large Tier Tasks)
+
+Before building any large feature, create `docs/PRD_<feature>.md` with these 10 sections:
+
+| # | Section | Content |
+|---|---------|---------|
+| 1 | **Problem Statement** | What pain exists? Who feels it? What's the cost of inaction? |
+| 2 | **Goals & Success Metrics** | 3-5 measurable outcomes (e.g. "reduce listing time from 4h to 1h") |
+| 3 | **Non-Goals** | What this feature explicitly will NOT do (scope fence) |
+| 4 | **User Stories** | As a [role], I want [action], so that [benefit] — minimum 5 stories |
+| 5 | **Current State** | What exists today? What works? What's broken? (link to gap analysis if exists) |
+| 6 | **Proposed Solution** | Architecture, data model, UI wireframes, API surface. 2+ design options with trade-offs. |
+| 7 | **Implementation Plan** | Phased rollout (see template below). Files per phase. Dependencies between phases. |
+| 8 | **Test Strategy** | Test types needed, acceptance criteria per story, eval metrics |
+| 9 | **Risks & Mitigations** | Technical risks, compliance risks, cost risks — each with mitigation |
+| 10 | **Timeline & Resources** | Phases with effort estimates, who does what, dependencies on external teams |
+
+PRD must be **user-approved** before implementation begins.
+
+### 4.4.0.1 Implementation Plan Template
+
+Every implementation plan (PRD Section 7 or DESIGN_SPEC Phase 6) must follow this structure:
+
+**Phase boundary criteria** — Split into phases when:
+- A phase delivers a testable, demoable increment
+- A phase has no more than 5-8 files changed
+- Each phase can be merged independently without breaking existing features
+
+**Template:**
+```markdown
+## Phase N: [Name] (Est: X hours)
+
+**Goal:** [One sentence — what's demoable after this phase?]
+
+**Files:**
+- CREATE: [new files]
+- MODIFY: [existing files]
+
+**Dependencies:** [What must be done before this phase?]
+
+**Database:** [New tables/columns/migrations? List them]
+
+**Test plan:** [Which tests to write + which existing tests to run]
+
+**Rollout:** [Feature flag? Migration? Config change?]
+
+**Done when:** [Specific acceptance criteria — not "it works"]
+```
+
+**Rules:** Phase 1 = data layer (migrations, types, actions). Phase 2 = API/backend. Phase 3+ = UI. Last phase = integration test + docs. Never plan >5 phases without user checkpoint.
+
+### 4.4.0.2 Test Execution Decision Matrix
+
+**Which tests to run and when:**
+
+| Trigger | What to Run | Command | SLA |
+|---------|-------------|---------|-----|
+| **Any code change** | TypeScript check | `npx tsc --noEmit` | 30s |
+| **Before every commit** | Smoke test | `bash scripts/test-suite.sh` | 2 min |
+| **Schema/migration change** | Full test suite + constraint tests | `bash scripts/test-suite.sh` | 2 min |
+| **Email marketing change** | Email engine QA | `node scripts/qa-test-email-engine.mjs` | 5 min |
+| **UI change** | Playwright e2e | `npx playwright test` | 3 min |
+| **Agent/prompt/tool change** | Agent eval suite | Golden tasks (tests/agent-evals/) | 10 min |
+| **Before deploy** | Full suite + email QA + Playwright | All of the above | 15 min |
+| **Domain-specific change** | Relevant eval script | `node scripts/eval-<domain>.mjs` | 5 min |
+
+**Test tool inventory:**
+
+| Tool | Location | Tests | What It Covers |
+|------|----------|-------|---------------|
+| `test-suite.sh` | `scripts/` | 73+ | Navigation (35 routes), CRUD (7 entities), data integrity, auth, cascade delete |
+| `qa-test-email-engine.mjs` | `scripts/` | 28 | Email pipeline: text, blocks, quality, send, webhooks, crons |
+| `eval-*.mjs` (8 scripts) | `scripts/` | Varies | Domain evals: RAG, content, workflow, recommendations, etc. |
+| Playwright | `tests/` | Varies | Browser e2e: login, navigation, form submission, UI rendering |
+| `evals.md` | repo root | 200 | Manual QA test cases (reference, not automated) |
+
+**Reading test output:**
+- `test-suite.sh`: Look for `PASS`/`FAIL` per category, total at bottom. Any FAIL = investigate before commit.
+- Playwright: `npx playwright test --reporter=list` for verbose. Screenshots in `test-results/` on failure.
+- Eval scripts: Output score per test case. Check for regressions against previous run.
 
 ---
 

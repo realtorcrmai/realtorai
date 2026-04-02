@@ -101,9 +101,10 @@ These apply to EVERY task. Violation = automatic revert.
 | Use-case doc | `usecases/<feature>.md` | New feature or major enhancement |
 | Test doc | `tests/<feature>.md` | Behavior change |
 | Gap analysis | `docs/gap-analysis/<area>/` | Audit or assessment task |
-| PRD | `docs/PRD_<feature>.md` | Large tier tasks |
+| PRD | `docs/PRD_<feature>.md` | Large tier tasks (→ [task-playbooks.md](playbook/task-playbooks.md) §4.4.0 for 10-section template) |
 
 **Key rule:** Use-case doc BEFORE coding. Tests AFTER coding. Deliverables are part of "done".
+**Test execution:** See [task-playbooks.md](playbook/task-playbooks.md) §4.4.0.2 for decision matrix (which tests, when, how).
 
 ### 1.4 Onboarding — New Developers
 
