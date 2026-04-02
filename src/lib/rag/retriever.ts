@@ -3,10 +3,39 @@
 // ============================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { embedQuery } from './embeddings';
+import Anthropic from '@anthropic-ai/sdk';
+import { embedQuery, embedText } from './embeddings';
 import { fullTextSearch } from './fallback';
-import { RETRIEVAL } from './constants';
+import { RETRIEVAL, MODELS } from './constants';
 import type { SearchResult, SearchFilters, SourceReference } from './types';
+
+const anthropic = new Anthropic();
+
+/**
+ * HyDE: Hypothetical Document Embedding.
+ * Generates a hypothetical answer to the query, embeds it, and uses that
+ * embedding for search. Improves recall on vague/conversational queries.
+ * Falls back to regular query embedding if generation fails.
+ */
+export async function hydeExpand(query: string): Promise<number[]> {
+  try {
+    const response = await anthropic.messages.create({
+      model: MODELS.TIER1_PLANNER,
+      max_tokens: 200,
+      system: 'Generate a short, factual paragraph that would answer this question in a real estate CRM context. Write as if it were a document in the database. Be specific with plausible details.',
+      messages: [{ role: 'user', content: query }],
+    });
+
+    const hypothetical = response.content[0].type === 'text' ? response.content[0].text : '';
+    if (!hypothetical) return embedQuery(query);
+
+    // Embed the hypothetical doc (as document, not query — it's a "fake document")
+    return embedText(hypothetical);
+  } catch {
+    // Fallback to regular query embedding
+    return embedQuery(query);
+  }
+}
 
 /**
  * Perform semantic search with optional structured filters.
@@ -43,6 +72,36 @@ export async function searchEmbeddings(
   }
 
   return (data ?? []) as SearchResult[];
+}
+
+/**
+ * HyDE-enhanced semantic search: generates hypothetical answer, embeds it,
+ * searches using that embedding. Better for vague/conversational queries.
+ */
+async function hydeSearchEmbeddings(
+  db: SupabaseClient,
+  query: string,
+  filters: SearchFilters = {},
+  topK: number = RETRIEVAL.DEFAULT_TOP_K
+): Promise<SearchResult[]> {
+  try {
+    const hydeEmbedding = await hydeExpand(query);
+
+    const { data, error } = await db.rpc('rag_search', {
+      query_embedding: `[${hydeEmbedding.join(',')}]`,
+      filter_types: filters.content_type ?? null,
+      filter_contact_id: filters.contact_id ?? null,
+      filter_listing_id: filters.listing_id ?? null,
+      filter_after: filters.date_after ?? null,
+      match_count: Math.min(topK, RETRIEVAL.MAX_TOP_K),
+      match_threshold: RETRIEVAL.SIMILARITY_THRESHOLD,
+    });
+
+    if (error) return [];
+    return (data ?? []) as SearchResult[];
+  } catch {
+    return []; // HyDE is best-effort, never blocks
+  }
 }
 
 /**
@@ -96,41 +155,36 @@ export async function hybridSearch(
 ): Promise<SearchResult[]> {
   const RRF_K = 60; // RRF constant (standard value)
 
-  // Run both searches in parallel
-  const [semanticResults, ftsResults] = await Promise.allSettled([
+  // Run semantic, HyDE, and FTS in parallel (3-way RRF)
+  const [semanticResults, hydeResults, ftsResults] = await Promise.allSettled([
     searchEmbeddings(db, query, filters, topK * 2),
+    hydeSearchEmbeddings(db, query, filters, topK * 2),
     fullTextSearch(db, query, filters, topK * 2),
   ]);
 
   const semantic = semanticResults.status === 'fulfilled' ? semanticResults.value : [];
+  const hyde = hydeResults.status === 'fulfilled' ? hydeResults.value : [];
   const fts = ftsResults.status === 'fulfilled' ? (ftsResults.value as SearchResult[]) : [];
 
-  // If only one source has results, return it directly
-  if (semantic.length === 0 && fts.length === 0) return [];
-  if (fts.length === 0) return semantic.slice(0, topK);
-  if (semantic.length === 0) return fts.slice(0, topK);
+  // If no results from any source, return empty
+  const allResults = [semantic, hyde, fts];
+  const nonEmpty = allResults.filter((r) => r.length > 0);
+  if (nonEmpty.length === 0) return [];
+  if (nonEmpty.length === 1) return nonEmpty[0].slice(0, topK);
 
-  // Reciprocal Rank Fusion: score = sum(1 / (k + rank)) across both lists
+  // 3-way Reciprocal Rank Fusion: score = sum(1 / (k + rank)) across all lists
   const rrfScores = new Map<string, { score: number; result: SearchResult }>();
 
-  for (let i = 0; i < semantic.length; i++) {
-    const key = `${semantic[i].source_table}:${semantic[i].source_id}:${i}`;
-    const existing = rrfScores.get(key);
-    const rrfScore = 1 / (RRF_K + i + 1);
-    rrfScores.set(key, {
-      score: (existing?.score ?? 0) + rrfScore,
-      result: existing?.result ?? semantic[i],
-    });
-  }
-
-  for (let i = 0; i < fts.length; i++) {
-    const key = `${fts[i].source_table}:${fts[i].source_id}:${i}`;
-    const existing = rrfScores.get(key);
-    const rrfScore = 1 / (RRF_K + i + 1);
-    rrfScores.set(key, {
-      score: (existing?.score ?? 0) + rrfScore,
-      result: existing?.result ?? fts[i],
-    });
+  for (const list of [semantic, hyde, fts]) {
+    for (let i = 0; i < list.length; i++) {
+      const key = `${list[i].source_table}:${list[i].source_id}`;
+      const existing = rrfScores.get(key);
+      const rrfScore = 1 / (RRF_K + i + 1);
+      rrfScores.set(key, {
+        score: (existing?.score ?? 0) + rrfScore,
+        result: existing?.result ?? list[i],
+      });
+    }
   }
 
   // Sort by RRF score descending, return top-K
