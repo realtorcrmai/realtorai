@@ -16,7 +16,9 @@ import {
   buildAssistantMessage,
 } from '@/lib/rag/conversation';
 import { checkGuardrails, buildFallbackResponse, hasAdequateContext } from '@/lib/rag/guardrails';
-import { logAudit } from '@/lib/rag/feedback';
+import { logAudit, createPipelineLogger } from '@/lib/rag/feedback';
+import { validateResponseGrounding } from '@/lib/rag/synthesizer';
+import { checkApiRateLimit } from '@/lib/api-rate-limit';
 import { MODELS, MAX_TOKENS, SESSION } from '@/lib/rag/constants';
 import type { ChatRequest, RagMessage, SourceReference } from '@/lib/rag/types';
 
@@ -68,6 +70,20 @@ export async function POST(req: NextRequest) {
     const tc = isAdmin ? null : await getAuthenticatedTenantClient();
     const db = isAdmin ? createAdminClient() : tc!.raw;
     const realtorId = tc?.realtorId;
+
+    // Rate limiting
+    if (realtorId) {
+      const rateCheck = checkApiRateLimit(realtorId, 'rag-chat');
+      if (!rateCheck.allowed) {
+        return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
+          status: 429,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // Pipeline logger
+    const pipeline = createPipelineLogger(body.session_id ?? 'new');
 
     // 1. Get or create chat session
     const chatSession = await getOrCreateSession(
@@ -242,6 +258,15 @@ export async function POST(req: NextRequest) {
               }
 
               const latencyMs = Date.now() - startTime;
+              // Output validation
+              const validation = validateResponseGrounding(fullText, formattedContext);
+              if (validation.warnings.length > 0) {
+                console.warn(`[RAG-stream] Grounding warnings:`, validation.warnings);
+              }
+
+              // Pipeline telemetry
+              pipeline.log();
+
               await logAudit(db, {
                 sessionId: chatSession.id,
                 userEmail,
