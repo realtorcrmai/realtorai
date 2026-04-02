@@ -65,9 +65,9 @@ export async function POST(req: NextRequest) {
     const isAdmin = (session.user as { role?: string }).role === 'admin';
 
     // Create tenant-scoped or admin DB client
-    const db = isAdmin
-      ? createAdminClient()
-      : (await getAuthenticatedTenantClient()).raw;
+    const tc = isAdmin ? null : await getAuthenticatedTenantClient();
+    const db = isAdmin ? createAdminClient() : tc!.raw;
+    const realtorId = tc?.realtorId;
 
     // 1. Get or create chat session
     const chatSession = await getOrCreateSession(
@@ -245,6 +245,7 @@ export async function POST(req: NextRequest) {
               await logAudit(db, {
                 sessionId: chatSession.id,
                 userEmail,
+                realtorId,
                 queryText: body.message,
                 intent: plan.intent,
                 queryPlan: plan,

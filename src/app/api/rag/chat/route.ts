@@ -29,9 +29,9 @@ export async function POST(req: NextRequest) {
 
     // Create tenant-scoped or admin DB client
     // Admin sees all data; realtor sees only their own
-    const db = isAdmin
-      ? createAdminClient()
-      : (await getAuthenticatedTenantClient()).raw;
+    const tc = isAdmin ? null : await getAuthenticatedTenantClient();
+    const db = isAdmin ? createAdminClient() : tc!.raw;
+    const realtorId = tc?.realtorId;
 
     // 1. Get or create chat session
     const chatSession = await getOrCreateSession(
@@ -110,10 +110,11 @@ export async function POST(req: NextRequest) {
 
     const latencyMs = Date.now() - startTime;
 
-    // 10. Audit log — scoped by tenant
+    // 10. Audit log — scoped by tenant (G3 fix: include realtorId)
     await logAudit(db, {
       sessionId: chatSession.id,
       userEmail,
+      realtorId,
       queryText: body.message,
       intent: plan.intent,
       queryPlan: plan,
