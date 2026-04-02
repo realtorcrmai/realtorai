@@ -2,8 +2,7 @@
 # ============================================================================
 # Playbook Reminder — UserPromptSubmit hook (Layer 1)
 #
-# Outputs task status + phase-specific nudge before every prompt.
-# Saves tokens when no active task.
+# Outputs task status + ordering reminder before every prompt.
 # Exit 0 always.
 # ============================================================================
 
@@ -20,18 +19,20 @@ if [[ -n "$TASK_FILE" && -f "$TASK_FILE" ]]; then
     SCOPED=$(jq -r '.phases.scoped // false' "$TASK_FILE")
     IMPLEMENTED=$(jq -r '.phases.implemented // false' "$TASK_FILE")
 
-    # Phase-specific nudge
     if [[ "$CLASSIFIED" != "true" ]]; then
-        NUDGE="→ Next: CLASSIFY (read request twice, consider 2+ approaches)"
+        NUDGE="→ CLASSIFY first (decompose → dependencies → reorder → task list)"
     elif [[ "$SCOPED" != "true" && ("$TIER" == "medium" || "$TIER" == "large") ]]; then
-        NUDGE="→ Next: SCOPE (list files, downside check, plan)"
+        NUDGE="→ SCOPE (list files, downside check, plan)"
     elif [[ "$IMPLEMENTED" != "true" ]]; then
-        NUDGE="→ Next: IMPLEMENT (output Phase checkpoint before coding)"
+        NUDGE="→ IMPLEMENT (output L3 checkpoint before coding)"
     else
-        NUDGE="→ Next: VERIFY (tsc + tests + PR)"
+        NUDGE="→ VERIFY (tsc + tests + deliverables + task list check)"
     fi
 
     echo "[L1] $TIER | $TYPE | $NUDGE"
+else
+    # No active task — remind about process
+    echo "[L1] New task? → Read twice → Decompose → Map dependencies → REORDER → Task list → Then classify"
 fi
 
 exit 0

@@ -22,3 +22,4 @@ paths:
 - AI generation: `src/lib/newsletter-ai.ts`
 - Test with: `node scripts/qa-test-email-engine.mjs`
 - CASL: always check consent. Include unsubscribe link. Physical address in footer.
+- **Multi-tenant:** Always use `getAuthenticatedTenantClient()` — never raw admin client (HC-12)
