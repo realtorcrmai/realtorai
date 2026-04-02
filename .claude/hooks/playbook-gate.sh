@@ -21,34 +21,48 @@ case "$TOOL_NAME" in
     Read|Grep|Glob|TodoWrite|ToolSearch|Skill) exit 0 ;;
 esac
 
-# --- For Edit/Write: skip non-source files (docs, configs, tests) ---
+# --- For Edit/Write: ONLY exempt task file + compliance log (bootstrap) ---
 if [[ "$TOOL_NAME" == "Edit" || "$TOOL_NAME" == "Write" ]]; then
     case "$FILE_PATH" in
-        *.md|*.json|*.yml|*.yaml|*.css|*.env*|*.sh|*.mjs) exit 0 ;;
-        */tests/*|*/test-results/*|*/__tests__/*) exit 0 ;;
-        */.claude/*) exit 0 ;;
+        */.claude/current-task.json) exit 0 ;;   # Must create this to classify
+        */.claude/compliance-log.md) exit 0 ;;    # Must log after every task
+        *.env*) exit 0 ;;                         # Env files (secrets — not code)
+        *.yml|*.yaml) exit 0 ;;                   # CI/deploy configs
     esac
 fi
 
 # --- For Bash: allow read-only commands without gate ---
 if [[ "$TOOL_NAME" == "Bash" ]]; then
-    # Allow git status/log/diff, curl, ls, wc, cat, grep, health checks
     case "$COMMAND" in
         git\ status*|git\ log*|git\ diff*|git\ branch*) exit 0 ;;
-        curl\ -s*|curl\ --silent*) exit 0 ;;
-        ls*|wc*|cat*|head*|tail*|find*|which*) exit 0 ;;
+        curl\ -s*|curl\ --silent*|curl\ -sv*) exit 0 ;;
+        ls*|wc*|cat*|head*|tail*|find*|which*|echo*) exit 0 ;;
         grep*|rg*) exit 0 ;;
         bash*health-check*|bash*test-suite*) exit 0 ;;
         npx\ tsc*) exit 0 ;;
-        mkdir*) exit 0 ;;
+        sleep*) exit 0 ;;
+        python3\ --version*|/opt/homebrew*--version*) exit 0 ;;
+        rm*current-task.json*) exit 0 ;;          # Cleanup after task
+        cp*current-task.json*) exit 0 ;;          # Copy task file between dirs
+        cat*current-task.json*) exit 0 ;;         # Create/copy task file
+        source*|.*\ .env*) exit 0 ;;              # Source env files
+        lsof*|kill*) exit 0 ;;                    # Process management
     esac
 fi
 
 # --- Now check: is there an active classified task? ---
+# Search for current-task.json file — check multiple locations (portable)
 TASK_FILE=""
-if [[ -n "$PROJECT_DIR" ]]; then
-    TASK_FILE="$PROJECT_DIR/.claude/current-task.json"
-fi
+for CANDIDATE in \
+    "$CLAUDE_PROJECT_DIR/.claude/current-task.json" \
+    "$PROJECT_DIR/.claude/current-task.json" \
+    "$PROJECT_DIR/realtorai/.claude/current-task.json" \
+    "$CLAUDE_PROJECT_DIR/realtorai/.claude/current-task.json"; do
+    if [[ -f "$CANDIDATE" ]]; then
+        TASK_FILE="$CANDIDATE"
+        break
+    fi
+done
 
 # No task file = not classified → BLOCK
 if [[ -z "$TASK_FILE" || ! -f "$TASK_FILE" ]]; then

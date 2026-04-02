@@ -151,7 +151,7 @@ export function VoiceAgentWidget() {
   const [speaking, setSpeaking] = useState(false);
   const [continuousMode, setContinuousMode] = useState(true);
   const [useEdgeTTS, setUseEdgeTTS] = useState(true); // prefer server TTS
-  const [useWhisperSTT, setUseWhisperSTT] = useState(true); // prefer server Whisper STT
+  const [useWhisperSTT, setUseWhisperSTT] = useState(false); // browser SpeechRecognition by default (Whisper needs server-side setup)
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [consentGranted, setConsentGranted] = useState(false);
   const sessionStartTimeRef = useRef<number | null>(null);
@@ -544,6 +544,17 @@ export function VoiceAgentWidget() {
           try {
             const chunk = JSON.parse(jsonStr);
             if (chunk.tool) {
+              // Check if tool result contains a navigation action
+              const toolResult = chunk.tool_result || chunk.result;
+              if (toolResult) {
+                try {
+                  const parsed = typeof toolResult === "string" ? JSON.parse(toolResult) : toolResult;
+                  if (parsed?.action === "navigate" && parsed?.path) {
+                    router.push(parsed.path);
+                    setMessages((prev) => [...prev, { role: "nav", content: `Navigating to ${parsed.page_name || parsed.path}...` }]);
+                  }
+                } catch { /* not JSON nav result */ }
+              }
               setMessages((prev) => [...prev, { role: "tool", content: `Working on it...` }]);
               continue;
             }
@@ -572,8 +583,11 @@ export function VoiceAgentWidget() {
                 return u;
               });
               if (fullContent) {
+                // Start listening immediately (allows interruption)
+                if (continuousMode) setTimeout(startListening, 300);
                 speak(fullContent, () => {
-                  if (continuousMode) setTimeout(startListening, 600);
+                  // TTS finished — if not already listening, start now
+                  if (continuousMode && !listening) setTimeout(startListening, 300);
                 });
               }
               fullContent = "";
@@ -591,8 +605,9 @@ export function VoiceAgentWidget() {
           return u;
         });
         if (fullContent) {
+          if (continuousMode) setTimeout(startListening, 300);
           speak(fullContent, () => {
-            if (continuousMode) setTimeout(startListening, 600);
+            if (continuousMode && !listening) setTimeout(startListening, 300);
           });
         }
       }
@@ -711,6 +726,7 @@ export function VoiceAgentWidget() {
           !connected && !open && "opacity-60"
         )}
         title={userStopped ? "Start New Voice Session" : connected ? "Open Voice Assistant" : "Voice Agent offline"}
+        suppressHydrationWarning
       >
         {open ? (
           <X className="h-6 w-6" />
@@ -800,6 +816,52 @@ export function VoiceAgentWidget() {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-3 space-y-3">
+            {/* Quick actions — show when only greeting message */}
+            {messages.length <= 1 && (
+              <div className="space-y-2 mb-3">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider px-1">Quick Actions</p>
+                {[
+                  { label: "Contacts", actions: [
+                    { text: "Show my contacts", icon: "👤" },
+                    { text: "Find hot leads", icon: "🔥" },
+                    { text: "Who needs follow-up?", icon: "📞" },
+                  ]},
+                  { label: "Listings", actions: [
+                    { text: "Show active listings", icon: "🏠" },
+                    { text: "Any new showings?", icon: "📅" },
+                    { text: "What offers are pending?", icon: "📝" },
+                  ]},
+                  { label: "Tasks & Deals", actions: [
+                    { text: "What tasks are due today?", icon: "✅" },
+                    { text: "Show my deals pipeline", icon: "💰" },
+                    { text: "Create a follow-up task", icon: "➕" },
+                  ]},
+                  { label: "Navigate", actions: [
+                    { text: "Go to calendar", icon: "📆" },
+                    { text: "Open newsletters", icon: "✉️" },
+                    { text: "Show automations", icon: "⚡" },
+                  ]},
+                ].map((section) => (
+                  <div key={section.label} className="space-y-1">
+                    <p className="text-[10px] font-semibold text-muted-foreground/70 px-1">{section.label}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {section.actions.map((a) => (
+                        <button
+                          key={a.text}
+                          onClick={() => { setInput(a.text); sendMessage(a.text); }}
+                          disabled={sending}
+                          className="flex items-center gap-1 px-2 py-1 text-[11px] bg-muted hover:bg-accent rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          <span>{a.icon}</span>
+                          <span>{a.text}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {messages.map((msg, i) => (
               <div key={i} className={cn("flex", {
                 "justify-end": msg.role === "user",
@@ -827,13 +889,13 @@ export function VoiceAgentWidget() {
             <div className="flex gap-2">
               <button
                 onClick={toggleListening}
-                disabled={!connected || sending || !recognitionRef.current}
+                disabled={!connected || sending || (!recognitionRef.current && !useWhisperSTT)}
                 className={cn(
                   "flex h-10 w-10 items-center justify-center rounded-xl transition-all shrink-0",
                   listening
                     ? "bg-red-500 text-white shadow-md shadow-red-500/30 scale-110"
                     : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                  (!connected || sending || !recognitionRef.current) && "opacity-40 cursor-not-allowed"
+                  (!connected || sending || (!recognitionRef.current && !useWhisperSTT)) && "opacity-40 cursor-not-allowed"
                 )}
               >
                 {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}

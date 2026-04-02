@@ -42,15 +42,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           );
         }
 
-        // Validate credentials
-        if (email === DEMO_EMAIL && password === DEMO_PASSWORD) {
-          // Success: reset rate limit for this IP
-          resetRateLimit(clientIp);
-          return {
-            id: "demo-user",
-            name: "Demo User",
-            email: DEMO_EMAIL,
-          };
+        // Validate credentials — check against users table
+        // All seeded users share the demo password for dev/demo purposes
+        if (email && password === DEMO_PASSWORD) {
+          const supabase = createAdminClient();
+          const { data: user, error: userErr } = await supabase
+            .from("users")
+            .select("id, name, email, role")
+            .eq("email", email)
+            .eq("is_active", true)
+            .single();
+
+          if (user && !userErr) {
+            resetRateLimit(clientIp);
+            return {
+              id: user.id,
+              name: user.name || email,
+              email: user.email,
+            };
+          }
         }
 
         // Failed attempt: record it

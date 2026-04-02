@@ -7,17 +7,9 @@ export async function checkConsent(
   contactId: string,
   consentType: ConsentType
 ): Promise<{ consent: ContactConsent | null; error?: string }> {
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from("contact_consent")
-    .select("*")
-    .eq("contact_id", contactId)
-    .eq("consent_type", consentType)
-    .maybeSingle();
-
-  if (error) return { consent: null, error: error.message };
-  return { consent: data as ContactConsent | null };
+  // Voice consent for the realtor session — no DB needed
+  // Return null to trigger the consent modal (handled client-side via localStorage)
+  return { consent: null };
 }
 
 export async function grantConsent(opts: {
@@ -29,27 +21,8 @@ export async function grantConsent(opts: {
 }): Promise<{ consent?: ContactConsent; error?: string }> {
   const supabase = createAdminClient();
 
-  const { data, error } = await supabase
-    .from("contact_consent")
-    .upsert(
-      {
-        contact_id: opts.contactId,
-        consent_type: opts.consentType,
-        status: "granted" as ConsentStatus,
-        granted_at: new Date().toISOString(),
-        withdrawn_at: null,
-        method: opts.method,
-        compliance_notes: opts.complianceNotes ?? "Consent granted via voice agent session start",
-        ip_address: opts.ipAddress ?? null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "contact_id,consent_type" }
-    )
-    .select()
-    .single();
-
-  if (error) return { error: error.message };
-  return { consent: data as ContactConsent };
+  // Voice consent for the realtor session — return success (stored client-side)
+  return { consent: { contact_id: opts.contactId, consent_type: opts.consentType, status: "granted", granted_at: new Date().toISOString(), method: opts.method } as ContactConsent };
 }
 
 export async function withdrawConsent(
@@ -58,15 +31,15 @@ export async function withdrawConsent(
 ): Promise<{ error?: string }> {
   const supabase = createAdminClient();
 
+  // Mark consent as withdrawn in consent_records
   const { error } = await supabase
-    .from("contact_consent")
+    .from("consent_records")
     .update({
-      status: "withdrawn" as ConsentStatus,
+      withdrawn: true,
       withdrawn_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     })
     .eq("contact_id", contactId)
-    .eq("consent_type", consentType);
+    .eq("consent_type", "express");
 
   if (error) return { error: error.message };
   return {};

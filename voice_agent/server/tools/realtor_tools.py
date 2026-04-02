@@ -1,3 +1,4 @@
+from __future__ import annotations
 #!/usr/bin/env python3
 """
 Realtor Mode Tools
@@ -941,6 +942,48 @@ REALTOR_TOOLS = [
             },
         },
     },
+    # ── RAG Knowledge Base Tools ────────────────────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "search_knowledge",
+            "description": "Search the CRM knowledge base using AI-powered semantic search. Finds relevant contacts, listings, communications, emails, and knowledge articles. Use this when the user asks complex questions that need context from their CRM data — e.g. 'what did we discuss with Aman?', 'find emails about the Dunbar listing', 'which contacts are interested in Kitsilano?'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Natural language search query"},
+                    "content_type": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": ["message", "email", "profile", "listing", "activity", "recommendation", "template", "offer", "faq"],
+                        },
+                        "description": "Optional: filter by content type(s). Leave empty to search all.",
+                    },
+                    "contact_id": {"type": "string", "description": "Optional: filter results to a specific contact"},
+                    "listing_id": {"type": "string", "description": "Optional: filter results to a specific listing"},
+                    "max_results": {"type": "integer", "description": "Max results (default 5, max 15)"},
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "ask_knowledge_base",
+            "description": "Ask a question and get an AI-generated answer grounded in CRM data. Uses RAG (Retrieval-Augmented Generation) to find relevant context and synthesize an accurate answer with source citations. Use for questions like 'summarize my relationship with Aman Singh', 'what's the status of the Dunbar deal?', 'draft a follow-up email for Jennifer', 'what are the top concerns from buyer feedback?'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "question": {"type": "string", "description": "The question to answer using CRM data"},
+                    "contact_id": {"type": "string", "description": "Optional: focus the answer on a specific contact"},
+                    "listing_id": {"type": "string", "description": "Optional: focus the answer on a specific listing"},
+                },
+                "required": ["question"],
+            },
+        },
+    },
 ]
 
 
@@ -1531,6 +1574,79 @@ async def handle_realtor_tool(tool_name: str, args: dict, realtor_id: str = "R00
                 )
 
             result = {"topic": topic, "help": help_text}
+
+        # ── RAG Knowledge Base Tools ────────────────────────────────────
+
+        elif tool_name == "search_knowledge":
+            query = args.get("query", "")
+            payload = {
+                "query": query,
+                "top_k": min(args.get("max_results", 5), 15),
+            }
+            filters = {}
+            if args.get("contact_id"):
+                filters["contact_id"] = args["contact_id"]
+            if args.get("listing_id"):
+                filters["listing_id"] = args["listing_id"]
+            if args.get("content_type"):
+                filters["content_type"] = args["content_type"]
+            if filters:
+                payload["filters"] = filters
+
+            try:
+                payload["action"] = "search"
+                rag_result = await api.post("/api/voice-agent/rag", payload)
+                results = rag_result.get("results", [])
+                # Format for voice-friendly output
+                formatted = []
+                for r in results[:10]:
+                    formatted.append({
+                        "source": r.get("source_table", ""),
+                        "content": r.get("content_text", "")[:300],
+                        "similarity": round(r.get("similarity", 0), 2),
+                    })
+                result = {
+                    "query": query,
+                    "count": len(formatted),
+                    "results": formatted,
+                    "message": f"Found {len(formatted)} results for '{query}'." if formatted else f"No results found for '{query}'.",
+                }
+            except Exception as e:
+                result = {"error": f"Knowledge search failed: {e}", "query": query}
+
+        elif tool_name == "ask_knowledge_base":
+            question = args.get("question", "")
+            payload = {"message": question}
+            ui_context = {}
+            if args.get("contact_id"):
+                ui_context["contact_id"] = args["contact_id"]
+            if args.get("listing_id"):
+                ui_context["listing_id"] = args["listing_id"]
+            if ui_context:
+                payload["ui_context"] = ui_context
+
+            try:
+                payload["action"] = "chat"
+                rag_result = await api.post("/api/voice-agent/rag", payload)
+                response = rag_result.get("response", {})
+                sources = response.get("sources", [])
+                source_summary = ", ".join(
+                    f"{s.get('source_table', 'unknown')}" for s in sources[:3]
+                ) if sources else "general knowledge"
+
+                result = {
+                    "answer": response.get("text", "No answer generated."),
+                    "sources": source_summary,
+                    "model_tier": rag_result.get("model_tier", "unknown"),
+                    "message": response.get("text", "No answer generated."),
+                }
+            except Exception as e:
+                # Fallback: if RAG endpoint not available, return helpful error
+                result = {
+                    "error": f"RAG chat unavailable: {e}",
+                    "question": question,
+                    "hint": "The knowledge base may not be set up yet. Try using search_properties, find_contact, or get_crm_help instead.",
+                }
 
         elif tool_name == "bc_real_estate_reference":
             topic = args.get("topic", "all").lower()

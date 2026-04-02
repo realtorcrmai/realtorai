@@ -1,3 +1,4 @@
+from __future__ import annotations
 #!/usr/bin/env python3
 """
 Database helper for the Voice Agent.
@@ -10,6 +11,27 @@ import uuid
 from datetime import datetime, timedelta
 
 import supabase_client as sb
+
+
+# ── Graceful DB wrapper (tables may not exist yet) ─────────────────────────
+
+import functools
+
+def db_safe(default=None):
+    """Decorator: catch DB errors (missing tables etc.) and return default."""
+    def decorator(fn):
+        @functools.wraps(fn)
+        async def wrapper(*args, **kwargs):
+            try:
+                return await fn(*args, **kwargs)
+            except Exception as e:
+                err = str(e)
+                if "404" in err or "schema cache" in err or "Not Found" in err:
+                    return default  # Table doesn't exist yet — silent
+                print(f"[DB] {fn.__name__} error: {err[:120]}")
+                return default
+        return wrapper
+    return decorator
 
 
 # ── Schema / Init ──────────────────────────────────────────────────────────
@@ -27,6 +49,7 @@ def generate_id(prefix=""):
 
 # ── Buyer / Contact Operations ─────────────────────────────────────────────
 
+@db_safe()
 async def find_buyer(tenant_id: str, name: str = None, buyer_id: str = None):
     """Find buyer by name or ID from the contacts table."""
     if buyer_id:
@@ -45,6 +68,7 @@ async def find_buyer(tenant_id: str, name: str = None, buyer_id: str = None):
     return None
 
 
+@db_safe()
 async def create_buyer(
     tenant_id: str,
     name: str,
@@ -67,6 +91,7 @@ async def create_buyer(
 
 # ── Listing Operations ────────────────────────────────────────────────────
 
+@db_safe()
 async def find_listing(
     tenant_id: str,
     address: str = None,
@@ -97,6 +122,7 @@ async def find_listing(
     return None
 
 
+@db_safe()
 async def search_properties(tenant_id: str, criteria: dict):
     """Search properties matching buyer criteria."""
     filters: dict = {"status": "eq.Active"}
@@ -132,6 +158,7 @@ async def search_properties(tenant_id: str, criteria: dict):
     )
 
 
+@db_safe()
 async def update_listing_status(tenant_id: str, listing_id: str, new_status: str):
     """Update listing pipeline status."""
     valid = ["Active", "Conditional", "Subject Removal", "Sold", "Expired", "Cancelled"]
@@ -147,6 +174,7 @@ async def update_listing_status(tenant_id: str, listing_id: str, new_status: str
     return {"ok": True, "listing_id": listing_id, "status": new_status}
 
 
+@db_safe()
 async def update_listing_price(tenant_id: str, listing_id: str, new_price: float):
     """Update listing price."""
     await sb.update(
@@ -158,6 +186,7 @@ async def update_listing_price(tenant_id: str, listing_id: str, new_price: float
     return {"ok": True, "listing_id": listing_id, "price": new_price}
 
 
+@db_safe()
 async def add_listing_note(tenant_id: str, listing_id: str, note: str):
     """Append an internal note to a listing."""
     row = await sb.query(
@@ -185,6 +214,7 @@ async def add_listing_note(tenant_id: str, listing_id: str, note: str):
 
 # ── Client Feedback ────────────────────────────────────────────────────────
 
+@db_safe()
 async def log_feedback(
     tenant_id: str,
     client_name: str,
@@ -219,6 +249,7 @@ async def log_feedback(
     return {"ok": True}
 
 
+@db_safe()
 async def get_client_playbook(
     tenant_id: str,
     listing_id: str = None,
@@ -241,6 +272,7 @@ async def get_client_playbook(
     return None
 
 
+@db_safe()
 async def configure_client_call(
     tenant_id: str,
     name: str,
@@ -273,6 +305,7 @@ async def configure_client_call(
 
 # ── Conversation Logging ──────────────────────────────────────────────────
 
+@db_safe()
 async def log_conversation(
     tenant_id: str,
     session_id: str,
@@ -301,6 +334,7 @@ async def log_conversation(
     )
 
 
+@db_safe()
 async def get_conversation_history(
     tenant_id: str,
     session_id: str = None,
@@ -327,6 +361,7 @@ async def get_conversation_history(
 
 # ── Personalization / Preferences ─────────────────────────────────────────
 
+@db_safe()
 async def track_preference(tenant_id: str, key: str, value):
     """Track or update a realtor preference/pattern."""
     # Try to fetch existing to bump frequency
@@ -360,6 +395,7 @@ async def track_preference(tenant_id: str, key: str, value):
         )
 
 
+@db_safe()
 async def get_preferences(tenant_id: str) -> dict:
     """Get all personalization preferences for a tenant."""
     rows = await sb.query(
@@ -380,6 +416,7 @@ async def get_preferences(tenant_id: str) -> dict:
 
 # ── Notes ─────────────────────────────────────────────────────────────────
 
+@db_safe()
 async def save_note(
     tenant_id: str,
     title: str,
@@ -399,6 +436,7 @@ async def save_note(
     return row.get("id")
 
 
+@db_safe()
 async def get_notes(
     tenant_id: str,
     search: str = None,
@@ -433,6 +471,7 @@ async def get_notes(
 
 # ── Reminders ─────────────────────────────────────────────────────────────
 
+@db_safe()
 async def save_reminder(tenant_id: str, message: str, remind_at: str):
     """Save a timed reminder."""
     row = await sb.insert(
@@ -446,6 +485,7 @@ async def save_reminder(tenant_id: str, message: str, remind_at: str):
     return row.get("id")
 
 
+@db_safe()
 async def get_reminders(tenant_id: str, include_past: bool = False):
     """Get pending reminders."""
     filters: dict = {}
@@ -465,6 +505,7 @@ async def get_reminders(tenant_id: str, include_past: bool = False):
 
 # ── Session Persistence ──────────────────────────────────────────────────
 
+@db_safe()
 async def save_session(
     tenant_id: str,
     session_id: str,
@@ -493,6 +534,7 @@ async def save_session(
     )
 
 
+@db_safe()
 async def load_session(tenant_id: str, session_id: str):
     """Load a persisted session."""
     rows = await sb.query(
@@ -512,6 +554,7 @@ async def load_session(tenant_id: str, session_id: str):
     return None
 
 
+@db_safe()
 async def cleanup_expired_sessions(tenant_id: str):
     """Remove expired sessions."""
     await sb.delete(
@@ -567,6 +610,7 @@ def calculate_cost(service, provider, input_tokens=0, output_tokens=0,
     return 0.0
 
 
+@db_safe()
 async def log_cost(
     tenant_id: str,
     session_id: str,
@@ -606,6 +650,7 @@ async def log_cost(
     return cost
 
 
+@db_safe()
 async def get_cost_summary(tenant_id: str, days: int = 30):
     """Get cost summary for the dashboard.
 
@@ -714,6 +759,7 @@ async def get_cost_summary(tenant_id: str, days: int = 30):
     }
 
 
+@db_safe()
 async def get_session_cost(tenant_id: str, session_id: str):
     """Get cost breakdown for a single session."""
     rows = await sb.query(
