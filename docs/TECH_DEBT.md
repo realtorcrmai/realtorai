@@ -91,8 +91,8 @@ Last updated: 2026-03-26
 
 ### TD-015: Stale Launch Config
 **File:** `.claude/launch.json` line 9
-**Issue:** `cwd` references `/Users/rahulmittal/Library/CloudStorage/...` — a different developer's machine
-**Fix:** Update to current path
+**Issue:** ~~`cwd` referenced hardcoded local path~~ **FIXED** — now uses `"."` (relative to repo root)
+**Fix:** ✅ Resolved
 
 ---
 

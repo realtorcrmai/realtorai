@@ -41,7 +41,7 @@ STT_PROVIDER = os.getenv("STT_PROVIDER", "whisper_local")  # whisper_local | ope
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "large-v3")
 
 # ── TTS Provider Configuration ────────────────────────────────────────────────
-TTS_PROVIDER = os.getenv("TTS_PROVIDER", "piper")  # piper | openai_tts | elevenlabs
+TTS_PROVIDER = os.getenv("TTS_PROVIDER", "edge_tts")  # edge_tts | piper | openai_tts | elevenlabs
 PIPER_VOICE = os.getenv("PIPER_VOICE", "en_US-amy-medium")
 OPENAI_TTS_VOICE = os.getenv("OPENAI_TTS_VOICE", "nova")
 OPENAI_TTS_MODEL = os.getenv("OPENAI_TTS_MODEL", "tts-1-hd")

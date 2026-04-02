@@ -11,3 +11,4 @@ paths:
 - 4 LLM providers (Anthropic, OpenAI, Groq, Ollama). Fallback chain in config.
 - 56 tools, 21 API routes. Dynamic tool selection by keyword.
 - Preserve: Edge TTS caching, session focus tracking, context summarization, `_clean_for_voice()`
+- **Multi-tenant:** Always use `getAuthenticatedTenantClient()` — never raw admin client (HC-12)
