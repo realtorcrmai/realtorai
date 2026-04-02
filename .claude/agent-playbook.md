@@ -239,6 +239,7 @@ RIGHT: Split tasks → map dependencies → reorder → numbered list → work i
 
 ### 3.1 Classification Output
 
+**Step 1 — Output the block in conversation:**
 ```
 Task Type: CODING:feature
 Confidence: high/medium/low
@@ -246,6 +247,27 @@ Reasoning: [1-2 sentences]
 Affected: [files, tables, APIs]
 Execution Order: [if multi-step, reordered sequence]
 ```
+
+**Step 2 — Create the task file (MANDATORY — L2 gate blocks Agent/Bash/Edit without it):**
+```bash
+cat > .claude/current-task.json << 'EOF'
+{
+  "type": "CODING:feature",
+  "tier": "medium",
+  "summary": "Short description of the task",
+  "phases": {
+    "classified": true,
+    "scoped": false,
+    "implemented": false,
+    "validated": false,
+    "logged": false
+  }
+}
+EOF
+```
+Update `phases.scoped`, `phases.implemented`, etc. as you complete each phase. Delete the file after compliance log entry is written.
+
+**Why this is mandatory:** The playbook-gate hook (L2) reads `current-task.json` before allowing Agent, Bash, Edit, or Write tool calls. Without this file, those tools are BLOCKED. This is mechanical enforcement — not optional discipline.
 
 ### 3.2 Trivial Change Fast Path
 
