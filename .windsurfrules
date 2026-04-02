@@ -1,0 +1,16 @@
+# Realtors360 CRM — Windsurf Rules
+# Source of truth: .claude/agent-playbook.md + AGENTS.md
+# Same rules as .cursorrules — see that file for full details
+
+Read `.claude/agent-playbook.md` before every task.
+Read `.claude/quick-reference.md` for the checklist.
+
+Hard constraints: No `any`, no inline styles, Server Actions for mutations,
+RLS on every table, multi-tenant via `getAuthenticatedTenantClient()`,
+Zod validation, never push to main/dev directly, no PII in prompts.
+
+Architecture: Next.js 16 + Supabase + TypeScript. Path alias @/ = src/.
+CSS: lf-* classes. force-dynamic on live pages. revalidatePath() after mutations.
+
+Every feature needs: use-case doc, tests, PR with classification block.
+Git: branch from dev, PR back to dev, conventional commits.

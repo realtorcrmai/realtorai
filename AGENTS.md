@@ -1,60 +1,137 @@
-# AGENTS.md — RealtorAI Real Estate CRM
+# AGENTS.md — Realtors360 Real Estate CRM
 
-> Cross-tool agent instructions (compatible with Claude Code, GitHub Copilot, Cursor, Windsurf, OpenAI Codex)
+> **Company BIBLE for ALL developers (human and AI).** Cross-tool instructions compatible with Claude Code, GitHub Copilot, Cursor, Windsurf, OpenAI Codex.
+> Full playbook: `.claude/agent-playbook.md` | Quick reference: `.claude/quick-reference.md`
 
-## Project
+## MANDATORY — Before Every Task
 
-Next.js 16 App Router + Supabase + TypeScript real estate CRM for BC realtors. Manages listings, contacts, showings, 8-phase workflows, AI content, email marketing.
+1. **Read the playbook:** `.claude/agent-playbook.md`
+2. **Classify the task** before making any changes (task type, tier, affected files)
+3. **Follow the checklist** at `.claude/quick-reference.md`
+4. **Verify your setup:** `bash scripts/verify-enforcement.sh`
+
+## Hard Constraints (violation = automatic revert)
+
+| # | Rule |
+|---|------|
+| HC-1 | No `any` type — define proper TypeScript types |
+| HC-2 | No inline styles — use `lf-*` CSS classes |
+| HC-3 | Server Actions for mutations — API routes only for GETs/webhooks |
+| HC-4 | RLS + `realtor_id` on every new table |
+| HC-5 | CASL consent check before every outbound message |
+| HC-6 | FINTRAC PII fields non-nullable on `seller_identities` |
+| HC-7 | Never push directly to `main` or `dev` — PRs only |
+| HC-8 | Never `git push --force`, `git reset --hard`, `rm -rf /` |
+| HC-9 | Never commit `.env.local` — use `scripts/vault.sh` |
+| HC-10 | Zod v4 validation on all inputs |
+| HC-11 | No PII in AI prompts |
+| HC-12 | Multi-tenant: `getAuthenticatedTenantClient()` for all user data |
+| HC-13 | Verify against code, not reports |
+| HC-14 | Every new table MUST have `realtor_id` with index and RLS |
+| HC-15 | Think before acting — read twice, consider alternatives, review output |
+
+## Multi-Tenancy
+
+```typescript
+// ALWAYS use tenant client for user data:
+const tc = await getAuthenticatedTenantClient();
+const { data } = await tc.from("contacts").select("*");
+// Auto-filters by realtor_id. Auto-injects on inserts.
+
+// NEVER use raw admin client for user data:
+// createAdminClient() bypasses tenant isolation — admin/crons only
+```
 
 ## Commands
 
 ```bash
-npm run dev          # Start dev server (port 3000)
+npm run dev          # Dev server (port 3000)
 npm run build        # Production build
+npm run typecheck    # tsc --noEmit
+npm run test         # Full test suite (73+)
+npm run test:quick   # Vitest unit tests
 npm run lint         # ESLint
-npx tsc --noEmit     # TypeScript check (run before every commit)
-bash scripts/test-suite.sh   # Full test suite (73+ tests)
-bash scripts/health-check.sh # Pre-flight health check
+npm run preflight    # typecheck + lint + audit
+bash scripts/verify-enforcement.sh  # Check your playbook setup
+bash scripts/install-git-hooks.sh   # Install pre-commit hook
+```
+
+## Architecture
+
+```
+src/app/(dashboard)/   # Protected pages
+src/app/api/           # API routes (webhooks, GETs, cron)
+src/actions/           # Server actions (CRUD mutations)
+src/components/        # React components
+src/lib/               # Utilities (supabase, AI, integrations)
+src/lib/agent/         # Unified AI agent (Vercel AI SDK)
+src/lib/rag/           # RAG retrieval pipeline
+src/hooks/             # React hooks
+src/types/             # TypeScript types
+supabase/migrations/   # SQL migrations (75 files)
+voice_agent/server/    # Python voice service (STT/TTS)
+.claude/               # Playbook, hooks, agents, rules
 ```
 
 ## Code Style
 
 - TypeScript strict — no `any`, define proper types
-- Server actions in `src/actions/` for mutations, API routes for GET/webhooks
-- Zod v4 for all validation (use `.min(1)` not `.nonempty()`)
-- Path alias: `@/` maps to `src/`
-- CSS: use `lf-*` design system classes from `globals.css` — no inline styles
-- Emoji icons on pages, Lucide only in `src/components/ui/`
+- Server actions in `src/actions/` for mutations
+- Zod v4 for validation (`.min(1)` not `.nonempty()`)
+- Path alias: `@/` → `src/`
+- CSS: `lf-*` classes — no inline styles
+- `force-dynamic` on pages with live data
+- `revalidatePath()` after every mutation
 
-## Architecture
+## Deliverables (every feature change)
 
-```
-src/app/(dashboard)/   # Protected pages (listings, contacts, showings, etc.)
-src/app/api/           # API routes (webhooks, GET endpoints, cron)
-src/actions/           # Server actions (CRUD mutations)
-src/components/        # React components (shadcn/ui + custom)
-src/lib/               # Utilities (supabase, twilio, resend, AI)
-src/hooks/             # React hooks
-src/types/             # TypeScript types (database.ts)
-supabase/migrations/   # SQL migrations (001-056+)
-```
-
-## Database
-
-Supabase (PostgreSQL) with RLS. Every new table needs:
-1. `ENABLE ROW LEVEL SECURITY`
-2. `CREATE POLICY` with appropriate scope
-3. Indexes on FK columns and filter columns
-4. Types updated in `src/types/database.ts`
+| Task Type | Use-Case Doc | Tests | Run Tests |
+|-----------|-------------|-------|-----------|
+| CODING:feature | **REQUIRED** before coding | **REQUIRED** after | **REQUIRED** |
+| CODING:bugfix | Update if exists | Regression test | **REQUIRED** |
+| CODING:refactor | Update if exists | Verify no breaks | **REQUIRED** |
 
 ## Git
 
-Feature branch model: `<developer>/<description>` → PR → `dev` → PR → `main`. Never push directly to `dev` or `main`.
+```
+<developer>/<description> → PR → dev → PR → main
+```
+
+- Branch from `dev`, PR back to `dev` (0 approvals)
+- Release: PR `dev` → `main` (1 approval)
+- Conventional commits: `feat:` `fix:` `refactor:` `docs:` `test:` `chore:`
+- PR template enforces playbook checklist (see `.github/pull_request_template.md`)
+
+## Database
+
+Every new table:
+```sql
+CREATE TABLE new_table (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  realtor_id uuid NOT NULL REFERENCES auth.users(id),
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX idx_new_table_realtor ON new_table(realtor_id);
+ALTER TABLE new_table ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_rls ON new_table FOR ALL USING (realtor_id = auth.uid()::uuid);
+```
 
 ## Boundaries
 
-**Always:** Check CASL consent before outbound messages. Use `supabaseAdmin` server-side. `revalidatePath()` after mutations.
+**Always:** Tenant client for user data. CASL consent before messages. `revalidatePath()` after mutations.
 
-**Never:** Commit `.env.local`. Use inline styles. Send PII to AI prompts. Skip RLS on new tables. Use `any` type. Push directly to protected branches.
+**Never:** `.env.local` in git. Inline styles. PII in prompts. Skip RLS. `any` type. Push to protected branches. Hardcoded local paths.
 
-**Ask first:** Schema migrations. RLS changes. Secret rotation. Bulk operations (>50 rows). Production deploys.
+**Ask first:** Schema migrations. RLS changes. Secret rotation. Bulk operations. Production deploys.
+
+## Setup for New AI Tool Users
+
+Your AI tool reads different config files:
+| Tool | Config File | Status |
+|------|------------|--------|
+| Claude Code | `.claude/settings.json` + hooks | ✅ Full enforcement |
+| Cursor | `.cursorrules` | ✅ Rules loaded |
+| GitHub Copilot | `.github/copilot-instructions.md` | ✅ Instructions loaded |
+| Windsurf | `.windsurfrules` | ✅ Rules loaded |
+
+Run `bash scripts/verify-enforcement.sh` to check your setup is complete.

@@ -1,0 +1,51 @@
+# Realtors360 CRM — Cursor Rules
+# Source of truth: .claude/agent-playbook.md + AGENTS.md
+
+## MANDATORY — Read Before Every Task
+1. Read `.claude/agent-playbook.md` (playbook) and `.claude/quick-reference.md` (checklist)
+2. Classify every task BEFORE making changes (task type, tier, affected files)
+3. Follow the playbook step by step — no shortcuts, no skipping
+
+## Hard Constraints (violation = automatic revert)
+- No `any` type, no `@ts-ignore`, no inline styles
+- Server Actions for mutations (src/actions/), API routes for GETs/webhooks only
+- RLS required on every new table with realtor_id scoping
+- Multi-tenant: use `getAuthenticatedTenantClient()` for ALL user data — never raw admin client
+- Every new table MUST have `realtor_id` column with index and RLS policy
+- Zod v4 validation on all form/API/webhook inputs
+- Never push directly to `main` or `dev` — PRs only
+- Never commit `.env.local` — use `scripts/vault.sh`
+- No PII in AI prompts (no phone, email, FINTRAC data, tokens)
+- CASL consent check before every outbound message
+- Verify against actual code, not reports — "code written" ≠ "feature works"
+
+## Architecture
+- Next.js 16 App Router + Supabase + TypeScript
+- CSS: `lf-*` design system classes from globals.css
+- Path alias: `@/` maps to `src/`
+- `force-dynamic` on pages with live Supabase data
+- `revalidatePath()` after every mutation
+
+## Multi-Tenancy
+- `getAuthenticatedTenantClient()` auto-injects `.eq("realtor_id", userId)` on all queries
+- Auto-injects realtor_id on inserts — never pass it manually
+- Admin users bypass via `createAdminClient()`
+- Global tables (exempt): google_tokens, newsletter_templates, workflow_blueprints, knowledge_articles
+
+## Deliverables (every feature change)
+- CODING:feature → usecases/<feature>.md BEFORE coding
+- CODING:feature/bugfix/refactor → tests written AFTER coding
+- Any code change → tests RUN (not just tsc)
+- PR must include: classification block, test results, deliverable status
+
+## Git Workflow
+- Branch: `<developer>/<description>` from dev
+- PR to dev (0 approvals, merge your own)
+- PR dev → main (1 approval for release)
+- Conventional commits: feat: fix: refactor: docs: test: chore: security:
+
+## Testing
+- `npm run typecheck` — TypeScript check
+- `npm test` — full test suite (73+ tests)
+- `npm run test:quick` — Vitest unit tests
+- `npx playwright test` — browser tests
