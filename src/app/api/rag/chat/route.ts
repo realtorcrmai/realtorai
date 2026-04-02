@@ -7,7 +7,9 @@ import { retrieveContext } from '@/lib/rag/retriever';
 import { synthesize, generateDirect } from '@/lib/rag/synthesizer';
 import { getOrCreateSession, addMessage, getRecentHistory, needsSummarization, summarizeHistory, buildUserMessage, buildAssistantMessage } from '@/lib/rag/conversation';
 import { checkGuardrails, buildFallbackResponse, hasAdequateContext } from '@/lib/rag/guardrails';
-import { logAudit } from '@/lib/rag/feedback';
+import { logAudit, createPipelineLogger } from '@/lib/rag/feedback';
+import { validateResponseGrounding } from '@/lib/rag/synthesizer';
+import { checkApiRateLimit, rateLimitHeaders } from '@/lib/api-rate-limit';
 import type { ChatRequest, ChatResponse } from '@/lib/rag/types';
 
 export async function POST(req: NextRequest) {
@@ -28,10 +30,23 @@ export async function POST(req: NextRequest) {
     const isAdmin = (session.user as { role?: string }).role === 'admin';
 
     // Create tenant-scoped or admin DB client
-    // Admin sees all data; realtor sees only their own
     const tc = isAdmin ? null : await getAuthenticatedTenantClient();
     const db = isAdmin ? createAdminClient() : tc!.raw;
     const realtorId = tc?.realtorId;
+
+    // Rate limiting
+    if (realtorId) {
+      const rateCheck = checkApiRateLimit(realtorId, 'rag-chat');
+      if (!rateCheck.allowed) {
+        return NextResponse.json(
+          { error: 'Rate limit exceeded. Please wait before sending more messages.' },
+          { status: 429, headers: rateLimitHeaders(rateCheck) }
+        );
+      }
+    }
+
+    // Pipeline logger
+    const pipeline = createPipelineLogger(body.session_id ?? 'new');
 
     // 1. Get or create chat session
     const chatSession = await getOrCreateSession(
@@ -95,6 +110,12 @@ export async function POST(req: NextRequest) {
         });
         responseText = result.text;
         modelTier = result.model_tier;
+
+        // 8b. Output validation — check response grounding
+        const validation = validateResponseGrounding(responseText, retrieved.formatted);
+        if (validation.warnings.length > 0) {
+          console.warn(`[RAG] Grounding warnings for session ${chatSession.id}:`, validation.warnings);
+        }
       }
     }
 
@@ -133,6 +154,9 @@ export async function POST(req: NextRequest) {
       latency_ms: latencyMs,
       guardrail_triggered: guardrail.type ?? undefined,
     };
+
+    // Pipeline telemetry
+    pipeline.log();
 
     return NextResponse.json(response);
   } catch (err) {
