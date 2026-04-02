@@ -1,3 +1,13 @@
+// Realtors360 — Feature Gating
+// 3-layer system: Plans (billing) → Release Gate (what's launched) → User Features
+
+import { PLANS, DEFAULT_PLAN } from "./plans";
+import type { PlanId } from "./plans";
+
+// ============================================================
+// Feature Keys
+// ============================================================
+
 export const FEATURE_KEYS = [
   "listings",
   "contacts",
@@ -20,25 +30,64 @@ export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
 export const ALL_FEATURES = [...FEATURE_KEYS] as FeatureKey[];
 
-/** Release-gated feature sets — controls what users see per release */
-export const R1_FEATURES: FeatureKey[] = [
-  "contacts", "calendar", "tasks", "newsletters", "automations",
+// ============================================================
+// Release Gate — controls what's available globally
+// Even if a plan includes a feature, it won't show until released here.
+// To release a feature: uncomment it and deploy.
+// ============================================================
+
+export const RELEASED_FEATURES: FeatureKey[] = [
+  // R1: Core CRM + Email Marketing
+  "contacts",
+  "calendar",
+  "tasks",
+  "newsletters",
+  "automations",
+  // R2: Uncomment to release
+  // "listings",
+  // "showings",
+  // "forms",
+  // "social",
+  // R3: Uncomment to release
+  // "website",
+  // "content",
+  // "import",
+  // "workflow",
+  // R4: Uncomment to release
+  // "assistant",
+  // "search",
 ];
 
-export const R2_FEATURES: FeatureKey[] = [
-  ...R1_FEATURES, "listings", "showings", "forms", "social",
-];
+// ============================================================
+// Feature Resolution
+// ============================================================
 
-export const R3_FEATURES: FeatureKey[] = [
-  ...R2_FEATURES, "website", "content", "import", "workflow",
-];
+/**
+ * Get the features a user can access.
+ * = intersection(plan features, released features) + any manual overrides
+ *
+ * @param plan - user's billing plan (free, professional, studio, team, admin)
+ * @param overrides - manual feature overrides set by admin (optional)
+ */
+export function getUserFeatures(plan?: string, overrides?: string[]): FeatureKey[] {
+  // If user has manual overrides from admin, use those (filtered by released)
+  if (overrides && Array.isArray(overrides) && overrides.length > 0) {
+    return overrides.filter((f): f is FeatureKey => RELEASED_FEATURES.includes(f as FeatureKey));
+  }
 
-export const R4_FEATURES: FeatureKey[] = [
-  ...R3_FEATURES, "assistant", "search",
-];
+  // Get plan features, filtered by what's released
+  const planId = (plan || DEFAULT_PLAN) as PlanId;
+  const planDef = PLANS[planId] || PLANS[DEFAULT_PLAN];
+  return planDef.features.filter((f) => RELEASED_FEATURES.includes(f));
+}
 
-/** Current release — change this to roll out features to new users */
-export const CURRENT_RELEASE_FEATURES = R1_FEATURES;
+// Backward compatibility
+export const CURRENT_RELEASE_FEATURES = RELEASED_FEATURES;
+export const R1_FEATURES = RELEASED_FEATURES;
+
+// ============================================================
+// Feature Metadata
+// ============================================================
 
 export const FEATURE_META: Record<
   FeatureKey,

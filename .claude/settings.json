@@ -9,7 +9,7 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Write|Agent|Bash",
         "hooks": [
           {
             "type": "command",

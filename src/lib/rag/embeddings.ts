@@ -7,9 +7,27 @@ import crypto from 'crypto';
 
 const VOYAGE_API_URL = 'https://api.voyageai.com/v1/embeddings';
 
+// Voyage-3-large pricing: $0.06 per 1M tokens
+const VOYAGE_COST_PER_1M_TOKENS = 0.06;
+
 interface VoyageResponse {
   data: Array<{ embedding: number[]; index: number }>;
   usage: { total_tokens: number };
+}
+
+/** Accumulated Voyage usage stats for the current process (reset on restart). */
+export const voyageUsageStats = {
+  totalTokens: 0,
+  totalCalls: 0,
+  totalCostUsd: 0,
+  lastCallTokens: 0,
+};
+
+function trackVoyageUsage(tokens: number): void {
+  voyageUsageStats.totalTokens += tokens;
+  voyageUsageStats.totalCalls += 1;
+  voyageUsageStats.totalCostUsd += (tokens / 1_000_000) * VOYAGE_COST_PER_1M_TOKENS;
+  voyageUsageStats.lastCallTokens = tokens;
 }
 
 /**
@@ -60,6 +78,11 @@ export async function embedBatch(texts: string[]): Promise<number[][]> {
 
   const json = (await response.json()) as VoyageResponse;
 
+  // Track usage
+  if (json.usage?.total_tokens) {
+    trackVoyageUsage(json.usage.total_tokens);
+  }
+
   // Sort by index to guarantee order matches input
   const sorted = json.data.sort((a, b) => a.index - b.index);
   const embeddings = sorted.map((d) => d.embedding);
@@ -105,6 +128,12 @@ export async function embedQuery(text: string): Promise<number[]> {
   }
 
   const json = (await response.json()) as VoyageResponse;
+
+  // Track usage
+  if (json.usage?.total_tokens) {
+    trackVoyageUsage(json.usage.total_tokens);
+  }
+
   const embedding = json.data[0].embedding;
 
   if (embedding.length !== EMBEDDING_DIMS) {

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getAuthenticatedTenantClient } from '@/lib/supabase/tenant';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { instantSearch } from '@/lib/rag/instant-search';
 
 /**
  * A25: Instant deterministic search — no AI, no embeddings.
  * Returns contacts, listings, and showings matching by name/address.
  * Target: <100ms response time.
+ * Always uses tenant client — never admin (G2 security fix).
  */
 export async function GET(req: NextRequest) {
   try {
@@ -16,10 +16,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const isAdmin = (session.user as { role?: string }).role === 'admin';
-    const db = isAdmin
-      ? createAdminClient()
-      : (await getAuthenticatedTenantClient()).raw;
+    const tc = await getAuthenticatedTenantClient();
+    const db = tc.raw;
 
     const q = req.nextUrl.searchParams.get('q')?.trim();
     if (!q || q.length < 2) {
