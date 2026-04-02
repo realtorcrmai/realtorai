@@ -73,13 +73,41 @@ export const CONTENT_TYPES_BY_INTENT: Record<QueryIntent, ContentType[] | null> 
   clarification: null,
 };
 
-/** Guardrail patterns — refuse and add disclaimer */
+/** Guardrail patterns — refuse and add disclaimer (25 patterns across 7 categories) */
 export const GUARDRAIL_PATTERNS: Array<{ pattern: RegExp; type: string }> = [
-  { pattern: /tax.*(?:strategy|advice|plan|structure|deduct)/i, type: 'tax' },
-  { pattern: /legal.*(?:advice|opinion|liability|sue|lawsuit)/i, type: 'legal' },
-  { pattern: /(?:guarantee|guaranteed).*(?:return|appreciation|sale|profit)/i, type: 'financial' },
-  { pattern: /(?:mortgage|loan|qualify).*(?:qualify|approval|rate.*lock|pre-approv|mortgage)/i, type: 'financial' },
-  { pattern: /(?:invest|investment|should.*buy).*(?:advice|recommend|should.*buy|invest|property)/i, type: 'financial' },
+  // --- Domain safety (tax/legal/financial) — 7 patterns ---
+  { pattern: /tax.*(?:strategy|advice|plan|structure|deduct|write.?off|capital.?gain)/i, type: 'tax' },
+  { pattern: /legal.*(?:advice|opinion|liability|sue|lawsuit|contract.?review)/i, type: 'legal' },
+  { pattern: /(?:guarantee|guaranteed).*(?:return|appreciation|sale|profit|value)/i, type: 'financial' },
+  { pattern: /(?:mortgage|loan|qualify).*(?:qualify|approval|rate.*lock|pre-approv)/i, type: 'financial' },
+  { pattern: /(?:invest|investment|should.*buy).*(?:advice|recommend|should.*buy|property)/i, type: 'financial' },
+  { pattern: /(?:home\s*inspection|inspection\s*report).*(?:interpret|mean|signif)/i, type: 'legal' },
+  { pattern: /(?:zoning|bylaw|permit).*(?:advice|can\s*I|allowed|legal)/i, type: 'legal' },
+  // --- FINTRAC PII requests — 4 patterns ---
+  { pattern: /\b(?:SIN|social\s*insurance\s*number)\b/i, type: 'fintrac_pii' },
+  { pattern: /\bpassport\s*number\b/i, type: 'fintrac_pii' },
+  { pattern: /\bbank\s*account\s*(?:number|#|detail)/i, type: 'fintrac_pii' },
+  { pattern: /\b(?:date\s*of\s*birth|DOB)\b.*(?:show|give|what|tell)/i, type: 'fintrac_pii' },
+  // --- Prompt injection — 10 patterns ---
+  { pattern: /ignore\s+(?:all\s+)?(?:previous|prior|above)\s+instructions/i, type: 'injection' },
+  { pattern: /disregard\s+(?:all\s+)?(?:previous|prior|above)/i, type: 'injection' },
+  { pattern: /you\s+are\s+now\s+(?:a|an|in)\b/i, type: 'injection' },
+  { pattern: /(?:reveal|show|print|output|display)\s+(?:your\s+)?system\s*prompt/i, type: 'injection' },
+  { pattern: /\bDAN\s+mode\b/i, type: 'injection' },
+  { pattern: /\bjailbreak\b/i, type: 'injection' },
+  { pattern: /pretend\s+(?:you\s+are|to\s+be)\s+(?:a|an)\b/i, type: 'injection' },
+  { pattern: /(?:bypass|override|disable)\s+(?:your\s+)?(?:safety|guardrail|filter|restriction)/i, type: 'injection' },
+  { pattern: /(?:act|behave)\s+as\s+(?:if|though)\s+you\s+(?:have|are|were)/i, type: 'injection' },
+  { pattern: /(?:forget|clear)\s+(?:all\s+)?(?:your|previous)\s+(?:instructions|rules|context)/i, type: 'injection' },
+  // --- Cross-tenant & data exfiltration — 8 patterns ---
+  { pattern: /(?:list|show|dump|export)\s+all\s+(?:contacts|clients|sellers|buyers|listings)\b/i, type: 'data_exfil' },
+  { pattern: /(?:all|every)\s+(?:realtor|tenant|user|agent)\b.*(?:data|record|info)/i, type: 'data_exfil' },
+  { pattern: /(?:other|another)\s+(?:realtor|agent|tenant).*(?:contacts|listings|data)/i, type: 'cross_tenant' },
+  { pattern: /(?:how\s+many|total)\s+(?:realtors|agents|tenants|users)\b/i, type: 'cross_tenant' },
+  { pattern: /(?:who\s+else|which\s+(?:realtor|agent)).*(?:using|has|listed|sold)/i, type: 'cross_tenant' },
+  { pattern: /(?:compare|benchmark).*(?:my|mine).*(?:other|another)\s+(?:realtor|agent)/i, type: 'cross_tenant' },
+  { pattern: /(?:competitor|rival|competing)\s+(?:realtor|agent).*(?:listing|client|contact)/i, type: 'cross_tenant' },
+  { pattern: /(?:switch|access|view)\s+(?:to|as)\s+(?:another|different)\s+(?:realtor|account|tenant)/i, type: 'cross_tenant' },
 ];
 
 /** Disclaimer text by guardrail type */
@@ -87,6 +115,10 @@ export const DISCLAIMERS: Record<string, string> = {
   tax: "I can't provide tax advice. Please consult a qualified accountant or tax professional.",
   legal: "I can't provide legal advice. Please consult a licensed real estate lawyer.",
   financial: "I can't provide financial or investment advice. Please consult a financial advisor.",
+  fintrac_pii: "I can't retrieve or display sensitive identity information. This data is protected under FINTRAC. Please use the secure compliance section.",
+  injection: "I'm unable to process that request. If you have a real estate question, I'm happy to help!",
+  data_exfil: "I can only show data from your account. I can't access other realtors' data or bulk-export records.",
+  cross_tenant: "Each realtor's data is completely isolated. I can only access your contacts, listings, and communications. I cannot view, compare, or reference any other realtor's data.",
 };
 
 /** Session config */

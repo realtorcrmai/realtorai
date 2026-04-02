@@ -330,13 +330,15 @@ Every gap analysis, PRD, architecture doc, or design spec MUST go through 7 iter
 4. Save as versioned file: `docs/gap-analysis/<area>/v<N>_<date>.md`
 5. Follow the 7-pass process (Section 4.4.1)
 
+**Versioned gap document (single source of truth per area):**
+- ONE gap document per area (e.g., `docs/gap-analysis/rag-voice-agent/`)
+- Each sprint → new version (v1→v2→v3) with: changelog (PR#s), scorecard, open/closed gaps
+- Keep old versions for history. **Update gap doc after every sprint, before starting next**
+
 **Verification checklist per feature:**
-- [ ] Read the page component — does it render the feature?
-- [ ] Read the server action — does it do real CRUD?
-- [ ] Check the API route — does it handle auth, validation, errors?
-- [ ] Check the migration — does the table exist with correct columns?
-- [ ] Check the component — is it imported and rendered somewhere?
-- [ ] Check integration — does data flow end-to-end?
+- [ ] Page renders feature? Server action does real CRUD? API handles auth/validation?
+- [ ] Migration applied with correct columns? Component imported and rendered?
+- [ ] Data flows end-to-end (page → component → action → DB → back)?
 
 **Output format:**
 ```markdown
@@ -497,8 +499,7 @@ curl -X POST localhost:8768/api/session/create -H "Content-Type: application/jso
 curl -X POST localhost:8768/api/chat -H "Content-Type: application/json" -H "Authorization: Bearer va-bridge-secret-key-2026" -d '{"session_id":"ID","message":"How many active listings?"}'
 ```
 
-**Phase 7 — Verify fallback chain**
-- Test with each provider active, verify tool-calling, check timeout handling
+**Phase 7 — Verify fallback chain** — test each provider, verify tool-calling, check timeouts
 
 ---
 
@@ -541,9 +542,9 @@ curl -X POST localhost:8768/api/chat -H "Content-Type: application/json" -H "Aut
 For every new feature, create or update `usecases/<feature-name>.md`.
 
 **Required sections**:
-1. **Problem Statement** — What user pain does this solve? (2-3 sentences)
+1. **Problem Statement** — What user pain does this solve?
 2. **User Roles** — Who uses this?
-3. **Existing System Context** — What related features already exist?
-4. **End-to-End Scenarios** (minimum 3): name, preconditions, steps, expected outcome, edge cases
-5. **Demo Script** — Setup, script, key talking points
-6. **Market Context** (for new features): How do 2-3 competitors handle this? Our differentiation.
+3. **Existing System Context** — Related features?
+4. **End-to-End Scenarios** (min 3): preconditions, steps, expected outcome, edge cases
+5. **Demo Script** — Setup, script, talking points
+6. **Market Context** (new features): How do 2-3 competitors handle this?
