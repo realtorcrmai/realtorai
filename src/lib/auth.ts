@@ -85,16 +85,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    // Allow all requests through middleware — page-level auth handled by dashboard layout
-    authorized({ auth: session, request }) {
-      const pathname = request.nextUrl.pathname;
-      // Always allow login page, public routes, API routes (handled separately)
-      if (pathname === "/login" || pathname.startsWith("/api/") || pathname.startsWith("/docs") || pathname.startsWith("/sdk/") || pathname.startsWith("/_next/")) {
-        return true;
-      }
-      // Dashboard pages: allow through (layout.tsx handles redirect)
-      return true;
-    },
     async jwt({ token, account, trigger }) {
       try {
         const supabase = createAdminClient();

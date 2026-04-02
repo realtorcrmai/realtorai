@@ -1,18 +1,16 @@
-import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export default auth((req) => {
-  const isLoggedIn = !!req.auth;
-  const pathname = req.nextUrl.pathname;
-  const isOnLogin = pathname === "/login";
+export function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
 
-  // Public pages — no auth required
-  if (pathname.startsWith("/docs")) {
-    return NextResponse.next();
-  }
-
-  // Allow routes that handle their own auth
+  // Public routes — always allow
   if (
+    pathname === "/login" ||
+    pathname.startsWith("/docs") ||
+    pathname.startsWith("/sdk/") ||
+    pathname.startsWith("/_next/") ||
+    pathname.startsWith("/favicon") ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/webhooks") ||
     pathname.startsWith("/api/cron") ||
@@ -33,31 +31,32 @@ export default auth((req) => {
     pathname.startsWith("/api/contacts/import") ||
     pathname.startsWith("/api/websites/") ||
     pathname.startsWith("/api/social/oauth") ||
-    pathname.startsWith("/sdk/")
+    pathname.startsWith("/api/agent/")
   ) {
     return NextResponse.next();
   }
 
-  // Protect all other API routes
-  if (pathname.startsWith("/api") && !isLoggedIn) {
+  // Check for auth session cookie
+  const sessionToken =
+    request.cookies.get("authjs.session-token")?.value ||
+    request.cookies.get("__Secure-authjs.session-token")?.value;
+
+  // API routes without session → 401
+  if (pathname.startsWith("/api") && !sessionToken) {
     return NextResponse.json(
       { error: "Authentication required" },
       { status: 401 }
     );
   }
 
-  // Block non-admins from /admin routes
-  if (pathname.startsWith("/admin") && req.auth?.user?.role !== "admin") {
-    return NextResponse.redirect(new URL("/", req.url));
+  // Dashboard pages without session → redirect to login
+  // (Dashboard layout also checks server-side as backup)
+  if (!sessionToken && !pathname.startsWith("/api")) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Auth redirects handled by dashboard layout (server-side) for Netlify compatibility
-  // Middleware only handles API auth and admin route protection
-  if (isOnLogin) {
-    return NextResponse.next();
-  }
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
