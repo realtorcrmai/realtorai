@@ -42,23 +42,35 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           );
         }
 
-        // Validate credentials
-        if (email === DEMO_EMAIL && password === DEMO_PASSWORD) {
-          // Success: reset rate limit for this IP
+        if (!email || !password) return null;
+
+        // Demo account check
+        if (DEMO_EMAIL && email === DEMO_EMAIL && password === DEMO_PASSWORD) {
           resetRateLimit(clientIp);
-          return {
-            id: "demo-user",
-            name: "Demo User",
-            email: DEMO_EMAIL,
-          };
+          return { id: "demo-user", name: "Demo User", email: DEMO_EMAIL };
         }
 
-        // Failed attempt: record it
+        // Database user check (email + password)
+        const supabaseAuth = createAdminClient();
+        const { data: user } = await supabaseAuth
+          .from("users")
+          .select("id, email, name, password_hash, is_active")
+          .eq("email", email.toLowerCase().trim())
+          .single();
+
+        if (user?.password_hash && user.is_active) {
+          const { compare } = await import("bcryptjs");
+          const valid = await compare(password, user.password_hash);
+          if (valid) {
+            resetRateLimit(clientIp);
+            return { id: user.id, name: user.name, email: user.email };
+          }
+        }
+
+        // Failed attempt
         const isNowBlocked = recordFailedAttempt(clientIp);
         if (isNowBlocked) {
-          throw new Error(
-            "Too many login attempts. Please try again in 15 minutes."
-          );
+          throw new Error("Too many login attempts. Please try again in 15 minutes.");
         }
 
         return null;

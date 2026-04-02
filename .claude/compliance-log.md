@@ -34,3 +34,4 @@
 | 2026-04-02 | claude | Self-learning Phase 1: per-task lessons via completion-gate | CODING:feature | ✅ YES | classify, scope, implement, validate | — | PR #84. lessons-learned.md, completion-gate extraction. |
 | 2026-04-02 | claude | Self-learning Phase 2: weekly task pattern analyzer | CODING:script | ✅ YES | classify, scope, implement, validate | — | PR #85. analyze-task-patterns.mjs. |
 | 2026-04-02 | claude | Self-learning Phase 3: monthly playbook review generator | CODING:script | ✅ YES | classify, scope, implement, validate | — | PR #86. generate-playbook-review.mjs. |
+| 2026-04-02 | claude | Self-service signup — email/password registration with plan selection | CODING:feature | ✅ YES | 0,1,2,3,4,5,7 | 6 | Signup page, API, bcrypt password hashing, plan selection, auto-signin. Migration 072. |
