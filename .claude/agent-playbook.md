@@ -228,6 +228,7 @@ RIGHT: Split tasks → map dependencies → reorder → numbered list → work i
 ```
 
 #### Phase 2: Execute with care
+- **Output L3 checkpoint between EVERY phase** (→ [governance.md](playbook/governance.md) §15.3 for format and mandatory points)
 - Before each action: "Is this the right approach, or am I rushing?"
 - Before writing code, read the existing code first
 - Before marking "done", verify it actually works (HC-13)

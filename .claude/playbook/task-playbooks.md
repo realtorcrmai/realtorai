@@ -257,7 +257,7 @@ Every implementation plan (PRD Section 7 or DESIGN_SPEC Phase 6) must follow thi
 **Done when:** [Specific acceptance criteria — not "it works"]
 ```
 
-**Rules:** Phase 1 = data layer (migrations, types, actions). Phase 2 = API/backend. Phase 3+ = UI. Last phase = integration test + docs. Never plan >5 phases without user checkpoint.
+**Rules:** Phase 1 = data layer. Phase 2 = API/backend. Phase 3+ = UI. Last = integration test + docs. Max 5 phases without user checkpoint.
 
 ### 4.4.0.2 Test Execution Decision Matrix
 
@@ -285,7 +285,7 @@ Every implementation plan (PRD Section 7 or DESIGN_SPEC Phase 6) must follow thi
 | `evals.md` | repo root | 200 | Manual QA test cases (reference, not automated) |
 
 **Reading test output:**
-- `test-suite.sh`: Look for `PASS`/`FAIL` per category, total at bottom. Any FAIL = investigate before commit.
+- `test-suite.sh`: Look for `PASS`/`FAIL` per category. Any FAIL = investigate before commit.
 - Playwright: `npx playwright test --reporter=list` for verbose. Screenshots in `test-results/` on failure.
 - Eval scripts: Output score per test case. Check for regressions against previous run.
 
@@ -308,9 +308,11 @@ Every gap analysis, PRD, architecture doc, or design spec MUST go through 7 iter
 **Rules:**
 - Each pass MUST read the output of the previous pass — not rubber-stamp it
 - Passes are sequential — each builds on the previous
+- **L3 checkpoint MANDATORY between every pass** (see governance.md §15.3 for format)
 - Present the final version only after all 7 passes
 - Note the pass count in the document header
 - "Each pass takes 2-5 minutes" means real thinking — if a pass takes 30 seconds, redo it
+- If L3 "Am I rubber-stamping?" = yes → redo the pass
 
 **When to use 7-pass:** Gap analyses, PRDs, architecture specs, audit documents.
 **When NOT to use:** INFO tasks, simple code changes, bug fixes, micro/small tier tasks.
@@ -486,10 +488,8 @@ Every gap must have: evidence (file:line or command output), framework classific
 - BC real estate knowledge embedded
 
 **Phase 5 — Key features to preserve**
-- Edge TTS with LRU cache (100 entries) + 13 pre-rendered phrases
-- Session focus tracking (`SessionState.focus`)
-- Context summarization — compresses old turns after 20 messages
-- `_clean_for_voice()` — strips markdown before TTS
+- Edge TTS with LRU cache + 13 pre-rendered phrases, session focus tracking
+- Context summarization (compresses after 20 msgs), `_clean_for_voice()` strips markdown
 
 **Phase 6 — Testing**
 ```bash
