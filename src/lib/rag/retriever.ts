@@ -84,7 +84,65 @@ export function extractSourceRefs(results: SearchResult[]): SourceReference[] {
 }
 
 /**
+ * Hybrid search: combine semantic (Voyage) + full-text search (tsvector)
+ * using Reciprocal Rank Fusion (RRF). Returns better recall than either alone.
+ * Falls back to semantic-only if FTS fails.
+ */
+export async function hybridSearch(
+  db: SupabaseClient,
+  query: string,
+  filters: SearchFilters = {},
+  topK: number = RETRIEVAL.DEFAULT_TOP_K
+): Promise<SearchResult[]> {
+  const RRF_K = 60; // RRF constant (standard value)
+
+  // Run both searches in parallel
+  const [semanticResults, ftsResults] = await Promise.allSettled([
+    searchEmbeddings(db, query, filters, topK * 2),
+    fullTextSearch(db, query, filters, topK * 2),
+  ]);
+
+  const semantic = semanticResults.status === 'fulfilled' ? semanticResults.value : [];
+  const fts = ftsResults.status === 'fulfilled' ? (ftsResults.value as SearchResult[]) : [];
+
+  // If only one source has results, return it directly
+  if (semantic.length === 0 && fts.length === 0) return [];
+  if (fts.length === 0) return semantic.slice(0, topK);
+  if (semantic.length === 0) return fts.slice(0, topK);
+
+  // Reciprocal Rank Fusion: score = sum(1 / (k + rank)) across both lists
+  const rrfScores = new Map<string, { score: number; result: SearchResult }>();
+
+  for (let i = 0; i < semantic.length; i++) {
+    const key = `${semantic[i].source_table}:${semantic[i].source_id}:${i}`;
+    const existing = rrfScores.get(key);
+    const rrfScore = 1 / (RRF_K + i + 1);
+    rrfScores.set(key, {
+      score: (existing?.score ?? 0) + rrfScore,
+      result: existing?.result ?? semantic[i],
+    });
+  }
+
+  for (let i = 0; i < fts.length; i++) {
+    const key = `${fts[i].source_table}:${fts[i].source_id}:${i}`;
+    const existing = rrfScores.get(key);
+    const rrfScore = 1 / (RRF_K + i + 1);
+    rrfScores.set(key, {
+      score: (existing?.score ?? 0) + rrfScore,
+      result: existing?.result ?? fts[i],
+    });
+  }
+
+  // Sort by RRF score descending, return top-K
+  return [...rrfScores.values()]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK)
+    .map((entry) => entry.result);
+}
+
+/**
  * Convenience: search + format in one call.
+ * Uses hybrid search (semantic + FTS fusion) for better recall.
  * Returns both the formatted prompt context and the source references.
  */
 export async function retrieveContext(
@@ -93,7 +151,7 @@ export async function retrieveContext(
   filters: SearchFilters = {},
   topK: number = RETRIEVAL.DEFAULT_TOP_K
 ): Promise<{ formatted: string; sources: SourceReference[]; results: SearchResult[] }> {
-  const results = await searchEmbeddings(db, query, filters, topK);
+  const results = await hybridSearch(db, query, filters, topK);
   return {
     formatted: formatContextChunks(results),
     sources: extractSourceRefs(results),
