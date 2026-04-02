@@ -51,7 +51,13 @@ export async function synthesize(input: SynthesizeInput): Promise<SynthesizeOutp
   const response = await anthropic.messages.create({
     model,
     max_tokens: maxTokens,
-    system: systemPrompt,
+    system: [
+      {
+        type: 'text' as const,
+        text: systemPrompt,
+        cache_control: { type: 'ephemeral' as const },
+      },
+    ],
     messages,
   });
 
