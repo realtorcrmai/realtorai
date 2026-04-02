@@ -180,5 +180,48 @@ export async function generateDirect(
   return { text, model_tier: 'sonnet' };
 }
 
+/**
+ * Validate response against retrieved context (lightweight hallucination check).
+ * Checks that any numbers (prices, counts, dates) in the response appear in the context.
+ * Returns { valid, warnings } — warnings are logged but don't block the response.
+ */
+export function validateResponseGrounding(
+  responseText: string,
+  contextText: string
+): { valid: boolean; warnings: string[] } {
+  const warnings: string[] = [];
+
+  if (!contextText || !responseText) return { valid: true, warnings };
+
+  // Extract dollar amounts from response
+  const responsePrices = responseText.match(/\$[\d,]+/g) ?? [];
+  for (const price of responsePrices) {
+    const normalized = price.replace(/[$,]/g, '');
+    if (!contextText.includes(normalized) && !contextText.includes(price)) {
+      warnings.push(`Price ${price} in response not found in retrieved context`);
+    }
+  }
+
+  // Extract dates (YYYY-MM-DD) from response
+  const responseDates = responseText.match(/\d{4}-\d{2}-\d{2}/g) ?? [];
+  for (const date of responseDates) {
+    if (!contextText.includes(date)) {
+      warnings.push(`Date ${date} in response not found in retrieved context`);
+    }
+  }
+
+  // Extract specific numbers (e.g., "3 bedrooms", "5 showings")
+  const responseNumbers = responseText.match(/\b(\d+)\s+(bedroom|bathroom|showing|listing|contact|offer)/gi) ?? [];
+  for (const numPhrase of responseNumbers) {
+    const num = numPhrase.match(/\d+/)?.[0];
+    if (num && !contextText.includes(num)) {
+      warnings.push(`Quantity "${numPhrase}" in response not found in retrieved context`);
+    }
+  }
+
+  // Valid if 0 warnings or fewer than 3 (minor hallucinations are common)
+  return { valid: warnings.length < 3, warnings };
+}
+
 // Export pure functions for testing
 export { buildSystemPrompt, buildMessages };
