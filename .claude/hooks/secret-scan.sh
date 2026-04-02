@@ -91,6 +91,15 @@ if echo "$COMMAND" | grep -qE 'git\s+commit'; then
         FINDINGS="$FINDINGS\n  - Hardcoded Bearer token"
     fi
 
+    # Absolute local paths (privacy — no developer home dirs in git)
+    if echo "$ADDED_LINES" | grep -qE '/Users/[a-zA-Z]+/|/home/[a-zA-Z]+/|C:\\\\Users\\\\'; then
+        # Exclude comments and documentation about paths
+        REAL_PATH_LEAKS=$(echo "$ADDED_LINES" | grep -E '/Users/[a-zA-Z]+/|/home/[a-zA-Z]+/' | grep -v "^+.*#\|^+.*//\|^+.*\*\|FIXED\|example\|placeholder" | head -3)
+        if [[ -n "$REAL_PATH_LEAKS" ]]; then
+            FINDINGS="$FINDINGS\n  - Absolute local path detected (use relative paths or env vars instead)"
+        fi
+    fi
+
     # Check if .env.local is being staged
     STAGED_FILES=$(git diff --cached --name-only 2>/dev/null)
     if echo "$STAGED_FILES" | grep -qE '\.env\.local$'; then

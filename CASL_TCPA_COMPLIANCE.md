@@ -343,7 +343,7 @@ This ensures compliance is enforced at the application layer before Twilio sends
 
 ## Questions?
 
-Refer to `/Users/rahulmittal/CLAUDE.md` for:
+Refer to `CLAUDE.md` (at repo root) for:
 - Environment variable setup
 - Twilio integration details
 - Email template architecture
