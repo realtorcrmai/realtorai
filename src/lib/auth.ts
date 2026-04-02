@@ -134,7 +134,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
             if (existingUser) {
               token.role = existingUser.role;
-              token.enabledFeatures = existingUser.enabled_features;
+              // Use stored features if set, otherwise use current release defaults
+              const storedFeatures = existingUser.enabled_features;
+              token.enabledFeatures = (storedFeatures && Array.isArray(storedFeatures) && storedFeatures.length > 0)
+                ? storedFeatures
+                : CURRENT_RELEASE_FEATURES;
               token.userId = existingUser.id;
             } else if (trigger === "signIn" || account) {
               const isAdmin = ADMIN_EMAIL && token.email === ADMIN_EMAIL;
@@ -144,6 +148,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                   email: token.email,
                   name: token.name as string | undefined,
                   role: isAdmin ? "admin" : "realtor",
+                  enabled_features: isAdmin ? ALL_FEATURES : CURRENT_RELEASE_FEATURES,
                 })
                 .select("id, role, enabled_features")
                 .single();
