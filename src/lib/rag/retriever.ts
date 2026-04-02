@@ -4,6 +4,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { embedQuery } from './embeddings';
+import { fullTextSearch } from './fallback';
 import { RETRIEVAL } from './constants';
 import type { SearchResult, SearchFilters, SourceReference } from './types';
 
@@ -33,7 +34,12 @@ export async function searchEmbeddings(
   });
 
   if (error) {
-    throw new Error(`RAG search failed: ${error.message}`);
+    console.warn(`RAG semantic search failed, falling back to FTS: ${error.message}`);
+    try {
+      return await fullTextSearch(db, query, filters, topK) as SearchResult[];
+    } catch (ftsError) {
+      throw new Error(`RAG search failed (semantic + FTS): ${error.message}`);
+    }
   }
 
   return (data ?? []) as SearchResult[];

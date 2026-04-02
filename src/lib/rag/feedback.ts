@@ -51,6 +51,7 @@ function estimateCost(
 export async function logAudit(db: SupabaseClient, params: {
   sessionId?: string;
   userEmail?: string;
+  realtorId?: string;
   queryText: string;
   intent?: string;
   queryPlan?: QueryPlan;
@@ -73,6 +74,7 @@ export async function logAudit(db: SupabaseClient, params: {
   await db.from('rag_audit_log').insert({
     session_id: params.sessionId || null,
     user_email: params.userEmail || null,
+    realtor_id: params.realtorId || null,
     query_text: params.queryText,
     intent: params.intent || null,
     query_plan: params.queryPlan || null,
