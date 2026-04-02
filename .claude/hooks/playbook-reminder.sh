@@ -35,4 +35,17 @@ else
     echo "[L1] New task? → Read twice → Decompose → Map dependencies → REORDER → Task list → Then classify"
 fi
 
+# Surface recent lessons (last 5) if lessons file exists
+LESSONS_FILE=""
+if [[ -n "$PROJECT_DIR" ]]; then
+    LESSONS_FILE="$PROJECT_DIR/.claude/playbook/lessons-learned.md"
+fi
+if [[ -n "$LESSONS_FILE" && -f "$LESSONS_FILE" ]]; then
+    LESSON_COUNT=$(tail -n +9 "$LESSONS_FILE" | grep -c "^|" 2>/dev/null || echo "0")
+    if [[ "$LESSON_COUNT" -gt 0 ]]; then
+        RECENT=$(tail -n +9 "$LESSONS_FILE" | grep "^|" | tail -3 | sed 's/^| //;s/ |$//' | tr '\n' ';')
+        echo "[Lessons] $LESSON_COUNT total. Recent: $RECENT"
+    fi
+fi
+
 exit 0

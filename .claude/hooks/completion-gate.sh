@@ -133,6 +133,39 @@ if [[ -f "$TASK_FILE" ]]; then
     mkdir -p "$ARCHIVE_DIR"
     TIMESTAMP=$(date +%Y%m%d-%H%M%S)
     cp "$TASK_FILE" "$ARCHIVE_DIR/task-$TIMESTAMP.json"
+
+    # --- Self-Learning: Extract lesson from task ---
+    LESSONS_FILE="$PROJECT_DIR/.claude/playbook/lessons-learned.md"
+    if [[ -f "$LESSONS_FILE" ]]; then
+        SUMMARY=$(jq -r '.summary // empty' "$TASK_FILE")
+        SKIPPED=$(jq -r '.phases | to_entries[] | select(.value == false) | .key' "$TASK_FILE" 2>/dev/null | tr '\n' ', ' | sed 's/,$//')
+        TASK_TIER=$(jq -r '.tier // "unknown"' "$TASK_FILE")
+
+        LESSON=""
+        # Detect skipped phases
+        if [[ -n "$SKIPPED" ]]; then
+            LESSON="Phases skipped: $SKIPPED. Ensure all phases complete for $TASK_TIER tier."
+        fi
+        # Detect rework (task file recreated — same summary exists in archive)
+        REWORK_COUNT=$(ls "$ARCHIVE_DIR"/task-*.json 2>/dev/null | xargs grep -l "$SUMMARY" 2>/dev/null | wc -l | tr -d ' ')
+        if [[ "$REWORK_COUNT" -gt 1 ]]; then
+            LESSON="Task reworked ${REWORK_COUNT}x. Scope may need better upfront analysis."
+        fi
+        # Detect TypeScript failures that were fixed
+        if [[ "$TYPE" == CODING:* ]]; then
+            VALIDATED=$(jq -r '.phases.validated // false' "$TASK_FILE")
+            if [[ "$VALIDATED" == "true" && -n "$TSC_OUTPUT" ]]; then
+                LESSON="TypeScript errors caught and fixed during validation. Self-heal loop worked."
+            fi
+        fi
+        # Default lesson for clean completions
+        if [[ -z "$LESSON" ]]; then
+            LESSON="Clean completion. All phases followed for $TYPE ($TASK_TIER)."
+        fi
+
+        echo "| $(date +%Y-%m-%d) | $TYPE | $LESSON |" >> "$LESSONS_FILE"
+    fi
+
     rm "$TASK_FILE"
 fi
 

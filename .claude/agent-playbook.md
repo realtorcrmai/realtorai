@@ -330,6 +330,16 @@ The detailed playbooks, validation rules, and governance policies are in focused
 | [operations.md](playbook/operations.md) | Incident protocol, secret rotation, infrastructure map | Handling incidents, rotating secrets, checking infra |
 | [compliance.md](playbook/compliance.md) | Compliance tracker, WIP board | Every task completion, starting new work |
 | [governance.md](playbook/governance.md) | Agent evals, AI governance, PII rules, layered enforcement | Changing agent behaviors, reviewing governance |
+| [lessons-learned.md](playbook/lessons-learned.md) | Auto-captured lessons from each task (skipped phases, rework, patterns) | Every session start (L1 shows last 3) |
+
+### Self-Learning Loop
+
+The playbook learns over time through three mechanisms:
+1. **Per-task:** `completion-gate.sh` extracts a lesson after each task → appends to `lessons-learned.md`
+2. **Per-session:** `playbook-reminder.sh` surfaces last 3 lessons at session start
+3. **Monthly:** Review `lessons-learned.md` for recurring patterns → promote to HC rules or playbook updates
+
+**Principle:** System captures and surfaces. Human reviews and decides. Playbook never self-modifies.
 
 ### Quick Reference
 
