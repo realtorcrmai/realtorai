@@ -1,5 +1,28 @@
 # CLAUDE.md — Realtors360 Real Estate CRM
 
+## Think Thoroughly — Depth Over Speed
+
+**Never prioritize speed over depth.** Read the full request twice before responding. Consider 2-3 alternative approaches before picking one. Analyze trade-offs and downsides of each option. Present the best option with reasoning — not the first one that comes to mind. Re-read your own output before presenting. If the problem is complex, take the time — don't simplify to be fast. The user would rather wait for a thorough, well-analyzed answer than get a fast shallow one.
+
+---
+
+## Agent Playbook — MANDATORY (Read Before Every Task)
+
+**All task execution MUST follow `.claude/agent-playbook.md` — the single source of truth.**
+
+**STRICT REQUIREMENT:** Every task, every developer (human and AI), every time:
+1. **Pre-Flight** — check branch, run health check, load memory
+2. **Classify** — output classification block (task type, confidence, affected files) BEFORE any code changes
+3. **Execute** — follow the per-type checklist for your task type (14 types: CODING, TESTING, DEPLOY, etc.)
+4. **Validate** — run tests, verify build, check TypeScript
+5. **Log** — append compliance log entry to `.claude/compliance-log.md`
+
+**A task without a classification block is an unauthorized change. A task without a compliance log entry did not happen.**
+
+Read the playbook before every task. It covers: pre-flight, task classification, per-type checklists (14 task types), model chaining, post-task validation, compliance logging, and production incident protocol.
+
+---
+
 ## Project Overview
 
 Realtors360 is a real estate transaction management CRM for licensed BC realtors. It automates the full property listing lifecycle — from seller intake through closing — with integrated showing management, BCREA form generation, AI content creation, and regulatory compliance tracking.
@@ -442,23 +465,6 @@ Every new feature MUST include all of the following before it is considered comp
 4. **Navigation test** — Add new page routes to `scripts/test-suite.sh` navigation section
 5. **Seed data** — If the feature introduces a new table, add representative seed data to the seed migration
 6. **Documentation** — Update CLAUDE.md sections (Project Structure, Database Schema) if new files/tables added
-
----
-
-## Agent Playbook — MANDATORY (Read Before Every Task)
-
-**All task execution MUST follow `.claude/agent-playbook.md` — the single source of truth.**
-
-**STRICT REQUIREMENT:** Every task, every developer (human and AI), every time:
-1. **Pre-Flight** — check branch, run health check, load memory
-2. **Classify** — output classification block (task type, confidence, affected files) BEFORE any code changes
-3. **Execute** — follow the per-type checklist for your task type (14 types: CODING, TESTING, DEPLOY, etc.)
-4. **Validate** — run tests, verify build, check TypeScript
-5. **Log** — append compliance log entry to `.claude/compliance-log.md`
-
-**A task without a classification block is an unauthorized change. A task without a compliance log entry did not happen.**
-
-Read the playbook before every task. It covers: pre-flight, task classification, per-type checklists (14 task types), model chaining, post-task validation, compliance logging, and production incident protocol.
 
 ---
 
