@@ -35,3 +35,4 @@
 | 2026-04-02 | claude | Self-learning Phase 2: weekly task pattern analyzer | CODING:script | ✅ YES | classify, scope, implement, validate | — | PR #85. analyze-task-patterns.mjs. |
 | 2026-04-02 | claude | Self-learning Phase 3: monthly playbook review generator | CODING:script | ✅ YES | classify, scope, implement, validate | — | PR #86. generate-playbook-review.mjs. |
 | 2026-04-02 | claude | Self-service signup — email/password registration with plan selection | CODING:feature | ✅ YES | 0,1,2,3,4,5,7 | 6 | Signup page, API, bcrypt password hashing, plan selection, auto-signin. Migration 072. |
+| 2026-04-03 | claude | Contact import UI with CSV upload, preview, and bulk import | CODING:feature | ✅ YES | 0,1,2,4,5,7 | 3,6 | New /contacts/import page with drag-drop CSV, preview table, import execution. Fixed import API for multi-tenancy. |
