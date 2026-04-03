@@ -209,6 +209,13 @@ export default function LoginPage() {
                   ))}
                 </div>
               </div>
+
+              <p className="text-xs text-muted-foreground text-center mt-3">
+                Don&apos;t have an account?{" "}
+                <a href="/signup" className="text-primary font-medium hover:underline">
+                  Sign up free
+                </a>
+              </p>
             </CardContent>
           </Card>
         </div>

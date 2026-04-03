@@ -1,0 +1,12 @@
+{
+  "type": "SECURITY_AUDIT:rls + CODING:bugfix",
+  "tier": "critical",
+  "summary": "Fix multi-tenancy data leak — 25 dashboard pages use createAdminClient instead of tenant client",
+  "phases": {
+    "classified": true,
+    "scoped": false,
+    "implemented": false,
+    "validated": false,
+    "logged": false
+  }
+}

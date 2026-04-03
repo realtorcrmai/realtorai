@@ -1,0 +1,13 @@
+{
+  "type": "DATA_MIGRATION:schema",
+  "tier": "medium",
+  "summary": "Apply migrations 062-063 — blocked on network (IPv6 only)",
+  "phases": {
+    "classified": true,
+    "scoped": true,
+    "implemented": false,
+    "validated": false,
+    "logged": false,
+    "compliance_logged": true
+  }
+}

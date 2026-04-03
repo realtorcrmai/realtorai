@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 
 /**
  * POST /api/contacts/import
@@ -8,7 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * Skips rows with duplicate phone numbers (existing in DB).
  */
 export async function POST(request: NextRequest) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   const formData = await request.formData();
   const file = formData.get("file");
@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
   }
 
   // Get existing phones to skip duplicates
-  const { data: existing } = await supabase.from("contacts").select("phone");
-  const existingPhones = new Set((existing ?? []).map((c) => normalizePhone(c.phone)));
+  const { data: existing } = await tc.from("contacts").select("phone");
+  const existingPhones = new Set((existing ?? []).map((c: any) => normalizePhone(c.phone)));
 
   const emailIdx = headers.indexOf("email");
   const typeIdx = headers.indexOf("type");
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     if (addressIdx >= 0 && row[addressIdx]?.trim()) contact.address = row[addressIdx].trim();
     if (sourceIdx >= 0 && row[sourceIdx]?.trim()) contact.source = row[sourceIdx].trim();
 
-    const { error } = await supabase.from("contacts").insert(contact);
+    const { error } = await tc.from("contacts").insert(contact);
     if (error) {
       errors.push(`Row ${i + 1}: ${error.message}`);
     } else {

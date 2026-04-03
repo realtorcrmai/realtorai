@@ -42,33 +42,45 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           );
         }
 
-        // Validate credentials — check against users table
-        // All seeded users share the demo password for dev/demo purposes
-        if (email && password === DEMO_PASSWORD) {
+        if (!email || !password) return null;
+
+        // Demo password — works for all seeded users in dev/demo
+        if (password === DEMO_PASSWORD) {
           const supabase = createAdminClient();
           const { data: user, error: userErr } = await supabase
             .from("users")
             .select("id, name, email, role")
-            .eq("email", email)
+            .eq("email", email.toLowerCase().trim())
             .eq("is_active", true)
             .single();
 
           if (user && !userErr) {
             resetRateLimit(clientIp);
-            return {
-              id: user.id,
-              name: user.name || email,
-              email: user.email,
-            };
+            return { id: user.id, name: user.name || email, email: user.email };
           }
         }
 
-        // Failed attempt: record it
+        // Database user check (email + password)
+        const supabaseAuth = createAdminClient();
+        const { data: user } = await supabaseAuth
+          .from("users")
+          .select("id, email, name, password_hash, is_active")
+          .eq("email", email.toLowerCase().trim())
+          .single();
+
+        if (user?.password_hash && user.is_active) {
+          const { compare } = await import("bcryptjs");
+          const valid = await compare(password, user.password_hash);
+          if (valid) {
+            resetRateLimit(clientIp);
+            return { id: user.id, name: user.name, email: user.email };
+          }
+        }
+
+        // Failed attempt
         const isNowBlocked = recordFailedAttempt(clientIp);
         if (isNowBlocked) {
-          throw new Error(
-            "Too many login attempts. Please try again in 15 minutes."
-          );
+          throw new Error("Too many login attempts. Please try again in 15 minutes.");
         }
 
         return null;

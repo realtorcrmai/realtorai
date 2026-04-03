@@ -1,0 +1,6 @@
+{
+  "type": "DEPLOY:local",
+  "tier": "trivial",
+  "summary": "Commit and push all session changes",
+  "phases": { "classified": true, "scoped": true, "compliance_logged": true }
+}
