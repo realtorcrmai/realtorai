@@ -60,3 +60,4 @@
 | 2026-04-03 | claude | Contact import UI with CSV upload, preview, and bulk import | CODING:feature | ✅ YES | 0,1,2,4,5,7 | 3,6 | New /contacts/import page with drag-drop CSV, preview table, import execution. Fixed import API for multi-tenancy. |
 | 2026-04-03 | claude | Contact Sync Hub — Google, FUB, CSV with auto-sync | CODING:feature | ✅ YES | 0,1,2,4,5,7 | 3,6 | Sync Hub UI, Google People API, FUB API import, sync tracking table. Migration 073. |
 | 2026-04-03 | claude | unknown | DEPLOY:local | ✅ | classified, compliance_logged | — | Auto-logged by completion-gate |
+| 2026-04-03 | claude | unknown | TESTING | ✅ | classified, started | — | Auto-logged by completion-gate |

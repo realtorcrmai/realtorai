@@ -8,3 +8,4 @@
 |------|------|--------|
 | 2026-04-01 | CODING:bugfix | Skipped scope for small fix — touched 4 files. Always scope >50 lines. |
 | 2026-04-03 | DEPLOY:local | Clean completion. All phases followed for DEPLOY:local (trivial). |
+| 2026-04-03 | TESTING | Task reworked 11x. Scope may need better upfront analysis. |
