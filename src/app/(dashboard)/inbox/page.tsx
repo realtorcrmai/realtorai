@@ -1,11 +1,11 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { Inbox, MessageSquare, ArrowDownLeft } from "lucide-react";
 import { InboxView } from "@/components/inbox/InboxView";
 
 export const dynamic = "force-dynamic";
 
 export default async function InboxPage() {
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
 
   const { data: communications } = await supabase
     .from("communications")

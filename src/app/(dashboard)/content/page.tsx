@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import Link from "next/link";
 import {
   Wand2,
@@ -16,7 +16,7 @@ import { MEDIA_STATUS_COLORS } from "@/lib/constants";
 export const dynamic = "force-dynamic";
 
 export default async function ContentPage() {
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
 
   const [{ data: listings }, { data: prompts }, { data: assets }] =
     await Promise.all([

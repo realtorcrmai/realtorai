@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { notFound } from "next/navigation";
 import { ContentDetail } from "./content-detail";
 
@@ -12,7 +12,7 @@ export default async function ContentDetailPage({
   params,
 }: ContentDetailPageProps) {
   const { id } = await params;
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
 
   const [
     { data: listing, error: listingError },

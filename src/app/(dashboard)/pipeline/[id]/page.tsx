@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { notFound } from "next/navigation";
 import { DealDetail } from "@/components/pipeline/DealDetail";
 
@@ -10,7 +10,7 @@ export default async function DealDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
 
   const [{ data: deal }, { data: parties }, { data: checklist }, { data: mortgages }] =
     await Promise.all([

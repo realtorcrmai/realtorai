@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { notFound } from "next/navigation";
 import { PDFFormEditor } from "@/components/forms/PDFFormEditor";
 
@@ -10,23 +11,24 @@ export default async function FormEditorPage({
   params: Promise<{ listingId: string; formKey: string }>;
 }) {
   const { listingId, formKey } = await params;
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
+  const adminDb = createAdminClient();
 
-  // Fetch listing (for address display)
-  const { data: listing } = await supabase
-    .from("listings")
-    .select("id, address")
-    .eq("id", listingId)
-    .single();
+  // Fetch listing (tenant-scoped) + template (global)
+  const [{ data: listing }, { data: template }] = await Promise.all([
+    tc
+      .from("listings")
+      .select("id, address")
+      .eq("id", listingId)
+      .single(),
+    adminDb
+      .from("form_templates")
+      .select("*")
+      .eq("form_key", formKey)
+      .single(),
+  ]);
 
   if (!listing) notFound();
-
-  // Fetch template
-  const { data: template } = await supabase
-    .from("form_templates")
-    .select("*")
-    .eq("form_key", formKey)
-    .single();
 
   if (!template) {
     // Template not yet uploaded — show a helpful message instead of 404
@@ -49,7 +51,7 @@ export default async function FormEditorPage({
   }
 
   // Fetch existing draft/submission
-  const { data: draft } = await supabase
+  const { data: draft } = await tc
     .from("form_submissions")
     .select("*")
     .eq("listing_id", listingId)

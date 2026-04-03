@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { WorkflowEditorClient } from "@/components/workflow-builder/WorkflowEditorClient";
@@ -11,7 +11,7 @@ export default async function EditWorkflowPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
 
   const { data: workflow } = await supabase
     .from("workflows")

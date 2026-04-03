@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
 export default async function AutomationsPage() {
   // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is safe
   const now = Date.now();
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
 
   // Fetch all data in parallel (was sequential — 4x faster now)
   const [
