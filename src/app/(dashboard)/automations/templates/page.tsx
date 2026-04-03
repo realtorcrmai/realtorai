@@ -1,11 +1,11 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import TemplateList from "@/components/automations/TemplateList";
 import type { MessageTemplate } from "@/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function TemplatesPage() {
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
 
   const { data: templates } = await supabase
     .from("message_templates")

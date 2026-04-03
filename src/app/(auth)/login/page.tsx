@@ -170,6 +170,46 @@ export default function LoginPage() {
                 Google Calendar access is required for showing management
               </p>
 
+              {/* Quick login — demo accounts */}
+              <div className="pt-2 border-t space-y-2">
+                <p className="text-xs text-muted-foreground text-center font-medium">
+                  Quick Login (Demo)
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: "Kunal (Pro)", email: "demo@realestatecrm.com", color: "bg-indigo-100 text-indigo-700 hover:bg-indigo-200" },
+                    { label: "Sarah (Studio)", email: "sarah@realtors360.com", color: "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" },
+                    { label: "Mike (Pro)", email: "mike@realtors360.com", color: "bg-amber-100 text-amber-700 hover:bg-amber-200" },
+                    { label: "Priya (Free)", email: "priya@realtors360.com", color: "bg-pink-100 text-pink-700 hover:bg-pink-200" },
+                    { label: "Admin", email: "admin@realtors360.com", color: "bg-gray-100 text-gray-700 hover:bg-gray-200 col-span-2" },
+                  ].map((user) => (
+                    <button
+                      key={user.email}
+                      type="button"
+                      className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${user.color}`}
+                      disabled={loading}
+                      onClick={async () => {
+                        setLoading(true);
+                        setError("");
+                        const result = await signIn("credentials", {
+                          email: user.email,
+                          password: "demo1234",
+                          redirect: false,
+                        });
+                        if (result?.error) {
+                          setError("Login failed");
+                          setLoading(false);
+                        } else {
+                          window.location.href = "/";
+                        }
+                      }}
+                    >
+                      {user.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <p className="text-xs text-muted-foreground text-center mt-3">
                 Don&apos;t have an account?{" "}
                 <a href="/signup" className="text-primary font-medium hover:underline">

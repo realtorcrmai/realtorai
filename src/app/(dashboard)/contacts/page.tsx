@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { Users, ArrowLeft } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -21,7 +21,7 @@ export default async function ContactsPage({
   searchParams: Promise<{ stage?: string }>;
 }) {
   const { stage } = await searchParams;
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
 
   // If a stage filter is provided, find the first contact in that stage
   if (stage && STAGE_FILTER_MAP[stage]) {

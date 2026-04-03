@@ -1,0 +1,13 @@
+{
+  "type": "DATA_MIGRATION:schema",
+  "tier": "medium",
+  "summary": "Applied migrations 062-063 + seeded per-realtor data",
+  "phases": {
+    "classified": true,
+    "scoped": true,
+    "implemented": true,
+    "validated": true,
+    "logged": true,
+    "compliance_logged": true
+  }
+}

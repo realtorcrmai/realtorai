@@ -2,6 +2,8 @@
 Tenant context extraction for the Voice Agent Python server.
 Resolves tenant_id from JWT tokens or API keys in request headers.
 """
+from __future__ import annotations
+
 
 import os
 import json

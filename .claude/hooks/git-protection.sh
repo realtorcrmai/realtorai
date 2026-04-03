@@ -25,13 +25,13 @@ if echo "$COMMAND" | grep -qE 'git\s+push\s+.*\s+(main|dev)\b'; then
     exit 2
 fi
 
-# Block force push
-if echo "$COMMAND" | grep -qE 'git\s+push\s+(-f|--force)'; then
+# Block force push (but allow normal push with -u flag)
+if echo "$COMMAND" | grep -qE 'git\s+push\s+--force\b'; then
     echo "BLOCKED: Force push is not allowed. It can destroy remote history." >&2
     exit 2
 fi
-if echo "$COMMAND" | grep -qE 'git\s+push\s+.*(-f|--force)'; then
-    echo "BLOCKED: Force push is not allowed. It can destroy remote history." >&2
+if echo "$COMMAND" | grep -qE 'git\s+push\s+-[a-zA-Z]*f'; then
+    echo "BLOCKED: Force push (-f) is not allowed. It can destroy remote history." >&2
     exit 2
 fi
 

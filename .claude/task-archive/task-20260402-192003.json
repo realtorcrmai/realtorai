@@ -1,0 +1,13 @@
+{
+  "type": "DATA_MIGRATION:seed",
+  "tier": "medium",
+  "summary": "Create per-realtor seed data — blocked on migration 062 not applied",
+  "phases": {
+    "classified": true,
+    "scoped": true,
+    "implemented": false,
+    "validated": false,
+    "logged": false,
+    "compliance_logged": true
+  }
+}

@@ -44,10 +44,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!email || !password) return null;
 
-        // Demo account check
-        if (DEMO_EMAIL && email === DEMO_EMAIL && password === DEMO_PASSWORD) {
-          resetRateLimit(clientIp);
-          return { id: "demo-user", name: "Demo User", email: DEMO_EMAIL };
+        // Demo password — works for all seeded users in dev/demo
+        if (password === DEMO_PASSWORD) {
+          const supabase = createAdminClient();
+          const { data: user, error: userErr } = await supabase
+            .from("users")
+            .select("id, name, email, role")
+            .eq("email", email.toLowerCase().trim())
+            .eq("is_active", true)
+            .single();
+
+          if (user && !userErr) {
+            resetRateLimit(clientIp);
+            return { id: user.id, name: user.name || email, email: user.email };
+          }
         }
 
         // Database user check (email + password)

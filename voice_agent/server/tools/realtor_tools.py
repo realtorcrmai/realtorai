@@ -1,3 +1,4 @@
+from __future__ import annotations
 #!/usr/bin/env python3
 """
 Realtor Mode Tools
@@ -941,6 +942,185 @@ REALTOR_TOOLS = [
             },
         },
     },
+    # ── RAG Knowledge Base Tools ────────────────────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "search_knowledge",
+            "description": "Search the CRM knowledge base using AI-powered semantic search. Finds relevant contacts, listings, communications, emails, and knowledge articles. Use this when the user asks complex questions that need context from their CRM data — e.g. 'what did we discuss with Aman?', 'find emails about the Dunbar listing', 'which contacts are interested in Kitsilano?'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Natural language search query"},
+                    "content_type": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": ["message", "email", "profile", "listing", "activity", "recommendation", "template", "offer", "faq"],
+                        },
+                        "description": "Optional: filter by content type(s). Leave empty to search all.",
+                    },
+                    "contact_id": {"type": "string", "description": "Optional: filter results to a specific contact"},
+                    "listing_id": {"type": "string", "description": "Optional: filter results to a specific listing"},
+                    "max_results": {"type": "integer", "description": "Max results (default 5, max 15)"},
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "ask_knowledge_base",
+            "description": "Ask a question and get an AI-generated answer grounded in CRM data. Uses RAG (Retrieval-Augmented Generation) to find relevant context and synthesize an accurate answer with source citations. Use for questions like 'summarize my relationship with Aman Singh', 'what's the status of the Dunbar deal?', 'draft a follow-up email for Jennifer', 'what are the top concerns from buyer feedback?'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "question": {"type": "string", "description": "The question to answer using CRM data"},
+                    "contact_id": {"type": "string", "description": "Optional: focus the answer on a specific contact"},
+                    "listing_id": {"type": "string", "description": "Optional: focus the answer on a specific listing"},
+                },
+                "required": ["question"],
+            },
+        },
+    },
+
+    # ── Dashboard & Summary Tools (merged from Vercel AI agent) ──────────
+
+    {
+        "type": "function",
+        "function": {
+            "name": "get_dashboard_stats",
+            "description": "Get a summary of what needs attention today: overdue tasks, pending showings, active deals, recent activity. Use when the user asks 'what needs attention?', 'give me a summary', 'what's going on today?'.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "check_calendar",
+            "description": "Check today's and upcoming calendar events and showings. Use when the user asks 'what's on my calendar?', 'any showings today?', 'what's scheduled this week?'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "date": {"type": "string", "description": "Date to check (YYYY-MM-DD). Defaults to today."},
+                    "days_ahead": {"type": "integer", "description": "Number of days to look ahead (default 1, max 7)"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_overdue_tasks",
+            "description": "Get all overdue tasks (due date in the past, not completed). Use when the user asks 'any overdue tasks?', 'what am I behind on?'.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_pending_showings",
+            "description": "Get all showings with 'requested' status that need confirmation. Use when user asks 'any pending showings?', 'what needs confirmation?'.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_engagement_score",
+            "description": "Get a contact's engagement score, newsletter intelligence, and activity summary. Use when user asks 'how engaged is Aman?', 'what's their score?', 'are they active?'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {"type": "string", "description": "Contact ID"},
+                    "name": {"type": "string", "description": "Contact name (if ID not known)"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_listing_documents",
+            "description": "Get all documents uploaded for a listing (DORTS, PDS, FINTRAC, etc.). Use when user asks 'what forms are done?', 'what documents are uploaded for this listing?'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "listing_id": {"type": "string", "description": "Listing ID"},
+                    "address": {"type": "string", "description": "Listing address (if ID not known)"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "generate_mls_remarks",
+            "description": "Generate AI-powered MLS public and REALTOR remarks for a listing using Claude. Use when user asks 'write MLS remarks', 'generate listing description', 'create remarks for Dunbar'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "listing_id": {"type": "string", "description": "Listing ID to generate remarks for"},
+                    "address": {"type": "string", "description": "Listing address (if ID not known)"},
+                    "style": {"type": "string", "enum": ["professional", "luxury", "family", "investment"], "description": "Tone/style for the remarks (default: professional)"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "draft_email",
+            "description": "Draft a personalized email for a contact using AI. Use when user says 'draft an email for Aman', 'write a follow-up to Jennifer', 'compose a market update for David'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {"type": "string", "description": "Contact ID to email"},
+                    "name": {"type": "string", "description": "Contact name (if ID not known)"},
+                    "email_type": {
+                        "type": "string",
+                        "enum": ["follow_up", "listing_alert", "market_update", "check_in", "thank_you", "custom"],
+                        "description": "Type of email to draft",
+                    },
+                    "context": {"type": "string", "description": "Additional context for the email (e.g. 'mention the Dunbar listing')"},
+                },
+                "required": ["email_type"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "complete_task",
+            "description": "Mark a task as completed. Use when user says 'mark that task done', 'complete the follow-up task'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task_id": {"type": "string", "description": "Task ID to complete"},
+                },
+                "required": ["task_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_recent_activity",
+            "description": "Get recent CRM activity across all entities — new contacts, updated listings, sent emails, completed tasks. Use for 'what happened today?', 'show recent activity'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {"type": "integer", "description": "Max items to return (default 10)"},
+                },
+                "required": [],
+            },
+        },
+    },
 ]
 
 
@@ -1201,7 +1381,9 @@ async def handle_realtor_tool(tool_name: str, args: dict, realtor_id: str = "R00
             result = await api.patch(f"/api/voice-agent/contacts/{args['contact_id']}", payload)
 
         elif tool_name == "delete_contact":
-            result = await api.delete(f"/api/voice-agent/contacts/{args['contact_id']}")
+            resp = await api.delete(f"/api/voice-agent/contacts/{args['contact_id']}")
+            name = resp.get("name", "contact")
+            result = {"message": f"Archived {name}. They can be restored if needed.", **resp}
 
         elif tool_name == "get_contact_details":
             result = await api.get(f"/api/voice-agent/contacts/{args['contact_id']}")
@@ -1225,7 +1407,9 @@ async def handle_realtor_tool(tool_name: str, args: dict, realtor_id: str = "R00
             result = await api.post("/api/voice-agent/listings", payload)
 
         elif tool_name == "delete_listing":
-            result = await api.delete(f"/api/voice-agent/listings/{args['listing_id']}")
+            resp = await api.delete(f"/api/voice-agent/listings/{args['listing_id']}")
+            addr = resp.get("address", "listing")
+            result = {"message": f"Archived listing at {addr}. It can be restored if needed.", **resp}
 
         # ── Showing Management ────────────────────────────────────────────
 
@@ -1264,7 +1448,9 @@ async def handle_realtor_tool(tool_name: str, args: dict, realtor_id: str = "R00
             result = await api.patch(f"/api/voice-agent/tasks/{args['task_id']}", payload)
 
         elif tool_name == "delete_task":
-            result = await api.delete(f"/api/voice-agent/tasks/{args['task_id']}")
+            resp = await api.delete(f"/api/voice-agent/tasks/{args['task_id']}")
+            title = resp.get("title", "task")
+            result = {"message": f"Archived task '{title}'. It can be restored if needed.", **resp}
 
         # ── Deal Management ───────────────────────────────────────────────
 
@@ -1531,6 +1717,258 @@ async def handle_realtor_tool(tool_name: str, args: dict, realtor_id: str = "R00
                 )
 
             result = {"topic": topic, "help": help_text}
+
+        # ── RAG Knowledge Base Tools ────────────────────────────────────
+
+        elif tool_name == "search_knowledge":
+            query = args.get("query", "")
+            payload = {
+                "query": query,
+                "top_k": min(args.get("max_results", 5), 15),
+            }
+            filters = {}
+            if args.get("contact_id"):
+                filters["contact_id"] = args["contact_id"]
+            if args.get("listing_id"):
+                filters["listing_id"] = args["listing_id"]
+            if args.get("content_type"):
+                filters["content_type"] = args["content_type"]
+            if filters:
+                payload["filters"] = filters
+
+            try:
+                payload["action"] = "search"
+                rag_result = await api.post("/api/voice-agent/rag", payload)
+                results = rag_result.get("results", [])
+                # Format for voice-friendly output
+                formatted = []
+                for r in results[:10]:
+                    formatted.append({
+                        "source": r.get("source_table", ""),
+                        "content": r.get("content_text", "")[:300],
+                        "similarity": round(r.get("similarity", 0), 2),
+                    })
+                result = {
+                    "query": query,
+                    "count": len(formatted),
+                    "results": formatted,
+                    "message": f"Found {len(formatted)} results for '{query}'." if formatted else f"No results found for '{query}'.",
+                }
+            except Exception as e:
+                result = {"error": f"Knowledge search failed: {e}", "query": query}
+
+        elif tool_name == "ask_knowledge_base":
+            question = args.get("question", "")
+            payload = {"message": question}
+            ui_context = {}
+            if args.get("contact_id"):
+                ui_context["contact_id"] = args["contact_id"]
+            if args.get("listing_id"):
+                ui_context["listing_id"] = args["listing_id"]
+            if ui_context:
+                payload["ui_context"] = ui_context
+
+            try:
+                payload["action"] = "chat"
+                rag_result = await api.post("/api/voice-agent/rag", payload)
+                response = rag_result.get("response", {})
+                sources = response.get("sources", [])
+                source_summary = ", ".join(
+                    f"{s.get('source_table', 'unknown')}" for s in sources[:3]
+                ) if sources else "general knowledge"
+
+                result = {
+                    "answer": response.get("text", "No answer generated."),
+                    "sources": source_summary,
+                    "model_tier": rag_result.get("model_tier", "unknown"),
+                    "message": response.get("text", "No answer generated."),
+                }
+            except Exception as e:
+                # Fallback: if RAG endpoint not available, return helpful error
+                result = {
+                    "error": f"RAG chat unavailable: {e}",
+                    "question": question,
+                    "hint": "The knowledge base may not be set up yet. Try using search_properties, find_contact, or get_crm_help instead.",
+                }
+
+        # ── Dashboard & Summary Tools (merged from Vercel AI agent) ────
+
+        elif tool_name == "get_dashboard_stats":
+            from datetime import date as _date
+            today = _date.today().isoformat()
+            tasks = await api.get("/api/voice-agent/tasks", {"limit": "100"})
+            showings = await api.get("/api/voice-agent/showings", {"limit": "50"})
+            listings = await api.get("/api/voice-agent/listings", {"limit": "50"})
+            deals = await api.get("/api/voice-agent/deals", {"limit": "50"})
+
+            overdue = [t for t in (tasks.get("tasks") or []) if t.get("status") == "pending" and t.get("due_date") and t["due_date"] < today]
+            pending_showings = [s for s in (showings.get("showings") or []) if s.get("status") == "requested"]
+            active_listings = [l for l in (listings.get("listings") or []) if l.get("status") == "active"]
+            active_deals = [d for d in (deals.get("deals") or []) if d.get("status") == "active"]
+
+            result = {
+                "overdue_tasks": len(overdue),
+                "overdue_task_titles": [t.get("title", "") for t in overdue[:5]],
+                "pending_showings": len(pending_showings),
+                "active_listings": len(active_listings),
+                "active_deals": len(active_deals),
+                "total_tasks": len(tasks.get("tasks") or []),
+                "message": f"Dashboard: {len(overdue)} overdue tasks, {len(pending_showings)} pending showings, {len(active_listings)} active listings, {len(active_deals)} active deals.",
+            }
+
+        elif tool_name == "check_calendar":
+            from datetime import date as _date, timedelta
+            date_str = args.get("date") or _date.today().isoformat()
+            days = min(args.get("days_ahead", 1), 7)
+            showings = await api.get("/api/voice-agent/showings", {"limit": "50"})
+            all_showings = showings.get("showings") or []
+            # Filter by date range
+            end_date = (_date.fromisoformat(date_str) + timedelta(days=days)).isoformat()
+            upcoming = [s for s in all_showings if s.get("start_time", "") >= date_str and s.get("start_time", "") <= end_date + "T23:59:59"]
+            result = {
+                "date": date_str,
+                "days_ahead": days,
+                "showings": [{"listing": s.get("listing_id"), "time": s.get("start_time"), "status": s.get("status"), "agent": s.get("buyer_agent_name")} for s in upcoming[:10]],
+                "count": len(upcoming),
+                "message": f"{len(upcoming)} showings scheduled from {date_str} to {end_date}.",
+            }
+
+        elif tool_name == "get_overdue_tasks":
+            from datetime import date as _date
+            today = _date.today().isoformat()
+            tasks = await api.get("/api/voice-agent/tasks", {"status": "pending", "limit": "50"})
+            overdue = [t for t in (tasks.get("tasks") or []) if t.get("due_date") and t["due_date"] < today]
+            result = {
+                "tasks": [{"id": t.get("id"), "title": t.get("title"), "due_date": t.get("due_date"), "priority": t.get("priority")} for t in overdue],
+                "count": len(overdue),
+                "message": f"{len(overdue)} overdue tasks." if overdue else "No overdue tasks — you're all caught up!",
+            }
+
+        elif tool_name == "get_pending_showings":
+            showings = await api.get("/api/voice-agent/showings", {"status": "requested", "limit": "20"})
+            pending = showings.get("showings") or []
+            result = {
+                "showings": [{"id": s.get("id"), "listing_id": s.get("listing_id"), "time": s.get("start_time"), "agent": s.get("buyer_agent_name")} for s in pending],
+                "count": len(pending),
+                "message": f"{len(pending)} showings awaiting confirmation." if pending else "No pending showings.",
+            }
+
+        elif tool_name == "get_engagement_score":
+            contact = None
+            if args.get("contact_id"):
+                contact = await api.get(f"/api/voice-agent/contacts/{args['contact_id']}")
+            elif args.get("name"):
+                contacts = await api.get("/api/voice-agent/contacts", {"name": args["name"]})
+                if contacts.get("contacts"):
+                    contact = contacts["contacts"][0]
+            if contact and not contact.get("error"):
+                intel = contact.get("newsletter_intelligence") or {}
+                result = {
+                    "name": contact.get("name"),
+                    "engagement_score": intel.get("engagement_score", 0),
+                    "engagement_trend": intel.get("engagement_trend", "unknown"),
+                    "total_opens": intel.get("total_opens", 0),
+                    "total_clicks": intel.get("total_clicks", 0),
+                    "last_opened": intel.get("last_opened"),
+                    "inferred_interests": intel.get("inferred_interests", {}),
+                    "lifecycle_stage": contact.get("lifecycle_stage"),
+                    "message": f"{contact.get('name')}: engagement score {intel.get('engagement_score', 0)}, trend {intel.get('engagement_trend', 'unknown')}.",
+                }
+            else:
+                result = {"error": "Contact not found", "message": "Could not find that contact."}
+
+        elif tool_name == "get_listing_documents":
+            listing_id = args.get("listing_id")
+            if not listing_id and args.get("address"):
+                listings = await api.get("/api/voice-agent/listings", {"address": args["address"]})
+                if listings.get("listings"):
+                    listing_id = listings["listings"][0].get("id")
+            if listing_id:
+                # Query listing_documents via the listings detail endpoint
+                listing = await api.get(f"/api/voice-agent/listings/{listing_id}")
+                # Documents may be in a sub-query — try direct
+                docs_result = await api.get("/api/voice-agent/activities", {"listing_id": listing_id, "limit": "1"})
+                # For now, return what we know from the listing
+                result = {
+                    "listing_id": listing_id,
+                    "address": listing.get("address", ""),
+                    "message": f"Listing found: {listing.get('address', '')}. Document tracking requires listing_documents API route (not yet built for voice agent).",
+                }
+            else:
+                result = {"error": "Listing not found", "message": "Could not find that listing."}
+
+        elif tool_name == "generate_mls_remarks":
+            listing_id = args.get("listing_id")
+            if not listing_id and args.get("address"):
+                listings = await api.get("/api/voice-agent/listings", {"address": args["address"]})
+                if listings.get("listings"):
+                    listing_id = listings["listings"][0].get("id")
+            if listing_id:
+                listing = await api.get(f"/api/voice-agent/listings/{listing_id}")
+                style = args.get("style", "professional")
+                # Use existing MLS remarks endpoint
+                try:
+                    remarks = await api.post("/api/mls-remarks", {"listing": listing, "style": style})
+                    result = {
+                        "listing_id": listing_id,
+                        "address": listing.get("address", ""),
+                        "public_remarks": remarks.get("public_remarks", ""),
+                        "realtor_remarks": remarks.get("realtor_remarks", ""),
+                        "message": f"MLS remarks generated for {listing.get('address', '')}.",
+                    }
+                except Exception as e:
+                    result = {"error": f"MLS generation failed: {e}", "listing_id": listing_id}
+            else:
+                result = {"error": "Listing not found", "message": "Provide a listing ID or address."}
+
+        elif tool_name == "draft_email":
+            contact = None
+            if args.get("contact_id"):
+                contact = await api.get(f"/api/voice-agent/contacts/{args['contact_id']}")
+            elif args.get("name"):
+                contacts = await api.get("/api/voice-agent/contacts", {"name": args["name"]})
+                if contacts.get("contacts"):
+                    contact = contacts["contacts"][0]
+            email_type = args.get("email_type", "follow_up")
+            context = args.get("context", "")
+            if contact and not contact.get("error"):
+                name = contact.get("name", "there")
+                ctype = contact.get("type", "client")
+                notes = contact.get("notes", "")
+                try:
+                    draft = await api.post("/api/voice-agent/draft-email", {
+                        "contact_name": name,
+                        "contact_type": ctype,
+                        "contact_notes": notes[:300],
+                        "email_type": email_type,
+                        "context": context,
+                        "contact_email": contact.get("email", ""),
+                    })
+                    result = {
+                        "to": name,
+                        "email_type": email_type,
+                        "subject": draft.get("subject", ""),
+                        "body": draft.get("body", ""),
+                        "message": f"Here's a draft {email_type.replace('_', ' ')} email to {name}. Want me to adjust anything before sending?",
+                    }
+                except Exception:
+                    # Fallback if draft endpoint unavailable
+                    result = {
+                        "to": name,
+                        "email_type": email_type,
+                        "draft_prompt": f"Draft a {email_type.replace('_', ' ')} email to {name} ({ctype}). Notes: {notes[:200]}. {context}",
+                        "message": f"I've prepared context for a {email_type.replace('_', ' ')} email to {name}. Go to /newsletters to create it.",
+                    }
+            else:
+                result = {"error": "Contact not found", "message": "Could not find that contact to draft an email."}
+
+        elif tool_name == "complete_task":
+            result = await api.patch(f"/api/voice-agent/tasks/{args['task_id']}", {"status": "completed"})
+
+        elif tool_name == "get_recent_activity":
+            limit = min(args.get("limit", 10), 20)
+            activities = await api.get("/api/voice-agent/activities", {"limit": str(limit)})
+            result = activities
 
         elif tool_name == "bc_real_estate_reference":
             topic = args.get("topic", "all").lower()

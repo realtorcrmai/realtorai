@@ -1,0 +1,12 @@
+{
+  "type": "INFO_QA:explain",
+  "tier": "trivial",
+  "summary": "Help user find Supabase DB password",
+  "phases": {
+    "classified": true,
+    "scoped": true,
+    "implemented": false,
+    "validated": false,
+    "logged": false
+  }
+}

@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { notFound } from "next/navigation";
 import WorkflowDetail from "@/components/automations/WorkflowDetail";
 import type { MessageTemplate, WorkflowStep, WorkflowEnrollment } from "@/types";
@@ -11,7 +11,7 @@ export default async function WorkflowDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
 
   // Fetch workflow with its steps
   const { data: workflow, error: workflowError } = await supabase

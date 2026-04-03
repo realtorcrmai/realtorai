@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { requireAuth } from "@/lib/api-auth";
 import { contactSchema } from "@/lib/schemas";
 
@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const { unauthorized } = await requireAuth();
   if (unauthorized) return unauthorized;
 
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
   const searchParams = req.nextUrl.searchParams;
   const search = searchParams.get("search");
   const type = searchParams.get("type")?.toLowerCase();
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
   const { data, error } = await supabase
     .from("contacts")
     .insert({

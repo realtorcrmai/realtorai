@@ -42,6 +42,7 @@ export async function GET(
       households(id, name, address, notes)
     `)
     .eq("id", id)
+    .is("deleted_at", null)
     .single();
 
   if (error || !contact) {
@@ -126,7 +127,7 @@ export async function PATCH(
 
 /**
  * DELETE /api/voice-agent/contacts/[id]
- * Delete contact (communications cascade via FK).
+ * Soft-delete contact — sets deleted_at timestamp instead of permanent removal.
  */
 export async function DELETE(
   req: NextRequest,
@@ -142,11 +143,20 @@ export async function DELETE(
 
   const supabase = createAdminClient();
 
-  const { error } = await supabase.from("contacts").delete().eq("id", id);
+  const { data, error } = await supabase
+    .from("contacts")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("deleted_at", null)
+    .select("id, name")
+    .single();
 
   if (error) {
+    if (error.code === "PGRST116") {
+      return NextResponse.json({ error: "Contact not found or already deleted" }, { status: 404 });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return new NextResponse(null, { status: 204 });
+  return NextResponse.json({ ok: true, deleted: data.id, name: data.name, soft: true });
 }

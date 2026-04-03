@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { ShowingSidebar } from "@/components/showings/ShowingSidebar";
 import { ShowingRequestForm } from "@/components/showings/ShowingRequestForm";
 import { MobileSidebarSheet } from "@/components/layout/MobileSidebarSheet";
@@ -10,7 +10,7 @@ export default async function ShowingsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
 
   const [{ data: showings }, { data: activeListings }] = await Promise.all([
     supabase

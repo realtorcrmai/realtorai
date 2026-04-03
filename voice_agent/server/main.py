@@ -78,13 +78,8 @@ class SessionState:
         if listing_context:
             self.messages.append({"role": "system", "content": f"Current listing context: {listing_context}"})
 
-        if PERSONALIZATION_ENABLED:
-            history = get_conversation_history(realtor_id=realtor_id, limit=10)
-            if history:
-                ctx = "Previous conversation context:\n"
-                for msg in history[-5:]:
-                    ctx += f"- {msg.get('role', 'user')}: {msg.get('content', '')[:100]}\n"
-                self.messages.append({"role": "system", "content": ctx})
+        # Personalization history loaded async in session create handler
+        self._needs_history = PERSONALIZATION_ENABLED
 
     @classmethod
     def from_persisted(cls, data: dict) -> "SessionState":
@@ -188,14 +183,23 @@ class SessionState:
         # Summarize old turns instead of brute-force truncation
         self._summarize_old_turns()
 
-        log_conversation(
-            session_id=self.session_id, mode=self.mode,
-            participant=self.participant_name or "unknown",
-            role=role, content=content, realtor_id=self.realtor_id,
-        )
-        if SESSION_PERSIST:
-            save_session(self.session_id, self.mode, self.realtor_id,
-                         self.messages, self.participant_name)
+        # Fire-and-forget async DB calls
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            loop.create_task(log_conversation(
+                session_id=self.session_id, mode=self.mode,
+                participant=self.participant_name or "unknown",
+                role=role, content=content, tenant_id=self.realtor_id,
+            ))
+            if SESSION_PERSIST:
+                loop.create_task(save_session(
+                    tenant_id=self.realtor_id, session_id=self.session_id,
+                    mode=self.mode, messages=self.messages,
+                    participant=self.participant_name,
+                ))
+        except Exception:
+            pass  # DB logging is best-effort
 
     def get_messages_with_focus(self) -> list:
         """Return messages with current date/time and focus context injected."""
@@ -323,17 +327,21 @@ class SessionState:
         # Update session focus from tool results
         self._update_focus_from_tool(tool_name, args, result)
 
-        log_conversation(
-            session_id=self.session_id, mode=self.mode,
-            participant=self.participant_name or "unknown",
-            role="tool", content=f"Called {tool_name}",
-            tool_name=tool_name, tool_args=args,
-            tool_result=json.loads(result) if result else None,
-            realtor_id=self.realtor_id,
-        )
-
-        if PERSONALIZATION_ENABLED:
-            track_preference(f"tool_usage_{tool_name}", {"last_args": args}, self.realtor_id)
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            loop.create_task(log_conversation(
+                session_id=self.session_id, mode=self.mode,
+                participant=self.participant_name or "unknown",
+                role="tool", content=f"Called {tool_name}",
+                tool_name=tool_name, tool_args=args,
+                tool_result=json.loads(result) if result else None,
+                tenant_id=self.realtor_id,
+            ))
+            if PERSONALIZATION_ENABLED:
+                loop.create_task(track_preference(self.realtor_id, f"tool_usage_{tool_name}", {"last_args": args}))
+        except Exception:
+            pass
 
         return result
 
@@ -499,17 +507,33 @@ async def handle_session_create(request):
                 "mode": session.mode, "resumed": True,
                 "message_count": len(session.messages),
             }, headers=_cors_headers())
-        persisted = load_session(resume_id)
-        if persisted:
-            session = SessionState.from_persisted(persisted)
-            _sessions[session.session_id] = session
-            return web.json_response({
-                "ok": True, "session_id": session.session_id,
-                "mode": session.mode, "resumed": True,
-                "message_count": len(session.messages),
-            }, headers=_cors_headers())
+        try:
+            persisted = await load_session(tenant_id=CURRENT_REALTOR_ID, session_id=resume_id)
+            if persisted:
+                session = SessionState.from_persisted(persisted)
+                _sessions[session.session_id] = session
+                return web.json_response({
+                    "ok": True, "session_id": session.session_id,
+                    "mode": session.mode, "resumed": True,
+                    "message_count": len(session.messages),
+                }, headers=_cors_headers())
+        except Exception:
+            pass  # Session not found in DB, create new
 
     session = SessionState(mode=mode, realtor_id=CURRENT_REALTOR_ID, listing_context=listing_context)
+
+    # Load conversation history async for personalization
+    if getattr(session, '_needs_history', False):
+        try:
+            history = await get_conversation_history(tenant_id=CURRENT_REALTOR_ID, limit=10)
+            if history:
+                ctx = "Previous conversation context:\n"
+                for msg in history[-5:]:
+                    ctx += f"- {msg.get('role', 'user')}: {msg.get('content', '')[:100]}\n"
+                session.messages.append({"role": "system", "content": ctx})
+        except Exception:
+            pass  # No history available
+
     _sessions[session.session_id] = session
     return web.json_response({
         "ok": True, "session_id": session.session_id, "mode": mode, "resumed": False,
@@ -551,7 +575,7 @@ async def handle_chat(request):
         _latency1 = int((_time.time() - _t0) * 1000)
         _usage = result.get("usage", {})
         log_cost(
-            session_id=sid, realtor_id=session.realtor_id,
+            session_id=sid, tenant_id=session.realtor_id,
             service="llm", provider=provider.name,
             model=getattr(provider, "model", None),
             input_tokens=_usage.get("input_tokens", len(message) // 4),
@@ -583,7 +607,7 @@ async def handle_chat(request):
             _latency2 = int((_time.time() - _t1) * 1000)
             _usage2 = result2.get("usage", {})
             log_cost(
-                session_id=sid, realtor_id=session.realtor_id,
+                session_id=sid, tenant_id=session.realtor_id,
                 service="llm", provider=provider.name,
                 model=getattr(provider, "model", None),
                 input_tokens=_usage2.get("input_tokens", 0),
@@ -703,7 +727,7 @@ async def handle_chat_stream(request):
                             "tool_use_id": tool_use_id,
                             "content": tool_result,
                         })
-                        await response.write(f"data: {json.dumps({'tool': tool_name, 'done': False})}\n\n".encode())
+                        await response.write(f"data: {json.dumps({'tool': tool_name, 'tool_result': tool_result, 'done': False})}\n\n".encode())
 
                     # Store tool results as proper Anthropic tool_result message
                     session.messages.append({
@@ -758,7 +782,7 @@ async def handle_chat_stream(request):
         if _tools_used:
             _meta["tools"] = _tools_used
         log_cost(
-            session_id=sid, realtor_id=session.realtor_id,
+            session_id=sid, tenant_id=session.realtor_id,
             service="llm", provider=provider.name,
             model=getattr(provider, "model", None),
             input_tokens=_total_input_tokens or (len(message) // 4),
@@ -1066,7 +1090,7 @@ async def handle_quick(request):
 
         _latency = int((_time.time() - _t0) * 1000)
         log_cost(
-            session_id=siri_sid, realtor_id=session.realtor_id,
+            session_id=siri_sid, tenant_id=session.realtor_id,
             service="llm", provider=provider.name,
             model=getattr(provider, "model", None),
             input_tokens=_total_input, output_tokens=_total_output,
@@ -1180,8 +1204,8 @@ def create_app():
 
 
 def main():
-    init_db()
-    cleanup_expired_sessions()
+    # init_db and cleanup are async/tenant-scoped — skip at startup
+    # They run per-request instead
     port = int(os.getenv("VOICE_AGENT_PORT", "8768"))
 
     provider = get_active_provider()
