@@ -1,1 +1,9 @@
-{"type":"DEPLOY:local","tier":"trivial","summary":"Merge PR #90 to dev","phases":{"classified":true,"compliance_logged":true}}
+{
+  "type": "TESTING",
+  "tier": "L1",
+  "title": "Fix test infrastructure, documentation, and browser testing",
+  "phases": {
+    "classified": true,
+    "started": true
+  }
+}
