@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { TaskSidebar } from "@/components/tasks/TaskSidebar";
 import { MobileSidebarSheet } from "@/components/layout/MobileSidebarSheet";
 
@@ -9,7 +9,7 @@ export default async function TasksLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
 
   const { data: tasks } = await supabase
     .from("tasks")

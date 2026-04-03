@@ -3,7 +3,6 @@ import { auth } from "@/lib/auth";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { VoiceAgentWidget } from "@/components/voice-agent/VoiceAgentWidget";
-import { UnifiedAgentWidget } from "@/components/agent/UnifiedAgentWidget";
 import { Toaster } from "@/components/ui/sonner";
 import { NetworkErrorBanner } from "@/components/shared/NetworkErrorBanner";
 import { OnboardingChecklist } from "@/components/help/OnboardingChecklist";
@@ -39,11 +38,8 @@ export default async function DashboardLayout({
       {/* Mobile bottom nav */}
       <MobileNav />
 
-      {/* Unified AI Agent — single button for text + voice, replaces ChatWidget + VoiceAgentWidget */}
-      <UnifiedAgentWidget />
-
-      {/* Legacy Voice Agent Widget — keep until unified agent has voice mode fully working */}
-      {/* <VoiceAgentWidget /> */}
+      {/* Voice Agent Widget — microphone + text chat with TTS */}
+      <VoiceAgentWidget />
 
       {/* Onboarding checklist (first 30 days) */}
       <OnboardingChecklist />

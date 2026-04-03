@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Building2, CheckCircle2, Circle, ArrowRight, GitBranch } from "lucide-react";
@@ -27,7 +27,7 @@ const PHASE_COLORS: Record<number, string> = {
 };
 
 export default async function WorkflowPage() {
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
   const { data: listings } = await supabase
     .from("listings")
     .select("id, address, status, mls_number, list_price, created_at")

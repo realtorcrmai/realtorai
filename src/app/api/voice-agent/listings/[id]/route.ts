@@ -22,6 +22,7 @@ export async function GET(
     .from("listings")
     .select("*, contacts!listings_seller_id_fkey(name, phone, email)")
     .eq("id", id)
+    .is("deleted_at", null)
     .single();
 
   if (error) {
@@ -114,4 +115,36 @@ export async function PATCH(
   }
 
   return NextResponse.json({ ok: true, listing: data });
+}
+
+/**
+ * DELETE /api/voice-agent/listings/[id]
+ * Soft-delete a listing — sets deleted_at timestamp.
+ */
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireVoiceAgentAuth(req);
+  if (!auth.authorized) return auth.error;
+
+  const { id } = await params;
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from("listings")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("deleted_at", null)
+    .select("id, address")
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      return NextResponse.json({ error: "Listing not found or already deleted" }, { status: 404 });
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true, deleted: data.id, address: data.address, soft: true });
 }

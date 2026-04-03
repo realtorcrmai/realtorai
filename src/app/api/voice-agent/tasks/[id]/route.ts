@@ -72,7 +72,7 @@ export async function PATCH(
 
 /**
  * DELETE /api/voice-agent/tasks/[id]
- * Delete a task.
+ * Soft-delete a task — sets deleted_at timestamp.
  */
 export async function DELETE(
   req: NextRequest,
@@ -88,11 +88,20 @@ export async function DELETE(
 
   const supabase = createAdminClient();
 
-  const { error } = await supabase.from("tasks").delete().eq("id", id);
+  const { data, error } = await supabase
+    .from("tasks")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("deleted_at", null)
+    .select("id, title")
+    .single();
 
   if (error) {
+    if (error.code === "PGRST116") {
+      return NextResponse.json({ error: "Task not found or already deleted" }, { status: 404 });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return new NextResponse(null, { status: 204 });
+  return NextResponse.json({ ok: true, deleted: data.id, title: data.title, soft: true });
 }

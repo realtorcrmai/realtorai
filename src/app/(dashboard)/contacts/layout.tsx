@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { ContactSidebar } from "@/components/contacts/ContactSidebar";
 import { ContactForm } from "@/components/contacts/ContactForm";
 import { MobileSidebarSheet } from "@/components/layout/MobileSidebarSheet";
@@ -11,7 +11,7 @@ export default async function ContactsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
 
   // Fetch contacts + activity counts for sorting by "most active"
   const [{ data: contacts }, { data: commCounts }, { data: taskCounts }, { data: enrollCounts }] = await Promise.all([

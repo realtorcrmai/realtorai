@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { Building2, ArrowLeft } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default async function ListingsPage() {
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
 
   const { data: latest } = await supabase
     .from("listings")

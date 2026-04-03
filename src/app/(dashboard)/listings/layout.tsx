@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { ListingSidebar } from "@/components/listings/ListingSidebar";
 import { ListingForm } from "@/components/listings/ListingForm";
 import { DDFImportModal } from "@/components/listings/DDFImportModal";
@@ -11,7 +11,7 @@ export default async function ListingsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
 
   const [{ data: listings }, { data: sellers }] = await Promise.all([
     supabase

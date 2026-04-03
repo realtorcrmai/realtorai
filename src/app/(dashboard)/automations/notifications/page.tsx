@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { NotificationList } from "@/components/automations/NotificationList";
 export const dynamic = "force-dynamic";
 
 export default async function NotificationsPage() {
-  const supabase = createAdminClient();
+  const supabase = await getAuthenticatedTenantClient();
 
   // Fetch all notifications
   const { data: notifications } = await supabase

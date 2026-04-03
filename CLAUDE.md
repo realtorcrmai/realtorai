@@ -216,8 +216,9 @@ The UI uses a custom glassmorphism design language. All custom styles are define
 ### Core Tables
 | Table | Purpose | Key Fields |
 |-------|---------|------------|
-| `contacts` | Buyers and sellers | name, phone, email, type, pref_channel, notes |
-| `listings` | Property listings | address, seller_id, status, current_phase (1-8), list_price, forms_status, envelopes, mls_status |
+| `contacts` | Buyers and sellers | name, phone, email, type, pref_channel, notes, casl_consent_given, casl_consent_date |
+| `listings` | Property listings | address, seller_id, status (active/conditional/pending/sold/expired/withdrawn), list_price, property_type, mls_number |
+| `users` | Authenticated users | email, name, role, plan (free/professional/studio/team/admin), enabled_features, is_active |
 | `appointments` | Showings | listing_id, buyer_agent_*, start_time, status, google_event_id |
 | `communications` | Unified message log | contact_id, direction, channel, body, related_id |
 | `listing_documents` | Document tracking | listing_id, doc_type, file_name, file_url |
@@ -240,7 +241,7 @@ Realtors360 is **multi-tenant**. Every data table has a `realtor_id` column scop
 
 ## 8-Phase Listing Workflow
 
-The CRM implements an 8-phase listing workflow (stored as `current_phase` on listings):
+The CRM implements an 8-phase listing workflow (designed but not yet fully migrated to DB — `current_phase` column does not exist on `listings` table yet):
 
 | Phase | Name | Key Features |
 |-------|------|-------------|

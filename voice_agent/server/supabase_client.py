@@ -3,6 +3,8 @@ Async Supabase REST client for the Voice Agent Python server.
 Replaces SQLite with direct Supabase queries via httpx.
 All queries include tenant_id for multi-tenant isolation.
 """
+from __future__ import annotations
+
 
 import os
 import httpx
