@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ALL_FEATURES, CURRENT_RELEASE_FEATURES } from "@/lib/features";
+import { ALL_FEATURES, getUserFeatures } from "@/lib/features";
 import {
   getClientIp,
   recordFailedAttempt,
@@ -115,7 +115,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (token.email && needsUserFetch && usersTableExists !== false) {
           const { data: existingUser, error: fetchError } = await supabase
             .from("users")
-            .select("id, role, enabled_features, is_active")
+            .select("id, role, plan, enabled_features, is_active")
             .eq("email", token.email)
             .single();
 
@@ -125,7 +125,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (tableMissing) {
             usersTableExists = false;
             token.role = token.role ?? "realtor";
-            token.enabledFeatures = token.enabledFeatures ?? CURRENT_RELEASE_FEATURES;
+            token.plan = "free";
+            token.enabledFeatures = getUserFeatures("free");
           } else {
             usersTableExists = true;
             if (fetchError && fetchError.code !== "PGRST116") {
@@ -134,18 +135,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
             if (existingUser) {
               token.role = existingUser.role;
-              token.enabledFeatures = existingUser.enabled_features;
+              token.plan = existingUser.plan || "free";
               token.userId = existingUser.id;
+              // Resolve features: plan + release gate + optional overrides
+              token.enabledFeatures = getUserFeatures(
+                existingUser.plan || "free",
+                existingUser.enabled_features
+              );
             } else if (trigger === "signIn" || account) {
               const isAdmin = ADMIN_EMAIL && token.email === ADMIN_EMAIL;
+              const defaultPlan = isAdmin ? "admin" : "free";
               const { data: newUser, error: insertError } = await supabase
                 .from("users")
                 .insert({
                   email: token.email,
                   name: token.name as string | undefined,
                   role: isAdmin ? "admin" : "realtor",
+                  plan: defaultPlan,
                 })
-                .select("id, role, enabled_features")
+                .select("id, role, plan, enabled_features")
                 .single();
 
               if (insertError) {
@@ -153,14 +161,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               }
 
               token.role = newUser?.role ?? "realtor";
-              token.enabledFeatures = newUser?.enabled_features ?? CURRENT_RELEASE_FEATURES;
+              token.plan = newUser?.plan ?? defaultPlan;
               token.userId = newUser?.id;
+              token.enabledFeatures = getUserFeatures(
+                newUser?.plan ?? defaultPlan,
+                newUser?.enabled_features
+              );
             }
           }
         } else if (token.email && !token.role) {
-          // Users table known to be missing — use defaults
           token.role = "realtor";
-          token.enabledFeatures = ALL_FEATURES;
+          token.plan = "free";
+          token.enabledFeatures = getUserFeatures("free");
         }
       } catch (err) {
         console.error("[auth] JWT callback error:", err);

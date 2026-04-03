@@ -51,11 +51,10 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  if (isOnLogin && isLoggedIn) {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-  if (!isOnLogin && !isLoggedIn) {
-    return NextResponse.redirect(new URL("/login", req.url));
+  // Auth redirects handled by dashboard layout (server-side) for Netlify compatibility
+  // Middleware only handles API auth and admin route protection
+  if (isOnLogin) {
+    return NextResponse.next();
   }
   return NextResponse.next();
 });

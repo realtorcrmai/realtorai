@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { VoiceAgentWidget } from "@/components/voice-agent/VoiceAgentWidget";
@@ -7,11 +9,16 @@ import { NetworkErrorBanner } from "@/components/shared/NetworkErrorBanner";
 import { OnboardingChecklist } from "@/components/help/OnboardingChecklist";
 import { CommandPalette } from "@/components/help/CommandPalette";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Server-side auth guard — works on any hosting (Netlify, Vercel, etc.)
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/login");
+  }
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Offline/online connectivity banner */}
