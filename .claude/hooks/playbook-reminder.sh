@@ -35,6 +35,22 @@ else
     echo "[L1] New task? → Read twice → Decompose → Map dependencies → REORDER → Task list → Then classify"
 fi
 
+# Branch awareness — detect if on main/dev/feature/hotfix and remind about correct workflow
+if [[ -n "$PROJECT_DIR" ]]; then
+    BRANCH=$(git -C "$PROJECT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+    case "$BRANCH" in
+        main)
+            echo "[Branch] On main — changes here must use hotfix/* branch. Ask: is this a production fix or a dev change?"
+            ;;
+        dev)
+            echo "[Branch] On dev — create a feature branch before making changes (never commit directly to dev)"
+            ;;
+        hotfix/*)
+            echo "[Branch] Hotfix branch — PR to main, then sync main → dev after merge"
+            ;;
+    esac
+fi
+
 # Surface recent lessons (last 5) if lessons file exists
 LESSONS_FILE=""
 if [[ -n "$PROJECT_DIR" ]]; then
