@@ -234,9 +234,9 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
               />
             </label>
             <a
-              href="/contacts/import"
+              href="/contacts/sync"
               className="p-1.5 rounded-md text-muted-foreground hover:bg-muted transition-colors"
-              title="Bulk import with preview"
+              title="Sync contacts from Google, FUB, CSV"
             >
               <Upload className="h-3.5 w-3.5" />
             </a>
