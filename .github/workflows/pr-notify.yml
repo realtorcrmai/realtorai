@@ -1,0 +1,48 @@
+name: PR Review Notification
+
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+
+jobs:
+  request-reviews:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Request reviews from all developers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+          REPO="${{ github.repository }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+
+          # Get all collaborators with push access
+          COLLABORATORS=$(gh api "repos/$REPO/collaborators" --jq '.[].login')
+
+          # Build reviewer list excluding the PR author
+          REVIEWERS=""
+          for user in $COLLABORATORS; do
+            if [ "$user" != "$PR_AUTHOR" ]; then
+              if [ -z "$REVIEWERS" ]; then
+                REVIEWERS="\"$user\""
+              else
+                REVIEWERS="$REVIEWERS,\"$user\""
+              fi
+            fi
+          done
+
+          if [ -n "$REVIEWERS" ]; then
+            echo "Requesting reviews from: $REVIEWERS"
+            gh api "repos/$REPO/pulls/$PR_NUMBER/requested_reviewers" \
+              -X POST \
+              --input - <<EOF
+          {
+            "reviewers": [$REVIEWERS]
+          }
+          EOF
+            echo "Review requests sent — GitHub will email all reviewers"
+          else
+            echo "No other collaborators to request reviews from"
+          fi
