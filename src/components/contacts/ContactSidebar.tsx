@@ -184,7 +184,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
   }, [filtered, sortMode]);
 
   return (
-    <aside className="flex flex-col flex-1 min-h-0 overflow-hidden">
+    <aside className="flex-1 overflow-y-auto">
       {/* Header */}
       <div className="p-4 border-b space-y-2.5">
         <div className="flex items-center justify-between">
@@ -264,7 +264,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
           </div>
         </div>
         {importResult && (
-          <div className="text-xs text-emerald-600 bg-emerald-50 rounded px-2 py-1 flex items-center justify-between">
+          <div className="text-sm text-emerald-600 bg-emerald-50 rounded px-2 py-1 flex items-center justify-between">
             <span>{importResult}</span>
             <button onClick={() => setImportResult(null)} className="text-emerald-400 hover:text-emerald-600"><X className="h-3 w-3" /></button>
           </div>
@@ -316,7 +316,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                   key={f.value}
                   onClick={() => setTypeFilter(f.value)}
                   className={`
-                    px-2 py-0.5 rounded-full text-[10px] font-medium transition-all
+                    px-2 py-0.5 rounded-full text-sm font-medium transition-all
                     ${
                       typeFilter === f.value
                         ? `${f.color} ring-1 ring-current shadow-sm`
@@ -338,7 +338,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                     key={f.value}
                     onClick={() => setStageFilter(f.value)}
                     className={`
-                      flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all
+                      flex items-center gap-1 px-2 py-0.5 rounded-full text-sm font-medium transition-all
                       ${
                         stageFilter === f.value
                           ? "bg-white ring-1 ring-gray-300 shadow-sm text-foreground"
@@ -363,7 +363,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                   setTypeFilter("all");
                   setStageFilter("all");
                 }}
-                className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
               >
                 <X className="w-3 h-3" /> Clear filters
               </button>
@@ -373,7 +373,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
       </div>
 
       {/* Contact items */}
-      <div className="flex-1 overflow-y-auto">
+      <div>
         {sorted.length === 0 ? (
           <div className="p-4 text-center">
             <p className="text-sm text-muted-foreground">
@@ -428,7 +428,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                         >
                           {contact.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-sm text-muted-foreground">
                           {contact.phone}
                         </p>
                         {/* Mini stage dots */}
@@ -441,7 +441,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                       {/* Type badge */}
                       <Badge
                         variant="secondary"
-                        className={`${CONTACT_TYPE_COLORS[contact.type as ContactType] ?? ""} text-[11px] px-1.5 py-0 shrink-0 capitalize`}
+                        className={`${CONTACT_TYPE_COLORS[contact.type as ContactType] ?? ""} text-sm px-1.5 py-0 shrink-0 capitalize`}
                       >
                         {contact.type}
                       </Badge>
@@ -454,12 +454,10 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
         )}
       </div>
 
-      {/* Pipeline Summary — always visible */}
-      <div className="border-t px-4 py-3 shrink-0">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-          Pipeline
-        </h3>
-        <div className="space-y-1">
+      {/* Pipeline Summary — matches right panel design */}
+      <div className="border-t border-l-4 border-l-indigo-400 px-4 py-3 bg-gradient-to-r from-indigo-50/30 to-transparent dark:from-indigo-950/10">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Pipeline</h3>
+        <div className="space-y-0.5">
           {STAGE_FILTERS.filter(s => s.value !== "all").map((stage) => {
             const count = stageCounts[stage.value] ?? 0;
             const total = contacts.length || 1;
@@ -472,20 +470,19 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                   setShowFilters(true);
                 }}
                 className={cn(
-                  "flex items-center gap-2 w-full px-2 py-1 rounded-md text-xs transition-colors",
+                  "flex items-center gap-2 w-full px-2.5 py-1.5 rounded-lg text-sm transition-all",
                   stageFilter === stage.value
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "hover:bg-muted/50 text-muted-foreground"
+                    ? "bg-primary/10 text-primary font-medium shadow-sm ring-1 ring-primary/10"
+                    : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
                 )}
               >
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${stage.dot}`} />
+                <span className={`w-2 h-2 rounded-full shrink-0 ${stage.dot}`} />
                 <span className="flex-1 text-left">{stage.label}</span>
-                <span className="tabular-nums">{count}</span>
-                {/* Mini bar */}
-                <div className="w-12 h-1 rounded-full bg-muted/50 overflow-hidden">
+                <span className="tabular-nums font-medium">{count}</span>
+                <div className="w-14 h-1.5 rounded-full bg-muted/30 overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${stage.dot} transition-all`}
-                    style={{ width: `${pct}%` }}
+                    className={`h-full rounded-full ${stage.dot} transition-all duration-500`}
+                    style={{ width: `${Math.max(pct, count > 0 ? 8 : 0)}%` }}
                   />
                 </div>
               </button>
@@ -494,7 +491,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
         </div>
       </div>
 
-      {/* Getting Started Checklist — shows only when < 10 contacts */}
+      {/* Getting Started Checklist — matches right panel tip card design */}
       {contacts.length < 10 && (
         <GettingStartedChecklist contacts={contacts} />
       )}
@@ -505,14 +502,8 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
 // ── Getting Started Checklist ──────────────────────────────
 function GettingStartedChecklist({ contacts }: { contacts: Contact[] }) {
   const checks = [
-    {
-      label: "Add your first contact",
-      done: contacts.length >= 1,
-    },
-    {
-      label: "Add 5 contacts",
-      done: contacts.length >= 5,
-    },
+    { label: "Add your first contact", done: contacts.length >= 1 },
+    { label: "Add 5 contacts", done: contacts.length >= 5 },
     {
       label: "Set buyer/seller preferences",
       done: contacts.some((c) => {
@@ -520,14 +511,8 @@ function GettingStartedChecklist({ contacts }: { contacts: Contact[] }) {
         return rec.buyer_preferences || rec.seller_preferences;
       }),
     },
-    {
-      label: "Import contacts (CSV/Google)",
-      done: contacts.length >= 10,
-    },
-    {
-      label: "Add a relationship",
-      done: false, // Can't check without extra query — stays unchecked
-    },
+    { label: "Import contacts (CSV/Google)", done: contacts.length >= 10 },
+    { label: "Add a relationship", done: false },
   ];
 
   const completed = checks.filter((c) => c.done).length;
@@ -535,37 +520,36 @@ function GettingStartedChecklist({ contacts }: { contacts: Contact[] }) {
   const pct = Math.round((completed / total) * 100);
 
   return (
-    <div className="border-t px-4 py-3 shrink-0">
-      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-        Getting Started
-      </h3>
-      <div className="space-y-1.5 mb-3">
+    <div className="border-t border-l-4 border-l-emerald-400 px-4 py-3 bg-gradient-to-r from-emerald-50/20 to-transparent dark:from-emerald-950/10">
+      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Getting Started</h3>
+      <div className="space-y-1 mb-3">
         {checks.map((check, i) => (
           <div
             key={i}
             className={cn(
-              "flex items-center gap-2 text-xs",
-              check.done ? "text-muted-foreground line-through" : "text-foreground"
+              "flex items-center gap-2.5 text-sm py-0.5 transition-all",
+              check.done ? "text-muted-foreground" : "text-foreground"
             )}
           >
             {check.done ? (
-              <Check className="h-3.5 w-3.5 text-green-500 shrink-0" />
+              <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                <Check className="h-2.5 w-2.5 text-white" />
+              </div>
             ) : (
-              <Circle className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+              <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/20 shrink-0" />
             )}
-            <span>{check.label}</span>
+            <span className={check.done ? "line-through opacity-60" : ""}>{check.label}</span>
           </div>
         ))}
       </div>
-      {/* Progress bar */}
       <div className="flex items-center gap-2">
-        <div className="flex-1 h-1.5 rounded-full bg-muted/50 overflow-hidden">
+        <div className="flex-1 h-2 rounded-full bg-emerald-100/50 dark:bg-emerald-900/20 overflow-hidden">
           <div
-            className="h-full rounded-full bg-green-500 transition-all"
+            className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
             style={{ width: `${pct}%` }}
           />
         </div>
-        <span className="text-[11px] text-muted-foreground tabular-nums">
+        <span className="text-sm text-muted-foreground tabular-nums font-medium">
           {completed}/{total}
         </span>
       </div>

@@ -310,39 +310,44 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             const emptyActions: React.ReactNode[] = [];
             if (!prefsHasData) {
               emptyActions.push(
-                <QuickSetupAction key="prefs" icon="🎯" label="Set Preferences"
+                <QuickSetupTile key="prefs" icon="🎯" label="Set Preferences"
                   description={isSeller ? "Motivation, pricing, timeline" : "Budget, areas, property type"}
+                  color="indigo"
                   onClick={() => { const btn = document.querySelector('[data-pref-edit]') as HTMLButtonElement; if (btn) btn.click(); }}
                 />
               );
             }
             if (!contextHasData) {
               emptyActions.push(
-                <QuickSetupAction key="context" icon="📝" label="Add Context"
+                <QuickSetupTile key="context" icon="📝" label="Add Context"
                   description="Notes, objections, preferences"
+                  color="teal"
                   onClick={() => { const el = document.getElementById("context-add-btn"); if (el) el.click(); }}
                 />
               );
             }
             if (!isSeller && !propertiesHasData) {
               emptyActions.push(
-                <QuickSetupAction key="properties" icon="🏠" label="Add Property"
+                <QuickSetupTile key="properties" icon="🏠" label="Add Property"
                   description="Track properties of interest"
+                  color="sky"
                   onClick={() => {}}
                 />
               );
             }
             if (!docsHasData) {
               emptyActions.push(
-                <QuickSetupAction key="docs" icon="📄" label="Upload Doc"
+                <QuickSetupTile key="docs" icon="📄" label="Upload Doc"
                   description="Contracts, ID, pre-approval"
+                  color="amber"
                   onClick={() => { const el = document.getElementById("doc-upload-btn"); if (el) el.click(); }}
                 />
               );
             }
             emptyActions.push(
-              <QuickSetupAction key="tasks" icon="✅" label="Add Task"
+              <QuickSetupTile key="tasks" icon="✅" label="Add Task"
                 description="Follow-ups and reminders"
+                color="emerald"
                 onClick={() => setCurrentTab("activity")}
               />
             );
@@ -352,19 +357,18 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
                 {/* Panels with data — float to top */}
                 {filledPanels}
 
-                {/* Quick Setup — fills remaining space */}
+                {/* Quick Setup — animated tiles */}
                 {emptyActions.length > 1 && (
-                  <Card className="border border-dashed border-muted-foreground/20 bg-muted/5">
-                    <CardContent className="p-5">
-                      <h3 className="text-sm font-semibold mb-3">Quick Setup</h3>
-                      <p className="text-xs text-muted-foreground mb-4">
-                        Complete these steps to build a full contact profile.
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {emptyActions}
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1 h-5 rounded-full bg-gradient-to-b from-indigo-400 to-teal-400" />
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Quick Setup</h3>
+                      <span className="text-sm text-muted-foreground ml-auto">{emptyActions.length - 1} remaining</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {emptyActions}
+                    </div>
+                  </div>
                 )}
               </>
             );
@@ -483,31 +487,98 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
 
 export { ContactDetailTabsInner as ContactDetailTabs };
 
-// ── Quick Setup Action Button ──────────────────────────────
-function QuickSetupAction({
+// ── Quick Setup Tile — Animated gradient tile with colored top border ──
+const TILE_COLORS: Record<string, {
+  border: string;
+  bg: string;
+  iconBg: string;
+  hoverBorder: string;
+  shimmer: string;
+}> = {
+  indigo: {
+    border: "border-t-indigo-400",
+    bg: "from-indigo-50/40 to-white dark:from-indigo-950/20 dark:to-background",
+    iconBg: "from-indigo-100 to-indigo-50 dark:from-indigo-900/40 dark:to-indigo-800/20",
+    hoverBorder: "hover:border-indigo-300 dark:hover:border-indigo-700",
+    shimmer: "from-indigo-200/0 via-indigo-200/30 to-indigo-200/0",
+  },
+  teal: {
+    border: "border-t-teal-400",
+    bg: "from-teal-50/40 to-white dark:from-teal-950/20 dark:to-background",
+    iconBg: "from-teal-100 to-teal-50 dark:from-teal-900/40 dark:to-teal-800/20",
+    hoverBorder: "hover:border-teal-300 dark:hover:border-teal-700",
+    shimmer: "from-teal-200/0 via-teal-200/30 to-teal-200/0",
+  },
+  sky: {
+    border: "border-t-sky-400",
+    bg: "from-sky-50/40 to-white dark:from-sky-950/20 dark:to-background",
+    iconBg: "from-sky-100 to-sky-50 dark:from-sky-900/40 dark:to-sky-800/20",
+    hoverBorder: "hover:border-sky-300 dark:hover:border-sky-700",
+    shimmer: "from-sky-200/0 via-sky-200/30 to-sky-200/0",
+  },
+  amber: {
+    border: "border-t-amber-400",
+    bg: "from-amber-50/40 to-white dark:from-amber-950/20 dark:to-background",
+    iconBg: "from-amber-100 to-amber-50 dark:from-amber-900/40 dark:to-amber-800/20",
+    hoverBorder: "hover:border-amber-300 dark:hover:border-amber-700",
+    shimmer: "from-amber-200/0 via-amber-200/30 to-amber-200/0",
+  },
+  emerald: {
+    border: "border-t-emerald-400",
+    bg: "from-emerald-50/40 to-white dark:from-emerald-950/20 dark:to-background",
+    iconBg: "from-emerald-100 to-emerald-50 dark:from-emerald-900/40 dark:to-emerald-800/20",
+    hoverBorder: "hover:border-emerald-300 dark:hover:border-emerald-700",
+    shimmer: "from-emerald-200/0 via-emerald-200/30 to-emerald-200/0",
+  },
+};
+
+function QuickSetupTile({
   icon,
   label,
   description,
+  color = "indigo",
   onClick,
 }: {
   icon: string;
   label: string;
   description: string;
+  color?: string;
   onClick: () => void;
 }) {
+  const c = TILE_COLORS[color] || TILE_COLORS.indigo;
+
   return (
     <button
       onClick={onClick}
-      className="flex items-start gap-2.5 p-3 rounded-xl border border-border/40 hover:bg-muted/30 hover:border-border transition-all text-left group"
+      className={`
+        relative overflow-hidden rounded-xl border-t-[3px] ${c.border} border border-border/20
+        bg-gradient-to-b ${c.bg}
+        p-4 text-left group
+        hover:shadow-lg ${c.hoverBorder} hover:-translate-y-0.5
+        transition-all duration-200
+      `}
     >
-      <span className="text-lg shrink-0 mt-0.5">{icon}</span>
-      <div>
-        <p className="text-xs font-medium group-hover:text-primary transition-colors">
-          {label}
-        </p>
-        <p className="text-xs text-muted-foreground leading-tight mt-0.5">
-          {description}
-        </p>
+      {/* Shimmer animation on hover */}
+      <div className={`absolute inset-0 bg-gradient-to-r ${c.shimmer} -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out`} />
+
+      {/* Content */}
+      <div className="relative flex items-start gap-3">
+        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${c.iconBg} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-200 shadow-sm`}>
+          <span className="text-lg">{icon}</span>
+        </div>
+        <div className="pt-0.5">
+          <p className="text-sm font-semibold group-hover:text-foreground transition-colors">
+            {label}
+          </p>
+          <p className="text-sm text-muted-foreground leading-snug mt-0.5">
+            {description}
+          </p>
+        </div>
+      </div>
+
+      {/* Bottom progress bar — empty (0%) */}
+      <div className="relative mt-3 h-1 rounded-full bg-border/20 overflow-hidden">
+        <div className={`h-full rounded-full bg-gradient-to-r ${c.shimmer.replace('/0', '/60').replace('/30', '/80')} w-0 group-hover:w-[15%] transition-all duration-500`} />
       </div>
     </button>
   );

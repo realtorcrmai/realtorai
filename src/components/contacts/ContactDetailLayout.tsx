@@ -1,12 +1,9 @@
 "use client";
 
 /**
- * ContactDetailLayout — Pure CSS flex layout.
- *
- * Outer: height = viewport - 64px (app header)
- * Center: flex-col → header (shrink-0) + tab area (flex-1, scrolls if overflows)
- * Right panel: passed through, controls own overflow.
- * Text: 14px base (text-sm) for consistency.
+ * ContactDetailLayout — Each panel scrolls as ONE unit.
+ * No independent section scrolling within a panel.
+ * All content flows naturally, panel scrolls if it overflows viewport.
  */
 export function ContactDetailLayout({
   header,
@@ -19,20 +16,15 @@ export function ContactDetailLayout({
 }) {
   return (
     <div className="flex text-sm h-full">
-      {/* CENTER */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-[#f8f7fd] dark:bg-background">
-        {/* Header — pinned, shrinks to content */}
-        <div className="shrink-0 p-3 md:p-4 space-y-2">
+      {/* CENTER — single scrollable unit */}
+      <div className="flex-1 overflow-y-auto bg-[#f8f7fd] dark:bg-background">
+        <div className="p-3 md:p-4 space-y-2">
           {header}
-        </div>
-
-        {/* Tab content — fills remaining, scrolls only if content overflows */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-3 md:px-4 pb-3">
           {tabs}
         </div>
       </div>
 
-      {/* RIGHT PANEL */}
+      {/* RIGHT PANEL — passed through, scrolls as one unit */}
       {rightPanel}
     </div>
   );
