@@ -55,9 +55,9 @@ export default async function ContactsLayout({
   });
 
   return (
-    <div className="flex h-full">
+    <div className="flex -mb-24" style={{ height: "calc(100vh - 64px)" }}>
       {/* Left sidebar — desktop only */}
-      <div className="hidden md:flex flex-col h-full w-[280px] shrink-0 border-r bg-card/50">
+      <div className="hidden md:flex flex-col w-[280px] shrink-0 border-r bg-card/50">
         <div className="p-3 border-b bg-card/50 shrink-0">
           <ContactForm />
         </div>

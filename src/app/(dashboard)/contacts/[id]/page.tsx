@@ -21,6 +21,7 @@ import { IntelligencePanel } from "@/components/contacts/IntelligencePanel";
 import { ContextLog } from "@/components/contacts/ContextLog";
 import { WebsiteActivityLoader } from "@/components/contacts/WebsiteActivityLoader";
 import { DeleteContactButton } from "@/components/contacts/DeleteContactButton";
+import { ContactDetailLayout } from "@/components/contacts/ContactDetailLayout";
 import { Button } from "@/components/ui/button";
 import type { Contact, Communication, Listing, ContactDate, ContactDocument, BuyerPreferences, SellerPreferences, Demographics } from "@/types";
 import {
@@ -540,15 +541,13 @@ export default async function ContactDetailPage({
   const filledDemoFields = demographics ? Object.values(demographics).filter(v => v !== undefined && v !== null && v !== "" && !(Array.isArray(v) && v.length === 0)).length : 0;
   const dataScore = Math.round(((filledDemoFields / totalDemoFields) * 50) + (relationships.length > 0 ? 25 : 0) + ((contactDates?.length ?? 0) > 0 ? 25 : 0));
 
-  return (
-    <div className="flex h-full">
-      {/* CENTER -- scrollable */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-[#f8f7fd] dark:bg-background">
-        <div className="space-y-4">
-          {/* B3 Floating Card Header */}
-          <div id="section-contact-info" className="animate-float-in relative z-20">
+  // Build header JSX (measured by useAutoLayout in ContactDetailLayout)
+  const headerJsx = (
+    <>
+      {/* Contact Card Header */}
+      <div id="section-contact-info" className="animate-float-in relative z-20">
             <Card className="shadow-md border border-violet-200/60 dark:border-violet-900/30 overflow-visible bg-gradient-to-r from-violet-50/50 via-indigo-50/40 to-teal-50/30 dark:from-violet-950/20 dark:via-indigo-950/20 dark:to-teal-950/10">
-              <CardContent className="p-5">
+              <CardContent className="p-4">
                 {/* Row 1: Avatar + Name + Badges + Actions */}
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-rose-500 flex items-center justify-center text-white font-bold text-lg shrink-0">
@@ -557,7 +556,7 @@ export default async function ContactDetailPage({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h1 className="text-xl font-bold tracking-tight">{contact.name}</h1>
-                      <Badge variant="secondary" className={`text-xs ${LEAD_STATUS_COLORS[leadStatus] ?? ""}`}>
+                      <Badge variant="secondary" className={`text-sm ${LEAD_STATUS_COLORS[leadStatus] ?? ""}`}>
                         {LEAD_STATUS_LABELS[leadStatus] ?? leadStatus}
                       </Badge>
                       <Badge variant="secondary" className={CONTACT_TYPE_COLORS[contact.type as ContactType]}>
@@ -582,7 +581,7 @@ export default async function ContactDetailPage({
                 </div>
 
                 {/* Row 2: Pipeline bar or Convert button */}
-                <div className="mt-4 pt-3 border-t border-indigo-50 dark:border-indigo-900/20">
+                <div className="mt-3 pt-2 border-t border-indigo-50 dark:border-indigo-900/20">
                   {contact.type === "customer" ? (
                     <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                       <span className="text-sm text-green-800 font-medium flex-1">This is an unqualified lead. Convert when ready:</span>
@@ -591,14 +590,14 @@ export default async function ContactDetailPage({
                         const { convertContactType } = await import("@/actions/contacts");
                         await convertContactType(id, "buyer");
                       }}>
-                        <button type="submit" className="text-xs px-3 py-1.5 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700">Convert to Buyer</button>
+                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700">Convert to Buyer</button>
                       </form>
                       <form action={async () => {
                         "use server";
                         const { convertContactType } = await import("@/actions/contacts");
                         await convertContactType(id, "seller");
                       }}>
-                        <button type="submit" className="text-xs px-3 py-1.5 rounded-md bg-purple-600 text-white font-medium hover:bg-purple-700">Convert to Seller</button>
+                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-purple-600 text-white font-medium hover:bg-purple-700">Convert to Seller</button>
                       </form>
                     </div>
                   ) : (
@@ -611,7 +610,7 @@ export default async function ContactDetailPage({
                   )}
                 </div>
                 {contact.notes && (
-                  <p className="text-xs text-muted-foreground mt-2">{contact.notes}</p>
+                  <p className="text-sm text-muted-foreground mt-2">{contact.notes}</p>
                 )}
               </CardContent>
             </Card>
@@ -644,7 +643,7 @@ export default async function ContactDetailPage({
           </MobileDetailSheet>
 
           {/* Quick Action Bar — colored icon buttons */}
-          <div className="flex items-center gap-2 px-1">
+          <div className="flex items-center gap-2">
             <QuickActionBar
               contactId={id}
               contactPhone={contact.phone}
@@ -656,28 +655,24 @@ export default async function ContactDetailPage({
             />
           </div>
 
-          {/* Journey Progress Bar (Prospect 360) */}
-          {contactJourney && (
-            <JourneyProgressBar
-              contactType={contact.type}
-              currentPhase={contactJourney.current_phase}
-              engagementScore={(intel?.engagement_score as number) || 0}
-              phaseEnteredAt={contactJourney.phase_entered_at}
-              enrolledAt={contactJourney.created_at}
-            />
-          )}
+          {/* Journey Progress Bar — temporarily removed to fit viewport */}
+          {/* TODO: Re-add as compact version or move into a tab */}
 
           {/* Email History */}
           {newslettersWithEvents.length > 0 && (
             <Card>
               <CardContent className="p-4">
-                <h3 className="text-sm font-semibold mb-3">Email History</h3>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Email History</h3>
                 <EmailHistoryTimeline newsletters={newslettersWithEvents as any} />
               </CardContent>
             </Card>
           )}
 
-          {/* Tabbed Content */}
+    </>
+  );
+
+  // Build tabs JSX (placed in scrollable area by ContactDetailLayout)
+  const tabsJsx = (
           <ContactDetailTabs
             contactId={id}
             contact={contact}
@@ -710,14 +705,14 @@ export default async function ContactDetailPage({
             documents={typedDocuments}
             contextEntries={(contactContextEntries ?? []) as Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>}
           />
-        </div>
-      </div>
+  );
 
-      {/* RIGHT PANEL -- fixed, own scroll */}
-      <aside className="hidden lg:block w-[340px] shrink-0 border-l overflow-y-auto p-6 space-y-5 bg-gradient-to-b from-slate-50 via-white to-teal-50/30 dark:from-card/50 dark:via-card/30 dark:to-teal-950/10">
+  // Build right panel JSX
+  const rightPanelJsx = (
+      <aside className="hidden lg:block w-[320px] shrink-0 border-l p-4 bg-gradient-to-b from-slate-50 via-white to-teal-50/30 dark:from-card/50 dark:via-card/30 dark:to-teal-950/10 overflow-y-auto space-y-4">
         {/* Engagement — 1st section */}
         {intel && (
-          <div className="pb-5 border-b border-indigo-100 dark:border-indigo-900/30 border-l-4 border-l-indigo-400 pl-4 rounded-sm">
+          <div className="pb-3 border-b border-indigo-100 dark:border-indigo-900/30 border-l-4 border-l-indigo-400 pl-4 rounded-sm shrink-0">
             <IntelligencePanel
               intelligence={intel}
               totalEmails={newslettersWithEvents.length}
@@ -726,7 +721,7 @@ export default async function ContactDetailPage({
         )}
 
         {/* Network Stats — 2nd section */}
-        <div className="border-b border-teal-100 dark:border-teal-900/30 pb-5 pt-5 border-l-4 border-l-teal-400 pl-4 rounded-sm">
+        <div className="border-b border-teal-100 dark:border-teal-900/30 pb-3 pt-3 border-l-4 border-l-teal-400 pl-4 rounded-sm shrink-0">
           <NetworkStatsCard
             connectionCount={relationships.length}
             referralCount={allReferrals.length}
@@ -739,7 +734,7 @@ export default async function ContactDetailPage({
         </div>
 
         {/* Referrals */}
-        <div className="border-b border-orange-100 dark:border-orange-900/30 pb-5 pt-5 border-l-4 border-l-orange-400 pl-4 rounded-sm">
+        <div className="border-b border-orange-100 dark:border-orange-900/30 pb-3 pt-3 border-l-4 border-l-orange-400 pl-4 rounded-sm shrink-0">
           <ReferralsPanel
             contact={contact}
             referredByName={referredByName}
@@ -749,15 +744,55 @@ export default async function ContactDetailPage({
           />
         </div>
 
-        {/* Relationships */}
-        <div className="pt-5 border-l-4 border-l-violet-400 pl-4 rounded-sm">
+        {/* Relationships — grows to fill remaining space */}
+        <div className="pt-3 border-l-4 border-l-violet-400 pl-4 rounded-sm">
           <RelationshipManager
             contactId={contact.id}
             relationships={relationships}
             allContacts={allContacts?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })) ?? []}
           />
+
+          {/* Contextual Tips — fills remaining space when sections are empty */}
+          {(!intel || Object.keys(intel).length === 0) && relationships.length === 0 && allReferrals.length === 0 && (
+            <div className="mt-4 pt-4 border-t border-border/30">
+              <div className="rounded-xl bg-gradient-to-br from-indigo-50/50 to-teal-50/30 dark:from-indigo-950/20 dark:to-teal-950/10 border border-indigo-100/50 dark:border-indigo-900/20 p-4">
+                <div className="flex items-start gap-2.5">
+                  <span className="text-lg">💡</span>
+                  <div>
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Build this profile</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                      The more you add here, the smarter the AI gets. Relationships help
+                      personalize emails. Referrals track your network value. Engagement
+                      data appears after sending the first email.
+                    </p>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-medium shrink-0">1</span>
+                        <span className="text-muted-foreground">Add a <strong className="text-foreground">relationship</strong></span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-medium shrink-0">2</span>
+                        <span className="text-muted-foreground">Set <strong className="text-foreground">preferences</strong></span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-medium shrink-0">3</span>
+                        <span className="text-muted-foreground">Send first <strong className="text-foreground">email</strong></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </aside>
-    </div>
+  );
+
+  return (
+    <ContactDetailLayout
+      header={headerJsx}
+      tabs={tabsJsx}
+      rightPanel={rightPanelJsx}
+    />
   );
 }
