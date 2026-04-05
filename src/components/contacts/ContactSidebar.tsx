@@ -15,6 +15,7 @@ import {
   STAGE_LABELS,
   STAGE_COLORS,
 } from "@/lib/constants/contacts";
+import { Check, Circle } from "lucide-react";
 
 // Map pipeline keys to stage_bar filter values
 const PIPELINE_TO_STAGE: Record<string, string> = {
@@ -452,6 +453,122 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
           </div>
         )}
       </div>
+
+      {/* Pipeline Summary — always visible */}
+      <div className="border-t px-4 py-3 shrink-0">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+          Pipeline
+        </h3>
+        <div className="space-y-1">
+          {STAGE_FILTERS.filter(s => s.value !== "all").map((stage) => {
+            const count = stageCounts[stage.value] ?? 0;
+            const total = contacts.length || 1;
+            const pct = Math.round((count / total) * 100);
+            return (
+              <button
+                key={stage.value}
+                onClick={() => {
+                  setStageFilter(stage.value === stageFilter ? "all" : stage.value);
+                  setShowFilters(true);
+                }}
+                className={cn(
+                  "flex items-center gap-2 w-full px-2 py-1 rounded-md text-xs transition-colors",
+                  stageFilter === stage.value
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "hover:bg-muted/50 text-muted-foreground"
+                )}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${stage.dot}`} />
+                <span className="flex-1 text-left">{stage.label}</span>
+                <span className="tabular-nums">{count}</span>
+                {/* Mini bar */}
+                <div className="w-12 h-1 rounded-full bg-muted/50 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${stage.dot} transition-all`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Getting Started Checklist — shows only when < 10 contacts */}
+      {contacts.length < 10 && (
+        <GettingStartedChecklist contacts={contacts} />
+      )}
     </aside>
+  );
+}
+
+// ── Getting Started Checklist ──────────────────────────────
+function GettingStartedChecklist({ contacts }: { contacts: Contact[] }) {
+  const checks = [
+    {
+      label: "Add your first contact",
+      done: contacts.length >= 1,
+    },
+    {
+      label: "Add 5 contacts",
+      done: contacts.length >= 5,
+    },
+    {
+      label: "Set buyer/seller preferences",
+      done: contacts.some((c) => {
+        const rec = c as Record<string, unknown>;
+        return rec.buyer_preferences || rec.seller_preferences;
+      }),
+    },
+    {
+      label: "Import contacts (CSV/Google)",
+      done: contacts.length >= 10,
+    },
+    {
+      label: "Add a relationship",
+      done: false, // Can't check without extra query — stays unchecked
+    },
+  ];
+
+  const completed = checks.filter((c) => c.done).length;
+  const total = checks.length;
+  const pct = Math.round((completed / total) * 100);
+
+  return (
+    <div className="border-t px-4 py-3 shrink-0">
+      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+        Getting Started
+      </h3>
+      <div className="space-y-1.5 mb-3">
+        {checks.map((check, i) => (
+          <div
+            key={i}
+            className={cn(
+              "flex items-center gap-2 text-xs",
+              check.done ? "text-muted-foreground line-through" : "text-foreground"
+            )}
+          >
+            {check.done ? (
+              <Check className="h-3.5 w-3.5 text-green-500 shrink-0" />
+            ) : (
+              <Circle className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+            )}
+            <span>{check.label}</span>
+          </div>
+        ))}
+      </div>
+      {/* Progress bar */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 h-1.5 rounded-full bg-muted/50 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-green-500 transition-all"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <span className="text-[11px] text-muted-foreground tabular-nums">
+          {completed}/{total}
+        </span>
+      </div>
+    </div>
   );
 }

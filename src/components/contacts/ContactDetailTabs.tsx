@@ -134,6 +134,17 @@ export type ContactDetailTabsProps = {
   contextEntries: Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>;
 };
 
+// Check if preferences object has any meaningful data set
+function hasPreferenceData(prefs: Record<string, unknown> | null | undefined): boolean {
+  if (!prefs) return false;
+  return Object.values(prefs).some((v) => {
+    if (v === null || v === undefined || v === "") return false;
+    if (Array.isArray(v) && v.length === 0) return false;
+    if (typeof v === "object" && Object.keys(v as object).length === 0) return false;
+    return true;
+  });
+}
+
 // ── Inner component (needs useSearchParams wrapped in Suspense) ──
 function ContactDetailTabsInner(props: ContactDetailTabsProps) {
   const {
@@ -196,7 +207,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
 
   return (
     <Tabs defaultValue="overview" value={currentTab} onValueChange={setCurrentTab}>
-      <TabsList className="w-full justify-start bg-white/60 backdrop-blur border rounded-xl p-1 mb-4">
+      <TabsList className="w-full justify-start bg-white/60 backdrop-blur border rounded-xl p-1 mb-4 shrink-0">
         <TabsTrigger value="overview" className="rounded-lg">
           📋 Overview
         </TabsTrigger>
@@ -212,90 +223,162 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
       </TabsList>
 
       {/* ── OVERVIEW TAB ─────────────────────────────────────── */}
-      <TabsContent value="overview">
-        <div className="space-y-5">
-          {/* Active workflow enrollments */}
-          {sortedEnrollments.map((enrollment) => (
-            <Card
-              key={enrollment.id}
-              className="border-l-4 border-l-indigo-400 bg-indigo-50/30 dark:bg-indigo-950/10"
-            >
-              <CardContent className="p-6">
-                <WorkflowStepperCard
-                  enrollment={enrollment}
-                  steps={stepsByWorkflow[enrollment.workflow_id] ?? []}
-                  defaultCollapsed={enrollment.workflow_id !== expandedWorkflowId}
+      <TabsContent value="overview" className="">
+        <div className="space-y-3">
+          {/* Panels sorted: panels WITH data render first, empty ones are collapsed into Quick Setup */}
+          {(() => {
+            const prefsHasData = isSeller ? hasPreferenceData(sellerPreferences) : hasPreferenceData(buyerPreferences);
+            const contextHasData = contextEntries.length > 0;
+            const propertiesHasData = !isSeller && (buyerPreferences?.properties_of_interest as unknown[] ?? []).length > 0;
+            const docsHasData = documents.length > 0;
+            const hasEnrollments = sortedEnrollments.length > 0;
+
+            // Build array of panels with data (rendered in order)
+            const filledPanels: React.ReactNode[] = [];
+
+            // Workflows always first (if any)
+            if (hasEnrollments) {
+              for (const enrollment of sortedEnrollments) {
+                filledPanels.push(
+                  <Card
+                    key={enrollment.id}
+                    className="border-l-4 border-l-indigo-400 bg-indigo-50/30 dark:bg-indigo-950/10"
+                  >
+                    <CardContent className="p-4">
+                      <WorkflowStepperCard
+                        enrollment={enrollment}
+                        steps={stepsByWorkflow[enrollment.workflow_id] ?? []}
+                        defaultCollapsed={enrollment.workflow_id !== expandedWorkflowId}
+                      />
+                    </CardContent>
+                  </Card>
+                );
+              }
+            }
+
+            // Preferences
+            if (prefsHasData) {
+              filledPanels.push(
+                isSeller ? (
+                  <Card key="prefs" id="section-seller-preferences" className="border-l-4 border-l-indigo-400 bg-indigo-50/20 dark:bg-indigo-950/10">
+                    <CardContent className="p-4">
+                      <SellerPreferencesPanel contactId={contactId} preferences={sellerPreferences} />
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card key="prefs" id="section-buyer-preferences" className="border-l-4 border-l-teal-400 bg-teal-50/20 dark:bg-teal-950/10">
+                    <CardContent className="p-4">
+                      <BuyerPreferencesPanel contactId={contactId} preferences={buyerPreferences} />
+                    </CardContent>
+                  </Card>
+                )
+              );
+            }
+
+            // Context
+            if (contextHasData) {
+              filledPanels.push(
+                <div key="context">
+                  <ContextLog contactId={contactId} entries={contextEntries} />
+                </div>
+              );
+            }
+
+            // Properties of interest
+            if (propertiesHasData) {
+              filledPanels.push(
+                <Card key="properties" id="section-properties-interest" className="border-l-4 border-l-sky-400 bg-sky-50/20 dark:bg-sky-950/10">
+                  <CardContent className="p-4">
+                    <PropertiesOfInterestPanel contactId={contactId} preferences={buyerPreferences} listings={allListings} />
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            // Documents
+            if (docsHasData) {
+              filledPanels.push(
+                <Card key="docs" className="border-l-4 border-l-amber-400 bg-amber-50/10 dark:bg-amber-950/10">
+                  <CardContent className="p-4">
+                    <ContactDocumentsPanel contactId={contactId} documents={documents} />
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            // Quick Setup actions for empty sections
+            const emptyActions: React.ReactNode[] = [];
+            if (!prefsHasData) {
+              emptyActions.push(
+                <QuickSetupAction key="prefs" icon="🎯" label="Set Preferences"
+                  description={isSeller ? "Motivation, pricing, timeline" : "Budget, areas, property type"}
+                  onClick={() => { const btn = document.querySelector('[data-pref-edit]') as HTMLButtonElement; if (btn) btn.click(); }}
                 />
-              </CardContent>
-            </Card>
-          ))}
-
-
-          {/* Seller / Buyer Preferences */}
-          {isSeller ? (
-            <Card
-              id="section-seller-preferences"
-              className="border-l-4 border-l-indigo-400 bg-indigo-50/20 dark:bg-indigo-950/10"
-            >
-              <CardContent className="p-6">
-                <SellerPreferencesPanel
-                  contactId={contactId}
-                  preferences={sellerPreferences}
+              );
+            }
+            if (!contextHasData) {
+              emptyActions.push(
+                <QuickSetupAction key="context" icon="📝" label="Add Context"
+                  description="Notes, objections, preferences"
+                  onClick={() => { const el = document.getElementById("context-add-btn"); if (el) el.click(); }}
                 />
-              </CardContent>
-            </Card>
-          ) : (
-            <Card
-              id="section-buyer-preferences"
-              className="border-l-4 border-l-teal-400 bg-teal-50/20 dark:bg-teal-950/10"
-            >
-              <CardContent className="p-6">
-                <BuyerPreferencesPanel
-                  contactId={contactId}
-                  preferences={buyerPreferences}
+              );
+            }
+            if (!isSeller && !propertiesHasData) {
+              emptyActions.push(
+                <QuickSetupAction key="properties" icon="🏠" label="Add Property"
+                  description="Track properties of interest"
+                  onClick={() => {}}
                 />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Realtor Context — Metadata */}
-          <ContextLog
-            contactId={contactId}
-            entries={contextEntries}
-          />
-
-          {/* Properties of Interest (buyers only) */}
-          {!isSeller && (
-            <Card id="section-properties-interest" className="border-l-4 border-l-sky-400 bg-sky-50/20 dark:bg-sky-950/10">
-              <CardContent className="p-6">
-                <PropertiesOfInterestPanel
-                  contactId={contactId}
-                  preferences={buyerPreferences}
-                  listings={allListings}
+              );
+            }
+            if (!docsHasData) {
+              emptyActions.push(
+                <QuickSetupAction key="docs" icon="📄" label="Upload Doc"
+                  description="Contracts, ID, pre-approval"
+                  onClick={() => { const el = document.getElementById("doc-upload-btn"); if (el) el.click(); }}
                 />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Contact Documents */}
-          <Card className="border-l-4 border-l-amber-400 bg-amber-50/10 dark:bg-amber-950/10">
-            <CardContent className="p-6">
-              <ContactDocumentsPanel
-                contactId={contactId}
-                documents={documents}
+              );
+            }
+            emptyActions.push(
+              <QuickSetupAction key="tasks" icon="✅" label="Add Task"
+                description="Follow-ups and reminders"
+                onClick={() => setCurrentTab("activity")}
               />
-            </CardContent>
-          </Card>
+            );
+
+            return (
+              <>
+                {/* Panels with data — float to top */}
+                {filledPanels}
+
+                {/* Quick Setup — fills remaining space */}
+                {emptyActions.length > 1 && (
+                  <Card className="border border-dashed border-muted-foreground/20 bg-muted/5">
+                    <CardContent className="p-5">
+                      <h3 className="text-sm font-semibold mb-3">Quick Setup</h3>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Complete these steps to build a full contact profile.
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {emptyActions}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            );
+          })()}
         </div>
       </TabsContent>
 
       {/* ── INTELLIGENCE TAB ─────────────────────────────────── */}
-      <TabsContent value="intelligence">
-        <div className="space-y-5">
+      <TabsContent value="intelligence" className="">
+        <div className="space-y-3">
           {/* Relationship Network */}
           {graphNodes.length > 1 && (
             <Card className="border-l-4 border-l-indigo-400 bg-indigo-50/15 dark:bg-indigo-950/10">
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <RelationshipGraph
                   nodes={graphNodes as any}
                   edges={graphEdges as any}
@@ -306,7 +389,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
 
           {/* Demographics Panel */}
           <Card className="border-l-4 border-l-violet-400 bg-violet-50/20 dark:bg-violet-950/10">
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <DemographicsPanel
                 contactId={contactId}
                 demographics={demographics}
@@ -317,18 +400,18 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
       </TabsContent>
 
       {/* ── ACTIVITY TAB ─────────────────────────────────────── */}
-      <TabsContent value="activity">
-        <div className="space-y-5">
+      <TabsContent value="activity" className="">
+        <div className="space-y-3">
           {/* Tasks & Follow-ups */}
           <Card className="border-l-4 border-l-orange-400 bg-orange-50/15 dark:bg-orange-950/10">
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <ContactTasksPanel contactId={contactId} tasks={tasks} />
             </CardContent>
           </Card>
 
           {/* Upcoming Events */}
           <Card className="border-l-4 border-l-amber-400 bg-amber-50/15 dark:bg-amber-950/10">
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <UpcomingEventsCard
                 contactDates={contactDates}
                 demographics={demographics}
@@ -339,7 +422,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
 
           {/* Communication Timeline */}
           <Card className="border-l-4 border-l-sky-400 bg-sky-50/15 dark:bg-sky-950/10">
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <CommunicationTimeline
                 contactId={contactId}
                 communications={communications}
@@ -350,7 +433,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
           {/* Activity Log (lazy-loaded) */}
           {activitiesLoading && (
             <Card className="border-l-4 border-l-slate-400 bg-slate-50/15 dark:bg-slate-950/10">
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <div className="animate-pulse space-y-3">
                   <div className="h-4 bg-muted rounded w-1/3" />
                   <div className="h-3 bg-muted rounded w-2/3" />
@@ -361,7 +444,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
           )}
           {!activitiesLoading && lazyActivities && lazyActivities.length > 0 && (
             <Card className="border-l-4 border-l-slate-400 bg-slate-50/15 dark:bg-slate-950/10">
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <ActivityTimeline activities={lazyActivities} />
               </CardContent>
             </Card>
@@ -370,12 +453,12 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
       </TabsContent>
 
       {/* ── DEALS TAB ────────────────────────────────────────── */}
-      <TabsContent value="deals">
-        <div className="space-y-5">
+      <TabsContent value="deals" className="">
+        <div className="space-y-3">
           {/* Seller Earnings Summary */}
           {isSeller && listings.some((l) => l.status === "sold") && (
             <Card className="border-l-4 border-l-emerald-400 bg-emerald-50/15 dark:bg-emerald-950/10">
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <SellerEarningsSummary listings={listings} />
               </CardContent>
             </Card>
@@ -384,7 +467,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
           {/* Property History */}
           {(isSeller ? listings.length > 0 : buyerListings.length > 0) && (
             <Card id="section-property-history" className="border-l-4 border-l-violet-400 bg-violet-50/15 dark:bg-violet-950/10">
-              <CardContent className="p-6">
+              <CardContent className="p-4">
                 <PropertyHistoryPanel
                   listings={isSeller ? listings : buyerListings}
                   contactType={contact.type}
@@ -399,3 +482,33 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
 }
 
 export { ContactDetailTabsInner as ContactDetailTabs };
+
+// ── Quick Setup Action Button ──────────────────────────────
+function QuickSetupAction({
+  icon,
+  label,
+  description,
+  onClick,
+}: {
+  icon: string;
+  label: string;
+  description: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-start gap-2.5 p-3 rounded-xl border border-border/40 hover:bg-muted/30 hover:border-border transition-all text-left group"
+    >
+      <span className="text-lg shrink-0 mt-0.5">{icon}</span>
+      <div>
+        <p className="text-xs font-medium group-hover:text-primary transition-colors">
+          {label}
+        </p>
+        <p className="text-xs text-muted-foreground leading-tight mt-0.5">
+          {description}
+        </p>
+      </div>
+    </button>
+  );
+}
