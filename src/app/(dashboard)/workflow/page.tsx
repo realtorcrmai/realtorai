@@ -42,7 +42,7 @@ export default async function WorkflowPage() {
 
   const phaseCounts = MLS_PHASES.map((p) => ({
     ...p,
-    count: (listings ?? []).filter((l) => listingPhase(l.status) === p.phase).length,
+    count: (listings ?? []).filter((l: { status: string }) => listingPhase(l.status) === p.phase).length,
   }));
 
   return (
@@ -80,7 +80,7 @@ export default async function WorkflowPage() {
       <div className="space-y-4">
         {MLS_PHASES.map((phase) => {
           const phaseListings = (listings ?? []).filter(
-            (l) => listingPhase(l.status) === phase.phase
+            (l: { status: string }) => listingPhase(l.status) === phase.phase
           );
           if (phaseListings.length === 0) return null;
           return (
@@ -96,7 +96,7 @@ export default async function WorkflowPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {phaseListings.map((listing) => (
+                  {phaseListings.map((listing: { id: string; address: string; mls_number?: string; list_price?: number; status: string }) => (
                     <Link key={listing.id} href={`/listings/${listing.id}`}>
                       <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/60 transition-colors cursor-pointer group">
                         {phase.phase === 7 ? (
