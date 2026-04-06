@@ -68,3 +68,5 @@
 | 2026-04-05 | claude | unknown | CODING:feature | ✅ | classified, scoped | — | Auto-logged by completion-gate |
 | 2026-04-05 | claude | unknown | DEPLOY:local | ✅ | classified | — | Auto-logged by completion-gate |
 | 2026-04-06 | claude | unknown | CODING:feature | ✅ | classified, scoped | — | Auto-logged by completion-gate |
+| 2026-04-06 | claude | unknown | CODING:feature | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-06 | claude | unknown | CODING:feature | ✅ | classified, scoped | — | Auto-logged by completion-gate |
