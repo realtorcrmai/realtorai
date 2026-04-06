@@ -1,1 +1,1 @@
-{"type":"DEPLOY:local","tier":"trivial","summary":"Merge PR #90 to dev","phases":{"classified":true,"compliance_logged":true}}
+{"type":"CODING:feature","tier":"Small","summary":"Commit Meet Someone New contact creation page to feature branch and PR to dev","phases":{"classified":true}}

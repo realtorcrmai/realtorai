@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Users, Building2, Clock, ListTodo } from "lucide-react";
 import {
   DropdownMenu,
@@ -23,6 +24,7 @@ import type { Contact } from "@/types";
 type ActiveDialog = null | "contact" | "listing" | "showing" | "task";
 
 export function QuickAddButton() {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [activeDialog, setActiveDialog] = useState<ActiveDialog>(null);
   const [sellers, setSellers] = useState<Contact[]>([]);
@@ -90,7 +92,7 @@ export function QuickAddButton() {
           <Plus className="h-4.5 w-4.5" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="center" side="top" sideOffset={12} className="w-48">
-          <DropdownMenuItem onClick={() => openDialog("contact")}>
+          <DropdownMenuItem onClick={() => router.push("/contacts/new")}>
             <Users className="h-4 w-4" />
             <span>Contact</span>
           </DropdownMenuItem>
