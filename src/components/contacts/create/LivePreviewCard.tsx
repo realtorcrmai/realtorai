@@ -1,0 +1,225 @@
+"use client";
+
+import { Badge } from "@/components/ui/badge";
+import { Phone, Mail, MessageSquare, Smartphone, MapPin, Tag, Calendar, DollarSign, Home, Briefcase } from "lucide-react";
+
+const AVATAR_GRADIENTS: Record<string, string> = {
+  buyer: "from-blue-500 to-indigo-600",
+  seller: "from-purple-500 to-indigo-600",
+  customer: "from-green-500 to-emerald-600",
+  agent: "from-orange-500 to-amber-600",
+  partner: "from-teal-500 to-cyan-600",
+  other: "from-gray-500 to-slate-600",
+};
+
+const TYPE_BADGE_COLORS: Record<string, string> = {
+  buyer: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+  seller: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+  customer: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+  agent: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+  partner: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300",
+  other: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
+};
+
+const CHANNEL_ICONS: Record<string, typeof Phone> = {
+  sms: Smartphone,
+  whatsapp: MessageSquare,
+  email: Mail,
+  phone: Phone,
+};
+
+const CHANNEL_LABELS: Record<string, string> = {
+  sms: "SMS",
+  whatsapp: "WhatsApp",
+  email: "Email",
+  phone: "Phone",
+};
+
+export interface LivePreviewCardProps {
+  name: string;
+  phone: string;
+  email: string;
+  type: string;
+  channel: string;
+  notes: string;
+  source: string;
+  address: string;
+  leadStatus: string;
+  // Buyer
+  budgetDisplay?: string;
+  buyerAreas?: string[];
+  propertyTypes?: string[];
+  timeline?: string;
+  financing?: string;
+  // Seller
+  sellerMotivation?: string;
+  desiredPrice?: string;
+  listDate?: string;
+}
+
+function getInitials(name: string) {
+  if (!name.trim()) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+function PreviewRow({ icon: Icon, label, value, empty }: { icon: typeof Phone; label: string; value?: string; empty?: string }) {
+  const hasValue = !!value;
+  return (
+    <div className="flex items-center gap-2.5 text-sm">
+      <Icon className={`h-4 w-4 shrink-0 ${hasValue ? "text-foreground" : "text-muted-foreground/25"}`} />
+      <span className="text-muted-foreground text-sm min-w-[70px] shrink-0">{label}</span>
+      <span className={hasValue ? "text-foreground font-medium" : "text-muted-foreground/30 italic"}>
+        {value || empty || "—"}
+      </span>
+    </div>
+  );
+}
+
+export function LivePreviewCard({
+  name, phone, email, type, channel, notes, source, address, leadStatus,
+  budgetDisplay, buyerAreas, propertyTypes, timeline, financing,
+  sellerMotivation, desiredPrice, listDate,
+}: LivePreviewCardProps) {
+  const initials = getInitials(name);
+  const gradient = AVATAR_GRADIENTS[type] || AVATAR_GRADIENTS.other;
+  const badgeColor = TYPE_BADGE_COLORS[type] || TYPE_BADGE_COLORS.other;
+  const ChannelIcon = CHANNEL_ICONS[channel] || MessageSquare;
+  const typeLabel = type === "customer" ? "Lead" : type;
+
+  const isBuyer = type === "buyer";
+  const isSeller = type === "seller";
+  const hasBuyerPrefs = !!(budgetDisplay || (buyerAreas && buyerAreas.length > 0) || (propertyTypes && propertyTypes.length > 0) || timeline || financing);
+  const hasSellerPrefs = !!(sellerMotivation || desiredPrice || listDate);
+
+  // Count filled fields for completion indicator
+  const totalFields = 6 + (isBuyer ? 5 : 0) + (isSeller ? 3 : 0);
+  const filledFields = [name, phone, email, type, channel, address, source, notes, leadStatus !== "new" ? leadStatus : ""]
+    .filter(Boolean).length
+    + (isBuyer ? [budgetDisplay, (buyerAreas?.length ?? 0) > 0 ? "y" : "", (propertyTypes?.length ?? 0) > 0 ? "y" : "", timeline, financing].filter(Boolean).length : 0)
+    + (isSeller ? [sellerMotivation, desiredPrice, listDate].filter(Boolean).length : 0);
+  const completionPct = Math.min(100, Math.round((filledFields / totalFields) * 100));
+
+  return (
+    <div className="rounded-2xl border border-border/30 bg-gradient-to-br from-white via-white to-slate-50/80 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-800/50 shadow-lg overflow-hidden transition-all duration-300">
+      {/* Colored top bar */}
+      <div className={`h-1.5 bg-gradient-to-r ${type ? gradient : "from-gray-300 to-gray-400"}`} />
+
+      <div className="p-5 space-y-4">
+        {/* Avatar + Name */}
+        <div className="flex items-center gap-4">
+          <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${type ? gradient : "from-gray-400 to-gray-500"} flex items-center justify-center text-white font-bold text-lg shadow-lg transition-all duration-300`}>
+            {initials}
+          </div>
+          <div>
+            <h3 className="text-lg font-bold tracking-tight transition-all">
+              {name || <span className="text-muted-foreground/30 italic font-normal">Full name</span>}
+            </h3>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {type && (
+                <Badge variant="secondary" className={`${badgeColor} text-sm capitalize`}>
+                  {typeLabel}
+                </Badge>
+              )}
+              {leadStatus && leadStatus !== "new" && (
+                <Badge variant="outline" className="text-sm capitalize">{leadStatus}</Badge>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Completion bar */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1 h-1.5 rounded-full bg-muted/30 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${completionPct >= 70 ? "bg-emerald-500" : completionPct >= 40 ? "bg-amber-500" : "bg-red-400"}`}
+              style={{ width: `${completionPct}%` }}
+            />
+          </div>
+          <span className="text-xs text-muted-foreground tabular-nums">{completionPct}%</span>
+        </div>
+
+        {/* Contact info */}
+        <div className="space-y-1.5 border-t border-border/20 pt-3">
+          <PreviewRow icon={Phone} label="Phone" value={phone} empty="Phone number" />
+          <PreviewRow icon={Mail} label="Email" value={email} empty="Email address" />
+          <PreviewRow icon={ChannelIcon} label="Channel" value={channel ? CHANNEL_LABELS[channel] : ""} empty="Preferred channel" />
+          <PreviewRow icon={MapPin} label="Address" value={address} empty="Address" />
+          <PreviewRow icon={Tag} label="Source" value={source} empty="Lead source" />
+        </div>
+
+        {/* Pipeline preview */}
+        {type && type !== "other" && (
+          <div className="border-t border-border/20 pt-3">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">Pipeline</p>
+            <div className="flex items-center gap-1.5">
+              <div className={`w-3 h-3 rounded-full bg-gradient-to-br ${gradient} ring-2 ring-offset-1 ring-current shadow-sm`} />
+              <div className="h-0.5 w-6 bg-muted/30 rounded-full" />
+              <div className="w-3 h-3 rounded-full bg-muted/20" />
+              <div className="h-0.5 w-6 bg-muted/30 rounded-full" />
+              <div className="w-3 h-3 rounded-full bg-muted/20" />
+              <div className="h-0.5 w-6 bg-muted/30 rounded-full" />
+              <div className="w-3 h-3 rounded-full bg-muted/20" />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">New — just getting started</p>
+          </div>
+        )}
+
+        {/* Buyer Preferences */}
+        {isBuyer && (
+          <div className="border-t border-border/20 pt-3">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">Buyer Preferences</p>
+            <div className="space-y-1.5">
+              <PreviewRow icon={DollarSign} label="Budget" value={budgetDisplay} empty="Not set" />
+              <div className="flex items-center gap-2.5 text-sm">
+                <MapPin className={`h-4 w-4 shrink-0 ${(buyerAreas?.length ?? 0) > 0 ? "text-foreground" : "text-muted-foreground/25"}`} />
+                <span className="text-muted-foreground text-sm min-w-[70px] shrink-0">Areas</span>
+                {(buyerAreas?.length ?? 0) > 0 ? (
+                  <div className="flex gap-1 flex-wrap">
+                    {buyerAreas!.map((a) => (
+                      <span key={a} className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 text-xs font-medium">{a}</span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground/30 italic">Not set</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2.5 text-sm">
+                <Home className={`h-4 w-4 shrink-0 ${(propertyTypes?.length ?? 0) > 0 ? "text-foreground" : "text-muted-foreground/25"}`} />
+                <span className="text-muted-foreground text-sm min-w-[70px] shrink-0">Types</span>
+                {(propertyTypes?.length ?? 0) > 0 ? (
+                  <span className="font-medium">{propertyTypes!.join(", ")}</span>
+                ) : (
+                  <span className="text-muted-foreground/30 italic">Not set</span>
+                )}
+              </div>
+              <PreviewRow icon={Calendar} label="Timeline" value={timeline} empty="Not set" />
+              <PreviewRow icon={Briefcase} label="Financing" value={financing ? financing.replace("_", " ") : ""} empty="Not set" />
+            </div>
+          </div>
+        )}
+
+        {/* Seller Preferences */}
+        {isSeller && (
+          <div className="border-t border-border/20 pt-3">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">Seller Preferences</p>
+            <div className="space-y-1.5">
+              <PreviewRow icon={Tag} label="Motivation" value={sellerMotivation} empty="Not set" />
+              <PreviewRow icon={DollarSign} label="Price" value={desiredPrice ? `$${desiredPrice}K` : ""} empty="Not set" />
+              <PreviewRow icon={Calendar} label="List date" value={listDate} empty="Not set" />
+            </div>
+          </div>
+        )}
+
+        {/* Notes */}
+        {notes && (
+          <div className="border-t border-border/20 pt-3">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Notes</p>
+            <p className="text-sm text-muted-foreground italic">&ldquo;{notes}&rdquo;</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

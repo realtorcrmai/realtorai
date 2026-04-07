@@ -293,6 +293,16 @@ export default async function DashboardPage() {
       count: null,
       countLabel: null,
     },
+    {
+      key: "social",
+      href: "/social",
+      title: "Social Media",
+      description: "AI content studio for all platforms",
+      icon: Globe,
+      gradient: "gradient-cyan",
+      count: null,
+      countLabel: null,
+    },
   ];
 
   // Filter tiles based on user's enabled features
@@ -339,10 +349,12 @@ export default async function DashboardPage() {
         <DailyDigestCard />
       </div>
 
-      {/* Pipeline Snapshot — primary dashboard visual */}
-      <div className="animate-float-in" style={{ animationDelay: "120ms" }}>
-        <PipelineSnapshot stages={pipelineStages} totalGCI={totalGCI} />
-      </div>
+      {/* Pipeline Snapshot — only show when listings feature is enabled */}
+      {enabledFeatures.includes("listings") && (
+        <div className="animate-float-in" style={{ animationDelay: "120ms" }}>
+          <PipelineSnapshot stages={pipelineStages} totalGCI={totalGCI} />
+        </div>
+      )}
 
       {/* Feature Hub */}
       <div>

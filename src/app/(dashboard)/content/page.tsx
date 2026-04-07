@@ -31,10 +31,10 @@ export default async function ContentPage() {
   const totalListings = listings?.length ?? 0;
   const withPrompts = prompts?.length ?? 0;
   const completedAssets =
-    assets?.filter((a) => a.status === "completed").length ?? 0;
+    assets?.filter((a: { status: string }) => a.status === "completed").length ?? 0;
   const processingAssets =
     assets?.filter(
-      (a) => a.status === "processing" || a.status === "pending"
+      (a: { status: string }) => a.status === "processing" || a.status === "pending"
     ).length ?? 0;
 
   const stats = [
@@ -124,18 +124,18 @@ export default async function ContentPage() {
             </div>
           ) : (
             <div className="grid gap-4 stagger-children">
-              {(listings ?? []).map((listing) => {
+              {(listings ?? []).map((listing: { id: string; address: string; list_price: number; status: string; hero_image_url?: string; contacts?: { name: string } | null }) => {
                 const listingPrompt = prompts?.find(
-                  (p) => p.listing_id === listing.id
+                  (p: { listing_id: string }) => p.listing_id === listing.id
                 );
                 const listingAssets = (assets ?? []).filter(
-                  (a) => a.listing_id === listing.id
+                  (a: { listing_id: string; asset_type: string; status: string }) => a.listing_id === listing.id
                 );
                 const videoAsset = listingAssets.find(
-                  (a) => a.asset_type === "video"
+                  (a: { asset_type: string }) => a.asset_type === "video"
                 );
                 const imageAsset = listingAssets.find(
-                  (a) => a.asset_type === "image"
+                  (a: { asset_type: string }) => a.asset_type === "image"
                 );
 
                 const sellerName =

@@ -6,9 +6,11 @@ export default defineConfig({
   retries: 0,
   use: {
     baseURL: "http://localhost:3000",
-    screenshot: "only-on-failure",
-    trace: "on-first-retry",
+    screenshot: "on",
+    trace: "on",
+    video: "retain-on-failure",
   },
+  outputDir: "test-results",
   projects: [
     // Login once — all other projects depend on this
     {

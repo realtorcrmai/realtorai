@@ -1,1 +1,1 @@
-{"type":"DEPLOY:local","tier":"trivial","summary":"Merge PR #90 to dev","phases":{"classified":true,"compliance_logged":true}}
+{"type":"CODING:feature","tier":"Large","summary":"Commit and PR full-page creation flows for listings, showings, tasks","phases":{"classified":true,"scoped":true,"executed":true}}

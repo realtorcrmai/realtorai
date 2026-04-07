@@ -55,11 +55,17 @@ export default async function ContactsLayout({
   });
 
   return (
-    <div className="flex h-full">
+    <div className="flex -mb-24" style={{ height: "calc(100vh - 64px)" }}>
       {/* Left sidebar — desktop only */}
-      <div className="hidden md:flex flex-col h-full w-[280px] shrink-0 border-r bg-card/50">
+      <div className="hidden md:flex flex-col w-[280px] shrink-0 border-r bg-card/50">
         <div className="p-3 border-b bg-card/50 shrink-0">
-          <ContactForm />
+          <a
+            href="/contacts/new"
+            className="flex items-center justify-center gap-2 w-full h-9 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <span className="text-base">+</span>
+            Add Contact
+          </a>
         </div>
         <Suspense>
           <ContactSidebar contacts={sortedContacts as any} />
@@ -67,7 +73,7 @@ export default async function ContactsLayout({
       </div>
 
       {/* Center + Right content */}
-      <div className="flex-1 overflow-hidden relative flex flex-col">
+      <div className="flex-1 overflow-auto relative flex flex-col">
         {/* Mobile: sticky bar to open sidebar sheet */}
         <MobileSidebarSheet title="Contacts" footer={<ContactForm />}>
           <Suspense>
@@ -75,12 +81,17 @@ export default async function ContactsLayout({
           </Suspense>
         </MobileSidebarSheet>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto">
           {children}
         </div>
         {/* Mobile FAB for creating contacts */}
         <div className="md:hidden fixed bottom-20 right-4 z-50">
-          <ContactForm />
+          <a
+            href="/contacts/new"
+            className="flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground text-2xl shadow-lg hover:bg-primary/90 transition-colors"
+          >
+            +
+          </a>
         </div>
       </div>
     </div>
