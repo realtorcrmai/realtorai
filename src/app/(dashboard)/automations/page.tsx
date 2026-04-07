@@ -55,9 +55,9 @@ export default async function AutomationsPage() {
   const templateCount = templates?.length ?? 0;
   const unreadCount = unreadNotifications?.length ?? 0;
 
-  const activeWorkflows = workflowList.filter((w) => w.is_active).length;
+  const activeWorkflows = workflowList.filter((w: { is_active: boolean }) => w.is_active).length;
   const totalActiveEnrollments = enrollmentList.filter(
-    (e) => e.status === "active"
+    (e: { status: string }) => e.status === "active"
   ).length;
 
   // Build enrollment counts by workflow (active + completed + last enrolled)
@@ -258,7 +258,7 @@ export default async function AutomationsPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {workflowList.map((workflow) => {
+          {workflowList.map((workflow: { id: string; slug: string; name: string; description?: string; workflow_steps: unknown; is_active: boolean; created_at: string; contact_type?: string }) => {
             const blueprint = blueprintsBySlug[workflow.slug];
             const icon = blueprint?.icon ?? "⚙️";
             const stepCount = Array.isArray(workflow.workflow_steps)

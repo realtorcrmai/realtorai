@@ -227,7 +227,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
         <div className="space-y-3">
           {/* Panels sorted: panels WITH data render first, empty ones are collapsed into Quick Setup */}
           {(() => {
-            const prefsHasData = isSeller ? hasPreferenceData(sellerPreferences) : hasPreferenceData(buyerPreferences);
+            const prefsHasData = isSeller ? hasPreferenceData(sellerPreferences as unknown as Record<string, unknown>) : hasPreferenceData(buyerPreferences);
             const contextHasData = contextEntries.length > 0;
             const propertiesHasData = !isSeller && (buyerPreferences?.properties_of_interest as unknown[] ?? []).length > 0;
             const docsHasData = documents.length > 0;

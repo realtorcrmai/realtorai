@@ -30,7 +30,7 @@ export default async function NotificationsPage() {
 
   const notificationList = notifications ?? [];
   const templateCount = templates?.length ?? 0;
-  const unreadCount = notificationList.filter((n) => !n.is_read).length;
+  const unreadCount = notificationList.filter((n: { is_read: boolean }) => !n.is_read).length;
 
   return (
     <div className="space-y-6 animate-float-in">

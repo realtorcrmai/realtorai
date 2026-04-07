@@ -70,11 +70,11 @@ export default async function ListingDetailPage({
 
   // Build form status map for the right panel
   const formStatuses = Object.fromEntries(
-    (formSubmissions ?? []).map((s) => [s.form_key, s.status as "draft" | "completed"])
+    (formSubmissions ?? []).map((s: { form_key: string; status: string }) => [s.form_key, s.status as "draft" | "completed"])
   );
 
   const requiredTypes = ["FINTRAC", "DORTS", "PDS"];
-  const docTypes = (documents ?? []).map((d) => d.doc_type);
+  const docTypes = (documents ?? []).map((d: { doc_type: string }) => d.doc_type);
   const hasMissingDocs = requiredTypes.some((t) => !docTypes.includes(t));
 
   return (
@@ -198,7 +198,7 @@ export default async function ListingDetailPage({
                   No showings for this listing yet.
                 </p>
               )}
-              {(showings ?? []).map((showing) => (
+              {(showings ?? []).map((showing: { id: string; buyer_agent_name: string; start_time: string; status: string; created_at: string }) => (
                 <div
                   key={showing.id}
                   className="flex items-center justify-between p-3 rounded-lg bg-muted/50"

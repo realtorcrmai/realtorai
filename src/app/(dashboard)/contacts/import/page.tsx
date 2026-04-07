@@ -21,9 +21,12 @@ interface ParsedRow {
   source?: string;
 }
 
+type FileType = "csv" | "vcf";
+
 export default function ContactImportPage() {
   const [step, setStep] = useState<"upload" | "preview" | "importing" | "done">("upload");
   const [file, setFile] = useState<File | null>(null);
+  const [fileType, setFileType] = useState<FileType>("csv");
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [rawLines, setRawLines] = useState<string[]>([]);
@@ -78,21 +81,96 @@ export default function ContactImportPage() {
     setStep("preview");
   }, []);
 
-  const handleFileSelect = useCallback((selectedFile: File) => {
-    if (!selectedFile.name.endsWith(".csv")) {
-      setError("Please upload a .csv file");
+  const parseVCF = useCallback((text: string) => {
+    if (!text.toUpperCase().includes("BEGIN:VCARD")) {
+      setError("Invalid vCard file — no BEGIN:VCARD found");
       return;
     }
-    if (selectedFile.size > 5 * 1024 * 1024) {
-      setError("File too large (max 5MB)");
+
+    // Client-side preview parsing (simplified)
+    const blocks = text.split(/BEGIN:VCARD/i).slice(1);
+    const rows: ParsedRow[] = [];
+
+    for (const block of blocks) {
+      const lines = block.split(/\r?\n/).filter((l) => l.trim());
+      let name = "";
+      let phone = "";
+      let email = "";
+      let address = "";
+      let org = "";
+      let notes = "";
+
+      for (const line of lines) {
+        const colonIdx = line.indexOf(":");
+        if (colonIdx === -1) continue;
+        const left = line.substring(0, colonIdx);
+        const value = line.substring(colonIdx + 1);
+        const prop = left.split(";")[0].toUpperCase().trim();
+
+        if (prop === "FN" && !name) name = value.trim();
+        if (prop === "TEL" && !phone) phone = value.replace(/[^\d+]/g, "");
+        if (prop === "EMAIL" && !email) email = value.trim();
+        if (prop === "ORG" && !org) org = value.split(";")[0].trim();
+        if (prop === "NOTE" && !notes) notes = value.trim();
+        if (prop === "ADR" && !address) {
+          const parts = value.split(";").map((p) => p.trim());
+          address = [parts[2], parts[3], parts[4], parts[5], parts[6]]
+            .filter(Boolean)
+            .join(", ");
+        }
+      }
+
+      if (name.trim()) {
+        rows.push({
+          name: name.trim(),
+          phone,
+          email: email || undefined,
+          address: address || undefined,
+          notes: [notes, org ? `Org: ${org}` : ""].filter(Boolean).join(" | ") || undefined,
+        });
+      }
+    }
+
+    if (rows.length === 0) {
+      setError("No contacts found in vCard file");
       return;
     }
-    setFile(selectedFile);
+
+    setHeaders(["name", "phone", "email", "address", "notes"]);
+    setRawLines([]);
+    setParsedRows(rows);
     setError("");
+    setStep("preview");
+  }, []);
+
+  const handleFileSelect = useCallback((selectedFile: File) => {
+    const ext = selectedFile.name.split(".").pop()?.toLowerCase();
+
+    if (ext !== "csv" && ext !== "vcf") {
+      setError("Please upload a .csv or .vcf file");
+      return;
+    }
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      setError("File too large (max 10MB)");
+      return;
+    }
+
+    const type: FileType = ext === "vcf" ? "vcf" : "csv";
+    setFile(selectedFile);
+    setFileType(type);
+    setError("");
+
     const reader = new FileReader();
-    reader.onload = (e) => parseCSV(e.target?.result as string);
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      if (type === "vcf") {
+        parseVCF(text);
+      } else {
+        parseCSV(text);
+      }
+    };
     reader.readAsText(selectedFile);
-  }, [parseCSV]);
+  }, [parseCSV, parseVCF]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -110,7 +188,8 @@ export default function ContactImportPage() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch("/api/contacts/import", {
+      const endpoint = fileType === "vcf" ? "/api/contacts/import-vcard" : "/api/contacts/import";
+      const res = await fetch(endpoint, {
         method: "POST",
         body: formData,
       });
@@ -134,12 +213,16 @@ export default function ContactImportPage() {
   const reset = () => {
     setStep("upload");
     setFile(null);
+    setFileType("csv");
     setParsedRows([]);
     setHeaders([]);
     setRawLines([]);
     setResult(null);
     setError("");
   };
+
+  const contactsWithPhone = parsedRows.filter((r) => r.phone);
+  const contactsWithoutPhone = parsedRows.length - contactsWithPhone.length;
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -152,7 +235,7 @@ export default function ContactImportPage() {
             </Link>
           </div>
           <h1 className="text-xl font-bold text-[var(--lf-text)]">📥 Import Contacts</h1>
-          <p className="text-sm text-[var(--lf-text)]/60">Upload a CSV file to bulk import contacts into your CRM</p>
+          <p className="text-sm text-[var(--lf-text)]/60">Upload a CSV or vCard (.vcf) file to bulk import contacts</p>
         </div>
       </div>
 
@@ -194,41 +277,68 @@ export default function ContactImportPage() {
           >
             <div className="text-4xl mb-3">📄</div>
             <p className="text-sm font-medium text-[var(--lf-text)] mb-1">
-              Drag and drop your CSV file here
+              Drag and drop your file here
             </p>
-            <p className="text-xs text-gray-500 mb-4">or click to browse (max 5MB)</p>
+            <p className="text-xs text-gray-500 mb-4">Supports .csv and .vcf (vCard) files — max 10MB</p>
             <input
               type="file"
-              accept=".csv"
+              accept=".csv,.vcf"
               className="hidden"
-              id="csv-upload"
+              id="file-upload"
               onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
             />
             <label
-              htmlFor="csv-upload"
+              htmlFor="file-upload"
               className="lf-btn cursor-pointer text-sm inline-block"
             >
               Choose File
             </label>
           </div>
 
-          {/* CSV Format Guide */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h3 className="text-sm font-semibold mb-2">📋 CSV Format</h3>
-            <p className="text-xs text-gray-600 mb-2">Required columns: <strong>name</strong>, <strong>phone</strong></p>
-            <p className="text-xs text-gray-600 mb-3">Optional: email, type (buyer/seller/customer/agent/partner), notes, address, source</p>
-            <div className="bg-white rounded border p-3 font-mono text-xs overflow-x-auto">
-              <div className="text-gray-500">name,phone,email,type,notes</div>
-              <div>Sarah Johnson,604-555-1234,sarah@email.com,buyer,Looking for 3BR in Kitsilano</div>
-              <div>Mike Thompson,778-555-5678,mike@email.com,seller,Wants to list in March</div>
+          {/* Format Guide */}
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* CSV Guide */}
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h3 className="text-sm font-semibold mb-2">📋 CSV Format</h3>
+              <p className="text-xs text-gray-600 mb-2">Required: <strong>name</strong>, <strong>phone</strong></p>
+              <p className="text-xs text-gray-600 mb-3">Optional: email, type, notes, address, source</p>
+              <div className="bg-white rounded border p-3 font-mono text-xs overflow-x-auto">
+                <div className="text-gray-500">name,phone,email,type</div>
+                <div>Sarah Johnson,604-555-1234,sarah@email.com,buyer</div>
+              </div>
+              <a
+                href="data:text/csv;charset=utf-8,name,phone,email,type,notes%0ASarah Johnson,604-555-1234,sarah@email.com,buyer,Looking for 3BR%0AMike Thompson,778-555-5678,mike@email.com,seller,Wants to list"
+                download="contacts_template.csv"
+                className="inline-block mt-3 text-xs text-[var(--lf-indigo)] hover:underline"
+              >
+                ⬇️ Download CSV template
+              </a>
             </div>
-            <a
-              href="data:text/csv;charset=utf-8,name,phone,email,type,notes%0ASarah Johnson,604-555-1234,sarah@email.com,buyer,Looking for 3BR%0AMike Thompson,778-555-5678,mike@email.com,seller,Wants to list"
-              download="contacts_template.csv"
-              className="inline-block mt-3 text-xs text-[var(--lf-indigo)] hover:underline"
-            >
-              ⬇️ Download template CSV
-            </a>
+
+            {/* vCard Guide */}
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h3 className="text-sm font-semibold mb-2">📇 vCard (.vcf) Format</h3>
+              <p className="text-xs text-gray-600 mb-2">Export from <strong>Apple Contacts</strong>, Outlook, or Google</p>
+              <p className="text-xs text-gray-600 mb-3">Supports vCard 2.1, 3.0, and 4.0</p>
+              <div className="bg-white rounded border p-3 text-xs space-y-2">
+                <div>
+                  <span className="font-semibold"> Apple:</span>
+                  <span className="text-gray-600"> Contacts → Select All → File → Export → Export vCard</span>
+                </div>
+                <div>
+                  <span className="font-semibold"> iPhone:</span>
+                  <span className="text-gray-600"> iCloud.com → Contacts → Select → Export vCard</span>
+                </div>
+                <div>
+                  <span className="font-semibold"> Outlook:</span>
+                  <span className="text-gray-600"> People → Select → Save as vCard</span>
+                </div>
+                <div>
+                  <span className="font-semibold"> Google:</span>
+                  <span className="text-gray-600"> contacts.google.com → Export → vCard</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -240,7 +350,12 @@ export default function ContactImportPage() {
             <div>
               <h2 className="text-lg font-semibold">Preview ({parsedRows.length} contacts)</h2>
               <p className="text-xs text-gray-500">
-                File: {file?.name} · Columns: {headers.join(", ")} · {rawLines.length - 1} rows
+                File: {file?.name} ({fileType.toUpperCase()})
+                {contactsWithoutPhone > 0 && (
+                  <span className="text-amber-600 ml-2">
+                    · {contactsWithoutPhone} without phone (will be skipped)
+                  </span>
+                )}
               </p>
             </div>
             <div className="flex gap-2">
@@ -248,7 +363,7 @@ export default function ContactImportPage() {
                 ← Change File
               </button>
               <button onClick={handleImport} className="lf-btn text-sm px-4 py-1.5">
-                ✅ Import {parsedRows.length} Contacts
+                ✅ Import {contactsWithPhone.length} Contacts
               </button>
             </div>
           </div>
@@ -261,20 +376,18 @@ export default function ContactImportPage() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Name</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Phone</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Email</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Type</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Address</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Notes</th>
                 </tr>
               </thead>
               <tbody>
                 {parsedRows.slice(0, 50).map((row, i) => (
-                  <tr key={i} className="border-b hover:bg-gray-50">
+                  <tr key={i} className={`border-b hover:bg-gray-50 ${!row.phone ? "opacity-50" : ""}`}>
                     <td className="px-3 py-2 text-xs text-gray-400">{i + 1}</td>
                     <td className="px-3 py-2 font-medium">{row.name}</td>
-                    <td className="px-3 py-2 text-gray-600">{row.phone}</td>
+                    <td className="px-3 py-2 text-gray-600">{row.phone || <span className="text-amber-500 text-xs">No phone</span>}</td>
                     <td className="px-3 py-2 text-gray-600">{row.email || "—"}</td>
-                    <td className="px-3 py-2">
-                      <span className="lf-badge text-[10px]">{row.type || "buyer"}</span>
-                    </td>
+                    <td className="px-3 py-2 text-gray-500 text-xs max-w-[200px] truncate">{row.address || "—"}</td>
                     <td className="px-3 py-2 text-gray-500 text-xs max-w-[200px] truncate">{row.notes || "—"}</td>
                   </tr>
                 ))}
@@ -282,7 +395,7 @@ export default function ContactImportPage() {
             </table>
             {parsedRows.length > 50 && (
               <div className="px-3 py-2 text-xs text-gray-500 bg-gray-50 text-center">
-                Showing first 50 of {parsedRows.length} rows
+                Showing first 50 of {parsedRows.length} contacts
               </div>
             )}
           </div>
@@ -294,7 +407,7 @@ export default function ContactImportPage() {
         <div className="lf-card p-12 text-center">
           <div className="text-4xl mb-4 animate-bounce">⏳</div>
           <h2 className="text-lg font-semibold mb-2">Importing contacts...</h2>
-          <p className="text-sm text-gray-500">Processing {parsedRows.length} contacts. This may take a moment.</p>
+          <p className="text-sm text-gray-500">Processing {contactsWithPhone.length} contacts. This may take a moment.</p>
         </div>
       )}
 
@@ -315,13 +428,13 @@ export default function ContactImportPage() {
             </div>
             <div className="p-3 bg-blue-50 rounded-lg">
               <div className="text-2xl font-bold text-blue-700">{result.total}</div>
-              <div className="text-xs text-blue-600">Total Rows</div>
+              <div className="text-xs text-blue-600">Total</div>
             </div>
           </div>
 
           {result.skipped > 0 && (
             <p className="text-xs text-gray-500 mb-2">
-              Skipped rows had missing data or duplicate phone numbers
+              Skipped contacts had no phone number or duplicates
             </p>
           )}
 
