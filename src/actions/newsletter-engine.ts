@@ -75,7 +75,7 @@ export async function getNewsletterEngineSnapshot(): Promise<NewsletterEngineSna
     return empty;
   }
 
-  // Recent events (last 50)
+  // Recent events (last 50) — for the queue UI only
   const eventsRes = await tc
     .from("email_events")
     .select(
@@ -94,15 +94,33 @@ export async function getNewsletterEngineSnapshot(): Promise<NewsletterEngineSna
   }
 
   const events = (eventsRes.data ?? []) as RecentEmailEvent[];
-  const counts = events.reduce(
-    (acc, e) => {
-      acc[e.status] = (acc[e.status] ?? 0) + 1;
-      return acc;
-    },
-    { pending: 0, processed: 0, failed: 0, ignored: 0 } as Record<
-      RecentEmailEvent["status"],
-      number
-    >
+
+  // Global status counts — query each status separately with head:true so we
+  // get the row count without paying for the rows themselves. The original
+  // M2-B implementation summed over the 50 most-recent events, which made
+  // the header counts misleading whenever the queue had more than 50 rows
+  // (e.g. "pending: 50" was actually "pending: ≥50"). We want the true
+  // realtor-scoped totals here, not a sample.
+  const counts = { pending: 0, processed: 0, failed: 0, ignored: 0 } as Record<
+    RecentEmailEvent["status"],
+    number
+  >;
+  const statuses: Array<RecentEmailEvent["status"]> = [
+    "pending",
+    "processed",
+    "failed",
+    "ignored",
+  ];
+  await Promise.all(
+    statuses.map(async (status) => {
+      const { count, error } = await tc
+        .from("email_events")
+        .select("id", { count: "exact", head: true })
+        .eq("status", status);
+      if (!error && typeof count === "number") {
+        counts[status] = count;
+      }
+    })
   );
 
   return {
