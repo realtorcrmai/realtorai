@@ -5,8 +5,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
+import { createWithRetry } from '@/lib/anthropic/retry';
 import { MODELS } from './constants';
-const SUMMARIZE_TIMEOUT = 30000;
 
 const anthropic = new Anthropic();
 
@@ -91,19 +91,12 @@ Timeline:
 ${timeline}`;
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), SUMMARIZE_TIMEOUT);
-
-    const response = await anthropic.messages.create(
-      {
-        model: MODELS.TIER1_PLANNER,
-        max_tokens: 500,
-        system: 'You are a CRM assistant summarizing contact interaction histories for a real estate agent. Be brief, specific, and actionable.',
-        messages: [{ role: 'user', content: summaryPrompt }],
-      },
-      { signal: controller.signal }
-    );
-    clearTimeout(timeout);
+    const response = await createWithRetry(anthropic, {
+      model: MODELS.TIER1_PLANNER,
+      max_tokens: 500,
+      system: 'You are a CRM assistant summarizing contact interaction histories for a real estate agent. Be brief, specific, and actionable.',
+      messages: [{ role: 'user', content: summaryPrompt }],
+    });
 
     const text = response.content[0].type === 'text' ? response.content[0].text : '';
     return text || 'Unable to generate summary.';

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import {
 import { createListing } from "@/actions/listings";
 import { Plus } from "lucide-react";
 import type { Contact } from "@/types";
+import { AddressAutocompleteInput } from "@/components/shared/AddressAutocompleteInput";
 
 const formSchema = z.object({
   address: z.string().min(5, "Address is required"),
@@ -55,6 +56,7 @@ export function ListingFormContent({ onSuccess, sellers }: ListingFormContentPro
     handleSubmit,
     setValue,
     reset,
+    control,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -63,6 +65,8 @@ export function ListingFormContent({ onSuccess, sellers }: ListingFormContentPro
       property_type: "Residential",
     },
   });
+
+  const addressValue = useWatch({ control, name: "address" }) ?? "";
 
   async function onSubmit(data: FormData) {
     setSubmitting(true);
@@ -89,9 +93,11 @@ export function ListingFormContent({ onSuccess, sellers }: ListingFormContentPro
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
         <Label>Address</Label>
-        <Input
-          {...register("address")}
+        <AddressAutocompleteInput
+          value={addressValue}
+          onChange={(val) => setValue("address", val, { shouldValidate: true })}
           placeholder="12345 King George Blvd, Surrey, BC"
+          disabled={submitting}
         />
         {errors.address && (
           <p className="text-sm text-red-600 mt-1">

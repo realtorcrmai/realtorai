@@ -2,6 +2,7 @@
 // Uses Claude Haiku for fast, cheap content scoring (0-100)
 
 import Anthropic from "@anthropic-ai/sdk";
+import { createWithRetry } from "@/lib/anthropic/retry";
 import type { SocialBrandKit, ContentScoreBreakdown } from "./types";
 
 const anthropic = new Anthropic({
@@ -19,7 +20,7 @@ export async function scoreContent(
   const model = process.env.SOCIAL_SCORING_MODEL || "claude-haiku-4-5-20251001";
 
   try {
-    const message = await anthropic.messages.create({
+    const message = await createWithRetry(anthropic, {
       model,
       max_tokens: 300,
       system: "You are a social media content quality evaluator for real estate agents. Score content on 6 dimensions, each 1-10.",

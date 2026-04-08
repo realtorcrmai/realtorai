@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { createWithRetry } from "@/lib/anthropic/retry";
 import type { TutorResponse, Correction, VocabularyItem } from "./types";
 
 function getClient() {
@@ -28,7 +29,8 @@ export async function sendTutorMessage(
     { role: "user", content: userMessage },
   ];
 
-  const response = await getClient().messages.create({
+  const _client = getClient();
+  const response = await createWithRetry(_client, {
     model: "claude-sonnet-4-20250514",
     max_tokens: 1024,
     system: systemPrompt,
@@ -103,7 +105,8 @@ export async function assessCEFR(
   areas_to_improve: string[];
   summary: string;
 }> {
-  const response = await getClient().messages.create({
+  const _client = getClient();
+  const response = await createWithRetry(_client, {
     model: "claude-sonnet-4-20250514",
     max_tokens: 1024,
     messages: [{ role: "user", content: assessmentPrompt }],

@@ -16,6 +16,11 @@ import { SellerPreferencesPanel } from "@/components/contacts/SellerPreferencesP
 import { ContactTasksPanel } from "@/components/contacts/ContactTasksPanel";
 import { ContactDocumentsPanel } from "@/components/contacts/ContactDocumentsPanel";
 import { PropertiesOfInterestPanel } from "@/components/contacts/PropertiesOfInterestPanel";
+import { BuyerJourneyPanel } from "@/components/contacts/BuyerJourneyPanel";
+import { ContactPortfolioTab } from "@/components/contacts/ContactPortfolioTab";
+import type { BuyerJourney } from "@/actions/buyer-journeys";
+import type { BuyerJourneyProperty } from "@/actions/buyer-journey-properties";
+import type { PortfolioItem } from "@/actions/contact-portfolio";
 import { WorkflowStepperCard } from "@/components/contacts/WorkflowStepperCard";
 import ActivityTimeline from "@/components/contacts/ActivityTimeline";
 import { ContextLog } from "@/components/contacts/ContextLog";
@@ -101,6 +106,12 @@ export type ContactDetailTabsProps = {
   contactId: string;
   contact: Contact;
   isSeller: boolean;
+  isBuyer: boolean;
+
+  // Buyer journey + portfolio
+  buyerJourneys: BuyerJourney[];
+  recentJourneyProperties: (BuyerJourneyProperty & { journeyStatus?: string })[];
+  portfolioItems: PortfolioItem[];
 
   // Overview tab
   sortedEnrollments: EnrollmentRow[];
@@ -157,6 +168,11 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
     contactId,
     contact,
     isSeller,
+    isBuyer,
+    // Buyer journey + portfolio
+    buyerJourneys,
+    recentJourneyProperties,
+    portfolioItems,
     // Overview
     sortedEnrollments,
     stepsByWorkflow,
@@ -239,6 +255,9 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             </span>
           )}
         </TabsTrigger>
+        <TabsTrigger value="portfolio" className="rounded-lg">
+          🏘️ Portfolio
+        </TabsTrigger>
       </TabsList>
 
       {/* ── OVERVIEW TAB ─────────────────────────────────────── */}
@@ -291,6 +310,21 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
                     </CardContent>
                   </Card>
                 )
+              );
+            }
+
+            // Buyer Journey Panel (buyers + dual clients)
+            if (isBuyer && buyerJourneys.length > 0) {
+              filledPanels.push(
+                <Card key="buyer-journey" id="section-buyer-journey" className="border-l-4 border-l-indigo-400 bg-indigo-50/20 dark:bg-indigo-950/10">
+                  <CardContent className="p-4">
+                    <BuyerJourneyPanel
+                      contactId={contactId}
+                      journeys={buyerJourneys}
+                      recentProperties={recentJourneyProperties}
+                    />
+                  </CardContent>
+                </Card>
               );
             }
 
@@ -519,6 +553,15 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
         <Card className="border-border/60">
           <CardContent className="p-5">
             <FamilyTabPanel contactId={contactId} initialMembers={familyMembers} />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* ── PORTFOLIO TAB ──────────────────────────────────── */}
+      <TabsContent value="portfolio">
+        <Card className="border-border/60">
+          <CardContent className="p-5">
+            <ContactPortfolioTab contactId={contactId} items={portfolioItems} />
           </CardContent>
         </Card>
       </TabsContent>

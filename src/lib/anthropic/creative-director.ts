@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { readFileSync } from "fs";
 import { resolve } from "path";
+import { createWithRetry } from "@/lib/anthropic/retry";
 
 function getAnthropicKey(): string {
   const envKey = process.env.ANTHROPIC_API_KEY;
@@ -41,7 +42,7 @@ export async function generateMLSRemarks(listing: ListingContext): Promise<{
   publicRemarks: string;
   realtorRemarks: string;
 }> {
-  const message = await anthropic.messages.create({
+  const message = await createWithRetry(anthropic, {
     model: "claude-sonnet-4-20250514",
     max_tokens: 1024,
     system: `You are a professional BC real estate copywriter. Generate two types of MLS remarks for a property listing.
@@ -85,7 +86,7 @@ export async function generateContentPrompts(listing: ListingContext): Promise<{
   imagePrompt: string;
   igCaption: string;
 }> {
-  const message = await anthropic.messages.create({
+  const message = await createWithRetry(anthropic, {
     model: "claude-sonnet-4-20250514",
     max_tokens: 2048,
     system: `You are a creative director for luxury real estate marketing. Generate three pieces of content for a property listing:
