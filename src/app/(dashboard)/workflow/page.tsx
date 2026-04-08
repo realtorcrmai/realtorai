@@ -18,12 +18,12 @@ const MLS_PHASES = [
 
 const PHASE_COLORS: Record<number, string> = {
   1: "bg-slate-100 text-slate-700 border-slate-300",
-  2: "bg-[#0F7694]/10 text-[#0A6880] border-[#0F7694]/30",
-  3: "bg-[#0F7694]/10 text-[#0A6880] border-[#0F7694]/25",
+  2: "bg-blue-100 text-blue-700 border-blue-300",
+  3: "bg-emerald-100 text-emerald-700 border-emerald-300",
   4: "bg-amber-100 text-amber-700 border-amber-300",
-  5: "bg-[#0F7694]/10 text-[#0A6880] border-[#0F7694]/25",
-  6: "bg-[#0F7694]/15 text-[#0A6880] border-[#0F7694]/30",
-  7: "bg-[#0F7694]/10 text-[#0A6880] border-[#0F7694]/25",
+  5: "bg-orange-100 text-orange-700 border-orange-300",
+  6: "bg-purple-100 text-purple-700 border-purple-300",
+  7: "bg-teal-100 text-teal-700 border-teal-300",
 };
 
 export default async function WorkflowPage() {
@@ -42,7 +42,7 @@ export default async function WorkflowPage() {
 
   const phaseCounts = MLS_PHASES.map((p) => ({
     ...p,
-    count: (listings ?? []).filter((l: any) => listingPhase(l.status) === p.phase).length,
+    count: (listings ?? []).filter((l: { status: string }) => listingPhase(l.status) === p.phase).length,
   }));
 
   return (
@@ -80,7 +80,7 @@ export default async function WorkflowPage() {
       <div className="space-y-4">
         {MLS_PHASES.map((phase) => {
           const phaseListings = (listings ?? []).filter(
-            (l: any) => listingPhase(l.status) === phase.phase
+            (l: { status: string }) => listingPhase(l.status) === phase.phase
           );
           if (phaseListings.length === 0) return null;
           return (
@@ -96,11 +96,11 @@ export default async function WorkflowPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {phaseListings.map((listing: any) => (
+                  {phaseListings.map((listing: { id: string; address: string; mls_number?: string; list_price?: number; status: string }) => (
                     <Link key={listing.id} href={`/listings/${listing.id}`}>
                       <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/60 transition-colors cursor-pointer group">
                         {phase.phase === 7 ? (
-                          <CheckCircle2 className="h-4 w-4 text-[#0F7694] shrink-0" />
+                          <CheckCircle2 className="h-4 w-4 text-teal-500 shrink-0" />
                         ) : (
                           <Circle className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                         )}

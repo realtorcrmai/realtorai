@@ -227,7 +227,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
         <div className="space-y-3">
           {/* Panels sorted: panels WITH data render first, empty ones are collapsed into Quick Setup */}
           {(() => {
-            const prefsHasData = isSeller ? hasPreferenceData(sellerPreferences as Record<string, unknown> | null) : hasPreferenceData(buyerPreferences);
+            const prefsHasData = isSeller ? hasPreferenceData(sellerPreferences as unknown as Record<string, unknown>) : hasPreferenceData(buyerPreferences);
             const contextHasData = contextEntries.length > 0;
             const propertiesHasData = !isSeller && (buyerPreferences?.properties_of_interest as unknown[] ?? []).length > 0;
             const docsHasData = documents.length > 0;
@@ -242,7 +242,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
                 filledPanels.push(
                   <Card
                     key={enrollment.id}
-                    className="border-l-4 border-l-[#0F7694] bg-[#0F7694]/5/30 dark:bg-[#1a1535]/10"
+                    className="border-l-4 border-l-indigo-400 bg-indigo-50/30 dark:bg-indigo-950/10"
                   >
                     <CardContent className="p-4">
                       <WorkflowStepperCard
@@ -260,13 +260,13 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             if (prefsHasData) {
               filledPanels.push(
                 isSeller ? (
-                  <Card key="prefs" id="section-seller-preferences" className="border-l-4 border-l-[#0F7694] bg-[#0F7694]/5/20 dark:bg-[#1a1535]/10">
+                  <Card key="prefs" id="section-seller-preferences" className="border-l-4 border-l-indigo-400 bg-indigo-50/20 dark:bg-indigo-950/10">
                     <CardContent className="p-4">
                       <SellerPreferencesPanel contactId={contactId} preferences={sellerPreferences} />
                     </CardContent>
                   </Card>
                 ) : (
-                  <Card key="prefs" id="section-buyer-preferences" className="border-l-4 border-l-[#0F7694] bg-[#0F7694]/5 dark:bg-[#1a1535]/10">
+                  <Card key="prefs" id="section-buyer-preferences" className="border-l-4 border-l-teal-400 bg-teal-50/20 dark:bg-teal-950/10">
                     <CardContent className="p-4">
                       <BuyerPreferencesPanel contactId={contactId} preferences={buyerPreferences} />
                     </CardContent>
@@ -287,7 +287,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             // Properties of interest
             if (propertiesHasData) {
               filledPanels.push(
-                <Card key="properties" id="section-properties-interest" className="border-l-4 border-l-[#0F7694] bg-[#0F7694]/5 dark:bg-[#1a1535]/10">
+                <Card key="properties" id="section-properties-interest" className="border-l-4 border-l-sky-400 bg-sky-50/20 dark:bg-sky-950/10">
                   <CardContent className="p-4">
                     <PropertiesOfInterestPanel contactId={contactId} preferences={buyerPreferences} listings={allListings} />
                   </CardContent>
@@ -361,7 +361,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
                 {emptyActions.length > 1 && (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-1 h-5 rounded-full bg-gradient-to-b from-[#0F7694] to-[#67D4E8]" />
+                      <div className="w-1 h-5 rounded-full bg-gradient-to-b from-indigo-400 to-teal-400" />
                       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Quick Setup</h3>
                       <span className="text-sm text-muted-foreground ml-auto">{emptyActions.length - 1} remaining</span>
                     </div>
@@ -381,7 +381,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
         <div className="space-y-3">
           {/* Relationship Network */}
           {graphNodes.length > 1 && (
-            <Card className="border-l-4 border-l-[#0F7694] bg-[#0F7694]/5/15 dark:bg-[#1a1535]/10">
+            <Card className="border-l-4 border-l-indigo-400 bg-indigo-50/15 dark:bg-indigo-950/10">
               <CardContent className="p-4">
                 <RelationshipGraph
                   nodes={graphNodes as any}
@@ -392,7 +392,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
           )}
 
           {/* Demographics Panel */}
-          <Card className="border-l-4 border-l-[#67D4E8] bg-[#0F7694]/5/20 dark:bg-[#1a1535]/10">
+          <Card className="border-l-4 border-l-violet-400 bg-violet-50/20 dark:bg-violet-950/10">
             <CardContent className="p-4">
               <DemographicsPanel
                 contactId={contactId}
@@ -407,7 +407,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
       <TabsContent value="activity" className="">
         <div className="space-y-3">
           {/* Tasks & Follow-ups */}
-          <Card className="border-l-4 border-l-[#0F7694] bg-[#0F7694]/5 dark:bg-[#1a1535]/10">
+          <Card className="border-l-4 border-l-orange-400 bg-orange-50/15 dark:bg-orange-950/10">
             <CardContent className="p-4">
               <ContactTasksPanel contactId={contactId} tasks={tasks} />
             </CardContent>
@@ -425,7 +425,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
           </Card>
 
           {/* Communication Timeline */}
-          <Card className="border-l-4 border-l-[#0F7694] bg-[#0F7694]/5 dark:bg-[#1a1535]/10">
+          <Card className="border-l-4 border-l-sky-400 bg-sky-50/15 dark:bg-sky-950/10">
             <CardContent className="p-4">
               <CommunicationTimeline
                 contactId={contactId}
@@ -461,7 +461,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
         <div className="space-y-3">
           {/* Seller Earnings Summary */}
           {isSeller && listings.some((l) => l.status === "sold") && (
-            <Card className="border-l-4 border-l-emerald-400 bg-[#0F7694]/5/15 dark:bg-[#1a1535]/10">
+            <Card className="border-l-4 border-l-emerald-400 bg-emerald-50/15 dark:bg-emerald-950/10">
               <CardContent className="p-4">
                 <SellerEarningsSummary listings={listings} />
               </CardContent>
@@ -470,7 +470,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
 
           {/* Property History */}
           {(isSeller ? listings.length > 0 : buyerListings.length > 0) && (
-            <Card id="section-property-history" className="border-l-4 border-l-[#67D4E8] bg-[#0F7694]/5/15 dark:bg-[#1a1535]/10">
+            <Card id="section-property-history" className="border-l-4 border-l-violet-400 bg-violet-50/15 dark:bg-violet-950/10">
               <CardContent className="p-4">
                 <PropertyHistoryPanel
                   listings={isSeller ? listings : buyerListings}
@@ -496,25 +496,25 @@ const TILE_COLORS: Record<string, {
   shimmer: string;
 }> = {
   indigo: {
-    border: "border-t-[#0F7694]",
-    bg: "from-[#0F7694]/5/40 to-white dark:from-[#1a1535]/20 dark:to-background",
-    iconBg: "from-[#0F7694]/10 to-[#0F7694]/5 dark:from-[#1a1535]/40 dark:to-[#1a1535]/20",
-    hoverBorder: "hover:border-[#0F7694]/30 dark:hover:border-[#0F7694]/40",
-    shimmer: "from-[#0F7694]/0 via-[#0F7694]/20 to-[#0F7694]/0",
+    border: "border-t-indigo-400",
+    bg: "from-indigo-50/40 to-white dark:from-indigo-950/20 dark:to-background",
+    iconBg: "from-indigo-100 to-indigo-50 dark:from-indigo-900/40 dark:to-indigo-800/20",
+    hoverBorder: "hover:border-indigo-300 dark:hover:border-indigo-700",
+    shimmer: "from-indigo-200/0 via-indigo-200/30 to-indigo-200/0",
   },
   teal: {
     border: "border-t-teal-400",
-    bg: "from-[#0F7694]/5 to-white dark:from-[#1a1535]/20 dark:to-background",
-    iconBg: "from-[#0F7694]/10 to-[#0F7694]/5 dark:from-[#1a1535]/40 dark:to-[#1a1535]/20",
-    hoverBorder: "hover:border-[#0F7694]/40 dark:hover:border-[#0F7694]/20",
-    shimmer: "from-[#0F7694]/0 via-[#0F7694]/15 to-[#0F7694]/0",
+    bg: "from-teal-50/40 to-white dark:from-teal-950/20 dark:to-background",
+    iconBg: "from-teal-100 to-teal-50 dark:from-teal-900/40 dark:to-teal-800/20",
+    hoverBorder: "hover:border-teal-300 dark:hover:border-teal-700",
+    shimmer: "from-teal-200/0 via-teal-200/30 to-teal-200/0",
   },
   sky: {
-    border: "border-t-[#0F7694]",
-    bg: "from-[#0F7694]/5 to-white dark:from-[#1a1535]/10 dark:to-background",
-    iconBg: "from-[#0F7694]/10 to-[#0F7694]/5 dark:from-[#1a1535]/40 dark:to-[#1a1535]/20",
-    hoverBorder: "hover:border-[#0F7694]/40 dark:hover:border-[#0F7694]/30",
-    shimmer: "from-[#0F7694]/0 via-[#0F7694]/20 to-[#0F7694]/0",
+    border: "border-t-sky-400",
+    bg: "from-sky-50/40 to-white dark:from-sky-950/20 dark:to-background",
+    iconBg: "from-sky-100 to-sky-50 dark:from-sky-900/40 dark:to-sky-800/20",
+    hoverBorder: "hover:border-sky-300 dark:hover:border-sky-700",
+    shimmer: "from-sky-200/0 via-sky-200/30 to-sky-200/0",
   },
   amber: {
     border: "border-t-amber-400",
@@ -525,10 +525,10 @@ const TILE_COLORS: Record<string, {
   },
   emerald: {
     border: "border-t-emerald-400",
-    bg: "from-[#0F7694]/40 to-white dark:from-[#0F7694]/20 dark:to-background",
-    iconBg: "from-[#0F7694] to-[#0F7694] dark:from-[#0F7694]/40 dark:to-[#0F7694]/20",
-    hoverBorder: "hover:border-[#0F7694]/30 dark:hover:border-emerald-700",
-    shimmer: "from-[#0F7694]/0 via-emerald-200/30 to-[#0F7694]/0",
+    bg: "from-emerald-50/40 to-white dark:from-emerald-950/20 dark:to-background",
+    iconBg: "from-emerald-100 to-emerald-50 dark:from-emerald-900/40 dark:to-emerald-800/20",
+    hoverBorder: "hover:border-emerald-300 dark:hover:border-emerald-700",
+    shimmer: "from-emerald-200/0 via-emerald-200/30 to-emerald-200/0",
   },
 };
 

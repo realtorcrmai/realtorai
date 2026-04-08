@@ -55,9 +55,9 @@ export default async function AutomationsPage() {
   const templateCount = templates?.length ?? 0;
   const unreadCount = unreadNotifications?.length ?? 0;
 
-  const activeWorkflows = workflowList.filter((w: any) => w.is_active).length;
+  const activeWorkflows = workflowList.filter((w: { is_active: boolean }) => w.is_active).length;
   const totalActiveEnrollments = enrollmentList.filter(
-    (e: any) => e.status === "active"
+    (e: { status: string }) => e.status === "active"
   ).length;
 
   // Build enrollment counts by workflow (active + completed + last enrolled)
@@ -127,8 +127,8 @@ export default async function AutomationsPage() {
         <Card>
           <CardContent className="py-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-[#0F7694]/5 flex items-center justify-center">
-                <GitBranch className="h-5 w-5 text-[#0F7694]" />
+              <div className="h-10 w-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+                <GitBranch className="h-5 w-5 text-indigo-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
@@ -148,8 +148,8 @@ export default async function AutomationsPage() {
         <Card>
           <CardContent className="py-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-[#0F7694]/5 flex items-center justify-center">
-                <Users className="h-5 w-5 text-[#0F7694]" />
+              <div className="h-10 w-10 rounded-lg bg-green-50 flex items-center justify-center">
+                <Users className="h-5 w-5 text-green-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
@@ -166,8 +166,8 @@ export default async function AutomationsPage() {
         <Card>
           <CardContent className="py-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-[#0F7694]/8 flex items-center justify-center">
-                <FileText className="h-5 w-5 text-[#0F7694]" />
+              <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-blue-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
@@ -204,7 +204,7 @@ export default async function AutomationsPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="rounded-b-none border-b-2 border-[#0F7694]/60 text-[#0F7694] font-medium"
+            className="rounded-b-none border-b-2 border-indigo-500 text-indigo-600 font-medium"
           >
             <GitBranch className="h-4 w-4 mr-1.5" />
             Workflows
@@ -258,7 +258,7 @@ export default async function AutomationsPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {workflowList.map((workflow: any) => {
+          {workflowList.map((workflow: { id: string; slug: string; name: string; description?: string; workflow_steps: unknown; is_active: boolean; created_at: string; contact_type?: string }) => {
             const blueprint = blueprintsBySlug[workflow.slug];
             const icon = blueprint?.icon ?? "⚙️";
             const stepCount = Array.isArray(workflow.workflow_steps)
@@ -277,14 +277,14 @@ export default async function AutomationsPage() {
                 href={`/automations/workflows/${workflow.id}`}
                 className="group"
               >
-                <Card className="h-full transition-shadow hover:shadow-md group-hover:border-[#0F7694]/20">
+                <Card className="h-full transition-shadow hover:shadow-md group-hover:border-indigo-200">
                   <CardContent className="py-5 space-y-3">
                     {/* Top row: icon + status */}
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">{icon}</span>
                         <div>
-                          <h3 className="font-semibold text-foreground group-hover:text-[#0F7694] transition-colors leading-tight">
+                          <h3 className="font-semibold text-foreground group-hover:text-indigo-600 transition-colors leading-tight">
                             {workflow.name}
                           </h3>
                           <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
@@ -292,7 +292,7 @@ export default async function AutomationsPage() {
                           </p>
                         </div>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-[#67D4E8] transition-colors shrink-0 mt-1" />
+                      <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-indigo-400 transition-colors shrink-0 mt-1" />
                     </div>
 
                     {/* Meta row */}
@@ -306,7 +306,7 @@ export default async function AutomationsPage() {
                         {activeEnrollments} enrolled
                       </span>
                       {completedEnrollments > 0 && (
-                        <span className="flex items-center gap-1 text-[#0F7694]">
+                        <span className="flex items-center gap-1 text-green-600">
                           <CheckCircle2 className="h-3 w-3" />
                           {completedEnrollments} completed
                         </span>
@@ -322,7 +322,7 @@ export default async function AutomationsPage() {
                     {/* Status badge */}
                     <div className="flex items-center justify-between">
                       {workflow.is_active ? (
-                        <Badge className="bg-[#0F7694]/10 text-[#0A6880] hover:bg-[#0F7694]/10 text-[11px]">
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100 text-[11px]">
                           <Play className="h-3 w-3 mr-1" />
                           Active
                         </Badge>

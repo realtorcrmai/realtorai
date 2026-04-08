@@ -38,10 +38,11 @@ const PROVIDERS = [
     id: "outlook",
     name: "Outlook / Microsoft",
     icon: "📧",
-    desc: "Import contacts from your Microsoft account.",
+    desc: "Export as vCard from Outlook, then upload via Apple Contacts / vCard below.",
     type: "oauth" as const,
     autoSync: true,
-    comingSoon: true,
+    comingSoon: false,
+    redirectToImport: true,
   },
   {
     id: "fub",
@@ -52,6 +53,14 @@ const PROVIDERS = [
     autoSync: false,
     placeholder: "Paste your Follow Up Boss API key",
     helpUrl: "https://docs.followupboss.com/reference/getting-started",
+  },
+  {
+    id: "vcf",
+    name: "Apple Contacts / vCard",
+    icon: "🍎",
+    desc: "Export from Apple Contacts, iPhone, Outlook, or any app as .vcf file.",
+    type: "file" as const,
+    autoSync: false,
   },
   {
     id: "csv",
@@ -200,7 +209,11 @@ export default function ContactSyncPage() {
                     </div>
                   </div>
                   <div>
-                    {provider.comingSoon ? (
+                    {"redirectToImport" in provider && provider.redirectToImport ? (
+                      <Link href="/contacts/import" className="lf-btn text-xs px-4 py-1.5">
+                        Upload vCard
+                      </Link>
+                    ) : "comingSoon" in provider && provider.comingSoon ? (
                       <span className="text-xs px-2 py-1 bg-gray-100 text-gray-500 rounded-full">Coming Soon</span>
                     ) : isConnected ? (
                       <button
@@ -255,7 +268,11 @@ export default function ContactSyncPage() {
                     </div>
                   </div>
                   <div>
-                    {provider.id === "csv" ? (
+                    {provider.id === "vcf" ? (
+                      <Link href="/contacts/import" className="lf-btn text-xs px-4 py-1.5">
+                        Upload vCard
+                      </Link>
+                    ) : provider.id === "csv" ? (
                       <Link href="/contacts/import" className="lf-btn text-xs px-4 py-1.5">
                         Upload CSV
                       </Link>

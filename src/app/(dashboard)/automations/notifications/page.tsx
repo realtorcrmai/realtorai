@@ -30,7 +30,7 @@ export default async function NotificationsPage() {
 
   const notificationList = notifications ?? [];
   const templateCount = templates?.length ?? 0;
-  const unreadCount = notificationList.filter((n: any) => !n.is_read).length;
+  const unreadCount = notificationList.filter((n: { is_read: boolean }) => !n.is_read).length;
 
   return (
     <div className="space-y-6 animate-float-in">
@@ -38,7 +38,7 @@ export default async function NotificationsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Zap className="h-6 w-6 text-[#0F7694]" />
+            <Zap className="h-6 w-6 text-indigo-500" />
             Automations
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -76,7 +76,7 @@ export default async function NotificationsPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="rounded-b-none border-b-2 border-[#0F7694]/60 text-[#0F7694] font-medium"
+            className="rounded-b-none border-b-2 border-indigo-500 text-indigo-600 font-medium"
           >
             <Bell className="h-4 w-4 mr-1.5" />
             Notifications

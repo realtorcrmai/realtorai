@@ -91,7 +91,7 @@ const title = { fontSize: "24px", fontWeight: "700" as const, color: "#1a1535", 
 const subtitle = { fontSize: "15px", color: "#6b6b8d", margin: "0" };
 
 const valueBox = {
-  backgroundColor: "#f6f5ff",
+  backgroundColor: "#f7f7f8",
   borderRadius: "10px",
   padding: "20px",
   textAlign: "center" as const,

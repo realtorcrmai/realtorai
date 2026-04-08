@@ -70,11 +70,11 @@ export default async function ListingDetailPage({
 
   // Build form status map for the right panel
   const formStatuses = Object.fromEntries(
-    (formSubmissions ?? []).map((s: any) => [s.form_key, s.status as "draft" | "completed"])
+    (formSubmissions ?? []).map((s: { form_key: string; status: string }) => [s.form_key, s.status as "draft" | "completed"])
   );
 
   const requiredTypes = ["FINTRAC", "DORTS", "PDS"];
-  const docTypes = (documents ?? []).map((d: any) => d.doc_type);
+  const docTypes = (documents ?? []).map((d: { doc_type: string }) => d.doc_type);
   const hasMissingDocs = requiredTypes.some((t) => !docTypes.includes(t));
 
   return (
@@ -88,7 +88,7 @@ export default async function ListingDetailPage({
 
           {/* Listing Header — compact */}
           <Card className="animate-float-in overflow-hidden border-0 shadow-md">
-            <div className="h-1.5 bg-gradient-to-r from-[#C8F5F0] via-[#0F7694] to-[#1a1535]" />
+            <div className="h-1.5 bg-gradient-to-r from-teal-500 via-blue-500 to-indigo-500" />
             <CardContent className="p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1.5 min-w-0">
@@ -198,7 +198,7 @@ export default async function ListingDetailPage({
                   No showings for this listing yet.
                 </p>
               )}
-              {(showings ?? []).map((showing: any) => (
+              {(showings ?? []).map((showing: { id: string; buyer_agent_name: string; start_time: string; status: string; created_at: string }) => (
                 <div
                   key={showing.id}
                   className="flex items-center justify-between p-3 rounded-lg bg-muted/50"

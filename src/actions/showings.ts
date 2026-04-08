@@ -6,6 +6,7 @@ import { sendShowingRequest } from "@/lib/twilio";
 import { fetchBusyBlocks, isSlotAvailable } from "@/lib/google-calendar";
 import { revalidatePath } from "next/cache";
 import { showingSchema, type ShowingFormData } from "@/lib/schemas";
+import { emitNewsletterEvent } from "@/lib/newsletter-events";
 
 export async function createShowingRequest(
   formData: ShowingFormData
@@ -161,18 +162,19 @@ export async function updateShowingStatus(
   }
 
   // Fire showing_completed trigger for buyer contacts when showing is confirmed
+  // AND emit newsletter event for the seller (Newsletter Engine v3 — non-blocking)
   if (status === "confirmed") {
     try {
       const { data: appointment } = await tc
         .from("appointments")
-        .select("listing_id")
+        .select("listing_id, start_time")
         .eq("id", appointmentId)
         .single();
 
       if (appointment?.listing_id) {
         const { data: listing } = await tc
           .from("listings")
-          .select("buyer_id")
+          .select("buyer_id, seller_id")
           .eq("id", appointment.listing_id)
           .single();
 
@@ -182,6 +184,22 @@ export async function updateShowingStatus(
             type: "showing_completed",
             contactId: listing.buyer_id,
             data: { appointmentId, listingId: appointment.listing_id },
+          });
+        }
+
+        // Newsletter Engine v3: notify the seller that a showing was confirmed
+        const sellerId = (listing as { seller_id?: string | null } | null)?.seller_id ?? null;
+        if (sellerId) {
+          await emitNewsletterEvent(tc, {
+            event_type: "showing_confirmed",
+            listing_id: appointment.listing_id,
+            contact_id: sellerId,
+            event_data: {
+              appointment_id: appointmentId,
+              listing_id: appointment.listing_id,
+              seller_id: sellerId,
+              start_time: appointment.start_time,
+            },
           });
         }
       }
