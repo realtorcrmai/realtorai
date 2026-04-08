@@ -4,6 +4,7 @@ import { config } from '../config.js';
 import { checkSavedSearches } from './check-saved-searches.js';
 import { checkBirthdays } from './check-birthdays.js';
 import { runRagBackfill } from './rag-backfill.js';
+import { runWeeklyLearning } from './weekly-learning.js';
 
 /**
  * Cron registry.
@@ -47,5 +48,18 @@ export function startCrons(): void {
   logger.info(
     { flag: config.FLAG_RAG_BACKFILL },
     'cron: registered rag-backfill (0 3 * * 0 America/Vancouver)'
+  );
+
+  // M3-C: weekly-learning (Monday 6 AM Vancouver). Same flag pattern.
+  cron.schedule(
+    '0 6 * * 1',
+    () => {
+      runWeeklyLearning().catch((err) => logger.error({ err }, 'cron: weekly-learning threw'));
+    },
+    { timezone: 'America/Vancouver' }
+  );
+  logger.info(
+    { flag: config.FLAG_WEEKLY_LEARNING },
+    'cron: registered weekly-learning (0 6 * * 1 America/Vancouver)'
   );
 }
