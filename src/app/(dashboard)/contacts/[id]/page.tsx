@@ -553,7 +553,7 @@ export default async function ContactDetailPage({
     <>
       {/* Contact Card Header */}
       <div id="section-contact-info" className="animate-float-in relative z-20">
-            <Card className="shadow-md border border-[#0F7694]/20 dark:border-[#0F7694]/10 overflow-visible bg-gradient-to-r from-[#0F7694]/5 via-[#0F7694]/5 to-[#0F7694]/3 dark:from-[#1a1535]/20 dark:via-[#1a1535]/20 dark:to-[#1a1535]/10">
+            <Card className="shadow-md border border-violet-200/60 dark:border-violet-900/30 overflow-visible bg-gradient-to-r from-violet-50/50 via-indigo-50/40 to-teal-50/30 dark:from-violet-950/20 dark:via-indigo-950/20 dark:to-teal-950/10">
               <CardContent className="p-4">
                 {/* Row 1: Avatar + Name + Badges + Actions */}
                 <div className="flex items-center gap-4">
@@ -588,7 +588,7 @@ export default async function ContactDetailPage({
                 </div>
 
                 {/* Row 2: Pipeline bar or Convert button */}
-                <div className="mt-3 pt-2 border-t border-[#0F7694]/10 dark:border-[#1a1535]/20">
+                <div className="mt-3 pt-2 border-t border-indigo-50 dark:border-indigo-900/20">
                   {contact.type === "customer" ? (
                     <div className="flex items-center gap-2 p-3 bg-[#0F7694]/5 border border-[#0F7694]/20 rounded-lg">
                       <span className="text-sm text-[#0A6880] font-medium flex-1">This is an unqualified lead. Convert when ready:</span>
@@ -597,14 +597,14 @@ export default async function ContactDetailPage({
                         const { convertContactType } = await import("@/actions/contacts");
                         await convertContactType(id, "buyer");
                       }}>
-                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-[#0F7694] text-white font-medium hover:bg-[#0A6880]">Convert to Buyer</button>
+                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700">Convert to Buyer</button>
                       </form>
                       <form action={async () => {
                         "use server";
                         const { convertContactType } = await import("@/actions/contacts");
                         await convertContactType(id, "seller");
                       }}>
-                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-[#0F7694] text-white font-medium hover:bg-[#0A6880]">Convert to Seller</button>
+                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-purple-600 text-white font-medium hover:bg-purple-700">Convert to Seller</button>
                       </form>
                     </div>
                   ) : (
@@ -717,10 +717,10 @@ export default async function ContactDetailPage({
 
   // Build right panel JSX
   const rightPanelJsx = (
-      <aside className="hidden lg:block w-[320px] shrink-0 border-l p-4 bg-gradient-to-b from-slate-50 via-white to-[#0F7694]/3 dark:from-card/50 dark:via-card/30 dark:to-[#1a1535]/10 overflow-y-auto space-y-4">
+      <aside className="hidden lg:block w-[320px] shrink-0 border-l p-4 bg-gradient-to-b from-slate-50 via-white to-teal-50/30 dark:from-card/50 dark:via-card/30 dark:to-teal-950/10 overflow-y-auto space-y-4">
         {/* Engagement — 1st section */}
         {intel && (
-          <div className="pb-3 border-b border-[#0F7694]/15 dark:border-[#1a1535]/30 border-l-4 border-l-[#0F7694] pl-4 rounded-sm shrink-0">
+          <div className="pb-3 border-b border-indigo-100 dark:border-indigo-900/30 border-l-4 border-l-indigo-400 pl-4 rounded-sm shrink-0">
             <IntelligencePanel
               intelligence={intel}
               totalEmails={newslettersWithEvents.length}
@@ -729,7 +729,7 @@ export default async function ContactDetailPage({
         )}
 
         {/* Network Stats — 2nd section */}
-        <div className="border-b border-[#0F7694]/20 dark:border-[#0F7694]/10 pb-3 pt-3 border-l-4 border-l-[#0F7694] pl-4 rounded-sm shrink-0">
+        <div className="border-b border-teal-100 dark:border-teal-900/30 pb-3 pt-3 border-l-4 border-l-teal-400 pl-4 rounded-sm shrink-0">
           <NetworkStatsCard
             connectionCount={relationships.length}
             referralCount={allReferrals.length}
@@ -742,7 +742,7 @@ export default async function ContactDetailPage({
         </div>
 
         {/* Referrals */}
-        <div className="border-b border-[#0F7694]/20 dark:border-[#0F7694]/10 pb-3 pt-3 border-l-4 border-l-[#67D4E8] pl-4 rounded-sm shrink-0">
+        <div className="border-b border-orange-100 dark:border-orange-900/30 pb-3 pt-3 border-l-4 border-l-orange-400 pl-4 rounded-sm shrink-0">
           <ReferralsPanel
             contact={contact}
             referredByName={referredByName}
@@ -753,7 +753,7 @@ export default async function ContactDetailPage({
         </div>
 
         {/* Relationships — grows to fill remaining space */}
-        <div className="pt-3 border-l-4 border-l-[#67D4E8] pl-4 rounded-sm">
+        <div className="pt-3 border-l-4 border-l-violet-400 pl-4 rounded-sm">
           <RelationshipManager
             contactId={contact.id}
             relationships={relationships}
@@ -763,7 +763,7 @@ export default async function ContactDetailPage({
           {/* Contextual Tips — fills remaining space when sections are empty */}
           {(!intel || Object.keys(intel).length === 0) && relationships.length === 0 && allReferrals.length === 0 && (
             <div className="mt-4 pt-4 border-t border-border/30">
-              <div className="rounded-xl bg-gradient-to-br from-[#0F7694]/5/50 to-[#0F7694]/3 dark:from-[#1a1535]/20 dark:to-[#1a1535]/10 border border-[#0F7694]/15/50 dark:border-[#1a1535]/20 p-4">
+              <div className="rounded-xl bg-gradient-to-br from-indigo-50/50 to-teal-50/30 dark:from-indigo-950/20 dark:to-teal-950/10 border border-indigo-100/50 dark:border-indigo-900/20 p-4">
                 <div className="flex items-start gap-2.5">
                   <span className="text-lg">💡</span>
                   <div>
@@ -775,15 +775,15 @@ export default async function ContactDetailPage({
                     </p>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-[#0F7694]/10 dark:bg-[#1a1535]/30 flex items-center justify-center text-xs font-medium shrink-0">1</span>
+                        <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-medium shrink-0">1</span>
                         <span className="text-muted-foreground">Add a <strong className="text-foreground">relationship</strong></span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-[#0F7694]/10 dark:bg-[#1a1535]/30 flex items-center justify-center text-xs font-medium shrink-0">2</span>
+                        <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-medium shrink-0">2</span>
                         <span className="text-muted-foreground">Set <strong className="text-foreground">preferences</strong></span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-[#0F7694]/10 dark:bg-[#1a1535]/30 flex items-center justify-center text-xs font-medium shrink-0">3</span>
+                        <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-medium shrink-0">3</span>
                         <span className="text-muted-foreground">Send first <strong className="text-foreground">email</strong></span>
                       </div>
                     </div>

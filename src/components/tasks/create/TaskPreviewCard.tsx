@@ -20,7 +20,7 @@ function PreviewRow({ icon: Icon, label, value, empty }: { icon: typeof Calendar
 
 const PRIORITY_GRADIENTS: Record<string, string> = {
   low: "from-gray-400 to-slate-500",
-  medium: "from-[#67D4E8] to-[#0F7694]",
+  medium: "from-blue-500 to-indigo-600",
   high: "from-orange-500 to-amber-600",
   urgent: "from-red-500 to-rose-600",
 };
@@ -59,7 +59,7 @@ export function TaskPreviewCard({
   const completionPct = Math.min(100, Math.round((filledFields / totalFields) * 100));
 
   return (
-    <div className="rounded-2xl border border-border/30 bg-gradient-to-br from-white via-white to-[#FAF8F4] dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-800/50 shadow-lg overflow-hidden transition-all duration-300">
+    <div className="rounded-2xl border border-border/30 bg-gradient-to-br from-white via-white to-slate-50/80 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-800/50 shadow-lg overflow-hidden transition-all duration-300">
       {/* Colored top bar */}
       <div className={`h-1.5 bg-gradient-to-r ${gradient}`} />
 
@@ -90,7 +90,7 @@ export function TaskPreviewCard({
         <div className="flex items-center gap-2">
           <div className="flex-1 h-1.5 rounded-full bg-muted/30 overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${completionPct >= 70 ? "bg-[#0F7694]" : completionPct >= 40 ? "bg-amber-500" : "bg-red-400"}`}
+              className={`h-full rounded-full transition-all duration-500 ${completionPct >= 70 ? "bg-emerald-500" : completionPct >= 40 ? "bg-amber-500" : "bg-red-400"}`}
               style={{ width: `${completionPct}%` }}
             />
           </div>

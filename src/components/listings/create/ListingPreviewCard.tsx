@@ -13,11 +13,11 @@ const PROPERTY_ICONS: Record<string, string> = {
 };
 
 const PROPERTY_GRADIENTS: Record<string, string> = {
-  Residential: "from-blue-500 to-[#0F7694]",
-  "Condo/Apartment": "from-[#0F7694] to-[#1a1535]",
-  Townhouse: "from-[#0F7694] to-[#0F7694]",
-  Land: "from-[#67D4E8] to-[#0F7694]",
-  Commercial: "from-[#67D4E8] to-[#0F7694]",
+  Residential: "from-blue-500 to-indigo-600",
+  "Condo/Apartment": "from-purple-500 to-indigo-600",
+  Townhouse: "from-green-500 to-emerald-600",
+  Land: "from-amber-500 to-orange-600",
+  Commercial: "from-teal-500 to-cyan-600",
   "Multi-Family": "from-rose-500 to-pink-600",
 };
 
@@ -51,7 +51,7 @@ export function ListingPreviewCard({
   lockboxCode, showingStart, showingEnd, notes,
 }: ListingPreviewCardProps) {
   const icon = PROPERTY_ICONS[propertyType] || "🏠";
-  const gradient = PROPERTY_GRADIENTS[propertyType] || "from-[#0F7694] to-[#1a1535]";
+  const gradient = PROPERTY_GRADIENTS[propertyType] || "from-indigo-500 to-purple-600";
 
   const showingWindow = showingStart && showingEnd
     ? `${showingStart} — ${showingEnd}`
@@ -65,7 +65,7 @@ export function ListingPreviewCard({
   const completionPct = Math.min(100, Math.round((filledFields / totalFields) * 100));
 
   return (
-    <div className="rounded-2xl border border-border/30 bg-gradient-to-br from-white via-white to-[#FAF8F4] dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-800/50 shadow-lg overflow-hidden transition-all duration-300">
+    <div className="rounded-2xl border border-border/30 bg-gradient-to-br from-white via-white to-slate-50/80 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-800/50 shadow-lg overflow-hidden transition-all duration-300">
       {/* Colored top bar */}
       <div className={`h-1.5 bg-gradient-to-r ${propertyType ? gradient : "from-gray-300 to-gray-400"}`} />
 
@@ -83,7 +83,7 @@ export function ListingPreviewCard({
               {propertyType && (
                 <Badge variant="secondary" className="text-sm">{propertyType}</Badge>
               )}
-              <Badge variant="outline" className="text-sm bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20">Active</Badge>
+              <Badge variant="outline" className="text-sm bg-emerald-50 text-emerald-700 border-emerald-200">Active</Badge>
             </div>
           </div>
         </div>
@@ -92,7 +92,7 @@ export function ListingPreviewCard({
         <div className="flex items-center gap-2">
           <div className="flex-1 h-1.5 rounded-full bg-muted/30 overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${completionPct >= 70 ? "bg-[#0F7694]/50" : completionPct >= 40 ? "bg-amber-500" : "bg-red-400"}`}
+              className={`h-full rounded-full transition-all duration-500 ${completionPct >= 70 ? "bg-emerald-500" : completionPct >= 40 ? "bg-amber-500" : "bg-red-400"}`}
               style={{ width: `${completionPct}%` }}
             />
           </div>

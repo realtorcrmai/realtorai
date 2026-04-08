@@ -141,7 +141,7 @@ export function ShowingCreator() {
               ) : listings.length === 0 ? (
                 <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-950/10 border border-amber-200/50 dark:border-amber-900/20">
                   <p className="text-sm text-amber-700 dark:text-amber-300">No active listings found.</p>
-                  <Link href="/listings/new" className="text-sm text-[#0F7694] hover:underline mt-1 inline-block">
+                  <Link href="/listings/new" className="text-sm text-indigo-600 hover:underline mt-1 inline-block">
                     Create a listing first →
                   </Link>
                 </div>
@@ -282,7 +282,7 @@ export function ShowingCreator() {
             </Button>
 
             {canSubmit && (
-              <p className="text-xs text-[#0F7694] text-center mt-1.5 font-medium">Ready to send request</p>
+              <p className="text-xs text-emerald-600 text-center mt-1.5 font-medium">Ready to send request</p>
             )}
           </div>
         </div>

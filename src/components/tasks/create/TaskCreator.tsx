@@ -93,7 +93,7 @@ export function TaskCreator() {
   };
 
   return (
-    <div className="min-h-full overflow-y-auto bg-gradient-to-br from-[#FAF8F4] via-white to-[#0F7694]/3 dark:from-zinc-950 dark:via-background dark:to-[#1a1535]/5">
+    <div className="min-h-full overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-emerald-50/20 dark:from-zinc-950 dark:via-background dark:to-emerald-950/5">
       {/* Header */}
       <div className="border-b border-border/30 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -106,7 +106,7 @@ export function TaskCreator() {
             </Link>
             <div>
               <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
-                <ListTodo className="h-5 w-5 text-[#0F7694]" />
+                <ListTodo className="h-5 w-5 text-emerald-500" />
                 Create a Task
               </h1>
               <p className="text-sm text-muted-foreground">Add something to your to-do list</p>
@@ -168,7 +168,7 @@ export function TaskCreator() {
             {/* Section 4: Due Date */}
             <div className="space-y-4">
               <SectionLabel number={4} label="When is it due?" />
-              <div className="p-4 rounded-xl bg-[#0F7694]/5 dark:bg-[#1a1535]/10 border border-[#0F7694]/15 dark:border-[#0F7694]/10">
+              <div className="p-4 rounded-xl bg-emerald-50/30 dark:bg-emerald-950/10 border border-emerald-100/50 dark:border-emerald-900/20">
                 <Input
                   type="date"
                   value={dueDate}
@@ -192,7 +192,7 @@ export function TaskCreator() {
               </button>
 
               {showLinks && (
-                <div className="space-y-3 animate-float-in p-4 rounded-xl bg-[#FAF8F4] dark:bg-[#1a1535]/10 border border-border/30">
+                <div className="space-y-3 animate-float-in p-4 rounded-xl bg-slate-50/50 dark:bg-slate-900/20 border border-border/30">
                   {loadingRefs ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                       <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground animate-spin" />
@@ -254,14 +254,14 @@ export function TaskCreator() {
             <Button
               disabled={!canSubmit || submitting}
               onClick={handleSubmit}
-              className="w-full mt-4 h-12 text-base font-semibold bg-[#0F7694] hover:from-[#67D4E8] hover:to-[#1a1535] shadow-lg rounded-xl"
+              className="w-full mt-4 h-12 text-base font-semibold bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 shadow-lg rounded-xl"
               size="lg"
             >
               {submitting ? "Creating..." : canSubmit ? "Create Task →" : "Enter a title *"}
             </Button>
 
             {canSubmit && (
-              <p className="text-xs text-[#0F7694] text-center mt-1.5 font-medium">Ready to create</p>
+              <p className="text-xs text-emerald-600 text-center mt-1.5 font-medium">Ready to create</p>
             )}
           </div>
         </div>
@@ -276,7 +276,7 @@ export function TaskCreator() {
 function SectionLabel({ number, label, optional, required }: { number: number; label: string; optional?: boolean; required?: boolean }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="w-7 h-7 rounded-lg bg-[#0F7694] flex items-center justify-center text-white text-xs font-bold shadow-sm">
+      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
         {number}
       </div>
       <h2 className="text-sm font-semibold">
