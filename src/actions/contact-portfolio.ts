@@ -244,6 +244,102 @@ export async function autoCreateFromListingClose(
 }
 
 // ============================================================
+// deletePortfolioItem
+// ============================================================
+
+export async function deletePortfolioItem(
+  itemId: string
+): Promise<{ error: string | null }> {
+  try {
+    const tc = await getAuthenticatedTenantClient();
+
+    // Fetch contact_id first so we can revalidate
+    const { data: item, error: fetchErr } = await tc
+      .from("contact_portfolio")
+      .select("contact_id")
+      .eq("id", itemId)
+      .single();
+
+    if (fetchErr || !item) return { error: fetchErr?.message ?? "Item not found" };
+
+    const { error } = await tc
+      .from("contact_portfolio")
+      .delete()
+      .eq("id", itemId);
+
+    if (error) return { error: error.message };
+
+    revalidatePath(`/contacts/${(item as { contact_id: string }).contact_id}`);
+    return { error: null };
+  } catch (err) {
+    return { error: String(err) };
+  }
+}
+
+// ============================================================
+// upsertPrimaryResidence
+// Called when contact.address is updated — keeps portfolio in sync
+// ============================================================
+
+export async function upsertPrimaryResidence(
+  contactId: string,
+  address: string,
+  city?: string | null,
+  province?: string,
+  postalCode?: string | null
+): Promise<{ error: string | null }> {
+  if (!address) return { error: null };
+
+  try {
+    const tc = await getAuthenticatedTenantClient();
+
+    // Find existing primary residence entry for this contact
+    const { data: existing } = await tc
+      .from("contact_portfolio")
+      .select("id")
+      .eq("contact_id", contactId)
+      .eq("property_category", "primary_residence")
+      .eq("status", "owned")
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      // Update address fields only — preserve everything else
+      await tc
+        .from("contact_portfolio")
+        .update({
+          address,
+          city: city ?? null,
+          province: province ?? "BC",
+          postal_code: postalCode ?? null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+    } else {
+      // Create new primary residence entry
+      await tc
+        .from("contact_portfolio")
+        .insert({
+          contact_id: contactId,
+          address,
+          city: city ?? null,
+          province: province ?? "BC",
+          postal_code: postalCode ?? null,
+          property_category: "primary_residence",
+          status: "owned",
+          ownership_pct: 100,
+          notes: "Auto-created from contact address",
+        });
+    }
+
+    revalidatePath(`/contacts/${contactId}`);
+    return { error: null };
+  } catch (err) {
+    return { error: String(err) };
+  }
+}
+
+// ============================================================
 // getPortfolioForContact
 // ============================================================
 

@@ -193,6 +193,16 @@ export async function updateContact(
   revalidatePath("/contacts");
   revalidatePath(`/contacts/${id}`);
 
+  // Sync address → primary residence portfolio entry
+  if (formData.address) {
+    try {
+      const { upsertPrimaryResidence } = await import("@/actions/contact-portfolio");
+      await upsertPrimaryResidence(id, formData.address);
+    } catch {
+      // Non-critical — don't fail the contact update
+    }
+  }
+
   // Fire workflow triggers for status/tag changes
   try {
     const { fireTrigger } = await import("@/lib/workflow-triggers");
