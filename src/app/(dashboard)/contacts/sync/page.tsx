@@ -215,9 +215,13 @@ export default function ContactSyncPage() {
                       </Link>
                     ) : "comingSoon" in provider && provider.comingSoon ? (
                       <span className="text-xs px-2 py-1 bg-gray-100 text-gray-500 rounded-full">Coming Soon</span>
+                    ) : provider.id === "google" ? (
+                      <Link href="/contacts/import-gmail" className="lf-btn text-xs px-4 py-1.5">
+                        {isConnected ? "📋 Pick Contacts" : "Connect & Import"}
+                      </Link>
                     ) : isConnected ? (
                       <button
-                        onClick={provider.id === "google" ? handleGoogleSync : undefined}
+                        onClick={undefined}
                         disabled={syncing === provider.id}
                         className="lf-btn-ghost text-xs px-3 py-1.5"
                       >
@@ -225,7 +229,7 @@ export default function ContactSyncPage() {
                       </button>
                     ) : (
                       <button
-                        onClick={provider.id === "google" ? handleGoogleSync : undefined}
+                        onClick={undefined}
                         disabled={syncing === provider.id}
                         className="lf-btn text-xs px-4 py-1.5"
                       >
