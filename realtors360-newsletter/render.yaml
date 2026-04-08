@@ -1,0 +1,48 @@
+# Render deployment manifest for realtors360-newsletter
+#
+# M1 ships web service ONLY (web runs Express + in-process worker + node-cron).
+# M2+ will split out a dedicated worker process and provision Redis.
+#
+# Reference: MASTER_NEWSLETTER_PLAN.md §4.7
+
+services:
+  - type: web
+    name: realtors360-newsletter
+    runtime: node
+    repo: https://github.com/realtorcrmai/realtorai
+    rootDir: realtors360-newsletter
+    branch: main
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    plan: starter   # $7/mo
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8080
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: VOYAGE_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        value: onboarding@resend.dev
+      - key: RESEND_WEBHOOK_SECRET
+        sync: false
+      - key: NEWSLETTER_SHARED_SECRET
+        sync: false
+      - key: REDIS_URL
+        sync: false   # Upstash external Redis URL — set in Render dashboard
+      - key: LOG_LEVEL
+        value: info
+      - key: FLAG_SAVED_SEARCH
+        value: "on"
+      - key: CANARY_TO_EMAIL
+        value: amandhindsa@outlook.com
