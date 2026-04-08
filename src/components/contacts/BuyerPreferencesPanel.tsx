@@ -27,11 +27,13 @@ const TIMELINE_OPTIONS = [
 export function BuyerPreferencesPanel({
   contactId,
   preferences,
+  initialEditing = false,
 }: {
   contactId: string;
   preferences: BuyerPreferences | null;
+  initialEditing?: boolean;
 }) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(initialEditing);
   const [form, setForm] = useState<BuyerPreferences>(
     preferences ?? {}
   );
