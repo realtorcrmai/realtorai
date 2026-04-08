@@ -1,18 +1,21 @@
 import cron from 'node-cron';
 import { logger } from '../lib/logger.js';
+import { config } from '../config.js';
 import { checkSavedSearches } from './check-saved-searches.js';
 import { checkBirthdays } from './check-birthdays.js';
+import { runRagBackfill } from './rag-backfill.js';
 
 /**
  * Cron registry.
  *
  * M1: check-saved-searches every 15 minutes.
  * M2: check-birthdays daily at 8 AM Vancouver time.
- * M3 will add migrated CRM crons (process-workflows, agent-scoring, etc).
+ * M3-B: rag-backfill weekly Sunday 03:00 Vancouver (gated on FLAG_RAG_BACKFILL).
+ * M3-C..E will add migrated CRM crons (weekly-learning, agent-scoring,
+ *   process-workflows). Each is gated on its own feature flag for safe rollout.
  *
- * node-cron uses the host's local timezone unless overridden. In production
- * the Render container is UTC, so 8am Vancouver = 16:00 UTC (PDT) / 17:00 UTC
- * (PST). We pass the timezone option to make this unambiguous.
+ * node-cron uses the host's local timezone unless overridden. We always pass
+ * the explicit timezone option so production behaviour matches dev.
  */
 export function startCrons(): void {
   cron.schedule('*/15 * * * *', () => {
@@ -30,4 +33,19 @@ export function startCrons(): void {
     { timezone: 'America/Vancouver' }
   );
   logger.info('cron: registered check-birthdays (0 8 * * * America/Vancouver)');
+
+  // M3-B: rag-backfill (weekly, Sunday 3 AM Vancouver). Always registered;
+  // the cron itself short-circuits when FLAG_RAG_BACKFILL=off, so toggling
+  // the flag is a one-env-var change with no redeploy.
+  cron.schedule(
+    '0 3 * * 0',
+    () => {
+      runRagBackfill().catch((err) => logger.error({ err }, 'cron: rag-backfill threw'));
+    },
+    { timezone: 'America/Vancouver' }
+  );
+  logger.info(
+    { flag: config.FLAG_RAG_BACKFILL },
+    'cron: registered rag-backfill (0 3 * * 0 America/Vancouver)'
+  );
 }
