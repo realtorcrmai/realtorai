@@ -10,6 +10,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
+import { createWithRetry } from "@/lib/anthropic/retry";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // ═══════════════════════════════════════════════
@@ -95,7 +96,7 @@ Respond ONLY with valid JSON:
 {"personalization":N,"relevance":N,"dataAccuracy":N,"toneMatch":N,"ctaClarity":N,"length":N,"uniqueness":N,"feedback":"1-2 sentences overall","suggestions":["specific improvement 1","specific improvement 2"]}`;
 
   try {
-    const msg = await client.messages.create({
+    const msg = await createWithRetry(client, {
       model: "claude-haiku-4-5-20251001",
       max_tokens: 300,
       messages: [{ role: "user", content: prompt }],

@@ -1,0 +1,268 @@
+"use server";
+
+import { z } from "zod";
+import { revalidatePath } from "next/cache";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
+
+// ============================================================
+// Types
+// ============================================================
+
+export type PortfolioStatus = "owned" | "selling" | "sold" | "refinancing" | "transferred";
+export type PropertyCategory = "primary_residence" | "investment" | "vacation" | "commercial" | "other";
+
+export type PortfolioItem = {
+  id: string;
+  realtor_id: string;
+  contact_id: string;
+  address: string;
+  unit_number: string | null;
+  city: string | null;
+  province: string;
+  postal_code: string | null;
+  property_type: string | null;
+  property_category: PropertyCategory | null;
+  ownership_pct: number;
+  co_owners: unknown[];
+  purchase_price: number | null;
+  purchase_date: string | null;
+  estimated_value: number | null;
+  bc_assessed_value: number | null;
+  mortgage_balance: number | null;
+  monthly_rental_income: number | null;
+  strata_fee: number | null;
+  status: PortfolioStatus;
+  linked_listing_id: string | null;
+  source_journey_id: string | null;
+  notes: string | null;
+  enrichment_data: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+// ============================================================
+// Schemas
+// ============================================================
+
+const AddPortfolioSchema = z.object({
+  contact_id: z.string().min(1),
+  address: z.string().min(1),
+  unit_number: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  province: z.string().default("BC"),
+  postal_code: z.string().nullable().optional(),
+  property_type: z.string().nullable().optional(),
+  property_category: z.enum(["primary_residence","investment","vacation","commercial","other"]).nullable().optional(),
+  ownership_pct: z.number().min(0).max(100).default(100),
+  co_owners: z.array(z.record(z.string(), z.unknown())).default([]),
+  purchase_price: z.number().positive().nullable().optional(),
+  purchase_date: z.string().nullable().optional(),
+  estimated_value: z.number().positive().nullable().optional(),
+  bc_assessed_value: z.number().positive().nullable().optional(),
+  mortgage_balance: z.number().min(0).nullable().optional(),
+  monthly_rental_income: z.number().min(0).nullable().optional(),
+  strata_fee: z.number().min(0).nullable().optional(),
+  status: z.enum(["owned","selling","sold","refinancing","transferred"]).default("owned"),
+  linked_listing_id: z.string().nullable().optional(),
+  source_journey_id: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  enrichment_data: z.record(z.string(), z.unknown()).default({}),
+});
+
+const UpdatePortfolioSchema = AddPortfolioSchema.partial().omit({ contact_id: true });
+
+// ============================================================
+// addPortfolioItem
+// ============================================================
+
+export async function addPortfolioItem(
+  data: z.input<typeof AddPortfolioSchema>
+): Promise<{ item: PortfolioItem | null; error: string | null }> {
+  const parsed = AddPortfolioSchema.safeParse(data);
+  if (!parsed.success) {
+    return { item: null, error: parsed.error.issues[0].message };
+  }
+
+  try {
+    const tc = await getAuthenticatedTenantClient();
+
+    const { data: item, error } = await tc
+      .from("contact_portfolio")
+      .insert(parsed.data)
+      .select()
+      .single();
+
+    if (error) return { item: null, error: error.message };
+
+    revalidatePath(`/contacts/${parsed.data.contact_id}`);
+
+    return { item: item as PortfolioItem, error: null };
+  } catch (err) {
+    return { item: null, error: String(err) };
+  }
+}
+
+// ============================================================
+// updatePortfolioItem
+// ============================================================
+
+export async function updatePortfolioItem(
+  itemId: string,
+  data: z.input<typeof UpdatePortfolioSchema>
+): Promise<{ item: PortfolioItem | null; error: string | null }> {
+  const parsed = UpdatePortfolioSchema.safeParse(data);
+  if (!parsed.success) {
+    return { item: null, error: parsed.error.issues[0].message };
+  }
+
+  try {
+    const tc = await getAuthenticatedTenantClient();
+
+    const { data: item, error } = await tc
+      .from("contact_portfolio")
+      .update({ ...parsed.data, updated_at: new Date().toISOString() })
+      .eq("id", itemId)
+      .select()
+      .single();
+
+    if (error) return { item: null, error: error.message };
+
+    revalidatePath(`/contacts/${(item as PortfolioItem).contact_id}`);
+
+    return { item: item as PortfolioItem, error: null };
+  } catch (err) {
+    return { item: null, error: String(err) };
+  }
+}
+
+// ============================================================
+// linkPortfolioToListing
+// ============================================================
+
+export async function linkPortfolioToListing(
+  itemId: string,
+  listingId: string
+): Promise<{ error: string | null }> {
+  try {
+    const tc = await getAuthenticatedTenantClient();
+
+    const { data: item, error } = await tc
+      .from("contact_portfolio")
+      .update({
+        linked_listing_id: listingId,
+        status: "selling",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", itemId)
+      .select("contact_id")
+      .single();
+
+    if (error) return { error: error.message };
+
+    revalidatePath(`/contacts/${(item as { contact_id: string }).contact_id}`);
+    revalidatePath(`/listings/${listingId}`);
+
+    return { error: null };
+  } catch (err) {
+    return { error: String(err) };
+  }
+}
+
+// ============================================================
+// autoCreateFromListingClose
+// Triggered when a listing status changes to 'sold'
+// Creates portfolio items for seller (status=sold) and buyer (status=owned) if buyer_contact_id set
+// ============================================================
+
+export async function autoCreateFromListingClose(
+  listingId: string
+): Promise<{ error: string | null }> {
+  try {
+    const tc = await getAuthenticatedTenantClient();
+
+    const { data: listing, error: listingErr } = await tc
+      .from("listings")
+      .select("id, address, seller_id, buyer_contact_id, sold_price, closing_date, property_type, realtor_id")
+      .eq("id", listingId)
+      .single();
+
+    if (listingErr || !listing) return { error: listingErr?.message ?? "Listing not found" };
+
+    const l = listing as {
+      id: string;
+      address: string;
+      seller_id: string;
+      buyer_contact_id: string | null;
+      sold_price: number | null;
+      closing_date: string | null;
+      property_type: string;
+      realtor_id: string;
+    };
+
+    // Seller side: mark as sold
+    await tc.from("contact_portfolio").insert({
+      contact_id: l.seller_id,
+      address: l.address,
+      property_type: l.property_type,
+      status: "sold",
+      purchase_price: l.sold_price,
+      purchase_date: l.closing_date,
+      linked_listing_id: l.id,
+      notes: "Auto-created on listing close",
+    });
+
+    // Buyer side: mark as owned
+    if (l.buyer_contact_id) {
+      await tc.from("contact_portfolio").insert({
+        contact_id: l.buyer_contact_id,
+        address: l.address,
+        property_type: l.property_type,
+        status: "owned",
+        purchase_price: l.sold_price,
+        purchase_date: l.closing_date,
+        linked_listing_id: l.id,
+        notes: "Auto-created on listing close",
+      });
+
+      // Advance buyer's lifecycle to past_client
+      const { computeLifecycleStage } = await import("./contacts");
+      await computeLifecycleStage(l.buyer_contact_id, l.realtor_id);
+    }
+
+    // Advance seller's lifecycle to past_client
+    const { computeLifecycleStage } = await import("./contacts");
+    await computeLifecycleStage(l.seller_id, l.realtor_id);
+
+    revalidatePath(`/listings/${listingId}`);
+    revalidatePath(`/contacts/${l.seller_id}`);
+    if (l.buyer_contact_id) revalidatePath(`/contacts/${l.buyer_contact_id}`);
+
+    return { error: null };
+  } catch (err) {
+    return { error: String(err) };
+  }
+}
+
+// ============================================================
+// getPortfolioForContact
+// ============================================================
+
+export async function getPortfolioForContact(
+  contactId: string
+): Promise<{ items: PortfolioItem[]; error: string | null }> {
+  try {
+    const tc = await getAuthenticatedTenantClient();
+
+    const { data, error } = await tc
+      .from("contact_portfolio")
+      .select("*")
+      .eq("contact_id", contactId)
+      .order("created_at", { ascending: false });
+
+    if (error) return { items: [], error: error.message };
+
+    return { items: (data ?? []) as PortfolioItem[], error: null };
+  } catch (err) {
+    return { items: [], error: String(err) };
+  }
+}

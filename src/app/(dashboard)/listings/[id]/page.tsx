@@ -48,6 +48,7 @@ export default async function ListingDetailPage({
     { data: showings },
     { data: allListings },
     { data: formSubmissions },
+    { data: buyerMatches },
   ] = await Promise.all([
     supabase
       .from("listing_documents")
@@ -66,6 +67,15 @@ export default async function ListingDetailPage({
       .from("form_submissions")
       .select("form_key, status")
       .eq("listing_id", id),
+    // Buyer match: find active journeys whose price range and property type overlap
+    supabase
+      .from("buyer_journeys")
+      .select("id, contact_id, min_price, max_price, preferred_property_types, preferred_areas, contacts(id, name)")
+      .not("status", "in", "(closed,cancelled)")
+      .or(
+        `max_price.is.null,max_price.gte.${listing.list_price ?? 0}`
+      )
+      .limit(5),
   ]);
 
   // Build form status map for the right panel
@@ -84,6 +94,33 @@ export default async function ListingDetailPage({
         <div className="space-y-6">
           {hasMissingDocs && (
             <AlertBanner message="Missing Required Documents — Upload FINTRAC, DORTS, and PDS before creating showings or generating conveyancing packs." />
+          )}
+
+          {/* Buyer Match Banner */}
+          {(buyerMatches ?? []).length > 0 && (
+            <div className="rounded-xl border border-teal-200 bg-teal-50/60 p-3 flex items-start gap-3">
+              <span className="text-xl shrink-0">🎯</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-teal-800">
+                  {(buyerMatches ?? []).length} potential buyer{(buyerMatches ?? []).length !== 1 ? "s" : ""} match this listing
+                </p>
+                <div className="flex flex-wrap gap-2 mt-1.5">
+                  {(buyerMatches ?? []).map((match: Record<string, unknown>) => {
+                    const contact = match.contacts as { id: string; name: string } | null;
+                    if (!contact) return null;
+                    return (
+                      <Link
+                        key={match.id}
+                        href={`/contacts/${contact.id}`}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 text-xs font-medium hover:bg-teal-200 transition-colors"
+                      >
+                        👤 {contact.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Listing Header — compact */}

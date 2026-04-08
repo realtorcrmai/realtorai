@@ -24,6 +24,9 @@ import { DeleteContactButton } from "@/components/contacts/DeleteContactButton";
 import { ContactDetailLayout } from "@/components/contacts/ContactDetailLayout";
 import { Button } from "@/components/ui/button";
 import type { Contact, Communication, Listing, ContactDate, ContactDocument, BuyerPreferences, SellerPreferences, Demographics } from "@/types";
+import type { BuyerJourney } from "@/actions/buyer-journeys";
+import type { BuyerJourneyProperty } from "@/actions/buyer-journey-properties";
+import type { PortfolioItem } from "@/actions/contact-portfolio";
 import {
   CONTACT_TYPE_COLORS,
   LEAD_STATUS_LABELS,
@@ -51,6 +54,7 @@ export default async function ContactDetailPage({
   if (!contact) notFound();
 
   const isSeller = contact.type === "seller";
+  const isBuyer = contact.type === "buyer" || contact.type === "dual";
 
   // ── Single parallel batch: ALL queries at once ─────────────
   // No waterfalls — everything fetched in one round-trip
@@ -78,6 +82,9 @@ export default async function ContactDetailPage({
     { data: contactNewsletters },
     { data: contactContextEntries },
     { data: familyMembersData },
+    { data: buyerJourneysData },
+    { data: journeyPropertiesData },
+    { data: portfolioData },
   ] = await Promise.all([
     // 1. Communications — limit to recent 50
     supabase
@@ -213,6 +220,30 @@ export default async function ContactDetailPage({
       .select("*")
       .eq("contact_id", id)
       .order("created_at", { ascending: true }),
+    // 24. Buyer journeys (active/paused only — buyers only)
+    isBuyer
+      ? supabase
+          .from("buyer_journeys")
+          .select("id, status, min_price, max_price, preferred_property_types, preferred_areas, notes, created_at, updated_at")
+          .eq("contact_id", id)
+          .not("status", "in", "(closed,cancelled)")
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    // 25. Recent buyer journey properties (via join on contact_id through buyer_journeys)
+    isBuyer
+      ? supabase
+          .from("buyer_journey_properties")
+          .select("id, journey_id, address, status, interest_level, list_price, notes, offer_price, offer_status, offer_date, subjects, created_at, buyer_journeys!inner(contact_id)")
+          .eq("buyer_journeys.contact_id", id)
+          .order("created_at", { ascending: false })
+          .limit(10)
+      : Promise.resolve({ data: [] }),
+    // 26. Contact portfolio items
+    supabase
+      .from("contact_portfolio")
+      .select("*")
+      .eq("contact_id", id)
+      .order("purchase_date", { ascending: false }),
   ]);
 
   const referredByName = referredByContact?.name ?? null;
@@ -712,6 +743,10 @@ export default async function ContactDetailPage({
             documents={typedDocuments}
             contextEntries={(contactContextEntries ?? []) as Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>}
             familyMembers={(familyMembersData ?? []) as import("@/types").ContactFamilyMember[]}
+            isBuyer={isBuyer}
+            buyerJourneys={(buyerJourneysData ?? []) as BuyerJourney[]}
+            recentJourneyProperties={(journeyPropertiesData ?? []) as BuyerJourneyProperty[]}
+            portfolioItems={(portfolioData ?? []) as PortfolioItem[]}
           />
   );
 

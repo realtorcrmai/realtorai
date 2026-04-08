@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
+import Link from "next/link";
 import PipelineSnapshot from "@/components/dashboard/PipelineSnapshot";
 import { GreetingTicker } from "@/components/dashboard/GreetingTicker";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
@@ -29,6 +30,8 @@ export default async function DashboardPage() {
     { data: pipelineContacts },
     { data: pipelineListings },
     { data: allDocs },
+    { data: activeBuyerJourneys },
+    { data: lifecycleContacts },
   ] = await Promise.all([
     tc.raw.from("listings").select("*", { count: "exact", head: true }).eq("realtor_id", tc.realtorId).eq("status", "active"),
     tc.raw.from("appointments").select("*", { count: "exact", head: true }).eq("realtor_id", tc.realtorId).eq("status", "requested"),
@@ -37,6 +40,8 @@ export default async function DashboardPage() {
     tc.from("contacts").select("id, stage_bar, type"),
     tc.from("listings").select("id, seller_id, buyer_id, list_price, sold_price, commission_rate, commission_amount, status"),
     tc.from("listing_documents").select("listing_id, doc_type"),
+    tc.from("buyer_journeys").select("id, status, contact_id").not("status", "in", "(closed,cancelled)"),
+    tc.from("contacts").select("id, lifecycle_stage").not("lifecycle_stage", "is", null),
   ]);
 
   const activeListingIds = (pipelineListings ?? []).filter((l: any) => l.status === "active");
@@ -52,11 +57,11 @@ export default async function DashboardPage() {
   const openTasksCount = pendingTasks + inProgressTasks;
 
   const PIPELINE_STAGES = [
-    { key: "new",            label: "New Leads",       color: "bg-[#C8F5F0]" },   // pale teal — cold lead
-    { key: "qualified",      label: "Qualified",        color: "bg-[#67D4E8]" },   // medium teal — warming up
-    { key: "active",         label: "Active",           color: "bg-[#0F7694]" },   // primary teal — in market
-    { key: "under_contract", label: "Under Contract",   color: "bg-[#FDAB3D]" },   // amber — deal in motion
-    { key: "closed",         label: "Closed",           color: "bg-[#00C875]" },   // green — won!
+    { key: "new",            label: "New Leads",       color: "bg-[#C8F5F0]" },
+    { key: "qualified",      label: "Qualified",        color: "bg-[#67D4E8]" },
+    { key: "active",         label: "Active",           color: "bg-[#0F7694]" },
+    { key: "under_contract", label: "Under Contract",   color: "bg-[#FDAB3D]" },
+    { key: "closed",         label: "Closed",           color: "bg-[#00C875]" },
   ];
 
   const contacts = pipelineContacts ?? [];
@@ -94,6 +99,36 @@ export default async function DashboardPage() {
     return { ...stage, count: stageContacts.length, value };
   });
 
+  // ── Buyer pipeline stats ─────────────────────────────────────
+  const activeJourneys = activeBuyerJourneys ?? [];
+  const journeyStatusCounts: Record<string, number> = {};
+  for (const j of activeJourneys) {
+    journeyStatusCounts[j.status] = (journeyStatusCounts[j.status] ?? 0) + 1;
+  }
+
+  const LIFECYCLE_LABELS: Record<string, string> = {
+    prospect: "Prospect",
+    nurture: "Nurture",
+    active_buyer: "Active Buyer",
+    active_seller: "Active Seller",
+    dual_client: "Dual Client",
+    under_contract: "Under Contract",
+    closed: "Closed",
+    past_client: "Past Client",
+    referral_partner: "Referral",
+  };
+  const lifecycleCounts: Record<string, number> = {};
+  for (const c of (lifecycleContacts ?? [])) {
+    if (c.lifecycle_stage) {
+      lifecycleCounts[c.lifecycle_stage] = (lifecycleCounts[c.lifecycle_stage] ?? 0) + 1;
+    }
+  }
+  const topLifecycleStages = Object.entries(lifecycleCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  // GCI = sum of (commission_amount ?? (list_price * (commission_rate ?? 2.5) / 100))
+  // for active + pending listings
   let totalGCI = 0;
   for (const l of listings) {
     if (l.status === "active" || l.status === "pending") {
@@ -139,6 +174,65 @@ export default async function DashboardPage() {
         <div className="animate-float-in" style={{ animationDelay: "40ms" }}>
           <PipelineSnapshot stages={pipelineStages} totalGCI={totalGCI} />
         </div>
+
+        {/* ── Buyer Pipeline + Lifecycle Breakdown ── */}
+        {(activeJourneys.length > 0 || topLifecycleStages.length > 0) && (
+          <div className="animate-float-in grid grid-cols-1 md:grid-cols-2 gap-4" style={{ animationDelay: "80ms" }}>
+            {activeJourneys.length > 0 && (
+              <div className="lf-card p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold">🏠 Buyer Journeys</h3>
+                  <Link href="/contacts?role=buyer" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                    View all →
+                  </Link>
+                </div>
+                <div className="flex items-end gap-2 mb-3">
+                  <span className="text-3xl font-bold text-indigo-700">{activeJourneys.length}</span>
+                  <span className="text-xs text-muted-foreground mb-1">active journeys</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(journeyStatusCounts).map(([status, count]) => (
+                    <span key={status} className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium capitalize">
+                      {status.replace("_", " ")} ({count})
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {topLifecycleStages.length > 0 && (
+              <div className="lf-card p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold">📊 Contact Lifecycle</h3>
+                  <Link href="/contacts" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                    View all →
+                  </Link>
+                </div>
+                <div className="space-y-2">
+                  {topLifecycleStages.map(([stage, count]) => {
+                    const total = (lifecycleContacts ?? []).length || 1;
+                    const pct = Math.round((count / total) * 100);
+                    return (
+                      <Link
+                        key={stage}
+                        href={`/contacts?lifecycle=${stage}`}
+                        className="flex items-center gap-2 hover:bg-indigo-50/50 rounded px-1 -mx-1 transition-colors"
+                      >
+                        <span className="text-xs text-muted-foreground w-24 shrink-0 truncate">
+                          {LIFECYCLE_LABELS[stage] ?? stage}
+                        </span>
+                        <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                          <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs font-semibold w-6 text-right">{count}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Command Center: Calendar + Feed ── */}
         <DashboardShell

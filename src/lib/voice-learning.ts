@@ -27,6 +27,7 @@ export async function extractVoiceRules(
 
   try {
     const Anthropic = (await import("@anthropic-ai/sdk")).default;
+    const { createWithRetry } = await import("@/lib/anthropic/retry");
     const client = new Anthropic();
 
     // Get existing rules to avoid duplicates
@@ -39,7 +40,7 @@ export async function extractVoiceRules(
 
     const existingRules = (config?.voice_rules as string[]) || [];
 
-    const response = await client.messages.create({
+    const response = await createWithRetry(client, {
       model: "claude-haiku-4-5-20251001",
       max_tokens: 500,
       messages: [
