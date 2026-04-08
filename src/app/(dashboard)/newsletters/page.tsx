@@ -190,9 +190,17 @@ export default async function NewsletterDashboard() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Email Marketing</h1>
-        <p className="text-sm text-muted-foreground mt-1">AI-powered email marketing — one page, full control</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Email Marketing</h1>
+          <p className="text-sm text-muted-foreground mt-1">AI-powered email marketing — one page, full control</p>
+        </div>
+        <a
+          href="/newsletters/engine"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+        >
+          ⚙️ Engine
+        </a>
       </div>
 
       <EmailMarketingTabs queueCount={queue.length}>

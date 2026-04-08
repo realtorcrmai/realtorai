@@ -29,6 +29,9 @@ const ConfigSchema = z.object({
 
   // Flags
   FLAG_SAVED_SEARCH: z.enum(['on', 'off']).default('on'),
+  FLAG_RAG_BACKFILL: z.enum(['on', 'off']).default('off'),
+  FLAG_WEEKLY_LEARNING: z.enum(['on', 'off']).default('off'),
+  FLAG_AGENT_SCORING: z.enum(['on', 'off']).default('off'),
   CRM_CRON_ENABLED: z.coerce.boolean().default(true),
 
   // Canary / test fixtures
