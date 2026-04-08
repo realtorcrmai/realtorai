@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { AddressAutocompleteInput } from "@/components/shared/AddressAutocompleteInput";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -313,7 +314,12 @@ export function ContactFormContent({
 
       <div>
         <Label htmlFor="address">Address (optional)</Label>
-        <Input {...register("address")} placeholder="123 Main St, Vancouver, BC" />
+        <AddressAutocompleteInput
+          value={watch("address") ?? ""}
+          onChange={(val) => setValue("address", val, { shouldValidate: false })}
+          placeholder="123 Main St, Vancouver, BC"
+          disabled={submitting}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-4">

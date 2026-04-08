@@ -6,6 +6,8 @@ import { addPropertyToJourney } from "@/actions/buyer-journey-properties";
 import { recordOffer, updatePropertyStatus } from "@/actions/buyer-journey-properties";
 import { advanceBuyerJourneyStatus } from "@/actions/buyer-journeys";
 import { Card, CardContent } from "@/components/ui/card";
+import { AddressAutocompleteInput } from "@/components/shared/AddressAutocompleteInput";
+import type { AddressSuggestion } from "@/components/shared/AddressAutocompleteInput";
 
 type PropertyStatus =
   | "interested" | "scheduled" | "viewed" | "offer_pending"
@@ -254,11 +256,14 @@ export function BuyerJourneyDetailClient({
             {addSource === "manual" && (
               <div>
                 <label className="text-xs font-medium text-muted-foreground block mb-1">Address</label>
-                <input
-                  className="lf-input w-full"
-                  placeholder="e.g. 123 Main St, Burnaby"
+                <AddressAutocompleteInput
                   value={addData.address}
-                  onChange={(e) => setAddData((d) => ({ ...d, address: e.target.value }))}
+                  onChange={(val) => setAddData((d) => ({ ...d, address: val }))}
+                  onSelect={(s: AddressSuggestion) => {
+                    setAddData((d) => ({ ...d, address: s.fullAddress }));
+                  }}
+                  placeholder="e.g. 123 Main St, Burnaby"
+                  disabled={isPending}
                 />
               </div>
             )}

@@ -110,7 +110,7 @@ export default async function ListingDetailPage({
                     if (!contact) return null;
                     return (
                       <Link
-                        key={match.id}
+                        key={match.id as string}
                         href={`/contacts/${contact.id}`}
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 text-xs font-medium hover:bg-teal-200 transition-colors"
                       >
