@@ -77,6 +77,7 @@ export default async function ContactDetailPage({
     { data: contactJourney },
     { data: contactNewsletters },
     { data: contactContextEntries },
+    { data: familyMembersData },
   ] = await Promise.all([
     // 1. Communications — limit to recent 50
     supabase
@@ -206,6 +207,12 @@ export default async function ContactDetailPage({
       .select("id, context_type, text, is_resolved, resolved_note, created_at")
       .eq("contact_id", id)
       .order("created_at", { ascending: false }),
+    // 23. Family members
+    supabase
+      .from("contact_family_members")
+      .select("*")
+      .eq("contact_id", id)
+      .order("created_at", { ascending: true }),
   ]);
 
   const referredByName = referredByContact?.name ?? null;
@@ -704,6 +711,7 @@ export default async function ContactDetailPage({
             allContacts={(allContacts ?? []) as { id: string; name: string }[]}
             documents={typedDocuments}
             contextEntries={(contactContextEntries ?? []) as Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>}
+            familyMembers={(familyMembersData ?? []) as import("@/types").ContactFamilyMember[]}
           />
   );
 

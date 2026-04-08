@@ -300,8 +300,8 @@ export function PipelineBoard({ contacts, listings }: PipelineBoardProps) {
               {/* Summary Stats */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="rounded-xl border border-[#0F7694]/15 bg-[#0F7694]/5 p-4">
-                  <p className="text-xs text-[#007A47] font-medium.*Won Deals</p>
-                  <p className="text-2xl font-bold text-[#007A47] font-bold mt-1.length}</p>
+                  <p className="text-xs text-[#007A47] font-medium">Won Deals</p>
+                  <p className="text-2xl font-bold text-[#007A47] mt-1">{wonDeals.length}</p>
                 </div>
                 <div className="rounded-xl border border-[#0F7694]/15 bg-[#0F7694]/5 p-4">
                   <p className="text-xs text-[#0A6880] font-medium">Total Volume</p>
