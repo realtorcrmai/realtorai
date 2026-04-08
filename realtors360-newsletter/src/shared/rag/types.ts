@@ -1,10 +1,14 @@
 /**
- * RAG types — minimal subset.
+ * RAG types.
  *
- * Ported from `realestate-crm/src/lib/rag/types.ts`. M3-A batch 1 only needs
- * the types touched by the rag-backfill cron path: SourceTable, ContentType,
- * EmbeddingRecord, IngestResult, TextChunk. The chat/session types stay in
- * the CRM until M3-D pulls in the retriever.
+ * Ported from `realestate-crm/src/lib/rag/types.ts`. The M3-A batch 1 port
+ * brought over only the types needed by rag-backfill: SourceTable,
+ * ContentType, EmbeddingRecord, IngestResult, TextChunk. M4 extends with
+ * the retriever-side types: SearchResult, SearchFilters, SourceReference.
+ *
+ * The CRM original also defines QueryIntent, QueryPlan, ChatSession etc.
+ * for the assistant UI — those stay in the CRM until/unless the newsletter
+ * service grows a chat surface.
  */
 
 /** Allowed content types for rag_embeddings */
@@ -114,4 +118,48 @@ export const CHUNK_CONFIG: Record<string, { maxTokens: number; overlap: number }
 /** Approximate token count from character count (1 token ≈ 4 chars). */
 export function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
+}
+
+/* ───────────────────── Retriever-side types (M4) ───────────────────── */
+
+/** Structured filters for hybrid retrieval. */
+export interface SearchFilters {
+  /** Restrict to specific content types. */
+  content_type?: ContentType[];
+  /** Scope to a single contact. */
+  contact_id?: string;
+  /** Scope to a single listing. */
+  listing_id?: string;
+  /** Only return chunks whose source row was created on/after this ISO date. */
+  date_after?: string;
+}
+
+/**
+ * A retrieval hit returned by `searchEmbeddings` / `hybridSearch`.
+ *
+ * Mirrors the row shape from the `rag_search` Postgres function and the
+ * tsvector fallback in `fallback.ts`. `similarity` is a cosine score in
+ * [0, 1] for semantic results, or a fixed 0.5 for FTS-only fallback rows.
+ */
+export interface SearchResult {
+  id?: string;
+  source_table: string;
+  source_id: string;
+  content_type?: ContentType | null;
+  content_text: string;
+  content_summary?: string | null;
+  contact_id?: string | null;
+  listing_id?: string | null;
+  similarity: number;
+  source_created_at?: string | null;
+  /** Set by the FTS fallback so callers can warn the user. */
+  freshness?: 'fresh' | 'stale' | 'unknown';
+}
+
+/** Light reference returned alongside `formatted` for UI source attribution. */
+export interface SourceReference {
+  source_table: string;
+  source_id: string;
+  snippet: string;
+  similarity: number;
 }
