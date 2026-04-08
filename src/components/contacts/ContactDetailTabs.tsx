@@ -20,6 +20,7 @@ import { WorkflowStepperCard } from "@/components/contacts/WorkflowStepperCard";
 import ActivityTimeline from "@/components/contacts/ActivityTimeline";
 import { ContextLog } from "@/components/contacts/ContextLog";
 import { FamilyTabPanel } from "@/components/contacts/FamilyWizard";
+import { PropertyDealsTab } from "@/components/contacts/PropertyDealsTab";
 import type { ContactFamilyMember } from "@/types";
 import type {
   Contact,
@@ -226,6 +227,9 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
         </TabsTrigger>
         <TabsTrigger value="deals" className="rounded-lg">
           🏠 Deals
+        </TabsTrigger>
+        <TabsTrigger value="properties" className="rounded-lg">
+          🏠 Properties
         </TabsTrigger>
         <TabsTrigger value="family" className="rounded-lg">
           👨‍👩‍👧 Family
@@ -495,6 +499,19 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             </Card>
           )}
         </div>
+      </TabsContent>
+
+      {/* ── PROPERTIES TAB ─────────────────────────────────── */}
+      <TabsContent value="properties">
+        <Card className="border-border/60">
+          <CardContent className="p-5">
+            <PropertyDealsTab
+              contactId={contactId}
+              contactName={contact.name}
+              allContacts={allContacts}
+            />
+          </CardContent>
+        </Card>
       </TabsContent>
 
       {/* ── FAMILY TAB ─────────────────────────────────────── */}
