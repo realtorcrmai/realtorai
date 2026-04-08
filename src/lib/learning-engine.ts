@@ -46,11 +46,17 @@ export async function runLearningCycle(realtorId: string): Promise<LearningResul
     .eq("realtor_id", realtorId)
     .single();
 
-  // Get all sent newsletters in last 30 days
+  // Get all sent newsletters in last 30 days for THIS realtor only.
+  // Multi-tenancy fix (HC-12): without `.eq("realtor_id", ...)` this query
+  // returns every realtor's newsletters since migration 062 made the table
+  // multi-tenant — the cron is invoked per-realtor but the analysis was
+  // aggregating cross-tenant data. Caught during the M3-C newsletter-engine
+  // port; this commit backports the fix to the CRM original.
   const { data: newsletters } = await supabase
     .from("newsletters")
     .select("id, email_type, sent_at, contact_id")
     .eq("status", "sent")
+    .eq("realtor_id", realtorId)
     .gte("sent_at", thirtyDaysAgo);
 
   if (!newsletters || newsletters.length === 0) {
