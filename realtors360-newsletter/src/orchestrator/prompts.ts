@@ -38,3 +38,70 @@ Total matches today: ${args.matchCount}
 
 Use the tools to load the contact, the listing, and any recent communications. Then write a short personalized "saved search match" email and emit it.`;
 }
+
+export function buildPriceDropUserPrompt(args: {
+  sellerFirstName: string;
+  realtorName: string;
+  listingAddress: string;
+  oldPrice: number | null;
+  newPrice: number | null;
+}): string {
+  const oldStr = args.oldPrice != null ? `$${args.oldPrice.toLocaleString('en-CA')}` : 'the previous price';
+  const newStr = args.newPrice != null ? `$${args.newPrice.toLocaleString('en-CA')}` : 'the new price';
+  return `The list price for one of ${args.sellerFirstName}'s listings has been adjusted.
+
+Realtor: ${args.realtorName}
+Listing: ${args.listingAddress}
+Old price: ${oldStr}
+New price: ${newStr}
+
+Use the tools to load the contact and listing. Then write a short, reassuring confirmation email to the seller letting them know the price update is live and what the realtor recommends as the next step. One clear CTA — "Talk to ${args.realtorName}" linking to a contact page.`;
+}
+
+export function buildListingSoldUserPrompt(args: {
+  sellerFirstName: string;
+  realtorName: string;
+  listingAddress: string;
+}): string {
+  return `One of ${args.sellerFirstName}'s listings just transitioned to "sold".
+
+Realtor: ${args.realtorName}
+Listing: ${args.listingAddress}
+
+Use the tools to load the contact and listing. Then write a short, warm congratulations email to the seller. Acknowledge the moment, thank them for trusting the realtor, and tee up the next step (closing logistics, paperwork, or a celebration). One clear CTA — "See your closing checklist" or similar.`;
+}
+
+export function buildShowingConfirmedUserPrompt(args: {
+  sellerFirstName: string;
+  realtorName: string;
+  listingAddress: string;
+  showingTimeIso: string;
+}): string {
+  // Format the time in Vancouver local since that's where the realtors are
+  const formatted = new Date(args.showingTimeIso).toLocaleString('en-CA', {
+    timeZone: 'America/Vancouver',
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  return `A showing for ${args.sellerFirstName}'s listing has been confirmed.
+
+Realtor: ${args.realtorName}
+Listing: ${args.listingAddress}
+Showing time: ${formatted} (Vancouver time)
+
+Use the tools to load the contact. Then write a short, warm confirmation email to the seller letting them know the showing is on the books, what to expect, and how to prepare. One clear CTA — "View showing details" linking to the listing page.`;
+}
+
+export function buildBirthdayUserPrompt(args: {
+  contactFirstName: string;
+  realtorName: string;
+}): string {
+  return `Today is ${args.contactFirstName}'s birthday.
+
+Realtor: ${args.realtorName}
+
+Use the tools to load the contact and any recent communications. Then write a SHORT, sincere birthday note from the realtor — no real estate pitch, no CTA pressuring a meeting. Keep it human. The CTA can be a simple "Reply to say hi" linking to a mailto.`;
+}

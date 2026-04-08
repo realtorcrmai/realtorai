@@ -1,13 +1,26 @@
 import { supabase } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
-import { runSavedSearchMatch, type EventRow } from '../pipelines/saved-search-match.js';
+import { runSavedSearchMatch } from '../pipelines/saved-search-match.js';
+import { runListingPriceDrop } from '../pipelines/listing-price-drop.js';
+import { runListingSold } from '../pipelines/listing-sold.js';
+import { runShowingConfirmed } from '../pipelines/showing-confirmed.js';
+import { runContactBirthday } from '../pipelines/contact-birthday.js';
+import type { EventRow, PipelineResult } from '../pipelines/_runner.js';
 
 /**
  * Routes a single email_event row to the right pipeline.
  *
- * M1: only `listing_matched_search` is wired. Other event types are marked
- * `ignored` so they don't accumulate as pending forever.
+ * M2 wires 5 event types. Anything else is marked `ignored` so it doesn't
+ * accumulate as `pending` forever.
  */
+const PIPELINES: Record<string, (event: EventRow) => Promise<PipelineResult>> = {
+  listing_matched_search: runSavedSearchMatch,
+  listing_price_dropped: runListingPriceDrop,
+  listing_sold: runListingSold,
+  showing_confirmed: runShowingConfirmed,
+  contact_birthday: runContactBirthday,
+};
+
 export async function processEvent(eventId: string): Promise<void> {
   const { data, error } = await supabase
     .from('email_events')
@@ -27,20 +40,21 @@ export async function processEvent(eventId: string): Promise<void> {
     return;
   }
 
-  let result: { ok: boolean; reason?: string };
+  const pipeline = PIPELINES[event.event_type];
 
-  switch (event.event_type) {
-    case 'listing_matched_search':
-      result = await runSavedSearchMatch(event);
-      break;
-    default:
-      logger.info({ event_type: event.event_type, eventId }, 'process: no pipeline (M1) — ignoring');
-      await supabase
-        .from('email_events')
-        .update({ status: 'ignored', processed_at: new Date().toISOString() })
-        .eq('id', eventId);
-      return;
+  if (!pipeline) {
+    logger.info(
+      { event_type: event.event_type, eventId },
+      'process: no pipeline registered — ignoring'
+    );
+    await supabase
+      .from('email_events')
+      .update({ status: 'ignored', processed_at: new Date().toISOString() })
+      .eq('id', eventId);
+    return;
   }
+
+  const result = await pipeline(event);
 
   await supabase
     .from('email_events')
@@ -51,5 +65,8 @@ export async function processEvent(eventId: string): Promise<void> {
     })
     .eq('id', eventId);
 
-  logger.info({ eventId, ok: result.ok, reason: result.reason }, 'process: done');
+  logger.info(
+    { eventId, event_type: event.event_type, ok: result.ok, reason: result.ok ? undefined : result.reason },
+    'process: done'
+  );
 }

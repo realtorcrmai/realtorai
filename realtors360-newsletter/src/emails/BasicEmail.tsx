@@ -13,15 +13,17 @@ import {
 } from '@react-email/components';
 
 /**
- * Minimal saved-search match email used by M1.
+ * Generic email template used by M2.
  *
- * The richer `PremiumListingShowcase.tsx` template lives in the CRM and will
- * be promoted into this service in M2 once the npm-workspace `@realtors360/emails`
- * package is set up. For M1 we ship a simple, plain template that the
- * orchestrator's text output drops directly into.
+ * Renders the structured output of the orchestrator (`EmailDraft`) into a
+ * plain, white-background email that works in Outlook / Gmail / Apple Mail.
+ *
+ * All M2 email types reuse this template — the differentiation comes from the
+ * orchestrator's content, not the visual layout. M4 will introduce per-type
+ * "Premium*" components when we want stronger visual differentiation.
  */
 
-export type SavedSearchMatchEmailProps = {
+export type BasicEmailProps = {
   greeting: string;
   bodyParagraphs: string[];
   ctaLabel: string;
@@ -31,7 +33,7 @@ export type SavedSearchMatchEmailProps = {
   realtorName: string;
 };
 
-export function SavedSearchMatchEmail(props: SavedSearchMatchEmailProps) {
+export function BasicEmail(props: BasicEmailProps) {
   return (
     <Html>
       <Head />
@@ -66,7 +68,7 @@ export function SavedSearchMatchEmail(props: SavedSearchMatchEmailProps) {
   );
 }
 
-export default SavedSearchMatchEmail;
+export default BasicEmail;
 
 /* ───────── styles ───────── */
 

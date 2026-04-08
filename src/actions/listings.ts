@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { listingSchema, type ListingFormData } from "@/lib/schemas";
 import { validateStageForType } from "@/lib/contact-consistency";
 import { triggerIngest } from "@/lib/rag/realtime-ingest";
+import { emitNewsletterEvent } from "@/lib/newsletter-events";
 
 export async function createListing(formData: ListingFormData) {
   const parsed = listingSchema.safeParse(formData);
@@ -70,12 +71,18 @@ export async function updateListing(
       Number(updateData.sold_price) * (Number(updateData.commission_rate) / 100);
   }
 
-  // Check if price changed (for blast automation trigger)
+  // Check if price changed (for blast automation trigger + newsletter event)
   const priceChanged = updateData.list_price !== undefined;
   let oldPrice: number | null = null;
+  let sellerIdForEvent: string | null = null;
   if (priceChanged) {
-    const { data: current } = await tc.from("listings").select("list_price, status").eq("id", id).single();
-    oldPrice = current?.list_price;
+    const { data: current } = await tc
+      .from("listings")
+      .select("list_price, status, seller_id")
+      .eq("id", id)
+      .single();
+    oldPrice = current?.list_price ?? null;
+    sellerIdForEvent = (current as { seller_id?: string } | null)?.seller_id ?? null;
   }
 
   const { error } = await tc
@@ -93,6 +100,27 @@ export async function updateListing(
 
   // Real-time RAG re-ingestion
   triggerIngest("listings", id);
+
+  // Newsletter Engine v3: emit listing_price_dropped when price actually decreased.
+  // Non-blocking — failure logged, never thrown.
+  if (
+    priceChanged &&
+    typeof updateData.list_price === "number" &&
+    typeof oldPrice === "number" &&
+    updateData.list_price < oldPrice
+  ) {
+    await emitNewsletterEvent(tc, {
+      event_type: "listing_price_dropped",
+      listing_id: id,
+      contact_id: sellerIdForEvent,
+      event_data: {
+        listing_id: id,
+        seller_id: sellerIdForEvent,
+        old_price: oldPrice,
+        new_price: updateData.list_price,
+      },
+    });
+  }
 
   return { success: true };
 }
@@ -184,10 +212,10 @@ export async function updateListingStatus(
 ) {
   const tc = await getAuthenticatedTenantClient();
 
-  // Fetch current listing to validate transition
+  // Fetch current listing to validate transition (also grab seller_id for newsletter event)
   const { data: listing } = await tc
     .from("listings")
-    .select("status")
+    .select("status, seller_id")
     .eq("id", id)
     .single();
 
@@ -206,6 +234,21 @@ export async function updateListingStatus(
     .eq("id", id);
 
   if (error) return { error: "Failed to update listing status" };
+
+  // Newsletter Engine v3: emit listing_sold when transitioning to sold.
+  // Non-blocking — failure logged, never thrown.
+  if (newStatus === "sold") {
+    const sellerId = (listing as { seller_id?: string | null }).seller_id ?? null;
+    await emitNewsletterEvent(tc, {
+      event_type: "listing_sold",
+      listing_id: id,
+      contact_id: sellerId,
+      event_data: {
+        listing_id: id,
+        seller_id: sellerId,
+      },
+    });
+  }
 
   revalidatePath("/listings");
   revalidatePath(`/listings/${id}`);
