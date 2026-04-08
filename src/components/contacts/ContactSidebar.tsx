@@ -264,7 +264,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
           </div>
         </div>
         {importResult && (
-          <div className="text-sm text-emerald-600 bg-emerald-50 rounded px-2 py-1 flex items-center justify-between">
+          <div className="text-sm text-[#0F7694] bg-[#0F7694]/5 rounded px-2 py-1 flex items-center justify-between">
             <span>{importResult}</span>
             <button onClick={() => setImportResult(null)} className="text-[#67D4E8] hover:text-[#0F7694]"><X className="h-3 w-3" /></button>
           </div>
@@ -455,7 +455,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
       </div>
 
       {/* Pipeline Summary — matches right panel design */}
-      <div className="border-t border-l-4 border-l-indigo-400 px-4 py-3 bg-gradient-to-r from-indigo-50/30 to-transparent dark:from-indigo-950/10">
+      <div className="border-t border-l-4 border-l-[#0F7694] px-4 py-3 bg-gradient-to-r from-[#0F7694]/5/30 to-transparent dark:from-[#1a1535]/10">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Pipeline</h3>
         <div className="space-y-0.5">
           {STAGE_FILTERS.filter(s => s.value !== "all").map((stage) => {
@@ -520,7 +520,7 @@ function GettingStartedChecklist({ contacts }: { contacts: Contact[] }) {
   const pct = Math.round((completed / total) * 100);
 
   return (
-    <div className="border-t border-l-4 border-l-emerald-400 px-4 py-3 bg-gradient-to-r from-emerald-50/20 to-transparent dark:from-emerald-950/10">
+    <div className="border-t border-l-4 border-l-emerald-400 px-4 py-3 bg-gradient-to-r from-[#0F7694]/20 to-transparent dark:from-[#0F7694]/10">
       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Getting Started</h3>
       <div className="space-y-1 mb-3">
         {checks.map((check, i) => (
@@ -532,7 +532,7 @@ function GettingStartedChecklist({ contacts }: { contacts: Contact[] }) {
             )}
           >
             {check.done ? (
-              <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+              <div className="w-4 h-4 rounded-full bg-[#0F7694]/50 flex items-center justify-center shrink-0">
                 <Check className="h-2.5 w-2.5 text-white" />
               </div>
             ) : (
@@ -543,9 +543,9 @@ function GettingStartedChecklist({ contacts }: { contacts: Contact[] }) {
         ))}
       </div>
       <div className="flex items-center gap-2">
-        <div className="flex-1 h-2 rounded-full bg-emerald-100/50 dark:bg-emerald-900/20 overflow-hidden">
+        <div className="flex-1 h-2 rounded-full bg-[#0F7694]/10/50 dark:bg-[#1a1535]/20 overflow-hidden">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
+            className="h-full rounded-full bg-gradient-to-r from-[#0F7694] to-[#0F7694] transition-all duration-500"
             style={{ width: `${pct}%` }}
           />
         </div>
