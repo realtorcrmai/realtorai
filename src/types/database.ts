@@ -37,6 +37,8 @@ export interface Database {
           household_id: string | null;
           stage_bar: string | null;
           last_activity_date: string | null;
+          is_indirect: boolean | null;
+          indirect_source: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -67,6 +69,8 @@ export interface Database {
           household_id?: string | null;
           stage_bar?: string | null;
           last_activity_date?: string | null;
+          is_indirect?: boolean | null;
+          indirect_source?: string | null;
           created_at?: string;
           updated_at?: string;
         };

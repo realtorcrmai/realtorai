@@ -56,11 +56,16 @@ export function ContactCard({ contact }: { contact: Contact }) {
                   <span className="truncate">{contact.email}</span>
                 </div>
               )}
-              <div className="mt-2">
+              <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                 <Badge variant="outline" className="text-[10px] text-muted-foreground">
                   <MessageSquare className="h-2.5 w-2.5 mr-1" />
                   {contact.pref_channel}
                 </Badge>
+                {Boolean((contact as Record<string, unknown>).is_indirect) && (
+                  <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                    🔗 Via property
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
