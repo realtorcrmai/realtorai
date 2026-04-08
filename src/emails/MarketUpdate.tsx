@@ -116,7 +116,7 @@ const statBox = {
   width: "30%",
   textAlign: "center" as const,
   padding: "16px 8px",
-  backgroundColor: "#f6f5ff",
+  backgroundColor: "#f7f7f8",
   borderRadius: "10px",
   marginRight: "3%",
   marginBottom: "8px",
