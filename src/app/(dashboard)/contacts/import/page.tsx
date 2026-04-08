@@ -3,6 +3,36 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 
+const IMPORT_SOURCES = [
+  {
+    id: "google",
+    label: "Google Contacts",
+    icon: "📱",
+    desc: "Pick directly from your Gmail / Google account",
+    href: "/contacts/import-gmail",
+    badge: "Picker",
+    badgeColor: "bg-blue-100 text-blue-700",
+  },
+  {
+    id: "apple",
+    label: "Apple / vCard",
+    icon: "🍎",
+    desc: "Export .vcf from Contacts app, Outlook, or iCloud",
+    href: null, // handled inline (file upload below)
+    badge: "File upload",
+    badgeColor: "bg-gray-100 text-gray-600",
+  },
+  {
+    id: "csv",
+    label: "CSV Spreadsheet",
+    icon: "📋",
+    desc: "From any CRM, spreadsheet, or custom export",
+    href: null, // handled inline
+    badge: "File upload",
+    badgeColor: "bg-gray-100 text-gray-600",
+  },
+];
+
 interface ImportResult {
   ok: boolean;
   imported: number;
@@ -277,6 +307,46 @@ export default function ContactImportPage() {
 
       {/* Step 1: Upload */}
       {step === "upload" && (
+        <div className="space-y-4">
+          {/* Source selector */}
+          <div className="grid grid-cols-3 gap-3">
+            {IMPORT_SOURCES.map((src) => (
+              src.href ? (
+                <Link
+                  key={src.id}
+                  href={src.href}
+                  className="lf-card p-4 flex flex-col gap-2 hover:border-[var(--lf-indigo)]/50 hover:shadow-md transition-all group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl">{src.icon}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${src.badgeColor}`}>
+                      {src.badge}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm group-hover:text-[var(--lf-indigo)] transition-colors">
+                      {src.label}
+                    </div>
+                    <div className="text-xs text-[var(--lf-text)]/50 mt-0.5">{src.desc}</div>
+                  </div>
+                </Link>
+              ) : (
+                <div key={src.id} className="lf-card p-4 flex flex-col gap-2 border-[var(--lf-indigo)]/30">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl">{src.icon}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${src.badgeColor}`}>
+                      {src.badge}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm">{src.label}</div>
+                    <div className="text-xs text-[var(--lf-text)]/50 mt-0.5">{src.desc}</div>
+                  </div>
+                </div>
+              )
+            ))}
+          </div>
+
         <div className="lf-card p-8">
           <div
             className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors ${
@@ -365,6 +435,7 @@ export default function ContactImportPage() {
               </div>
             </div>
           </div>
+        </div>
         </div>
       )}
 
