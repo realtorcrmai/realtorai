@@ -105,7 +105,7 @@ const addressText = { fontSize: "18px", fontWeight: "600" as const, color: "#1a1
 const priceText = { fontSize: "24px", fontWeight: "700" as const, color: "#4f35d2", margin: "4px 0 0" };
 
 const dateBox = {
-  backgroundColor: "#f6f5ff",
+  backgroundColor: "#f7f7f8",
   borderRadius: "10px",
   padding: "16px",
   textAlign: "center" as const,

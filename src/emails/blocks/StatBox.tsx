@@ -27,7 +27,7 @@ export function StatBoxBlock({ stats, accentColor = "#4f35d2" }: Props) {
               width: "30%",
               textAlign: "center",
               padding: "14px 8px",
-              background: "#f6f5ff",
+              background: "#f7f7f8",
               borderRadius: 10,
               marginRight: i < 2 ? "3%" : 0,
             }}
