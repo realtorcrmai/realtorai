@@ -79,7 +79,7 @@ export function JourneyProgressBar({
                 : engagementScore >= 40
                 ? "bg-amber-100 text-amber-700"
                 : engagementScore >= 20
-                ? "bg-blue-100 text-blue-700"
+                ? "bg-[#0F7694]/10 text-[#0A6880]"
                 : "bg-gray-100 text-gray-600"
             }`}
           >

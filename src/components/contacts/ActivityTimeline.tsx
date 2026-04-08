@@ -33,26 +33,26 @@ const ACTIVITY_CONFIG: Record<
 > = {
   workflow_auto_enrolled: {
     icon: Zap,
-    color: "text-indigo-600",
-    bg: "bg-indigo-50",
+    color: "text-[#0F7694]",
+    bg: "bg-[#0F7694]/5",
     label: "Auto Enrolled",
   },
   workflow_step_auto_sms: {
     icon: Phone,
-    color: "text-green-600",
-    bg: "bg-green-50",
+    color: "text-[#0F7694]",
+    bg: "bg-[#0F7694]/5",
     label: "SMS",
   },
   workflow_step_auto_whatsapp: {
     icon: MessageSquare,
-    color: "text-emerald-600",
-    bg: "bg-emerald-50",
+    color: "text-[#0F7694]",
+    bg: "bg-[#0F7694]/5",
     label: "WhatsApp",
   },
   workflow_step_auto_email: {
     icon: Mail,
-    color: "text-blue-600",
-    bg: "bg-blue-50",
+    color: "text-[#0F7694]",
+    bg: "bg-[#0F7694]/5",
     label: "Email",
   },
   workflow_step_manual_task: {
@@ -69,8 +69,8 @@ const ACTIVITY_CONFIG: Record<
   },
   workflow_step_system_action: {
     icon: Settings,
-    color: "text-purple-600",
-    bg: "bg-purple-50",
+    color: "text-[#0F7694]",
+    bg: "bg-[#0F7694]/5",
     label: "System",
   },
   workflow_exited: {
@@ -182,7 +182,7 @@ export default function ActivityTimeline({ activities }: ActivityTimelineProps) 
             <div className="mt-3 text-center">
               <Link
                 href="/automations/notifications"
-                className="text-xs text-indigo-600 hover:underline"
+                className="text-xs text-[#0F7694] hover:underline"
               >
                 Show More
               </Link>

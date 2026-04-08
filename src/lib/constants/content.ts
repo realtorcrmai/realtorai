@@ -12,7 +12,7 @@ export type MediaAssetStatus = (typeof MEDIA_ASSET_STATUSES)[number];
 export const MEDIA_STATUS_COLORS: Record<MediaAssetStatus, string> = {
   pending: "bg-slate-50 text-slate-700 border-slate-200",
   processing: "bg-amber-50 text-amber-700 border-amber-200",
-  completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  completed: "bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20",
   failed: "bg-red-50 text-red-700 border-red-200",
 };
 

@@ -219,11 +219,11 @@ export function BuyerPreferencesPanel({
             </div>
           )}
           {preferences?.pre_approval_amount && (
-            <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/20">
-              <p className="text-xs text-emerald-600 dark:text-emerald-500 uppercase font-medium">
+            <div className="p-3 rounded-lg bg-[#0F7694]/5 dark:bg-[#1a1535]/20">
+              <p className="text-xs text-[#0F7694] dark:text-[#0F7694] uppercase font-medium">
                 Pre-Approved
               </p>
-              <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 mt-1">
+              <p className="text-sm font-bold text-[#0A6880] dark:text-[#67D4E8] mt-1">
                 {Number(preferences.pre_approval_amount).toLocaleString("en-CA", {
                   style: "currency",
                   currency: "CAD",
@@ -261,7 +261,7 @@ export function BuyerPreferencesPanel({
               {preferences.preferred_areas.map((a) => (
                 <span
                   key={a}
-                  className="px-2.5 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                  className="px-2.5 py-1 text-xs font-medium rounded-full bg-[#0F7694]/10 text-[#0A6880] dark:bg-blue-900/30 dark:text-[#67D4E8]"
                 >
                   {a}
                 </span>
@@ -528,7 +528,7 @@ export function BuyerPreferencesPanel({
               {(form.preferred_areas ?? []).map((area) => (
                 <span
                   key={area}
-                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-[#0F7694]/10 text-[#0A6880] dark:bg-blue-900/30 dark:text-[#67D4E8]"
                 >
                   {area}
                   <button

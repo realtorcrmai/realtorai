@@ -305,17 +305,17 @@ export default function ContactImportPage() {
           <h2 className="text-xl font-bold mb-2">Import Complete</h2>
 
           <div className="grid grid-cols-3 gap-4 max-w-md mx-auto my-6">
-            <div className="p-3 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-700">{result.imported}</div>
-              <div className="text-xs text-green-600">Imported</div>
+            <div className="p-3 bg-[#0F7694]/5 rounded-lg">
+              <div className="text-2xl font-bold text-[#0A6880]">{result.imported}</div>
+              <div className="text-xs text-[#0F7694]">Imported</div>
             </div>
             <div className="p-3 bg-yellow-50 rounded-lg">
               <div className="text-2xl font-bold text-yellow-700">{result.skipped}</div>
               <div className="text-xs text-yellow-600">Skipped</div>
             </div>
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-700">{result.total}</div>
-              <div className="text-xs text-blue-600">Total Rows</div>
+            <div className="p-3 bg-[#0F7694]/5 rounded-lg">
+              <div className="text-2xl font-bold text-[#1a1535]">{result.total}</div>
+              <div className="text-xs text-[#0F7694]">Total Rows</div>
             </div>
           </div>
 

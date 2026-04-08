@@ -15,7 +15,7 @@ export default async function FormsPage() {
 
   // Build a map: { listingId: { formKey: status } }
   const allStatuses: Record<string, Record<string, "draft" | "completed">> = {};
-  (submissions ?? []).forEach((s) => {
+  (submissions ?? []).forEach((s: any) => {
     if (!allStatuses[s.listing_id]) allStatuses[s.listing_id] = {};
     allStatuses[s.listing_id][s.form_key] = s.status as "draft" | "completed";
   });

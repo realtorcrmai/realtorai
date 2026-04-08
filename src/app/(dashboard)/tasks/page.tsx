@@ -177,7 +177,7 @@ export default function TasksPage() {
                 type="checkbox"
                 checked={allSelected}
                 onChange={toggleSelectAll}
-                className="h-4 w-4 cursor-pointer accent-indigo-600"
+                className="h-4 w-4 cursor-pointer accent-[#0F7694]"
                 aria-label="Select all incomplete tasks"
                 title={allSelected ? "Deselect all" : "Select all incomplete tasks"}
               />
@@ -237,7 +237,7 @@ export default function TasksPage() {
             size="sm"
             onClick={bulkComplete}
             disabled={bulkLoading}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="bg-[#0F7694] hover:bg-[#0A6880] text-white"
           >
             <CheckCheck className="h-4 w-4 mr-1.5" />
             {bulkLoading ? "Completing..." : "Mark Complete"}

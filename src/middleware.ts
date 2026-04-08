@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Public routes — always allow
   if (
     pathname === "/login" ||
     pathname === "/signup" ||
+    pathname === "/verify" ||
+    pathname.startsWith("/verify/") ||
+    pathname === "/onboarding" ||
     pathname.startsWith("/docs") ||
     pathname.startsWith("/sdk/") ||
     pathname.startsWith("/_next/") ||
@@ -32,7 +36,9 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/api/contacts/import") ||
     pathname.startsWith("/api/websites/") ||
     pathname.startsWith("/api/social/oauth") ||
-    pathname.startsWith("/api/agent/")
+    pathname.startsWith("/api/agent/") ||
+    pathname.startsWith("/api/contacts/import-gmail") ||
+    pathname.startsWith("/api/contacts/import-vcard")
   ) {
     return NextResponse.next();
   }
@@ -55,6 +61,21 @@ export function middleware(request: NextRequest) {
   if (!sessionToken && !pathname.startsWith("/api")) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
+
+  // ── Verification gate — check JWT claims without DB hit ──
+  try {
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+    if (token) {
+      if (token.emailVerified === false) {
+        if (!pathname.startsWith("/api")) return NextResponse.redirect(new URL("/verify", request.url));
+        return NextResponse.json({ error: "Email not verified" }, { status: 403 });
+      }
+      if (token.phoneVerified === false && token.emailVerified === true) {
+        if (!pathname.startsWith("/api")) return NextResponse.redirect(new URL("/verify/phone", request.url));
+        return NextResponse.json({ error: "Phone not verified" }, { status: 403 });
+      }
+    }
+  } catch { /* JWT decode failure — allow through, session check already passed */ }
 
   return NextResponse.next();
 }

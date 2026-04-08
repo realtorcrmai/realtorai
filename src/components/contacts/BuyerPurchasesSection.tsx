@@ -103,7 +103,7 @@ export function BuyerPurchasesSection({
           <Home className="h-4 w-4" />
           Properties & Purchases
           {wonDeals.length > 0 && (
-            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] px-1.5 py-0">
+            <Badge className="bg-[#0F7694]/10 text-[#0A6880] border-[#0F7694]/30 text-[10px] px-1.5 py-0">
               {wonDeals.length} Purchased
             </Badge>
           )}
@@ -127,10 +127,10 @@ export function BuyerPurchasesSection({
                 key={deal.id}
                 className={`rounded-lg border transition-colors ${
                   isWon
-                    ? "border-emerald-200 bg-emerald-50/30"
+                    ? "border-[#0F7694]/20 bg-[#0F7694]/5/30"
                     : isLost
                     ? "border-muted bg-muted/20 opacity-60"
-                    : "border-blue-200 bg-blue-50/30"
+                    : "border-[#0F7694]/20 bg-[#0F7694]/5"
                 }`}
               >
                 {/* Summary row */}
@@ -147,10 +147,10 @@ export function BuyerPurchasesSection({
                         variant="outline"
                         className={`text-[10px] px-1.5 py-0 ${
                           isWon
-                            ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                            ? "bg-[#0F7694]/10 text-[#0A6880] border-[#0F7694]/30"
                             : isLost
                             ? "bg-red-100 text-red-800 border-red-300"
-                            : "bg-blue-100 text-blue-800 border-blue-300"
+                            : "bg-[#0F7694]/10 text-[#0A6880] border-[#0F7694]/30"
                         }`}
                       >
                         {isWon ? "Purchased" : isLost ? "Lost" : STAGE_LABELS[deal.stage] ?? deal.stage}

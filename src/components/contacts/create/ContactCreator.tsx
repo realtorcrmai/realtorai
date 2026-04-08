@@ -152,7 +152,7 @@ export function ContactCreator() {
   };
 
   return (
-    <div className="min-h-full overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-indigo-50/20 dark:from-zinc-950 dark:via-background dark:to-indigo-950/5">
+    <div className="min-h-full overflow-y-auto bg-gradient-to-br from-[#FAF8F4] via-white to-[#0F7694]/5 dark:from-zinc-950 dark:via-background dark:to-[#1a1535]/5">
       {/* Header */}
       <div className="border-b border-border/30 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -165,7 +165,7 @@ export function ContactCreator() {
             </Link>
             <div>
               <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-indigo-500" />
+                <Sparkles className="h-5 w-5 text-[#0F7694]" />
                 Meet Someone New
               </h1>
               <p className="text-sm text-muted-foreground">Add a new contact to your network</p>
@@ -246,7 +246,7 @@ export function ContactCreator() {
                 />
 
                 {isBuyer && (
-                  <div className="space-y-3 p-4 rounded-xl bg-blue-50/30 dark:bg-blue-950/10 border border-blue-100/50 dark:border-blue-900/20">
+                  <div className="space-y-3 p-4 rounded-xl bg-[#0F7694]/5 dark:bg-blue-950/10 border border-blue-100/50 dark:border-blue-900/20">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-sm text-muted-foreground mb-1 block">Budget min ($K)</label>
@@ -274,7 +274,7 @@ export function ContactCreator() {
                       {areas.length > 0 && (
                         <div className="flex gap-1.5 flex-wrap mt-2">
                           {areas.map((area) => (
-                            <span key={area} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm">
+                            <span key={area} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#0F7694]/10 dark:bg-blue-900/30 text-[#0A6880] dark:text-blue-300 text-sm">
                               {area}
                               <button onClick={() => setAreas(areas.filter(a => a !== area))} className="hover:text-red-500">
                                 <X className="h-3 w-3" />
@@ -294,7 +294,7 @@ export function ContactCreator() {
                             onClick={() => togglePropertyType(pt)}
                             className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
                               propertyTypes.includes(pt)
-                                ? "bg-blue-600 text-white shadow-sm"
+                                ? "bg-[#0F7694] text-white shadow-sm"
                                 : "bg-white dark:bg-zinc-800 border border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
                             }`}
                           >
@@ -329,7 +329,7 @@ export function ContactCreator() {
                 )}
 
                 {isSeller && (
-                  <div className="space-y-3 p-4 rounded-xl bg-purple-50/30 dark:bg-purple-950/10 border border-purple-100/50 dark:border-purple-900/20">
+                  <div className="space-y-3 p-4 rounded-xl bg-[#0F7694]/5/30 dark:bg-[#1a1535]/10 border border-[#0F7694]/15/50 dark:border-[#0F7694]/10">
                     <div>
                       <label className="text-sm text-muted-foreground mb-1 block">Motivation</label>
                       <select value={motivation} onChange={(e) => setMotivation(e.target.value)} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm">
@@ -372,7 +372,7 @@ export function ContactCreator() {
               {showMore && (
                 <div className="space-y-4 animate-float-in">
                   {/* Structured Address */}
-                  <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-slate-900/20 border border-border/30 space-y-3">
+                  <div className="p-4 rounded-xl bg-[#FAF8F4] dark:bg-[#1a1535]/10 border border-border/30 space-y-3">
                     <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Residential Address</p>
                     <div>
                       <label className="text-sm text-muted-foreground mb-1 block">Street address</label>
@@ -413,8 +413,8 @@ export function ContactCreator() {
                       </div>
                     </div>
                     {postalCode.length >= 2 && city && (
-                      <p className="text-xs text-emerald-600 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <p className="text-xs text-[#0F7694] flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#0F7694]/50" />
                         Auto-detected: {city}, {province}
                       </p>
                     )}
@@ -485,14 +485,14 @@ export function ContactCreator() {
             <Button
               disabled={!canSubmit || submitting}
               onClick={handleSubmit}
-              className="w-full mt-4 h-12 text-base font-semibold bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 shadow-lg rounded-xl"
+              className="w-full mt-4 h-12 text-base font-semibold bg-gradient-to-r from-[#0F7694] to-[#0F7694] hover:bg-[#0A6880] shadow-lg rounded-xl"
               size="lg"
             >
               {submitting ? "Creating..." : canSubmit ? "Add to Network →" : "Fill required fields *"}
             </Button>
 
             {canSubmit && (
-              <p className="text-xs text-emerald-600 text-center mt-1.5 font-medium">Ready to add to your network</p>
+              <p className="text-xs text-[#0F7694] text-center mt-1.5 font-medium">Ready to add to your network</p>
             )}
           </div>
         </div>
@@ -508,7 +508,7 @@ export function ContactCreator() {
 function SectionLabel({ number, label, optional, required }: { number: number; label: string; optional?: boolean; required?: boolean }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#0F7694] to-[#0F7694] flex items-center justify-center text-white text-xs font-bold shadow-sm">
         {number}
       </div>
       <h2 className="text-sm font-semibold">

@@ -90,7 +90,7 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
         <div className="flex justify-end">
           <Button
             size="sm"
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="gap-2 bg-[#0A6880] hover:bg-[#0A6880] text-white"
             onClick={handleBulkApprove}
             disabled={pending}
           >
@@ -144,7 +144,7 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
                     <div className="flex items-center gap-2 shrink-0">
                       <Button
                         size="sm"
-                        className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        className="gap-1.5 bg-[#0A6880] hover:bg-[#0A6880] text-white"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleApprove(item.id);

@@ -2,11 +2,11 @@ export const CONTACT_TYPES = ["buyer", "seller", "customer", "agent", "partner",
 export type ContactType = (typeof CONTACT_TYPES)[number];
 
 export const CONTACT_TYPE_COLORS: Record<ContactType, string> = {
-  customer: "bg-green-100 text-green-800",
+  customer: "bg-[#0F7694]/10 text-[#0A6880]",
   buyer: "bg-blue-100 text-blue-800",
-  seller: "bg-purple-100 text-purple-800",
+  seller: "bg-[#0F7694]/15 text-[#0A6880]",
   agent: "bg-orange-100 text-orange-800",
-  partner: "bg-teal-100 text-teal-800",
+  partner: "bg-[#0F7694]/10 text-[#0A6880]",
   other: "bg-gray-100 text-gray-800",
 };
 
@@ -69,9 +69,9 @@ export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
 export const LEAD_STATUS_COLORS: Record<LeadStatus, string> = {
   new: "bg-sky-100 text-sky-800",
   contacted: "bg-amber-100 text-amber-800",
-  qualified: "bg-emerald-100 text-emerald-800",
-  nurturing: "bg-violet-100 text-violet-800",
-  active: "bg-green-100 text-green-800",
+  qualified: "bg-[#0F7694]/10 text-[#0A6880]",
+  nurturing: "bg-[#0F7694]/10 text-[#0A6880]",
+  active: "bg-[#0F7694]/10 text-[#0A6880]",
   under_contract: "bg-orange-100 text-orange-800",
   closed: "bg-gray-100 text-gray-800",
   lost: "bg-red-100 text-red-800",
@@ -174,10 +174,10 @@ export const STAGE_LABELS: Record<string, string> = {
 export const STAGE_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
   new: { bg: "bg-sky-100", text: "text-sky-800", dot: "bg-sky-500" },
   qualified: { bg: "bg-amber-100", text: "text-amber-800", dot: "bg-amber-500" },
-  active_search: { bg: "bg-green-100", text: "text-green-800", dot: "bg-green-500" },
-  active_listing: { bg: "bg-green-100", text: "text-green-800", dot: "bg-green-500" },
+  active_search: { bg: "bg-[#0F7694]/10", text: "text-[#0A6880]", dot: "bg-[#0F7694]/50" },
+  active_listing: { bg: "bg-[#0F7694]/10", text: "text-[#0A6880]", dot: "bg-[#0F7694]/50" },
   under_contract: { bg: "bg-orange-100", text: "text-orange-800", dot: "bg-orange-500" },
-  closed: { bg: "bg-emerald-100", text: "text-emerald-800", dot: "bg-emerald-600" },
+  closed: { bg: "bg-[#0F7694]/10", text: "text-[#0A6880]", dot: "bg-[#0A6880]" },
   cold: { bg: "bg-gray-100", text: "text-gray-600", dot: "bg-gray-400" },
 };
 

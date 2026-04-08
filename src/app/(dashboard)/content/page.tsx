@@ -31,29 +31,29 @@ export default async function ContentPage() {
   const totalListings = listings?.length ?? 0;
   const withPrompts = prompts?.length ?? 0;
   const completedAssets =
-    assets?.filter((a) => a.status === "completed").length ?? 0;
+    assets?.filter((a: any) => a.status === "completed").length ?? 0;
   const processingAssets =
     assets?.filter(
-      (a) => a.status === "processing" || a.status === "pending"
+      (a: any) => a.status === "processing" || a.status === "pending"
     ).length ?? 0;
 
   const stats = [
     {
       label: "Total Listings",
       value: totalListings,
-      color: "text-indigo-600",
+      color: "text-[#0F7694]",
       icon: Building2,
     },
     {
       label: "With Prompts",
       value: withPrompts,
-      color: "text-violet-600",
+      color: "text-[#0F7694]",
       icon: Sparkles,
     },
     {
       label: "Completed Media",
       value: completedAssets,
-      color: "text-emerald-600",
+      color: "text-[#0F7694]",
       icon: CheckCircle2,
     },
     {
@@ -124,18 +124,18 @@ export default async function ContentPage() {
             </div>
           ) : (
             <div className="grid gap-4 stagger-children">
-              {(listings ?? []).map((listing) => {
+              {(listings ?? []).map((listing: any) => {
                 const listingPrompt = prompts?.find(
-                  (p) => p.listing_id === listing.id
+                  (p: any) => p.listing_id === listing.id
                 );
                 const listingAssets = (assets ?? []).filter(
-                  (a) => a.listing_id === listing.id
+                  (a: any) => a.listing_id === listing.id
                 );
                 const videoAsset = listingAssets.find(
-                  (a) => a.asset_type === "video"
+                  (a: any) => a.asset_type === "video"
                 );
                 const imageAsset = listingAssets.find(
-                  (a) => a.asset_type === "image"
+                  (a: any) => a.asset_type === "image"
                 );
 
                 const sellerName =
@@ -194,7 +194,7 @@ export default async function ContentPage() {
                             className={cn(
                               "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border",
                               listingPrompt
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                ? "bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20"
                                 : "bg-slate-50 text-slate-500 border-slate-200"
                             )}
                           >

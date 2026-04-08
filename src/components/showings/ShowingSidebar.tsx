@@ -33,7 +33,7 @@ function deriveShowingWorkflow(status: string): StepStatus[] {
 }
 
 const STEP_DOT_STYLES: Record<StepStatus, string> = {
-  completed: "bg-green-500",
+  completed: "bg-[#00C875]",
   "in-progress": "bg-orange-400",
   pending: "bg-gray-300 dark:bg-gray-600",
   blocked: "bg-red-400",
@@ -42,7 +42,7 @@ const STEP_DOT_STYLES: Record<StepStatus, string> = {
 const STATUS_FILTERS: { value: StatusFilter; label: string; dot: string }[] = [
   { value: "all", label: "All", dot: "bg-gray-400" },
   { value: "requested", label: "Requested", dot: "bg-amber-500" },
-  { value: "confirmed", label: "Confirmed", dot: "bg-emerald-500" },
+  { value: "confirmed", label: "Confirmed", dot: "bg-[#0F7694]" },
   { value: "denied", label: "Denied", dot: "bg-red-500" },
   { value: "cancelled", label: "Cancelled", dot: "bg-gray-500" },
 ];
@@ -90,7 +90,7 @@ export function ShowingSidebar({
           >
             <Filter className="h-4 w-4" />
             {hasActiveFilter && (
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#0F7694]" />
             )}
           </button>
         </div>

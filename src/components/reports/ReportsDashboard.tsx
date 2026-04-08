@@ -114,15 +114,15 @@ export function ReportsDashboard() {
             icon={Users}
             label="Contacts"
             value={summary.totalContacts}
-            color="text-blue-600"
-            bg="bg-blue-50"
+            color="text-[#0F7694]"
+            bg="bg-[#0F7694]/5"
           />
           <StatCard
             icon={Building2}
             label="Listings"
             value={summary.totalListings}
-            color="text-violet-600"
-            bg="bg-violet-50"
+            color="text-[#0F7694]"
+            bg="bg-[#0F7694]/5"
           />
           <StatCard
             icon={Target}
@@ -135,15 +135,15 @@ export function ReportsDashboard() {
             icon={DollarSign}
             label="Sales Volume"
             value={`$${summary.wonValue.toLocaleString("en-CA")}`}
-            color="text-emerald-600"
-            bg="bg-emerald-50"
+            color="text-[#0F7694]"
+            bg="bg-[#0F7694]/5"
           />
           <StatCard
             icon={TrendingUp}
             label="Earned GCI"
             value={`$${summary.earnedCommission.toLocaleString("en-CA")}`}
-            color="text-green-600"
-            bg="bg-green-50"
+            color="text-[#0F7694]"
+            bg="bg-[#0F7694]/5"
           />
           <StatCard
             icon={DollarSign}
@@ -156,15 +156,15 @@ export function ReportsDashboard() {
             icon={TrendingUp}
             label="Pipeline GCI"
             value={`$${summary.pipelineCommission.toLocaleString("en-CA")}`}
-            color="text-orange-600"
-            bg="bg-orange-50"
+            color="text-[#0A6880]"
+            bg="bg-[#0F7694]/5"
           />
           <StatCard
             icon={Calendar}
             label="Showings"
             value={summary.totalShowings}
-            color="text-indigo-600"
-            bg="bg-indigo-50"
+            color="text-[#0F7694]"
+            bg="bg-[#0F7694]/5"
           />
           <StatCard
             icon={ListTodo}
@@ -177,8 +177,8 @@ export function ReportsDashboard() {
             icon={MessageSquare}
             label="Communications"
             value={summary.totalCommunications}
-            color="text-cyan-600"
-            bg="bg-cyan-50"
+            color="text-[#0F7694]"
+            bg="bg-[#0F7694]/5"
           />
         </div>
 
@@ -479,11 +479,11 @@ export function ReportsDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="p-4 rounded-xl bg-emerald-50">
-                <p className="text-3xl font-bold text-emerald-700">
+              <div className="p-4 rounded-xl bg-[#0F7694]/5">
+                <p className="text-3xl font-bold text-[#0A6880]">
                   {summary.wonDeals}
                 </p>
-                <p className="text-xs text-emerald-600 mt-1">Won</p>
+                <p className="text-xs text-[#0F7694] mt-1">Won</p>
               </div>
               <div className="p-4 rounded-xl bg-amber-50">
                 <p className="text-3xl font-bold text-amber-700">
@@ -513,7 +513,7 @@ export function ReportsDashboard() {
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-emerald-500 rounded-full"
+                    className="h-full bg-[#0F7694]/50 rounded-full"
                     style={{
                       width: `${(summary.wonDeals / Math.max(summary.totalDeals, 1)) * 100}%`,
                     }}

@@ -59,7 +59,7 @@ export function BackfillButton() {
       {result && (
         <div className="rounded-lg border bg-card p-4 space-y-2 text-sm animate-float-in">
           <div className="flex items-center gap-2 font-medium text-foreground">
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <CheckCircle2 className="h-4 w-4 text-[#0F7694]" />
             Backfill complete — {result.totalEnrolled} contact
             {result.totalEnrolled !== 1 ? "s" : ""} enrolled
           </div>

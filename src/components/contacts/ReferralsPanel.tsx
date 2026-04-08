@@ -27,15 +27,15 @@ export type ReferralRow = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  open: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-  accepted: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  closed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+  open: "bg-[#0F7694]/10 text-[#0A6880] dark:bg-blue-900/30 dark:text-[#67D4E8]",
+  accepted: "bg-[#0F7694]/10 text-[#0A6880] dark:bg-[#1a1535]/30 dark:text-[#67D4E8]",
+  closed: "bg-[#0F7694]/10 text-[#0A6880] dark:bg-[#1a1535]/30 dark:text-[#67D4E8]",
   lost: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
 };
 
 const TYPE_STYLES: Record<string, string> = {
-  buyer: "bg-blue-100 text-blue-800",
-  seller: "bg-purple-100 text-purple-800",
+  buyer: "bg-[#0F7694]/10 text-[#0A6880]",
+  seller: "bg-[#0F7694]/15 text-[#0A6880]",
   rental: "bg-amber-100 text-amber-800",
   other: "bg-gray-100 text-gray-800",
 };
@@ -135,7 +135,7 @@ export function ReferralsPanel({
                   onClick={() => handleSaveEdit(r.id)}
                   disabled={isPending}
                 >
-                  <Check className="h-3.5 w-3.5 text-green-600" />
+                  <Check className="h-3.5 w-3.5 text-[#0F7694]" />
                 </Button>
                 <Button
                   variant="ghost"

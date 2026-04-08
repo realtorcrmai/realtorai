@@ -37,11 +37,11 @@ export default async function AdminPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 animate-float-in" style={{ animationDelay: "80ms" }}>
           <div className="glass rounded-xl px-4 py-3 elevation-2">
-            <p className="text-2xl font-bold text-indigo-600">{realtors.length}</p>
+            <p className="text-2xl font-bold text-[#0F7694]">{realtors.length}</p>
             <p className="text-xs text-muted-foreground mt-0.5">Total Users</p>
           </div>
           <div className="glass rounded-xl px-4 py-3 elevation-2">
-            <p className="text-2xl font-bold text-emerald-600">
+            <p className="text-2xl font-bold text-[#0F7694]">
               {realtors.filter((u) => u.is_active).length}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">Active</p>

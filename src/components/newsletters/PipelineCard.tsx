@@ -75,7 +75,7 @@ export function PipelineCard({ title, type, phaseCounts, contactsByPhase }: Prop
                       <div key={c.id} className="flex items-center justify-between px-4 py-2 border-b border-border/50 last:border-0">
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0 ${
-                            type === "buyer" ? "bg-gradient-to-br from-primary to-purple-500" : "bg-gradient-to-br from-primary to-orange-500"
+                            type === "buyer" ? "bg-gradient-to-br from-primary to-[#1a1535]" : "bg-[#0F7694]"
                           }`}>
                             {(c.name || "?")[0]}
                           </div>
@@ -101,7 +101,7 @@ export function PipelineCard({ title, type, phaseCounts, contactsByPhase }: Prop
                           )}
                           {c.phone && (
                             <a href={`tel:${c.phone}`} className="p-1 rounded hover:bg-muted" title="Call">
-                              <Phone className="h-3 w-3 text-emerald-600" />
+                              <Phone className="h-3 w-3 text-[#0F7694]" />
                             </a>
                           )}
                           <a href={`/contacts/${c.id}`} className="p-1 rounded hover:bg-muted" title="View">

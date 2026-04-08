@@ -43,17 +43,17 @@ const CATEGORY_EMOJI: Record<ContentType, string> = {
 };
 
 const CATEGORY_GRADIENT: Record<ContentType, string> = {
-  just_listed: "from-blue-400 to-indigo-500",
-  just_sold: "from-emerald-400 to-teal-500",
-  open_house: "from-amber-400 to-orange-500",
+  just_listed: "from-blue-400 to-[#0F7694]",
+  just_sold: "from-[#0F7694] to-[#0F7694]",
+  open_house: "from-amber-400 to-[#0F7694]",
   price_reduced: "from-rose-400 to-pink-500",
-  market_update: "from-cyan-400 to-blue-500",
-  neighbourhood: "from-lime-400 to-green-500",
+  market_update: "from-[#67D4E8] to-[#1a1535]",
+  neighbourhood: "from-lime-400 to-[#0F7694]",
   testimonial: "from-yellow-400 to-amber-500",
-  tips: "from-violet-400 to-purple-500",
+  tips: "from-[#67D4E8] to-[#1a1535]",
   holiday: "from-red-400 to-rose-500",
   milestone: "from-fuchsia-400 to-pink-500",
-  coming_soon: "from-sky-400 to-cyan-500",
+  coming_soon: "from-[#67D4E8] to-[#0F7694]",
   custom: "from-gray-400 to-slate-500",
 };
 
@@ -68,8 +68,8 @@ const PLATFORM_EMOJI: Record<SocialPlatform, string> = {
 };
 
 const MEDIA_DISPLAY: Record<MediaType, { emoji: string; label: string; colour: string }> = {
-  image: { emoji: "🖼️", label: "Image", colour: "bg-blue-100 text-blue-700" },
-  carousel: { emoji: "📱", label: "Carousel", colour: "bg-purple-100 text-purple-700" },
+  image: { emoji: "🖼️", label: "Image", colour: "bg-[#0F7694]/10 text-[#0A6880]" },
+  carousel: { emoji: "📱", label: "Carousel", colour: "bg-[#0F7694]/15 text-[#0A6880]" },
   video: { emoji: "🎬", label: "Video", colour: "bg-red-100 text-red-700" },
   reel: { emoji: "🎞️", label: "Reel", colour: "bg-pink-100 text-pink-700" },
   story: { emoji: "📖", label: "Story", colour: "bg-amber-100 text-amber-700" },
@@ -214,7 +214,7 @@ export function SocialTemplatesTab({ templates, onUseTemplate }: Props) {
 
                     {/* System badge */}
                     {template.is_system && (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-indigo-100 text-indigo-700">
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-[#0F7694]/10 text-[#0A6880]">
                         🔒 System
                       </span>
                     )}

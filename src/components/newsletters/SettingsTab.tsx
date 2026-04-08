@@ -54,7 +54,7 @@ export function SettingsTab({ config }: { config: Config | null }) {
           onClick={handleSave}
           disabled={isPending}
           className={`text-xs px-4 py-2 rounded-lg font-medium transition-all ${
-            saved ? "bg-emerald-600 text-white" : isPending ? "bg-gray-400 text-white" : "bg-primary text-white hover:bg-primary/90"
+            saved ? "bg-[#0F7694] text-white" : isPending ? "bg-gray-400 text-white" : "bg-primary text-white hover:bg-primary/90"
           }`}
         >
           {saved ? "Saved!" : isPending ? "Saving..." : "Save Changes"}
@@ -72,7 +72,7 @@ export function SettingsTab({ config }: { config: Config | null }) {
             </div>
             <button
               onClick={() => setAiSending(!aiSending)}
-              className={`relative w-12 h-6 rounded-full transition-colors ${aiSending ? "bg-emerald-500" : "bg-gray-300"}`}
+              className={`relative w-12 h-6 rounded-full transition-colors ${aiSending ? "bg-[#0F7694]" : "bg-gray-300"}`}
             >
               <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${aiSending ? "left-[26px]" : "left-0.5"}`} />
             </button>
@@ -113,7 +113,7 @@ export function SettingsTab({ config }: { config: Config | null }) {
             </div>
             <button
               onClick={() => setWeekendSending(!weekendSending)}
-              className={`relative w-12 h-6 rounded-full transition-colors ${weekendSending ? "bg-emerald-500" : "bg-gray-300"}`}
+              className={`relative w-12 h-6 rounded-full transition-colors ${weekendSending ? "bg-[#0F7694]" : "bg-gray-300"}`}
             >
               <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${weekendSending ? "left-[26px]" : "left-0.5"}`} />
             </button>
@@ -147,22 +147,22 @@ export function SettingsTab({ config }: { config: Config | null }) {
             <div className="text-center p-3 bg-muted/50 rounded-lg">
               <div className="text-lg font-bold text-foreground">CASL</div>
               <div className="text-[10px] text-muted-foreground">Canada</div>
-              <div className="text-xs text-emerald-600 font-medium mt-1">Compliant</div>
+              <div className="text-xs text-[#0F7694] font-medium mt-1">Compliant</div>
             </div>
             <div className="text-center p-3 bg-muted/50 rounded-lg">
               <div className="text-lg font-bold text-foreground">CAN-SPAM</div>
               <div className="text-[10px] text-muted-foreground">USA</div>
-              <div className="text-xs text-emerald-600 font-medium mt-1">Compliant</div>
+              <div className="text-xs text-[#0F7694] font-medium mt-1">Compliant</div>
             </div>
             <div className="text-center p-3 bg-muted/50 rounded-lg">
               <div className="text-lg font-bold text-foreground">0</div>
               <div className="text-[10px] text-muted-foreground">Unsubscribes</div>
-              <div className="text-xs text-emerald-600 font-medium mt-1">This month</div>
+              <div className="text-xs text-[#0F7694] font-medium mt-1">This month</div>
             </div>
             <div className="text-center p-3 bg-muted/50 rounded-lg">
               <div className="text-lg font-bold text-foreground">0</div>
               <div className="text-[10px] text-muted-foreground">Complaints</div>
-              <div className="text-xs text-emerald-600 font-medium mt-1">This month</div>
+              <div className="text-xs text-[#0F7694] font-medium mt-1">This month</div>
             </div>
           </div>
         </CardContent>

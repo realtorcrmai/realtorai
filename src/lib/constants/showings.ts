@@ -11,7 +11,7 @@ export const SHOWING_STATUS_CONFIG: Record<
   },
   confirmed: {
     label: "Confirmed",
-    className: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50",
+    className: "bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20 hover:bg-[#0F7694]/5",
   },
   denied: {
     label: "Denied",

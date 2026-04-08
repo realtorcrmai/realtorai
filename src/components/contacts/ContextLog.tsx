@@ -27,10 +27,10 @@ const TYPE_CONFIG: Record<
   { icon: typeof AlertTriangle; color: string; label: string }
 > = {
   objection: { icon: AlertTriangle, color: "text-amber-600", label: "Objection" },
-  preference: { icon: Heart, color: "text-blue-600", label: "Preference" },
+  preference: { icon: Heart, color: "text-[#0F7694]", label: "Preference" },
   concern: { icon: AlertTriangle, color: "text-red-600", label: "Concern" },
   info: { icon: Info, color: "text-gray-600", label: "Info" },
-  timeline: { icon: Clock, color: "text-purple-600", label: "Timeline" },
+  timeline: { icon: Clock, color: "text-[#0F7694]", label: "Timeline" },
 };
 
 export function ContextLog({ contactId, entries, onAdd, onResolve }: Props) {
@@ -169,7 +169,7 @@ export function ContextLog({ contactId, entries, onAdd, onResolve }: Props) {
                   onClick={() => handleResolve(entry.id)}
                   title="Mark as resolved"
                 >
-                  <Check className="w-3 h-3 text-emerald-500" />
+                  <Check className="w-3 h-3 text-[#0F7694]" />
                 </Button>
               </div>
             );
@@ -182,7 +182,7 @@ export function ContextLog({ contactId, entries, onAdd, onResolve }: Props) {
             <p className="text-[10px] text-muted-foreground mb-1">Resolved</p>
             {resolved.map((entry) => (
               <div key={entry.id} className="flex items-start gap-2 text-xs text-muted-foreground line-through">
-                <Check className="w-3 h-3 mt-0.5 text-emerald-500" />
+                <Check className="w-3 h-3 mt-0.5 text-[#0F7694]" />
                 <span>
                   {entry.text}
                   {entry.resolved_note && (

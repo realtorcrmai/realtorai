@@ -43,7 +43,7 @@ const EMAIL_TYPE_LABELS: Record<string, string> = {
 };
 
 const STATUS_STYLES: Record<string, { label: string; class: string }> = {
-  sent: { label: "Sent", class: "bg-emerald-100 text-emerald-700" },
+  sent: { label: "Sent", class: "bg-[#0F7694]/10 text-[#0A6880]" },
   draft: { label: "Pending", class: "bg-amber-100 text-amber-700" },
   failed: { label: "Failed", class: "bg-red-100 text-red-700" },
   suppressed: { label: "Held Back", class: "bg-gray-100 text-gray-600" },
@@ -126,12 +126,12 @@ export function EmailHistoryTimeline({ newsletters, filter = "all" }: Props) {
                   {nl.status === "sent" && (
                     <>
                       {opens.length > 0 && (
-                        <span className="text-xs text-emerald-600 font-medium">
+                        <span className="text-xs text-[#0F7694] font-medium">
                           {opens.length} open{opens.length > 1 ? "s" : ""}
                         </span>
                       )}
                       {clicks.length > 0 && (
-                        <span className="text-xs text-blue-600 font-medium">
+                        <span className="text-xs text-[#0A6880] font-medium">
                           {clicks.length} click{clicks.length > 1 ? "s" : ""}
                         </span>
                       )}
@@ -192,7 +192,7 @@ export function EmailHistoryTimeline({ newsletters, filter = "all" }: Props) {
                             key={click.id}
                             className="flex items-center gap-2 text-xs"
                           >
-                            <span className="text-blue-500">→</span>
+                            <span className="text-[#0F7694]">→</span>
                             <span className={isHot ? "text-red-600 font-medium" : "text-foreground"}>
                               Clicked: {link.replace(/https?:\/\/[^/]+/, "")}
                               {isHot && " 🔥"}

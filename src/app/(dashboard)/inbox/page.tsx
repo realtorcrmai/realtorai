@@ -16,9 +16,9 @@ export default async function InboxPage() {
   const messages = communications ?? [];
 
   // Count unread inbound messages (messages from today that are inbound)
-  const inboundCount = messages.filter((m) => m.direction === "inbound").length;
+  const inboundCount = messages.filter((m: any) => m.direction === "inbound").length;
   const totalConversations = new Set(
-    messages.filter((m) => m.contacts).map((m) => m.contact_id)
+    messages.filter((m: any) => m.contacts).map((m: any) => m.contact_id)
   ).size;
 
   return (
