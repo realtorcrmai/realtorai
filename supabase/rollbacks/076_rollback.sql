@@ -6,4 +6,4 @@
 -- other than the index itself (e.g. it interacts badly with another
 -- migration), drop just the index and leave the deduplicated rows in place.
 
-DROP INDEX IF EXISTS uq_agent_recs_pending;
+DROP INDEX IF EXISTS uq_agent_recs_pending_advance;

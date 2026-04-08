@@ -147,11 +147,31 @@ export async function saveRecommendations(recs: Recommendation[]): Promise<numbe
     expires_at: new Date(Date.now() + 24 * 3600000).toISOString(),
   }));
 
-  const { error } = await supabase.from("agent_recommendations").insert(rows);
-  if (error) {
-    console.error("Failed to save recommendations:", error);
-    return 0;
+  // Migration 076 adds a partial unique index `uq_agent_recs_pending_advance`
+  // on pending advance_stage rows. A multi-row INSERT here would abort the
+  // entire batch on the first conflict (Postgres aborts the statement on
+  // any unique violation), losing valid rows alongside the dupes.
+  //
+  // Insert one at a time and treat SQLSTATE 23505 as an idempotent skip —
+  // it just means another inserter (lead-scorer) already created the same
+  // pending advance_stage suggestion for this (contact, target_stage)
+  // tuple in the past 24h. The recommendations cron runs daily, so the
+  // overhead of N single-row inserts vs one batched insert is negligible
+  // (≤10 rows per run).
+  let inserted = 0;
+  for (const row of rows) {
+    const { error } = await supabase.from("agent_recommendations").insert(row);
+    if (!error) {
+      inserted++;
+      continue;
+    }
+    if (error.code === "23505") {
+      // Idempotent: another inserter already wrote this (contact,
+      // advance_stage, new_stage) tuple. Not a failure.
+      continue;
+    }
+    console.error("Failed to save recommendation:", error);
   }
 
-  return rows.length;
+  return inserted;
 }

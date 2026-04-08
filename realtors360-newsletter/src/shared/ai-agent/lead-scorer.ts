@@ -15,11 +15,14 @@ import { logger } from '../../lib/logger.js';
  *      showings, and the parsed Claude JSON. Each is now typed against a
  *      narrow row interface.
  *
- *   2. The `agent_recommendations` insert is now an upsert against the new
- *      `uq_agent_recs_pending` partial unique index (migration 076,
- *      MASTER_NEWSLETTER_PLAN.md §6.4 #2). This eliminates the duplicate
- *      pending recommendations the CRM cron has been creating every 15
- *      minutes for the same (contact, action, target_stage) tuple.
+ *   2. The `agent_recommendations` insert now goes through `INSERT … catch
+ *      SQLSTATE 23505` against the new `uq_agent_recs_pending_advance`
+ *      partial unique index (migration 076, MASTER_NEWSLETTER_PLAN.md
+ *      §6.4 #2). The index is narrowed to pending advance_stage rows
+ *      only, so it eliminates the duplicate pending recommendations the
+ *      CRM cron has been creating every 15 minutes for the same
+ *      (contact, target_stage) tuple without constraining other
+ *      recommendation kinds (greetings, next-best-action mixes, etc).
  *
  *   3. The recommendation insert now writes `realtor_id` explicitly so RLS
  *      stays consistent with HC-14. The CRM original relied on the admin
@@ -269,10 +272,20 @@ ${recentComms || 'none'}`;
 // Scoring entry points
 // ---------------------------------------------------------------------------
 
+/**
+ * Result of scoring a single contact. Returns the realtor_id alongside the
+ * score so `scoreBatch` doesn't need a second SELECT to write a tenant-
+ * scoped recommendation row.
+ */
+export interface ScoreResult {
+  score: LeadScore;
+  realtorId: string | null;
+}
+
 export async function scoreContact(
   db: SupabaseClient,
   contactId: string
-): Promise<LeadScore | null> {
+): Promise<ScoreResult | null> {
   const { data: contact, error: contactErr } = await db
     .from('contacts')
     .select(
@@ -364,7 +377,8 @@ export async function scoreContact(
 
     const jsonStr = extractJsonString(text);
     const parsed: unknown = JSON.parse(jsonStr);
-    return LeadScoreSchema.parse(parsed);
+    const score = LeadScoreSchema.parse(parsed);
+    return { score, realtorId: contact.realtor_id };
   } catch (err) {
     logger.warn({ contactId, err }, 'lead-scorer: scoring failed');
     return null;
@@ -380,11 +394,12 @@ export async function scoreBatch(
 
   for (const contactId of contactIds.slice(0, 50)) {
     try {
-      const score = await scoreContact(db, contactId);
-      if (!score) {
+      const result = await scoreContact(db, contactId);
+      if (!result) {
         errors++;
         continue;
       }
+      const { score, realtorId } = result;
 
       const { error: updateErr } = await db
         .from('contacts')
@@ -401,23 +416,19 @@ export async function scoreBatch(
       }
 
       // Stage-advance recommendation: insert + swallow unique-violation
-      // (Postgres SQLSTATE 23505) raised by the partial unique index added
-      // in migration 076. We can't use `.upsert({onConflict})` here because
+      // (Postgres SQLSTATE 23505) raised by `uq_agent_recs_pending_advance`
+      // (migration 076). We can't use `.upsert({onConflict})` here because
       // PostgREST only accepts plain column names in on_conflict — it has
       // no syntax for targeting an expression-based partial index. The
       // catch-and-ignore-23505 pattern is functionally equivalent.
+      //
+      // We write `realtor_id` explicitly (HC-14) so the row is correctly
+      // tenant-scoped. The CRM original omitted this and relied on admin-
+      // client RLS bypass; M3-C caught the same bug class in
+      // learning-engine and we're tightening it consistently across ports.
+      // realtorId comes from the same SELECT scoreContact already ran, so
+      // there's no extra round-trip.
       if (score.stage_recommendation === 'advance' && score.new_stage) {
-        // Refetch realtor_id so the recommendation row is correctly
-        // tenant-scoped (HC-14). The CRM original omitted this and relied
-        // on admin-client RLS bypass; M3-C caught the same bug class in
-        // learning-engine and we're tightening it consistently across the
-        // newsletter service ports.
-        const { data: realtorRow } = await db
-          .from('contacts')
-          .select('realtor_id')
-          .eq('id', contactId)
-          .single<{ realtor_id: string | null }>();
-
         const insertPayload: Record<string, unknown> = {
           contact_id: contactId,
           action_type: 'advance_stage',
@@ -426,8 +437,8 @@ export async function scoreBatch(
           priority: score.buying_readiness > 70 ? 'hot' : 'warm',
           status: 'pending',
         };
-        if (realtorRow?.realtor_id) {
-          insertPayload.realtor_id = realtorRow.realtor_id;
+        if (realtorId) {
+          insertPayload.realtor_id = realtorId;
         }
 
         const { error: insertErr } = await db

@@ -11,48 +11,62 @@
 --   one. In the worst case the queue UI shows the same suggestion 4×/hour.
 --
 -- Fix:
---   Partial unique index over (contact_id, action_type, new_stage) scoped to
---   pending rows only. Combined with ON CONFLICT DO NOTHING in the inserter
---   (see realtors360-newsletter/src/shared/ai-agent/lead-scorer.ts), this
---   guarantees at most one pending recommendation per (contact, action,
---   target_stage) tuple. Once a recommendation is accepted/dismissed/expired
---   the partial index releases that slot, so the next scoring run can write
+--   Partial unique index over (contact_id, action_config->>'new_stage')
+--   scoped to PENDING rows of action_type='advance_stage' only. The narrow
+--   predicate is intentional — we want to dedupe stage-advance suggestions
+--   without accidentally constraining other recommendation kinds (e.g.
+--   `next-best-action.ts` inserts mixed action_types from a single Claude
+--   call, and we don't want migration 076 to start blocking those just
+--   because one of them happens to be an advance_stage).
+--
+--   Combined with `INSERT ... catch SQLSTATE 23505` in both inserters
+--   (lead-scorer port + next-best-action), this guarantees at most one
+--   pending advance_stage recommendation per (contact, target_stage)
+--   tuple. Once a recommendation is accepted / dismissed / expired the
+--   partial index releases that slot, so the next scoring run can write
 --   a fresh suggestion if the score still warrants one.
 --
+-- Why not `.upsert({onConflict})`?
+--   PostgREST `on_conflict` only accepts plain column lists. It cannot
+--   target an expression-based partial index (it would need to emit
+--   `ON CONFLICT (contact_id, (action_config->>'new_stage')) WHERE ...`
+--   which PostgREST does not generate). The catch-23505 pattern is the
+--   functional equivalent and is portable across both inserters.
+--
 -- Idempotency:
---   IF NOT EXISTS so re-running the migration is safe. Pre-existing duplicate
---   pending rows would block index creation, so the DELETE below collapses
---   each duplicate group down to the most recent row before the index is
---   added. The DELETE is also idempotent (no-op if there are no duplicates).
+--   IF NOT EXISTS so re-running the migration is safe. Pre-existing
+--   duplicate pending rows would block index creation, so the DELETE
+--   below collapses each duplicate group down to the most recent row
+--   before the index is added. The DELETE is also idempotent (no-op if
+--   there are no duplicates).
 --
 -- Rollback: see supabase/rollbacks/076_rollback.sql
 
 -- 1. Collapse pre-existing duplicates to the most recent pending row per
---    (contact_id, action_type, new_stage) tuple. We keep the newest because
---    its reasoning string reflects the most recent scoring context.
+--    (contact_id, new_stage) tuple, scoped to advance_stage rows. We keep
+--    the newest because its reasoning string reflects the most recent
+--    scoring context.
 WITH ranked AS (
   SELECT
     id,
     row_number() OVER (
-      PARTITION BY contact_id, action_type, (action_config->>'new_stage')
+      PARTITION BY contact_id, (action_config->>'new_stage')
       ORDER BY created_at DESC
     ) AS rn
   FROM agent_recommendations
   WHERE status = 'pending'
     AND action_type = 'advance_stage'
-    AND action_config ? 'new_stage'
+    AND (action_config->>'new_stage') IS NOT NULL
 )
 DELETE FROM agent_recommendations
 WHERE id IN (SELECT id FROM ranked WHERE rn > 1);
 
--- 2. Partial unique index. Postgres requires the same WHERE clause shape on
---    inserts that want to use ON CONFLICT against this index. The ai-agent
---    lead-scorer port uses .upsert({ ..., onConflict: 'uq_agent_recs_pending',
---    ignoreDuplicates: true }).
-CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_recs_pending
+-- 2. Partial unique index, narrowed to pending advance_stage rows so it
+--    cannot accidentally constrain other action types.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_recs_pending_advance
   ON agent_recommendations (
     contact_id,
-    action_type,
     (action_config->>'new_stage')
   )
-  WHERE status = 'pending';
+  WHERE status = 'pending'
+    AND action_type = 'advance_stage';
