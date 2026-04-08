@@ -17,9 +17,9 @@ const RELATIONSHIP_LABELS: Record<string, string> = {
 
 const RELATIONSHIP_COLORS: Record<string, string> = {
   spouse: "bg-pink-50 text-pink-700",
-  child: "bg-sky-50 text-sky-700",
+  child: "bg-[#0F7694]/8 text-[#0A6880]",
   parent: "bg-amber-50 text-amber-700",
-  sibling: "bg-violet-50 text-violet-700",
+  sibling: "bg-[#0F7694]/10 text-[#0A6880]",
   other: "bg-slate-50 text-slate-700",
 };
 

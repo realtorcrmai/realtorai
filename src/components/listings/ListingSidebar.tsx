@@ -10,9 +10,9 @@ import type { Listing } from "@/types";
 import { LISTING_STATUS_COLORS } from "@/lib/constants";
 
 const STATUS_DOT_COLORS: Record<string, string> = {
-  active: "bg-emerald-500",
+  active: "bg-[#00C875]",
   pending: "bg-amber-500",
-  sold: "bg-blue-500",
+  sold: "bg-[#0A6880]",
 };
 
 type StepStatus = "completed" | "in-progress" | "pending";
@@ -50,8 +50,8 @@ function deriveSimpleWorkflow(listing: Listing): StepStatus[] {
 }
 
 const STEP_DOT_STYLES: Record<StepStatus, string> = {
-  completed: "bg-green-500",
-  "in-progress": "bg-orange-400",
+  completed: "bg-[#00C875]",
+  "in-progress": "bg-amber-400",
   pending: "bg-gray-300 dark:bg-gray-600",
 };
 
@@ -59,9 +59,9 @@ type StatusFilter = "all" | "active" | "pending" | "sold";
 
 const STATUS_FILTERS: { value: StatusFilter; label: string; dot: string }[] = [
   { value: "all", label: "All", dot: "bg-gray-400" },
-  { value: "active", label: "Active", dot: "bg-emerald-500" },
+  { value: "active", label: "Active", dot: "bg-[#0F7694]" },
   { value: "pending", label: "Pending", dot: "bg-amber-500" },
-  { value: "sold", label: "Sold", dot: "bg-blue-500" },
+  { value: "sold", label: "Sold", dot: "bg-[#0F7694]" },
 ];
 
 export function ListingSidebar({
@@ -107,7 +107,7 @@ export function ListingSidebar({
           >
             <Filter className="h-4 w-4" />
             {hasActiveFilter && (
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#0F7694]" />
             )}
           </button>
         </div>
@@ -180,7 +180,7 @@ export function ListingSidebar({
                               STATUS_DOT_COLORS[listing.status] ?? "bg-gray-400"
                             } ${
                               listing.status === "active"
-                                ? "ring-emerald-500/30"
+                                ? "ring-[#0F7694]/30"
                                 : listing.status === "pending"
                                   ? "ring-amber-500/30"
                                   : "ring-blue-500/30"

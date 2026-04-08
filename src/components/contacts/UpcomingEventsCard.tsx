@@ -52,7 +52,7 @@ function getCountdownText(nextDate: Date): { text: string; color: string } {
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
   if (diffDays === 0) {
-    return { text: "Today!", color: "bg-green-100 text-green-800" };
+    return { text: "Today!", color: "bg-[#0F7694]/10 text-[#0A6880]" };
   }
   if (diffDays === 1) {
     return { text: "Tomorrow", color: "bg-amber-100 text-amber-800" };
@@ -65,7 +65,7 @@ function getCountdownText(nextDate: Date): { text: string; color: string } {
   }
   return {
     text: `in ${diffDays} days`,
-    color: "bg-purple-100 text-purple-800",
+    color: "bg-[#0F7694]/15 text-[#0A6880]",
   };
 }
 

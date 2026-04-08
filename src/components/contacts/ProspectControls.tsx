@@ -111,7 +111,7 @@ export function ProspectControls({
             <div className="flex items-center gap-2">
               <div
                 className={`w-3 h-3 rounded-full ${
-                  journey.is_paused ? "bg-amber-400" : "bg-emerald-500"
+                  journey.is_paused ? "bg-amber-400" : "bg-[#0F7694]/50"
                 }`}
               />
               <span className="text-sm font-medium">
@@ -261,7 +261,7 @@ export function ProspectControls({
               Save notes
             </Button>
             {notesSaved && (
-              <span className="text-xs text-emerald-600">Saved ✓</span>
+              <span className="text-xs text-[#0F7694]">Saved ✓</span>
             )}
           </div>
         </CardContent>

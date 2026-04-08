@@ -28,13 +28,13 @@ export type ThemeVariant = {
 /** Core semantic tokens — every status maps to one of these */
 const SEMANTIC_TOKENS = {
   success: {
-    bg: "bg-emerald-50 dark:bg-emerald-950/30",
-    text: "text-emerald-700 dark:text-emerald-400",
-    border: "border-emerald-200 dark:border-emerald-800",
-    dot: "bg-emerald-500",
+    bg: "bg-[#0F7694]/5 dark:bg-[#1a1535]/30",
+    text: "text-[#0A6880] dark:text-[#67D4E8]",
+    border: "border-[#0F7694]/20 dark:border-[#0F7694]/15",
+    dot: "bg-[#0F7694]/50",
     badge:
-      "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800",
-    hoverBg: "hover:bg-emerald-50 dark:hover:bg-emerald-950/30",
+      "bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20 dark:bg-[#1a1535]/30 dark:text-[#67D4E8] dark:border-[#0F7694]/15",
+    hoverBg: "hover:bg-[#0F7694]/5 dark:hover:bg-[#0A6880]/30",
   },
   warning: {
     bg: "bg-amber-50 dark:bg-amber-950/30",
@@ -73,22 +73,22 @@ const SEMANTIC_TOKENS = {
     hoverBg: "hover:bg-gray-50 dark:hover:bg-gray-900",
   },
   accent: {
-    bg: "bg-teal-50 dark:bg-teal-950/30",
-    text: "text-teal-700 dark:text-teal-400",
-    border: "border-teal-200 dark:border-teal-800",
-    dot: "bg-teal-500",
+    bg: "bg-[#0F7694]/5 dark:bg-[#1a1535]/20/30",
+    text: "text-[#0A6880] dark:text-[#67D4E8]",
+    border: "border-[#0F7694]/20 dark:border-[#0F7694]/10",
+    dot: "bg-[#0F7694]",
     badge:
-      "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/30 dark:text-teal-400 dark:border-teal-800",
-    hoverBg: "hover:bg-teal-50 dark:hover:bg-teal-950/30",
+      "bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20 dark:bg-[#1a1535]/30 dark:text-[#67D4E8] dark:border-[#0F7694]/10",
+    hoverBg: "hover:bg-[#0F7694]/5 dark:hover:bg-[#1a1535]/30",
   },
   purple: {
-    bg: "bg-purple-50 dark:bg-purple-950/30",
-    text: "text-purple-700 dark:text-purple-400",
-    border: "border-purple-200 dark:border-purple-800",
-    dot: "bg-purple-500",
+    bg: "bg-[#0F7694]/5 dark:bg-[#1a1535]/20/30",
+    text: "text-[#0A6880] dark:text-[#67D4E8]",
+    border: "border-[#0F7694]/20 dark:border-[#0F7694]/20",
+    dot: "bg-[#0F7694]/50",
     badge:
-      "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-800",
-    hoverBg: "hover:bg-purple-50 dark:hover:bg-purple-950/30",
+      "bg-[#0F7694]/10 text-[#0A6880] border-[#0F7694]/20 dark:bg-[#1a1535]/20/30 dark:text-[#67D4E8] dark:border-[#0F7694]/20",
+    hoverBg: "hover:bg-[#0F7694]/5 dark:hover:bg-[#1a1535]/30",
   },
   orange: {
     bg: "bg-orange-50 dark:bg-orange-950/30",

@@ -38,14 +38,14 @@ export const ACTION_TYPE_ICONS: Record<WorkflowActionType, string> = {
 
 export const ACTION_TYPE_COLORS: Record<WorkflowActionType, { bg: string; text: string }> = {
   auto_email: { bg: "bg-blue-50 dark:bg-blue-950", text: "text-blue-600 dark:text-blue-400" },
-  auto_sms: { bg: "bg-green-50 dark:bg-green-950", text: "text-green-600 dark:text-green-400" },
-  auto_whatsapp: { bg: "bg-emerald-50 dark:bg-emerald-950", text: "text-emerald-600 dark:text-emerald-400" },
+  auto_sms: { bg: "bg-[#0F7694]/5 dark:bg-[#1a1535]", text: "text-[#0F7694] dark:text-[#67D4E8]" },
+  auto_whatsapp: { bg: "bg-[#0F7694]/5 dark:bg-[#1a1535]", text: "text-[#0F7694] dark:text-[#67D4E8]" },
   manual_task: { bg: "bg-amber-50 dark:bg-amber-950", text: "text-amber-600 dark:text-amber-400" },
   auto_alert: { bg: "bg-red-50 dark:bg-red-950", text: "text-red-600 dark:text-red-400" },
-  system_action: { bg: "bg-purple-50 dark:bg-purple-950", text: "text-purple-600 dark:text-purple-400" },
+  system_action: { bg: "bg-[#0F7694]/5 dark:bg-[#1a1535]/20", text: "text-[#0F7694] dark:text-[#67D4E8]" },
   wait: { bg: "bg-gray-50 dark:bg-gray-900", text: "text-gray-500 dark:text-gray-400" },
-  condition: { bg: "bg-indigo-50 dark:bg-indigo-950", text: "text-indigo-600 dark:text-indigo-400" },
-  milestone: { bg: "bg-teal-50 dark:bg-teal-950", text: "text-teal-600 dark:text-teal-400" },
+  condition: { bg: "bg-[#0F7694]/5 dark:bg-[#1a1535]", text: "text-[#0F7694] dark:text-[#67D4E8]" },
+  milestone: { bg: "bg-[#0F7694]/5 dark:bg-[#1a1535]/20", text: "text-[#0F7694] dark:text-[#67D4E8]" },
 };
 
 // ── Workflow Trigger Types ────────────────────────────────────
@@ -81,7 +81,7 @@ export const ENROLLMENT_STATUSES = [
 export type EnrollmentStatus = (typeof ENROLLMENT_STATUSES)[number];
 
 export const ENROLLMENT_STATUS_COLORS: Record<EnrollmentStatus, string> = {
-  active: "bg-green-100 text-green-800",
+  active: "bg-[#0F7694]/10 text-[#0A6880]",
   paused: "bg-amber-100 text-amber-800",
   completed: "bg-blue-100 text-blue-800",
   exited: "bg-gray-100 text-gray-800",
@@ -140,8 +140,8 @@ export const NOTIFICATION_TYPE_COLORS: Record<NotificationType, string> = {
   info: "bg-blue-100 text-blue-800",
   warning: "bg-amber-100 text-amber-800",
   urgent: "bg-red-100 text-red-800",
-  task: "bg-green-100 text-green-800",
-  workflow: "bg-purple-100 text-purple-800",
+  task: "bg-[#0F7694]/10 text-[#0A6880]",
+  workflow: "bg-[#0F7694]/15 text-[#0A6880]",
 };
 
 // ── 7 Workflow Definitions (step blueprints) ──────────────────

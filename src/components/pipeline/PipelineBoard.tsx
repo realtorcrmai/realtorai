@@ -30,14 +30,14 @@ type ViewType = "all" | "buyer" | "seller";
 
 // Extract accent border-top color from stage
 const STAGE_TOP_BORDER: Record<string, string> = {
-  new_lead: "border-t-blue-400",
-  qualified: "border-t-cyan-400",
+  new_lead: "border-t-[#C8F5F0]",
+  qualified: "border-t-[#67D4E8]",
   pre_listing: "border-t-slate-400",
-  listed: "border-t-indigo-400",
-  showing: "border-t-violet-400",
+  listed: "border-t-[#0F7694]",
+  showing: "border-t-[#67D4E8]",
   offer: "border-t-amber-400",
   offer_received: "border-t-amber-500",
-  conditional: "border-t-orange-400",
+  conditional: "border-t-[#0F7694]",
   subject_removal: "border-t-rose-400",
   closing: "border-t-emerald-400",
   closed: "border-t-green-500",
@@ -203,18 +203,18 @@ export function PipelineBoard({ contacts, listings }: PipelineBoardProps) {
           <div className="hidden md:flex items-center gap-2 text-sm">
             {viewMode === "board" ? (
               <>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50/80 border border-indigo-100 text-indigo-700">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F7694]/5/80 border border-[#0F7694]/15 text-[#0A6880]">
                   <BarChart3 className="h-3.5 w-3.5" />
                   <span className="font-bold">{filteredActiveDeals.length}</span>
                   <span className="text-xs opacity-75">deals</span>
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50/80 border border-blue-100 text-blue-700">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F7694]/5 border border-[#0F7694]/15 text-[#0A6880]">
                   <DollarSign className="h-3.5 w-3.5" />
                   <span className="font-bold text-xs">
                     ${totalValue.toLocaleString("en-CA")}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50/80 border border-emerald-100 text-emerald-700">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F7694]/5 border border-[#0F7694]/15 text-[#0A6880]">
                   <TrendingUp className="h-3.5 w-3.5" />
                   <span className="text-xs font-medium">GCI</span>
                   <span className="font-bold text-xs">
@@ -224,18 +224,18 @@ export function PipelineBoard({ contacts, listings }: PipelineBoardProps) {
               </>
             ) : (
               <>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50/80 border border-emerald-100 text-emerald-700">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F7694]/5 border border-[#0F7694]/15 text-[#0A6880]">
                   <Trophy className="h-3.5 w-3.5" />
                   <span className="font-bold">{wonDeals.length}</span>
                   <span className="text-xs opacity-75">won</span>
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50/80 border border-blue-100 text-blue-700">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F7694]/5 border border-[#0F7694]/15 text-[#0A6880]">
                   <DollarSign className="h-3.5 w-3.5" />
                   <span className="font-bold text-xs">
                     ${wonTotalValue.toLocaleString("en-CA")}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50/80 border border-green-100 text-green-700">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F7694]/5 border border-[#0F7694]/15 text-[#0A6880]">
                   <TrendingUp className="h-3.5 w-3.5" />
                   <span className="text-xs font-medium">GCI</span>
                   <span className="font-bold text-xs">
@@ -299,17 +299,17 @@ export function PipelineBoard({ contacts, listings }: PipelineBoardProps) {
             <div className="max-w-5xl mx-auto space-y-6">
               {/* Summary Stats */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4">
-                  <p className="text-xs text-emerald-600 font-medium">Won Deals</p>
-                  <p className="text-2xl font-bold text-emerald-700 mt-1">{wonDeals.length}</p>
+                <div className="rounded-xl border border-[#0F7694]/15 bg-[#0F7694]/5 p-4">
+                  <p className="text-xs text-[#007A47] font-medium.*Won Deals</p>
+                  <p className="text-2xl font-bold text-[#007A47] font-bold mt-1.length}</p>
                 </div>
-                <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4">
-                  <p className="text-xs text-blue-600 font-medium">Total Volume</p>
-                  <p className="text-2xl font-bold text-blue-700 mt-1">${wonTotalValue > 0 ? (wonTotalValue / 1000000).toFixed(1) + "M" : "0"}</p>
+                <div className="rounded-xl border border-[#0F7694]/15 bg-[#0F7694]/5 p-4">
+                  <p className="text-xs text-[#0A6880] font-medium">Total Volume</p>
+                  <p className="text-2xl font-bold text-[#1a1535] mt-1">${wonTotalValue > 0 ? (wonTotalValue / 1000000).toFixed(1) + "M" : "0"}</p>
                 </div>
-                <div className="rounded-xl border border-green-100 bg-green-50/50 p-4">
-                  <p className="text-xs text-green-600 font-medium">Earned GCI</p>
-                  <p className="text-2xl font-bold text-green-700 mt-1">${wonTotalGCI.toLocaleString("en-CA")}</p>
+                <div className="rounded-xl border border-[#0F7694]/15 bg-[#0F7694]/5 p-4">
+                  <p className="text-xs text-[#0A6880] font-medium">Earned GCI</p>
+                  <p className="text-2xl font-bold text-[#1a1535] mt-1">${wonTotalGCI.toLocaleString("en-CA")}</p>
                 </div>
                 <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-4">
                   <p className="text-xs text-amber-600 font-medium">Avg Deal Size</p>
@@ -321,8 +321,8 @@ export function PipelineBoard({ contacts, listings }: PipelineBoardProps) {
               {wonDeals.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <Trophy className="h-4 w-4 text-emerald-600" />
-                    <h2 className="text-sm font-semibold text-emerald-700">Won Deals ({wonDeals.length})</h2>
+                    <Trophy className="h-4 w-4 text-[#0F7694]" />
+                    <h2 className="text-sm font-semibold text-[#0A6880]">Won Deals ({wonDeals.length})</h2>
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                     {wonDeals.map((deal) => (
@@ -456,13 +456,13 @@ function ClosedDealCard({ deal }: { deal: DealWithRelations }) {
       <div
         className={`group rounded-xl border overflow-hidden transition-all hover:shadow-lg cursor-pointer ${
           isWon
-            ? "border-emerald-200 hover:border-emerald-300"
+            ? "border-[#0F7694]/30 hover:border-[#0F7694]/50"
             : "border-red-200 hover:border-red-300"
         }`}
       >
         {/* Left accent bar + content */}
         <div className="flex">
-          <div className={`w-1.5 shrink-0 ${isWon ? "bg-emerald-500" : "bg-red-400"}`} />
+          <div className={`w-1.5 shrink-0 ${isWon ? "bg-[#00C875]" : "bg-red-400"}`} />
           <div className="flex-1 p-4">
             {/* Title row */}
             <div className="flex items-center justify-between mb-2">
@@ -498,7 +498,7 @@ function ClosedDealCard({ deal }: { deal: DealWithRelations }) {
             </div>
 
             {/* Value row */}
-            <div className={`flex items-center justify-between pt-2 border-t ${isWon ? "border-emerald-100" : "border-red-100"}`}>
+            <div className={`flex items-center justify-between pt-2 border-t border-[#0F7694]/15" : "border-red-100"}`}>
               <div className="flex items-center gap-3">
                 {deal.value && (
                   <span className="text-sm font-bold">
@@ -506,7 +506,7 @@ function ClosedDealCard({ deal }: { deal: DealWithRelations }) {
                   </span>
                 )}
                 {deal.commission_amount && isWon && (
-                  <span className="text-xs text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded">
+                  <span className="text-xs text-[#0F7694] font-semibold bg-[#0F7694]/5 px-1.5 py-0.5 rounded">
                     GCI ${Number(deal.commission_amount).toLocaleString("en-CA")}
                   </span>
                 )}

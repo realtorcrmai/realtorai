@@ -35,12 +35,12 @@ export function FloatingTaskBanner({ tasks, openTasksCount }: FloatingTaskBanner
   const tickerItems = [...tasks, ...tasks];
 
   return (
-    <div className="w-full rounded-xl border border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/60 dark:bg-indigo-950/20 overflow-hidden">
+    <div className="w-full rounded-xl border border-[#0F7694]/15 dark:border-[#1a1535]/50 bg-[#0F7694]/5/60 dark:bg-[#1a1535]/20 overflow-hidden">
       <div className="flex items-center">
         {/* Fixed left label */}
         <Link
           href="/tasks"
-          className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white group hover:bg-indigo-700 transition-colors"
+          className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-[#0F7694] text-white group hover:bg-[#0A6880] transition-colors"
         >
           <ListTodo className="h-4 w-4" />
           <span className="text-xs font-semibold whitespace-nowrap">
@@ -55,15 +55,15 @@ export function FloatingTaskBanner({ tasks, openTasksCount }: FloatingTaskBanner
         {/* Scrolling ticker */}
         <div className="flex-1 overflow-hidden relative">
           {/* Fade edges */}
-          <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-indigo-50/90 dark:from-indigo-950/60 to-transparent z-10 pointer-events-none" />
-          <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-indigo-50/90 dark:from-indigo-950/60 to-transparent z-10 pointer-events-none" />
+          <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#0F7694]/5/90 dark:from-[#1a1535]/60 to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#0F7694]/5/90 dark:from-[#1a1535]/60 to-transparent z-10 pointer-events-none" />
 
           <div className="flex animate-ticker hover:[animation-play-state:paused]">
             {tickerItems.map((task, i) => (
               <Link
                 key={`${task.id}-${i}`}
                 href="/tasks"
-                className="shrink-0 flex items-center gap-2 px-5 py-2.5 hover:bg-indigo-100/50 dark:hover:bg-indigo-900/20 transition-colors"
+                className="shrink-0 flex items-center gap-2 px-5 py-2.5 hover:bg-[#0F7694]/10/50 dark:hover:bg-[#1a1535]/20 transition-colors"
               >
                 {priorityDot(task.priority)}
                 <span className="text-xs font-medium text-foreground whitespace-nowrap">
@@ -77,7 +77,7 @@ export function FloatingTaskBanner({ tasks, openTasksCount }: FloatingTaskBanner
                     })}
                   </span>
                 )}
-                <span className="text-indigo-300 dark:text-indigo-700 mx-2">|</span>
+                <span className="text-[#67D4E8] dark:text-[#0A6880] mx-2">|</span>
               </Link>
             ))}
           </div>

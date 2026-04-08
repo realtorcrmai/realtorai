@@ -4,20 +4,20 @@ import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, MessageSquare, Smartphone, MapPin, Tag, Calendar, DollarSign, Home, Briefcase } from "lucide-react";
 
 const AVATAR_GRADIENTS: Record<string, string> = {
-  buyer: "from-blue-500 to-indigo-600",
-  seller: "from-purple-500 to-indigo-600",
-  customer: "from-green-500 to-emerald-600",
-  agent: "from-orange-500 to-amber-600",
-  partner: "from-teal-500 to-cyan-600",
+  buyer: "from-blue-500 to-[#0F7694]",
+  seller: "from-[#0F7694] to-[#1a1535]",
+  customer: "from-[#0F7694] to-[#0F7694]",
+  agent: "from-[#67D4E8] to-[#0F7694]",
+  partner: "from-[#67D4E8] to-[#0F7694]",
   other: "from-gray-500 to-slate-600",
 };
 
 const TYPE_BADGE_COLORS: Record<string, string> = {
-  buyer: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-  seller: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-  customer: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-  agent: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-  partner: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300",
+  buyer: "bg-[#0F7694]/10 text-[#0A6880] dark:bg-blue-900/30 dark:text-blue-300",
+  seller: "bg-[#0F7694]/15 text-[#0A6880] dark:bg-[#0F7694]/20 dark:text-[#67D4E8]",
+  customer: "bg-[#0F7694]/10 text-[#0A6880] dark:bg-[#1a1535]/30 dark:text-[#67D4E8]",
+  agent: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+  partner: "bg-[#0F7694]/10 text-[#0A6880] dark:bg-[#1a1535]/30 dark:text-[#67D4E8]",
   other: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
 };
 
@@ -102,7 +102,7 @@ export function LivePreviewCard({
   const completionPct = Math.min(100, Math.round((filledFields / totalFields) * 100));
 
   return (
-    <div className="rounded-2xl border border-border/30 bg-gradient-to-br from-white via-white to-slate-50/80 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-800/50 shadow-lg overflow-hidden transition-all duration-300">
+    <div className="rounded-2xl border border-border/30 bg-gradient-to-br from-white via-white to-[#FAF8F4] dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-800/50 shadow-lg overflow-hidden transition-all duration-300">
       {/* Colored top bar */}
       <div className={`h-1.5 bg-gradient-to-r ${type ? gradient : "from-gray-300 to-gray-400"}`} />
 
@@ -133,7 +133,7 @@ export function LivePreviewCard({
         <div className="flex items-center gap-2">
           <div className="flex-1 h-1.5 rounded-full bg-muted/30 overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${completionPct >= 70 ? "bg-emerald-500" : completionPct >= 40 ? "bg-amber-500" : "bg-red-400"}`}
+              className={`h-full rounded-full transition-all duration-500 ${completionPct >= 70 ? "bg-[#0F7694]/50" : completionPct >= 40 ? "bg-amber-500" : "bg-red-400"}`}
               style={{ width: `${completionPct}%` }}
             />
           </div>
@@ -178,7 +178,7 @@ export function LivePreviewCard({
                 {(buyerAreas?.length ?? 0) > 0 ? (
                   <div className="flex gap-1 flex-wrap">
                     {buyerAreas!.map((a) => (
-                      <span key={a} className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 text-xs font-medium">{a}</span>
+                      <span key={a} className="px-1.5 py-0.5 rounded bg-[#0F7694]/5 dark:bg-blue-950/30 text-[#0A6880] dark:text-blue-300 text-xs font-medium">{a}</span>
                     ))}
                   </div>
                 ) : (

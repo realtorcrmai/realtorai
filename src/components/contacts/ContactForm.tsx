@@ -245,8 +245,8 @@ export function ContactFormContent({
 
       {/* ── Partner-specific Fields ───────────────────────── */}
       {selectedType === "partner" && (
-        <div className="space-y-4 rounded-lg border border-teal-200 bg-teal-50/50 p-4">
-          <p className="text-sm font-semibold text-teal-800">Partner Details</p>
+        <div className="space-y-4 rounded-lg border border-[#0F7694]/20 bg-[#0F7694]/5 p-4">
+          <p className="text-sm font-semibold text-[#0A6880]">Partner Details</p>
 
           <div className="grid grid-cols-2 gap-4">
             <div>

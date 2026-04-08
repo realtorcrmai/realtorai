@@ -52,7 +52,7 @@ export function EmailMarketingTabs({ queueCount, children }: Props) {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all whitespace-nowrap ${
               activeTab === tab.id
-                ? "bg-primary text-white"
+                ? "bg-[#0F7694] text-white"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             }`}
           >

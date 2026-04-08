@@ -43,8 +43,8 @@ export function ContactContextPanel({
               variant="secondary"
               className={`text-[11px] capitalize ${
                 contact.type === "seller"
-                  ? "bg-purple-100 text-purple-800"
-                  : "bg-blue-100 text-blue-800"
+                  ? "bg-[#0F7694]/15 text-[#0A6880]"
+                  : "bg-[#0F7694]/10 text-[#0A6880]"
               }`}
             >
               {contact.type}

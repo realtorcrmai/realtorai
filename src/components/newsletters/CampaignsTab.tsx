@@ -87,8 +87,8 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
           </Card>
           <Card className="cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all group" onClick={() => { setView("custom_campaign"); resetCampaign(); }}>
             <CardContent className="p-5 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0 group-hover:bg-purple-500/20">
-                <Mail className="h-5 w-5 text-purple-600" />
+              <div className="w-10 h-10 rounded-xl bg-[#0F7694]/50/10 flex items-center justify-center shrink-0 group-hover:bg-[#0F7694]/50/20">
+                <Mail className="h-5 w-5 text-[#0F7694]" />
               </div>
               <div>
                 <p className="text-sm font-semibold">Custom Campaign</p>
@@ -135,7 +135,7 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
                     </div>
                     <div className="flex items-center gap-3 shrink-0 ml-3">
                       <div className="flex items-center gap-2">
-                        <span className={`text-xs font-medium flex items-center gap-0.5 ${run.opens > 0 ? "text-emerald-600" : "text-muted-foreground"}`}>
+                        <span className={`text-xs font-medium flex items-center gap-0.5 ${run.opens > 0 ? "text-[#0F7694]" : "text-muted-foreground"}`}>
                           <MailOpen className="h-3 w-3" /> {run.opens}
                         </span>
                         <span className={`text-xs font-medium flex items-center gap-0.5 ${run.clicks > 0 ? "text-primary" : "text-muted-foreground"}`}>
@@ -144,7 +144,7 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
                       </div>
                       <div className="hidden md:flex items-center gap-1">
                         <div className="w-12 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${openRate >= 70 ? "bg-emerald-500" : openRate >= 40 ? "bg-amber-500" : "bg-red-400"}`} style={{ width: `${openRate}%` }} />
+                          <div className={`h-full rounded-full ${openRate >= 70 ? "bg-[#0F7694]" : openRate >= 40 ? "bg-amber-500" : "bg-red-400"}`} style={{ width: `${openRate}%` }} />
                         </div>
                         <span className="text-[10px] text-muted-foreground">{openRate}%</span>
                       </div>
@@ -160,7 +160,7 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
                           <div className="text-[10px] text-muted-foreground">Sent</div>
                         </div>
                         <div className="p-2.5 bg-muted/50 rounded-lg">
-                          <div className="text-lg font-bold text-emerald-600">{run.opens}</div>
+                          <div className="text-lg font-bold text-[#0F7694]">{run.opens}</div>
                           <div className="text-[10px] text-muted-foreground">Opens</div>
                         </div>
                         <div className="p-2.5 bg-muted/50 rounded-lg">
@@ -218,12 +218,12 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
       return (
         <div className="space-y-4">
           <Card><CardContent className="p-10 text-center">
-            <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
-            <h3 className="text-xl font-bold text-emerald-600 mb-1">Blast Sent!</h3>
+            <CheckCircle2 className="h-12 w-12 text-[#00C875] mx-auto mb-3" />
+            <h3 className="text-xl font-bold text-[#00C875] mb-1">Blast Sent!</h3>
             <p className="text-sm text-muted-foreground">{selectedListing?.address} → announced to all agents</p>
             <div className="flex justify-center gap-3 mt-6">
               <button onClick={resetBlast} className="text-xs px-4 py-2 rounded-lg border border-border font-medium hover:bg-muted">Send Another</button>
-              <button onClick={() => setView("home")} className="text-xs px-4 py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary/90">Back to Campaigns</button>
+              <button onClick={() => setView("home")} className="text-xs px-4 py-2 rounded-lg bg-[#0F7694] text-white font-medium hover:bg-primary/90">Back to Campaigns</button>
             </div>
           </CardContent></Card>
         </div>
@@ -253,7 +253,7 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
               </Card>
             ))}
             <div className="flex justify-end pt-2">
-              <button onClick={() => selectedListing && setBlastStep("customize")} disabled={!selectedListing} className="text-xs px-4 py-2 rounded-lg bg-primary text-white font-medium disabled:opacity-40">Next →</button>
+              <button onClick={() => selectedListing && setBlastStep("customize")} disabled={!selectedListing} className="text-xs px-4 py-2 rounded-lg bg-[#0F7694] text-white font-medium disabled:opacity-40">Next →</button>
             </div>
           </div>
         )}
@@ -311,7 +311,7 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
                     }
                     setBlastSent(true);
                   }}
-                  className="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 disabled:opacity-50"
+                  className="text-xs px-4 py-2 rounded-lg bg-[#0F7694] text-white font-medium hover:bg-[#0A6880] disabled:opacity-50"
                 >{isSending ? "Sending..." : "Send to 5 Agents"}</button>
               </div>
             </div>
@@ -335,12 +335,12 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
       return (
         <div className="space-y-4">
           <Card><CardContent className="p-10 text-center">
-            <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
-            <h3 className="text-xl font-bold text-emerald-600 mb-1">{scheduleType === "now" ? "Campaign Sent!" : "Scheduled!"}</h3>
+            <CheckCircle2 className="h-12 w-12 text-[#00C875] mx-auto mb-3" />
+            <h3 className="text-xl font-bold text-[#0F7694] mb-1">{scheduleType === "now" ? "Campaign Sent!" : "Scheduled!"}</h3>
             <p className="text-sm text-muted-foreground">{selectedTemplate?.name} → {selectedRecipients.replace(/_/g, " ")}</p>
             <div className="flex justify-center gap-3 mt-6">
               <button onClick={resetCampaign} className="text-xs px-4 py-2 rounded-lg border border-border font-medium hover:bg-muted">Create Another</button>
-              <button onClick={() => setView("home")} className="text-xs px-4 py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary/90">Back</button>
+              <button onClick={() => setView("home")} className="text-xs px-4 py-2 rounded-lg bg-[#0F7694] text-white font-medium hover:bg-primary/90">Back</button>
             </div>
           </CardContent></Card>
         </div>
@@ -374,7 +374,7 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
               ))}
             </div>
             <div className="flex justify-end pt-2">
-              <button onClick={() => selectedTemplate && setCampaignStep("select_contacts")} disabled={!selectedTemplate} className="text-xs px-4 py-2 rounded-lg bg-primary text-white font-medium disabled:opacity-40">Next →</button>
+              <button onClick={() => selectedTemplate && setCampaignStep("select_contacts")} disabled={!selectedTemplate} className="text-xs px-4 py-2 rounded-lg bg-[#0F7694] text-white font-medium disabled:opacity-40">Next →</button>
             </div>
           </div>
         )}
@@ -411,7 +411,7 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
                 <CardContent className="p-4 text-center"><Send className="h-5 w-5 mx-auto mb-1 text-primary" /><p className="text-sm font-semibold">Send Now</p></CardContent>
               </Card>
               <Card className={`cursor-pointer ${scheduleType === "scheduled" ? "ring-2 ring-primary" : "hover:ring-1 hover:ring-border"}`} onClick={() => setScheduleType("scheduled")}>
-                <CardContent className="p-4 text-center"><Calendar className="h-5 w-5 mx-auto mb-1 text-purple-600" /><p className="text-sm font-semibold">Schedule</p></CardContent>
+                <CardContent className="p-4 text-center"><Calendar className="h-5 w-5 mx-auto mb-1 text-[#0F7694]" /><p className="text-sm font-semibold">Schedule</p></CardContent>
               </Card>
             </div>
             {scheduleType === "scheduled" && <Card><CardContent className="p-4 flex items-center gap-3"><Clock className="h-4 w-4 text-muted-foreground" /><input type="datetime-local" className="text-sm border border-border rounded-md px-3 py-2 flex-1" /></CardContent></Card>}
@@ -434,7 +434,7 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
                     }
                     setCampaignSent(true);
                   }}
-                  className="text-xs px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 disabled:opacity-50"
+                  className="text-xs px-4 py-2 rounded-lg bg-[#0F7694] text-white font-medium hover:bg-[#0A6880] disabled:opacity-50"
                 >{isSending ? "Sending..." : scheduleType === "now" ? "Send" : "Schedule"}</button>
               </div>
             </div>
@@ -455,12 +455,12 @@ function StepIndicator({ steps, currentIdx }: { steps: { key: string; label: str
       {steps.map((s, i) => (
         <div key={s.key} className="flex items-center">
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
-            i < currentIdx ? "bg-emerald-100 text-emerald-700" : i === currentIdx ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+            i < currentIdx ? "bg-[#0F7694]/10 text-[#0A6880]" : i === currentIdx ? "bg-[#0F7694] text-white" : "bg-muted text-muted-foreground"
           }`}>
             {i < currentIdx ? <CheckCircle2 className="h-3 w-3" /> : <span>{i + 1}</span>}
             <span className="hidden md:inline">{s.label}</span>
           </div>
-          {i < steps.length - 1 && <div className={`w-6 h-0.5 mx-1 ${i < currentIdx ? "bg-emerald-300" : "bg-muted"}`} />}
+          {i < steps.length - 1 && <div className={`w-6 h-0.5 mx-1 ${i < currentIdx ? "bg-[#67D4E8]" : "bg-muted"}`} />}
         </div>
       ))}
     </div>
@@ -479,7 +479,7 @@ function NavButtons({ onBack, onNext, nextLabel = "Next →" }: { onBack: () => 
   return (
     <div className="flex justify-between pt-2">
       <button onClick={onBack} className="text-xs px-4 py-2 rounded-lg border border-border font-medium hover:bg-muted">← Back</button>
-      <button onClick={onNext} className="text-xs px-4 py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary/90">{nextLabel}</button>
+      <button onClick={onNext} className="text-xs px-4 py-2 rounded-lg bg-[#0F7694] text-white font-medium hover:bg-primary/90">{nextLabel}</button>
     </div>
   );
 }

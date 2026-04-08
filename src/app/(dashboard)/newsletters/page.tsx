@@ -205,13 +205,13 @@ export default async function NewsletterDashboard() {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mr-1">Health:</span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">🔥 {hotBuyers.length} Hot Buyers</span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-700 border border-orange-200">🔥 {hotSellers.length} Hot Sellers</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-[#0F7694]/10 text-[#0A6880] border border-[#0F7694]/20">🔥 {hotSellers.length} Hot Sellers</span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">🌡️ {warmContacts.length} Warm</span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200">❄️ {coolingContacts.length + dormantContacts.length} Cold</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#0F7694]/5 text-[#0A6880] border border-[#0F7694]/20">❄️ {coolingContacts.length + dormantContacts.length} Cold</span>
                 <span className="text-muted-foreground mx-1">·</span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">📧 {dashboard.totalSent} sent</span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">📬 {dashboard.openRate}% opens</span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">🖱️ {dashboard.clickRate}% clicks</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#0F7694]/5 text-[#0A6880] border border-[#0F7694]/20">📬 {dashboard.openRate}% opens</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#0F7694]/10 text-[#0A6880] border border-[#0F7694]/20">🖱️ {dashboard.clickRate}% clicks</span>
               </div>
 
               {/* Row 2: ACT NOW — top 3 most urgent contacts (buyers + sellers mixed) */}
@@ -221,7 +221,7 @@ export default async function NewsletterDashboard() {
                   .slice(0, 4);
                 if (urgent.length === 0) return null;
                 return (
-                  <Card className="border-red-200 bg-gradient-to-r from-red-50/80 to-orange-50/80">
+                  <Card className="border-red-200 bg-gradient-to-r from-rose-50/80 to-[#0F7694]/5">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
@@ -240,7 +240,7 @@ export default async function NewsletterDashboard() {
                             <div key={c.id} className="flex items-center justify-between p-2.5 bg-white/70 rounded-lg border border-red-100">
                               <div className="flex items-center gap-2.5 min-w-0">
                                 <div className="relative">
-                                  <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${isBuyer ? "from-red-500 to-amber-500" : "from-orange-500 to-red-500"} flex items-center justify-center text-white text-xs font-bold`}>
+                                  <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${isBuyer ? "from-rose-500 to-[#0F7694]" : "from-[#0F7694] to-rose-500"} flex items-center justify-center text-white text-xs font-bold`}>
                                     {(c.name || "?")[0]}
                                   </div>
                                   {daysSince !== null && daysSince <= 2 && <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse" />}
@@ -248,7 +248,7 @@ export default async function NewsletterDashboard() {
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1.5">
                                     <p className="text-xs font-semibold truncate">{c.name}</p>
-                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${isBuyer ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>
+                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${isBuyer ? "bg-red-100 text-red-700" : "bg-[#0F7694]/10 text-[#0A6880]"}`}>
                                       {c.type === "customer" ? "LEAD" : isBuyer ? "BUYER" : "SELLER"}
                                     </span>
                                   </div>
@@ -324,8 +324,8 @@ export default async function NewsletterDashboard() {
                         <>
                           {dashboard.recentEvents.slice(0, 4).map((event: any) => (
                             <div key={event.id} className="flex items-center gap-2 text-xs">
-                              <span className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                                {event.event_type === "opened" ? <MailOpen className="h-3 w-3 text-emerald-600" /> :
+                              <span className="w-5 h-5 rounded-full bg-[#00C875]/10 flex items-center justify-center shrink-0">
+                                {event.event_type === "opened" ? <MailOpen className="h-3 w-3 text-[#0F7694]" /> :
                                  event.event_type === "clicked" ? <MousePointerClick className="h-3 w-3 text-primary" /> :
                                  <Send className="h-3 w-3 text-muted-foreground" />}
                               </span>
@@ -429,7 +429,7 @@ export default async function NewsletterDashboard() {
 
                               <div className="flex items-center justify-between">
                                 {w.is_active ? (
-                                  <Badge className="bg-green-100 text-green-800 hover:bg-green-100 text-[11px]">Active</Badge>
+                                  <Badge className="bg-[#0F7694]/10 text-[#0A6880] hover:bg-[#0F7694]/10 text-[11px]">Active</Badge>
                                 ) : (
                                   <Badge variant="secondary" className="text-[11px]">Paused</Badge>
                                 )}

@@ -52,11 +52,19 @@ function loadOnboardingState() {
 }
 
 export function OnboardingChecklist() {
-  const [initialState] = useState(loadOnboardingState);
-  const [items, setItems] = useState<ChecklistItem[]>(initialState.items);
-  const [minimized, setMinimized] = useState(initialState.minimized);
-  const [dismissed, setDismissed] = useState(initialState.dismissed);
-  const [loaded] = useState(initialState.loaded);
+  const [items, setItems] = useState<ChecklistItem[]>([]);
+  const [minimized, setMinimized] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  // Defer localStorage access to client only (prevents hydration mismatch)
+  useEffect(() => {
+    const state = loadOnboardingState();
+    setItems(state.items);
+    setMinimized(state.minimized);
+    setDismissed(state.dismissed);
+    setLoaded(state.loaded);
+  }, []);
 
   // Save state on change
   useEffect(() => {
@@ -87,10 +95,10 @@ export function OnboardingChecklist() {
   // All done — show celebration then auto-dismiss after 5 seconds
   if (allComplete) {
     return (
-      <div className="fixed bottom-6 right-6 z-40 w-72 lf-card p-4 shadow-lg border border-green-200 bg-green-50 animate-in fade-in-0 zoom-in-95">
-        <p className="text-sm font-semibold text-green-700">🎉 You&apos;re all set!</p>
-        <p className="text-xs text-green-600 mt-1">You&apos;ve completed the getting started checklist.</p>
-        <button onClick={dismiss} className="text-xs text-green-500 hover:underline mt-2">Dismiss</button>
+      <div className="fixed bottom-6 right-6 z-40 w-72 lf-card p-4 shadow-lg border border-[#0F7694]/20 bg-[#0F7694]/5 animate-in fade-in-0 zoom-in-95">
+        <p className="text-sm font-semibold text-[#0A6880]">🎉 You&apos;re all set!</p>
+        <p className="text-xs text-[#0F7694] mt-1">You&apos;ve completed the getting started checklist.</p>
+        <button onClick={dismiss} className="text-xs text-[#0F7694] hover:underline mt-2">Dismiss</button>
       </div>
     );
   }
@@ -111,7 +119,7 @@ export function OnboardingChecklist() {
       {/* Progress bar */}
       <div className="px-3 py-2">
         <div className="w-full h-1.5 bg-border rounded-full overflow-hidden">
-          <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+          <div className="h-full bg-gradient-to-r from-[#67D4E8] to-[#0F7694] rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>
       </div>
 
@@ -127,7 +135,7 @@ export function OnboardingChecklist() {
                 aria-label={item.complete ? `${item.label} completed` : `Mark ${item.label} as complete`}
               >
                 {item.complete ? (
-                  <Check className="h-4 w-4 text-green-500" />
+                  <Check className="h-4 w-4 text-[#0F7694]" />
                 ) : (
                   <Circle className="h-4 w-4 text-muted-foreground/40" />
                 )}

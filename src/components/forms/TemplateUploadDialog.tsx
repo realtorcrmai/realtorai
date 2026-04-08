@@ -158,26 +158,26 @@ export function TemplateUploadDialog() {
           </div>
 
           {extractedFields.length > 0 && (
-            <div className="space-y-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm font-medium text-green-700">
+            <div className="space-y-2 p-3 bg-[#0F7694]/5 border border-[#0F7694]/20 rounded-lg">
+              <p className="text-sm font-medium text-[#0A6880]">
                 {extractedFields.length} fillable fields detected:
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {extractedFields.slice(0, 20).map((f) => (
                   <span
                     key={f}
-                    className="px-2 py-0.5 bg-white text-xs rounded border border-green-200"
+                    className="px-2 py-0.5 bg-white text-xs rounded border border-[#0F7694]/20"
                   >
                     {f}
                   </span>
                 ))}
                 {extractedFields.length > 20 && (
-                  <span className="px-2 py-0.5 text-xs text-green-600">
+                  <span className="px-2 py-0.5 text-xs text-[#0F7694]">
                     +{extractedFields.length - 20} more
                   </span>
                 )}
               </div>
-              <p className="text-xs text-green-600 mt-1">
+              <p className="text-xs text-[#0F7694] mt-1">
                 Configure field mapping from the template settings to auto-fill
                 these fields with CRM data.
               </p>
