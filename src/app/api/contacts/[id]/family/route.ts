@@ -67,6 +67,36 @@ export async function POST(
   return NextResponse.json(data, { status: 201 });
 }
 
+export async function PATCH(req: NextRequest) {
+  const { unauthorized } = await requireAuth();
+  if (unauthorized) return unauthorized;
+
+  const supabase = createAdminClient();
+  const url = new URL(req.url);
+  const memberId = url.searchParams.get("member_id");
+  if (!memberId) return NextResponse.json({ error: "member_id required" }, { status: 400 });
+
+  const body = await req.json();
+  const parsed = createFamilyMemberSchema.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ error: "Validation failed" }, { status: 400 });
+
+  const { data, error } = await supabase
+    .from("contact_family_members")
+    .update({
+      name: body.name,
+      relationship: body.relationship,
+      phone: body.phone || null,
+      email: body.email || null,
+      notes: body.notes || null,
+    })
+    .eq("id", memberId)
+    .select()
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
+}
+
 export async function DELETE(req: NextRequest) {
   const { unauthorized } = await requireAuth();
   if (unauthorized) return unauthorized;

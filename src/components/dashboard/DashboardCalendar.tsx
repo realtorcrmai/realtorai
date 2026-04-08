@@ -13,7 +13,6 @@ import {
   isSameMonth,
   isSameDay,
   isToday,
-  isWeekend,
 } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -33,24 +32,24 @@ interface DashboardCalendarProps {
   onSelectDate: (date: Date) => void;
 }
 
-const EVENT_DOT_COLORS: Record<string, string> = {
-  google: "bg-blue-400",       // Google Calendar brand
-  showing: "bg-[#FDAB3D]",     // showing = pending/attention by default
-  task: "bg-[#A25DDC]",        // tasks = purple
+// Event pill colors — semantic
+const EVENT_PILL: Record<string, { bg: string; text: string; dot: string }> = {
+  google:  { bg: "bg-blue-100",   text: "text-blue-700",   dot: "bg-blue-400" },
+  showing: { bg: "bg-amber-100",  text: "text-amber-700",  dot: "bg-[#FDAB3D]" },
+  task:    { bg: "bg-purple-100", text: "text-purple-700", dot: "bg-[#A25DDC]" },
 };
 
-const STATUS_DOT_COLORS: Record<string, string> = {
-  requested:  "bg-[#FDAB3D]",  // orange — needs action
-  confirmed:  "bg-[#00C875]",  // green — confirmed = success
-  denied:     "bg-rose-500",   // red — denied
-  cancelled:  "bg-gray-400",   // gray — cancelled
+const STATUS_OVERRIDE: Record<string, { bg: string; text: string; dot: string }> = {
+  confirmed: { bg: "bg-emerald-100", text: "text-emerald-700", dot: "bg-[#00C875]" },
+  denied:    { bg: "bg-red-100",     text: "text-red-700",     dot: "bg-rose-500" },
+  cancelled: { bg: "bg-gray-100",    text: "text-gray-500",    dot: "bg-gray-400" },
 };
 
-function getDotColor(event: CalendarEvent): string {
-  if (event.type === "showing" && event.status) {
-    return STATUS_DOT_COLORS[event.status] ?? EVENT_DOT_COLORS.showing;
+function getEventStyle(ev: CalendarEvent) {
+  if (ev.type === "showing" && ev.status && STATUS_OVERRIDE[ev.status]) {
+    return STATUS_OVERRIDE[ev.status];
   }
-  return EVENT_DOT_COLORS[event.type] ?? "bg-gray-400";
+  return EVENT_PILL[ev.type] ?? EVENT_PILL.google;
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -97,98 +96,149 @@ export function DashboardCalendar({
   };
 
   return (
-    <div className="relative rounded-2xl overflow-hidden elevation-8 bg-card border border-[#0F7694]/20">
-      {/* Gold accent top border */}
-      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#0F7694]/60 via-[#0F7694] to-[#0F7694]/60" />
+    <div className="rounded-2xl overflow-hidden bg-card border border-border elevation-8 flex flex-col">
 
-      <div className="flex items-center justify-between px-5 py-4">
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold tracking-tight text-foreground">
-            {format(currentMonth, "MMMM yyyy")}
+      {/* ── Header: "April  2026" + nav ── */}
+      <div className="flex items-center justify-between px-5 pt-4 pb-3">
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-2xl font-bold text-foreground tracking-tight">
+            {format(currentMonth, "MMMM")}
           </h2>
+          <span className="text-2xl font-light text-foreground/50">
+            {format(currentMonth, "yyyy")}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
           <button
             onClick={goToToday}
-            className="text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full bg-[#0F7694] text-white hover:shadow-md hover:shadow-[#0F7694]/30 transition-all duration-200 hover:scale-105"
+            className="text-[11px] font-semibold px-3 py-1 rounded-full border border-border text-muted-foreground hover:bg-muted transition-colors mr-1"
           >
             Today
           </button>
-        </div>
-        <div className="flex items-center gap-0.5">
-          <button onClick={prevMonth} className="p-2.5 rounded-xl hover:bg-muted/80 transition-all duration-200 text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95" aria-label="Previous month">
+          <button
+            onClick={prevMonth}
+            className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            aria-label="Previous month"
+          >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <button onClick={nextMonth} className="p-2.5 rounded-xl hover:bg-muted/80 transition-all duration-200 text-muted-foreground hover:text-foreground hover:scale-105 active:scale-95" aria-label="Next month">
+          <button
+            onClick={nextMonth}
+            className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            aria-label="Next month"
+          >
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 px-4 pb-2">
+      {/* ── Weekday header row ── */}
+      <div className="grid grid-cols-7 border-t border-b border-border/60">
         {WEEKDAYS.map((d, i) => (
-          <div key={d} className={cn("text-center text-[10px] font-bold uppercase tracking-widest py-1.5", i === 0 || i === 6 ? "text-rose-400/60" : "text-muted-foreground/50")}>
+          <div
+            key={d}
+            className={cn(
+              "text-center text-[11px] font-semibold py-2 uppercase tracking-wider",
+              i === 0 || i === 6 ? "text-rose-400/70" : "text-muted-foreground/60",
+              i > 0 && "border-l border-border/40"
+            )}
+          >
             {d}
           </div>
         ))}
       </div>
 
-      <div className="px-3 pb-4">
+      {/* ── Day grid ── */}
+      <div className="flex-1 grid grid-rows-[repeat(var(--weeks),1fr)]" style={{ "--weeks": weeks.length } as React.CSSProperties}>
         {weeks.map((week, wi) => (
-          <div key={wi} className="grid grid-cols-7 gap-px">
-            {week.map((d) => {
+          <div key={wi} className={cn("grid grid-cols-7", wi > 0 && "border-t border-border/40")}>
+            {week.map((d, di) => {
               const dateKey = format(d, "yyyy-MM-dd");
               const dayEvents = eventsByDate.get(dateKey) ?? [];
               const inMonth = isSameMonth(d, currentMonth);
               const selected = isSameDay(d, selectedDate);
               const today = isToday(d);
-              const weekend = isWeekend(d);
-              const eventCount = dayEvents.length;
-              const dotColors = [...new Set(dayEvents.map(getDotColor))].slice(0, 3);
+              const visibleEvents = dayEvents.slice(0, 3);
+              const overflow = dayEvents.length - 3;
 
               return (
-                <button
+                <div
                   key={dateKey}
-                  onClick={() => onSelectDate(d)}
+                  onClick={() => inMonth && onSelectDate(d)}
                   className={cn(
-                    "relative flex flex-col items-center justify-center py-2.5 rounded-xl transition-all duration-200 group min-h-[52px]",
-                    !inMonth && "opacity-25 pointer-events-none",
-                    inMonth && !selected && "hover:bg-primary/5 hover:scale-105 active:scale-95",
-                    selected && "bg-[#0F7694] text-white shadow-lg shadow-[#0F7694]/25 scale-105",
-                    today && !selected && "bg-[#0F7694]/8 ring-2 ring-[#0F7694]/25 ring-inset",
-                    weekend && inMonth && !selected && !today && "bg-muted/30"
+                    "relative flex flex-col min-h-[90px] p-1.5 transition-colors",
+                    di > 0 && "border-l border-border/40",
+                    inMonth ? "cursor-pointer hover:bg-primary/[0.03]" : "opacity-30 cursor-default",
+                    selected && "bg-primary/[0.06]",
                   )}
                 >
-                  <span className={cn("text-sm tabular-nums leading-none", selected ? "text-white font-extrabold" : today ? "text-[#0F7694] font-extrabold" : "text-foreground font-semibold", weekend && !selected && !today && "text-foreground/70")}>
-                    {format(d, "d")}
-                  </span>
-                  {dotColors.length > 0 && (
-                    <div className="flex items-center gap-[3px] mt-1.5">
-                      {dotColors.map((color, i) => (
-                        <span key={i} className={cn("h-[5px] w-[5px] rounded-full transition-all duration-200", selected ? "bg-white/80 shadow-sm shadow-white/40" : color, "group-hover:scale-150")} />
-                      ))}
-                    </div>
-                  )}
-                  {eventCount > 2 && !selected && (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#0F7694] text-[8px] font-bold text-white shadow-sm">{eventCount}</span>
-                  )}
-                </button>
+                  {/* Date number */}
+                  <div className="flex justify-end mb-1">
+                    <span
+                      className={cn(
+                        "flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium transition-colors",
+                        today
+                          ? "bg-red-500 text-white font-bold"
+                          : selected
+                          ? "bg-primary text-primary-foreground font-semibold"
+                          : inMonth
+                          ? "text-foreground hover:bg-muted"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      {format(d, "d")}
+                    </span>
+                  </div>
+
+                  {/* Event pills */}
+                  <div className="flex flex-col gap-[3px]">
+                    {visibleEvents.map((ev) => {
+                      const style = getEventStyle(ev);
+                      return (
+                        <div
+                          key={ev.id}
+                          className={cn(
+                            "flex items-center gap-1 px-1.5 py-[2px] rounded text-[10px] font-medium truncate leading-tight",
+                            style.bg,
+                            style.text
+                          )}
+                          title={ev.title}
+                        >
+                          <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", style.dot)} />
+                          <span className="truncate">{format(ev.start, "h:mm")} {ev.title}</span>
+                        </div>
+                      );
+                    })}
+                    {overflow > 0 && (
+                      <div className="text-[10px] font-semibold text-muted-foreground px-1.5">
+                        +{overflow} more
+                      </div>
+                    )}
+                  </div>
+                </div>
               );
             })}
           </div>
         ))}
       </div>
 
-      <div className="flex items-center gap-5 px-5 py-3.5 border-t border-border/20 bg-muted/20">
-        <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-blue-400 shadow-sm shadow-blue-400/40" />
-          <span className="text-[11px] font-medium text-muted-foreground">Calendar</span>
+      {/* ── Legend ── */}
+      <div className="flex items-center gap-5 px-5 py-3 border-t border-border/40 bg-muted/10">
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-blue-400" />
+          <span className="text-[11px] text-muted-foreground">Calendar</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#FDAB3D] shadow-sm shadow-[#FDAB3D]/40" />
-          <span className="text-[11px] font-medium text-muted-foreground">Showings</span>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-[#FDAB3D]" />
+          <span className="text-[11px] text-muted-foreground">Showings</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#A25DDC] shadow-sm shadow-[#A25DDC]/40" />
-          <span className="text-[11px] font-medium text-muted-foreground">Tasks</span>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-[#A25DDC]" />
+          <span className="text-[11px] text-muted-foreground">Tasks</span>
+        </div>
+        <div className="flex items-center gap-1.5 ml-auto">
+          <span className="h-2 w-2 rounded-full bg-red-500" />
+          <span className="text-[11px] text-muted-foreground">Today</span>
         </div>
       </div>
     </div>

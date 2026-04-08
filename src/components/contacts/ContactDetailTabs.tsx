@@ -19,6 +19,8 @@ import { PropertiesOfInterestPanel } from "@/components/contacts/PropertiesOfInt
 import { WorkflowStepperCard } from "@/components/contacts/WorkflowStepperCard";
 import ActivityTimeline from "@/components/contacts/ActivityTimeline";
 import { ContextLog } from "@/components/contacts/ContextLog";
+import { FamilyTabPanel } from "@/components/contacts/FamilyWizard";
+import type { ContactFamilyMember } from "@/types";
 import type {
   Contact,
   Communication,
@@ -132,6 +134,9 @@ export type ContactDetailTabsProps = {
   allContacts: { id: string; name: string }[];
   documents: ContactDocument[];
   contextEntries: Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>;
+
+  // Family tab
+  familyMembers: ContactFamilyMember[];
 };
 
 // Check if preferences object has any meaningful data set
@@ -181,6 +186,8 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
     allContacts,
     documents,
     contextEntries,
+    // Family
+    familyMembers,
   } = props;
 
   const [currentTab, setCurrentTab] = useState("overview");
@@ -219,6 +226,14 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
         </TabsTrigger>
         <TabsTrigger value="deals" className="rounded-lg">
           🏠 Deals
+        </TabsTrigger>
+        <TabsTrigger value="family" className="rounded-lg">
+          👨‍👩‍👧 Family
+          {familyMembers.length > 0 && (
+            <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-bold px-1">
+              {familyMembers.length}
+            </span>
+          )}
         </TabsTrigger>
       </TabsList>
 
@@ -480,6 +495,15 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             </Card>
           )}
         </div>
+      </TabsContent>
+
+      {/* ── FAMILY TAB ─────────────────────────────────────── */}
+      <TabsContent value="family">
+        <Card className="border-border/60">
+          <CardContent className="p-5">
+            <FamilyTabPanel contactId={contactId} initialMembers={familyMembers} />
+          </CardContent>
+        </Card>
       </TabsContent>
     </Tabs>
   );
