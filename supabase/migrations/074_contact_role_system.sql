@@ -86,7 +86,7 @@ CREATE INDEX IF NOT EXISTS idx_appointments_buyer_contact ON appointments(buyer_
 
 CREATE TABLE IF NOT EXISTS buyer_journeys (
   id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  realtor_id             UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  realtor_id             UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   contact_id             UUID NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
   status                 TEXT NOT NULL DEFAULT 'searching'
                            CHECK (status IN (
@@ -151,7 +151,7 @@ END $$;
 
 CREATE TABLE IF NOT EXISTS buyer_journey_properties (
   id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  realtor_id           UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  realtor_id           UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   journey_id           UUID NOT NULL REFERENCES buyer_journeys(id) ON DELETE CASCADE,
   contact_id           UUID NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
   listing_id           UUID REFERENCES listings(id) ON DELETE SET NULL,
@@ -210,7 +210,7 @@ END $$;
 
 CREATE TABLE IF NOT EXISTS contact_portfolio (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  realtor_id            UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  realtor_id            UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   contact_id            UUID NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
   address               TEXT NOT NULL,
   unit_number           TEXT,
