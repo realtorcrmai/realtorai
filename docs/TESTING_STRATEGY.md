@@ -114,33 +114,45 @@ on:
 
 ## 4. Test Isolation & Codebase Management
 
-### 4.1 Target Project Structure
+### 4.1 Project Structure
 
 ```
 realestate-crm/
-├── src/                        # production code only
+├── src/
+│   ├── (production code)
+│   └── __tests__/              # existing unit tests — colocated convention, 81 tests
+│       ├── lib/
+│       └── utils/
 ├── tests/
-│   ├── unit/                   # vitest, mirrors src/ layout
-│   │   └── lib/learning-engine.test.ts
-│   ├── integration/            # hits a test Supabase project
+│   ├── integration/            # hits a TEST Supabase project (env-gated)
 │   │   ├── actions/
-│   │   └── rls/                # cross-tenant isolation tests
-│   ├── e2e/                    # playwright
+│   │   └── rls/                # cross-tenant isolation canary tests
+│   ├── e2e/                    # playwright (future)
 │   │   ├── flows/
 │   │   └── visual/
-│   ├── fixtures/               # static JSON, never imported from src/
-│   ├── factories/              # test data builders
-│   └── setup/                  # global test setup, env mocks
-├── vitest.config.ts            # include: ['tests/unit/**', 'tests/integration/**']
-├── playwright.config.ts        # testDir: './tests/e2e'
-└── scripts/                    # one-shot operational scripts (.mjs files stay)
+│   ├── fixtures/               # static JSON, never imported from src/ (future)
+│   └── factories/              # test data builders (future)
+├── vitest.config.ts            # include: ['src/__tests__/**', 'tests/integration/**']
+├── playwright.config.ts        # testDir: './tests/e2e' (future)
+└── scripts/                    # one-shot operational + .mjs test scripts (kept)
 ```
+
+**Why two test locations?** When the scaffold landed, the CRM already had 81
+vitest unit tests living in `src/__tests__/` per the colocated convention.
+Migrating them all in one PR would have been a noisy diff with no behavioural
+value, so this scaffold preserves them in place and introduces `tests/` as the
+home for **integration** tests that need real external resources (Supabase,
+Resend, etc.) and must be env-gated. The two locations are unified at the
+vitest config level — `npm run test:quick` runs both. Future cleanup may
+migrate everything under `tests/unit/`, but it is not a prerequisite for any
+of the §6 work.
 
 ### 4.2 Naming Conventions
 
 - `*.test.ts` → Vitest
 - `*.spec.ts` → Playwright
-- Test files mirror the source path: `src/lib/foo.ts` ↔ `tests/unit/lib/foo.test.ts`
+- Unit test files mirror the source path: `src/lib/foo.ts` ↔ `src/__tests__/lib/foo.test.ts`
+- Integration tests live under `tests/integration/<area>/<name>.test.ts`
 - Factories: `tests/factories/contact.ts` exports `makeContact(overrides)` — never inline test data in tests
 
 ### 4.3 Config Separation
@@ -198,23 +210,38 @@ Today the CRM has scattered test infrastructure: `scripts/test-*.mjs`, `evals.md
 
 ## 6. First Concrete Steps (the scaffold task)
 
-This doc is the design. Execution starts immediately after, on the same branch (`claude/test-infra-scaffold`):
+Executed on branch `claude/test-infra-scaffold` in the same series of commits as this doc:
 
-1. Create `tests/` directory tree per §4.1
-2. Add `vitest.config.ts` at CRM root (currently only the newsletter service has one)
-3. Add `tests/setup/env.ts` for global test env
-4. Write `tests/unit/lib/learning-engine.test.ts` — first regression test, locks in the cross-tenant fix from commit `188f85d`
-5. Write `tests/integration/rls/cross-tenant.test.ts` — the canary that would have caught the M3-C bug. Asserts that a tenant's queries cannot return another tenant's rows.
-6. Add `vitest`, `vitest:watch`, `vitest:rls` scripts to `package.json`
-7. Wire into `.github/workflows/test.yml` as new jobs (additive — does not touch existing jobs)
+| # | Step | Status |
+|---|---|---|
+| 1 | Cherry-pick the cross-tenant `learning-engine` fix from `188f85d` so the regression test in step 3 has something to lock in | ✅ commit `8631c17` |
+| 2 | Discover that `vitest.config.ts` already exists at the CRM root with 81 passing tests in `src/__tests__/` — adapt strategy: keep colocated unit tests, add `tests/` for integration | ✅ docs §4.1 amended |
+| 3 | Write `src/__tests__/lib/learning-engine.test.ts` — regression test for the cross-tenant fix (asserts the newsletters query receives `.eq('realtor_id', realtorId)`) | ✅ |
+| 4 | Write `tests/integration/rls/cross-tenant.test.ts` — env-gated RLS canary that would have caught the M3-C bug at the SQL layer | ✅ skipped without `TEST_SUPABASE_*` env vars |
+| 5 | Extend `vitest.config.ts` to include `tests/integration/**` alongside the existing `src/__tests__/**` | ✅ |
+| 6 | Add npm scripts: `test:unit`, `test:integration`, `test:rls`, `test:watch` | ✅ |
+| 7 | Wire into `.github/workflows/test.yml` as new jobs (additive — does not touch existing jobs) | ⏸ deferred to follow-up — needs CI secrets setup for the test Supabase project |
 
 ### 6.1 Out of Scope for the Initial Scaffold
 
+- Migrating `src/__tests__/` → `tests/unit/` (separate cleanup PR; not load-bearing)
 - Migrating existing `scripts/test-*.mjs` files into `tests/integration/` (separate cleanup PR)
 - Building the production canary system
 - Building `seed-stress.mjs`, k6 perf tests, CASL compliance tests
+- Provisioning the staging Supabase project for the RLS canary in CI (needs env secrets + a one-time admin setup)
 
 These are tracked in `docs/TECH_DEBT.md` after the scaffold lands.
+
+### 6.2 How to Enable the RLS Canary Locally
+
+```bash
+# Point at a TEST Supabase project — never prod
+export TEST_SUPABASE_URL="https://<test-project>.supabase.co"
+export TEST_SUPABASE_SERVICE_ROLE_KEY="<service role key>"
+npm run test:rls
+```
+
+Without those vars, the RLS suite skips automatically (`describe.skipIf`).
 
 ---
 
