@@ -2,9 +2,9 @@
 /**
  * apply-newsletter-migrations.mjs
  *
- * Applies Newsletter Engine v3 migrations 074 + 075 to the linked Supabase
- * project via the Management API. Direct DB access from this dev environment
- * is blocked by IPv6-only DNS for the project host (see
+ * Applies Newsletter Engine v3 migrations (074, 075, 076) to the linked
+ * Supabase project via the Management API. Direct DB access from this dev
+ * environment is blocked by IPv6-only DNS for the project host (see
  * .claude/compliance-log.md 2026-04-02 entries), so the API is the only path.
  *
  * Required env vars:
@@ -33,6 +33,9 @@ const ROOT = resolve(__dirname, "..");
 const MIGRATIONS = [
   "supabase/migrations/074_newsletter_engine_v3.sql",
   "supabase/migrations/075_newsletter_engine_v3_m2.sql",
+  // M3-D: partial unique index on agent_recommendations to fix duplicate
+  // pending recommendations from the 15-min agent-scoring cron loop.
+  "supabase/migrations/076_agent_recommendations_unique_index.sql",
 ];
 
 const ACCESS_TOKEN = process.env.SUPABASE_ACCESS_TOKEN;
