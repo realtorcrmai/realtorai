@@ -1,7 +1,46 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
+
+// Contact Picker API — only available on iOS Safari 14.5+ and Chrome on Android
+interface ContactAddress { city?: string; region?: string; country?: string; postalCode?: string; streetAddress?: string; }
+interface NativeContact { name?: string[]; tel?: string[]; email?: string[]; address?: ContactAddress[]; }
+interface ContactsManager {
+  select(props: string[], opts?: { multiple?: boolean }): Promise<NativeContact[]>;
+  getProperties(): Promise<string[]>;
+}
+declare global { interface Navigator { contacts?: ContactsManager; } }
+
+const IMPORT_SOURCES = [
+  {
+    id: "google",
+    label: "Google Contacts",
+    icon: "📱",
+    desc: "Pick directly from your Gmail / Google account",
+    href: "/contacts/import-gmail",
+    badge: "Picker",
+    badgeColor: "bg-blue-100 text-blue-700",
+  },
+  {
+    id: "apple",
+    label: "Apple / vCard",
+    icon: "🍎",
+    desc: "Export .vcf from Contacts app, Outlook, or iCloud",
+    href: null, // handled inline (file upload below)
+    badge: "File upload",
+    badgeColor: "bg-gray-100 text-gray-600",
+  },
+  {
+    id: "csv",
+    label: "CSV Spreadsheet",
+    icon: "📋",
+    desc: "From any CRM, spreadsheet, or custom export",
+    href: null, // handled inline
+    badge: "File upload",
+    badgeColor: "bg-gray-100 text-gray-600",
+  },
+];
 
 interface ImportResult {
   ok: boolean;
@@ -38,6 +77,17 @@ export default function ContactImportPage() {
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState("");
   const [dragOver, setDragOver] = useState(false);
+  const [pickerSupported, setPickerSupported] = useState(false);
+  const [pickerLoading, setPickerLoading] = useState(false);
+
+  // Detect Contact Picker API support (iOS Safari 14.5+ / Chrome Android)
+  useEffect(() => {
+    setPickerSupported(
+      typeof navigator !== "undefined" &&
+      "contacts" in navigator &&
+      typeof navigator.contacts?.select === "function"
+    );
+  }, []);
 
   const parseCSV = useCallback((text: string) => {
     const lines = text.split(/\r?\n/).filter((l) => l.trim());
@@ -154,6 +204,58 @@ export default function ContactImportPage() {
     setStep("preview");
   }, []);
 
+  const handleNativePicker = useCallback(async () => {
+    if (!navigator.contacts) return;
+    setPickerLoading(true);
+    setError("");
+    try {
+      const available = await navigator.contacts.getProperties();
+      const props = (["name", "tel", "email", "address"] as const).filter((p) =>
+        available.includes(p)
+      );
+      const picked: NativeContact[] = await navigator.contacts.select(props, { multiple: true });
+      if (!picked || picked.length === 0) {
+        setPickerLoading(false);
+        return;
+      }
+
+      const rows: ParsedRow[] = picked.map((c) => {
+        const addrObj = c.address?.[0];
+        const addrParts = addrObj
+          ? [addrObj.streetAddress, addrObj.city, addrObj.region, addrObj.postalCode, addrObj.country]
+              .filter(Boolean)
+              .join(", ")
+          : undefined;
+        return {
+          name:    c.name?.[0]?.trim()  || "Unknown",
+          phone:   c.tel?.[0]?.replace(/[^\d+]/g, "") || "",
+          email:   c.email?.[0]?.trim() || undefined,
+          address: addrParts            || undefined,
+          source:  "native_contacts",
+        };
+      }).filter((r) => r.name !== "Unknown" || r.phone);
+
+      if (rows.length === 0) {
+        setError("No usable contacts found (need at least a name or phone)");
+        setPickerLoading(false);
+        return;
+      }
+
+      setHeaders(["name", "phone", "email", "address"]);
+      setRawLines([]);
+      setFile(null);
+      setFileType("csv"); // native contacts go through the same CSV import endpoint
+      setParsedRows(rows);
+      setStep("preview");
+    } catch (err: unknown) {
+      // User cancelled — no error
+      if (err instanceof Error && err.name !== "AbortError") {
+        setError("Could not access contacts. Please check permissions.");
+      }
+    }
+    setPickerLoading(false);
+  }, []);
+
   const handleFileSelect = useCallback((selectedFile: File) => {
     const ext = selectedFile.name.split(".").pop()?.toLowerCase();
 
@@ -191,19 +293,26 @@ export default function ContactImportPage() {
   }, [handleFileSelect]);
 
   const handleImport = async () => {
-    if (!file) return;
+    if (!file && parsedRows.length === 0) return;
     setStep("importing");
     setError("");
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      let res: Response;
 
-      const endpoint = fileType === "vcf" ? "/api/contacts/import-vcard" : "/api/contacts/import";
-      const res = await fetch(endpoint, {
-        method: "POST",
-        body: formData,
-      });
+      if (!file) {
+        // Native Contact Picker path — POST JSON rows directly
+        res = await fetch("/api/contacts/import-native", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contacts: parsedRows }),
+        });
+      } else {
+        const formData = new FormData();
+        formData.append("file", file);
+        const endpoint = fileType === "vcf" ? "/api/contacts/import-vcard" : "/api/contacts/import";
+        res = await fetch(endpoint, { method: "POST", body: formData });
+      }
 
       const data = await res.json();
 
@@ -277,6 +386,78 @@ export default function ContactImportPage() {
 
       {/* Step 1: Upload */}
       {step === "upload" && (
+        <div className="space-y-4">
+          {/* Source selector */}
+          <div className="grid grid-cols-3 gap-3">
+            {IMPORT_SOURCES.map((src) => (
+              src.href ? (
+                <Link
+                  key={src.id}
+                  href={src.href}
+                  className="lf-card p-4 flex flex-col gap-2 hover:border-[var(--lf-indigo)]/50 hover:shadow-md transition-all group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl">{src.icon}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${src.badgeColor}`}>
+                      {src.badge}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm group-hover:text-[var(--lf-indigo)] transition-colors">
+                      {src.label}
+                    </div>
+                    <div className="text-xs text-[var(--lf-text)]/50 mt-0.5">{src.desc}</div>
+                  </div>
+                </Link>
+              ) : src.id === "apple" ? (
+                <div key={src.id} className="lf-card p-4 flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl">{src.icon}</span>
+                    {pickerSupported ? (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                        Native
+                      </span>
+                    ) : (
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${src.badgeColor}`}>
+                        {src.badge}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm">{src.label}</div>
+                    <div className="text-xs text-[var(--lf-text)]/50 mt-0.5">
+                      {pickerSupported
+                        ? "Tap to pick contacts directly from your device"
+                        : src.desc}
+                    </div>
+                  </div>
+                  {pickerSupported && (
+                    <button
+                      onClick={handleNativePicker}
+                      disabled={pickerLoading}
+                      className="mt-1 w-full lf-btn text-xs py-1.5 disabled:opacity-50"
+                    >
+                      {pickerLoading ? "Opening..." : "📲 Pick Contacts"}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div key={src.id} className="lf-card p-4 flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl">{src.icon}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${src.badgeColor}`}>
+                      {src.badge}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm">{src.label}</div>
+                    <div className="text-xs text-[var(--lf-text)]/50 mt-0.5">{src.desc}</div>
+                  </div>
+                </div>
+              )
+            ))}
+          </div>
+
         <div className="lf-card p-8">
           <div
             className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors ${
@@ -365,6 +546,7 @@ export default function ContactImportPage() {
               </div>
             </div>
           </div>
+        </div>
         </div>
       )}
 
