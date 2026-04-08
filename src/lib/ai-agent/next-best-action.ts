@@ -147,7 +147,7 @@ export async function saveRecommendations(recs: Recommendation[]): Promise<numbe
     expires_at: new Date(Date.now() + 24 * 3600000).toISOString(),
   }));
 
-  // Migration 076 adds a partial unique index `uq_agent_recs_pending_advance`
+  // Migration 077 adds a partial unique index `uq_agent_recs_pending_advance`
   // on pending advance_stage rows. A multi-row INSERT here would abort the
   // entire batch on the first conflict (Postgres aborts the statement on
   // any unique violation), losing valid rows alongside the dupes.

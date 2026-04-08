@@ -1,4 +1,4 @@
--- Rollback for 076_agent_recommendations_unique_index.sql
+-- Rollback for 077_agent_recommendations_unique_index.sql
 --
 -- Drops the partial unique index added in M3-D. Pre-existing duplicate
 -- recommendations cannot be restored — the migration's DELETE step is

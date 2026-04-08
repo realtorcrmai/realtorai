@@ -17,7 +17,7 @@ import { logger } from '../../lib/logger.js';
  *
  *   2. The `agent_recommendations` insert now goes through `INSERT … catch
  *      SQLSTATE 23505` against the new `uq_agent_recs_pending_advance`
- *      partial unique index (migration 076, MASTER_NEWSLETTER_PLAN.md
+ *      partial unique index (migration 077, MASTER_NEWSLETTER_PLAN.md
  *      §6.4 #2). The index is narrowed to pending advance_stage rows
  *      only, so it eliminates the duplicate pending recommendations the
  *      CRM cron has been creating every 15 minutes for the same
@@ -417,7 +417,7 @@ export async function scoreBatch(
 
       // Stage-advance recommendation: insert + swallow unique-violation
       // (Postgres SQLSTATE 23505) raised by `uq_agent_recs_pending_advance`
-      // (migration 076). We can't use `.upsert({onConflict})` here because
+      // (migration 077). We can't use `.upsert({onConflict})` here because
       // PostgREST only accepts plain column names in on_conflict — it has
       // no syntax for targeting an expression-based partial index. The
       // catch-and-ignore-23505 pattern is functionally equivalent.
@@ -446,7 +446,7 @@ export async function scoreBatch(
           .insert(insertPayload);
 
         if (insertErr) {
-          // 23505 = unique_violation. With migration 076 in place, the
+          // 23505 = unique_violation. With migration 077 in place, the
           // partial unique index makes this the expected outcome whenever
           // a pending recommendation already exists for this (contact,
           // action, target_stage) tuple. Log at debug, not warn.

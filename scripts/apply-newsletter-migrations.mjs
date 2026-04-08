@@ -35,7 +35,9 @@ const MIGRATIONS = [
   "supabase/migrations/075_newsletter_engine_v3_m2.sql",
   // M3-D: partial unique index on agent_recommendations to fix duplicate
   // pending recommendations from the 15-min agent-scoring cron loop.
-  "supabase/migrations/076_agent_recommendations_unique_index.sql",
+  // Renumbered from 076 to 077 to avoid colliding with PR #111
+  // (`076_property_co_ownership.sql` — unrelated feature, took 076 first).
+  "supabase/migrations/077_agent_recommendations_unique_index.sql",
 ];
 
 const ACCESS_TOKEN = process.env.SUPABASE_ACCESS_TOKEN;

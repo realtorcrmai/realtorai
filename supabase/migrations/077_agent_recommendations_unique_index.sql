@@ -1,4 +1,4 @@
--- 076_agent_recommendations_unique_index.sql
+-- 077_agent_recommendations_unique_index.sql
 --
 -- M3-D — fix duplicate-recommendation bug per MASTER_NEWSLETTER_PLAN.md §6.4 #2.
 --
@@ -40,7 +40,13 @@
 --   before the index is added. The DELETE is also idempotent (no-op if
 --   there are no duplicates).
 --
--- Rollback: see supabase/rollbacks/076_rollback.sql
+-- Rollback: see supabase/rollbacks/077_rollback.sql
+--
+-- Note: this migration was originally numbered 076 but was renumbered to
+-- 077 to avoid colliding with PR #111 (`076_property_co_ownership.sql`
+-- — `property_deals` + `property_deal_partners` tables, an unrelated
+-- feature that took 076 first). The two migrations are independent —
+-- this is a pure file-rename to keep the numerical sequence clean.
 
 -- 1. Collapse pre-existing duplicates to the most recent pending row per
 --    (contact_id, new_stage) tuple, scoped to advance_stage rows. We keep
