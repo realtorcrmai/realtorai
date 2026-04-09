@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
+import { canSendToContact } from "@/lib/compliance/can-send";
 import { revalidatePath } from "next/cache";
 
 type JourneyType = "buyer" | "seller" | "customer" | "agent";
@@ -261,10 +262,11 @@ export async function getJourneyDashboard() {
 export async function processJourneyQueue() {
   const tc = await getAuthenticatedTenantClient();
 
-  // Find journeys that need an email sent
+  // Find journeys that need an email sent.
+  // Fetch CASL fields so we can enforce canSendToContact() in-loop.
   const { data: dueJourneys } = await tc
     .from("contact_journeys")
-    .select("*, contacts(id, name, email, type, newsletter_intelligence, newsletter_unsubscribed, buyer_preferences)")
+    .select("*, contacts(id, name, email, type, newsletter_intelligence, newsletter_unsubscribed, casl_consent_given, casl_consent_date, buyer_preferences)")
     .eq("is_paused", false)
     .not("next_email_at", "is", null)
     .lte("next_email_at", new Date().toISOString())
@@ -273,10 +275,18 @@ export async function processJourneyQueue() {
   if (!dueJourneys?.length) return { processed: 0 };
 
   let processed = 0;
+  let skippedCasl = 0;
 
   for (const journey of dueJourneys) {
     const contact = journey.contacts as any;
-    if (!contact?.email || contact.newsletter_unsubscribed) continue;
+    // Central CASL gate — see src/lib/compliance/can-send.ts
+    const sendCheck = canSendToContact(contact);
+    if (!sendCheck.allowed) {
+      if (sendCheck.code === 'no_casl_consent' || sendCheck.code === 'unsubscribed') {
+        skippedCasl++;
+      }
+      continue;
+    }
 
     const schedule = JOURNEY_SCHEDULES[journey.journey_type as JourneyType][journey.current_phase as JourneyPhase];
     const emailIndex = journey.emails_sent_in_phase;
@@ -326,7 +336,7 @@ export async function processJourneyQueue() {
     }
   }
 
-  return { processed };
+  return { processed, skipped_casl: skippedCasl };
 }
 
 export async function autoEnrollNewContact(contactId: string, contactType: string) {

@@ -8,6 +8,7 @@ import { generateNewsletterContent, NewsletterContext } from "@/lib/newsletter-a
 import { render } from "@react-email/components";
 import { revalidatePath } from "next/cache";
 import { triggerIngest } from "@/lib/rag/realtime-ingest";
+import { canSendToContact, filterSendable } from "@/lib/compliance/can-send";
 
 // React Email template imports
 import { NewListingAlert } from "@/emails/NewListingAlert";
@@ -188,12 +189,11 @@ export async function generateAndQueueNewsletter(
     .eq("id", contactId)
     .single();
 
-  if (!contact || !contact.email) {
-    return { error: "Contact not found or has no email" };
-  }
-
-  if (contact.newsletter_unsubscribed) {
-    return { error: "Contact is unsubscribed" };
+  // Central CASL + unsubscribe gate — do NOT bypass.
+  // See src/lib/compliance/can-send.ts for the rules.
+  const sendCheck = canSendToContact(contact);
+  if (!sendCheck.allowed) {
+    return { error: sendCheck.reason };
   }
 
   // Fetch relevant listings with full data
@@ -589,10 +589,14 @@ export async function bulkApproveNewsletters(ids: string[]) {
 export async function sendCampaign(emailType: string, recipients: string, subject: string) {
   const tc = await getAuthenticatedTenantClient();
 
-  // Build recipient query based on selection
+  // Build recipient query based on selection. We fetch all candidate
+  // fields needed for the CASL gate (`newsletter_unsubscribed`,
+  // `casl_consent_given`) and filter in-memory via filterSendable().
+  // The DB filter on newsletter_unsubscribed is kept as a first-pass
+  // narrow so we don't pull opted-out rows at all.
   let query = tc
     .from("contacts")
-    .select("id, name, email, type")
+    .select("id, name, email, type, newsletter_unsubscribed, casl_consent_given, casl_consent_date")
     .eq("newsletter_unsubscribed", false)
     .not("email", "is", null);
 
@@ -605,15 +609,28 @@ export async function sendCampaign(emailType: string, recipients: string, subjec
     // "everyone" — no filter
   }
 
-  const { data: contacts } = await query.limit(500);
-  if (!contacts || contacts.length === 0) {
+  const { data: candidates } = await query.limit(500);
+  if (!candidates || candidates.length === 0) {
     return { error: "No matching contacts found" };
+  }
+
+  // Enforce CASL: drop any contact without consent.
+  const { sendable: contacts, skipped } = filterSendable(candidates);
+
+  if (contacts.length === 0) {
+    return {
+      error:
+        `Campaign blocked — ${skipped.length} contacts matched the recipient filter ` +
+        `but none have CASL consent. Send an opt-in request first, or narrow the ` +
+        `selection to contacts with casl_consent_given=true.`,
+    };
   }
 
   let sent = 0;
   let failed = 0;
 
   for (const contact of contacts) {
+    if (!contact.id) continue; // Type guard — DB rows always have id
     try {
       const result = await generateAndQueueNewsletter(
         contact.id,
@@ -630,7 +647,13 @@ export async function sendCampaign(emailType: string, recipients: string, subjec
   }
 
   revalidatePath("/newsletters");
-  return { success: true, sent, failed, total: contacts.length };
+  return {
+    success: true,
+    sent,
+    failed,
+    total: contacts.length,
+    skipped_casl: skipped.length,
+  };
 }
 
 export async function sendListingBlast(listingId: string, _template: string) {

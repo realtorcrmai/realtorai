@@ -36,16 +36,21 @@ export async function executeListingBlastRules(
       const sendToAllBuyers = rule.recipients === "all_buyers" || rule.recipients === "area_buyers";
 
       if (sendToAllBuyers) {
-        // Send to buyer contacts instead of agents
+        // Send to buyer contacts instead of agents.
+        // Central CASL gate: only send to buyers with CASL consent AND
+        // who haven't unsubscribed. See src/lib/compliance/can-send.ts
         const supabase = createAdminClient();
         const { data: buyers } = await supabase
           .from("contacts")
-          .select("email")
+          .select("id, email, newsletter_unsubscribed, casl_consent_given, casl_consent_date")
           .eq("type", "buyer")
           .eq("newsletter_unsubscribed", false)
+          .eq("casl_consent_given", true)
           .not("email", "is", null);
 
-        const recipientEmails = (buyers || []).map((b: { email: string | null }) => b.email).filter(Boolean);
+        const { filterSendable } = await import("@/lib/compliance/can-send");
+        const { sendable } = filterSendable(buyers || []);
+        const recipientEmails = sendable.map((b) => b.email).filter((e): e is string => !!e);
 
         if (recipientEmails.length === 0) {
           skipped++;
