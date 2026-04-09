@@ -117,6 +117,17 @@ export default async function DashboardPage() {
     past_client: "Past Client",
     referral_partner: "Referral",
   };
+  const LIFECYCLE_COLORS: Record<string, { bar: string; bg: string; dot: string; text: string }> = {
+    active_buyer:    { bar: "bg-[#0F7694]",    bg: "bg-[#0F7694]/10",  dot: "bg-[#0F7694]",    text: "text-[#0A6880]" },
+    active_seller:   { bar: "bg-[#4f35d2]",    bg: "bg-[#4f35d2]/10",  dot: "bg-[#4f35d2]",    text: "text-[#3d27a8]" },
+    under_contract:  { bar: "bg-violet-500",    bg: "bg-violet-100",    dot: "bg-violet-500",    text: "text-violet-700" },
+    referral_partner:{ bar: "bg-emerald-500",   bg: "bg-emerald-100",   dot: "bg-emerald-500",   text: "text-emerald-700" },
+    past_client:     { bar: "bg-amber-500",     bg: "bg-amber-100",     dot: "bg-amber-500",     text: "text-amber-700" },
+    dual_client:     { bar: "bg-pink-500",      bg: "bg-pink-100",      dot: "bg-pink-500",      text: "text-pink-700" },
+    prospect:        { bar: "bg-sky-500",       bg: "bg-sky-100",       dot: "bg-sky-500",       text: "text-sky-700" },
+    nurture:         { bar: "bg-orange-400",    bg: "bg-orange-100",    dot: "bg-orange-400",    text: "text-orange-700" },
+    closed:          { bar: "bg-slate-400",     bg: "bg-slate-100",     dot: "bg-slate-400",     text: "text-slate-600" },
+  };
   const lifecycleCounts: Record<string, number> = {};
   for (const c of (lifecycleContacts ?? [])) {
     if (c.lifecycle_stage) {
@@ -177,22 +188,23 @@ export default async function DashboardPage() {
 
         {/* ── Buyer Pipeline + Lifecycle Breakdown ── */}
         {(activeJourneys.length > 0 || topLifecycleStages.length > 0) && (
-          <div className="animate-float-in grid grid-cols-1 md:grid-cols-2 gap-4" style={{ animationDelay: "80ms" }}>
+          <div className="animate-float-in space-y-4" style={{ animationDelay: "80ms" }}>
+            {/* Buyer Journeys */}
             {activeJourneys.length > 0 && (
               <div className="lf-card p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold">🏠 Buyer Journeys</h3>
-                  <Link href="/contacts?role=buyer" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                  <Link href="/contacts?role=buyer" className="text-xs text-[#0F7694] hover:text-[#0A6880] font-medium">
                     View all →
                   </Link>
                 </div>
                 <div className="flex items-end gap-2 mb-3">
-                  <span className="text-3xl font-bold text-indigo-700">{activeJourneys.length}</span>
+                  <span className="text-3xl font-bold text-[#0F7694]">{activeJourneys.length}</span>
                   <span className="text-xs text-muted-foreground mb-1">active journeys</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {Object.entries(journeyStatusCounts).map(([status, count]) => (
-                    <span key={status} className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium capitalize">
+                    <span key={status} className="px-2 py-0.5 rounded-full bg-[#0F7694]/10 text-[#0A6880] text-xs font-medium capitalize">
                       {status.replace("_", " ")} ({count})
                     </span>
                   ))}
@@ -200,31 +212,46 @@ export default async function DashboardPage() {
               </div>
             )}
 
+            {/* Contact Lifecycle — full width, 2-col grid of stages */}
             {topLifecycleStages.length > 0 && (
-              <div className="lf-card p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold">📊 Contact Lifecycle</h3>
-                  <Link href="/contacts" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+              <div className="lf-card p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-sm font-semibold">👥 Contact Lifecycle</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {(lifecycleContacts ?? []).length} contacts tracked
+                    </p>
+                  </div>
+                  <Link href="/contacts" className="text-xs text-[#0F7694] hover:text-[#0A6880] font-medium">
                     View all →
                   </Link>
                 </div>
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
                   {topLifecycleStages.map(([stage, count]) => {
                     const total = (lifecycleContacts ?? []).length || 1;
                     const pct = Math.round((count / total) * 100);
+                    const c = LIFECYCLE_COLORS[stage] ?? { bar: "bg-slate-400", bg: "bg-slate-100", dot: "bg-slate-400", text: "text-slate-600" };
                     return (
                       <Link
                         key={stage}
                         href={`/contacts?lifecycle=${stage}`}
-                        className="flex items-center gap-2 hover:bg-indigo-50/50 rounded px-1 -mx-1 transition-colors"
+                        className="group"
                       >
-                        <span className="text-xs text-muted-foreground w-24 shrink-0 truncate">
-                          {LIFECYCLE_LABELS[stage] ?? stage}
-                        </span>
-                        <div className="flex-1 bg-gray-100 rounded-full h-1.5">
-                          <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: `${pct}%` }} />
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${c.dot}`} />
+                            <span className={`text-xs font-semibold group-hover:underline ${c.text}`}>
+                              {LIFECYCLE_LABELS[stage] ?? stage}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-bold text-foreground">{count}</span>
+                            <span className="text-[10px] text-muted-foreground">{pct}%</span>
+                          </div>
                         </div>
-                        <span className="text-xs font-semibold w-6 text-right">{count}</span>
+                        <div className={`h-2 rounded-full ${c.bg}`}>
+                          <div className={`h-2 rounded-full ${c.bar} transition-all duration-500`} style={{ width: `${pct}%` }} />
+                        </div>
                       </Link>
                     );
                   })}
