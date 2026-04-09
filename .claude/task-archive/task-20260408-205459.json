@@ -1,0 +1,6 @@
+{
+  "type": "CODING:config",
+  "tier": "Small",
+  "description": "Add strange-wilson worktree to launch.json for preview_start support",
+  "phases": { "classified": true }
+}

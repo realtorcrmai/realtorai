@@ -17,3 +17,5 @@
 | 2026-04-06 | CODING:feature | Clean completion. All phases followed for CODING:feature (Medium). |
 | 2026-04-06 | CODING:feature | Clean completion. All phases followed for CODING:feature (Small). |
 | 2026-04-06 | CODING:feature | Clean completion. All phases followed for CODING:feature (Large). |
+| 2026-04-08 | CODING:fix | Task reworked 28x. Scope may need better upfront analysis. |
+| 2026-04-08 | DOCS | Task reworked 29x. Scope may need better upfront analysis. |
