@@ -6,9 +6,9 @@ import { z } from "zod";
 const createFamilyMemberSchema = z.object({
   name: z.string().min(1).max(200),
   relationship: z.string().min(1).max(100),
-  phone: z.string().max(30).optional(),
-  email: z.string().email().optional(),
-  notes: z.string().optional(),
+  phone: z.string().max(30).nullish(),
+  email: z.string().email().nullish(),
+  notes: z.string().nullish(),
 });
 
 export async function GET(
