@@ -99,35 +99,31 @@ export function FamilyMemberForm({ contactId, contactName, editMember }: FamilyM
   }
 
   return (
-    <div className="min-h-full overflow-y-auto bg-gradient-to-br from-[#FAF8F4] via-white to-[#0F7694]/5 dark:from-zinc-950 dark:via-background dark:to-[#1a1535]/5">
-      {/* Header */}
-      <div className="border-b border-border/30 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm">
-        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center gap-3">
-          <button
-            onClick={() => router.push(backUrl)}
-            className="p-2 -ml-2 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">
-              {editMember ? "Edit Family Member" : "Add Family Member"}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {contactName
-                ? editMember
-                  ? `Update ${editMember.name}'s details for ${contactName}`
-                  : `Add to ${contactName}'s family network`
-                : editMember
-                  ? "Update their details"
-                  : "Add to this contact's family network"}
-            </p>
-          </div>
+    <div className="px-6 py-6 max-w-2xl space-y-8">
+
+      {/* Inline header — back arrow + title */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.push(backUrl)}
+          className="p-2 -ml-2 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors shrink-0"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <div>
+          <h1 className="text-xl font-bold tracking-tight">
+            {editMember ? "Edit Family Member" : "Add Family Member"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {contactName
+              ? editMember
+                ? `Update ${editMember.name}'s details for ${contactName}`
+                : `Add to ${contactName}'s family network`
+              : editMember
+                ? "Update their details"
+                : "Add to this contact's family network"}
+          </p>
         </div>
       </div>
-
-      {/* Form */}
-      <div className="max-w-2xl mx-auto px-6 py-8 space-y-8">
 
         {serverError && (
           <div className="flex items-center gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-sm text-destructive">
@@ -241,7 +237,6 @@ export function FamilyMemberForm({ contactId, contactName, editMember }: FamilyM
             Cancel
           </Button>
         </div>
-      </div>
     </div>
   );
 }
