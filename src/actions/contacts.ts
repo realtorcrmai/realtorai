@@ -444,7 +444,7 @@ export async function createContactTask(
     due_date?: string;
     priority?: string;
     category?: string;
-    notes?: string;
+    description?: string;
   }
 ) {
   const tc = await getAuthenticatedTenantClient();
@@ -454,7 +454,7 @@ export async function createContactTask(
     due_date: data.due_date || null,
     priority: data.priority || "medium",
     category: data.category || "general",
-    notes: data.notes || null,
+    description: data.description || null,
     status: "pending",
   });
 
