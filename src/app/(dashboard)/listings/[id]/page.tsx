@@ -5,6 +5,7 @@ import { MapPin, DollarSign, Key, Clock, User } from "lucide-react";
 import { ManualStatusOverride } from "@/components/listings/ManualStatusOverride";
 import { ListingWorkflow } from "@/components/listings/ListingWorkflow";
 import { FormReadinessPanel } from "@/components/listings/FormReadinessPanel";
+import { SellerIdentitiesPanel } from "@/components/listings/SellerIdentitiesPanel";
 import { ConveyancingPackButton } from "@/components/listings/ConveyancingPackButton";
 import { ShowingRequestForm } from "@/components/showings/ShowingRequestForm";
 import { ShowingStatusBadge } from "@/components/showings/ShowingStatusBadge";
@@ -49,6 +50,7 @@ export default async function ListingDetailPage({
     { data: allListings },
     { data: formSubmissions },
     { data: buyerMatches },
+    { data: sellerIdentities },
   ] = await Promise.all([
     supabase
       .from("listing_documents")
@@ -76,6 +78,13 @@ export default async function ListingDetailPage({
         `max_price.is.null,max_price.gte.${listing.list_price ?? 0}`
       )
       .limit(5),
+    // FINTRAC seller identities for the Phase 1 compliance panel.
+    // Listing cannot transition to active/pending/sold without ≥1 row.
+    supabase
+      .from("seller_identities")
+      .select("*")
+      .eq("listing_id", id)
+      .order("sort_order", { ascending: true }),
   ]);
 
   // Build form status map for the right panel
@@ -273,7 +282,15 @@ export default async function ListingDetailPage({
       </div>
 
       {/* RIGHT PANEL — fixed, own scroll */}
-      <aside className="hidden lg:block w-[340px] shrink-0 border-l overflow-y-auto p-6 bg-card/30">
+      <aside className="hidden lg:block w-[340px] shrink-0 border-l overflow-y-auto p-6 bg-card/30 space-y-4">
+        {/* FINTRAC seller identity panel — rendered first so missing
+            compliance data is the first thing a realtor sees on an
+            unverified listing. See src/components/listings/
+            SellerIdentitiesPanel.tsx for the form. */}
+        <SellerIdentitiesPanel
+          listingId={id}
+          initialIdentities={(sellerIdentities ?? []) as never}
+        />
         <FormReadinessPanel
           listingId={id}
           documents={(documents ?? []) as ListingDocument[]}
