@@ -13,9 +13,10 @@ import { resolve } from "path";
 
 // ── Config ──────────────────────────────────────────────────
 const BASE_URL = "http://localhost:3000";
-const SUPABASE_URL = "https://qcohfohjihazivkforsj.supabase.co";
 
-// Load env
+// Load env BEFORE reading any env vars — this script ships without
+// any hardcoded fallback credentials (removed 2026-04-09 during the
+// Supabase consolidation cleanup) so it must load .env.local itself.
 try {
   const envPath = resolve(import.meta.dirname || ".", "../.env.local");
   const env = readFileSync(envPath, "utf8");
@@ -25,7 +26,15 @@ try {
   }
 } catch {}
 
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error("❌ Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  console.error("   Make sure .env.local exists at the repo root, or export the vars");
+  console.error("   manually:  source .env.local && node scripts/test-email-marketing-ui.mjs");
+  process.exit(1);
+}
+
 const DEMO_EMAIL = process.env.DEMO_EMAIL || "demo@realestatecrm.com";
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD || "demo123";
 

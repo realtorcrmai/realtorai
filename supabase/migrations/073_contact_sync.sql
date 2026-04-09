@@ -31,5 +31,12 @@ ALTER TABLE contacts ADD COLUMN IF NOT EXISTS sync_external_id text;  -- ID from
 CREATE INDEX IF NOT EXISTS idx_contacts_sync ON contacts(sync_source, sync_external_id);
 
 -- RLS
+-- PostgreSQL does NOT support `CREATE POLICY IF NOT EXISTS`. The original
+-- version of this migration used that syntax and failed silently on first
+-- apply (the table + indexes got created, but the policy creation errored
+-- out, leaving RLS enabled with zero policies — effectively locking the
+-- table to the service role only). Fixed on 2026-04-09 by using the
+-- DROP-then-CREATE pattern, which is idempotent and valid PG syntax.
 ALTER TABLE contact_sync_sources ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS css_policy ON contact_sync_sources FOR ALL USING (true);
+DROP POLICY IF EXISTS css_policy ON contact_sync_sources;
+CREATE POLICY css_policy ON contact_sync_sources FOR ALL USING (true);
