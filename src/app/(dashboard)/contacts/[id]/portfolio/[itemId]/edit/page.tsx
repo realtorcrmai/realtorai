@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PortfolioForm } from "@/components/contacts/PortfolioForm";
 import type { PortfolioItem } from "@/actions/contact-portfolio";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -21,46 +22,38 @@ export default async function PortfolioEditPage({
 
   if (!contact || !item) notFound();
 
-  const CATEGORY_LABELS: Record<string, string> = {
-    primary_residence: "Primary Residence",
-    investment: "Investment",
-    vacation: "Vacation",
-    commercial: "Commercial",
-    other: "Other",
-  };
-
-  const categoryLabel = CATEGORY_LABELS[(item as PortfolioItem).property_category ?? "other"] ?? "Property";
-
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="max-w-2xl mx-auto p-4 md:p-8 space-y-6">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-3">
+    <div className="min-h-full overflow-y-auto bg-gradient-to-br from-[#FAF8F4] via-white to-[#0F7694]/5 dark:from-zinc-950 dark:via-background dark:to-[#1a1535]/5">
+      {/* Glass header */}
+      <div className="border-b border-border/30 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-sm sticky top-0 z-10">
+        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center gap-3">
           <Link
-            href={`/contacts/${id}`}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            href={`/contacts/${id}?tab=portfolio`}
+            className="p-2 -ml-2 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
           >
-            ← {contact.name}
+            <ArrowLeft className="h-5 w-5" />
           </Link>
-          <span className="text-muted-foreground/40">/</span>
-          <span className="text-sm font-medium">Edit {categoryLabel}</span>
-        </div>
-
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">✏️ Edit Property</h1>
-          <p className="text-sm text-muted-foreground mt-1 truncate">
-            {(item as PortfolioItem).address}
-          </p>
-        </div>
-
-        <div className="lf-card p-6">
-          <PortfolioForm
-            contactId={id}
-            contactName={contact.name}
-            existing={item as PortfolioItem}
-          />
+          <div>
+            <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
+              ✏️ Edit Property
+            </h1>
+            <p className="text-sm text-muted-foreground truncate">
+              {(item as PortfolioItem).address}
+            </p>
+          </div>
         </div>
       </div>
+
+      {/* Form */}
+      <div className="max-w-2xl mx-auto px-6 py-8">
+        <PortfolioForm
+          contactId={id}
+          contactName={contact.name}
+          existing={item as PortfolioItem}
+        />
+      </div>
+
+      <div className="h-8" />
     </div>
   );
 }
