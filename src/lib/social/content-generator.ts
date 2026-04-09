@@ -2,6 +2,7 @@
 // Uses Claude to generate platform-specific social media content from CRM data
 
 import Anthropic from "@anthropic-ai/sdk";
+import { createWithRetry } from "@/lib/anthropic/retry";
 import type {
   ContentGenerationRequest,
   GeneratedContent,
@@ -176,7 +177,7 @@ Only include platforms that were requested. Ensure all JSON is valid.`;
 
   const model = process.env.SOCIAL_AI_MODEL || "claude-sonnet-4-20250514";
 
-  const message = await anthropic.messages.create({
+  const message = await createWithRetry(anthropic, {
     model,
     max_tokens: 2000,
     system: systemPrompt,

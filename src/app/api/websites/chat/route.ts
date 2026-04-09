@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { createWithRetry } from "@/lib/anthropic/retry";
 import { validateApiKey, corsHeaders, handleCORS, normalizePhone, createAdminClient } from "@/lib/website-api";
 
 export async function OPTIONS(request: NextRequest) {
@@ -320,7 +321,7 @@ Rules:
 
   try {
     // Initial Claude call
-    let response = await anthropic.messages.create({
+    let response = await createWithRetry(anthropic, {
       model: "claude-sonnet-4-20250514",
       max_tokens: 1024,
       system: systemPrompt,
@@ -362,7 +363,7 @@ Rules:
       allMessages.push({ role: "user", content: toolResults as unknown as string });
 
       // Continue conversation
-      response = await anthropic.messages.create({
+      response = await createWithRetry(anthropic, {
         model: "claude-sonnet-4-20250514",
         max_tokens: 1024,
         system: systemPrompt,
@@ -381,7 +382,7 @@ Rules:
     const toolBlocks = response.content.filter(
       (b): b is Anthropic.ToolUseBlock => b.type === "tool_use"
     );
-    let listings: unknown[] = [];
+    const listings: unknown[] = [];
     for (const tb of toolBlocks) {
       if (tb.name === "search_listings") {
         // Find the corresponding result — it was already processed above

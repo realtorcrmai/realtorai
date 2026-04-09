@@ -24,6 +24,9 @@ import { DeleteContactButton } from "@/components/contacts/DeleteContactButton";
 import { ContactDetailLayout } from "@/components/contacts/ContactDetailLayout";
 import { Button } from "@/components/ui/button";
 import type { Contact, Communication, Listing, ContactDate, ContactDocument, BuyerPreferences, SellerPreferences, Demographics } from "@/types";
+import type { BuyerJourney } from "@/actions/buyer-journeys";
+import type { BuyerJourneyProperty } from "@/actions/buyer-journey-properties";
+import type { PortfolioItem } from "@/actions/contact-portfolio";
 import {
   CONTACT_TYPE_COLORS,
   LEAD_STATUS_LABELS,
@@ -51,6 +54,7 @@ export default async function ContactDetailPage({
   if (!contact) notFound();
 
   const isSeller = contact.type === "seller";
+  const isBuyer = contact.type === "buyer" || contact.type === "dual";
 
   // ── Single parallel batch: ALL queries at once ─────────────
   // No waterfalls — everything fetched in one round-trip
@@ -77,6 +81,10 @@ export default async function ContactDetailPage({
     { data: contactJourney },
     { data: contactNewsletters },
     { data: contactContextEntries },
+    { data: familyMembersData },
+    { data: buyerJourneysData },
+    { data: journeyPropertiesData },
+    { data: portfolioData },
   ] = await Promise.all([
     // 1. Communications — limit to recent 50
     supabase
@@ -206,6 +214,36 @@ export default async function ContactDetailPage({
       .select("id, context_type, text, is_resolved, resolved_note, created_at")
       .eq("contact_id", id)
       .order("created_at", { ascending: false }),
+    // 23. Family members
+    supabase
+      .from("contact_family_members")
+      .select("*")
+      .eq("contact_id", id)
+      .order("created_at", { ascending: true }),
+    // 24. Buyer journeys (active/paused only — buyers only)
+    isBuyer
+      ? supabase
+          .from("buyer_journeys")
+          .select("id, status, min_price, max_price, preferred_property_types, preferred_areas, notes, created_at, updated_at")
+          .eq("contact_id", id)
+          .not("status", "in", "(closed,cancelled)")
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    // 25. Recent buyer journey properties (via join on contact_id through buyer_journeys)
+    isBuyer
+      ? supabase
+          .from("buyer_journey_properties")
+          .select("id, journey_id, address, status, interest_level, list_price, notes, offer_price, offer_status, offer_date, subjects, created_at, buyer_journeys!inner(contact_id)")
+          .eq("buyer_journeys.contact_id", id)
+          .order("created_at", { ascending: false })
+          .limit(10)
+      : Promise.resolve({ data: [] }),
+    // 26. Contact portfolio items
+    supabase
+      .from("contact_portfolio")
+      .select("*")
+      .eq("contact_id", id)
+      .order("purchase_date", { ascending: false }),
   ]);
 
   const referredByName = referredByContact?.name ?? null;
@@ -546,11 +584,11 @@ export default async function ContactDetailPage({
     <>
       {/* Contact Card Header */}
       <div id="section-contact-info" className="animate-float-in relative z-20">
-            <Card className="shadow-md border border-violet-200/60 dark:border-violet-900/30 overflow-visible bg-gradient-to-r from-violet-50/50 via-indigo-50/40 to-teal-50/30 dark:from-violet-950/20 dark:via-indigo-950/20 dark:to-teal-950/10">
+            <Card className="shadow-md border border-[#0F7694]/20 dark:border-[#0F7694]/10 overflow-visible bg-gradient-to-r from-[#0F7694]/5 via-[#0F7694]/5 to-[#0F7694]/3 dark:from-[#1a1535]/20 dark:via-[#1a1535]/20 dark:to-[#1a1535]/10">
               <CardContent className="p-4">
                 {/* Row 1: Avatar + Name + Badges + Actions */}
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-rose-500 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0F7694] to-rose-500 flex items-center justify-center text-white font-bold text-lg shrink-0">
                     {contact.name.split(/\s+/).map((w: string) => w[0]).join("").substring(0, 2).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -581,23 +619,23 @@ export default async function ContactDetailPage({
                 </div>
 
                 {/* Row 2: Pipeline bar or Convert button */}
-                <div className="mt-3 pt-2 border-t border-indigo-50 dark:border-indigo-900/20">
+                <div className="mt-3 pt-2 border-t border-[#0F7694]/10 dark:border-[#1a1535]/20">
                   {contact.type === "customer" ? (
-                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <span className="text-sm text-green-800 font-medium flex-1">This is an unqualified lead. Convert when ready:</span>
+                    <div className="flex items-center gap-2 p-3 bg-[#0F7694]/5 border border-[#0F7694]/20 rounded-lg">
+                      <span className="text-sm text-[#0A6880] font-medium flex-1">This is an unqualified lead. Convert when ready:</span>
                       <form action={async () => {
                         "use server";
                         const { convertContactType } = await import("@/actions/contacts");
                         await convertContactType(id, "buyer");
                       }}>
-                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700">Convert to Buyer</button>
+                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-[#0F7694] text-white font-medium hover:bg-[#0A6880]">Convert to Buyer</button>
                       </form>
                       <form action={async () => {
                         "use server";
                         const { convertContactType } = await import("@/actions/contacts");
                         await convertContactType(id, "seller");
                       }}>
-                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-purple-600 text-white font-medium hover:bg-purple-700">Convert to Seller</button>
+                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-[#0F7694] text-white font-medium hover:bg-[#0A6880]">Convert to Seller</button>
                       </form>
                     </div>
                   ) : (
@@ -704,15 +742,20 @@ export default async function ContactDetailPage({
             allContacts={(allContacts ?? []) as { id: string; name: string }[]}
             documents={typedDocuments}
             contextEntries={(contactContextEntries ?? []) as Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>}
+            familyMembers={(familyMembersData ?? []) as import("@/types").ContactFamilyMember[]}
+            isBuyer={isBuyer}
+            buyerJourneys={(buyerJourneysData ?? []) as BuyerJourney[]}
+            recentJourneyProperties={(journeyPropertiesData ?? []) as BuyerJourneyProperty[]}
+            portfolioItems={(portfolioData ?? []) as PortfolioItem[]}
           />
   );
 
   // Build right panel JSX
   const rightPanelJsx = (
-      <aside className="hidden lg:block w-[320px] shrink-0 border-l p-4 bg-gradient-to-b from-slate-50 via-white to-teal-50/30 dark:from-card/50 dark:via-card/30 dark:to-teal-950/10 overflow-y-auto space-y-4">
+      <aside className="hidden lg:block w-[320px] shrink-0 border-l p-4 bg-gradient-to-b from-slate-50 via-white to-[#0F7694]/3 dark:from-card/50 dark:via-card/30 dark:to-[#1a1535]/10 overflow-y-auto space-y-4">
         {/* Engagement — 1st section */}
         {intel && (
-          <div className="pb-3 border-b border-indigo-100 dark:border-indigo-900/30 border-l-4 border-l-indigo-400 pl-4 rounded-sm shrink-0">
+          <div className="pb-3 border-b border-[#0F7694]/15 dark:border-[#1a1535]/30 border-l-4 border-l-[#0F7694] pl-4 rounded-sm shrink-0">
             <IntelligencePanel
               intelligence={intel}
               totalEmails={newslettersWithEvents.length}
@@ -721,7 +764,7 @@ export default async function ContactDetailPage({
         )}
 
         {/* Network Stats — 2nd section */}
-        <div className="border-b border-teal-100 dark:border-teal-900/30 pb-3 pt-3 border-l-4 border-l-teal-400 pl-4 rounded-sm shrink-0">
+        <div className="border-b border-[#0F7694]/20 dark:border-[#0F7694]/10 pb-3 pt-3 border-l-4 border-l-[#0F7694] pl-4 rounded-sm shrink-0">
           <NetworkStatsCard
             connectionCount={relationships.length}
             referralCount={allReferrals.length}
@@ -734,7 +777,7 @@ export default async function ContactDetailPage({
         </div>
 
         {/* Referrals */}
-        <div className="border-b border-orange-100 dark:border-orange-900/30 pb-3 pt-3 border-l-4 border-l-orange-400 pl-4 rounded-sm shrink-0">
+        <div className="border-b border-[#0F7694]/20 dark:border-[#0F7694]/10 pb-3 pt-3 border-l-4 border-l-[#67D4E8] pl-4 rounded-sm shrink-0">
           <ReferralsPanel
             contact={contact}
             referredByName={referredByName}
@@ -745,7 +788,7 @@ export default async function ContactDetailPage({
         </div>
 
         {/* Relationships — grows to fill remaining space */}
-        <div className="pt-3 border-l-4 border-l-violet-400 pl-4 rounded-sm">
+        <div className="pt-3 border-l-4 border-l-[#67D4E8] pl-4 rounded-sm">
           <RelationshipManager
             contactId={contact.id}
             relationships={relationships}
@@ -755,7 +798,7 @@ export default async function ContactDetailPage({
           {/* Contextual Tips — fills remaining space when sections are empty */}
           {(!intel || Object.keys(intel).length === 0) && relationships.length === 0 && allReferrals.length === 0 && (
             <div className="mt-4 pt-4 border-t border-border/30">
-              <div className="rounded-xl bg-gradient-to-br from-indigo-50/50 to-teal-50/30 dark:from-indigo-950/20 dark:to-teal-950/10 border border-indigo-100/50 dark:border-indigo-900/20 p-4">
+              <div className="rounded-xl bg-gradient-to-br from-[#0F7694]/5/50 to-[#0F7694]/3 dark:from-[#1a1535]/20 dark:to-[#1a1535]/10 border border-[#0F7694]/15/50 dark:border-[#1a1535]/20 p-4">
                 <div className="flex items-start gap-2.5">
                   <span className="text-lg">💡</span>
                   <div>
@@ -767,15 +810,15 @@ export default async function ContactDetailPage({
                     </p>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-medium shrink-0">1</span>
+                        <span className="w-5 h-5 rounded-full bg-[#0F7694]/10 dark:bg-[#1a1535]/30 flex items-center justify-center text-xs font-medium shrink-0">1</span>
                         <span className="text-muted-foreground">Add a <strong className="text-foreground">relationship</strong></span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-medium shrink-0">2</span>
+                        <span className="w-5 h-5 rounded-full bg-[#0F7694]/10 dark:bg-[#1a1535]/30 flex items-center justify-center text-xs font-medium shrink-0">2</span>
                         <span className="text-muted-foreground">Set <strong className="text-foreground">preferences</strong></span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-medium shrink-0">3</span>
+                        <span className="w-5 h-5 rounded-full bg-[#0F7694]/10 dark:bg-[#1a1535]/30 flex items-center justify-center text-xs font-medium shrink-0">3</span>
                         <span className="text-muted-foreground">Send first <strong className="text-foreground">email</strong></span>
                       </div>
                     </div>

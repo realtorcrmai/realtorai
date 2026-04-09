@@ -99,6 +99,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             "https://www.googleapis.com/auth/calendar.readonly",
             "https://www.googleapis.com/auth/gmail.send",
             "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/contacts.readonly",
           ].join(" "),
           access_type: "offline",
           prompt: "consent",
@@ -128,6 +129,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           token.accessToken = account.access_token;
           token.refreshToken = account.refresh_token;
+          token.emailVerified = true; // Google verified the email
+        }
+
+        // OAuth providers = email auto-verified
+        if (account && ["google", "apple", "facebook"].includes(account.provider)) {
+          token.emailVerified = true;
         }
 
         // Skip DB lookup if role/features are already cached in the token
@@ -137,7 +144,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (token.email && needsUserFetch && usersTableExists !== false) {
           const { data: existingUser, error: fetchError } = await supabase
             .from("users")
-            .select("id, role, plan, enabled_features, is_active")
+            .select("id, role, plan, enabled_features, is_active, email_verified, phone_verified, onboarding_completed")
             .eq("email", token.email)
             .single();
 
@@ -159,6 +166,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               token.role = existingUser.role;
               token.plan = existingUser.plan || "free";
               token.userId = existingUser.id;
+              token.emailVerified = existingUser.email_verified ?? true;
+              token.phoneVerified = existingUser.phone_verified ?? false;
+              token.onboardingCompleted = existingUser.onboarding_completed ?? true;
               // Resolve features: plan + release gate + optional overrides
               token.enabledFeatures = getUserFeatures(
                 existingUser.plan || "free",
@@ -209,6 +219,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Multi-tenancy: userId = realtorId (the tenant identifier)
       session.user.id = (token.userId as string) || (token.sub as string) || "";
       (session.user as unknown as Record<string, unknown>).realtorId = (token.userId as string) || (token.sub as string) || "";
+      (session.user as unknown as Record<string, unknown>).emailVerified = token.emailVerified ?? true;
+      (session.user as unknown as Record<string, unknown>).phoneVerified = token.phoneVerified ?? false;
+      (session.user as unknown as Record<string, unknown>).onboardingCompleted = token.onboardingCompleted ?? true;
       return session;
     },
   },

@@ -108,7 +108,7 @@ const categoryTitle = {
 const highlightItem = { fontSize: "14px", color: "#3a3a5c", margin: "0 0 4px", paddingLeft: "4px" };
 
 const funFactBox = {
-  backgroundColor: "#f6f5ff",
+  backgroundColor: "#f7f7f8",
   borderRadius: "10px",
   padding: "16px",
   borderLeft: "4px solid #4f35d2",

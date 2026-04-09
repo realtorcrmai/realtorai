@@ -96,7 +96,7 @@ export function AIAgentQueue({ drafts: initialDrafts, sendAction, skipAction, bu
           <button
             onClick={handleBulkApprove}
             disabled={bulkSending}
-            className="text-xs px-3 py-1.5 rounded-md bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
+            className="text-xs px-3 py-1.5 rounded-md bg-[#0F7694] text-white font-medium hover:bg-[#0A6880] transition-colors disabled:opacity-50"
           >
             {bulkSending ? "Sending..." : `✓ Approve All (${pendingDrafts.length})`}
           </button>
@@ -127,7 +127,7 @@ export function AIAgentQueue({ drafts: initialDrafts, sendAction, skipAction, bu
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-                        result.status === "sent" ? "bg-emerald-500" : result.status === "skipped" ? "bg-gray-400" : "bg-red-500"
+                        result.status === "sent" ? "bg-[#0F7694]" : result.status === "skipped" ? "bg-gray-400" : "bg-red-500"
                       }`}>
                         {result.status === "sent" ? "✓" : result.status === "skipped" ? "—" : "!"}
                       </div>
@@ -153,7 +153,7 @@ export function AIAgentQueue({ drafts: initialDrafts, sendAction, skipAction, bu
                 <div className="flex items-center justify-between p-4 border-b border-border">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${
-                      type === "seller" ? "bg-gradient-to-br from-primary to-orange-500" : "bg-gradient-to-br from-primary to-purple-500"
+                      type === "seller" ? "bg-[#0F7694]" : "bg-gradient-to-br from-primary to-[#1a1535]"
                     }`}>
                       {name[0]}
                     </div>
@@ -177,7 +177,7 @@ export function AIAgentQueue({ drafts: initialDrafts, sendAction, skipAction, bu
                       <div className="flex gap-2">
                         <button
                           onClick={() => setEditingId(null)}
-                          className="text-xs px-3 py-1.5 rounded-md bg-primary text-white font-medium"
+                          className="text-xs px-3 py-1.5 rounded-md bg-[#0F7694] text-white font-medium"
                         >Save</button>
                         <button
                           onClick={() => setEditingId(null)}
@@ -218,7 +218,7 @@ export function AIAgentQueue({ drafts: initialDrafts, sendAction, skipAction, bu
                   <button
                     onClick={() => handleApprove(d.id)}
                     disabled={isSending}
-                    className="text-xs px-3 py-1.5 rounded-md bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                    className="text-xs px-3 py-1.5 rounded-md bg-[#0F7694] text-white font-medium hover:bg-[#0A6880] transition-colors disabled:opacity-50"
                   >
                     {isSending ? "Sending..." : "✓ Approve & Send"}
                   </button>

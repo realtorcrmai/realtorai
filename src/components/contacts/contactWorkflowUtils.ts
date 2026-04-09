@@ -120,11 +120,11 @@ export const CONTACT_STEPS: ContactStep[] = [
 
 export const STATUS_STYLES = {
   completed: {
-    circle: "bg-green-500 shadow-sm shadow-green-500/30",
-    connector: "bg-green-500",
+    circle: "bg-[#00C875] shadow-sm shadow-[#00C875]/30",
+    connector: "bg-[#00C875]",
     text: "text-foreground",
     badge:
-      "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+      "bg-[#0F7694]/15 text-[#0A6880] dark:bg-[#00C875]/15 dark:text-[#00C875]",
     badgeLabel: "COMPLETE",
   },
   "in-progress": {

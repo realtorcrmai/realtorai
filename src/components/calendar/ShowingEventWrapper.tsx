@@ -20,7 +20,7 @@ export function ShowingEventWrapper({
       case "requested":
         return "bg-amber-400 text-amber-900";
       case "confirmed":
-        return "bg-green-500 text-white";
+        return "bg-[#00C875] text-white";
       case "denied":
         return "bg-red-400 text-white";
       default:

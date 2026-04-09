@@ -18,12 +18,46 @@ const STAGE_FILTER_MAP: Record<string, string[]> = {
 export default async function ContactsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ stage?: string }>;
+  searchParams: Promise<{ stage?: string; role?: string; lifecycle?: string }>;
 }) {
-  const { stage } = await searchParams;
+  const { stage, role, lifecycle } = await searchParams;
   const supabase = await getAuthenticatedTenantClient();
 
-  // If a stage filter is provided, find the first contact in that stage
+  // Build query suffix to preserve active filters when redirecting
+  const buildSuffix = (contactId: string) => {
+    const params = new URLSearchParams();
+    if (stage) params.set("stage", stage);
+    if (role) params.set("role", role);
+    if (lifecycle) params.set("lifecycle", lifecycle);
+    const qs = params.toString();
+    return `/contacts/${contactId}${qs ? `?${qs}` : ""}`;
+  };
+
+  // Role filter: find first contact whose roles[] contains the given role
+  if (role) {
+    const { data: match } = await supabase
+      .from("contacts")
+      .select("id")
+      .contains("roles", [role])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    if (match) redirect(buildSuffix(match.id));
+  }
+
+  // Lifecycle filter: find first contact with the given lifecycle_stage
+  if (lifecycle) {
+    const { data: match } = await supabase
+      .from("contacts")
+      .select("id")
+      .eq("lifecycle_stage", lifecycle)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    if (match) redirect(buildSuffix(match.id));
+  }
+
+  // Stage filter: find first contact in that stage_bar bucket
   if (stage && STAGE_FILTER_MAP[stage]) {
     const stageValues = STAGE_FILTER_MAP[stage];
     const { data: match } = await supabase
@@ -35,7 +69,7 @@ export default async function ContactsPage({
       .single();
 
     if (match) {
-      redirect(`/contacts/${match.id}?stage=${stage}`);
+      redirect(buildSuffix(match.id));
     }
   }
 
@@ -48,7 +82,7 @@ export default async function ContactsPage({
     .single();
 
   if (latest) {
-    redirect(`/contacts/${latest.id}${stage ? `?stage=${stage}` : ""}`);
+    redirect(buildSuffix(latest.id));
   }
 
   return (

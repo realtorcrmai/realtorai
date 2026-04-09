@@ -76,7 +76,7 @@ export default function FormsPageClient({
           </Link>
         </div>
 
-        <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
+        <div className="flex items-center gap-3 p-4 bg-[#0F7694]/5 border border-[#0F7694]/20 rounded-xl text-sm text-[#0A6880]">
           <Info className="h-4 w-4 shrink-0" />
           <span>
             Select a listing above, then click a form to open the PDF editor.
@@ -153,7 +153,7 @@ function FormCard({
             {status === "completed" && (
               <Badge
                 variant="outline"
-                className="text-[10px] bg-green-50 text-green-600 border-green-200"
+                className="text-[10px] bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20"
               >
                 <FileCheck className="h-3 w-3 mr-0.5" />
                 Done

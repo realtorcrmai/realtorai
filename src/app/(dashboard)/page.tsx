@@ -1,24 +1,9 @@
 import { auth } from "@/lib/auth";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import Link from "next/link";
-import {
-  Building2,
-  Clock,
-  CalendarCheck,
-  ListTodo,
-  Search,
-  GitBranch,
-  Upload,
-  FileText,
-  Users,
-  Wand2,
-  Globe,
-  Mail,
-  ArrowRight,
-} from "lucide-react";
 import PipelineSnapshot from "@/components/dashboard/PipelineSnapshot";
 import { GreetingTicker } from "@/components/dashboard/GreetingTicker";
-import { DailyDigestCard } from "@/components/dashboard/DailyDigestCard";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
 
 export const dynamic = "force-dynamic";
 
@@ -45,41 +30,21 @@ export default async function DashboardPage() {
     { data: pipelineContacts },
     { data: pipelineListings },
     { data: allDocs },
+    { data: activeBuyerJourneys },
+    { data: lifecycleContacts },
   ] = await Promise.all([
-    tc.raw
-      .from("listings")
-      .select("*", { count: "exact", head: true })
-      .eq("realtor_id", tc.realtorId)
-      .eq("status", "active"),
-    tc.raw
-      .from("appointments")
-      .select("*", { count: "exact", head: true })
-      .eq("realtor_id", tc.realtorId)
-      .eq("status", "requested"),
-    tc
-      .from("appointments")
-      .select("id")
-      .eq("status", "confirmed")
-      .gte(
-        "start_time",
-        new Date(
-          now - new Date().getDay() * 24 * 60 * 60 * 1000
-        ).toISOString()
-      ),
-    tc
-      .from("tasks")
-      .select("id, status, priority")
-      .neq("status", "completed")
-      .order("created_at", { ascending: false })
-      .limit(5),
+    tc.raw.from("listings").select("*", { count: "exact", head: true }).eq("realtor_id", tc.realtorId).eq("status", "active"),
+    tc.raw.from("appointments").select("*", { count: "exact", head: true }).eq("realtor_id", tc.realtorId).eq("status", "requested"),
+    tc.from("appointments").select("id").eq("status", "confirmed").gte("start_time", new Date(now - new Date().getDay() * 24 * 60 * 60 * 1000).toISOString()),
+    tc.from("tasks").select("id, title, status, priority, category, due_date").neq("status", "completed").order("created_at", { ascending: false }).limit(20),
     tc.from("contacts").select("id, stage_bar, type"),
     tc.from("listings").select("id, seller_id, buyer_id, list_price, sold_price, commission_rate, commission_amount, status"),
     tc.from("listing_documents").select("listing_id, doc_type"),
+    tc.from("buyer_journeys").select("id, status, contact_id").not("status", "in", "(closed,cancelled)"),
+    tc.from("contacts").select("id, lifecycle_stage").not("lifecycle_stage", "is", null),
   ]);
 
-  // Derive active listing IDs from pipelineListings (avoids redundant query)
   const activeListingIds = (pipelineListings ?? []).filter((l: any) => l.status === "active");
-
   const requiredTypes = ["FINTRAC", "DORTS", "PDS"];
   const listingsWithMissing = activeListingIds.filter((listing: any) => {
     const docs = (allDocs ?? []).filter((d: any) => d.listing_id === listing.id);
@@ -87,56 +52,41 @@ export default async function DashboardPage() {
     return requiredTypes.some((t: any) => !docTypes.includes(t));
   });
 
-  const pendingTasks = (tasks ?? []).filter(
-    (t: any) => t.status === "pending"
-  ).length;
-  const inProgressTasks = (tasks ?? []).filter(
-    (t: any) => t.status === "in_progress"
-  ).length;
+  const pendingTasks = (tasks ?? []).filter((t: any) => t.status === "pending").length;
+  const inProgressTasks = (tasks ?? []).filter((t: any) => t.status === "in_progress").length;
   const openTasksCount = pendingTasks + inProgressTasks;
 
-  const enabledFeatures = session?.user?.enabledFeatures ?? [];
-
-  // ── Pipeline Snapshot computation ──────────────────────────
   const PIPELINE_STAGES = [
-    { key: "new", label: "New Leads", color: "bg-sky-500" },
-    { key: "qualified", label: "Qualified", color: "bg-amber-500" },
-    { key: "active", label: "Active", color: "bg-green-500" },
-    { key: "under_contract", label: "Under Contract", color: "bg-orange-500" },
-    { key: "closed", label: "Closed", color: "bg-emerald-600" },
+    { key: "new",            label: "New Leads",       color: "bg-[#C8F5F0]" },
+    { key: "qualified",      label: "Qualified",        color: "bg-[#67D4E8]" },
+    { key: "active",         label: "Active",           color: "bg-[#0F7694]" },
+    { key: "under_contract", label: "Under Contract",   color: "bg-[#FDAB3D]" },
+    { key: "closed",         label: "Closed",           color: "bg-[#00C875]" },
   ];
 
   const contacts = pipelineContacts ?? [];
   const listings = pipelineListings ?? [];
 
-  // Map stage_bar values to pipeline keys (merge active_search + active_listing into "active")
   function toPipelineKey(stageBar: string | null): string {
     if (!stageBar) return "new";
     if (stageBar === "active_search" || stageBar === "active_listing") return "active";
     if (["new", "qualified", "under_contract", "closed"].includes(stageBar)) return stageBar;
-    return "new"; // cold, contacted, nurturing, etc. map to "new"
+    return "new";
   }
 
-  // Group contacts by pipeline stage
   const contactsByStage: Record<string, typeof contacts> = {};
-  for (const stage of PIPELINE_STAGES) {
-    contactsByStage[stage.key] = [];
-  }
+  for (const stage of PIPELINE_STAGES) contactsByStage[stage.key] = [];
   for (const c of contacts) {
     const key = toPipelineKey(c.stage_bar);
     if (contactsByStage[key]) contactsByStage[key].push(c);
   }
 
-  // For each contact, find their deal value from listings
   function getDealValueForContact(contactId: string): number {
     let total = 0;
     for (const l of listings) {
       if (l.seller_id === contactId || l.buyer_id === contactId) {
-        if (l.status === "sold" && l.sold_price) {
-          total += l.sold_price;
-        } else if (l.list_price) {
-          total += l.list_price;
-        }
+        if (l.status === "sold" && l.sold_price) total += l.sold_price;
+        else if (l.list_price) total += l.list_price;
       }
     }
     return total;
@@ -145,172 +95,59 @@ export default async function DashboardPage() {
   const pipelineStages = PIPELINE_STAGES.map((stage) => {
     const stageContacts = contactsByStage[stage.key];
     let value = 0;
-    for (const c of stageContacts) {
-      value += getDealValueForContact(c.id);
-    }
+    for (const c of stageContacts) value += getDealValueForContact(c.id);
     return { ...stage, count: stageContacts.length, value };
   });
+
+  // ── Buyer pipeline stats ─────────────────────────────────────
+  const activeJourneys = activeBuyerJourneys ?? [];
+  const journeyStatusCounts: Record<string, number> = {};
+  for (const j of activeJourneys) {
+    journeyStatusCounts[j.status] = (journeyStatusCounts[j.status] ?? 0) + 1;
+  }
+
+  const LIFECYCLE_LABELS: Record<string, string> = {
+    prospect: "Prospect",
+    nurture: "Nurture",
+    active_buyer: "Active Buyer",
+    active_seller: "Active Seller",
+    dual_client: "Dual Client",
+    under_contract: "Under Contract",
+    closed: "Closed",
+    past_client: "Past Client",
+    referral_partner: "Referral",
+  };
+  const LIFECYCLE_COLORS: Record<string, { bar: string; bg: string; dot: string; text: string }> = {
+    active_buyer:    { bar: "bg-[#0F7694]",    bg: "bg-[#0F7694]/10",  dot: "bg-[#0F7694]",    text: "text-[#0A6880]" },
+    active_seller:   { bar: "bg-[#4f35d2]",    bg: "bg-[#4f35d2]/10",  dot: "bg-[#4f35d2]",    text: "text-[#3d27a8]" },
+    under_contract:  { bar: "bg-violet-500",    bg: "bg-violet-100",    dot: "bg-violet-500",    text: "text-violet-700" },
+    referral_partner:{ bar: "bg-emerald-500",   bg: "bg-emerald-100",   dot: "bg-emerald-500",   text: "text-emerald-700" },
+    past_client:     { bar: "bg-amber-500",     bg: "bg-amber-100",     dot: "bg-amber-500",     text: "text-amber-700" },
+    dual_client:     { bar: "bg-pink-500",      bg: "bg-pink-100",      dot: "bg-pink-500",      text: "text-pink-700" },
+    prospect:        { bar: "bg-sky-500",       bg: "bg-sky-100",       dot: "bg-sky-500",       text: "text-sky-700" },
+    nurture:         { bar: "bg-orange-400",    bg: "bg-orange-100",    dot: "bg-orange-400",    text: "text-orange-700" },
+    closed:          { bar: "bg-slate-400",     bg: "bg-slate-100",     dot: "bg-slate-400",     text: "text-slate-600" },
+  };
+  const lifecycleCounts: Record<string, number> = {};
+  for (const c of (lifecycleContacts ?? [])) {
+    if (c.lifecycle_stage) {
+      lifecycleCounts[c.lifecycle_stage] = (lifecycleCounts[c.lifecycle_stage] ?? 0) + 1;
+    }
+  }
+  const topLifecycleStages = Object.entries(lifecycleCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
 
   // GCI = sum of (commission_amount ?? (list_price * (commission_rate ?? 2.5) / 100))
   // for active + pending listings
   let totalGCI = 0;
   for (const l of listings) {
     if (l.status === "active" || l.status === "pending") {
-      if (l.commission_amount) {
-        totalGCI += l.commission_amount;
-      } else if (l.list_price) {
-        totalGCI += l.list_price * ((l.commission_rate ?? 2.5) / 100);
-      }
+      if (l.commission_amount) totalGCI += l.commission_amount;
+      else if (l.list_price) totalGCI += l.list_price * ((l.commission_rate ?? 2.5) / 100);
     }
   }
 
-  // Tile gradients follow a warm-cool alternating pattern across the 3-column grid:
-  // Row 1: teal (cool) — amber (warm) — indigo (cool)
-  // Row 2: orange (warm) — emerald (cool) — rose (warm)
-  // Row 3: blue (cool) — pink (warm) — cyan (cool)
-  // Row 4: violet (cool) — amber (warm)
-  const allFeatureTiles = [
-    {
-      key: "listings",
-      href: "/listings",
-      title: "Listings",
-      description: "Manage property listings, photos & pricing",
-      icon: Building2,
-      gradient: "gradient-teal",
-      count: (activeListings ?? 0) > 0 ? activeListings : null,
-      countLabel: "active",
-    },
-    {
-      key: "contacts",
-      href: "/contacts",
-      title: "Contacts",
-      description: "Buyers, sellers & agent relationships",
-      icon: Users,
-      gradient: "gradient-amber",
-      count: null,
-      countLabel: null,
-    },
-    {
-      key: "tasks",
-      href: "/tasks",
-      title: "Tasks",
-      description: "Daily to-do items & follow-ups",
-      icon: ListTodo,
-      gradient: "gradient-indigo",
-      count: openTasksCount > 0 ? openTasksCount : null,
-      countLabel: "open",
-    },
-    {
-      key: "showings",
-      href: "/showings",
-      title: "Showings",
-      description: "Track & manage showing requests",
-      icon: Clock,
-      gradient: "gradient-orange",
-      count: (pendingShowings ?? 0) > 0 ? pendingShowings : null,
-      countLabel: "pending",
-    },
-    {
-      key: "calendar",
-      href: "/calendar",
-      title: "Calendar",
-      description: "View your schedule at a glance",
-      icon: CalendarCheck,
-      gradient: "gradient-emerald",
-      count:
-        (confirmedThisWeek?.length ?? 0) > 0
-          ? confirmedThisWeek?.length
-          : null,
-      countLabel: "this week",
-    },
-    {
-      key: "content",
-      href: "/content",
-      title: "Content Engine",
-      description: "AI-powered MLS remarks, video & images",
-      icon: Wand2,
-      gradient: "gradient-rose",
-      count: null,
-      countLabel: null,
-    },
-    {
-      key: "search",
-      href: "/search",
-      title: "Property Search",
-      description: "Find properties for your buyers",
-      icon: Search,
-      gradient: "gradient-blue",
-      count: null,
-      countLabel: null,
-    },
-    {
-      key: "workflow",
-      href: "/workflow",
-      title: "MLS Workflow",
-      description: "7-phase listing pipeline tracker",
-      icon: GitBranch,
-      gradient: "gradient-pink",
-      count: null,
-      countLabel: null,
-    },
-    {
-      key: "import",
-      href: "/import",
-      title: "Excel Import",
-      description: "Import listings from spreadsheets",
-      icon: Upload,
-      gradient: "gradient-cyan",
-      count: null,
-      countLabel: null,
-    },
-    {
-      key: "forms",
-      href: "/forms",
-      title: "BC Forms",
-      description: "Standard BC real estate documents",
-      icon: FileText,
-      gradient: "gradient-violet",
-      count: null,
-      countLabel: null,
-    },
-    {
-      key: "newsletters",
-      href: "/newsletters",
-      title: "Email Marketing",
-      description: "AI newsletters, journeys & analytics",
-      icon: Mail,
-      gradient: "gradient-rose",
-      count: null,
-      countLabel: null,
-    },
-    {
-      key: "website",
-      href: "/websites",
-      title: "Website Marketing",
-      description: "AI-powered realtor website generation",
-      icon: Globe,
-      gradient: "gradient-amber",
-      count: null,
-      countLabel: null,
-    },
-    {
-      key: "social",
-      href: "/social",
-      title: "Social Media",
-      description: "AI content studio for all platforms",
-      icon: Globe,
-      gradient: "gradient-cyan",
-      count: null,
-      countLabel: null,
-    },
-  ];
-
-  // Filter tiles based on user's enabled features
-  const featureTiles = enabledFeatures.length > 0
-    ? allFeatureTiles.filter((tile) => enabledFeatures.includes(tile.key))
-    : allFeatureTiles;
-
-  // Initial stats for the ticker bar (passed to client component)
   const initialDashboardStats = {
     activeListings: activeListings ?? 0,
     openTasks: openTasksCount,
@@ -320,101 +157,117 @@ export default async function DashboardPage() {
     newLeadsToday: 0,
   };
 
+  const clientTasks = (tasks ?? []).map((t: any) => ({
+    id: t.id, title: t.title, status: t.status, priority: t.priority, category: t.category, due_date: t.due_date,
+  }));
+
   return (
     <div className="h-full overflow-y-auto p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
-    <div className="space-y-8">
-      {/* Greeting + Live Metrics */}
-      <div className="animate-float-in">
-        <div className="flex items-center justify-between gap-4">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">
-              {new Date().toLocaleDateString("en-CA", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
-            </p>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-              {getGreeting()}, {userName}
-            </h1>
-          </div>
-          <div className="hidden sm:block shrink-0">
-            <GreetingTicker initialStats={initialDashboardStats} />
+      <div className="space-y-6">
+        {/* ── Greeting ── */}
+        <div className="animate-float-in">
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">
+                {new Date().toLocaleDateString("en-CA", { weekday: "long", month: "long", day: "numeric" })}
+              </p>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+                {getGreeting()}, {userName}
+              </h1>
+            </div>
+            <div className="hidden sm:block shrink-0">
+              <GreetingTicker initialStats={initialDashboardStats} />
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* AI Email Summary */}
-      <div className="animate-float-in" style={{ animationDelay: "60ms" }}>
-        <DailyDigestCard />
-      </div>
-
-      {/* Pipeline Snapshot — only show when listings feature is enabled */}
-      {enabledFeatures.includes("listings") && (
-        <div className="animate-float-in" style={{ animationDelay: "120ms" }}>
+        {/* ── Pipeline Snapshot (always visible) ── */}
+        <div className="animate-float-in" style={{ animationDelay: "40ms" }}>
           <PipelineSnapshot stages={pipelineStages} totalGCI={totalGCI} />
         </div>
-      )}
 
-      {/* Feature Hub */}
-      <div>
-        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">
-          Your Workspace
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5 stagger-children">
-          {featureTiles.map((tile) => {
-            const tileContent = (
-              <>
-                {/* Gradient background */}
-                <div
-                  className={`absolute inset-0 ${tile.gradient} transition-opacity`}
-                />
+        {/* ── Buyer Pipeline + Lifecycle Breakdown ── */}
+        {(activeJourneys.length > 0 || topLifecycleStages.length > 0) && (
+          <div className="animate-float-in space-y-4" style={{ animationDelay: "80ms" }}>
+            {/* Buyer Journeys */}
+            {activeJourneys.length > 0 && (
+              <div className="lf-card p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold">🏠 Buyer Journeys</h3>
+                  <Link href="/contacts?role=buyer" className="text-xs text-[#0F7694] hover:text-[#0A6880] font-medium">
+                    View all →
+                  </Link>
+                </div>
+                <div className="flex items-end gap-2 mb-3">
+                  <span className="text-3xl font-bold text-[#0F7694]">{activeJourneys.length}</span>
+                  <span className="text-xs text-muted-foreground mb-1">active journeys</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(journeyStatusCounts).map(([status, count]) => (
+                    <span key={status} className="px-2 py-0.5 rounded-full bg-[#0F7694]/10 text-[#0A6880] text-xs font-medium capitalize">
+                      {status.replace("_", " ")} ({count})
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
-                {/* Light overlay for depth */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white/12 via-transparent to-black/8" />
-
-                {/* Content */}
-                <div className="relative z-10">
-                  <div className="flex items-start justify-between mb-5">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm ring-1 ring-white/20">
-                      <tile.icon className="h-6 w-6" />
-                    </div>
-                    {tile.count != null && tile.count > 0 && (
-                      <span className="flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-sm ring-1 ring-white/15 px-2.5 py-1 text-xs font-semibold">
-                        {tile.count} {tile.countLabel}
-                      </span>
-                    )}
+            {/* Contact Lifecycle — full width, 2-col grid of stages */}
+            {topLifecycleStages.length > 0 && (
+              <div className="lf-card p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-sm font-semibold">👥 Contact Lifecycle</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {(lifecycleContacts ?? []).length} contacts tracked
+                    </p>
                   </div>
-                  <h3 className="text-lg font-bold mb-1 tracking-tight">
-                    {tile.title}
-                  </h3>
-                  <p className="text-sm text-white/75 leading-relaxed">
-                    {tile.description}
-                  </p>
+                  <Link href="/contacts" className="text-xs text-[#0F7694] hover:text-[#0A6880] font-medium">
+                    View all →
+                  </Link>
                 </div>
-
-                {/* Hover arrow */}
-                <div className="absolute bottom-5 right-5 opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                  <ArrowRight className="h-5 w-5 text-white/70" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+                  {topLifecycleStages.map(([stage, count]) => {
+                    const total = (lifecycleContacts ?? []).length || 1;
+                    const pct = Math.round((count / total) * 100);
+                    const c = LIFECYCLE_COLORS[stage] ?? { bar: "bg-slate-400", bg: "bg-slate-100", dot: "bg-slate-400", text: "text-slate-600" };
+                    return (
+                      <Link
+                        key={stage}
+                        href={`/contacts?lifecycle=${stage}`}
+                        className="group"
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${c.dot}`} />
+                            <span className={`text-xs font-semibold group-hover:underline ${c.text}`}>
+                              {LIFECYCLE_LABELS[stage] ?? stage}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-bold text-foreground">{count}</span>
+                            <span className="text-[10px] text-muted-foreground">{pct}%</span>
+                          </div>
+                        </div>
+                        <div className={`h-2 rounded-full ${c.bg}`}>
+                          <div className={`h-2 rounded-full ${c.bar} transition-all duration-500`} style={{ width: `${pct}%` }} />
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
-              </>
-            );
+              </div>
+            )}
+          </div>
+        )}
 
-            const className = "group relative overflow-hidden rounded-2xl p-6 text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_8px_30px_oklch(0_0_0/20%)] elevation-4";
-
-            return "external" in tile ? (
-              <a key={tile.href} href={tile.href} target="_blank" rel="noopener noreferrer" className={className}>
-                {tileContent}
-              </a>
-            ) : (
-              <Link key={tile.href} href={tile.href} className={className}>
-                {tileContent}
-              </Link>
-            );
-          })}
-        </div>
+        {/* ── Command Center: Calendar + Feed ── */}
+        <DashboardShell
+          initialTasks={clientTasks}
+          pendingShowings={pendingShowings ?? 0}
+          activeListings={activeListings ?? 0}
+        />
       </div>
-    </div>
     </div>
   );
 }

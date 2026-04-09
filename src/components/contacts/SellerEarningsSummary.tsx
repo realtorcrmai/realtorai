@@ -33,21 +33,21 @@ export function SellerEarningsSummary({
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold flex items-center gap-2">
-        <TrendingUp className="h-5 w-5 text-emerald-600" />
+        <TrendingUp className="h-5 w-5 text-[#0F7694]" />
         Earnings Summary
       </h3>
 
       {/* Totals */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 text-center">
-          <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
+        <div className="p-4 rounded-lg bg-[#0F7694]/5 dark:bg-[#1a1535]/20 text-center">
+          <p className="text-2xl font-bold text-[#0A6880] dark:text-[#67D4E8]">
             {totalEarnings.toLocaleString("en-CA", {
               style: "currency",
               currency: "CAD",
               maximumFractionDigits: 0,
             })}
           </p>
-          <p className="text-xs text-emerald-600 dark:text-emerald-500 uppercase font-medium mt-1">
+          <p className="text-xs text-[#0F7694] dark:text-[#0F7694] uppercase font-medium mt-1">
             Total Commission
           </p>
         </div>
@@ -92,7 +92,7 @@ export function SellerEarningsSummary({
               </div>
             </div>
             <div className="text-right shrink-0 ml-3">
-              <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+              <p className="text-sm font-bold text-[#0A6880] dark:text-[#67D4E8] flex items-center gap-1">
                 <DollarSign className="h-3.5 w-3.5" />
                 {deal.commission.toLocaleString("en-CA", {
                   maximumFractionDigits: 0,

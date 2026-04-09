@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getRealtorConfig } from "@/actions/config";
 import type { GreetingRule } from "@/actions/config";
 import Anthropic from "@anthropic-ai/sdk";
+import { createWithRetry } from "@/lib/anthropic/retry";
 
 // ── Types ───────────────────────────────────────────────────
 interface GreetingCandidate {
@@ -362,7 +363,7 @@ Return JSON array:
 
   try {
     const model = process.env.AI_SCORING_MODEL || "claude-sonnet-4-20250514";
-    const msg = await anthropic.messages.create({
+    const msg = await createWithRetry(anthropic, {
       model,
       max_tokens: 3000,
       messages: [{ role: "user", content: prompt }],

@@ -23,7 +23,7 @@ export function QuickAddButton() {
     // Render static placeholder during SSR to avoid hydration mismatch from auto-generated IDs
     return (
       <button
-        className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#4f35d2] text-white"
+        className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0F7694] text-white"
         aria-label="Quick add"
       >
         <Plus className="h-4.5 w-4.5" />
@@ -34,7 +34,7 @@ export function QuickAddButton() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#4f35d2] text-white hover:bg-[#3d28b0] transition-all hover:scale-105"
+        className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0F7694] text-white hover:shadow-md hover:shadow-[#0F7694]/30 transition-all hover:scale-105"
         aria-label="Quick add"
       >
         <Plus className="h-4.5 w-4.5" />

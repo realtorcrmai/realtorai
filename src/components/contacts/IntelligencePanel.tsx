@@ -49,7 +49,7 @@ export function IntelligencePanel({ intelligence, totalEmails = 0 }: Props) {
     trend === "accelerating" ? "↑" : trend === "declining" ? "↓" : "→";
   const trendColor =
     trend === "accelerating"
-      ? "text-emerald-600"
+      ? "text-[#0F7694]"
       : trend === "declining"
       ? "text-red-600"
       : "text-muted-foreground";
@@ -66,13 +66,13 @@ export function IntelligencePanel({ intelligence, totalEmails = 0 }: Props) {
       : "Cold";
   const scoreColor =
     score >= 80
-      ? "bg-purple-100 text-purple-700"
+      ? "bg-[#0F7694]/15 text-[#0A6880]"
       : score >= 60
       ? "bg-red-100 text-red-700"
       : score >= 40
       ? "bg-amber-100 text-amber-700"
       : score >= 20
-      ? "bg-blue-100 text-blue-700"
+      ? "bg-[#0F7694]/10 text-[#0A6880]"
       : "bg-gray-100 text-gray-600";
 
   if (!intelligence) {
@@ -108,13 +108,13 @@ export function IntelligencePanel({ intelligence, totalEmails = 0 }: Props) {
 
         {/* Score hero — colored background card */}
         <div className={`rounded-xl p-4 ${
-          score >= 70 ? "bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200" :
-          score >= 40 ? "bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200" :
-          "bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200"
+          score >= 70 ? "bg-gradient-to-br from-[#0F7694] to-[#0F7694]/5 border border-[#0F7694]/20" :
+          score >= 40 ? "bg-gradient-to-br from-amber-50 to-[#0F7694]/5 border border-amber-200" :
+          "bg-gradient-to-br from-[#0F7694]/5 to-[#0F7694]/10 border border-[#0F7694]/20"
         }`}>
           <div className="flex items-baseline gap-2 mb-3">
             <span className={`text-3xl font-bold ${
-              score >= 70 ? "text-emerald-700" : score >= 40 ? "text-amber-700" : "text-blue-700"
+              score >= 70 ? "text-[#0A6880]" : score >= 40 ? "text-amber-700" : "text-[#0A6880]"
             }`}>{score}</span>
             <span className="text-sm text-muted-foreground">/100</span>
             <span className={`text-sm font-medium ml-auto ${trendColor}`}>{trend}</span>
@@ -124,9 +124,9 @@ export function IntelligencePanel({ intelligence, totalEmails = 0 }: Props) {
           <div className="w-full bg-white/60 rounded-full h-2.5 overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
-                score >= 70 ? "bg-gradient-to-r from-emerald-400 to-emerald-600" :
-                score >= 40 ? "bg-gradient-to-r from-amber-400 to-orange-500" :
-                "bg-gradient-to-r from-blue-400 to-indigo-500"
+                score >= 70 ? "bg-gradient-to-r from-[#0F7694] to-[#0F7694]" :
+                score >= 40 ? "bg-gradient-to-r from-amber-400 to-[#0F7694]" :
+                "bg-gradient-to-r from-blue-400 to-[#0F7694]"
               }`}
               style={{ width: `${Math.max(score, 3)}%` }}
             />
@@ -141,17 +141,17 @@ export function IntelligencePanel({ intelligence, totalEmails = 0 }: Props) {
 
         {/* Stats grid — colored */}
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-violet-50 border border-violet-100 rounded-lg p-2.5 text-center">
-            <p className="text-base font-bold text-violet-700">{intel.email_opens || 0}</p>
-            <p className="text-[10px] text-violet-500 font-medium">Opens</p>
+          <div className="bg-[#0F7694]/5 border border-[#0F7694]/15 rounded-lg p-2.5 text-center">
+            <p className="text-base font-bold text-[#0A6880]">{intel.email_opens || 0}</p>
+            <p className="text-[10px] text-[#0F7694] font-medium">Opens</p>
           </div>
-          <div className="bg-sky-50 border border-sky-100 rounded-lg p-2.5 text-center">
-            <p className="text-base font-bold text-sky-700">{intel.email_clicks || 0}</p>
-            <p className="text-[10px] text-sky-500 font-medium">Clicks</p>
+          <div className="bg-[#0F7694]/5 border border-[#0F7694]/15 rounded-lg p-2.5 text-center">
+            <p className="text-base font-bold text-[#0A6880]">{intel.email_clicks || 0}</p>
+            <p className="text-[10px] text-[#0F7694] font-medium">Clicks</p>
           </div>
-          <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-2.5 text-center">
-            <p className="text-base font-bold text-indigo-700">{totalEmails}</p>
-            <p className="text-[10px] text-indigo-500 font-medium">Sent</p>
+          <div className="bg-[#0F7694]/5 border border-[#0F7694]/15 rounded-lg p-2.5 text-center">
+            <p className="text-base font-bold text-[#0A6880]">{totalEmails}</p>
+            <p className="text-[10px] text-[#0F7694] font-medium">Sent</p>
           </div>
         </div>
       </div>
@@ -223,7 +223,7 @@ export function IntelligencePanel({ intelligence, totalEmails = 0 }: Props) {
                   .slice(0, 3)
                   .map((c) => (
                     <div key={c.type} className="flex items-center gap-1 text-xs mb-1">
-                      <span className="text-emerald-500">✓</span>
+                      <span className="text-[#0F7694]">✓</span>
                       <span>{c.type.replace(/_/g, " ")}</span>
                       <span className="text-muted-foreground">
                         ({Math.round(c.openRate * 100)}%)
@@ -262,7 +262,7 @@ export function IntelligencePanel({ intelligence, totalEmails = 0 }: Props) {
                   key={day}
                   className={`flex-1 text-center py-1 rounded text-[10px] ${
                     timing.best_day?.toLowerCase().startsWith(day.toLowerCase())
-                      ? "bg-primary text-white font-bold"
+                      ? "bg-[#0F7694] text-white font-bold"
                       : "bg-muted text-muted-foreground"
                   }`}
                 >

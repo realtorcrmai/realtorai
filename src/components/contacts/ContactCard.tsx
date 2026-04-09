@@ -19,11 +19,11 @@ export function ContactCard({ contact }: { contact: Contact }) {
           <div className="flex items-start gap-3">
             <div
               className={`flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold shrink-0 ${
-                contact.type === "seller" ? "bg-purple-50 text-purple-700"
-                  : contact.type === "customer" ? "bg-green-50 text-green-700"
-                  : contact.type === "agent" ? "bg-orange-50 text-orange-700"
-                  : contact.type === "partner" ? "bg-teal-50 text-teal-700"
-                  : "bg-blue-50 text-blue-700"
+                contact.type === "seller" ? "bg-[#0F7694]/10 text-[#0A6880]"
+                  : contact.type === "customer" ? "bg-[#0F7694]/5 text-[#0A6880]"
+                  : contact.type === "agent" ? "bg-amber-50 text-amber-700"
+                  : contact.type === "partner" ? "bg-[#0F7694]/10 text-[#0A6880]"
+                  : "bg-[#0F7694]/5 text-[#0A6880]"
               }`}
             >
               {initials}
@@ -36,11 +36,11 @@ export function ContactCard({ contact }: { contact: Contact }) {
                 <Badge
                   variant="outline"
                   className={`text-[11px] font-medium capitalize shrink-0 ${
-                    contact.type === "seller" ? "bg-purple-50 text-purple-700 border-purple-200"
-                      : contact.type === "customer" ? "bg-green-50 text-green-700 border-green-200"
-                      : contact.type === "agent" ? "bg-orange-50 text-orange-700 border-orange-200"
-                      : contact.type === "partner" ? "bg-teal-50 text-teal-700 border-teal-200"
-                      : "bg-blue-50 text-blue-700 border-blue-200"
+                    contact.type === "seller" ? "bg-[#0F7694]/10 text-[#0A6880] border-[#0F7694]/20"
+                      : contact.type === "customer" ? "bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20"
+                      : contact.type === "agent" ? "bg-amber-50 text-amber-700 border-orange-200"
+                      : contact.type === "partner" ? "bg-[#0F7694]/10 text-[#0A6880] border-[#0F7694]/20"
+                      : "bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20"
                   }`}
                 >
                   {contact.type}
@@ -56,11 +56,16 @@ export function ContactCard({ contact }: { contact: Contact }) {
                   <span className="truncate">{contact.email}</span>
                 </div>
               )}
-              <div className="mt-2">
+              <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                 <Badge variant="outline" className="text-[10px] text-muted-foreground">
                   <MessageSquare className="h-2.5 w-2.5 mr-1" />
                   {contact.pref_channel}
                 </Badge>
+                {Boolean((contact as Record<string, unknown>).is_indirect) && (
+                  <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                    🔗 Via property
+                  </Badge>
+                )}
               </div>
             </div>
           </div>

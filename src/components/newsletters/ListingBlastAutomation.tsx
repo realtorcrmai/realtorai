@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
  */
 export function ListingBlastAutomation() {
   return (
-    <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-purple-50/50">
+    <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-[#0F7694]/5">
       <CardContent className="p-5">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2.5">
@@ -21,7 +21,7 @@ export function ListingBlastAutomation() {
               </p>
             </div>
           </div>
-          <Badge className="bg-green-100 text-green-800 hover:bg-green-100 text-[11px]">
+          <Badge className="bg-[#0F7694]/10 text-[#0A6880] hover:bg-[#0F7694]/10 text-[11px]">
             Active
           </Badge>
         </div>

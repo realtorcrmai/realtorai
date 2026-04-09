@@ -287,7 +287,7 @@ export function PDFFormEditor({
             </p>
           </div>
           {existingDraft?.status === "completed" && (
-            <Badge variant="secondary" className="bg-green-100 text-green-700 shrink-0">
+            <Badge variant="secondary" className="bg-[#0F7694]/10 text-[#0A6880] shrink-0">
               <FileCheck className="h-3 w-3 mr-1" />
               Completed
             </Badge>
