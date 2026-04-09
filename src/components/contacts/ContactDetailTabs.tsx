@@ -209,6 +209,11 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
 
   const [currentTab, setCurrentTab] = useState("overview");
 
+  // ── Quick Setup tile triggers — open panels inline without tab switch ──
+  const [triggerPrefs, setTriggerPrefs] = useState(false);
+  const [triggerContext, setTriggerContext] = useState(false);
+  const [triggerDocs, setTriggerDocs] = useState(false);
+
   // ── Lazy-load activity log when Activity tab is selected ──
   const [lazyActivities, setLazyActivities] = useState<ActivityRow[] | null>(activities);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
@@ -243,9 +248,6 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
         </TabsTrigger>
         <TabsTrigger value="deals" className="rounded-lg">
           🏠 Deals
-        </TabsTrigger>
-        <TabsTrigger value="properties" className="rounded-lg">
-          🏠 Properties
         </TabsTrigger>
         <TabsTrigger value="family" className="rounded-lg">
           👨‍👩‍👧 Family
@@ -295,7 +297,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             }
 
             // Preferences
-            if (prefsHasData) {
+            if (prefsHasData || triggerPrefs) {
               filledPanels.push(
                 isSeller ? (
                   <Card key="prefs" id="section-seller-preferences" className="border-l-4 border-l-indigo-400 bg-indigo-50/20 dark:bg-indigo-950/10">
@@ -306,7 +308,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
                 ) : (
                   <Card key="prefs" id="section-buyer-preferences" className="border-l-4 border-l-teal-400 bg-teal-50/20 dark:bg-teal-950/10">
                     <CardContent className="p-4">
-                      <BuyerPreferencesPanel contactId={contactId} preferences={buyerPreferences} />
+                      <BuyerPreferencesPanel contactId={contactId} preferences={buyerPreferences} initialEditing={!prefsHasData && triggerPrefs} />
                     </CardContent>
                   </Card>
                 )
@@ -329,10 +331,10 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             }
 
             // Context
-            if (contextHasData) {
+            if (contextHasData || triggerContext) {
               filledPanels.push(
                 <div key="context">
-                  <ContextLog contactId={contactId} entries={contextEntries} />
+                  <ContextLog contactId={contactId} entries={contextEntries} autoShowForm={!contextHasData && triggerContext} />
                 </div>
               );
             }
@@ -349,11 +351,11 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             }
 
             // Documents
-            if (docsHasData) {
+            if (docsHasData || triggerDocs) {
               filledPanels.push(
                 <Card key="docs" className="border-l-4 border-l-amber-400 bg-amber-50/10 dark:bg-amber-950/10">
                   <CardContent className="p-4">
-                    <ContactDocumentsPanel contactId={contactId} documents={documents} />
+                    <ContactDocumentsPanel contactId={contactId} documents={documents} autoShowUpload={!docsHasData && triggerDocs} />
                   </CardContent>
                 </Card>
               );
@@ -361,39 +363,39 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
 
             // Quick Setup actions for empty sections
             const emptyActions: React.ReactNode[] = [];
-            if (!prefsHasData) {
+            if (!prefsHasData && !triggerPrefs) {
               emptyActions.push(
                 <QuickSetupTile key="prefs" icon="🎯" label="Set Preferences"
                   description={isSeller ? "Motivation, pricing, timeline" : "Budget, areas, property type"}
                   color="indigo"
-                  onClick={() => { const btn = document.querySelector('[data-pref-edit]') as HTMLButtonElement; if (btn) btn.click(); }}
+                  onClick={() => setTriggerPrefs(true)}
                 />
               );
             }
-            if (!contextHasData) {
+            if (!contextHasData && !triggerContext) {
               emptyActions.push(
                 <QuickSetupTile key="context" icon="📝" label="Add Context"
                   description="Notes, objections, preferences"
                   color="teal"
-                  onClick={() => { const el = document.getElementById("context-add-btn"); if (el) el.click(); }}
+                  onClick={() => setTriggerContext(true)}
                 />
               );
             }
-            if (!isSeller && !propertiesHasData) {
+            if (!isSeller && !portfolioItems.length) {
               emptyActions.push(
                 <QuickSetupTile key="properties" icon="🏠" label="Add Property"
                   description="Track properties of interest"
                   color="sky"
-                  onClick={() => {}}
+                  onClick={() => setCurrentTab("portfolio")}
                 />
               );
             }
-            if (!docsHasData) {
+            if (!docsHasData && !triggerDocs) {
               emptyActions.push(
                 <QuickSetupTile key="docs" icon="📄" label="Upload Doc"
                   description="Contracts, ID, pre-approval"
                   color="amber"
-                  onClick={() => { const el = document.getElementById("doc-upload-btn"); if (el) el.click(); }}
+                  onClick={() => setTriggerDocs(true)}
                 />
               );
             }
@@ -533,19 +535,6 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             </Card>
           )}
         </div>
-      </TabsContent>
-
-      {/* ── PROPERTIES TAB ─────────────────────────────────── */}
-      <TabsContent value="properties">
-        <Card className="border-border/60">
-          <CardContent className="p-5">
-            <PropertyDealsTab
-              contactId={contactId}
-              contactName={contact.name}
-              allContacts={allContacts}
-            />
-          </CardContent>
-        </Card>
       </TabsContent>
 
       {/* ── FAMILY TAB ─────────────────────────────────────── */}

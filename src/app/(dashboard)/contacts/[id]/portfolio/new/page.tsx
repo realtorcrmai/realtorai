@@ -2,6 +2,7 @@ import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { notFound } from "next/navigation";
 import { PortfolioForm } from "@/components/contacts/PortfolioForm";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -22,31 +23,27 @@ export default async function PortfolioNewPage({
   if (!contact) notFound();
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="max-w-2xl mx-auto p-4 md:p-8 space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/contacts/${id}`}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            ← {contact.name}
-          </Link>
-          <span className="text-muted-foreground/40">/</span>
-          <span className="text-sm font-medium">Add Property</span>
-        </div>
-
+    <div className="min-h-full bg-[#f8f7fd] dark:bg-background p-3 md:p-4 space-y-4">
+      {/* Back + title */}
+      <div className="flex items-center gap-3">
+        <Link
+          href={`/contacts/${id}?tab=portfolio`}
+          className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">🏠 Add Property to Portfolio</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Track a property {contact.name} owns, co-owns, or has an interest in.
+          <h1 className="text-base font-semibold flex items-center gap-2">
+            🏘️ Add Property to Portfolio
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            Track a property {contact.name} owns, co-owns, or has interest in
           </p>
         </div>
-
-        <div className="lf-card p-6">
-          <PortfolioForm contactId={id} contactName={contact.name} />
-        </div>
       </div>
+
+      {/* Form */}
+      <PortfolioForm contactId={id} contactName={contact.name} />
     </div>
   );
 }

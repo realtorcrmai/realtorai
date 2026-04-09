@@ -18,6 +18,7 @@ type ContextEntry = {
 type Props = {
   contactId: string;
   entries: ContextEntry[];
+  autoShowForm?: boolean;
   onAdd?: (entry: { context_type: string; text: string }) => void;
   onResolve?: (id: string, note: string) => void;
 };
@@ -33,8 +34,8 @@ const TYPE_CONFIG: Record<
   timeline: { icon: Clock, color: "text-[#0F7694]", label: "Timeline" },
 };
 
-export function ContextLog({ contactId, entries, onAdd, onResolve }: Props) {
-  const [showForm, setShowForm] = useState(false);
+export function ContextLog({ contactId, entries, autoShowForm = false, onAdd, onResolve }: Props) {
+  const [showForm, setShowForm] = useState(autoShowForm);
   const [newType, setNewType] = useState("info");
   const [newText, setNewText] = useState("");
   const [saving, setSaving] = useState(false);
