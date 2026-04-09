@@ -1,0 +1,6 @@
+{
+  "type": "CODING:fix",
+  "tier": "Small",
+  "description": "Merge origin/dev into strange-wilson — resolve compliance-log conflict",
+  "phases": { "classified": true }
+}

@@ -1,0 +1,6 @@
+{
+  "type": "CODING:fix",
+  "tier": "Small",
+  "description": "Fix NextAuth server configuration error (ClientFetchError / AuthError)",
+  "phases": { "classified": true }
+}

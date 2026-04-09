@@ -82,3 +82,5 @@
 - TypeScript: 0 errors
 - API: BC Geocoder (free, no key required) — proxied server-side to avoid CORS
 - Behavior: debounced 300ms, returns structured data (fullAddress, city, province, postalCode), keyboard nav supported
+| 2026-04-08 | claude | Merge origin/dev into strange-wilson — resolve compliance-log conflict | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-08 | claude | Save feedback memory — diagnose before acting on visual complaints | DOCS | ✅ | classified | — | Auto-logged by completion-gate |
