@@ -182,13 +182,16 @@ export async function evaluateGreetings(): Promise<{
 
       if (contactIds.length === 0) continue;
 
-      // Fetch contact details
-      // Exclude agents from greetings — they only receive listing blasts
+      // Fetch contact details.
+      // CASL: greetings are commercial email, so enforce casl_consent_given=true
+      // at the DB level + filterSendable() as belt-and-suspenders.
+      // Exclude agents from greetings — they only receive listing blasts.
       const { data: contacts } = await supabase
         .from("contacts")
-        .select("id, name, type, email, newsletter_unsubscribed, newsletter_intelligence, stage_bar, notes")
+        .select("id, name, type, email, newsletter_unsubscribed, casl_consent_given, casl_consent_date, newsletter_intelligence, stage_bar, notes")
         .in("id", contactIds)
         .eq("newsletter_unsubscribed", false)
+        .eq("casl_consent_given", true)
         .not("email", "is", null)
         .not("type", "eq", "agent")
         .limit(200);
@@ -408,10 +411,12 @@ Return JSON array:
 // ── Helpers ──────────────────────────────────────────────────
 
 async function getContactIdsByRecipients(supabase: ReturnType<typeof createAdminClient>, recipients: string): Promise<string[]> {
+  // CASL: all greeting-candidate contacts must have explicit consent.
   let query = supabase
     .from("contacts")
     .select("id")
     .eq("newsletter_unsubscribed", false)
+    .eq("casl_consent_given", true)
     .not("email", "is", null)
     .not("type", "eq", "agent"); // Agents only get listing blasts, not greetings
 

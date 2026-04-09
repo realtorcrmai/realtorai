@@ -228,6 +228,37 @@ export async function updateListingStatus(
     };
   }
 
+  // FINTRAC compliance gate — added 2026-04-09 after QA audit found 22
+  // active listings with zero seller_identities rows.
+  //
+  // BC/federal regulation requires FINTRAC Part XV.1 identity verification
+  // for every real estate transaction. A listing cannot transition to
+  // "active" (open for marketing + offers) without at least one
+  // seller_identities row recording the seller's verified ID.
+  //
+  // Transitions to "sold" or "pending" are also gated because those
+  // imply a transaction is in flight. Only transitions TO "draft",
+  // "withdrawn", or other non-active terminal states are exempt.
+  //
+  // Override: if an environment really needs to bypass this (e.g. dev
+  // with test data), set env var BYPASS_FINTRAC_GATE=true. Do NOT set
+  // this in production.
+  const FINTRAC_GATED_STATUSES = new Set(["active", "pending", "sold"]);
+  if (FINTRAC_GATED_STATUSES.has(newStatus) && process.env.BYPASS_FINTRAC_GATE !== "true") {
+    const { count: identityCount } = await tc.raw
+      .from("seller_identities")
+      .select("id", { count: "exact", head: true })
+      .eq("listing_id", id);
+
+    if ((identityCount ?? 0) === 0) {
+      return {
+        error:
+          `FINTRAC compliance: cannot set listing to "${newStatus}" without at least one seller identity record. ` +
+          `Add a seller_identities row via the Phase 1 intake form (full name, DOB, citizenship, ID type/number/expiry) before activating this listing.`,
+      };
+    }
+  }
+
   const { error } = await tc
     .from("listings")
     .update({ status: newStatus })
