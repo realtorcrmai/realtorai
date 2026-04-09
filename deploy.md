@@ -37,7 +37,7 @@ Create `.env.local` in the project root with these values:
 # ═══════════════════════════════════════
 
 # Supabase (get from: supabase.com/dashboard → Settings → API)
-NEXT_PUBLIC_SUPABASE_URL=https://ybgiljuclpsuhbmdhust.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://qcohfohjihazivkforsj.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
 SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 
@@ -103,7 +103,7 @@ npx supabase --version
 # Generate an access token at: supabase.com/dashboard/account/tokens
 
 # Link your project
-SUPABASE_ACCESS_TOKEN=<your-token> npx supabase link --project-ref ybgiljuclpsuhbmdhust
+SUPABASE_ACCESS_TOKEN=<your-token> npx supabase link --project-ref qcohfohjihazivkforsj
 
 # Run ALL migrations
 for f in supabase/migrations/*.sql; do
@@ -114,7 +114,7 @@ done
 
 ### Option 2: Supabase SQL Editor
 
-1. Go to https://supabase.com/dashboard/project/ybgiljuclpsuhbmdhust/sql
+1. Go to https://supabase.com/dashboard/project/qcohfohjihazivkforsj/sql
 2. Open each migration file in `supabase/migrations/` (in numerical order)
 3. Paste the SQL and click "Run"
 

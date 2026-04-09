@@ -13,7 +13,7 @@ import { resolve } from "path";
 
 // ── Config ──────────────────────────────────────────────────
 const BASE_URL = "http://localhost:3000";
-const SUPABASE_URL = "https://ybgiljuclpsuhbmdhust.supabase.co";
+const SUPABASE_URL = "https://qcohfohjihazivkforsj.supabase.co";
 
 // Load env
 try {

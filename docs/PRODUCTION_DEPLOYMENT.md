@@ -11,7 +11,7 @@
 
 | Service | Dev | Production | Shared? |
 |---------|-----|-----------|---------|
-| **Supabase DB** | `ybgiljuclpsuhbmdhust` (dev) | NEW — separate project | NO — isolated |
+| **Supabase DB** | `qcohfohjihazivkforsj` (dev) | NEW — separate project | NO — isolated |
 | **Netlify** | localhost:3000 | Netlify auto-deploy from `main` | NO — isolated |
 | **Resend (email)** | Same API key | Same API key | YES |
 | **Twilio (SMS)** | Same account | Same account | YES |
@@ -188,7 +188,7 @@ WHERE email = 'realtor@example.com';
 
 ```bash
 # Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://ybgiljuclpsuhbmdhust.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://qcohfohjihazivkforsj.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<from Supabase dashboard>
 SUPABASE_SERVICE_ROLE_KEY=<from Supabase dashboard>
 
@@ -256,9 +256,9 @@ KLING_IMAGE_API_BASE_URL=<kling image endpoint>
 ### Supabase Access
 
 ```bash
-# Project ref: ybgiljuclpsuhbmdhust
-# Dashboard: https://supabase.com/dashboard/project/ybgiljuclpsuhbmdhust
-# SQL Editor: https://supabase.com/dashboard/project/ybgiljuclpsuhbmdhust/sql/new
+# Project ref: qcohfohjihazivkforsj
+# Dashboard: https://supabase.com/dashboard/project/qcohfohjihazivkforsj
+# SQL Editor: https://supabase.com/dashboard/project/qcohfohjihazivkforsj/sql/new
 ```
 
 ### Running Migrations
@@ -438,9 +438,9 @@ WHERE email = 'beta-tester@example.com';
 | Service | URL |
 |---------|-----|
 | Netlify Dashboard | https://vercel.com/dashboard |
-| Supabase Dashboard | https://supabase.com/dashboard/project/ybgiljuclpsuhbmdhust |
+| Supabase Dashboard | https://supabase.com/dashboard/project/qcohfohjihazivkforsj |
 | Resend Dashboard | https://resend.com/dashboard |
-| Supabase SQL Editor | https://supabase.com/dashboard/project/ybgiljuclpsuhbmdhust/sql/new |
+| Supabase SQL Editor | https://supabase.com/dashboard/project/qcohfohjihazivkforsj/sql/new |
 
 ### Common Issues
 
