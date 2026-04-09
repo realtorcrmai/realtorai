@@ -82,3 +82,24 @@
 - TypeScript: 0 errors
 - API: BC Geocoder (free, no key required) — proxied server-side to avoid CORS
 - Behavior: debounced 300ms, returns structured data (fullAddress, city, province, postalCode), keyboard nav supported
+
+## 2026-04-09 | DOCS:infra | Environment documentation for post-consolidation state
+
+**Task:** Document the dev/prod environment setup after the Supabase consolidation so other developers and AI agents know which projects they're connecting to, which branches deploy where, and how to update env vars safely.
+
+**Scope:** 3 files.
+
+**Files changed:**
+- `docs/ENVIRONMENTS.md` (NEW) — canonical source of truth. Covers Supabase projects (active + orphaned), Vercel environments, branch → env mapping, env var locations, deploy flow, external services, quick reference for AI agents, and a list of open follow-ups. ~250 lines.
+- `CLAUDE.md` — added a prominent "Environments — READ BEFORE TOUCHING THE DATABASE" section right after the Agent Playbook block. Summarizes the critical rules (single Supabase project, `main` is reserved, `.env.vault` is stale, migration runner usage, `printf` not `echo` when setting env vars) and points at `docs/ENVIRONMENTS.md` for full details.
+- `.env.local.example` — rewrote with the actual `qcohfohjihazivkforsj` project URL, inline comments explaining how to get working values (`vercel env pull` is the fastest path), a Google OAuth caveat for preview URLs, and notes on the stale vault.
+
+**Validation:** Read-only docs changes. No code impact. `tsc` + `lint` unaffected.
+
+**Not included in this commit:**
+- Re-encrypting `.env.vault` with current values — requires the team passphrase which I don't have
+- Fixing the `CREATE POLICY IF NOT EXISTS` broken SQL in `073_contact_sync.sql` — separate follow-up
+- Writing migration files for `seller_identities` + `listing_enrichment` — separate follow-up
+- Removing the dead `.github/workflows/deploy.yml` + `netlify.toml` — separate follow-up
+
+**Why separate from PR #116:** PR #116 is the consolidation itself (file references + compliance log). This PR is about communicating the new reality to future developers/agents. Different concerns, cleaner review.

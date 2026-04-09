@@ -23,6 +23,33 @@ Read the playbook before every task. It covers: pre-flight, task classification,
 
 ---
 
+## Environments — READ BEFORE TOUCHING THE DATABASE
+
+**Full reference:** `docs/ENVIRONMENTS.md` — always read this before running migrations, changing env vars, or deploying.
+
+**Quick summary as of 2026-04-09 (post-consolidation):**
+
+| | Dev | Production |
+|---|---|---|
+| **Supabase project** | `qcohfohjihazivkforsj` ("realtyaicontent") | not set up yet — planned |
+| **Git branch** | `dev` | `main` (reserved, currently empty of live traffic) |
+| **Vercel env** | Preview | Production |
+| **Deploy URL** | `https://realestate-crm-git-dev-amandhindsas-projects.vercel.app` | `https://realestate-crm-jade-ten.vercel.app` |
+| **Auto-deploy** | On push to `dev` | On push to `main` |
+
+**Critical rules:**
+- **One Supabase project right now: `qcohfohjihazivkforsj`.** Every env scope (Preview + Production + local + GitHub secrets) points at it. Two other projects (`ybgiljuclpsuhbmdhust`, `rsfjescdjuubxadfjyxb`) are orphaned and pending deletion — **do not reference them**.
+- **The `main` branch is not production yet.** Nothing has been merged to main since 2026-04-07. Until the real production environment is set up, `dev` is the only live environment.
+- **`.env.vault` is stale** (last re-encrypted 2026-04-01). Do not `./scripts/vault.sh decrypt` and blindly use the values — they point at the old `ybgilju` project. The canonical env values live in Vercel; run `vercel env pull .env.local` to get current values.
+- **Never push directly to `dev` or `main`** — always via PR.
+- **Two demo realtor users exist** after consolidation: `7de22757-...` = `demo-legacy@realestatecrm.com` (owns 518 of the 698 contacts), `e044c0c6-...` = `demo@realestatecrm.com` (owns the rest). Log in as the legacy one to see most contact data.
+- **Migrations run via `scripts/apply-newsletter-migrations.mjs`** with `SUPABASE_ACCESS_TOKEN` env var (generate at https://supabase.com/dashboard/account/tokens). Never paste SQL directly into the editor for destructive operations — wrap in `BEGIN; ... ROLLBACK;` first.
+- **Use `printf` not `echo` when piping values to `vercel env add`** — `echo` adds a trailing newline that breaks env var values.
+
+**Full details, migration file catalogue, orphan table notes, deploy flow diagram, and follow-up items — all in `docs/ENVIRONMENTS.md`.**
+
+---
+
 ## Project Overview
 
 Realtors360 is a real estate transaction management CRM for licensed BC realtors. It automates the full property listing lifecycle — from seller intake through closing — with integrated showing management, BCREA form generation, AI content creation, and regulatory compliance tracking.
