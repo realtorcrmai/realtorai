@@ -46,7 +46,7 @@ type TaskRow = {
   priority: string;
   category: string;
   due_date: string | null;
-  notes: string | null;
+  description: string | null;
   completed_at: string | null;
   created_at: string;
 };
