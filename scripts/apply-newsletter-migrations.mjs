@@ -16,7 +16,7 @@
  *
  * Usage:
  *   SUPABASE_ACCESS_TOKEN=sbp_... \
- *   SUPABASE_PROJECT_REF=ybgiljuclpsuhbmdhust \
+ *   SUPABASE_PROJECT_REF=qcohfohjihazivkforsj \
  *     node scripts/apply-newsletter-migrations.mjs
  *
  * The migrations themselves are idempotent (CREATE TABLE IF NOT EXISTS,

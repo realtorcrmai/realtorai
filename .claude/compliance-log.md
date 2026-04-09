@@ -84,3 +84,57 @@
 - Behavior: debounced 300ms, returns structured data (fullAddress, city, province, postalCode), keyboard nav supported
 | 2026-04-08 | claude | Merge origin/dev into strange-wilson — resolve compliance-log conflict | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |
 | 2026-04-08 | claude | Save feedback memory — diagnose before acting on visual complaints | DOCS | ✅ | classified | — | Auto-logged by completion-gate |
+
+## 2026-04-09 | DATA:consolidation | Supabase 3→1 project consolidation (qcohfohjihazivkforsj)
+
+**Task:** Consolidate 3 diverged Supabase projects (ybgiljuclpsuhbmdhust "amandhindsa's Project", qcohfohjihazivkforsj "realtyaicontent", rsfjescdjuubxadfjyxb "Realtors360-prod") into a single database at `qcohfohjihazivkforsj` per user decision. Migrate all data. Update all env var references. Orphan the other two projects for later manual deletion.
+
+**Scope:** Management API access to all 3 projects + GitHub Actions secrets + `.env.local` + 17 hardcoded references in scripts/docs.
+
+**Pre-flight discovery:**
+- 3 projects, not 1 as memory claimed. ybgilju had most data (519 contacts, 30 listings, 117 newsletters). qcohfoh had Rahul's unique features (offers, open_houses, contact_family_members). rsfjes was near-empty prod (1 contact).
+- Schemas divergent: 57 tables in common, 65 tables unique to individual projects.
+- GitHub Actions secrets had already been pointing at rsfjes since 2026-04-02 — meaning "production" was targeting a near-empty DB for a week.
+- Migration files exist for ~95% of unique tables; 2 tables (`listing_enrichment`, `seller_identities`) have no migration files and had to be introspected from ybgilju's pg_catalog.
+
+**Validation:** 2,693/2,721 rows imported successfully (99%). 28 rows lost to CHECK constraint enum divergence. 0 orphan FKs after the 518-contact re-homing fix. Final state: 129 public tables, 11 users, 698 contacts, 48 listings, 48 appointments, 117 newsletters, 101 tasks in qcohfoh.
+
+**Files changed on disk:**
+- `realestate-crm/.env.local` — updated NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (initially hallucinated JWT contents; fixed by reading real keys from tmp files)
+- `realestate-crm/.claude/skills/deploy.md`, `deploy.md`, `docs/PRODUCTION_DEPLOYMENT.md` — replaced ybgilju → qcohfoh
+- 13 × `scripts/*.mjs` — replaced hardcoded ybgilju → qcohfoh
+- `supabase/.temp/project-ref`, `supabase/.temp/pooler-url` — replaced ybgilju → qcohfoh
+- GitHub Actions secrets on realtorcrmai/realtorai — updated to qcohfoh keys
+
+**Schema changes applied to qcohfoh (16 migration files + 2 orphan reconstructions):**
+- 055_rag_system, 055_website_integrations (after listingflow-sites FKs satisfied)
+- listingflow-sites/001_website_tables, 002_ai_generation
+- 057_help_events, 058_social_media_studio, 060_voice_agent_system, 061_multi_tenant_voice, 062_oauth_clients, 063_voice_consent
+- 073_contact_sync (patched inline — original has invalid `CREATE POLICY IF NOT EXISTS`), 073_soft_deletes
+- 074_newsletter_engine_v3, 075_newsletter_engine_v3_m2, 076_property_co_ownership, 077_agent_recommendations_unique_index
+- Orphan tables reconstructed: seller_identities, listing_enrichment
+
+**Data migration tooling built (not committed — throwaway helpers at /private/tmp/claude/):**
+- `run-sql.mjs` — simple POST-SQL-file helper using Management API
+- `dump-db.mjs` — dumps all public tables to JSON
+- `import-db-v3.mjs` — schema-aware importer with type coercion, FK-bypass via `SET session_replication_role = replica`, 429 backoff, per-row CHECK constraint fallback
+
+**Lessons captured for future:**
+1. NEVER type JWT values by hand into Edit tool calls — I hallucinated a different JWT than what the API returned. Always pipe from source file to destination via shell/python, never retype.
+2. Supabase users table has `users_email_key` UNIQUE constraint — merging two DBs' users with overlapping emails requires either remapping UUIDs or giving one a distinct email.
+3. `session_replication_role = 'replica'` bypasses FK checks during INSERT — useful for bulk imports but leaves opportunity for orphan data if source is missing parent rows.
+4. CHECK constraints with enum values drift between DBs with the same migration history but different paths — lost rows are unrecoverable without also migrating the constraint.
+
+**OUT OF SCOPE (user must handle manually):**
+- Netlify env vars (need Netlify API token or manual dashboard edit at https://app.netlify.com)
+- Delete `ybgiljuclpsuhbmdhust` + `rsfjescdjuubxadfjyxb` via Supabase dashboard after 24-48h safety window (pause API unavailable for paid tier)
+- Rotate the Supabase Management API access token used in this session — it appeared in plain text in chat history
+- Tell Rahul that the shared dev DB now has all his migrations + additional schema from ybgilju. His local dev may need a schema refresh.
+- `realtors360-sites/.env.local` — not yet checked or updated (separate module)
+
+**Backups at `/private/tmp/claude/`:**
+- `backup_ybgilju/` (92 table JSON files, 2,685 rows)
+- `backup_rsfjes/` (97 table JSON files, 36 rows)
+- `backup_qcohfoh_PRE_MERGE/` (129 table JSON files, 496 rows)
+
+**Full session notes:** `~/.claude/projects/-Users-bigbear-reality-crm/sessions/2026-04-09-supabase-consolidation.md`
