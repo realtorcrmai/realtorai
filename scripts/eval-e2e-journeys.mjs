@@ -8,10 +8,6 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-<<<<<<< HEAD
-const SUPABASE_URL = "https://qcohfohjihazivkforsj.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InliZ2lsanVjbHBzdWhibWRodXN0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzI2Nzc5MSwiZXhwIjoyMDg4ODQzNzkxfQ.qdu6B5jdtckJ23nErIiVuQOzGbPqn_SrEJxQrL9buEk";
-=======
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -22,7 +18,6 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
   process.exit(1);
 }
 
->>>>>>> 5cb2549 (chore(scripts,migrations): post-consolidation cleanup)
 const CRON_SECRET = "listingflow-cron-secret-2026";
 const BASE_URL = "http://localhost:3000";
 
