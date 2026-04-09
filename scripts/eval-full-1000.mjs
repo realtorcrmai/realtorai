@@ -12,7 +12,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-const S_URL = "https://ybgiljuclpsuhbmdhust.supabase.co";
+const S_URL = "https://qcohfohjihazivkforsj.supabase.co";
 const S_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InliZ2lsanVjbHBzdWhibWRodXN0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzI2Nzc5MSwiZXhwIjoyMDg4ODQzNzkxfQ.qdu6B5jdtckJ23nErIiVuQOzGbPqn_SrEJxQrL9buEk";
 const CRON = process.env.CRON_SECRET || "listingflow-cron-secret-2026";
 const BASE = "http://localhost:3000";

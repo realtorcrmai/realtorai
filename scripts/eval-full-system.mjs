@@ -17,7 +17,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = "https://ybgiljuclpsuhbmdhust.supabase.co";
+const SUPABASE_URL = "https://qcohfohjihazivkforsj.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InliZ2lsanVjbHBzdWhibWRodXN0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzI2Nzc5MSwiZXhwIjoyMDg4ODQzNzkxfQ.qdu6B5jdtckJ23nErIiVuQOzGbPqn_SrEJxQrL9buEk";
 const RESEND_KEY = process.env.RESEND_API_KEY || "re_irQXbNRk_ERs9PMkpZu5nSHJGh7zeSKpM";
 const CRON_SECRET = process.env.CRON_SECRET || "listingflow-cron-secret-2026";
