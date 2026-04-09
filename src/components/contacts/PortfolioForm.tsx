@@ -30,13 +30,13 @@ const CATEGORY_OPTIONS: {
 }[] = [
   {
     value: "primary_residence",
-    label: "Primary Residence",
+    label: "Primary",
     emoji: "🏠",
     desc: "Where they live",
-    gradient: "from-indigo-500 to-[#4f35d2]",
-    bg: "from-indigo-50 to-indigo-100/50 dark:from-indigo-950/20 dark:to-indigo-950/30",
-    ring: "ring-indigo-400",
-    border: "border-indigo-200 dark:border-indigo-800",
+    gradient: "from-blue-500 to-[#0F7694]",
+    bg: "from-[#0F7694]/5 to-[#0F7694]/10 dark:from-[#1a1535]/20 dark:to-[#1a1535]/30",
+    ring: "ring-blue-400",
+    border: "border-[#0F7694]/20 dark:border-blue-800",
   },
   {
     value: "investment",
@@ -115,7 +115,7 @@ function SectionLabel({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#4f35d2] to-[#4f35d2] flex items-center justify-center text-white text-xs font-bold shadow-sm shrink-0">
+      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#0F7694] to-[#0F7694] flex items-center justify-center text-white text-xs font-bold shadow-sm shrink-0">
         {number}
       </div>
       <h2 className="text-sm font-semibold">{label}</h2>
@@ -242,12 +242,12 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-10">
+    <form onSubmit={handleSubmit} className="space-y-8">
 
       {/* ── 1. Property Type ─────────────────────────────────── */}
       <div className="space-y-4">
         <SectionLabel number={1} label="What type of property?" />
-        <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5">
+        <div className="grid grid-cols-5 gap-2.5">
           {CATEGORY_OPTIONS.map((opt) => {
             const selected = category === opt.value;
             return (
@@ -273,10 +273,10 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
                 `}>
                   <span className={selected ? "drop-shadow-sm" : ""}>{opt.emoji}</span>
                 </div>
-                <p className={`text-xs font-semibold leading-tight ${selected ? "text-foreground" : "text-muted-foreground"}`}>
+                <p className={`text-sm font-semibold ${selected ? "text-foreground" : "text-muted-foreground"}`}>
                   {opt.label}
                 </p>
-                <p className={`text-[10px] mt-0.5 leading-tight ${selected ? "text-muted-foreground" : "text-muted-foreground/60"}`}>
+                <p className={`text-xs mt-0.5 ${selected ? "text-muted-foreground" : "text-muted-foreground/60"}`}>
                   {opt.desc}
                 </p>
               </button>
