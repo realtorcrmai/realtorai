@@ -3,164 +3,148 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, X, Check, Circle } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
-
-interface ChecklistItem {
-  id: string;
-  label: string;
-  helpSlug: string;
-  checkRoute: string;     // CRM page to complete this action
-  complete: boolean;
-}
-
-const DEFAULT_ITEMS: Omit<ChecklistItem, "complete">[] = [
-  { id: "first-contact", label: "Create your first contact", helpSlug: "contact-management", checkRoute: "/contacts" },
-  { id: "first-listing", label: "Add a listing", helpSlug: "listing-workflow", checkRoute: "/listings" },
-  { id: "phase-1-complete", label: "Complete seller intake (Phase 1)", helpSlug: "listing-workflow", checkRoute: "/listings" },
-  { id: "forms-generated", label: "Generate BCREA forms", helpSlug: "bc-forms-generation", checkRoute: "/forms" },
-  { id: "first-showing", label: "Schedule a showing", helpSlug: "showing-management", checkRoute: "/showings" },
-  { id: "first-email", label: "Send your first email campaign", helpSlug: "email-marketing-engine", checkRoute: "/newsletters" },
-  { id: "used-voice", label: "Use the voice agent", helpSlug: "voice-agent", checkRoute: "/" },
-];
+import { fireConfetti } from "@/hooks/useConfetti";
+import type { ChecklistItem } from "@/actions/checklist";
 
 /**
- * Persistent onboarding checklist that tracks real CRM actions.
- * Shows for 30 days after first use. State persisted in localStorage.
+ * Server-backed onboarding checklist (PO1).
+ * Bottom-right floating widget with progress ring.
+ * Auto-detects completion from real DB state.
+ * Confetti fires when all items complete.
  */
-function loadOnboardingState() {
-  if (typeof window === "undefined") return { items: [], minimized: false, dismissed: false, loaded: false };
-  const stored = localStorage.getItem("lf-onboarding");
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      if (data.dismissed) return { items: [], minimized: false, dismissed: true, loaded: true };
-      return {
-        items: DEFAULT_ITEMS.map((item) => ({
-          ...item,
-          complete: data.completed?.includes(item.id) || false,
-        })),
-        minimized: !!data.minimized,
-        dismissed: false,
-        loaded: true,
-      };
-    } catch {
-      return { items: DEFAULT_ITEMS.map((item) => ({ ...item, complete: false })), minimized: false, dismissed: false, loaded: true };
-    }
-  }
-  localStorage.setItem("lf-onboarding", JSON.stringify({ started: new Date().toISOString(), completed: [], dismissed: false }));
-  return { items: DEFAULT_ITEMS.map((item) => ({ ...item, complete: false })), minimized: false, dismissed: false, loaded: true };
-}
-
 export function OnboardingChecklist() {
+  const { data: session } = useSession();
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [minimized, setMinimized] = useState(false);
   const [dismissed, setDismissed] = useState(false);
-  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [allComplete, setAllComplete] = useState(false);
 
-  // Defer localStorage access to client only (prevents hydration mismatch)
+  // Don't show for admins or if no session
+  const onboardingCompleted = (session?.user as Record<string, unknown> | undefined)?.onboardingCompleted;
+
   useEffect(() => {
-    const state = loadOnboardingState();
-    setItems(state.items);
-    setMinimized(state.minimized);
-    setDismissed(state.dismissed);
-    setLoaded(state.loaded);
-  }, []);
+    if (!session?.user) { setLoading(false); return; }
 
-  // Save state on change
-  useEffect(() => {
-    if (!loaded || dismissed) return;
-    const completed = items.filter((i) => i.complete).map((i) => i.id);
-    const stored = JSON.parse(localStorage.getItem("lf-onboarding") || "{}");
-    localStorage.setItem("lf-onboarding", JSON.stringify({ ...stored, completed, minimized }));
-  }, [items, minimized, loaded, dismissed]);
+    fetch("/api/onboarding/checklist")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.dismissedAll) { setDismissed(true); setLoading(false); return; }
+        const fetchedItems = data.items || [];
+        setItems(fetchedItems);
+        // Check if all complete
+        const allDone = fetchedItems.length > 0 && fetchedItems.every((i: ChecklistItem) => i.completed);
+        if (allDone && !allComplete) {
+          setAllComplete(true);
+          fireConfetti();
+          // Auto-dismiss after 5s
+          setTimeout(() => setDismissed(true), 5000);
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [session, allComplete]);
 
-  function markComplete(id: string) {
-    setItems((prev) => prev.map((item) => item.id === id ? { ...item, complete: true } : item));
-  }
+  // Hide if: loading, dismissed, no items, been more than 30 days since signup
+  if (loading || dismissed || items.length === 0 || !session?.user) return null;
+  // Also hide if onboarding not completed yet (they're still in the wizard)
+  if (onboardingCompleted === false) return null;
 
-  function dismiss() {
+  const completed = items.filter((i) => i.completed).length;
+  const total = items.length;
+  const progress = Math.round((completed / total) * 100);
+
+  const handleDismiss = async () => {
     setDismissed(true);
-    const stored = JSON.parse(localStorage.getItem("lf-onboarding") || "{}");
-    localStorage.setItem("lf-onboarding", JSON.stringify({ ...stored, dismissed: true }));
-  }
+    await fetch("/api/onboarding/checklist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dismiss_all: true }),
+    });
+  };
 
-  if (!loaded || dismissed) return null;
-
-  const completedCount = items.filter((i) => i.complete).length;
-  const totalCount = items.length;
-  const allComplete = completedCount === totalCount;
-  const progress = Math.round((completedCount / totalCount) * 100);
-  const nextIncomplete = items.find((i) => !i.complete);
-
-  // All done — show celebration then auto-dismiss after 5 seconds
-  if (allComplete) {
-    return (
-      <div className="fixed bottom-6 right-6 z-40 w-72 lf-card p-4 shadow-lg border border-brand/20 bg-brand-muted animate-in fade-in-0 zoom-in-95">
-        <p className="text-sm font-semibold text-brand-dark">🎉 You&apos;re all set!</p>
-        <p className="text-xs text-brand mt-1">You&apos;ve completed the getting started checklist.</p>
-        <button onClick={dismiss} className="text-xs text-brand hover:underline mt-2">Dismiss</button>
-      </div>
-    );
-  }
+  // Progress ring SVG
+  const ringSize = 36;
+  const strokeWidth = 3;
+  const radius = (ringSize - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 w-72 lf-card shadow-lg animate-in fade-in-0 zoom-in-95">
+    <div className={cn(
+      "fixed bottom-4 right-4 z-40 w-80 bg-card border rounded-xl shadow-lg transition-all duration-300",
+      "animate-in fade-in-0 zoom-in-95"
+    )}>
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-border">
-        <button onClick={() => setMinimized(!minimized)} className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          🚀 Getting Started ({completedCount}/{totalCount})
-          {minimized ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-        </button>
-        <button onClick={dismiss} aria-label="Dismiss checklist" className="text-muted-foreground hover:text-foreground">
-          <X className="h-3.5 w-3.5" />
-        </button>
-      </div>
+      <div className="flex items-center gap-3 p-3 border-b cursor-pointer" onClick={() => setMinimized(!minimized)}>
+        {/* Progress ring */}
+        <svg width={ringSize} height={ringSize} className="shrink-0 -rotate-90">
+          <circle cx={ringSize / 2} cy={ringSize / 2} r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth={strokeWidth} />
+          <circle
+            cx={ringSize / 2} cy={ringSize / 2} r={radius} fill="none"
+            stroke="url(#checklist-gradient)" strokeWidth={strokeWidth}
+            strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round" className="transition-all duration-500"
+          />
+          <defs>
+            <linearGradient id="checklist-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#4f35d2" />
+              <stop offset="100%" stopColor="#ff5c3a" />
+            </linearGradient>
+          </defs>
+        </svg>
 
-      {/* Progress bar */}
-      <div className="px-3 py-2">
-        <div className="w-full h-1.5 bg-border rounded-full overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-[#67D4E8] to-[#0F7694] rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground">Getting Started</p>
+          <p className="text-xs text-muted-foreground">{completed}/{total} complete</p>
         </div>
+
+        <button onClick={(e) => { e.stopPropagation(); setMinimized(!minimized); }} className="p-1">
+          {minimized ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); handleDismiss(); }}
+          className="p-1 hover:bg-muted rounded"
+          aria-label="Dismiss checklist"
+        >
+          <X className="w-4 h-4 text-muted-foreground" />
+        </button>
       </div>
 
-      {/* Items (when expanded) */}
+      {/* Items */}
       {!minimized && (
-        <div className="px-3 pb-3 space-y-1.5">
+        <div className="p-2 space-y-1 max-h-64 overflow-y-auto">
           {items.map((item) => (
-            <div key={item.id} className="flex items-start gap-2">
-              <button
-                onClick={() => !item.complete && markComplete(item.id)}
-                disabled={item.complete}
-                className="mt-0.5 shrink-0"
-                aria-label={item.complete ? `${item.label} completed` : `Mark ${item.label} as complete`}
-              >
-                {item.complete ? (
-                  <Check className="h-4 w-4 text-brand" />
-                ) : (
-                  <Circle className="h-4 w-4 text-muted-foreground/40" />
-                )}
-              </button>
-              <div className="flex-1 min-w-0">
-                <span className={cn("text-xs", item.complete ? "text-muted-foreground line-through" : "text-foreground")}>
-                  {item.label}
-                </span>
-              </div>
-              {!item.complete && (
-                <Link href={item.checkRoute} className="text-[10px] text-primary hover:underline shrink-0">
-                  Go
-                </Link>
-              )}
-            </div>
-          ))}
-
-          {nextIncomplete && (
             <Link
-              href={nextIncomplete.checkRoute}
-              className="block mt-3 text-center text-xs text-primary hover:underline font-medium"
+              key={item.key}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 p-2 rounded-lg text-sm transition-colors",
+                item.completed
+                  ? "text-muted-foreground"
+                  : "hover:bg-muted text-foreground"
+              )}
             >
-              Continue: {nextIncomplete.label} →
+              {item.completed ? (
+                <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                  <Check className="w-3 h-3 text-white" />
+                </div>
+              ) : (
+                <Circle className="w-5 h-5 text-muted-foreground shrink-0" />
+              )}
+              <span className={cn(item.completed && "line-through")}>{item.label}</span>
             </Link>
-          )}
+          ))}
+        </div>
+      )}
+
+      {/* All complete celebration */}
+      {allComplete && !minimized && (
+        <div className="p-3 text-center border-t">
+          <p className="text-sm font-semibold text-foreground">You&apos;re all set! 🎉</p>
+          <p className="text-xs text-muted-foreground">Great job completing your setup</p>
         </div>
       )}
     </div>

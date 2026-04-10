@@ -3,6 +3,7 @@ import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import PipelineSnapshot from "@/components/dashboard/PipelineSnapshot";
 import { GreetingTicker } from "@/components/dashboard/GreetingTicker";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { OnboardingBanner } from "@/components/dashboard/OnboardingBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -136,6 +137,9 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* ── Onboarding Banner (PO6) ── */}
+        <OnboardingBanner />
 
         {/* ── Pipeline Snapshot (always visible) ── */}
         <div className="animate-float-in" style={{ animationDelay: "40ms" }}>
