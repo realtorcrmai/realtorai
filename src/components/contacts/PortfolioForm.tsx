@@ -174,11 +174,12 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
   const [notes, setNotes]                     = useState(existing?.notes ?? "");
 
   function handleAddressSuggestion(s: AddressSuggestion) {
-    // Use street-only portion so city/province/postal don't duplicate into the street field
+    // Always update all fields unconditionally so stale values from a previous
+    // selection get cleared when the user picks a different address.
     setAddress(s.streetAddress || s.fullAddress);
-    if (s.city)       setCity(s.city);
-    if (s.province)   setProvince(s.province);
-    if (s.postalCode) setPostalCode(s.postalCode);
+    setCity(s.city);
+    setProvince(s.province || "BC");
+    setPostalCode(s.postalCode);
   }
 
   function addCoOwner() {
