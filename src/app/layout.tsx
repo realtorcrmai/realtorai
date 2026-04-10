@@ -47,6 +47,12 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable}`}>
       <head />
       <body className="antialiased">
+        {/* Inline script runs before React hydrates — sets layout data attribute to prevent flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var l=localStorage.getItem("lf-layout-mode");if(l==="sidebar")document.documentElement.dataset.layout="sidebar"}catch(e){}`,
+          }}
+        />
 
         <SessionProvider refetchOnWindowFocus={false} refetchInterval={300}>
           <TooltipProvider>{children}</TooltipProvider>

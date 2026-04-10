@@ -260,6 +260,11 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
         </TabsTrigger>
         <TabsTrigger value="portfolio" className="rounded-lg">
           🏘️ Portfolio
+          {portfolioItems.length > 0 && (
+            <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-bold px-1">
+              {portfolioItems.length}
+            </span>
+          )}
         </TabsTrigger>
       </TabsList>
 

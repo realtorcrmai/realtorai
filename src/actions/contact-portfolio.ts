@@ -399,7 +399,7 @@ export async function createContactFromCoOwner(data: {
       .select("id")
       .single();
 
-    if (error) return { contactId: null, error: "Could not create contact. Please try again." };
+    if (error) return { contactId: null, error: `Could not create contact: ${error.message}` };
     return { contactId: row.id, error: null };
   } catch (err) {
     return { contactId: null, error: String(err) };

@@ -119,7 +119,7 @@ export function ContextLog({ contactId, entries, autoShowForm = false, onAdd, on
               value={newText}
               onChange={(e) => setNewText(e.target.value)}
               placeholder="e.g., Thinks Kits is too expensive"
-              className="w-full text-xs border border-border rounded px-2 py-1.5 bg-background"
+              className="w-full text-sm border border-border rounded px-2 py-1.5 bg-background"
               onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             />
             <div className="flex gap-1">
@@ -140,23 +140,23 @@ export function ContextLog({ contactId, entries, autoShowForm = false, onAdd, on
 
         {/* Active entries */}
         {active.length === 0 && resolved.length === 0 && !showForm && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             No context logged yet. Add objections, preferences, or timeline info.
           </p>
         )}
 
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {active.map((entry) => {
             const config = TYPE_CONFIG[entry.context_type] || TYPE_CONFIG.info;
             return (
               <div
                 key={entry.id}
-                className="flex items-start gap-2 text-xs group"
+                className="flex items-start gap-2 text-sm group"
               >
-                <span className="flex-shrink-0 text-sm leading-none mt-px">{config.emoji}</span>
+                <span className="flex-shrink-0 text-sm leading-none mt-0.5">{config.emoji}</span>
                 <div className="flex-1 min-w-0">
                   <span>{entry.text}</span>
-                  <span className="text-muted-foreground ml-1">
+                  <span className="text-muted-foreground text-xs ml-1">
                     — {new Date(entry.created_at).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
@@ -182,7 +182,7 @@ export function ContextLog({ contactId, entries, autoShowForm = false, onAdd, on
           <div className="mt-3 pt-2 border-t border-border">
             <p className="text-[10px] text-muted-foreground mb-1">Resolved</p>
             {resolved.map((entry) => (
-              <div key={entry.id} className="flex items-start gap-2 text-xs text-muted-foreground line-through">
+              <div key={entry.id} className="flex items-start gap-2 text-sm text-muted-foreground line-through">
                 <Check className="w-3 h-3 mt-0.5 text-brand" />
                 <span>
                   {entry.text}
