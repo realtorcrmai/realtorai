@@ -11,7 +11,7 @@ export async function OPTIONS(request: NextRequest) {
  * Body: { name, phone, email?, address, property_type?, beds?, baths?, sqft? }
  */
 export async function POST(request: NextRequest) {
-  const auth = validateApiKey(request);
+  const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
   const body = await request.json();
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     try {
       const { autoEnrollNewContact } = await import("@/actions/journeys");
       await autoEnrollNewContact(contactId, "seller");
-    } catch {}
+    } catch (err) { console.error("[website-api] non-fatal:", err instanceof Error ? err.message : err); }
   }
 
   // Create high-priority task

@@ -13,6 +13,8 @@ export const FEATURE_KEYS = [
   "newsletters",
   "website",
   "mls-browse",
+  "social",
+  "assistant",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -78,6 +80,14 @@ export const FEATURE_META: Record<
   "mls-browse": {
     label: "MLS Browse",
     description: "Search & import listings from Repliers MLS",
+  },
+  social: {
+    label: "Social Media",
+    description: "AI-powered social content studio",
+  },
+  assistant: {
+    label: "AI Assistant",
+    description: "RAG-powered chat assistant & knowledge base",
   },
 };
 
@@ -148,4 +158,6 @@ export const FEATURE_HREF: Record<FeatureKey, string> = {
   newsletters: "/newsletters",
   website: "/websites",
   "mls-browse": "/mls-browse",
+  social: "/social",
+  assistant: "/assistant",
 };
