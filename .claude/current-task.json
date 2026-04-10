@@ -1,6 +1,0 @@
-{
-  "type": "DEPLOY",
-  "tier": "Small",
-  "description": "Commit housekeeping, push strange-wilson to dev via PR, delete all feature branches",
-  "phases": { "classified": true }
-}

@@ -4,9 +4,9 @@
     {
       "name": "nextjs",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "3001"],
-      "port": 3001,
-      "cwd": "."
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000,
+      "cwd": "/Users/apple/Library/CloudStorage/OneDrive-Personal/CoWork/realtorai"
     }
   ]
 }
