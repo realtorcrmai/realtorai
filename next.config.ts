@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Fix Turbopack workspace root detection (picks up parent package-lock.json otherwise)
+  turbopack: {
+    root: __dirname,
+  },
   // ── Security headers ──────────────────────────────────────────
   // Applied to every response. Added 2026-04-09 for production readiness.
   // Reference: https://nextjs.org/docs/app/api-reference/config/next-config-js/headers

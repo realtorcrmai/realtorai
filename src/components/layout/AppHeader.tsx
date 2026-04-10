@@ -39,8 +39,10 @@ import { VoiceStatusIndicator } from "@/components/voice-agent/VoiceStatusIndica
 
 import type { FeatureKey } from "@/lib/features";
 
-const mainTabs: { href: string; label: string; icon: typeof Building2; featureKey?: FeatureKey }[] = [
-  { href: "/listings", label: "Listings", icon: Building2 },
+// featureKey is REQUIRED — every nav item must declare its plan gate.
+// Items without a featureKey bypass plan gating (TypeScript will catch omissions).
+const mainTabs: { href: string; label: string; icon: typeof Building2; featureKey: FeatureKey }[] = [
+  { href: "/listings", label: "Listings", icon: Building2, featureKey: "listings" },
   { href: "/contacts", label: "Contacts", icon: Users, featureKey: "contacts" },
   { href: "/showings", label: "Showings", icon: Clock, featureKey: "showings" },
   { href: "/calendar", label: "Calendar", icon: Calendar, featureKey: "calendar" },
@@ -65,14 +67,16 @@ export function AppHeader() {
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
 
-  const enabledFeatures = session?.user?.enabledFeatures ?? [];
+  const enabledFeatures = session?.user?.enabledFeatures;
+  const hasFeatureData = Array.isArray(enabledFeatures) && enabledFeatures.length > 0;
   const isAdmin = session?.user?.role === "admin";
 
-  const filteredMainTabs = enabledFeatures.length > 0
-    ? mainTabs.filter((tab) => !tab.featureKey || enabledFeatures.includes(tab.featureKey))
+  // Always filter when feature data is loaded; show all while session is loading
+  const filteredMainTabs = hasFeatureData
+    ? mainTabs.filter((tab) => enabledFeatures.includes(tab.featureKey))
     : mainTabs;
-  const filteredMoreItems = enabledFeatures.length > 0
-    ? moreItems.filter((item) => !item.featureKey || enabledFeatures.includes(item.featureKey))
+  const filteredMoreItems = hasFeatureData
+    ? moreItems.filter((item) => enabledFeatures.includes(item.featureKey))
     : moreItems;
   const allNav = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, featureKey: undefined as FeatureKey | undefined },
@@ -212,7 +216,11 @@ export function AppHeader() {
         <VoiceStatusIndicator />
 
         {/* Search shortcut hint */}
-        <span className="hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-border bg-muted text-[10px] text-muted-foreground font-mono">⌘K</span>
+        <button
+          onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
+          className="hidden md:flex items-center justify-center size-8 shrink-0 aspect-square rounded-lg border border-border bg-card text-[10px] text-foreground/70 font-mono shadow-[0_1px_3px_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.08)] hover:bg-accent hover:text-foreground hover:shadow-[0_3px_8px_rgba(0,0,0,0.15)] transition-all"
+          aria-label="Search (⌘K)"
+        >⌘K</button>
 
         {/* Help */}
         <ContextualHelpButton />

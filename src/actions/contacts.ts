@@ -72,6 +72,7 @@ export async function createContact(formData: ContactFormData, force = false) {
       buyer_preferences: (parsed.data.buyer_preferences as Json) ?? null,
       seller_preferences: (parsed.data.seller_preferences as Json) ?? null,
       demographics: (parsed.data.demographics as Json) ?? null,
+      social_profiles: (parsed.data.social_profiles as Json) ?? null,
     })
     .select()
     .single();
@@ -166,6 +167,7 @@ export async function updateContact(
   if (formData.job_title !== undefined) updatePayload.job_title = formData.job_title || null;
   if (formData.typical_client_profile !== undefined) updatePayload.typical_client_profile = formData.typical_client_profile || null;
   if (formData.referral_agreement_terms !== undefined) updatePayload.referral_agreement_terms = formData.referral_agreement_terms || null;
+  if (formData.social_profiles !== undefined) updatePayload.social_profiles = formData.social_profiles || null;
 
   // Enforce cross-field consistency (stage↔status, type↔stage, tags)
   if (oldContact && needsConsistency) {

@@ -23,10 +23,10 @@ export function QuickAddButton() {
     // Render static placeholder during SSR to avoid hydration mismatch from auto-generated IDs
     return (
       <button
-        className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-white"
+        className="flex items-center justify-center size-8 shrink-0 aspect-square rounded-lg border border-brand/30 bg-brand text-white shadow-[0_1px_3px_rgba(15,118,148,0.3),0_2px_6px_rgba(15,118,148,0.15)]"
         aria-label="Quick add"
       >
-        <Plus className="h-4.5 w-4.5" />
+        <Plus className="h-4 w-4" />
       </button>
     );
   }
@@ -34,10 +34,10 @@ export function QuickAddButton() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-white hover:shadow-md hover:shadow-[#0F7694]/30 transition-all hover:scale-105"
+        className="flex items-center justify-center size-8 shrink-0 aspect-square rounded-lg border border-brand/30 bg-brand text-white shadow-[0_1px_3px_rgba(15,118,148,0.3),0_2px_6px_rgba(15,118,148,0.15)] hover:bg-brand/90 hover:shadow-[0_3px_10px_rgba(15,118,148,0.35)] transition-all"
         aria-label="Quick add"
       >
-        <Plus className="h-4.5 w-4.5" />
+        <Plus className="h-4 w-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="center" side="top" sideOffset={12} className="w-48">
         <DropdownMenuItem onClick={() => router.push("/contacts/new")}>

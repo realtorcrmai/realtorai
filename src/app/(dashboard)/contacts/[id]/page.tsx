@@ -46,238 +46,99 @@ export default async function ContactDetailPage({
 }) {
   const { id } = await params;
   const supabase = await getAuthenticatedTenantClient();
+  const realtorId = supabase.realtorId;
 
-  const { data: contact } = await supabase
+  // ── Lightweight type check (1 query, minimal columns) ──────
+  const { data: contactMeta } = await supabase
     .from("contacts")
-    .select("*")
+    .select("type")
     .eq("id", id)
     .single();
 
-  if (!contact) notFound();
+  if (!contactMeta) notFound();
 
-  const isSeller = contact.type === "seller";
-  const isBuyer = contact.type === "buyer" || contact.type === "dual";
+  const isSeller = contactMeta.type === "seller";
+  const isBuyer = contactMeta.type === "buyer" || contactMeta.type === "dual";
 
-  // ── Single parallel batch: ALL queries at once ─────────────
-  // No waterfalls — everything fetched in one round-trip
+  // ── Two RPC calls + ~6 conditional queries in parallel (was 28 queries) ──
   const [
-    { data: communications },
+    { data: detailRpc },
+    { data: networkRpc },
     { data: listings },
-    { data: contactDates },
-    { data: allContacts },
     { data: buyerListings },
-    { data: tasks },
-    { data: contactDocuments },
-    { data: referralsAsReferrer },
-    { data: referralsAsReferred },
-    { data: workflowEnrollments },
+    { data: allContacts },
     { data: availableWorkflows },
-    { data: activityLog },
     { data: allListings },
-    { data: referredByContact },
-    { data: relationshipsData },
     { data: allHouseholds },
-    { data: householdData },
-    { data: householdMembersData },
-    { data: allWorkflowSteps },
-    { data: contactJourney },
-    { data: contactNewsletters },
-    { data: contactContextEntries },
-    { data: familyMembersData },
     { data: buyerJourneysData },
     { data: journeyPropertiesData },
-    { data: portfolioData },
   ] = await Promise.all([
-    // 1. Communications — limit to recent 50
-    supabase
-      .from("communications")
-      .select("id, contact_id, direction, channel, body, related_id, created_at")
-      .eq("contact_id", id)
-      .order("created_at", { ascending: false })
-      .limit(50),
-    // 2. Seller listings (skip for buyers)
+    // RPC 1: Core contact data (contact, comms, tasks, docs, dates, family, context, portfolio, journey, household, referred-by)
+    supabase.raw.rpc("get_contact_detail", { p_contact_id: id, p_realtor_id: realtorId }),
+    // RPC 2: Network data (relationships, referrals, enrollments+steps, newsletters+events)
+    supabase.raw.rpc("get_contact_network", { p_contact_id: id, p_realtor_id: realtorId }),
+    // Seller listings (conditional — need full Listing type for stage bar)
     isSeller
-      ? supabase
-          .from("listings")
-          .select("*")
-          .eq("seller_id", id)
-          .order("created_at", { ascending: false })
+      ? supabase.from("listings").select("*").eq("seller_id", id).order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
-    // 3. Contact dates
-    supabase
-      .from("contact_dates")
-      .select("id, contact_id, label, date, notes")
-      .eq("contact_id", id)
-      .order("date", { ascending: true }),
-    // 4. All contacts (id, name only — for referral selectors)
-    supabase
-      .from("contacts")
-      .select("id, name"),
-    // 5. Buyer listings (skip for sellers)
+    // Buyer listings (conditional)
     !isSeller
-      ? supabase
-          .from("listings")
-          .select("*")
-          .eq("buyer_id", id)
-          .order("created_at", { ascending: false })
+      ? supabase.from("listings").select("*").eq("buyer_id", id).order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
-    // 6. Tasks
-    supabase
-      .from("tasks")
-      .select("id, contact_id, title, status, priority, category, due_date, notes, completed_at, created_at")
-      .eq("contact_id", id)
-      .order("due_date", { ascending: true }),
-    // 7. Contact documents
-    supabase
-      .from("contact_documents")
-      .select("id, contact_id, doc_type, file_name, file_url, uploaded_at, notes")
-      .eq("contact_id", id)
-      .order("uploaded_at", { ascending: false }),
-    // 8. Referrals as referrer
-    supabase
-      .from("referrals")
-      .select("*, referred_client:contacts!referred_client_contact_id(id, name, type), closed_deal:listings!closed_deal_id(id, address)")
-      .eq("referred_by_contact_id", id)
-      .order("referral_date", { ascending: false }),
-    // 9. Referrals as referred
-    supabase
-      .from("referrals")
-      .select("*, referrer:contacts!referred_by_contact_id(id, name, type), closed_deal:listings!closed_deal_id(id, address)")
-      .eq("referred_client_contact_id", id)
-      .order("referral_date", { ascending: false }),
-    // 10. Workflow enrollments (was waterfall 2)
-    supabase
-      .from("workflow_enrollments")
-      .select("*, workflows(id, name, slug)")
-      .eq("contact_id", id)
-      .order("created_at", { ascending: false }),
-    // 11. Available workflows (was waterfall 2)
-    supabase
-      .from("workflows")
-      .select("id, slug, name, is_active")
-      .order("name", { ascending: true }),
-    // 12. Activity log — deferred to tab click (lazy-loaded)
-    Promise.resolve({ data: null }),
-    // 13. All listings for properties of interest (was waterfall 4)
+    // All contacts (for referral/relationship selectors)
+    supabase.from("contacts").select("id, name"),
+    // Available workflows (active only)
+    supabase.from("workflows").select("id, slug, name, is_active").eq("is_active", true).order("name", { ascending: true }),
+    // All listings for buyer properties of interest
     !isSeller
-      ? supabase
-          .from("listings")
-          .select("id, address, list_price")
-          .order("created_at", { ascending: false })
+      ? supabase.from("listings").select("id, address, list_price").order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
-    // 14. Referred-by contact name (was waterfall 5)
-    contact.referred_by_id
-      ? supabase
-          .from("contacts")
-          .select("name")
-          .eq("id", contact.referred_by_id)
-          .single()
-      : Promise.resolve({ data: null }),
-    // 15. Relationships (both directions)
-    supabase
-      .from("contact_relationships")
-      .select("*, contact_a:contacts!contact_a_id(id, name, type), contact_b:contacts!contact_b_id(id, name, type)")
-      .or(`contact_a_id.eq.${id},contact_b_id.eq.${id}`),
-    // 16. All households (for selector)
-    supabase
-      .from("households")
-      .select("id, name")
-      .order("name"),
-    // 17. Household detail (if contact has household_id) — was sequential
-    (contact as Record<string, unknown>).household_id
-      ? supabase.from("households").select("*").eq("id", (contact as Record<string, unknown>).household_id as string).single()
-      : Promise.resolve({ data: null }),
-    // 18. Household members (if contact has household_id) — was sequential
-    (contact as Record<string, unknown>).household_id
-      ? supabase.from("contacts").select("id, name, type").eq("household_id", (contact as Record<string, unknown>).household_id as string)
-      : Promise.resolve({ data: [] }),
-    // 19. ALL workflow steps (filter client-side) — was sequential waterfall
-    supabase
-      .from("workflow_steps")
-      .select("id, workflow_id, step_order, name, action_type, delay_minutes, delay_unit, delay_value, exit_on_reply")
-      .order("step_order", { ascending: true }),
-    // 20. Contact journey (for Prospect 360 progress bar)
-    supabase
-      .from("contact_journeys")
-      .select("id, journey_type, current_phase, phase_entered_at, next_email_at, is_paused, send_mode, trust_level, created_at")
-      .eq("contact_id", id)
-      .limit(1)
-      .maybeSingle(),
-    // 21. Newsletters sent to this contact (for email history timeline)
-    supabase
-      .from("newsletters")
-      .select("id, subject, email_type, status, html_body, sent_at, created_at, quality_score, ai_context")
-      .eq("contact_id", id)
-      .order("created_at", { ascending: false })
-      .limit(30),
-    // 22. Contact context entries (objections, preferences, timeline)
-    supabase
-      .from("contact_context")
-      .select("id, context_type, text, is_resolved, resolved_note, created_at")
-      .eq("contact_id", id)
-      .order("created_at", { ascending: false }),
-    // 23. Family members
-    supabase
-      .from("contact_family_members")
-      .select("*")
-      .eq("contact_id", id)
-      .order("created_at", { ascending: true }),
-    // 24. Buyer journeys (active/paused only — buyers only)
+    // All households (for selector)
+    supabase.from("households").select("id, name").order("name"),
+    // Buyer journeys (conditional)
     isBuyer
-      ? supabase
-          .from("buyer_journeys")
+      ? supabase.from("buyer_journeys")
           .select("id, status, min_price, max_price, preferred_property_types, preferred_areas, notes, created_at, updated_at")
-          .eq("contact_id", id)
-          .not("status", "in", "(closed,cancelled)")
-          .order("created_at", { ascending: false })
+          .eq("contact_id", id).not("status", "in", "(closed,cancelled)").order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
-    // 25. Recent buyer journey properties (via join on contact_id through buyer_journeys)
+    // Buyer journey properties (conditional)
     isBuyer
-      ? supabase
-          .from("buyer_journey_properties")
+      ? supabase.from("buyer_journey_properties")
           .select("id, journey_id, address, status, interest_level, list_price, notes, offer_price, offer_status, offer_date, subjects, created_at, buyer_journeys!inner(contact_id)")
-          .eq("buyer_journeys.contact_id", id)
-          .order("created_at", { ascending: false })
-          .limit(10)
+          .eq("buyer_journeys.contact_id", id).order("created_at", { ascending: false }).limit(10)
       : Promise.resolve({ data: [] }),
-    // 26. Contact portfolio items
-    supabase
-      .from("contact_portfolio")
-      .select("*")
-      .eq("contact_id", id)
-      .order("purchase_date", { ascending: false }),
   ]);
 
-  const referredByName = referredByContact?.name ?? null;
-  const household = householdData;
-  const householdMembers = (householdMembersData ?? []) as { id: string; name: string; type: string }[];
+  // ── Unpack RPC results ─────────────────────────────────────
+  const detail = (detailRpc ?? {}) as Record<string, any>;
+  const network = (networkRpc ?? {}) as Record<string, any>;
 
-  // Fetch newsletter events for email history timeline
-  const newsletterIds = (contactNewsletters ?? []).map((n: { id: string }) => n.id);
-  const { data: newsletterEvents } = newsletterIds.length > 0
-    ? await supabase
-        .from("newsletter_events")
-        .select("id, newsletter_id, event_type, metadata, created_at")
-        .in("newsletter_id", newsletterIds)
-    : { data: [] };
+  const contact = detail.contact;
+  if (!contact) notFound();
 
-  // Merge events into newsletters
-  const newslettersWithEvents = (contactNewsletters ?? []).map((nl: Record<string, unknown>) => ({
-    ...nl,
-    events: (newsletterEvents ?? []).filter((e: { newsletter_id: string }) => e.newsletter_id === nl.id),
-  }));
+  const communications = detail.communications ?? [];
+  const tasks = detail.tasks ?? [];
+  const contactDocuments = detail.documents ?? [];
+  const contactDates = detail.dates ?? [];
+  const familyMembersData = detail.family_members ?? [];
+  const contactContextEntries = detail.context_entries ?? [];
+  const portfolioData = detail.portfolio ?? [];
+  const contactJourney = detail.journey ?? null;
+  const referredByName = detail.referred_by_name ?? null;
+  const household = detail.household ?? null;
+  const householdMembers = (detail.household_members ?? []) as { id: string; name: string; type: string }[];
+
+  const relationshipsData = network.relationships ?? [];
+  const referralsAsReferrer = network.referrals_as_referrer ?? [];
+  const referralsAsReferred = network.referrals_as_referred ?? [];
+  const workflowEnrollments = network.enrollments ?? [];
+  const newslettersWithEvents = network.newsletters ?? [];
 
   // Parse intelligence
   const intel = contact.newsletter_intelligence as Record<string, unknown> | null;
 
-  // Filter workflow steps to only active/paused enrollment workflows (client-side)
-  const activeEnrollmentWorkflowIds = (workflowEnrollments ?? [])
-    .filter((e: { status: string }) => e.status === "active" || e.status === "paused")
-    .map((e: { workflow_id: string }) => e.workflow_id);
-  const activeWfIdSet = new Set(activeEnrollmentWorkflowIds);
-  const workflowSteps = (allWorkflowSteps ?? []).filter(
-    (s: { workflow_id: string }) => activeWfIdSet.has(s.workflow_id)
-  );
+  // Extract workflow steps from enrollment data (already nested by the RPC)
+  const workflowSteps = workflowEnrollments.flatMap((e: any) => e.steps ?? []);
 
   // Group steps by workflow_id
   type WorkflowStepRow = {
@@ -609,6 +470,21 @@ export default async function ContactDetailPage({
                       {contact.email && <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{contact.email}</span>}
                       <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" />{contact.pref_channel}</span>
                     </div>
+                    {/* Social profiles */}
+                    {contact.social_profiles && typeof contact.social_profiles === "object" && Object.keys(contact.social_profiles as Record<string, string>).length > 0 && (
+                      <div className="flex items-center gap-2 mt-1.5">
+                        {Object.entries(contact.social_profiles as Record<string, string>).map(([platform, handle]) => {
+                          const icons: Record<string, string> = { instagram: "📸", facebook: "📘", linkedin: "💼", twitter: "𝕏", tiktok: "🎵", youtube: "▶️" };
+                          const urls: Record<string, string> = { instagram: "instagram.com/", facebook: "facebook.com/", linkedin: "linkedin.com/in/", twitter: "x.com/", tiktok: "tiktok.com/@", youtube: "youtube.com/@" };
+                          return (
+                            <a key={platform} href={`https://${urls[platform] || ""}${handle}`} target="_blank" rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/50 border border-border/30 text-xs text-brand hover:bg-muted hover:underline transition-colors">
+                              <span>{icons[platform] || "🔗"}</span>@{handle}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <ContactForm
@@ -790,7 +666,7 @@ export default async function ContactDetailPage({
           <QuickLogForm
             contactId={id}
             contactName={contact.name}
-            recentEmails={(contactNewsletters ?? [])
+            recentEmails={(newslettersWithEvents ?? [])
               .filter((nl: Record<string, unknown>) => nl.status === "sent")
               .slice(0, 5)
               .map((nl: Record<string, unknown>) => ({

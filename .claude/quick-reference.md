@@ -52,6 +52,7 @@ STRICT POLICY: No step below can be skipped. No exceptions. No bypass.
 □ Search for existing capability  □ Summarize what exists
 □ What problem? What benefit?  □ Compare 2-3 competitors
 □ Fits Realtors360 vision?  □ If unclear → ask product owner
+□ Check plan gating — free: contacts, calendar, tasks, listings only (see features.ts PLAN_FEATURES)
 
 ═══ GAP ANALYSIS (GAP_ANALYSIS type — Section 4.4.2) ═══
 □ Read ACTUAL code, not reports (HC-13)

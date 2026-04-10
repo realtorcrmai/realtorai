@@ -13,7 +13,7 @@ export default async function ContactsLayout({
 }) {
   const supabase = await getAuthenticatedTenantClient();
 
-  // Fetch contacts + activity counts for sorting by "most active"
+  // Fetch contacts + lightweight activity counts (only FK columns, not full rows)
   const [{ data: contacts }, { data: commCounts }, { data: taskCounts }, { data: enrollCounts }] = await Promise.all([
     supabase
       .from("contacts")
@@ -40,15 +40,14 @@ export default async function ContactsLayout({
     if (t.contact_id) activityScore[t.contact_id] = (activityScore[t.contact_id] || 0) + 1;
   }
   for (const e of enrollCounts ?? []) {
-    activityScore[e.contact_id] = (activityScore[e.contact_id] || 0) + 2; // Enrollments weighted higher
+    activityScore[e.contact_id] = (activityScore[e.contact_id] || 0) + 2;
   }
 
-  // Sort contacts: most activity first, then by last_activity_date, then created_at
+  // Sort: most activity first, then by last_activity_date, then created_at
   const sortedContacts = [...(contacts ?? [])].sort((a, b) => {
     const scoreA = activityScore[a.id] || 0;
     const scoreB = activityScore[b.id] || 0;
     if (scoreB !== scoreA) return scoreB - scoreA;
-    // Tiebreak: most recent activity
     const dateA = a.last_activity_date || a.created_at;
     const dateB = b.last_activity_date || b.created_at;
     return new Date(dateB).getTime() - new Date(dateA).getTime();
