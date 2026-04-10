@@ -172,7 +172,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
-      <div className="space-y-6">
+      <div className="space-y-6 stagger-children">
         {/* ── Greeting ── */}
         <div className="animate-float-in">
           <div className="flex items-center justify-between gap-4">

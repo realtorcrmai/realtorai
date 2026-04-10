@@ -8,7 +8,13 @@ const client = twilio(
 type Channel = "whatsapp" | "sms";
 
 function formatNumber(phone: string, channel: Channel): string {
+  if (!phone || phone.trim().length === 0) {
+    throw new Error("Phone number is required");
+  }
   const clean = phone.replace(/\D/g, "");
+  if (clean.length < 10) {
+    throw new Error(`Invalid phone number: too short (${clean.length} digits)`);
+  }
   const e164 = clean.startsWith("1") ? `+${clean}` : `+1${clean}`;
   return channel === "whatsapp" ? `whatsapp:${e164}` : e164;
 }

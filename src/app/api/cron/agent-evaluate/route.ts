@@ -8,7 +8,7 @@ const BATCH_SIZE = parseInt(process.env.AGENT_EVAL_BATCH_SIZE ?? "100", 10);
 export async function GET(req: Request) {
   // Verify cron secret
   const auth = req.headers.get("authorization");
-  if (CRON_SECRET && auth !== `Bearer ${CRON_SECRET}`) {
+  if (!CRON_SECRET || auth !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

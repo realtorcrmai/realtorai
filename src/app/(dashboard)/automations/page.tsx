@@ -257,7 +257,7 @@ export default async function AutomationsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger-children">
           {workflowList.map((workflow: { id: string; slug: string; name: string; description?: string; workflow_steps: unknown; is_active: boolean; created_at: string; contact_type?: string }) => {
             const blueprint = blueprintsBySlug[workflow.slug];
             const icon = blueprint?.icon ?? "⚙️";

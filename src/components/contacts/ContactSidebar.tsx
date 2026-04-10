@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, X, ArrowDownAZ, Clock, Upload, Download, GitMerge } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getAvatarColor } from "@/lib/avatar-color";
 import type { Contact } from "@/types";
 import { CONTACT_TYPE_COLORS, type ContactType } from "@/lib/constants";
 import {

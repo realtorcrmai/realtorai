@@ -215,7 +215,7 @@ export default async function NewsletterDashboard() {
         {{
           /* ═══ OVERVIEW ═══ */
           overview: (
-            <div className="space-y-3">
+            <div className="space-y-3 stagger-children">
 
               {/* Row 1: Compact stat pills */}
               <div className="flex items-center gap-2 flex-wrap">

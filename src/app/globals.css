@@ -65,10 +65,10 @@
 
 :root {
   /* ── Core surfaces ── */
-  --background: #f4f2ff;                      /* soft lavender — matches reference */
+  --background: #f6f7fb;                      /* neutral gray — Monday.com clean */
   --foreground: oklch(0.145 0 0);           /* #222 — near-black, high contrast */
 
-  --card: oklch(1 0 0 / 82%);              /* semi-transparent white — glassmorphism */
+  --card: oklch(1 0 0);                    /* solid white — no transparency */
   --card-foreground: oklch(0.145 0 0);
 
   --popover: oklch(1 0 0);                  /* solid white for popovers */
@@ -78,21 +78,21 @@
   --primary: oklch(0.50 0.11 220);          /* ≈ rgb(15, 118, 148) — trustworthy teal */
   --primary-foreground: oklch(0.99 0 0);
 
-  /* ── Secondary & Muted — lavender tint ── */
-  --secondary: #eeeaff;                     /* lavender-tinted off-white */
+  /* ── Secondary & Muted — neutral gray ── */
+  --secondary: #f0f1f3;
   --secondary-foreground: oklch(0.20 0 0);
 
-  --muted: #ece8ff;                         /* lavender-tinted muted */
+  --muted: #f0f1f3;
   --muted-foreground: oklch(0.42 0 0);     /* #666 — clearly readable */
 
-  --accent: #e8e3ff;                        /* soft purple accent */
+  --accent: #e8eaed;
   --accent-foreground: oklch(0.20 0 0);
 
   --destructive: oklch(0.577 0.245 27.325);
 
   /* ── Borders & inputs ── */
-  --border: #e0daf0;                       /* lavender-tinted border */
-  --input: #e0daf0;
+  --border: #e6e9ef;                       /* Monday.com neutral border */
+  --input: #e6e9ef;
   --ring: oklch(0.50 0.11 220);            /* matches primary */
 
   /* ── Charts ── */
@@ -145,15 +145,15 @@
   --gradient-orange-end: oklch(0.67 0.14 40);
 
   /* ── Glass tokens (translucent for glassmorphism) ── */
-  --glass-bg: oklch(1 0 0 / 78%);
+  --glass-bg: oklch(1 0 0);
   --glass-border: oklch(0 0 0 / 8%);
-  --glass-blur: 16px;
+  --glass-blur: 0px;
 
   /* ── Elevation shadows ── */
-  --shadow-2: 0 1px 3px oklch(0 0 0 / 8%);
-  --shadow-4: 0 2px 6px oklch(0 0 0 / 8%), 0 1px 3px oklch(0 0 0 / 5%);
-  --shadow-8: 0 4px 12px oklch(0 0 0 / 10%), 0 2px 4px oklch(0 0 0 / 5%);
-  --shadow-16: 0 8px 24px oklch(0 0 0 / 12%), 0 4px 8px oklch(0 0 0 / 5%);
+  --shadow-2: 0 1px 2px oklch(0 0 0 / 5%);
+  --shadow-4: 0 1px 3px oklch(0 0 0 / 5%);
+  --shadow-8: 0 2px 4px oklch(0 0 0 / 5%);
+  --shadow-16: 0 2px 6px oklch(0 0 0 / 5%);
   --shadow-colored: 0 4px 14px oklch(0.50 0.11 220 / 18%);
 }
 
@@ -275,29 +275,45 @@
   .gradient-orange {
     background: linear-gradient(135deg, var(--gradient-orange-start), var(--gradient-orange-end));
   }
+
+  /* ─── Page transition animations ─── */
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes count-up {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.3s ease-out both;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.2s ease-out both;
+  }
+
+  .animate-count-up {
+    animation: count-up 0.4s ease-out both;
+  }
+
+  /* Skeleton to content transition */
+  .skeleton-fade {
+    animation: fade-in 0.3s ease-out both;
+  }
 }
 
 /* ─── Background Canvas (gradient blobs) ─── */
 
 .bg-canvas {
   position: relative;
-}
-
-.bg-canvas::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 700px 600px at -8% -5%, #d4ccf8 0%, transparent 60%),
-    radial-gradient(ellipse 600px 520px at 108% 92%, #ffd4cc 0%, transparent 60%),
-    radial-gradient(ellipse 500px 450px at 95% 3%, #c8f5f0 0%, transparent 60%);
-}
-
-.bg-canvas > * {
-  position: relative;
-  z-index: 1;
 }
 
 /* ─── Animations ─── */
@@ -319,7 +335,7 @@
 
 /* Stagger children animation for tile grids */
 .stagger-children > * {
-  animation: float-in 0.4s cubic-bezier(0.33, 1, 0.68, 1) both;
+  animation: fade-in-up 0.3s ease-out both;
 }
 .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
 .stagger-children > *:nth-child(2) { animation-delay: 50ms; }
