@@ -5,6 +5,8 @@
  * Pure string manipulation — no DB, no side effects, fully testable.
  */
 
+import { config } from '../../config.js';
+
 export type ContactVars = {
   name: string;
   phone: string;
@@ -44,9 +46,9 @@ export function buildVariableContext(
     contact_first_name: firstName,
     contact_phone: contact.phone,
     contact_email: contact.email || '',
-    agent_name: agent?.name || process.env.AGENT_NAME || 'Your Agent',
-    agent_phone: agent?.phone || process.env.AGENT_PHONE || '',
-    agent_email: agent?.email || process.env.AGENT_EMAIL || '',
+    agent_name: agent?.name || config.AGENT_NAME,
+    agent_phone: agent?.phone || config.AGENT_PHONE,
+    agent_email: agent?.email || config.AGENT_EMAIL,
     today_date: today,
   };
 

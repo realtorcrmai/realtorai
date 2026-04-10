@@ -2,6 +2,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import AnthropicSdk from '@anthropic-ai/sdk';
 import type { ToolContext } from '../index.js';
 import { createWithRetry } from '../../../shared/anthropic-retry.js';
+import { config } from '../../../config.js';
 import { logger } from '../../../lib/logger.js';
 
 const anthropic = new AnthropicSdk();
@@ -9,18 +10,83 @@ const anthropic = new AnthropicSdk();
 export const GENERATE_COPY_SCHEMA: Anthropic.Tool = {
   name: 'generate_copy',
   description:
-    'Generate email copy (subject, body paragraphs, CTA) using Claude. Provide the email type, contact context, and any relevant listing/market data. Returns ready-to-send content.',
+    'Generate high-quality email copy using Claude. Provide the email type, contact context (from get_contact + get_engagement_intel), and any relevant data (listings, market stats, RAG history). Returns polished, personalized content ready to send.',
   input_schema: {
     type: 'object',
     properties: {
       email_type: { type: 'string', description: 'Type of email to generate' },
-      contact_context: { type: 'string', description: 'Summary of who this contact is and their preferences (from get_contact and get_engagement_intel)' },
-      data_context: { type: 'string', description: 'Relevant data: listing details, market stats, RAG context, etc.' },
-      tone: { type: 'string', description: 'Tone: warm, professional, casual, urgent. Default: warm.' },
+      contact_context: { type: 'string', description: 'Who this contact is, their preferences, engagement history (from tools)' },
+      data_context: { type: 'string', description: 'Relevant data: listing details, market stats, RAG interaction history' },
+      tone: { type: 'string', description: 'Tone: warm, professional, casual, celebratory, reassuring. Default: warm.' },
+      realtor_name: { type: 'string', description: 'The realtor\'s name for sign-off' },
     },
     required: ['email_type', 'contact_context'],
   },
 };
+
+/**
+ * The real estate email generation prompt.
+ *
+ * This is the single highest-leverage prompt in the entire system.
+ * Quality here determines whether emails get opened, clicked, and replied to
+ * — or ignored and unsubscribed from.
+ */
+const SYSTEM_PROMPT = `You are an elite real estate email copywriter working for a BC (British Columbia) realtor. You write emails that feel like they come from a trusted friend who happens to be an expert in real estate — never from a marketing machine.
+
+## RULES — follow these exactly
+
+1. **Open with something specific.** NEVER generic openers like "I hope this finds you well", "I wanted to reach out", "Just checking in", "I'm excited to share". Instead, reference something REAL: the contact's neighbourhood, a property they clicked on, the season, a local event, their kids' school district — anything that proves you know them.
+
+2. **One idea per email.** Each email does ONE thing: announces a listing, shares a market insight, celebrates a birthday. Never bundle.
+
+3. **Write like you talk.** Short sentences. Contractions. Natural rhythm. Read it aloud — if it sounds like a brochure, rewrite it.
+
+4. **Be specific, never vague.** "The 3-bed on Maple just dropped $40K" beats "A great property in your area has a new price". "Your Kerrisdale condo is worth ~$85K more than last year" beats "Your home has appreciated".
+
+5. **Earn the CTA.** The call-to-action must follow naturally from the content. Don't ask "Schedule a call?" after a birthday wish. Don't say "View Listings" after a market update — say "See what $800K buys in Burnaby this month".
+
+6. **120 words max.** Respect their time. Every word must earn its place.
+
+7. **Canadian spelling.** Neighbourhood, favourite, colour, centre.
+
+8. **Subject lines that create curiosity.** Under 50 characters. Use specifics: "Your Kitsilano equity update" not "Monthly Market Report". Use lowercase after the first word (like a text message, not a headline).
+
+## ANTI-PATTERNS — never write these
+
+- "I hope this email finds you well" → DELETE
+- "I wanted to reach out to let you know" → DELETE
+- "As your trusted real estate advisor" → DELETE (let your advice prove it)
+- "Don't miss this incredible opportunity" → DELETE (salesy)
+- "Act now before it's too late" → DELETE (pressure)
+- "In today's dynamic market" → DELETE (filler)
+- Any sentence that could apply to ANY contact → REWRITE with specifics
+
+## EXAMPLES OF GREAT EMAILS
+
+### Saved Search Match (good)
+Subject: 3-bed under $900K just hit Dunbar
+"Hi Alex, a detached on W 28th just listed at $879K — 3 bed, 2 bath, south-facing yard. It matches the Dunbar criteria you saved. Open house Saturday 2-4. Want me to grab you a preview slot before then? — Sarah"
+
+### Market Update (good)
+Subject: Burnaby condos are moving faster
+"Hey Maya, something interesting this month — Burnaby condos are selling in 14 days avg, down from 22 in January. Your building (Brentwood Gate) had two units close above ask last week. If you've been thinking about timing, this is the data I'd want to see. Here's the full breakdown. — Sarah"
+
+### Birthday (good)
+Subject: Happy birthday, James
+"James — happy birthday! Hope you're celebrating properly today. No real estate talk, just wanted you to know I'm thinking of you. Enjoy it. — Sarah"
+
+## OUTPUT FORMAT
+
+Return ONLY valid JSON (no markdown fences):
+{
+  "subject": "Subject line, under 50 chars, specific not generic",
+  "preheader": "Inbox preview text, under 90 chars, adds context the subject doesn't",
+  "greeting": "Short personalized greeting",
+  "body_paragraphs": ["1-3 short paragraphs, 120 words max total"],
+  "cta_label": "Specific action text (not generic 'Learn More')",
+  "cta_url": "URL or placeholder",
+  "signoff": "Casual sign-off with realtor name"
+}`;
 
 export async function generateCopy(
   _ctx: ToolContext,
@@ -30,35 +96,26 @@ export async function generateCopy(
   const contactContext = String(input.contact_context);
   const dataContext = String(input.data_context || '');
   const tone = String(input.tone || 'warm');
+  const realtorName = String(input.realtor_name || config.AGENT_NAME);
 
-  const prompt = `You are writing a real estate newsletter email for a BC realtor. Generate the email content.
+  const userPrompt = `Write a "${emailType}" email.
 
-EMAIL TYPE: ${emailType}
 TONE: ${tone}
+REALTOR: ${realtorName}
 
-CONTACT CONTEXT:
+ABOUT THIS CONTACT:
 ${contactContext}
 
-${dataContext ? `RELEVANT DATA:\n${dataContext}\n` : ''}
+${dataContext ? `DATA TO REFERENCE (use specifics from this, don't invent):\n${dataContext}\n` : 'No additional data provided — keep it personal and brief.'}
 
-Generate the following as JSON:
-{
-  "subject": "Email subject line, under 60 characters",
-  "preheader": "Preview text for inbox, under 100 characters",
-  "greeting": "Personalized greeting, e.g. 'Hi Alex,'",
-  "body_paragraphs": ["1-3 short paragraphs, total under 120 words"],
-  "cta_label": "Button text, e.g. 'View Listings'",
-  "cta_url": "Button URL or placeholder",
-  "signoff": "Sign-off, e.g. 'Talk soon, — Sarah'"
-}
-
-Return ONLY valid JSON, no markdown fences.`;
+Remember: specific > generic. If you don't have enough data to be specific, keep it SHORT and honest rather than padding with filler.`;
 
   try {
     const message = await createWithRetry(anthropic, {
-      model: process.env.AI_SCORING_MODEL || 'claude-sonnet-4-20250514',
-      max_tokens: 600,
-      messages: [{ role: 'user', content: prompt }],
+      model: config.AI_SCORING_MODEL,
+      max_tokens: 800,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userPrompt }],
     });
 
     const text = message.content[0]?.type === 'text' ? message.content[0].text : '';
@@ -66,7 +123,15 @@ Return ONLY valid JSON, no markdown fences.`;
     try {
       return JSON.parse(text);
     } catch {
-      return { subject: emailType, greeting: 'Hi,', body_paragraphs: [text], cta_label: 'Learn More', cta_url: '#', signoff: 'Best regards' };
+      // If Claude returns text instead of JSON, wrap it
+      return {
+        subject: emailType.replace(/_/g, ' '),
+        greeting: 'Hi,',
+        body_paragraphs: [text.slice(0, 500)],
+        cta_label: 'Learn More',
+        cta_url: '#',
+        signoff: `— ${realtorName}`,
+      };
     }
   } catch (err) {
     logger.error({ err, emailType }, 'generate_copy: Claude call failed');

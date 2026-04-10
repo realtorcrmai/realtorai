@@ -21,6 +21,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
+import { config } from '../../config.js';
 import { logger } from '../../lib/logger.js';
 import { sendEmail } from '../../lib/resend.js';
 import { sendGenericMessage } from '../../lib/twilio.js';
@@ -88,40 +89,76 @@ type StepResult = {
 
 /* ───────────────────────── AI Content Generation ───────────────────────── */
 
+const EMAIL_SYSTEM_PROMPT = `You are an elite real estate email copywriter for a BC realtor. Your emails feel like they come from a trusted friend who knows real estate — never from a marketing machine.
+
+RULES:
+- Open with something SPECIFIC to the contact — their neighbourhood, a property they viewed, the season. NEVER "I hope this finds you well" or "I wanted to reach out".
+- One idea per email. Short sentences. Contractions. Natural rhythm.
+- 120 words max for email body. Under 160 chars for SMS.
+- Canadian spelling: neighbourhood, favourite, colour.
+- Subject lines under 50 chars with specifics, not generic headers.
+- If you don't have enough data to be specific, keep it SHORT and honest.
+
+ANTI-PATTERNS (NEVER write these):
+- "I hope this email finds you well"
+- "As your trusted real estate advisor"
+- "Don't miss this incredible opportunity"
+- "In today's dynamic market"
+- Any sentence that could apply to ANY contact`;
+
+const SMS_SYSTEM_PROMPT = `You write SMS/WhatsApp messages for a BC realtor. Under 160 chars. Casual, friendly, specific. No fluff. Include one action if relevant.`;
+
 /**
- * Generate message content via Claude for steps with ai_template_intent.
- * Simplified port of CRM's `generateMessageContent`.
+ * Generate message content via Claude for workflow steps with ai_template_intent.
+ * Uses RAG context for personalization when available.
  */
 async function generateAIContent(
+  db: SupabaseClient,
   intent: string,
   channel: 'email' | 'sms' | 'whatsapp',
-  contact: { name: string; type: string; stage_bar?: string | null },
+  contact: { name: string; type: string; stage_bar?: string | null; id?: string },
   listing?: { address?: string; list_price?: number } | null,
   agentName?: string
 ): Promise<{ subject?: string; body: string }> {
-  const channelGuidance =
-    channel === 'sms' || channel === 'whatsapp'
-      ? 'Keep the message under 160 characters. Be casual and friendly.'
-      : 'Write a professional but warm email. Include a greeting and sign-off.';
+  const firstName = contact.name.split(/\s+/)[0] || contact.name;
 
-  const prompt = `You are a real estate assistant writing a ${channel} message for a BC realtor.
+  // RAG: pull interaction history for personalization (best-effort)
+  let ragContext = '';
+  if (contact.id) {
+    try {
+      const { retrieveContext } = await import('../rag/retriever.js');
+      const retrieved = await retrieveContext(
+        db,
+        `${contact.name} ${intent} recent interactions preferences`,
+        { contact_id: contact.id, content_type: ['message', 'activity', 'email'] },
+        5
+      );
+      if (retrieved.formatted) {
+        ragContext = `\nINTERACTION HISTORY (use specifics from this):\n${retrieved.formatted}\n`;
+      }
+    } catch {
+      // RAG unavailable — proceed without
+    }
+  }
 
-Context:
-- Contact: ${contact.name} (${contact.type}, stage: ${contact.stage_bar || 'unknown'})
-- Agent: ${agentName || 'the realtor'}
-${listing ? `- Property: ${listing.address || 'N/A'}, Price: $${listing.list_price?.toLocaleString() || 'N/A'}` : ''}
+  const listingInfo = listing
+    ? `\nPROPERTY: ${listing.address || 'N/A'}, $${listing.list_price?.toLocaleString() || 'N/A'}`
+    : '';
 
-Intent: ${intent}
+  const prompt = `Write a ${channel} message.
 
-${channelGuidance}
-
-${channel === 'email' ? 'Return JSON: { "subject": "...", "body": "..." }' : 'Return JSON: { "body": "..." }'}
-
-Return ONLY valid JSON, no markdown.`;
+CONTACT: ${firstName} (${contact.type}, stage: ${contact.stage_bar || 'lead'})
+REALTOR: ${agentName || config.AGENT_NAME}${listingInfo}
+INTENT: ${intent}
+${ragContext}
+${channel === 'email'
+    ? 'Return ONLY valid JSON: { "subject": "under 50 chars, specific", "body": "greeting + 1-3 paragraphs + sign-off, 120 words max" }'
+    : 'Return ONLY valid JSON: { "body": "under 160 chars" }'}`;
 
   const message = await createWithRetry(anthropic, {
-    model: process.env.AI_SCORING_MODEL || 'claude-sonnet-4-20250514',
-    max_tokens: 500,
+    model: config.AI_SCORING_MODEL,
+    max_tokens: 600,
+    system: channel === 'email' ? EMAIL_SYSTEM_PROMPT : SMS_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -196,10 +233,11 @@ async function executeAutoMessage(
   // AI-powered content generation
   if (aiIntent) {
     try {
-      const aiResult = await generateAIContent(aiIntent, channel, {
+      const aiResult = await generateAIContent(db, aiIntent, channel, {
         name: contact.name,
         type: contact.type,
         stage_bar: contact.lead_status,
+        id: contact.id,
       }, listing ? { address: listing.address, list_price: listing.list_price ?? undefined } : null, variables.agent_name);
       body = aiResult.body;
       subject = aiResult.subject || '';
