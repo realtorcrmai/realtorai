@@ -37,6 +37,7 @@ import { checkFrequencyCap, CHECK_FREQUENCY_CAP_SCHEMA } from './decide/check-fr
 import { pickTemplate, PICK_TEMPLATE_SCHEMA } from './decide/pick-template.js';
 import { generateCopy, GENERATE_COPY_SCHEMA } from './decide/generate-copy.js';
 import { classifyTrustLevel, CLASSIFY_TRUST_LEVEL_SCHEMA } from './decide/classify-trust-level.js';
+import { optimizeSendParams, OPTIMIZE_SEND_PARAMS_SCHEMA } from './decide/optimize-send-params.js';
 
 // WRITE tools
 import { draftEmail, DRAFT_EMAIL_SCHEMA } from './write/draft-email.js';
@@ -44,6 +45,7 @@ import { queueForApproval, QUEUE_FOR_APPROVAL_SCHEMA } from './write/queue-for-a
 import { sendEmailTool, SEND_EMAIL_SCHEMA } from './write/send-email.js';
 import { scheduleSend, SCHEDULE_SEND_SCHEMA } from './write/schedule-send.js';
 import { logDecision, LOG_DECISION_SCHEMA } from './write/log-decision.js';
+import { abTestSubject, AB_TEST_SUBJECT_SCHEMA } from './write/ab-test-subject.js';
 
 export type ToolContext = {
   db: SupabaseClient;
@@ -73,12 +75,14 @@ export const AGENT_TOOLS: Record<string, ToolDef> = {
   pick_template: { schema: PICK_TEMPLATE_SCHEMA, handler: pickTemplate, category: 'decide' },
   generate_copy: { schema: GENERATE_COPY_SCHEMA, handler: generateCopy, category: 'decide' },
   classify_trust_level: { schema: CLASSIFY_TRUST_LEVEL_SCHEMA, handler: classifyTrustLevel, category: 'decide' },
+  optimize_send_params: { schema: OPTIMIZE_SEND_PARAMS_SCHEMA, handler: optimizeSendParams, category: 'decide' },
   // WRITE
   draft_email: { schema: DRAFT_EMAIL_SCHEMA, handler: draftEmail, category: 'write' },
   queue_for_approval: { schema: QUEUE_FOR_APPROVAL_SCHEMA, handler: queueForApproval, category: 'write' },
   send_email: { schema: SEND_EMAIL_SCHEMA, handler: sendEmailTool, category: 'write' },
   schedule_send: { schema: SCHEDULE_SEND_SCHEMA, handler: scheduleSend, category: 'write' },
   log_decision: { schema: LOG_DECISION_SCHEMA, handler: logDecision, category: 'write' },
+  ab_test_subject: { schema: AB_TEST_SUBJECT_SCHEMA, handler: abTestSubject, category: 'write' },
 };
 
 /** Tool definitions array for Claude API. */

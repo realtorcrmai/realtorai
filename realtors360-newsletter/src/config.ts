@@ -26,6 +26,13 @@ const ConfigSchema = z.object({
 
   // Inter-service
   NEWSLETTER_SHARED_SECRET: z.string().optional(),
+  NEWSLETTER_SERVICE_URL: z.string().default('http://localhost:8080'),
+
+  // Sentry (optional — disabled when not set)
+  SENTRY_DSN: z.string().optional(),
+
+  // IP warm-up (optional — overrides auto-detection of first send date)
+  WARMUP_START_DATE: z.string().optional(),
 
   // Flags
   FLAG_SAVED_SEARCH: z.enum(['on', 'off']).default('on'),
