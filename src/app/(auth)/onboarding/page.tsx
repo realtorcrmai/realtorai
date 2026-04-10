@@ -313,73 +313,40 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Left panel — fixed so it never disappears when right panel scrolls */}
-      <div className="hidden lg:flex fixed top-0 left-0 w-1/2 h-screen bg-primary overflow-hidden z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_oklch(0.60_0.20_260)_0%,_transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_oklch(0.40_0.15_240)_0%,_transparent_60%)]" />
-        <div className="relative z-10 flex flex-col justify-between p-12 text-primary-foreground w-full">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-              <Home className="h-5 w-5" />
-            </div>
-            <span className="text-xl font-bold tracking-tight">RealtorAI</span>
-          </div>
-          <div className="space-y-4">
-            <h1 className="text-4xl font-bold leading-tight">
-              Let&apos;s set up
-              <br />
-              your workspace
-            </h1>
-            <p className="text-lg text-primary-foreground/80 max-w-md">
-              {step === 1 && "Add a photo and phone so clients recognize you."}
-              {step === 2 && "Import your contacts to get started fast."}
-              {step === 3 && "Connect your email for conversation logging."}
-              {step === 4 && "Connect your calendar for showing management."}
-              {step === 5 && "Add your professional details."}
-              {step === 6 && "Connect your MLS for listing sync."}
-              {step === 7 && "You're all set! Choose where to start."}
-            </p>
-          </div>
-          {/* Progress */}
-          <div className="flex gap-2">
-            {STEPS.map((s) => (
-              <div
-                key={s.num}
-                className={`h-1.5 flex-1 rounded-full transition-colors ${
-                  step >= s.num ? "bg-white" : "bg-white/20"
-                }`}
-              />
-            ))}
-          </div>
-        </div>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#f4f2ff] to-[#e8e4ff]">
+      {/* Progress bar — thin gradient at top (matches personalization) */}
+      <div className="fixed top-0 left-0 right-0 h-1 z-50">
+        <div
+          className="h-full bg-gradient-to-r from-[#4f35d2] to-[#ff5c3a] transition-all duration-300 ease-out"
+          style={{ width: `${Math.max(8, (step / STEPS.length) * 100)}%` }}
+        />
       </div>
 
-      {/* Right panel — scrollable, offset for fixed left panel */}
-      <div className="lg:ml-[50%] flex flex-1 items-start justify-center p-6 bg-background min-h-screen overflow-y-auto">
-        <div className="w-full max-w-md space-y-6 py-8">
-          {/* Mobile progress */}
-          <div className="lg:hidden flex items-center justify-center gap-3 mb-4">
+      {/* Back button */}
+      {step > 1 && (
+        <button
+          onClick={goBack}
+          className="fixed top-6 left-6 z-50 w-10 h-10 rounded-full bg-white/80 backdrop-blur border border-gray-200 flex items-center justify-center hover:bg-white transition-colors"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
+        </button>
+      )}
+
+      {/* Centered content */}
+      <div className="flex-1 flex flex-col items-center justify-start px-4 py-16 overflow-y-auto">
+        <div className="w-full max-w-lg">
+          {/* Logo */}
+          <div className="flex items-center justify-center gap-3 mb-6">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
               <Home className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold tracking-tight">RealtorAI</span>
           </div>
 
-          {/* Step indicator */}
-          <div className="flex items-center justify-center gap-1 lg:hidden">
-            {STEPS.map((s) => (
-              <div
-                key={s.num}
-                className={`h-1 flex-1 max-w-12 rounded-full ${
-                  step >= s.num ? "bg-primary" : "bg-muted"
-                }`}
-              />
-            ))}
-          </div>
-
-          <Card className="border-0 shadow-none lg:border lg:shadow-sm">
-            <CardContent className="p-0 lg:p-6 space-y-5">
+          {/* Card */}
+          <Card className="border bg-white/90 backdrop-blur shadow-lg">
+            <CardContent className="p-6 space-y-5">
               {error && (
                 <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
                   {error}
@@ -835,6 +802,18 @@ export default function OnboardingPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Step dots */}
+          <div className="flex items-center justify-center gap-2 mt-4">
+            {STEPS.map((s) => (
+              <div
+                key={s.num}
+                className={`h-2 w-2 rounded-full transition-colors ${
+                  step >= s.num ? "bg-[#4f35d2]" : "bg-gray-300"
+                }`}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>
