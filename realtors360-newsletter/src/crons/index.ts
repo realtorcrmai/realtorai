@@ -6,6 +6,8 @@ import { checkBirthdays } from './check-birthdays.js';
 import { runRagBackfill } from './rag-backfill.js';
 import { runWeeklyLearning } from './weekly-learning.js';
 import { runAgentScoring } from './agent-scoring.js';
+import { runProcessWorkflows } from './process-workflows.js';
+import { runAgentTriage } from './agent-triage.js';
 
 /**
  * Cron registry.
@@ -15,9 +17,9 @@ import { runAgentScoring } from './agent-scoring.js';
  * M3-B: rag-backfill weekly Sunday 03:00 Vancouver (gated on FLAG_RAG_BACKFILL).
  * M3-C: weekly-learning Monday 06:00 Vancouver (gated on FLAG_WEEKLY_LEARNING).
  * M3-D: agent-scoring every 15 min Vancouver (gated on FLAG_AGENT_SCORING).
- * M3-E will add the last migrated CRM cron (process-workflows) — highest
- * risk, lands last with the most validation behind it. Each is gated on
- * its own feature flag for safe rollout.
+ * M3-E: process-workflows every 2 min Vancouver (gated on FLAG_PROCESS_WORKFLOWS).
+ *   The critical port — the whole reason this service exists (Vercel 10s timeout).
+ *   Each is gated on its own feature flag for safe rollout.
  *
  * node-cron uses the host's local timezone unless overridden. We always pass
  * the explicit timezone option so production behaviour matches dev.
@@ -82,5 +84,42 @@ export function startCrons(): void {
   logger.info(
     { flag: config.FLAG_AGENT_SCORING },
     'cron: registered agent-scoring (*/15 * * * * America/Vancouver)'
+  );
+
+  // M3-E: process-workflows (every 2 min Vancouver). THE critical port.
+  // The CRM's Vercel cron times out at ~20 enrollments because each
+  // enrollment may invoke Claude + Resend + Twilio sequentially. Here
+  // there's no timeout — we can process hundreds. Gated on
+  // FLAG_PROCESS_WORKFLOWS; when enabled, DISABLE the CRM's cron in
+  // vercel.json to avoid double-processing.
+  cron.schedule(
+    '*/2 * * * *',
+    () => {
+      runProcessWorkflows().catch((err) =>
+        logger.error({ err }, 'cron: process-workflows threw')
+      );
+    },
+    { timezone: 'America/Vancouver' }
+  );
+  logger.info(
+    { flag: config.FLAG_PROCESS_WORKFLOWS },
+    'cron: registered process-workflows (*/2 * * * * America/Vancouver)'
+  );
+
+  // M5: agent-triage (hourly). The newsletter agent's per-realtor triage
+  // loop identifies contacts needing emails and spawns per-contact Claude
+  // tool-use runs. Gated on FLAG_AGENT_TRIAGE (default off).
+  cron.schedule(
+    '0 * * * *',
+    () => {
+      runAgentTriage().catch((err) =>
+        logger.error({ err }, 'cron: agent-triage threw')
+      );
+    },
+    { timezone: 'America/Vancouver' }
+  );
+  logger.info(
+    { flag: config.FLAG_AGENT_TRIAGE },
+    'cron: registered agent-triage (0 * * * * America/Vancouver)'
   );
 }

@@ -1,0 +1,258 @@
+/**
+ * Newsletter Agent Orchestrator — M5.
+ *
+ * The agent loop: Claude tool_use with 17 tools, max 12 turns.
+ *
+ * Architecture (per SPEC_Newsletter_Agent_M5.md §2):
+ *   - Agent DECIDES and orchestrates (no business logic)
+ *   - Tools DO the work (typed, deterministic, testable)
+ *   - READ → DECIDE → WRITE flow
+ *
+ * Trigger model (§3.1): BOTH scheduled + event-driven.
+ *   - Hourly cron calls `runTriageLoop()` which identifies contacts
+ *     needing action and spawns per-contact agent runs.
+ *   - High-priority events (new listing match, price drop) trigger
+ *     immediate per-contact runs.
+ *
+ * Autonomy (§3.2): Trust-based.
+ *   - L0: all emails go to approval queue
+ *   - L1+: low-stakes auto-send
+ *   - L2+: most auto-send
+ *   - L3: full auto
+ */
+
+import Anthropic from '@anthropic-ai/sdk';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { logger } from '../lib/logger.js';
+import { getToolSchemas, executeTool, type ToolContext } from './tools/index.js';
+
+const anthropic = new Anthropic();
+const MAX_TURNS = 12;
+const AGENT_MODEL = 'claude-sonnet-4-20250514';
+
+const SYSTEM_PROMPT = `You are the Newsletter Agent for Realtors360 — an AI assistant that helps BC real estate agents send the right email to the right contact at the right time.
+
+Your job in each run:
+1. READ: Gather context about the contact — who they are, what they've engaged with, what listings are relevant, what the market looks like.
+2. DECIDE: Score their intent, check frequency caps, classify trust level, pick the right template, generate personalized copy.
+3. WRITE: Draft the email, then either send it (if trust level allows auto-send) or queue it for realtor approval.
+
+Rules:
+- NEVER send to a contact without checking frequency caps first (check_frequency_cap tool).
+- ALWAYS check trust level before deciding auto-send vs queue (classify_trust_level tool).
+- ALWAYS log your decision with reasoning (log_decision tool) — the realtor reviews your decisions.
+- Keep emails SHORT: 1-3 paragraphs, under 120 words total. Subject under 60 chars.
+- Be warm, professional, and specific. Reference actual data (listings, market stats) when available.
+- If you don't have enough data to write a useful email, log a "skip" decision instead of sending garbage.
+- For L0 contacts (trust level 0), ALWAYS use queue_for_approval instead of send_email.
+- For L1+ contacts with low-stakes email types (market_update, birthday, neighbourhood_guide), you may auto-send.
+- For high-stakes email types (cold_pitch, re_engagement), always queue for approval regardless of trust level.
+
+You have access to the full CRM data through your tools. Use them.`;
+
+export type AgentRunResult = {
+  runId: string;
+  contactId: string;
+  decisions: number;
+  status: 'completed' | 'failed' | 'no_action';
+  error?: string;
+};
+
+/**
+ * Run the agent for a single contact. The agent uses Claude tool_use
+ * to gather context, make decisions, and take action.
+ */
+export async function runAgentForContact(
+  db: SupabaseClient,
+  realtorId: string,
+  contactId: string,
+  trigger: string = 'scheduled'
+): Promise<AgentRunResult> {
+  const ctx: ToolContext = { db, realtorId };
+  const runLog = logger.child({ realtorId, contactId, trigger });
+
+  // Create agent_run record
+  const { data: run, error: runErr } = await db
+    .from('agent_runs')
+    .insert({
+      realtor_id: realtorId,
+      trigger_type: trigger,
+      contact_ids_evaluated: [contactId],
+      status: 'running',
+    })
+    .select('id')
+    .single();
+
+  if (runErr || !run) {
+    runLog.error({ err: runErr }, 'agent: failed to create run record');
+    return { runId: '', contactId, decisions: 0, status: 'failed', error: runErr?.message };
+  }
+
+  const runId = run.id;
+  let decisions = 0;
+
+  try {
+    const messages: Anthropic.MessageParam[] = [
+      {
+        role: 'user',
+        content: `Evaluate contact ${contactId} for realtor ${realtorId}. Trigger: ${trigger}.
+Start by getting the contact's details and engagement intelligence, then decide if they need an email and what kind. If yes, generate and send/queue it. If no, log a skip decision with your reasoning.`,
+      },
+    ];
+
+    for (let turn = 0; turn < MAX_TURNS; turn++) {
+      const response = await anthropic.messages.create({
+        model: AGENT_MODEL,
+        max_tokens: 1024,
+        system: SYSTEM_PROMPT,
+        tools: getToolSchemas(),
+        messages,
+      });
+
+      // If the model stops without tool use, we're done
+      if (response.stop_reason === 'end_turn') {
+        runLog.info({ turn, decisions }, 'agent: completed (end_turn)');
+        break;
+      }
+
+      // Process tool calls — narrow the ContentBlock union to ToolUseBlock
+      const toolUseBlocks: Array<{ type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }> = [];
+      for (const block of response.content) {
+        if (block.type === 'tool_use') {
+          toolUseBlocks.push({
+            type: 'tool_use',
+            id: block.id,
+            name: block.name,
+            input: block.input as Record<string, unknown>,
+          });
+        }
+      }
+
+      if (toolUseBlocks.length === 0) {
+        runLog.info({ turn, decisions }, 'agent: completed (no more tool calls)');
+        break;
+      }
+
+      // Add assistant message with tool calls
+      messages.push({ role: 'assistant', content: response.content });
+
+      // Execute each tool call and collect results
+      const toolResults: Anthropic.ToolResultBlockParam[] = [];
+      for (const toolBlock of toolUseBlocks) {
+        // Inject run_id into log_decision calls
+        const toolInput = { ...toolBlock.input };
+        if (toolBlock.name === 'log_decision') {
+          toolInput.run_id = runId;
+        }
+
+        const result = await executeTool(ctx, toolBlock.name, toolInput);
+
+        // Count WRITE tool calls as decisions
+        if (['draft_email', 'send_email', 'queue_for_approval', 'schedule_send', 'log_decision'].includes(toolBlock.name)) {
+          decisions++;
+        }
+
+        toolResults.push({
+          type: 'tool_result',
+          tool_use_id: toolBlock.id,
+          content: JSON.stringify(result),
+        });
+
+        runLog.debug({ tool: toolBlock.name, turn }, 'agent: tool executed');
+      }
+
+      messages.push({ role: 'user', content: toolResults });
+    }
+
+    // Update run record
+    await db
+      .from('agent_runs')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        decisions_made: decisions,
+      })
+      .eq('id', runId);
+
+    return { runId, contactId, decisions, status: decisions > 0 ? 'completed' : 'no_action' };
+  } catch (err) {
+    runLog.error({ err }, 'agent: run failed');
+    await db
+      .from('agent_runs')
+      .update({
+        status: 'failed',
+        completed_at: new Date().toISOString(),
+        error_message: err instanceof Error ? err.message : String(err),
+      })
+      .eq('id', runId);
+
+    return { runId, contactId, decisions, status: 'failed', error: String(err) };
+  }
+}
+
+/**
+ * Per-realtor triage loop. Called by the hourly cron.
+ *
+ * 1. Find contacts that might need an email (recent events, stale engagement, etc.)
+ * 2. Run the agent for each (up to 20 contacts per cycle, 5 concurrent)
+ * 3. Return summary of actions taken
+ */
+export async function runTriageLoop(
+  db: SupabaseClient,
+  realtorId: string
+): Promise<{ contactsEvaluated: number; totalDecisions: number; results: AgentRunResult[] }> {
+  const triageLog = logger.child({ realtorId, phase: 'triage' });
+
+  // Find contacts that might need attention:
+  // 1. Contacts with pending email events
+  const { data: pendingEvents } = await db
+    .from('email_events')
+    .select('contact_id')
+    .eq('realtor_id', realtorId)
+    .eq('status', 'pending')
+    .limit(20);
+
+  // 2. Active contacts with no recent email (7+ days)
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: staleContacts } = await db
+    .from('contacts')
+    .select('id')
+    .eq('realtor_id', realtorId)
+    .in('lead_status', ['active', 'lead'])
+    .eq('newsletter_unsubscribed', false)
+    .eq('casl_consent_given', true)
+    .limit(20);
+
+  // Deduplicate contact IDs
+  const contactIds = new Set<string>();
+  for (const e of pendingEvents ?? []) {
+    if (e.contact_id) contactIds.add(e.contact_id);
+  }
+  for (const c of staleContacts ?? []) {
+    contactIds.add(c.id);
+  }
+
+  const contactList = [...contactIds].slice(0, 20);
+  triageLog.info({ contactCount: contactList.length }, 'triage: contacts identified');
+
+  if (contactList.length === 0) {
+    return { contactsEvaluated: 0, totalDecisions: 0, results: [] };
+  }
+
+  // Run agent for each contact (sequential for now; M5+ can parallelize)
+  const results: AgentRunResult[] = [];
+  let totalDecisions = 0;
+
+  for (const contactId of contactList) {
+    const result = await runAgentForContact(db, realtorId, contactId, 'triage');
+    results.push(result);
+    totalDecisions += result.decisions;
+  }
+
+  triageLog.info(
+    { contactsEvaluated: contactList.length, totalDecisions },
+    'triage: loop complete'
+  );
+
+  return { contactsEvaluated: contactList.length, totalDecisions, results };
+}
