@@ -4,9 +4,6 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ContactImportPreview } from "@/components/onboarding/ContactImportPreview";
 import {
   Home,
@@ -333,172 +330,130 @@ export default function OnboardingPage() {
         </button>
       )}
 
-      {/* Centered content */}
-      <div className="flex-1 flex flex-col items-center justify-start px-4 py-16 overflow-y-auto">
-        <div className="w-full max-w-lg">
-          {/* Logo */}
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-              <Home className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold tracking-tight">RealtorAI</span>
-          </div>
-
-          {/* Card */}
-          <Card className="border bg-white/90 backdrop-blur shadow-lg">
-            <CardContent className="p-6 space-y-5">
+      {/* Centered content — no card wrapper, fields on gradient like personalization */}
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-16 overflow-y-auto">
+        <div className="w-full max-w-xl">
               {error && (
-                <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                <div className="rounded-lg bg-red-100 px-4 py-2 text-sm text-red-700 mb-6">
                   {error}
                 </div>
               )}
 
               {/* ═══ Step 1: Profile Setup ═══ */}
               {step === 1 && (
-                <div className="space-y-6">
-                  <div className="text-center">
-                    <h2 className="text-2xl font-bold">Make it yours</h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Set up your profile so clients recognize you
-                    </p>
-                  </div>
+                <>
+                  <h1 className="text-2xl md:text-3xl font-bold text-foreground text-center mb-2 animate-fade-in">
+                    Make it yours
+                  </h1>
+                  <p className="text-gray-500 text-sm text-center mb-8">
+                    Set up your profile so clients recognize you
+                  </p>
 
-                  {/* Photo */}
-                  <div className="flex items-center gap-5 p-4 rounded-xl bg-gray-50/80">
+                  {/* Avatar */}
+                  <div className="flex flex-col items-center mb-8">
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="relative w-20 h-20 rounded-full bg-white flex items-center justify-center overflow-hidden ring-2 ring-gray-200 hover:ring-primary transition-all shrink-0"
+                      className="relative w-28 h-28 rounded-full bg-white/80 flex items-center justify-center overflow-hidden ring-4 ring-white shadow-lg hover:ring-[#4f35d2]/30 transition-all mb-3"
                       aria-label="Upload headshot"
                     >
                       {avatarPreview ? (
                         <img src={avatarPreview} alt="Headshot" className="w-full h-full object-cover" />
                       ) : (
-                        <Camera className="h-7 w-7 text-gray-400" />
+                        <Camera className="h-8 w-8 text-gray-300" />
                       )}
                       {loading && (
                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                          <Loader2 className="h-5 w-5 animate-spin text-white" />
+                          <Loader2 className="h-6 w-6 animate-spin text-white" />
                         </div>
                       )}
                     </button>
+                    <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileSelect} className="hidden" />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-sm font-medium text-[#4f35d2] hover:text-[#3d28a8] transition-colors"
+                    >
+                      {avatarPreview ? "Change photo" : "Upload photo"}
+                    </button>
+                  </div>
+
+                  {/* Fields */}
+                  <div className="space-y-4 mb-8">
                     <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={handleFileSelect}
-                      className="hidden"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Phone number (e.g. 604-555-1234)"
+                      className="w-full h-12 rounded-xl border-2 border-gray-200 bg-white px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors"
                     />
-                    <div>
-                      <p className="text-sm font-medium">Profile photo</p>
-                      <p className="text-xs text-muted-foreground mb-2">JPG, PNG or WebP, max 5MB</p>
-                      <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => fileInputRef.current?.click()}>
-                        <Upload className="h-3.5 w-3.5 mr-1" />
-                        {avatarPreview ? "Change" : "Upload"}
-                      </Button>
-                    </div>
+                    <select
+                      value={timezone}
+                      onChange={(e) => setTimezone(e.target.value)}
+                      className="w-full h-12 rounded-xl border-2 border-gray-200 bg-white px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors appearance-none"
+                    >
+                      <option value="America/Vancouver">Pacific (Vancouver)</option>
+                      <option value="America/Edmonton">Mountain (Edmonton)</option>
+                      <option value="America/Winnipeg">Central (Winnipeg)</option>
+                      <option value="America/Toronto">Eastern (Toronto)</option>
+                      <option value="America/Halifax">Atlantic (Halifax)</option>
+                      <option value="America/Los_Angeles">Pacific (LA)</option>
+                      <option value="America/New_York">Eastern (New York)</option>
+                    </select>
+                    <input
+                      value={spouseName}
+                      onChange={(e) => setSpouseName(e.target.value)}
+                      placeholder="Spouse / partner name (optional)"
+                      className="w-full h-12 rounded-xl border-2 border-gray-200 bg-white px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors"
+                    />
+                    <select
+                      value={kidsCount}
+                      onChange={(e) => setKidsCount(e.target.value)}
+                      className="w-full h-12 rounded-xl border-2 border-gray-200 bg-white px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors appearance-none"
+                    >
+                      <option value="">Number of kids (optional)</option>
+                      <option value="0">No kids</option>
+                      <option value="1">1 kid</option>
+                      <option value="2">2 kids</option>
+                      <option value="3">3 kids</option>
+                      <option value="4">4+ kids</option>
+                    </select>
+                    <label className="flex items-center gap-3 w-full h-12 rounded-xl border-2 border-dashed border-gray-200 bg-white/60 px-4 cursor-pointer hover:border-[#4f35d2] transition-colors">
+                      <Upload className="h-4 w-4 text-gray-400 shrink-0" />
+                      <span className="text-sm text-gray-400 flex-1">
+                        {familyFile ? <span className="text-foreground font-medium">{familyFile.name}</span> : "Upload family contacts (.csv)"}
+                      </span>
+                      <input type="file" accept=".csv" onChange={(e) => setFamilyFile(e.target.files?.[0] || null)} className="hidden" />
+                      {familyFile && (
+                        <button onClick={(e) => { e.preventDefault(); setFamilyFile(null); }} className="text-gray-400 hover:text-red-500">
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </label>
                   </div>
 
-                  {/* Contact info */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-gray-600">Phone number</Label>
-                      <Input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="604-555-1234"
-                        className="h-10"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-gray-600">Timezone</Label>
-                      <select
-                        value={timezone}
-                        onChange={(e) => setTimezone(e.target.value)}
-                        className="w-full h-10 rounded-md border bg-background px-3 text-sm"
-                      >
-                        <option value="America/Vancouver">Pacific (Vancouver)</option>
-                        <option value="America/Edmonton">Mountain (Edmonton)</option>
-                        <option value="America/Winnipeg">Central (Winnipeg)</option>
-                        <option value="America/Toronto">Eastern (Toronto)</option>
-                        <option value="America/Halifax">Atlantic (Halifax)</option>
-                        <option value="America/Los_Angeles">Pacific (LA)</option>
-                        <option value="America/New_York">Eastern (New York)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Family — collapsible section */}
-                  <div className="rounded-xl border bg-gray-50/50 overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-3">
-                      <Heart className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm font-medium text-gray-600">Family details</span>
-                      <span className="text-xs text-gray-400 ml-auto">optional</span>
-                    </div>
-                    <div className="px-4 pb-4 space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <Input
-                          value={spouseName}
-                          onChange={(e) => setSpouseName(e.target.value)}
-                          placeholder="Spouse / partner name"
-                          className="h-10 bg-white"
-                        />
-                        <select
-                          value={kidsCount}
-                          onChange={(e) => setKidsCount(e.target.value)}
-                          className="w-full h-10 rounded-md border bg-white px-3 text-sm"
-                        >
-                          <option value="">Number of kids</option>
-                          <option value="0">No kids</option>
-                          <option value="1">1 kid</option>
-                          <option value="2">2 kids</option>
-                          <option value="3">3 kids</option>
-                          <option value="4">4+ kids</option>
-                        </select>
-                      </div>
-                      <label className="flex items-center gap-3 p-2.5 rounded-lg border border-dashed border-gray-300 hover:border-primary transition-colors cursor-pointer bg-white">
-                        <Upload className="h-4 w-4 text-gray-400 shrink-0" />
-                        <span className="text-xs text-gray-500">
-                          {familyFile ? (
-                            <span className="text-foreground font-medium">{familyFile.name}</span>
-                          ) : (
-                            "Upload family contacts (.csv)"
-                          )}
-                        </span>
-                        <input type="file" accept=".csv" onChange={(e) => setFamilyFile(e.target.files?.[0] || null)} className="hidden" />
-                        {familyFile && (
-                          <button onClick={(e) => { e.preventDefault(); setFamilyFile(null); }} className="ml-auto text-gray-400 hover:text-destructive">
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Action */}
+                  {/* Continue */}
                   <button
                     onClick={handleStep1Continue}
-                    className="w-full py-3 bg-[#4f35d2] text-white rounded-xl text-sm font-semibold hover:bg-[#3d28a8] transition-colors"
+                    className="w-full max-w-xs mx-auto block py-3 bg-[#4f35d2] text-white rounded-xl text-sm font-semibold hover:bg-[#3d28a8] transition-colors"
                   >
                     Continue
                   </button>
-                  <button onClick={goNext} className="w-full text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                  <button onClick={goNext} className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 transition-colors text-center">
                     Skip for now
                   </button>
-                </div>
+                </>
               )}
 
               {/* ═══ Step 2: Contact Import ═══ */}
               {step === 2 && (
                 <>
                   {importSource === "none" && importCount === 0 && (
-                    <div className="space-y-5">
-                      <div className="text-center">
-                        <h2 className="text-2xl font-bold">Bring your contacts</h2>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Your CRM works best with your real contacts
-                        </p>
-                      </div>
+                    <>
+                      <h1 className="text-2xl md:text-3xl font-bold text-foreground text-center mb-2 animate-fade-in">
+                        Bring your contacts
+                      </h1>
+                      <p className="text-gray-500 text-sm text-center mb-8">
+                        Your CRM works best with your real contacts
+                      </p>
 
                       <div className="space-y-3">
                         <button
@@ -555,11 +510,11 @@ export default function OnboardingPage() {
                       </button>
                       <button
                         onClick={async () => { await seedSampleData(); goNext(); }}
-                        className="w-full text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                        className="w-full text-sm text-gray-400 hover:text-gray-600 transition-colors mt-3"
                       >
                         Skip — use sample data
                       </button>
-                    </div>
+                    </>
                   )}
 
                   {/* Contact preview */}
@@ -648,20 +603,20 @@ export default function OnboardingPage() {
 
               {/* ═══ Step 4: Google Calendar ═══ */}
               {step === 4 && (
-                <div className="space-y-5">
-                  <div className="text-center">
-                    <h2 className="text-2xl font-bold">Connect your calendar</h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      See showings and tasks on your Google Calendar
-                    </p>
-                  </div>
+                <>
+                  <h1 className="text-2xl md:text-3xl font-bold text-foreground text-center mb-2 animate-fade-in">
+                    Connect your calendar
+                  </h1>
+                  <p className="text-gray-500 text-sm text-center mb-8">
+                    See showings and tasks on your Google Calendar
+                  </p>
 
                   <button
                     onClick={() => signIn("google", { callbackUrl: "/onboarding" })}
-                    className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-[#4f35d2] transition-colors text-left"
+                    className="w-full flex items-center gap-4 p-5 rounded-xl border-2 border-gray-200 bg-white hover:border-[#4f35d2] transition-colors text-left mb-4"
                   >
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 shrink-0">
-                      <Calendar className="h-5 w-5 text-blue-600" />
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 shrink-0">
+                      <Calendar className="h-6 w-6 text-blue-600" />
                     </div>
                     <div>
                       <p className="text-sm font-semibold">Connect Google Calendar</p>
@@ -669,70 +624,64 @@ export default function OnboardingPage() {
                     </div>
                   </button>
 
-                  <p className="text-xs text-center text-gray-400">
+                  <p className="text-xs text-center text-gray-400 mb-6">
                     Already connected? Continue below.
                   </p>
 
-                  <button
-                    onClick={goNext}
-                    className="w-full py-3 bg-[#4f35d2] text-white rounded-xl text-sm font-semibold hover:bg-[#3d28a8] transition-colors"
-                  >
+                  <button onClick={goNext} className="w-full max-w-xs mx-auto block py-3 bg-[#4f35d2] text-white rounded-xl text-sm font-semibold hover:bg-[#3d28a8] transition-colors">
                     Continue
                   </button>
-                  <button onClick={goNext} className="w-full text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                  <button onClick={goNext} className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 transition-colors text-center">
                     Skip for now
                   </button>
-                </div>
+                </>
               )}
 
               {/* ═══ Step 5: Professional Details ═══ */}
               {step === 5 && (
-                <div className="space-y-5">
-                  <div className="text-center">
-                    <h2 className="text-2xl font-bold">Professional details</h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Optional — you can fill this in later
-                    </p>
-                  </div>
+                <>
+                  <h1 className="text-2xl md:text-3xl font-bold text-foreground text-center mb-2 animate-fade-in">
+                    Professional details
+                  </h1>
+                  <p className="text-gray-500 text-sm text-center mb-8">
+                    Optional — you can fill this in later
+                  </p>
 
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5 relative">
-                        <Label className="text-xs font-medium text-gray-600">Brokerage</Label>
-                        <Input
-                          placeholder="24K Realty Group"
-                          value={brokerage}
-                          onChange={(e) => setBrokerage(e.target.value)}
-                          className="h-10"
-                        />
-                        {brokerageSuggestions.length > 0 && (
-                          <div className="absolute z-10 top-full mt-1 w-full bg-white border rounded-lg shadow-lg py-1">
-                            {brokerageSuggestions.map((s) => (
-                              <button
-                                key={s}
-                                onClick={() => { setBrokerage(s); setBrokerageSuggestions([]); }}
-                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors"
-                              >
-                                {s}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-medium text-gray-600">License number</Label>
-                        <Input placeholder="Optional" value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} className="h-10" />
-                      </div>
+                  <div className="space-y-4 mb-8">
+                    <div className="relative">
+                      <input
+                        placeholder="Brokerage name"
+                        value={brokerage}
+                        onChange={(e) => setBrokerage(e.target.value)}
+                        className="w-full h-12 rounded-xl border-2 border-gray-200 bg-white px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors"
+                      />
+                      {brokerageSuggestions.length > 0 && (
+                        <div className="absolute z-10 top-full mt-1 w-full bg-white border rounded-xl shadow-lg py-1 overflow-hidden">
+                          {brokerageSuggestions.map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => { setBrokerage(s); setBrokerageSuggestions([]); }}
+                              className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors"
+                            >
+                              {s}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-gray-600">Short bio / tagline</Label>
+                    <input
+                      placeholder="License number (optional)"
+                      value={licenseNumber}
+                      onChange={(e) => setLicenseNumber(e.target.value)}
+                      className="w-full h-12 rounded-xl border-2 border-gray-200 bg-white px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors"
+                    />
+                    <div>
                       <textarea
-                        placeholder="Vancouver realtor specializing in condos and townhomes"
+                        placeholder="Short bio or tagline — e.g. Vancouver realtor specializing in condos"
                         value={bio}
                         onChange={(e) => setBio(e.target.value)}
                         rows={3}
-                        className="w-full rounded-lg border bg-white px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#4f35d2]/20 focus:border-[#4f35d2]"
+                        className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm resize-none focus:outline-none focus:border-[#4f35d2] transition-colors"
                       />
                       <AIBioGenerator bio={bio} onBioChange={setBio} />
                     </div>
@@ -741,14 +690,14 @@ export default function OnboardingPage() {
                   <button
                     onClick={saveProfessionalInfo}
                     disabled={loading}
-                    className="w-full py-3 bg-[#4f35d2] text-white rounded-xl text-sm font-semibold hover:bg-[#3d28a8] transition-colors disabled:opacity-50"
+                    className="w-full max-w-xs mx-auto block py-3 bg-[#4f35d2] text-white rounded-xl text-sm font-semibold hover:bg-[#3d28a8] transition-colors disabled:opacity-50"
                   >
                     {loading ? "Saving..." : "Continue"}
                   </button>
-                  <button onClick={goNext} className="w-full text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                  <button onClick={goNext} className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 transition-colors text-center">
                     Skip for now
                   </button>
-                </div>
+                </>
               )}
 
               {/* ═══ Step 6: MLS Connection ═══ */}
@@ -764,20 +713,6 @@ export default function OnboardingPage() {
               {step === 7 && (
                 <Step7AutoComplete completeOnboarding={completeOnboarding} />
               )}
-            </CardContent>
-          </Card>
-
-          {/* Step dots */}
-          <div className="flex items-center justify-center gap-2 mt-4">
-            {STEPS.map((s) => (
-              <div
-                key={s.num}
-                className={`h-2 w-2 rounded-full transition-colors ${
-                  step >= s.num ? "bg-[#4f35d2]" : "bg-gray-300"
-                }`}
-              />
-            ))}
-          </div>
         </div>
       </div>
     </div>
