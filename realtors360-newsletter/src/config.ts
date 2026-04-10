@@ -32,7 +32,6 @@ const ConfigSchema = z.object({
   FLAG_RAG_BACKFILL: z.enum(['on', 'off']).default('off'),
   FLAG_WEEKLY_LEARNING: z.enum(['on', 'off']).default('off'),
   FLAG_AGENT_SCORING: z.enum(['on', 'off']).default('off'),
-  CRM_CRON_ENABLED: z.coerce.boolean().default(true),
 
   // Canary / test fixtures
   CANARY_TO_EMAIL: z.string().email().default('amandhindsa@outlook.com'),

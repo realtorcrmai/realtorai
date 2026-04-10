@@ -6,15 +6,18 @@ import { logger } from '../lib/logger.js';
  *
  * Schedule: every 15 minutes (registered in `crons/index.ts`).
  *
- * For every enabled saved_search:
- *   1. SELECT listings created since last check that match the criteria
- *   2. For each match, INSERT an `email_events` row with type
- *      `listing_matched_search`
- *   3. UPDATE saved_searches.last_match_check
+ * N6 fix: the timestamp snapshot (`checkedAt`) is taken BEFORE the listing
+ * query, then written as `last_match_check` AFTER the event inserts. This
+ * closes the time-window bug where a crash between inserts and the update
+ * would either re-emit events (duplicate emails) or advance the window
+ * past un-emitted listings (missed emails).
  *
- * The criteria match is intentionally simple in M1 — supports min_price,
- * max_price, beds_min, baths_min, areas[], prop_types[]. Anything more
- * sophisticated lands in M4 with proper geo + score-based ranking.
+ * Combined with the `uq_email_events_search_match` partial unique index
+ * from migration 086, duplicate events are also blocked at the DB level
+ * as belt-and-suspenders.
+ *
+ * Each insert catches SQLSTATE 23505 and skips silently — this is the
+ * idempotent-skip pattern used throughout the newsletter service.
  */
 
 type Criteria = {
@@ -46,9 +49,14 @@ export async function checkSavedSearches(): Promise<void> {
   logger.info({ count: searches.length }, 'cron/saved-searches: scanning');
 
   let totalEvents = 0;
+  let duplicatesSkipped = 0;
+
   for (const search of searches) {
     const criteria = (search.criteria as Criteria) ?? {};
     const since = search.last_match_check ?? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    // N6: snapshot the timestamp BEFORE querying listings.
+    const checkedAt = new Date().toISOString();
 
     let q = supabase
       .from('listings')
@@ -68,15 +76,19 @@ export async function checkSavedSearches(): Promise<void> {
       logger.warn({ err: matchErr, search_id: search.id }, 'cron/saved-searches: match query failed');
       continue;
     }
+
+    // Always update the checkpoint to `checkedAt`, even if no matches.
+    // This advances the window consistently.
     if (!matches || matches.length === 0) {
       await supabase
         .from('saved_searches')
-        .update({ last_match_check: new Date().toISOString(), last_match_count: 0 })
+        .update({ last_match_check: checkedAt, last_match_count: 0 })
         .eq('id', search.id);
       continue;
     }
 
-    // Emit one event per matched listing
+    // Emit one event per matched listing. 23505 (unique violation from
+    // migration 086's `uq_email_events_search_match` index) = idempotent skip.
     for (const listing of matches) {
       const { error: insertErr } = await supabase.from('email_events').insert({
         realtor_id: search.realtor_id,
@@ -91,24 +103,29 @@ export async function checkSavedSearches(): Promise<void> {
         },
         status: 'pending',
       });
+
       if (insertErr) {
+        if (insertErr.code === '23505') {
+          duplicatesSkipped++;
+          continue;
+        }
         logger.error({ err: insertErr }, 'cron/saved-searches: event insert failed');
         continue;
       }
       totalEvents++;
     }
 
+    // N6: use the pre-snapshot timestamp, not `now()`. If the process crashes
+    // between the inserts and this update, next run re-emits — the unique
+    // index catches duplicates.
     await supabase
       .from('saved_searches')
-      .update({
-        last_match_check: new Date().toISOString(),
-        last_match_count: matches.length,
-      })
+      .update({ last_match_check: checkedAt, last_match_count: matches.length })
       .eq('id', search.id);
   }
 
   logger.info(
-    { searches: searches.length, events: totalEvents, ms: Date.now() - startedAt },
+    { searches: searches.length, events: totalEvents, duplicatesSkipped, ms: Date.now() - startedAt },
     'cron/saved-searches: complete'
   );
 }

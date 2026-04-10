@@ -6,28 +6,29 @@ import { logger } from '../lib/logger.js';
  *
  * Schedule: daily at 8 AM Vancouver (registered in `crons/index.ts`).
  *
- * Birthdays live in the `contact_important_dates` table where
- * `date_type = 'birthday'`. Year is ignored — we only match month + day.
+ * N7 fix: TOCTOU race eliminated. The old code did SELECT count → INSERT,
+ * which under concurrent runs lets both see count=0 and both insert.
+ * Now we just INSERT and catch the 23505 unique violation from migration
+ * 086's `uq_email_events_birthday_year` index. Same idempotent-skip
+ * pattern used across the entire service.
  *
- * For every contact whose birthday is today:
- *   1. INSERT an `email_events` row with type `contact_birthday`
- *   2. The worker picks it up and runs the birthday pipeline
- *
- * Idempotency: a per-contact-per-year guard prevents double-emits if the cron
- * runs multiple times in a day. We check for an existing `email_events` row of
- * type `contact_birthday` for the same contact in the current calendar year.
+ * P13 fix: birthday date comparison now uses the Vancouver timezone
+ * explicitly. The server runs UTC; a birthday stored as `1995-06-15` at
+ * PDT midnight is June 16 07:00 UTC. We convert `today` to Vancouver
+ * before extracting month + day.
  */
 export async function checkBirthdays(): Promise<void> {
   const startedAt = Date.now();
-  const today = new Date();
-  const month = today.getMonth() + 1; // 1-12
-  const day = today.getDate();
-  const year = today.getFullYear();
-  const yearStart = new Date(year, 0, 1).toISOString();
 
-  // Pull all birthday rows joined to the contact for realtor_id + email + unsub status.
-  // M2 scale (≤10k contacts) is fine to filter month/day in-app; M4 will move
-  // to a Postgres function with `EXTRACT(MONTH FROM date_value)` for >100k.
+  // P13: use Vancouver timezone for "today" — the cron fires at 8am Vancouver
+  // so the date should match the realtor's local calendar, not UTC.
+  const vanNow = new Date(
+    new Date().toLocaleString('en-US', { timeZone: 'America/Vancouver' })
+  );
+  const month = vanNow.getMonth() + 1; // 1-12
+  const day = vanNow.getDate();
+  const year = vanNow.getFullYear();
+
   const { data: rows, error } = await supabase
     .from('contact_important_dates')
     .select('contact_id, date_value, contacts!inner(id, realtor_id, name, email, newsletter_unsubscribed)')
@@ -44,6 +45,7 @@ export async function checkBirthdays(): Promise<void> {
 
   let emitted = 0;
   let skipped = 0;
+  let duplicates = 0;
 
   type Row = {
     contact_id: string;
@@ -60,26 +62,25 @@ export async function checkBirthdays(): Promise<void> {
   for (const raw of rows as unknown as Row[]) {
     const contact = raw.contacts;
     if (!contact || !contact.email || contact.newsletter_unsubscribed) {
+      skipped++;
       continue;
     }
-    if (!raw.date_value) continue;
-
-    const bday = new Date(raw.date_value);
-    if (bday.getMonth() + 1 !== month || bday.getDate() !== day) continue;
-
-    // Idempotency guard
-    const { count: existing } = await supabase
-      .from('email_events')
-      .select('id', { count: 'exact', head: true })
-      .eq('contact_id', contact.id)
-      .eq('event_type', 'contact_birthday')
-      .gte('created_at', yearStart);
-
-    if ((existing ?? 0) > 0) {
+    if (!raw.date_value) {
       skipped++;
       continue;
     }
 
+    // P13: parse date_value as a date-only string, compare month + day.
+    // Avoid `new Date(date_value)` which applies timezone offsets to dates
+    // that are meant to be timezone-agnostic.
+    const [yearStr, monthStr, dayStr] = raw.date_value.split('T')[0].split('-');
+    const bdayMonth = parseInt(monthStr, 10);
+    const bdayDay = parseInt(dayStr, 10);
+
+    if (bdayMonth !== month || bdayDay !== day) continue;
+
+    // N7 fix: just INSERT and catch the unique violation from migration 086's
+    // `uq_email_events_birthday_year` index. No SELECT-before-INSERT race.
     const { error: insertErr } = await supabase.from('email_events').insert({
       realtor_id: contact.realtor_id,
       contact_id: contact.id,
@@ -87,12 +88,16 @@ export async function checkBirthdays(): Promise<void> {
       event_data: {
         contact_id: contact.id,
         birthday: raw.date_value,
-        year,
+        year: String(year),
       },
       status: 'pending',
     });
 
     if (insertErr) {
+      if (insertErr.code === '23505') {
+        duplicates++;
+        continue;
+      }
       logger.error({ err: insertErr, contactId: contact.id }, 'cron/birthdays: emit failed');
       continue;
     }
@@ -100,7 +105,7 @@ export async function checkBirthdays(): Promise<void> {
   }
 
   logger.info(
-    { rows: rows.length, emitted, skipped, ms: Date.now() - startedAt },
+    { rows: rows.length, emitted, skipped, duplicates, ms: Date.now() - startedAt },
     'cron/birthdays: complete'
   );
 }
