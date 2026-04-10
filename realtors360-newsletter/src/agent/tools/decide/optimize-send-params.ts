@@ -65,7 +65,8 @@ export async function optimizeSendParams(
   const typeMap = new Map<string, { opens: number; clicks: number; sends: number }>();
 
   for (const ev of events!) {
-    const newsletters = ev.newsletters as unknown as Record<string, unknown>;
+    const newsletters = ev.newsletters as unknown as Record<string, unknown> | null;
+    if (!newsletters || typeof newsletters !== 'object') continue;
     const emailType = newsletters.email_type as string;
     if (!emailType) continue;
     const entry = typeMap.get(emailType) ?? { opens: 0, clicks: 0, sends: 0 };

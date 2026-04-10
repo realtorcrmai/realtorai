@@ -33,6 +33,10 @@ export async function checkFrequencyCap(
       .order('sent_at', { ascending: false }).limit(1).maybeSingle(),
   ]);
 
+  // Fail-safe: if any query errors, assume cap NOT reached (don't block sends on infra failure)
+  if (dailyRes.error || weeklyRes.error) {
+    return { contact_id: contactId, allowed: true, daily: { sent: 0, cap: 2, remaining: 2 }, weekly: { sent: 0, cap: 5, remaining: 5 }, last_sent_at: null, warning: 'frequency cap query failed — allowing send' };
+  }
   const dailyCount = dailyRes.count ?? 0;
   const weeklyCount = weeklyRes.count ?? 0;
   const DAILY_CAP = 2;

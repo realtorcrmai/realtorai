@@ -101,6 +101,18 @@ Start by getting the contact's details and engagement intelligence, then decide 
     ];
 
     for (let turn = 0; turn < MAX_TURNS; turn++) {
+      // Context window protection: estimate total chars, bail if too large.
+      // Claude Sonnet has 200K tokens (~800K chars). Cap at 150K chars to
+      // leave room for the response + system prompt + tool schemas.
+      const totalChars = messages.reduce((sum, m) => {
+        const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+        return sum + content.length;
+      }, 0);
+      if (totalChars > 600_000) {
+        runLog.warn({ totalChars, turn }, 'agent: context window approaching limit, stopping early');
+        break;
+      }
+
       const response = await anthropic.messages.create({
         model: AGENT_MODEL,
         max_tokens: 1024,

@@ -51,6 +51,15 @@ export async function runRetryFailedEvents(): Promise<void> {
       return;
     }
 
+    // Atomic claim: set status='retrying' to prevent concurrent cron ticks
+    // from processing the same events (TOCTOU fix).
+    const claimIds = rows.map((r) => r.id);
+    await supabase
+      .from('email_events')
+      .update({ status: 'retrying' })
+      .in('id', claimIds)
+      .eq('status', 'failed');
+
     log.info({ count: rows.length }, 'retry: processing failed events');
 
     let retried = 0;
@@ -59,11 +68,12 @@ export async function runRetryFailedEvents(): Promise<void> {
     for (const row of rows) {
       const currentRetry = row.retry_count ?? 0;
 
-      // Reset status to 'pending' so processEvent will pick it up
+      // Set to 'pending' for processEvent (already claimed via 'retrying')
       await supabase
         .from('email_events')
         .update({ status: 'pending' })
-        .eq('id', row.id);
+        .eq('id', row.id)
+        .eq('status', 'retrying');
 
       try {
         await processEvent(row.id);
