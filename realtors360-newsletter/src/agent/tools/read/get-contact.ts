@@ -18,10 +18,17 @@ export async function getContact(
   ctx: ToolContext,
   input: Record<string, unknown>
 ): Promise<unknown> {
+  const contactId = String(input.contact_id);
+
+  // Use prefetched data if available (batch-loaded by triage loop)
+  if (ctx.prefetchedContacts?.has(contactId)) {
+    return ctx.prefetchedContacts.get(contactId)!;
+  }
+
   const { data, error } = await ctx.db
     .from('contacts')
     .select('id, name, email, phone, type, lead_status, stage_bar, pref_channel, tags, newsletter_intelligence, newsletter_unsubscribed, casl_consent_given, ai_lead_score, notes, updated_at')
-    .eq('id', String(input.contact_id))
+    .eq('id', contactId)
     .eq('realtor_id', ctx.realtorId)
     .maybeSingle();
 

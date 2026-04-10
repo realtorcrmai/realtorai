@@ -50,6 +50,10 @@ export function computeTrustLevel(
 
 /**
  * Record a positive signal (open, click, reply) and potentially promote.
+ *
+ * Uses an atomic Postgres function (088_trust_level_atomic.sql) to avoid
+ * TOCTOU race conditions — the increment and level recomputation happen
+ * in a single transaction with a row-level lock.
  */
 export async function recordPositiveSignal(
   db: SupabaseClient,
@@ -57,20 +61,9 @@ export async function recordPositiveSignal(
   contactId: string,
   signalType: 'open' | 'click' | 'reply'
 ): Promise<{ newLevel: TrustLevel; promoted: boolean }> {
-  // Upsert trust record
-  const { data: existing } = await db
-    .from('contact_trust_levels')
-    .select('*')
-    .eq('contact_id', contactId)
-    .eq('realtor_id', realtorId)
-    .maybeSingle();
+  const hasReply = signalType === 'reply';
 
-  const currentLevel = (existing?.level ?? 0) as TrustLevel;
-  const currentPositive = (existing?.positive_signals ?? 0) + 1;
-  const currentNegative = existing?.negative_signals ?? 0;
-  const hasReply = signalType === 'reply' || currentPositive >= 10; // approximate
-
-  // Check for deal (simplified — check if contact has any deal with status 'closed')
+  // Check for deal (still needed as input to the atomic function)
   const { count: dealCount } = await db
     .from('deals')
     .select('id', { count: 'exact', head: true })
@@ -78,30 +71,26 @@ export async function recordPositiveSignal(
     .eq('status', 'closed');
 
   const hasClosedDeal = (dealCount ?? 0) > 0;
-  const computedLevel = computeTrustLevel(currentPositive, currentNegative, hasReply, hasClosedDeal);
-  const newLevel = Math.max(currentLevel, computedLevel) as TrustLevel; // never auto-demote on positive
-  const promoted = newLevel > currentLevel;
 
-  if (existing) {
-    await db.from('contact_trust_levels').update({
-      positive_signals: currentPositive,
-      level: newLevel,
-      last_promoted_at: promoted ? new Date().toISOString() : existing.last_promoted_at,
-      updated_at: new Date().toISOString(),
-    }).eq('contact_id', contactId).eq('realtor_id', realtorId);
-  } else {
-    await db.from('contact_trust_levels').insert({
-      realtor_id: realtorId,
-      contact_id: contactId,
-      level: newLevel,
-      positive_signals: currentPositive,
-      negative_signals: 0,
-      last_promoted_at: promoted ? new Date().toISOString() : null,
-    });
+  const { data, error } = await db.rpc('promote_trust_level', {
+    p_contact_id: contactId,
+    p_realtor_id: realtorId,
+    p_positive_increment: 1,
+    p_has_reply: hasReply,
+    p_has_deal: hasClosedDeal,
+  }).single();
+
+  if (error) {
+    logger.error({ error, contactId }, 'trust: promote_trust_level RPC failed');
+    return { newLevel: 0, promoted: false };
   }
 
+  const result = data as { new_level?: number; promoted?: boolean } | null;
+  const newLevel = (result?.new_level ?? 0) as TrustLevel;
+  const promoted = result?.promoted ?? false;
+
   if (promoted) {
-    logger.info({ contactId, from: currentLevel, to: newLevel, signal: signalType }, 'trust: promoted');
+    logger.info({ contactId, to: newLevel, signal: signalType }, 'trust: promoted');
   }
 
   return { newLevel, promoted };
@@ -110,6 +99,9 @@ export async function recordPositiveSignal(
 /**
  * Record a negative signal (unsubscribe, complaint, bounce) and potentially demote.
  * Demotion drops exactly 1 level (never more) to avoid trust oscillation.
+ *
+ * Uses an atomic Postgres function (088_trust_level_atomic.sql) to avoid
+ * TOCTOU race conditions.
  */
 export async function recordNegativeSignal(
   db: SupabaseClient,
@@ -117,35 +109,22 @@ export async function recordNegativeSignal(
   contactId: string,
   signalType: 'unsubscribe' | 'complaint' | 'bounce'
 ): Promise<{ newLevel: TrustLevel; demoted: boolean }> {
-  const { data: existing } = await db
-    .from('contact_trust_levels')
-    .select('*')
-    .eq('contact_id', contactId)
-    .eq('realtor_id', realtorId)
-    .maybeSingle();
+  const { data, error } = await db.rpc('demote_trust_level', {
+    p_contact_id: contactId,
+    p_realtor_id: realtorId,
+  }).single();
 
-  const currentLevel = (existing?.level ?? 0) as TrustLevel;
-  const newLevel = Math.max(0, currentLevel - 1) as TrustLevel;
-  const demoted = newLevel < currentLevel;
-
-  if (existing) {
-    await db.from('contact_trust_levels').update({
-      negative_signals: (existing.negative_signals ?? 0) + 1,
-      level: newLevel,
-      updated_at: new Date().toISOString(),
-    }).eq('contact_id', contactId).eq('realtor_id', realtorId);
-  } else {
-    await db.from('contact_trust_levels').insert({
-      realtor_id: realtorId,
-      contact_id: contactId,
-      level: 0,
-      positive_signals: 0,
-      negative_signals: 1,
-    });
+  if (error) {
+    logger.error({ error, contactId }, 'trust: demote_trust_level RPC failed');
+    return { newLevel: 0, demoted: false };
   }
 
+  const negResult = data as { new_level?: number; demoted?: boolean } | null;
+  const newLevel = (negResult?.new_level ?? 0) as TrustLevel;
+  const demoted = negResult?.demoted ?? false;
+
   if (demoted) {
-    logger.warn({ contactId, from: currentLevel, to: newLevel, signal: signalType }, 'trust: demoted');
+    logger.warn({ contactId, to: newLevel, signal: signalType }, 'trust: demoted');
   }
 
   return { newLevel, demoted };

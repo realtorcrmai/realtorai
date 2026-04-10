@@ -8,6 +8,8 @@ import { runWeeklyLearning } from './weekly-learning.js';
 import { runAgentScoring } from './agent-scoring.js';
 import { runProcessWorkflows } from './process-workflows.js';
 import { runAgentTriage } from './agent-triage.js';
+import { runProcessScheduledSends } from './process-scheduled-sends.js';
+import { scrapeMarketStats } from './scrape-market-stats.js';
 
 /**
  * Cron registry.
@@ -20,6 +22,7 @@ import { runAgentTriage } from './agent-triage.js';
  * M3-E: process-workflows every 2 min Vancouver (gated on FLAG_PROCESS_WORKFLOWS).
  *   The critical port — the whole reason this service exists (Vercel 10s timeout).
  *   Each is gated on its own feature flag for safe rollout.
+ * scrape-market-stats: weekly Sunday 02:00 Vancouver (gated on FLAG_MARKET_SCRAPER).
  *
  * node-cron uses the host's local timezone unless overridden. We always pass
  * the explicit timezone option so production behaviour matches dev.
@@ -106,6 +109,21 @@ export function startCrons(): void {
     'cron: registered process-workflows (*/2 * * * * America/Vancouver)'
   );
 
+  // Process scheduled sends (every 5 min Vancouver). Picks up agent_drafts
+  // with status='approved' and scheduled_send_at <= now(), checks CASL
+  // compliance, sends via Resend, tracks in newsletters table. No feature
+  // flag — only processes explicitly approved drafts.
+  cron.schedule(
+    '*/5 * * * *',
+    () => {
+      runProcessScheduledSends().catch((err) =>
+        logger.error({ err }, 'cron: process-scheduled-sends threw')
+      );
+    },
+    { timezone: 'America/Vancouver' }
+  );
+  logger.info('cron: registered process-scheduled-sends (*/5 * * * * America/Vancouver)');
+
   // M5: agent-triage (hourly). The newsletter agent's per-realtor triage
   // loop identifies contacts needing emails and spawns per-contact Claude
   // tool-use runs. Gated on FLAG_AGENT_TRIAGE (default off).
@@ -121,5 +139,24 @@ export function startCrons(): void {
   logger.info(
     { flag: config.FLAG_AGENT_TRIAGE },
     'cron: registered agent-triage (0 * * * * America/Vancouver)'
+  );
+
+  // scrape-market-stats (weekly, Sunday 2 AM Vancouver). Upserts BC market
+  // data into market_stats_cache so the newsletter AI and agent tools can
+  // reference current stats in Market Update emails. Gated on
+  // FLAG_MARKET_SCRAPER (default off). Currently uses placeholder data —
+  // swap for real REBGV/FVREB API when available.
+  cron.schedule(
+    '0 2 * * 0',
+    () => {
+      scrapeMarketStats().catch((err) =>
+        logger.error({ err }, 'cron: scrape-market-stats threw')
+      );
+    },
+    { timezone: 'America/Vancouver' }
+  );
+  logger.info(
+    { flag: config.FLAG_MARKET_SCRAPER },
+    'cron: registered scrape-market-stats (0 2 * * 0 America/Vancouver)'
   );
 }

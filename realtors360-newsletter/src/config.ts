@@ -40,6 +40,12 @@ const ConfigSchema = z.object({
   // IP warm-up (optional — overrides auto-detection of first send date)
   WARMUP_START_DATE: z.string().optional(),
 
+  // AI model + agent identity
+  AI_SCORING_MODEL: z.string().default('claude-sonnet-4-20250514'),
+  AGENT_NAME: z.string().default('Your Agent'),
+  AGENT_PHONE: z.string().default(''),
+  AGENT_EMAIL: z.string().default(''),
+
   // Flags
   FLAG_SAVED_SEARCH: z.enum(['on', 'off']).default('on'),
   FLAG_RAG_BACKFILL: z.enum(['on', 'off']).default('off'),
@@ -47,6 +53,7 @@ const ConfigSchema = z.object({
   FLAG_AGENT_SCORING: z.enum(['on', 'off']).default('off'),
   FLAG_PROCESS_WORKFLOWS: z.enum(['on', 'off']).default('off'),
   FLAG_AGENT_TRIAGE: z.enum(['on', 'off']).default('off'),
+  FLAG_MARKET_SCRAPER: z.enum(['on', 'off']).default('off'),
 
   // Twilio (required for SMS/WhatsApp workflow steps)
   TWILIO_ACCOUNT_SID: z.string().optional().default(''),
