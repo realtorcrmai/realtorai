@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { addPortfolioItem, updatePortfolioItem } from "@/actions/contact-portfolio";
+import { addPortfolioItem, updatePortfolioItem, createContactFromCoOwner } from "@/actions/contact-portfolio";
 import type { PortfolioItem, PropertyCategory, PortfolioStatus } from "@/actions/contact-portfolio";
 import { AddressAutocompleteInput } from "@/components/shared/AddressAutocompleteInput";
 import type { AddressSuggestion } from "@/components/shared/AddressAutocompleteInput";
@@ -16,6 +16,17 @@ type CoOwner = {
   role: "individual" | "partner" | "spouse" | "trust" | "corporation";
   ownership_pct: number;
   contact_id?: string;
+  // For new contacts to be created on submit
+  isNew?: boolean;
+  newPhone?: string;
+  newEmail?: string;
+};
+
+type ContactSuggestion = {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string | null;
 };
 
 const CATEGORY_OPTIONS: {
@@ -104,6 +115,127 @@ const PROPERTY_TYPES = [
 
 // ── Sub-components ─────────────────────────────────────────
 
+/** Debounce helper */
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
+/**
+ * Contact search input with a fixed-position dropdown (avoids overflow:hidden clipping).
+ * Emits either an existing contact (onSelect) or a new-contact intent (onCreateNew).
+ */
+function ContactSearchInput({
+  value,
+  onChange,
+  onSelect,
+  onCreateNew,
+  disabled,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSelect: (c: ContactSuggestion) => void;
+  onCreateNew: (name: string) => void;
+  disabled?: boolean;
+}) {
+  const [results, setResults] = useState<ContactSuggestion[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const debouncedQ = useDebounce(value, 250);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (debouncedQ.length < 2) { setResults([]); setOpen(false); return; }
+    setLoading(true);
+    fetch(`/api/contacts?search=${encodeURIComponent(debouncedQ)}&limit=6`)
+      .then((r) => r.json())
+      .then((d) => {
+        setResults(d.contacts ?? []);
+        setOpen(true);
+      })
+      .catch(() => setResults([]))
+      .finally(() => setLoading(false));
+  }, [debouncedQ]);
+
+  // Close on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function updateDropdownPosition() {
+    if (!inputRef.current) return;
+    const r = inputRef.current.getBoundingClientRect();
+    setDropdownRect({ top: r.bottom + window.scrollY + 4, left: r.left + window.scrollX, width: r.width });
+  }
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <Input
+        ref={inputRef}
+        className="h-10"
+        placeholder="Search by name…"
+        value={value}
+        onChange={(e) => { onChange(e.target.value); updateDropdownPosition(); }}
+        onFocus={() => { updateDropdownPosition(); if (results.length || value.length >= 2) setOpen(true); }}
+        disabled={disabled}
+        autoComplete="off"
+      />
+      {loading && (
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+          searching…
+        </span>
+      )}
+      {open && value.length >= 2 && dropdownRect && (
+        <div
+          className="fixed z-[9999] bg-white dark:bg-gray-900 border border-border rounded-xl shadow-xl overflow-hidden"
+          style={{ top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width }}
+        >
+          {results.length > 0 ? (
+            results.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-left transition-colors"
+                onMouseDown={(e) => { e.preventDefault(); onSelect(c); setOpen(false); onChange(c.name); }}
+              >
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-[#4f35d2] flex items-center justify-center text-white text-xs font-bold shrink-0">
+                  {c.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{c.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{c.phone}</p>
+                </div>
+              </button>
+            ))
+          ) : (
+            <div className="px-3 py-2.5 text-sm text-muted-foreground">No contact found</div>
+          )}
+          <button
+            type="button"
+            className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-indigo-600 font-medium hover:bg-indigo-50 dark:hover:bg-indigo-950/20 border-t border-border transition-colors"
+            onMouseDown={(e) => { e.preventDefault(); onCreateNew(value); setOpen(false); }}
+          >
+            <span className="text-base">➕</span>
+            Create &ldquo;{value}&rdquo; as new contact
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SectionLabel({
   number,
   label,
@@ -162,6 +294,10 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
   const [newCoOwner, setNewCoOwner]       = useState<CoOwner>({
     name: "", role: "individual", ownership_pct: 50,
   });
+  // Track whether the new co-owner was picked from contacts or will be created
+  const [newCoOwnerIsNew, setNewCoOwnerIsNew] = useState(false);
+  const [newCoOwnerPhone, setNewCoOwnerPhone] = useState("");
+  const [newCoOwnerEmail, setNewCoOwnerEmail] = useState("");
 
   // ── Financials ────────────────────────────────────────────
   const [purchasePrice, setPurchasePrice]     = useState(existing?.purchase_price ? String(existing.purchase_price) : "");
@@ -182,20 +318,49 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
     setPostalCode(s.postalCode);
   }
 
+  const coOwnerTotal = coOwners.reduce((s, o) => s + o.ownership_pct, 0);
+  const myOwnership  = Math.max(0, Math.min(100, Number(ownershipPct) || 100));
+  const totalOwnership = myOwnership + coOwnerTotal;
+
+  // How much % is still unallocated (used to suggest new co-owner's %)
+  const remainingForNew = Math.max(0, 100 - coOwnerTotal - myOwnership);
+  // Preview: what primary owner will become after the new co-owner is added
+  const primaryAfterAdd = Math.max(0, 100 - coOwnerTotal - newCoOwner.ownership_pct);
+
+  function handleNewCoOwnerPctChange(pct: number) {
+    setNewCoOwner((d) => ({ ...d, ownership_pct: pct }));
+    // Auto-preview: primary % will become 100 - coOwnerTotal - pct (clamped)
+    // (actual state update happens on addCoOwner)
+  }
+
   function addCoOwner() {
     if (!newCoOwner.name) return;
-    setCoOwners((prev) => [...prev, { ...newCoOwner }]);
+    const entry: CoOwner = {
+      ...newCoOwner,
+      isNew: newCoOwnerIsNew || undefined,
+      newPhone: newCoOwnerIsNew ? newCoOwnerPhone : undefined,
+      newEmail: newCoOwnerIsNew ? newCoOwnerEmail : undefined,
+    };
+    const newList = [...coOwners, entry];
+    setCoOwners(newList);
+    // Auto-adjust primary owner % to fill up to 100
+    const newCoTotal = newList.reduce((s, o) => s + o.ownership_pct, 0);
+    setOwnershipPct(String(Math.max(0, 100 - newCoTotal)));
+    // Reset form
     setNewCoOwner({ name: "", role: "individual", ownership_pct: 50 });
+    setNewCoOwnerIsNew(false);
+    setNewCoOwnerPhone("");
+    setNewCoOwnerEmail("");
     setAddingCoOwner(false);
   }
 
   function removeCoOwner(idx: number) {
-    setCoOwners((prev) => prev.filter((_, i) => i !== idx));
+    const newList = coOwners.filter((_, i) => i !== idx);
+    setCoOwners(newList);
+    // Auto-adjust primary owner % back
+    const newCoTotal = newList.reduce((s, o) => s + o.ownership_pct, 0);
+    setOwnershipPct(String(Math.max(0, 100 - newCoTotal)));
   }
-
-  const coOwnerTotal  = coOwners.reduce((s, o) => s + o.ownership_pct, 0);
-  const myOwnership   = Math.max(0, Math.min(100, Number(ownershipPct) || 100));
-  const totalOwnership = myOwnership + coOwnerTotal;
 
   const equity = estimatedValue && mortgageBalance
     ? Number(estimatedValue) - Number(mortgageBalance)
@@ -207,6 +372,35 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
     setSaving(true);
     setError(null);
 
+    // Create contacts for any new co-owners before saving the portfolio item
+    let resolvedCoOwners = [...coOwners];
+    for (let i = 0; i < resolvedCoOwners.length; i++) {
+      const co = resolvedCoOwners[i];
+      if (co.isNew) {
+        // We need the realtor_id — fetch it from the session via API
+        const sessionRes = await fetch("/api/auth/session");
+        const session = await sessionRes.json();
+        const realtorId = session?.user?.id;
+        if (!realtorId) { setError("Session expired — please reload."); setSaving(false); return; }
+
+        const { contactId: newId, error: createErr } = await createContactFromCoOwner({
+          name: co.name,
+          phone: co.newPhone,
+          email: co.newEmail,
+          realtorId,
+        });
+        if (createErr || !newId) {
+          setError(`Could not create contact for "${co.name}": ${createErr}`);
+          setSaving(false);
+          return;
+        }
+        resolvedCoOwners[i] = { name: co.name, role: co.role, ownership_pct: co.ownership_pct, contact_id: newId };
+      }
+    }
+
+    // Strip client-only fields before saving
+    const cleanCoOwners = resolvedCoOwners.map(({ isNew: _i, newPhone: _p, newEmail: _e, ...rest }) => rest);
+
     const payload = {
       contact_id: contactId,
       address: address.trim(),
@@ -217,7 +411,7 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
       property_type: propertyType || null,
       property_category: category,
       ownership_pct: myOwnership,
-      co_owners: coOwners as Record<string, unknown>[],
+      co_owners: cleanCoOwners as Record<string, unknown>[],
       purchase_price: purchasePrice ? Number(purchasePrice) : null,
       purchase_date: purchaseDate || null,
       estimated_value: estimatedValue ? Number(estimatedValue) : null,
@@ -433,12 +627,26 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm font-medium mb-1.5 block">Name</label>
-                  <Input
-                    className="h-10"
-                    placeholder="Full name"
+                  <ContactSearchInput
                     value={newCoOwner.name}
-                    onChange={(e) => setNewCoOwner((d) => ({ ...d, name: e.target.value }))}
+                    onChange={(v) => {
+                      setNewCoOwner((d) => ({ ...d, name: v }));
+                      setNewCoOwnerIsNew(false); // reset if they start typing again
+                    }}
+                    onSelect={(c) => {
+                      setNewCoOwner((d) => ({ ...d, name: c.name, contact_id: c.id }));
+                      setNewCoOwnerIsNew(false);
+                    }}
+                    onCreateNew={(name) => {
+                      setNewCoOwner((d) => ({ ...d, name, contact_id: undefined }));
+                      setNewCoOwnerIsNew(true);
+                    }}
                   />
+                  {newCoOwnerIsNew && (
+                    <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                      ⚡ Will be created as a new contact on save
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-1.5 block">Role</label>
@@ -453,7 +661,34 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
                   </select>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+
+              {/* Optional phone/email for new contacts */}
+              {newCoOwnerIsNew && (
+                <div className="grid grid-cols-2 gap-3 pt-1 border-t border-indigo-100 dark:border-indigo-900/30">
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">Phone <span className="text-xs font-normal text-muted-foreground">(optional)</span></label>
+                    <Input
+                      className="h-10"
+                      placeholder="+1 604 555 0100"
+                      value={newCoOwnerPhone}
+                      onChange={(e) => setNewCoOwnerPhone(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">Email <span className="text-xs font-normal text-muted-foreground">(optional)</span></label>
+                    <Input
+                      className="h-10"
+                      type="email"
+                      placeholder="name@email.com"
+                      value={newCoOwnerEmail}
+                      onChange={(e) => setNewCoOwnerEmail(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Ownership % with auto-preview */}
+              <div className="flex items-center gap-3">
                 <label className="text-sm font-medium">Ownership %</label>
                 <Input
                   type="number"
@@ -461,18 +696,35 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
                   max={99}
                   className="h-10 w-24"
                   value={newCoOwner.ownership_pct}
-                  onChange={(e) => setNewCoOwner((d) => ({ ...d, ownership_pct: Number(e.target.value) }))}
+                  onChange={(e) => handleNewCoOwnerPctChange(Number(e.target.value))}
                 />
+                <span className="text-xs text-muted-foreground">
+                  → {contactName.split(" ")[0]} will be{" "}
+                  <span className={primaryAfterAdd < 0 ? "text-red-500 font-semibold" : "font-semibold"}>
+                    {primaryAfterAdd}%
+                  </span>
+                </span>
               </div>
+              {remainingForNew > 0 && newCoOwner.ownership_pct !== remainingForNew && (
+                <p className="text-xs text-indigo-500">
+                  💡 {remainingForNew}% is currently unallocated
+                </p>
+              )}
+
               <div className="flex gap-2">
-                <Button type="button" size="sm" onClick={addCoOwner}>Add</Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => setAddingCoOwner(false)}>Cancel</Button>
+                <Button type="button" size="sm" onClick={addCoOwner} disabled={!newCoOwner.name}>Add</Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => { setAddingCoOwner(false); setNewCoOwnerIsNew(false); setNewCoOwnerPhone(""); setNewCoOwnerEmail(""); }}>Cancel</Button>
               </div>
             </div>
           ) : (
             <button
               type="button"
-              onClick={() => setAddingCoOwner(true)}
+              onClick={() => {
+                // Suggest splitting remaining % evenly
+                const suggested = Math.max(1, Math.floor(myOwnership / 2));
+                setNewCoOwner({ name: "", role: "individual", ownership_pct: suggested });
+                setAddingCoOwner(true);
+              }}
               className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
               disabled={saving}
             >

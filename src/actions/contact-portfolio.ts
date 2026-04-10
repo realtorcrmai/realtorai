@@ -340,6 +340,42 @@ export async function upsertPrimaryResidence(
 }
 
 // ============================================================
+// createContactFromCoOwner
+// Creates a minimal contact record for a co-owner who isn't in the system yet.
+// ============================================================
+
+export async function createContactFromCoOwner(data: {
+  name: string;
+  phone?: string;
+  email?: string;
+  realtorId: string;
+}): Promise<{ contactId: string | null; error: string | null }> {
+  try {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const supabase = createAdminClient();
+
+    const { data: row, error } = await supabase
+      .from("contacts")
+      .insert({
+        name: data.name.trim(),
+        phone: data.phone?.trim() || "",
+        email: data.email?.trim() || null,
+        type: "buyer",
+        pref_channel: "sms",
+        realtor_id: data.realtorId,
+        source: "portfolio_co_owner",
+      })
+      .select("id")
+      .single();
+
+    if (error) return { contactId: null, error: error.message };
+    return { contactId: row.id, error: null };
+  } catch (err) {
+    return { contactId: null, error: String(err) };
+  }
+}
+
+// ============================================================
 // getPortfolioForContact
 // ============================================================
 
