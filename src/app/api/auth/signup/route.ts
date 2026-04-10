@@ -6,9 +6,9 @@ import { getUserFeatures } from "@/lib/features";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, password, phone, brokerage, license_number, plan } = body;
+    const { name, email, password } = body;
 
-    // Validation
+    // Validation — only 3 required fields (S1)
     if (!name || typeof name !== "string" || name.trim().length < 2) {
       return NextResponse.json({ error: "Name is required (min 2 characters)" }, { status: 422 });
     }
@@ -33,31 +33,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });
     }
 
-    // Hash password
     const passwordHash = await hash(password, 12);
 
-    // Determine plan
-    const selectedPlan = plan === "professional" ? "professional" : "free";
-    const features = getUserFeatures(selectedPlan);
+    // All new users get 14-day Professional trial (S7)
+    const trialPlan = "professional";
+    const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+    const features = getUserFeatures(trialPlan);
 
-    // Create user
     const { data: newUser, error: insertError } = await supabase
       .from("users")
       .insert({
         email: normalizedEmail,
         name: name.trim(),
         password_hash: passwordHash,
-        phone: phone?.trim() || null,
-        brokerage: brokerage?.trim() || null,
-        license_number: license_number?.trim() || null,
         role: "realtor",
-        plan: selectedPlan,
+        plan: "free",
+        trial_plan: trialPlan,
+        trial_ends_at: trialEndsAt,
         enabled_features: features,
         signup_source: "email",
         email_verified: false,
         is_active: true,
+        onboarding_completed: false,
+        personalization_completed: false,
       })
-      .select("id, email, name, plan")
+      .select("id, email, name, plan, trial_ends_at")
       .single();
 
     if (insertError) {
@@ -65,15 +65,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to create account. Please try again." }, { status: 500 });
     }
 
+    // TODO: Send verification email (S5) — sendVerificationEmail(newUser.id, normalizedEmail)
+    // TODO: Send Day 0 welcome drip email (D1) — sendWelcomeEmail(newUser.id, normalizedEmail, name)
+
     return NextResponse.json({
       success: true,
       user: {
         id: newUser.id,
         email: newUser.email,
         name: newUser.name,
-        plan: newUser.plan,
+        plan: trialPlan,
+        trialEndsAt: newUser.trial_ends_at,
       },
-      message: "Account created successfully. Please sign in.",
+      message: "Account created with 14-day Professional trial.",
     }, { status: 201 });
 
   } catch (err) {
