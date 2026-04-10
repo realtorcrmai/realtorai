@@ -1,13 +1,3 @@
-// Realtors360 — Feature Gating
-// 3-layer system: Plans (billing) → Release Gate (what's launched) → User Features
-
-import { PLANS, DEFAULT_PLAN } from "./plans";
-import type { PlanId } from "./plans";
-
-// ============================================================
-// Feature Keys
-// ============================================================
-
 export const FEATURE_KEYS = [
   "listings",
   "contacts",
@@ -22,72 +12,12 @@ export const FEATURE_KEYS = [
   "automations",
   "newsletters",
   "website",
-  "social",
-  "assistant",
+  "mls-browse",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
 export const ALL_FEATURES = [...FEATURE_KEYS] as FeatureKey[];
-
-// ============================================================
-// Release Gate — controls what's available globally
-// Even if a plan includes a feature, it won't show until released here.
-// To release a feature: uncomment it and deploy.
-// ============================================================
-
-export const RELEASED_FEATURES: FeatureKey[] = [
-  // R1: Core CRM + Email Marketing
-  "contacts",
-  "calendar",
-  "tasks",
-  "newsletters",
-  "automations",
-  // R2: Uncomment to release
-  // "listings",
-  // "showings",
-  // "forms",
-  // "social",
-  // R3: Uncomment to release
-  // "website",
-  // "content",
-  // "import",
-  // "workflow",
-  // R4: Uncomment to release
-  // "assistant",
-  // "search",
-];
-
-// ============================================================
-// Feature Resolution
-// ============================================================
-
-/**
- * Get the features a user can access.
- * = intersection(plan features, released features) + any manual overrides
- *
- * @param plan - user's billing plan (free, professional, studio, team, admin)
- * @param overrides - manual feature overrides set by admin (optional)
- */
-export function getUserFeatures(plan?: string, overrides?: string[]): FeatureKey[] {
-  // If user has manual overrides from admin, use those (filtered by released)
-  if (overrides && Array.isArray(overrides) && overrides.length > 0) {
-    return overrides.filter((f): f is FeatureKey => RELEASED_FEATURES.includes(f as FeatureKey));
-  }
-
-  // Get plan features, filtered by what's released
-  const planId = (plan || DEFAULT_PLAN) as PlanId;
-  const planDef = PLANS[planId] || PLANS[DEFAULT_PLAN];
-  return planDef.features.filter((f) => RELEASED_FEATURES.includes(f));
-}
-
-// Backward compatibility
-export const CURRENT_RELEASE_FEATURES = RELEASED_FEATURES;
-export const R1_FEATURES = RELEASED_FEATURES;
-
-// ============================================================
-// Feature Metadata
-// ============================================================
 
 export const FEATURE_META: Record<
   FeatureKey,
@@ -145,15 +75,62 @@ export const FEATURE_META: Record<
     label: "Website Marketing",
     description: "Build & manage your realtor website",
   },
-  social: {
-    label: "Social Media",
-    description: "AI content studio — auto-generate & publish to all platforms",
-  },
-  assistant: {
-    label: "AI Assistant",
-    description: "RAG-powered chat — ask questions about your CRM data",
+  "mls-browse": {
+    label: "MLS Browse",
+    description: "Search & import listings from Repliers MLS",
   },
 };
+
+/**
+ * Returns the set of enabled FeatureKeys for a given plan, optionally
+ * merged with per-user overrides stored in the `enabled_features` DB column.
+ * Filters out any keys that are not in FEATURE_KEYS (e.g. legacy "social" /
+ * "assistant" entries in plans.ts) so the result is always type-safe.
+ */
+export function getUserFeatures(
+  plan: string,
+  overrides?: string[] | null,
+): FeatureKey[] {
+  // Inline plan→feature map to avoid circular import with plans.ts
+  const PLAN_FEATURES: Record<string, string[]> = {
+    free: ["contacts", "calendar", "tasks"],
+    professional: [
+      "contacts", "calendar", "tasks",
+      "newsletters", "automations",
+      "listings", "showings", "forms",
+    ],
+    studio: [
+      "contacts", "calendar", "tasks",
+      "newsletters", "automations",
+      "listings", "showings", "forms",
+      "website", "content", "import", "workflow",
+    ],
+    team: [
+      "contacts", "calendar", "tasks",
+      "newsletters", "automations",
+      "listings", "showings", "forms",
+      "website", "content", "import", "workflow",
+      "search",
+    ],
+    admin: [
+      "contacts", "calendar", "tasks",
+      "newsletters", "automations",
+      "listings", "showings", "forms",
+      "website", "content", "import", "workflow",
+      "search",
+    ],
+  };
+
+  const validSet = new Set<string>(FEATURE_KEYS);
+  const base: string[] = PLAN_FEATURES[plan] ?? PLAN_FEATURES["free"];
+  const merged = new Set<string>(base);
+
+  if (overrides) {
+    for (const key of overrides) merged.add(key);
+  }
+
+  return [...merged].filter((k): k is FeatureKey => validSet.has(k));
+}
 
 /** Map feature keys to their nav href */
 export const FEATURE_HREF: Record<FeatureKey, string> = {
@@ -170,6 +147,5 @@ export const FEATURE_HREF: Record<FeatureKey, string> = {
   automations: "/automations",
   newsletters: "/newsletters",
   website: "/websites",
-  social: "/social",
-  assistant: "/assistant",
+  "mls-browse": "/mls-browse",
 };
