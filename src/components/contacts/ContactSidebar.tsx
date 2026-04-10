@@ -424,7 +424,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                         >
                           {contact.name}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {contact.phone}
                         </p>
                         {/* Mini stage dots */}
@@ -437,7 +437,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                       {/* Type badge */}
                       <Badge
                         variant="secondary"
-                        className={`${CONTACT_TYPE_COLORS[contact.type as ContactType] ?? ""} text-sm px-1.5 py-0 shrink-0 capitalize`}
+                        className={`${CONTACT_TYPE_COLORS[contact.type as ContactType] ?? ""} text-xs px-1.5 py-0 shrink-0 capitalize`}
                       >
                         {contact.type}
                       </Badge>

@@ -279,7 +279,7 @@ export default async function AutomationsPage() {
                 className="group"
               >
                 <Card className="h-full transition-shadow hover:shadow-md group-hover:border-indigo-200">
-                  <CardContent className="py-5 space-y-3">
+                  <CardContent className="py-4 space-y-2">
                     {/* Top row: icon + status */}
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">

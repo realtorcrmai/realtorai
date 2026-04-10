@@ -221,7 +221,7 @@ export default function TasksPage() {
 
       {/* Floating bulk action bar */}
       {someSelected && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl bg-white dark:bg-zinc-900 border border-border">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-4 py-2 rounded-xl shadow-xl bg-white dark:bg-zinc-900 border border-border">
           <span className="text-sm font-medium text-muted-foreground">
             {selectedIds.size} selected
           </span>

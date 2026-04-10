@@ -8,7 +8,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-poppins), var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -66,10 +66,10 @@
 :root {
   /* ── Core surfaces ── */
   --background: #f6f7fb;                      /* neutral gray — Monday.com clean */
-  --foreground: oklch(0.145 0 0);           /* #222 — near-black, high contrast */
+  --foreground: #333333;                    /* Monday.com main text — softer than near-black */
 
   --card: oklch(1 0 0);                    /* solid white — no transparency */
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: #333333;
 
   --popover: oklch(1 0 0);                  /* solid white for popovers */
   --popover-foreground: oklch(0.145 0 0);
@@ -83,7 +83,7 @@
   --secondary-foreground: oklch(0.20 0 0);
 
   --muted: #f0f1f3;
-  --muted-foreground: oklch(0.42 0 0);     /* #666 — clearly readable */
+  --muted-foreground: #676879;              /* Monday.com secondary text */
 
   --accent: #e8eaed;
   --accent-foreground: oklch(0.20 0 0);
@@ -102,7 +102,7 @@
   --chart-4: oklch(0.62 0.17 45);          /* orange */
   --chart-5: oklch(0.52 0.14 320);         /* magenta */
 
-  --radius: 0.625rem;
+  --radius: 0.25rem;
 
   /* ── Sidebar: Dark charcoal ── */
   --sidebar: oklch(0.18 0.012 250);

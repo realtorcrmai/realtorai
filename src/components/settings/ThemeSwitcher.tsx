@@ -195,7 +195,7 @@ export function ThemeSwitcher() {
             <button
               key={mode}
               onClick={() => applyColorMode(mode)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all text-sm font-medium ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all text-sm font-medium ${
                 colorMode === mode
                   ? "border-brand bg-brand-muted text-brand"
                   : "border-border bg-background text-muted-foreground hover:border-brand/30"

@@ -127,7 +127,7 @@ export function TaskCard({ task, onUpdate, isSelected = false, onToggleSelect }:
         <div className="flex items-start justify-between gap-2">
           <p
             className={cn(
-              "text-xs md:text-sm font-medium",
+              "text-sm font-medium",
               task.status === "completed" && "line-through text-muted-foreground"
             )}
           >
@@ -139,7 +139,7 @@ export function TaskCard({ task, onUpdate, isSelected = false, onToggleSelect }:
         </div>
 
         {task.description && (
-          <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 line-clamp-1 md:line-clamp-2">
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
             {task.description}
           </p>
         )}

@@ -215,7 +215,7 @@ export default async function NewsletterDashboard() {
         {{
           /* ═══ OVERVIEW ═══ */
           overview: (
-            <div className="space-y-3 stagger-children">
+            <div className="space-y-4 stagger-children">
 
               {/* Row 1: Compact stat pills */}
               <div className="flex items-center gap-2 flex-wrap">
@@ -285,7 +285,7 @@ export default async function NewsletterDashboard() {
               })()}
 
               {/* Row 3: Pipeline (compact) + AI Activity (side by side) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Compact Pipeline — merged buyer + seller */}
                 <Card>
                   <CardContent className="p-4">
@@ -423,7 +423,7 @@ export default async function NewsletterDashboard() {
                       return (
                         <a key={w.id} href={`/automations/workflows/${w.id}`} className="group">
                           <Card className="h-full transition-shadow hover:shadow-md group-hover:border-primary/30">
-                            <CardContent className="p-5 space-y-3">
+                            <CardContent className="p-4 space-y-2">
                               <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-3">
                                   <span className="text-2xl">{icon}</span>
@@ -495,7 +495,7 @@ function HotContactCard({ title, contacts, warningText, emptyText, bottomStat, g
 }) {
   return (
     <Card className={contacts.length > 0 ? "border-red-200 bg-red-50/30" : ""}>
-      <CardContent className="p-5">
+      <CardContent className="p-4">
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-base font-semibold">{title}</h3>
           <Badge variant={contacts.length > 0 ? "destructive" : "secondary"} className="text-xs">{contacts.length} ready to act</Badge>
