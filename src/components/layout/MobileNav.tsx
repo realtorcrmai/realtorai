@@ -18,7 +18,7 @@ const navItems: { href: string; label: string; icon: typeof Building2; featureKe
   { href: "/", label: "Home", icon: LayoutDashboard },
   { href: "/contacts", label: "Contacts", icon: Users, featureKey: "contacts" },
   { href: "/tasks", label: "Tasks", icon: ListTodo, featureKey: "tasks" },
-  { href: "/listings", label: "Listings", icon: Building2, featureKey: "listings" },
+  { href: "/listings", label: "Listings", icon: Building2 },
   { href: "/calendar", label: "Calendar", icon: Calendar, featureKey: "calendar" },
 ];
 
