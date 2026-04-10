@@ -212,6 +212,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
   // ── Quick Setup tile triggers — open panels inline without tab switch ──
   const [triggerPrefs, setTriggerPrefs] = useState(false);
   const [triggerContext, setTriggerContext] = useState(false);
+  const [triggerProperties, setTriggerProperties] = useState(false);
   const [triggerDocs, setTriggerDocs] = useState(false);
 
   // ── Lazy-load activity log when Activity tab is selected ──
@@ -340,7 +341,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             }
 
             // Properties of interest
-            if (propertiesHasData) {
+            if (propertiesHasData || triggerProperties) {
               filledPanels.push(
                 <Card key="properties" id="section-properties-interest" className="border-l-4 border-l-sky-400 bg-sky-50/20 dark:bg-sky-950/10">
                   <CardContent className="p-4">
@@ -381,12 +382,12 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
                 />
               );
             }
-            if (!isSeller && !portfolioItems.length) {
+            if (!isSeller && !propertiesHasData && !triggerProperties) {
               emptyActions.push(
                 <QuickSetupTile key="properties" icon="🏠" label="Add Property"
                   description="Track properties of interest"
                   color="sky"
-                  onClick={() => setCurrentTab("portfolio")}
+                  onClick={() => setTriggerProperties(true)}
                 />
               );
             }
@@ -538,21 +539,25 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
       </TabsContent>
 
       {/* ── FAMILY TAB ─────────────────────────────────────── */}
-      <TabsContent value="family">
-        <Card className="border-border/60">
-          <CardContent className="p-5">
-            <FamilyTabPanel contactId={contactId} initialMembers={familyMembers} />
-          </CardContent>
-        </Card>
+      <TabsContent value="family" className="">
+        <div className="space-y-3">
+          <Card className="border-l-4 border-l-rose-400 bg-rose-50/15 dark:bg-rose-950/10">
+            <CardContent className="p-4">
+              <FamilyTabPanel contactId={contactId} initialMembers={familyMembers} />
+            </CardContent>
+          </Card>
+        </div>
       </TabsContent>
 
       {/* ── PORTFOLIO TAB ──────────────────────────────────── */}
-      <TabsContent value="portfolio">
-        <Card className="border-border/60">
-          <CardContent className="p-5">
-            <ContactPortfolioTab contactId={contactId} items={portfolioItems} />
-          </CardContent>
-        </Card>
+      <TabsContent value="portfolio" className="">
+        <div className="space-y-3">
+          <Card className="border-l-4 border-l-indigo-400 bg-indigo-50/15 dark:bg-indigo-950/10">
+            <CardContent className="p-4">
+              <ContactPortfolioTab contactId={contactId} items={portfolioItems} />
+            </CardContent>
+          </Card>
+        </div>
       </TabsContent>
     </Tabs>
   );

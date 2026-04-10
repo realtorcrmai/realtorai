@@ -2,19 +2,21 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Command } from "cmdk";
 import { Search, BookOpen, ArrowRight, Zap } from "lucide-react";
 import { getAllFeatures, getFeatureIcon } from "@/lib/help-parser";
 
-const ACTIONS = [
+const BASE_ACTIONS = [
   { label: "Create Listing", href: "/listings", icon: "🏠" },
   { label: "Add Contact", href: "/contacts", icon: "👤" },
   { label: "Schedule Showing", href: "/showings", icon: "🔑" },
   { label: "Create Task", href: "/tasks", icon: "📋" },
   { label: "Create Deal", href: "/pipeline", icon: "💰" },
-  { label: "Open Help Center", href: "/help", icon: "❓" },
   { label: "Settings", href: "/settings", icon: "⚙️" },
 ];
+
+const HELP_ACTION = { label: "Open Help Center", href: "/help", icon: "❓" };
 
 function routeQuery(query: string): "help" | "action" | "mixed" {
   if (/^(how|what|why|when|where|can i|do i|is there|help|guide|tutorial)/i.test(query)) return "help";
@@ -26,7 +28,10 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
-  const features = typeof window === "undefined" ? [] : (() => { try { return getAllFeatures(); } catch { return []; } })();
+  const { data: session } = useSession();
+  const enabledFeatures = session?.user?.enabledFeatures as string[] | undefined;
+  const hasHelp = Array.isArray(enabledFeatures) && enabledFeatures.includes("assistant");
+  const features = hasHelp && typeof window !== "undefined" ? (() => { try { return getAllFeatures(); } catch { return []; } })() : [];
 
   // Cmd+K shortcut
   useEffect(() => {
@@ -59,7 +64,7 @@ export function CommandPalette() {
           <div className="flex items-center gap-2 px-4 border-b border-border">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <Command.Input
-              placeholder="Search help, CRM, or type a command..."
+              placeholder={hasHelp ? "Search help, CRM, or type a command..." : "Search CRM or type a command..."}
               className="flex-1 py-3 text-sm bg-transparent outline-none placeholder:text-muted-foreground"
               autoFocus
               onValueChange={setSearchQuery}
@@ -72,28 +77,30 @@ export function CommandPalette() {
               No results found.
             </Command.Empty>
 
-            {/* Help Articles */}
-            <Command.Group heading="Help" className="mb-2">
-              {features.map((f) => (
-                <Command.Item
-                  key={f.slug}
-                  value={`help ${f.title} ${f.problem}`}
-                  onSelect={() => navigate(`/help/${f.slug}`)}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm cursor-pointer data-[selected=true]:bg-accent transition-colors"
-                >
-                  <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-foreground">{getFeatureIcon(f.slug)} {f.title}</span>
-                    <p className="text-xs text-muted-foreground truncate">{f.problem.slice(0, 80)}</p>
-                  </div>
-                  <ArrowRight className="h-3 w-3 text-muted-foreground/50 shrink-0" />
-                </Command.Item>
-              ))}
-            </Command.Group>
+            {/* Help Articles — professional+ only */}
+            {features.length > 0 && (
+              <Command.Group heading="Help" className="mb-2">
+                {features.map((f) => (
+                  <Command.Item
+                    key={f.slug}
+                    value={`help ${f.title} ${f.problem}`}
+                    onSelect={() => navigate(`/help/${f.slug}`)}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm cursor-pointer data-[selected=true]:bg-accent transition-colors"
+                  >
+                    <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-foreground">{getFeatureIcon(f.slug)} {f.title}</span>
+                      <p className="text-xs text-muted-foreground truncate">{f.problem.slice(0, 80)}</p>
+                    </div>
+                    <ArrowRight className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                  </Command.Item>
+                ))}
+              </Command.Group>
+            )}
 
             {/* Quick Actions */}
             <Command.Group heading="Actions" className="mb-2">
-              {ACTIONS.map((action) => (
+              {[...BASE_ACTIONS, ...(hasHelp ? [HELP_ACTION] : [])].map((action) => (
                 <Command.Item
                   key={action.href}
                   value={`action ${action.label}`}

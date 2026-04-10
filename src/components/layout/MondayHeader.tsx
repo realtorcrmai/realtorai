@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { Bell, Search, HelpCircle, LogOut } from "lucide-react";
+import { Search, LogOut } from "lucide-react";
 import { QuickAddButton } from "@/components/layout/QuickAddButton";
 
 export function MondayHeader() {
@@ -29,21 +29,17 @@ export function MondayHeader() {
       {/* Quick add */}
       <QuickAddButton />
 
-      {/* Search hint */}
-      <button className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-[rgba(103,104,121,0.1)] text-[#676879] transition-colors">
+      {/* Search — opens command palette */}
+      <button
+        onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
+        className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-[rgba(103,104,121,0.1)] text-[#676879] transition-colors"
+        aria-label="Search (⌘K)"
+      >
         <Search className="h-4 w-4" />
         <span className="hidden md:inline text-xs text-muted-foreground font-mono border border-border rounded px-1 py-0.5">⌘K</span>
       </button>
 
-      {/* Notifications */}
-      <button className="p-1.5 rounded hover:bg-[rgba(103,104,121,0.1)] text-[#676879] transition-colors">
-        <Bell className="h-4 w-4" />
-      </button>
-
-      {/* Help */}
-      <button className="p-1.5 rounded hover:bg-[rgba(103,104,121,0.1)] text-[#676879] transition-colors">
-        <HelpCircle className="h-4 w-4" />
-      </button>
+      {/* Notifications and Help removed — no functionality attached */}
 
       {/* User avatar */}
       <div className="flex items-center gap-2">

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Building, Plus } from "lucide-react";
 import { deletePortfolioItem } from "@/actions/contact-portfolio";
 import type { PortfolioItem } from "@/actions/contact-portfolio";
 
@@ -87,24 +88,51 @@ export function ContactPortfolioTab({ contactId, items: initialItems }: ContactP
 
   if (items.length === 0) {
     return (
-      <div className="lf-card p-6 text-center space-y-3">
-        <div className="text-3xl">🏠</div>
-        <p className="font-medium text-sm">No properties in portfolio</p>
-        <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-          Add properties this contact owns, co-owns, or has previously owned. Updating the
-          contact&apos;s address will automatically create a primary residence entry.
-        </p>
-        <Link href={`/contacts/${contactId}/portfolio/new`} className="lf-btn-sm inline-block">
-          + Add Property
-        </Link>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <Building className="h-4 w-4" />
+            Portfolio
+          </h3>
+        </div>
+        <div className="text-center py-6">
+          <p className="text-sm text-muted-foreground mb-3">
+            No properties in portfolio — add properties this contact owns or has owned.
+          </p>
+          <Link
+            href={`/contacts/${contactId}/portfolio/new`}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add Property
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+          <Building className="h-4 w-4" />
+          Portfolio
+          <span className="ml-1 px-2 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary normal-case tracking-normal">
+            {items.filter(i => i.status === "owned").length} owned
+          </span>
+        </h3>
+        <Link
+          href={`/contacts/${contactId}/portfolio/new`}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-border hover:border-primary/50 text-muted-foreground hover:text-primary transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add Property
+        </Link>
+      </div>
+
       {/* Portfolio summary bar */}
-      <div className="lf-card p-4 grid grid-cols-3 gap-4 text-center">
+      <div className="p-3 rounded-lg bg-muted/30 grid grid-cols-3 gap-4 text-center">
         <div>
           <p className="text-xs text-muted-foreground">Properties</p>
           <p className="text-2xl font-bold text-indigo-700">{items.filter(i => i.status === "owned").length}</p>
@@ -142,16 +170,13 @@ export function ContactPortfolioTab({ contactId, items: initialItems }: ContactP
             onClick={() => setFilter(key)}
             className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
               filter === key
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                ? "bg-primary text-white"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted"
             }`}
           >
             {label}
           </button>
         ))}
-        <Link href={`/contacts/${contactId}/portfolio/new`} className="lf-btn-sm ml-auto">
-          + Add Property
-        </Link>
       </div>
 
       {/* Property cards */}
@@ -168,7 +193,7 @@ export function ContactPortfolioTab({ contactId, items: initialItems }: ContactP
             const coOwners = (item.co_owners as CoOwner[] | null) ?? [];
 
             return (
-              <div key={item.id} className="lf-card p-4 space-y-3">
+              <div key={item.id} className="p-3 rounded-lg border border-border/50 hover:bg-muted/20 transition-colors space-y-3">
                 {/* Header row */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
