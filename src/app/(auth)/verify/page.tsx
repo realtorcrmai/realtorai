@@ -132,7 +132,7 @@ function VerifyEmailContent() {
 
               {/* Success message */}
               {message && (
-                <div className="p-3 rounded-lg bg-[#0F7694]/5 text-sm text-[#0A6880] text-center">
+                <div className="p-3 rounded-lg bg-brand-muted text-sm text-brand-dark text-center">
                   {message}
                 </div>
               )}

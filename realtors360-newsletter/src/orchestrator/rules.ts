@@ -4,8 +4,15 @@ import { logger } from '../lib/logger.js';
 /**
  * Rule resolution + frequency capping for `email_event_rules`.
  *
- * Given an event, find the highest-priority enabled rule that maps it to an
- * email type, then check that the contact hasn't been emailed too recently.
+ * N3 fix: frequency cap now counts all newsletter statuses except 'failed'
+ * (including 'pending_review', 'sending', 'sent'). The original only
+ * counted `.gte('sent_at', ...)` which silently missed pending-review drafts
+ * — a realtor with 50 queued drafts could trigger 50 more for the same
+ * contact because the cap only saw sent rows.
+ *
+ * N4: CASL consent is checked in the pipeline runner (`_runner.ts`) AFTER
+ * rule resolution. The rule resolver deals with rate limits; the runner
+ * deals with legal compliance. Separation of concerns.
  */
 
 export type ResolvedRule = {
@@ -58,18 +65,23 @@ export async function resolveRuleForEvent(args: {
   // 2. Frequency cap (only meaningful if we have a contact)
   if (args.contact_id) {
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    // N3 fix: count ALL rows created in the last week that aren't failures.
+    // This captures pending_review, sending, and sent. Without this, a
+    // realtor in review-mode could pile up unlimited drafts per contact.
     const { count: weekCount, error: weekErr } = await supabase
       .from('newsletters')
       .select('id', { count: 'exact', head: true })
       .eq('contact_id', args.contact_id)
-      .gte('sent_at', oneWeekAgo);
+      .neq('status', 'failed')
+      .gte('created_at', oneWeekAgo);
 
     if (weekErr) logger.warn({ err: weekErr }, 'rules: week count failed');
     if ((weekCount ?? 0) >= resolved.frequency_cap_per_week) {
       return { ok: false, reason: 'cap_exceeded', detail: `${weekCount} sends in last 7 days` };
     }
 
-    // Min hours between sends
+    // Min hours between sends — same fix: use created_at not sent_at.
     const minHoursAgo = new Date(
       Date.now() - resolved.min_hours_between_sends * 60 * 60 * 1000
     ).toISOString();
@@ -77,7 +89,8 @@ export async function resolveRuleForEvent(args: {
       .from('newsletters')
       .select('id', { count: 'exact', head: true })
       .eq('contact_id', args.contact_id)
-      .gte('sent_at', minHoursAgo);
+      .neq('status', 'failed')
+      .gte('created_at', minHoursAgo);
 
     if ((recentCount ?? 0) > 0) {
       return { ok: false, reason: 'too_soon', detail: `sent within last ${resolved.min_hours_between_sends}h` };

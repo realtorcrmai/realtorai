@@ -19,12 +19,11 @@ const EventBodySchema = z.object({
 /**
  * POST /events
  *
- * CRM publishes events here. M1 also allows direct table inserts via the
- * service-role client (the worker polls `email_events` regardless of the
- * publishing path), so this endpoint is the optional fast path.
- *
- * Auth: HMAC-SHA256 signature in `x-newsletter-signature` header, computed
- * over the raw body using NEWSLETTER_SHARED_SECRET.
+ * N8 fix: HMAC is now computed over `req.rawBody` (the original bytes
+ * captured by the express.json verify callback in server.ts) instead of
+ * `JSON.stringify(req.body)`. The old approach was non-deterministic —
+ * key ordering, whitespace, and number formatting could all drift between
+ * the CRM and this service.
  */
 eventsRouter.post('/events', async (req: Request, res: Response) => {
   // 1. Verify signature (skipped if no secret configured — dev mode)
@@ -32,9 +31,15 @@ eventsRouter.post('/events', async (req: Request, res: Response) => {
     const sig = req.header('x-newsletter-signature');
     if (!sig) return res.status(401).json({ error: 'missing signature' });
 
+    // N8: use the raw bytes captured by server.ts's verify callback.
+    const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
+    if (!rawBody) {
+      return res.status(500).json({ error: 'raw body not captured — check server.ts middleware' });
+    }
+
     const expected = crypto
       .createHmac('sha256', config.NEWSLETTER_SHARED_SECRET)
-      .update(JSON.stringify(req.body))
+      .update(rawBody)
       .digest('hex');
 
     if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {

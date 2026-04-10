@@ -61,20 +61,20 @@ const STATUS_STYLES: Record<
   }
 > = {
   completed: {
-    circle: "bg-[#0F7694]/50 shadow-sm shadow-green-500/30",
-    connector: "bg-[#0F7694]/50",
+    circle: "bg-brand/50 shadow-sm shadow-green-500/30",
+    connector: "bg-brand/50",
     text: "text-foreground",
     badge:
-      "bg-[#0F7694]/10 text-[#0A6880] dark:bg-[#1a1535]/30 dark:text-[#67D4E8]",
+      "bg-brand-muted text-brand-dark dark:bg-foreground/30 dark:text-brand-light",
     badgeLabel: "COMPLETE",
   },
   current: {
     circle:
-      "border-2 border-[#0F7694]/60 bg-[#0F7694]/5 dark:bg-[#1a1535]/50",
+      "border-2 border-brand/60 bg-brand-muted dark:bg-foreground/50",
     connector: "bg-muted-foreground/15",
-    text: "text-[#0F7694] dark:text-[#67D4E8]",
+    text: "text-brand dark:text-brand-light",
     badge:
-      "bg-[#0F7694]/10 text-[#0A6880] dark:bg-[#1a1535]/30 dark:text-[#67D4E8]",
+      "bg-brand-muted text-brand-dark dark:bg-foreground/30 dark:text-brand-light",
     badgeLabel: "CURRENT",
   },
   pending: {
@@ -205,7 +205,7 @@ export function WorkflowStepperCard({
       return {
         label: "COMPLETED",
         className:
-          "bg-[#0F7694]/10 text-[#0A6880] dark:bg-[#1a1535]/30 dark:text-[#67D4E8]",
+          "bg-brand-muted text-brand-dark dark:bg-foreground/30 dark:text-brand-light",
       };
     if (isPaused)
       return {
@@ -228,7 +228,7 @@ export function WorkflowStepperCard({
     return {
       label: "ACTIVE",
       className:
-        "bg-[#0F7694]/10 text-[#0A6880] dark:bg-[#1a1535]/30 dark:text-[#67D4E8]",
+        "bg-brand-muted text-brand-dark dark:bg-foreground/30 dark:text-brand-light",
     };
   })();
 
@@ -271,7 +271,7 @@ export function WorkflowStepperCard({
               size="sm"
               onClick={handleResume}
               disabled={isPending}
-              className="text-xs text-muted-foreground hover:text-[#0F7694]"
+              className="text-xs text-muted-foreground hover:text-brand"
               title="Resume"
             >
               {isPending ? (
@@ -315,10 +315,10 @@ export function WorkflowStepperCard({
         <div
           className={`h-full rounded-full transition-all duration-500 ${
             allComplete
-              ? "bg-[#0F7694]/50"
+              ? "bg-brand/50"
               : isPaused
                 ? "bg-amber-500"
-                : "bg-[#0F7694]"
+                : "bg-brand"
           }`}
           style={{
             width: `${totalSteps > 0 ? (completedCount / totalSteps) * 100 : 0}%`,
@@ -379,7 +379,7 @@ export function WorkflowStepperCard({
                     <div
                       className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${styles.circle}`}
                     >
-                      <span className="text-sm font-bold text-[#0F7694] dark:text-[#67D4E8]">
+                      <span className="text-sm font-bold text-brand dark:text-brand-light">
                         {step.step_order}
                       </span>
                     </div>

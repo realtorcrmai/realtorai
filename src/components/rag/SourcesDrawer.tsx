@@ -44,25 +44,25 @@ export default function SourcesDrawer({ sources }: SourcesDrawerProps) {
     <div className="mt-1">
       <button
         onClick={() => setOpen(!open)}
-        className="text-xs text-[#0F7694] hover:text-[#0A6880] flex items-center gap-1"
+        className="text-xs text-brand hover:text-brand-dark flex items-center gap-1"
       >
         📎 {sources.length} source{sources.length > 1 ? 's' : ''} referenced
         <span className="text-[10px]">{open ? '▲' : '▼'}</span>
       </button>
 
       {open && (
-        <div className="mt-2 space-y-2 pl-2 border-l-2 border-[#0F7694]/15">
+        <div className="mt-2 space-y-2 pl-2 border-l-2 border-brand/15">
           {sources.map((s, i) => {
             const deepLink = getDeepLink(s.source_table, s.source_id);
             return (
               <div key={i} className="text-xs bg-gray-50 rounded p-2 border">
                 <div className="flex items-center gap-2 mb-1">
                   {deepLink ? (
-                    <a href={deepLink} className="font-medium text-[#0F7694] hover:underline">
+                    <a href={deepLink} className="font-medium text-brand hover:underline">
                       {TABLE_LABELS[s.source_table] ?? s.source_table} →
                     </a>
                   ) : (
-                    <span className="font-medium text-[#0F7694]">
+                    <span className="font-medium text-brand">
                       {TABLE_LABELS[s.source_table] ?? s.source_table}
                     </span>
                   )}

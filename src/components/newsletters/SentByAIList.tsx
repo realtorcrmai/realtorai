@@ -133,7 +133,7 @@ export function SentByAIList({ newsletters }: { newsletters: SentEmail[] }) {
             <div className="text-[10px] text-muted-foreground">Sent</div>
           </div>
           <div className="text-center">
-            <div className="text-lg font-bold text-[#0F7694]">{grouped.reduce((a, g) => a + g.totalOpens, 0)}</div>
+            <div className="text-lg font-bold text-brand">{grouped.reduce((a, g) => a + g.totalOpens, 0)}</div>
             <div className="text-[10px] text-muted-foreground">Opens</div>
           </div>
           <div className="text-center">
@@ -162,7 +162,7 @@ export function SentByAIList({ newsletters }: { newsletters: SentEmail[] }) {
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${
-                      group.contactType === "seller" ? "bg-[#0F7694]" : "bg-gradient-to-br from-primary to-[#1a1535]"
+                      group.contactType === "seller" ? "bg-brand" : "bg-gradient-to-br from-primary to-[#1a1535]"
                     }`}>
                       {group.contactName[0]}
                     </div>
@@ -182,8 +182,8 @@ export function SentByAIList({ newsletters }: { newsletters: SentEmail[] }) {
                     {/* Engagement stats */}
                     <div className="flex items-center gap-2.5">
                       <div className="flex items-center gap-1" title="Opens">
-                        <MailOpen className={`h-3.5 w-3.5 ${group.totalOpens > 0 ? "text-[#0F7694]" : "text-muted-foreground/40"}`} />
-                        <span className={`text-xs font-medium ${group.totalOpens > 0 ? "text-[#0F7694]" : "text-muted-foreground"}`}>{group.totalOpens}</span>
+                        <MailOpen className={`h-3.5 w-3.5 ${group.totalOpens > 0 ? "text-brand" : "text-muted-foreground/40"}`} />
+                        <span className={`text-xs font-medium ${group.totalOpens > 0 ? "text-brand" : "text-muted-foreground"}`}>{group.totalOpens}</span>
                       </div>
                       <div className="flex items-center gap-1" title="Clicks">
                         <MousePointerClick className={`h-3.5 w-3.5 ${group.totalClicks > 0 ? "text-primary" : "text-muted-foreground/40"}`} />
@@ -193,7 +193,7 @@ export function SentByAIList({ newsletters }: { newsletters: SentEmail[] }) {
                       <div className="hidden md:flex items-center gap-1.5">
                         <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full ${group.openRate >= 70 ? "bg-[#0F7694]/50" : group.openRate >= 40 ? "bg-amber-500" : "bg-red-400"}`}
+                            className={`h-full rounded-full ${group.openRate >= 70 ? "bg-brand/50" : group.openRate >= 40 ? "bg-amber-500" : "bg-red-400"}`}
                             style={{ width: `${group.openRate}%` }}
                           />
                         </div>
@@ -218,7 +218,7 @@ export function SentByAIList({ newsletters }: { newsletters: SentEmail[] }) {
                       </a>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground ml-auto">
                         <TrendingUp className="h-3 w-3" />
-                        Open rate: <span className={`font-medium ${group.openRate >= 70 ? "text-[#0F7694]" : group.openRate >= 40 ? "text-amber-600" : "text-red-500"}`}>{group.openRate}%</span>
+                        Open rate: <span className={`font-medium ${group.openRate >= 70 ? "text-brand" : group.openRate >= 40 ? "text-amber-600" : "text-red-500"}`}>{group.openRate}%</span>
                       </div>
                     </div>
 
@@ -238,8 +238,8 @@ export function SentByAIList({ newsletters }: { newsletters: SentEmail[] }) {
                             <div className="flex items-center gap-2 min-w-0">
                               <div className={`w-2 h-2 rounded-full shrink-0 ${
                                 bounces.length > 0 ? "bg-red-500" :
-                                clicks.length > 0 ? "bg-[#0F7694]" :
-                                opens.length > 0 ? "bg-[#0F7694]/50" :
+                                clicks.length > 0 ? "bg-brand" :
+                                opens.length > 0 ? "bg-brand/50" :
                                 "bg-muted-foreground/30"
                               }`} />
                               <div className="min-w-0">
@@ -258,7 +258,7 @@ export function SentByAIList({ newsletters }: { newsletters: SentEmail[] }) {
                                 <span className="text-[10px] text-red-500 font-medium">Bounced</span>
                               ) : (
                                 <>
-                                  {opens.length > 0 && <span className="text-[10px] text-[#0F7694] font-medium">✓ {opens.length > 1 ? `${opens.length}x` : "Opened"}</span>}
+                                  {opens.length > 0 && <span className="text-[10px] text-brand font-medium">✓ {opens.length > 1 ? `${opens.length}x` : "Opened"}</span>}
                                   {clicks.length > 0 && <span className="text-[10px] text-primary font-medium">{clicks.length} click{clicks.length > 1 ? "s" : ""}</span>}
                                   {opens.length === 0 && clicks.length === 0 && <span className="text-[10px] text-muted-foreground">No engagement</span>}
                                 </>
@@ -274,7 +274,7 @@ export function SentByAIList({ newsletters }: { newsletters: SentEmail[] }) {
                               <div className="space-y-1.5 ml-1">
                                 {/* Sent */}
                                 <TimelineRow
-                                  color="bg-[#0F7694]/50"
+                                  color="bg-brand/50"
                                   icon={<Mail className="h-3 w-3 text-muted-foreground" />}
                                   label="Delivered"
                                   time={nl.sent_at}
@@ -284,8 +284,8 @@ export function SentByAIList({ newsletters }: { newsletters: SentEmail[] }) {
                                 {opens.map((e, i) => (
                                   <TimelineRow
                                     key={"o" + i}
-                                    color="bg-[#0F7694]"
-                                    icon={<MailOpen className="h-3 w-3 text-[#0F7694]" />}
+                                    color="bg-brand"
+                                    icon={<MailOpen className="h-3 w-3 text-brand" />}
                                     label={`Opened${opens.length > 1 ? ` (${i + 1}/${opens.length})` : ""}`}
                                     time={e.created_at}
                                   />
@@ -295,7 +295,7 @@ export function SentByAIList({ newsletters }: { newsletters: SentEmail[] }) {
                                 {clicks.map((e, i) => (
                                   <TimelineRow
                                     key={"c" + i}
-                                    color="bg-[#0F7694]/50"
+                                    color="bg-brand/50"
                                     icon={<MousePointerClick className="h-3 w-3 text-primary" />}
                                     label="Clicked"
                                     detail={e.metadata?.link?.replace(/https?:\/\/(www\.)?/, "").slice(0, 50)}

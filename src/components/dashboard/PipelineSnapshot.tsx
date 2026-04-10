@@ -36,7 +36,7 @@ export default function PipelineSnapshot({
   const totalCount = stages.reduce((sum, s) => sum + s.count, 0);
 
   return (
-    <div className="relative rounded-2xl overflow-hidden elevation-4 bg-card border border-[#0F7694]/20 border-t-[#0F7694]">
+    <div className="relative rounded-2xl overflow-hidden elevation-4 bg-card border border-brand/20 border-t-[#0F7694]">
       {/* Gold accent top border */}
       <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#0F7694]/60 via-[#0F7694] to-[#0F7694]/60" />
     <div className="p-5">
@@ -45,7 +45,7 @@ export default function PipelineSnapshot({
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">
           Pipeline
         </h2>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#00C875]/15 px-3 py-1 text-xs font-bold text-[#007A47]">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-success/15 px-3 py-1 text-xs font-bold text-emerald-700">
           💰 GCI {formatGCI(totalGCI)}
         </span>
       </div>

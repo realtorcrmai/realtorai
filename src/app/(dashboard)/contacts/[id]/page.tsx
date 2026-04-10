@@ -19,6 +19,8 @@ import { JourneyProgressBar } from "@/components/contacts/JourneyProgressBar";
 import { EmailHistoryTimeline } from "@/components/contacts/EmailHistoryTimeline";
 import { IntelligencePanel } from "@/components/contacts/IntelligencePanel";
 import { ContextLog } from "@/components/contacts/ContextLog";
+import { ProspectControls } from "@/components/contacts/ProspectControls";
+import { QuickLogForm } from "@/components/contacts/QuickLogForm";
 import { WebsiteActivityLoader } from "@/components/contacts/WebsiteActivityLoader";
 import { DeleteContactButton } from "@/components/contacts/DeleteContactButton";
 import { ContactDetailLayout } from "@/components/contacts/ContactDetailLayout";
@@ -584,7 +586,7 @@ export default async function ContactDetailPage({
     <>
       {/* Contact Card Header */}
       <div id="section-contact-info" className="animate-float-in relative z-20">
-            <Card className="shadow-md border border-[#0F7694]/20 dark:border-[#0F7694]/10 overflow-visible bg-gradient-to-r from-[#0F7694]/5 via-[#0F7694]/5 to-[#0F7694]/3 dark:from-[#1a1535]/20 dark:via-[#1a1535]/20 dark:to-[#1a1535]/10">
+            <Card className="shadow-md border border-brand/20 dark:border-brand/10 overflow-visible bg-gradient-to-r from-[#0F7694]/5 via-[#0F7694]/5 to-[#0F7694]/3 dark:from-[#1a1535]/20 dark:via-[#1a1535]/20 dark:to-[#1a1535]/10">
               <CardContent className="p-4">
                 {/* Row 1: Avatar + Name + Badges + Actions */}
                 <div className="flex items-center gap-4">
@@ -619,23 +621,23 @@ export default async function ContactDetailPage({
                 </div>
 
                 {/* Row 2: Pipeline bar or Convert button */}
-                <div className="mt-3 pt-2 border-t border-[#0F7694]/10 dark:border-[#1a1535]/20">
+                <div className="mt-3 pt-2 border-t border-brand/10 dark:border-foreground/20">
                   {contact.type === "customer" ? (
-                    <div className="flex items-center gap-2 p-3 bg-[#0F7694]/5 border border-[#0F7694]/20 rounded-lg">
-                      <span className="text-sm text-[#0A6880] font-medium flex-1">This is an unqualified lead. Convert when ready:</span>
+                    <div className="flex items-center gap-2 p-3 bg-brand-muted border border-brand/20 rounded-lg">
+                      <span className="text-sm text-brand-dark font-medium flex-1">This is an unqualified lead. Convert when ready:</span>
                       <form action={async () => {
                         "use server";
                         const { convertContactType } = await import("@/actions/contacts");
                         await convertContactType(id, "buyer");
                       }}>
-                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-[#0F7694] text-white font-medium hover:bg-[#0A6880]">Convert to Buyer</button>
+                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-brand text-white font-medium hover:bg-brand-dark">Convert to Buyer</button>
                       </form>
                       <form action={async () => {
                         "use server";
                         const { convertContactType } = await import("@/actions/contacts");
                         await convertContactType(id, "seller");
                       }}>
-                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-[#0F7694] text-white font-medium hover:bg-[#0A6880]">Convert to Seller</button>
+                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-brand text-white font-medium hover:bg-brand-dark">Convert to Seller</button>
                       </form>
                     </div>
                   ) : (
@@ -693,10 +695,18 @@ export default async function ContactDetailPage({
             />
           </div>
 
-          {/* Journey Progress Bar — temporarily removed to fit viewport */}
-          {/* TODO: Re-add as compact version or move into a tab */}
+          {/* Journey Progress Bar */}
+          {contactJourney && (
+            <JourneyProgressBar
+              contactType={contact.type}
+              currentPhase={contactJourney.current_phase}
+              engagementScore={(intel as Record<string, unknown> | null)?.engagement_score as number ?? 0}
+              phaseEnteredAt={contactJourney.phase_entered_at}
+              enrolledAt={contactJourney.created_at}
+            />
+          )}
 
-          {/* Email History */}
+          {/* Prospect 360 — Email History + Quick Log */}
           {newslettersWithEvents.length > 0 && (
             <Card>
               <CardContent className="p-4">
@@ -755,7 +765,7 @@ export default async function ContactDetailPage({
       <aside className="hidden lg:block w-[320px] shrink-0 border-l p-4 bg-gradient-to-b from-slate-50 via-white to-[#0F7694]/3 dark:from-card/50 dark:via-card/30 dark:to-[#1a1535]/10 overflow-y-auto space-y-4">
         {/* Engagement — 1st section */}
         {intel && (
-          <div className="pb-3 border-b border-[#0F7694]/15 dark:border-[#1a1535]/30 border-l-4 border-l-[#0F7694] pl-4 rounded-sm shrink-0">
+          <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-[#0F7694] pl-4 rounded-sm shrink-0">
             <IntelligencePanel
               intelligence={intel}
               totalEmails={newslettersWithEvents.length}
@@ -763,8 +773,36 @@ export default async function ContactDetailPage({
           </div>
         )}
 
+        {/* Prospect Controls — journey pause/resume, trust, frequency */}
+        {(contactJourney || contact.type === "buyer" || contact.type === "seller") && (
+          <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-[#67D4E8] pl-4 rounded-sm shrink-0">
+            <ProspectControls
+              contactId={id}
+              contactName={contact.name}
+              journey={contactJourney as { id: string; journey_type: string; current_phase: string; is_paused: boolean; send_mode: string; next_email_at: string | null; trust_level: number } | null}
+              aiContextNotes={(contact as Record<string, unknown>).ai_context_notes as string | null}
+            />
+          </div>
+        )}
+
+        {/* Quick Log — log calls, texts, meetings */}
+        <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-[#0F7694] pl-4 rounded-sm shrink-0">
+          <QuickLogForm
+            contactId={id}
+            contactName={contact.name}
+            recentEmails={(contactNewsletters ?? [])
+              .filter((nl: Record<string, unknown>) => nl.status === "sent")
+              .slice(0, 5)
+              .map((nl: Record<string, unknown>) => ({
+                id: nl.id as string,
+                subject: nl.subject as string,
+                sent_at: nl.sent_at as string | null,
+              }))}
+          />
+        </div>
+
         {/* Network Stats — 2nd section */}
-        <div className="border-b border-[#0F7694]/20 dark:border-[#0F7694]/10 pb-3 pt-3 border-l-4 border-l-[#0F7694] pl-4 rounded-sm shrink-0">
+        <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-[#0F7694] pl-4 rounded-sm shrink-0">
           <NetworkStatsCard
             connectionCount={relationships.length}
             referralCount={allReferrals.length}
@@ -777,7 +815,7 @@ export default async function ContactDetailPage({
         </div>
 
         {/* Referrals */}
-        <div className="border-b border-[#0F7694]/20 dark:border-[#0F7694]/10 pb-3 pt-3 border-l-4 border-l-[#67D4E8] pl-4 rounded-sm shrink-0">
+        <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-[#67D4E8] pl-4 rounded-sm shrink-0">
           <ReferralsPanel
             contact={contact}
             referredByName={referredByName}
@@ -798,7 +836,7 @@ export default async function ContactDetailPage({
           {/* Contextual Tips — fills remaining space when sections are empty */}
           {(!intel || Object.keys(intel).length === 0) && relationships.length === 0 && allReferrals.length === 0 && (
             <div className="mt-4 pt-4 border-t border-border/30">
-              <div className="rounded-xl bg-gradient-to-br from-[#0F7694]/5/50 to-[#0F7694]/3 dark:from-[#1a1535]/20 dark:to-[#1a1535]/10 border border-[#0F7694]/15/50 dark:border-[#1a1535]/20 p-4">
+              <div className="rounded-xl bg-gradient-to-br from-[#0F7694]/5/50 to-[#0F7694]/3 dark:from-[#1a1535]/20 dark:to-[#1a1535]/10 border border-brand/15/50 dark:border-foreground/20 p-4">
                 <div className="flex items-start gap-2.5">
                   <span className="text-lg">💡</span>
                   <div>
@@ -810,15 +848,15 @@ export default async function ContactDetailPage({
                     </p>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-[#0F7694]/10 dark:bg-[#1a1535]/30 flex items-center justify-center text-xs font-medium shrink-0">1</span>
+                        <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">1</span>
                         <span className="text-muted-foreground">Add a <strong className="text-foreground">relationship</strong></span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-[#0F7694]/10 dark:bg-[#1a1535]/30 flex items-center justify-center text-xs font-medium shrink-0">2</span>
+                        <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">2</span>
                         <span className="text-muted-foreground">Set <strong className="text-foreground">preferences</strong></span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-[#0F7694]/10 dark:bg-[#1a1535]/30 flex items-center justify-center text-xs font-medium shrink-0">3</span>
+                        <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">3</span>
                         <span className="text-muted-foreground">Send first <strong className="text-foreground">email</strong></span>
                       </div>
                     </div>

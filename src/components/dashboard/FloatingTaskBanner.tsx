@@ -35,12 +35,12 @@ export function FloatingTaskBanner({ tasks, openTasksCount }: FloatingTaskBanner
   const tickerItems = [...tasks, ...tasks];
 
   return (
-    <div className="w-full rounded-xl border border-[#0F7694]/15 dark:border-[#1a1535]/50 bg-[#0F7694]/5/60 dark:bg-[#1a1535]/20 overflow-hidden">
+    <div className="w-full rounded-xl border border-brand/15 dark:border-foreground/50 bg-brand-muted/60 dark:bg-foreground/20 overflow-hidden">
       <div className="flex items-center">
         {/* Fixed left label */}
         <Link
           href="/tasks"
-          className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-[#0F7694] text-white group hover:bg-[#0A6880] transition-colors"
+          className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-brand text-white group hover:bg-brand-dark transition-colors"
         >
           <ListTodo className="h-4 w-4" />
           <span className="text-xs font-semibold whitespace-nowrap">
@@ -63,7 +63,7 @@ export function FloatingTaskBanner({ tasks, openTasksCount }: FloatingTaskBanner
               <Link
                 key={`${task.id}-${i}`}
                 href="/tasks"
-                className="shrink-0 flex items-center gap-2 px-5 py-2.5 hover:bg-[#0F7694]/10/50 dark:hover:bg-[#1a1535]/20 transition-colors"
+                className="shrink-0 flex items-center gap-2 px-5 py-2.5 hover:bg-brand-muted/50 dark:hover:bg-foreground/20 transition-colors"
               >
                 {priorityDot(task.priority)}
                 <span className="text-xs font-medium text-foreground whitespace-nowrap">
@@ -77,7 +77,7 @@ export function FloatingTaskBanner({ tasks, openTasksCount }: FloatingTaskBanner
                     })}
                   </span>
                 )}
-                <span className="text-[#67D4E8] dark:text-[#0A6880] mx-2">|</span>
+                <span className="text-brand-light dark:text-brand-dark mx-2">|</span>
               </Link>
             ))}
           </div>

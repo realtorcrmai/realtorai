@@ -13,11 +13,11 @@ const AVATAR_GRADIENTS: Record<string, string> = {
 };
 
 const TYPE_BADGE_COLORS: Record<string, string> = {
-  buyer: "bg-[#0F7694]/10 text-[#0A6880] dark:bg-blue-900/30 dark:text-blue-300",
-  seller: "bg-[#0F7694]/15 text-[#0A6880] dark:bg-[#0F7694]/20 dark:text-[#67D4E8]",
-  customer: "bg-[#0F7694]/10 text-[#0A6880] dark:bg-[#1a1535]/30 dark:text-[#67D4E8]",
+  buyer: "bg-brand-muted text-brand-dark dark:bg-blue-900/30 dark:text-blue-300",
+  seller: "bg-brand-muted-strong text-brand-dark dark:bg-brand/20 dark:text-brand-light",
+  customer: "bg-brand-muted text-brand-dark dark:bg-foreground/30 dark:text-brand-light",
   agent: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
-  partner: "bg-[#0F7694]/10 text-[#0A6880] dark:bg-[#1a1535]/30 dark:text-[#67D4E8]",
+  partner: "bg-brand-muted text-brand-dark dark:bg-foreground/30 dark:text-brand-light",
   other: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
 };
 
@@ -133,7 +133,7 @@ export function LivePreviewCard({
         <div className="flex items-center gap-2">
           <div className="flex-1 h-1.5 rounded-full bg-muted/30 overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${completionPct >= 70 ? "bg-[#0F7694]/50" : completionPct >= 40 ? "bg-amber-500" : "bg-red-400"}`}
+              className={`h-full rounded-full transition-all duration-500 ${completionPct >= 70 ? "bg-brand/50" : completionPct >= 40 ? "bg-amber-500" : "bg-red-400"}`}
               style={{ width: `${completionPct}%` }}
             />
           </div>
@@ -178,7 +178,7 @@ export function LivePreviewCard({
                 {(buyerAreas?.length ?? 0) > 0 ? (
                   <div className="flex gap-1 flex-wrap">
                     {buyerAreas!.map((a) => (
-                      <span key={a} className="px-1.5 py-0.5 rounded bg-[#0F7694]/5 dark:bg-blue-950/30 text-[#0A6880] dark:text-blue-300 text-xs font-medium">{a}</span>
+                      <span key={a} className="px-1.5 py-0.5 rounded bg-brand-muted dark:bg-blue-950/30 text-brand-dark dark:text-blue-300 text-xs font-medium">{a}</span>
                     ))}
                   </div>
                 ) : (

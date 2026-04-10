@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     // Classify click link
     let linkUrl: string | null = null;
     let linkType: string | null = null;
-    let scoreImpact = 0;
+    let scoreImpact = eventType === "opened" ? 2 : 0;
     if (eventType === "clicked" && data.click?.link) {
       linkUrl = data.click.link as string;
       const classification = classifyClick(linkUrl);
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
         user_agent: data.click?.userAgent,
         email_type: newsletter.email_type,
         ...(eventType === "clicked" && linkType
-          ? { click_classification: linkType, score_impact: scoreImpact }
+          ? { click_type: linkType, score_impact: scoreImpact }
           : {}),
       },
     });
@@ -190,24 +190,24 @@ interface ClickClassification {
   score_impact: number;
 }
 
-const CLICK_CATEGORIES: { type: string; score_impact: number; patterns: string[] }[] = [
-  { type: "book_showing", score_impact: 30, patterns: ["/book-showing", "/schedule-viewing"] },
-  { type: "get_cma", score_impact: 30, patterns: ["/cma", "/home-value", "/what-is-my-home-worth"] },
-  { type: "mortgage_calc", score_impact: 20, patterns: ["/mortgage", "/calculator", "/pre-approval"] },
-  { type: "listing", score_impact: 15, patterns: ["/listing/", "/listings/", "/listings?", "/property/", "/homes/"] },
-  { type: "investment", score_impact: 15, patterns: ["/investment", "/rental", "/yield", "/cap-rate"] },
-  { type: "open_house_rsvp", score_impact: 15, patterns: ["/open-house", "/rsvp"] },
-  { type: "school_info", score_impact: 10, patterns: ["/school", "/education"] },
-  { type: "market_stats", score_impact: 10, patterns: ["/market", "/stats", "/report"] },
-  { type: "neighbourhood", score_impact: 10, patterns: ["/neighbourhood", "/neighborhood", "/area-guide"] },
-  { type: "price_drop", score_impact: 10, patterns: ["/price-drop", "/reduced"] },
-  { type: "forwarded", score_impact: 5, patterns: ["/forward", "/share"] },
+const CLICK_CATEGORIES: { type: string; score_impact: number; keywords: string[] }[] = [
+  { type: "book_showing", score_impact: 30, keywords: ["showing", "book", "schedule", "tour"] },
+  { type: "get_cma", score_impact: 30, keywords: ["cma", "valuation", "home-value", "appraisal"] },
+  { type: "mortgage_calc", score_impact: 20, keywords: ["mortgage", "calculator", "rate", "payment"] },
+  { type: "listing", score_impact: 15, keywords: ["listing", "property", "home", "house", "mls"] },
+  { type: "investment", score_impact: 15, keywords: ["investment", "rental", "roi", "income"] },
+  { type: "open_house_rsvp", score_impact: 15, keywords: ["rsvp", "open-house", "register"] },
+  { type: "school_info", score_impact: 10, keywords: ["school", "education", "district"] },
+  { type: "market_stats", score_impact: 10, keywords: ["market", "stats", "report", "trend"] },
+  { type: "neighbourhood", score_impact: 10, keywords: ["neighbourhood", "neighborhood", "area", "community"] },
+  { type: "price_drop", score_impact: 10, keywords: ["price-drop", "reduced", "new-price"] },
+  { type: "forwarded", score_impact: 5, keywords: ["forward", "share"] },
 ];
 
 function classifyClick(url: string): ClickClassification {
   const lower = url.toLowerCase();
   for (const category of CLICK_CATEGORIES) {
-    if (category.patterns.some((p) => lower.includes(p))) {
+    if (category.keywords.some((kw) => lower.includes(kw))) {
       return { type: category.type, score_impact: category.score_impact };
     }
   }
@@ -257,9 +257,12 @@ async function updateContactIntelligence(
     const tags = intel.inferred_interests.lifestyle_tags || [];
     if (linkType === "school_info" && !tags.includes("family")) tags.push("family");
     if (linkType === "listing" && !tags.includes("active_searcher")) tags.push("active_searcher");
-    if (linkType === "cma" && !tags.includes("considering_selling")) tags.push("considering_selling");
-    if (linkType === "market_report") intel.content_preference = "data_driven";
+    if (linkType === "get_cma" && !tags.includes("considering_selling")) tags.push("considering_selling");
+    if (linkType === "market_stats") intel.content_preference = "data_driven";
     if (linkType === "neighbourhood") intel.content_preference = "lifestyle";
+    if (linkType === "investment" && !tags.includes("investor")) tags.push("investor");
+    if (linkType === "mortgage_calc" && !tags.includes("financing")) tags.push("financing");
+    if (linkType === "open_house_rsvp" && !tags.includes("active_searcher")) tags.push("active_searcher");
     intel.inferred_interests.lifestyle_tags = tags;
 
     // Extract area from listing URLs (e.g., /listings/kitsilano-123)
@@ -274,32 +277,34 @@ async function updateContactIntelligence(
     }
   }
 
-  // Engagement score (0-100)
-  const opens = intel.total_opens || 0;
-  const clicks = intel.total_clicks || 0;
-  const lastClicked = intel.last_clicked ? new Date(intel.last_clicked).getTime() : 0;
-  const lastOpened = intel.last_opened ? new Date(intel.last_opened).getTime() : 0;
-  const lastEngagement = Math.max(lastClicked, lastOpened);
-  const recencyDays = lastEngagement > 0
-    ? Math.floor((Date.now() - lastEngagement) / 86400000)
-    : 999;
-
-  intel.engagement_score = Math.min(100, Math.round(
-    (Math.min(opens, 20) * 2) +
-    (Math.min(clicks, 15) * 3) +
-    (recencyDays < 7 ? 15 : recencyDays < 30 ? 10 : recencyDays < 90 ? 5 : 0)
-  ));
+  // Engagement score: add click/open score impact, capped at 100
+  const currentScore = intel.engagement_score || 0;
+  intel.engagement_score = Math.min(100, currentScore + scoreImpact);
 
   await supabase
     .from("contacts")
     .update({ newsletter_intelligence: intel })
     .eq("id", contactId);
 
-  // Hot lead alerts for high-intent actions
-  if (linkType === "showing" || linkType === "contact_agent" || linkType === "cma") {
+  // HIGH intent clicks (score_impact >= 30): log to communications table + agent notification
+  if (scoreImpact >= 30 && linkType) {
+    const labelMap: Record<string, string> = {
+      book_showing: "Book a Showing",
+      get_cma: "Get a CMA / Home Valuation",
+    };
+    const label = labelMap[linkType] || linkType.replace(/_/g, " ");
+
+    await supabase.from("communications").insert({
+      contact_id: contactId,
+      direction: "inbound",
+      channel: "email",
+      body: `HOT LEAD: clicked ${label} — ${linkUrl || "unknown URL"}`,
+      related_type: "newsletter_click",
+    });
+
     await supabase.from("agent_notifications").insert({
-      title: "\uD83D\uDD25 Hot Lead Alert",
-      body: `${contact?.name || "A contact"} clicked "${linkType?.replace(/_/g, " ")}" in your newsletter — they may be ready to act!`,
+      title: "Hot Lead Alert",
+      body: `${contact?.name || "A contact"} clicked "${label}" in your newsletter — they may be ready to act!`,
       type: "urgent",
       contact_id: contactId,
       action_url: `/contacts/${contactId}`,

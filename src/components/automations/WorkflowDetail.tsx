@@ -428,7 +428,7 @@ export default function WorkflowDetail({
               disabled={isPending}
               className={
                 workflow.is_active
-                  ? "bg-[#0A6880] hover:bg-[#0A6880] text-white"
+                  ? "bg-brand-dark hover:bg-brand-dark text-white"
                   : ""
               }
             >
@@ -541,7 +541,7 @@ export default function WorkflowDetail({
                             isWait
                               ? "bg-gray-50 border-gray-200 text-gray-500"
                               : isMilestone
-                              ? "bg-[#0F7694]/5 border-[#0F7694]/30 text-[#0F7694]"
+                              ? "bg-brand-muted border-brand/30 text-brand"
                               : "bg-white border-[var(--lf-indigo)]/30 text-[var(--lf-indigo)]"
                           }`}
                         >
@@ -578,7 +578,7 @@ export default function WorkflowDetail({
                             {tplName && (
                               <Badge
                                 variant="outline"
-                                className="text-xs border-[#0F7694]/20 text-[#0F7694] bg-[#0F7694]/5"
+                                className="text-xs border-brand/20 text-brand bg-brand-muted"
                               >
                                 📄 {tplName}
                               </Badge>

@@ -134,10 +134,10 @@ const WORKFLOW_STEPS: WorkflowStep[] = [
 
 const STATUS_STYLES = {
   completed: {
-    circle: "bg-[#00C875] shadow-sm shadow-[#00C875]/30",
-    connector: "bg-[#00C875]",
+    circle: "bg-success shadow-sm shadow-[#00C875]/30",
+    connector: "bg-success",
     text: "text-foreground",
-    badge: "bg-[#00C875]/15 text-[#007A47] dark:bg-[#00C875]/15 dark:text-[#00C875]",
+    badge: "bg-success/15 text-emerald-700 dark:bg-success/15 dark:text-success",
     badgeLabel: "COMPLETE",
   },
   "in-progress": {
@@ -1081,7 +1081,7 @@ export function ListingWorkflow({
                                 {/* Substep indicator */}
                                 <div className="mt-0.5 shrink-0">
                                   {subStatus === "completed" ? (
-                                    <div className="h-5 w-5 rounded-full bg-[#0F7694] flex items-center justify-center">
+                                    <div className="h-5 w-5 rounded-full bg-brand flex items-center justify-center">
                                       <Check className="h-3 w-3 text-white" />
                                     </div>
                                   ) : subStatus === "in-progress" ? (

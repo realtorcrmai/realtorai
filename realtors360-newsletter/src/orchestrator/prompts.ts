@@ -105,3 +105,56 @@ Realtor: ${args.realtorName}
 
 Use the tools to load the contact and any recent communications. Then write a SHORT, sincere birthday note from the realtor — no real estate pitch, no CTA pressuring a meeting. Keep it human. The CTA can be a simple "Reply to say hi" linking to a mailto.`;
 }
+
+/**
+ * A2: Build a voice profile block from the realtor's `realtor_agent_config`
+ * row. Injected into the system prompt so every email reflects the
+ * realtor's brand voice, preferred topics, and content preferences.
+ *
+ * Returns null if the config row has no useful voice data (brand new
+ * realtor with default config).
+ */
+export function buildVoiceProfileBlock(
+  agentConfig: {
+    tone?: string | null;
+    content_rankings?: unknown;
+    writing_style_rules?: unknown;
+    brand_name?: string | null;
+  }
+): string | null {
+  const parts: string[] = [];
+
+  if (agentConfig.brand_name) {
+    parts.push(`Brand: ${agentConfig.brand_name}`);
+  }
+
+  if (agentConfig.tone) {
+    parts.push(`Tone: ${agentConfig.tone}`);
+  }
+
+  if (agentConfig.writing_style_rules) {
+    const rules = agentConfig.writing_style_rules;
+    if (typeof rules === 'string') {
+      parts.push(`Writing style rules: ${rules}`);
+    } else if (Array.isArray(rules) && rules.length > 0) {
+      parts.push(`Writing style rules:\n${rules.map((r: string) => `- ${r}`).join('\n')}`);
+    }
+  }
+
+  if (agentConfig.content_rankings) {
+    const rankings = agentConfig.content_rankings;
+    if (Array.isArray(rankings) && rankings.length > 0) {
+      const top3 = rankings.slice(0, 3);
+      const formatted = top3
+        .map((r: { type?: string; effectiveness?: number }) =>
+          `${r.type ?? 'unknown'} (${Math.round((r.effectiveness ?? 0) * 100)}% effectiveness)`
+        )
+        .join(', ');
+      parts.push(`This realtor's audience responds best to: ${formatted}`);
+    }
+  }
+
+  if (parts.length === 0) return null;
+
+  return `REALTOR VOICE PROFILE (adapt your writing to match):\n${parts.join('\n')}`;
+}

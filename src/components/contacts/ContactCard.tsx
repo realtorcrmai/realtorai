@@ -19,11 +19,11 @@ export function ContactCard({ contact }: { contact: Contact }) {
           <div className="flex items-start gap-3">
             <div
               className={`flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold shrink-0 ${
-                contact.type === "seller" ? "bg-[#0F7694]/10 text-[#0A6880]"
-                  : contact.type === "customer" ? "bg-[#0F7694]/5 text-[#0A6880]"
+                contact.type === "seller" ? "bg-brand-muted text-brand-dark"
+                  : contact.type === "customer" ? "bg-brand-muted text-brand-dark"
                   : contact.type === "agent" ? "bg-amber-50 text-amber-700"
-                  : contact.type === "partner" ? "bg-[#0F7694]/10 text-[#0A6880]"
-                  : "bg-[#0F7694]/5 text-[#0A6880]"
+                  : contact.type === "partner" ? "bg-brand-muted text-brand-dark"
+                  : "bg-brand-muted text-brand-dark"
               }`}
             >
               {initials}
@@ -36,11 +36,11 @@ export function ContactCard({ contact }: { contact: Contact }) {
                 <Badge
                   variant="outline"
                   className={`text-[11px] font-medium capitalize shrink-0 ${
-                    contact.type === "seller" ? "bg-[#0F7694]/10 text-[#0A6880] border-[#0F7694]/20"
-                      : contact.type === "customer" ? "bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20"
+                    contact.type === "seller" ? "bg-brand-muted text-brand-dark border-brand/20"
+                      : contact.type === "customer" ? "bg-brand-muted text-brand-dark border-brand/20"
                       : contact.type === "agent" ? "bg-amber-50 text-amber-700 border-orange-200"
-                      : contact.type === "partner" ? "bg-[#0F7694]/10 text-[#0A6880] border-[#0F7694]/20"
-                      : "bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20"
+                      : contact.type === "partner" ? "bg-brand-muted text-brand-dark border-brand/20"
+                      : "bg-brand-muted text-brand-dark border-brand/20"
                   }`}
                 >
                   {contact.type}

@@ -12,24 +12,24 @@ const TAG_COLORS: Record<string, string> = {
   vip: "bg-amber-100 text-amber-800",
   "hot lead": "bg-red-100 text-red-800",
   "warm lead": "bg-orange-100 text-orange-800",
-  "cold lead": "bg-[#0F7694]/10 text-[#0A6880]",
+  "cold lead": "bg-brand-muted text-brand-dark",
   // Buyer
-  "first-time buyer": "bg-[#0F7694]/10 text-[#0A6880]",
-  "pre-approved": "bg-[#0F7694]/10 text-[#0A6880]",
-  investor: "bg-[#0F7694]/10 text-[#0A6880]",
-  downsizer: "bg-[#0F7694]/10 text-[#0A6880]",
-  upsizer: "bg-[#0F7694]/10 text-[#0A6880]",
-  relocating: "bg-[#0F7694]/10 text-[#1a1535]",
+  "first-time buyer": "bg-brand-muted text-brand-dark",
+  "pre-approved": "bg-brand-muted text-brand-dark",
+  investor: "bg-brand-muted text-brand-dark",
+  downsizer: "bg-brand-muted text-brand-dark",
+  upsizer: "bg-brand-muted text-brand-dark",
+  relocating: "bg-brand-muted text-foreground",
   // Seller
-  "listing active": "bg-[#0F7694]/10 text-[#0A6880]",
+  "listing active": "bg-brand-muted text-brand-dark",
   "listing expired": "bg-gray-100 text-gray-800",
-  "listing sold": "bg-[#0F7694]/10 text-[#0A6880]",
+  "listing sold": "bg-brand-muted text-brand-dark",
   fsbo: "bg-pink-100 text-pink-800",
   // Relationship
-  "past client": "bg-[#0F7694]/15 text-[#0A6880]",
-  referral: "bg-[#0F7694]/10 text-[#0A6880]",
-  "sphere of influence": "bg-[#0F7694]/10 text-[#1a1535]",
-  "repeat client": "bg-[#0F7694]/10 text-[#0A6880]",
+  "past client": "bg-brand-muted-strong text-brand-dark",
+  referral: "bg-brand-muted text-brand-dark",
+  "sphere of influence": "bg-brand-muted text-foreground",
+  "repeat client": "bg-brand-muted text-brand-dark",
   // Status
   "under contract": "bg-orange-100 text-orange-800",
   "closing soon": "bg-amber-100 text-amber-800",
@@ -37,20 +37,20 @@ const TAG_COLORS: Record<string, string> = {
   "do not contact": "bg-red-100 text-red-800",
   // Source
   "open house lead": "bg-lime-100 text-lime-800",
-  "online lead": "bg-[#0F7694]/10 text-[#0A6880]",
-  "sign call": "bg-[#0F7694]/10 text-[#0A6880]",
+  "online lead": "bg-brand-muted text-brand-dark",
+  "sign call": "bg-brand-muted text-brand-dark",
 };
 
 // Fallback colors for custom tags
 const FALLBACK_COLORS = [
-  "bg-[#0F7694]/10 text-[#0A6880]",
-  "bg-[#0F7694]/10 text-[#0A6880]",
+  "bg-brand-muted text-brand-dark",
+  "bg-brand-muted text-brand-dark",
   "bg-amber-100 text-amber-800",
   "bg-pink-100 text-pink-800",
-  "bg-[#0F7694]/10 text-[#0A6880]",
-  "bg-[#0F7694]/10 text-[#0A6880]",
+  "bg-brand-muted text-brand-dark",
+  "bg-brand-muted text-brand-dark",
   "bg-red-100 text-red-800",
-  "bg-[#0F7694]/10 text-[#1a1535]",
+  "bg-brand-muted text-foreground",
 ];
 
 function getTagColor(tag: string): string {

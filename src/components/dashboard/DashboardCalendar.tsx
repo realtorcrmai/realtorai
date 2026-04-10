@@ -40,7 +40,7 @@ const EVENT_PILL: Record<string, { bg: string; text: string; dot: string }> = {
 };
 
 const STATUS_OVERRIDE: Record<string, { bg: string; text: string; dot: string }> = {
-  confirmed: { bg: "bg-emerald-100", text: "text-emerald-700", dot: "bg-[#00C875]" },
+  confirmed: { bg: "bg-emerald-100", text: "text-emerald-700", dot: "bg-success" },
   denied:    { bg: "bg-red-100",     text: "text-red-700",     dot: "bg-rose-500" },
   cancelled: { bg: "bg-gray-100",    text: "text-gray-500",    dot: "bg-gray-400" },
 };

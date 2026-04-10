@@ -40,7 +40,7 @@ export function DDFSyncButton({ listingId }: { listingId: string }) {
         {isPending ? (
           <RefreshCw className="h-3.5 w-3.5 animate-spin" />
         ) : status === "success" ? (
-          <Check className="h-3.5 w-3.5 text-[#0F7694]" />
+          <Check className="h-3.5 w-3.5 text-brand" />
         ) : status === "error" ? (
           <AlertCircle className="h-3.5 w-3.5 text-red-600" />
         ) : (
@@ -51,7 +51,7 @@ export function DDFSyncButton({ listingId }: { listingId: string }) {
       {message && status !== "idle" && (
         <span
           className={`text-xs ${
-            status === "error" ? "text-red-600" : "text-[#0F7694]"
+            status === "error" ? "text-red-600" : "text-brand"
           }`}
         >
           {message}

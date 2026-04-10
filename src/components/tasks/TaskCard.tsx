@@ -114,9 +114,9 @@ export function TaskCard({ task, onUpdate, isSelected = false, onToggleSelect }:
         title={`Mark as ${nextStatus()}`}
       >
         {task.status === "completed" ? (
-          <CheckCircle2 className="h-5 w-5 text-[#00C875]" />
+          <CheckCircle2 className="h-5 w-5 text-success" />
         ) : task.status === "in_progress" ? (
-          <Clock className="h-5 w-5 text-[#0F7694]" />
+          <Clock className="h-5 w-5 text-brand" />
         ) : (
           <Circle className="h-5 w-5 text-muted-foreground/50 hover:text-primary" />
         )}
@@ -203,10 +203,10 @@ export function TaskCard({ task, onUpdate, isSelected = false, onToggleSelect }:
         {task.status !== "completed" && (
           <button
             onClick={() => updateStatus("completed")}
-            className="p-1 rounded hover:bg-[#0F7694]/10 dark:hover:bg-[#0F7694]/10 transition-colors"
+            className="p-1 rounded hover:bg-brand-muted dark:hover:bg-brand-muted transition-colors"
             title="Complete"
           >
-            <ArrowRight className="h-3.5 w-3.5 text-[#0F7694]" />
+            <ArrowRight className="h-3.5 w-3.5 text-brand" />
           </button>
         )}
         <button

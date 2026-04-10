@@ -9,12 +9,12 @@ import type { ListingActivity } from "@/types";
 import { formatDistanceToNow } from "date-fns";
 
 const TYPE_CONFIG: Record<string, { icon: typeof Eye; label: string; color: string }> = {
-  view: { icon: Eye, label: "View", color: "bg-[#0F7694]/8 text-[#0A6880]" },
-  inquiry: { icon: MessageSquare, label: "Inquiry", color: "bg-[#0F7694]/10 text-[#0A6880]" },
-  showing: { icon: Users, label: "Showing", color: "bg-[#0F7694]/5 text-[#0A6880]" },
+  view: { icon: Eye, label: "View", color: "bg-brand/8 text-brand-dark" },
+  inquiry: { icon: MessageSquare, label: "Inquiry", color: "bg-brand-muted text-brand-dark" },
+  showing: { icon: Users, label: "Showing", color: "bg-brand-muted text-brand-dark" },
   offer: { icon: FileText, label: "Offer", color: "bg-amber-50 text-amber-700" },
   price_change: { icon: DollarSign, label: "Price Change", color: "bg-rose-50 text-rose-700" },
-  open_house: { icon: Home, label: "Open House", color: "bg-[#0F7694]/5 text-[#0A6880]" },
+  open_house: { icon: Home, label: "Open House", color: "bg-brand-muted text-brand-dark" },
 };
 
 interface ListingActivityFeedProps {

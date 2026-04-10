@@ -97,7 +97,7 @@ export function ListingCreator() {
             </Link>
             <div>
               <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-[#0F7694]" />
+                <Building2 className="h-5 w-5 text-brand" />
                 List a Property
               </h1>
               <p className="text-sm text-muted-foreground">Create a new listing and start the workflow</p>
@@ -152,7 +152,7 @@ export function ListingCreator() {
               ) : sellers.length === 0 ? (
                 <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-950/10 border border-amber-200/50 dark:border-amber-900/20">
                   <p className="text-sm text-amber-700 dark:text-amber-300">No seller contacts found.</p>
-                  <Link href="/contacts/new" className="text-sm text-[#0F7694] hover:underline mt-1 inline-block">
+                  <Link href="/contacts/new" className="text-sm text-brand hover:underline mt-1 inline-block">
                     Add a seller contact first →
                   </Link>
                 </div>
@@ -221,7 +221,7 @@ export function ListingCreator() {
 
               {showMore && (
                 <div className="space-y-4 animate-float-in">
-                  <div className="p-4 rounded-xl bg-[#FAF8F4] dark:bg-[#1a1535]/10 border border-border/30 space-y-3">
+                  <div className="p-4 rounded-xl bg-[#FAF8F4] dark:bg-foreground/10 border border-border/30 space-y-3">
                     <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Showing Window</p>
                     <p className="text-xs text-muted-foreground/60">When are showings allowed for this property?</p>
                     <div className="grid grid-cols-2 gap-3">
@@ -283,14 +283,14 @@ export function ListingCreator() {
             <Button
               disabled={!canSubmit || submitting}
               onClick={handleSubmit}
-              className="w-full mt-4 h-12 text-base font-semibold bg-[#0F7694] hover:from-[#a37b35] hover:to-[#1a1535] shadow-lg rounded-xl"
+              className="w-full mt-4 h-12 text-base font-semibold bg-brand hover:from-[#a37b35] hover:to-[#1a1535] shadow-lg rounded-xl"
               size="lg"
             >
               {submitting ? "Creating..." : canSubmit ? "Create Listing →" : "Fill required fields *"}
             </Button>
 
             {canSubmit && (
-              <p className="text-xs text-[#0F7694] text-center mt-1.5 font-medium">Ready to list</p>
+              <p className="text-xs text-brand text-center mt-1.5 font-medium">Ready to list</p>
             )}
           </div>
         </div>
@@ -305,7 +305,7 @@ export function ListingCreator() {
 function SectionLabel({ number, label, optional, required }: { number: number; label: string; optional?: boolean; required?: boolean }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="w-7 h-7 rounded-lg bg-[#0F7694] flex items-center justify-center text-white text-xs font-bold shadow-sm">
+      <div className="w-7 h-7 rounded-lg bg-brand flex items-center justify-center text-white text-xs font-bold shadow-sm">
         {number}
       </div>
       <h2 className="text-sm font-semibold">

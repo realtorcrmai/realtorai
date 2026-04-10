@@ -77,10 +77,10 @@ export function ListingBlastDialog({ listing, onClose, onSent }: Props) {
   // Success state
   if (result) {
     return (
-      <Card className="border-[#0F7694]/20">
+      <Card className="border-brand/20">
         <CardContent className="p-6 text-center">
-          <div className="w-12 h-12 rounded-full bg-[#0F7694]/10 flex items-center justify-center mx-auto mb-3">
-            <Check className="w-6 h-6 text-[#0F7694]" />
+          <div className="w-12 h-12 rounded-full bg-brand-muted flex items-center justify-center mx-auto mb-3">
+            <Check className="w-6 h-6 text-brand" />
           </div>
           <h3 className="text-lg font-semibold mb-1">Blast Sent!</h3>
           <p className="text-sm text-muted-foreground mb-3">

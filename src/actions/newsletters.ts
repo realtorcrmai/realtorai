@@ -17,6 +17,17 @@ import { JustSold } from "@/emails/JustSold";
 import { OpenHouseInvite } from "@/emails/OpenHouseInvite";
 import { NeighbourhoodGuide } from "@/emails/NeighbourhoodGuide";
 import { HomeAnniversary } from "@/emails/HomeAnniversary";
+import { PremiumListingShowcase } from "@/emails/PremiumListingShowcase";
+import { ClosingReminder } from "@/emails/ClosingReminder";
+import { BuyerGuide } from "@/emails/BuyerGuide";
+import { ClientTestimonial } from "@/emails/ClientTestimonial";
+import { HomeValueUpdate } from "@/emails/HomeValueUpdate";
+import { MortgageRenewalAlert } from "@/emails/MortgageRenewalAlert";
+import { InspectionReminder } from "@/emails/InspectionReminder";
+import { YearInReview } from "@/emails/YearInReview";
+import { CommunityEvent } from "@/emails/CommunityEvent";
+import { PriceDropAlert } from "@/emails/PriceDropAlert";
+import { ReferralThankYou } from "@/emails/ReferralThankYou";
 import type { RealtorBranding } from "@/emails/BaseLayout";
 
 async function getRealtorBranding(): Promise<RealtorBranding> {
@@ -127,6 +138,155 @@ async function renderEmailTemplate(
         appreciation: content.appreciation,
         message: content.body,
         tips: content.tips || [],
+        ctaText: content.ctaText,
+      } as any);
+      break;
+
+    case "premium_listing_showcase":
+      element = PremiumListingShowcase({
+        ...templateProps,
+        address: content.address || "",
+        cityStatePostal: content.cityStatePostal || content.city || "",
+        price: content.price || "",
+        beds: content.beds || 0,
+        baths: content.baths || 0,
+        sqft: content.sqft,
+        propertyType: content.propertyType,
+        heroPhoto: content.heroPhoto || content.photo || "",
+        galleryPhotos: (content.galleryPhotos || []).map((p: any) =>
+          typeof p === "string" ? { url: p } : p
+        ),
+        headline: content.headline || content.subject || "",
+        description: content.description || content.body || "",
+        features: content.features || content.highlights || [],
+        openHouseDate: content.openHouseDate || content.date,
+        openHouseTime: content.openHouseTime || content.time,
+        listingUrl: content.listingUrl,
+      } as any);
+      break;
+
+    case "closing_reminder":
+      element = ClosingReminder({
+        ...templateProps,
+        address: content.address || "",
+        closingDate: content.closingDate || content.date || "",
+        daysRemaining: content.daysRemaining || 0,
+        checklist: content.checklist || content.highlights || content.tips || [],
+        message: content.body || content.intro || "",
+        ctaText: content.ctaText,
+      } as any);
+      break;
+
+    case "buyer_guide":
+      element = BuyerGuide({
+        ...templateProps,
+        title: content.subject || "Your Buyer Guide",
+        intro: content.intro || content.body || "",
+        steps: content.steps || content.highlights?.map((h: string, i: number) => ({
+          stepNumber: i + 1,
+          title: h,
+          description: "",
+        })) || [],
+        tip: content.funFact || content.tips?.[0] || "",
+        ctaText: content.ctaText,
+      } as any);
+      break;
+
+    case "client_testimonial":
+      element = ClientTestimonial({
+        ...templateProps,
+        clientName: content.clientName || content.name || "",
+        quote: content.quote || content.body || "",
+        address: content.address || "",
+        salePrice: content.salePrice || content.price || "",
+        photo: content.photo,
+        message: content.intro || content.message || "",
+        ctaText: content.ctaText,
+      } as any);
+      break;
+
+    case "home_value_update":
+      element = HomeValueUpdate({
+        ...templateProps,
+        address: content.address || "",
+        currentValue: content.currentValue || content.estimatedValue || "",
+        previousValue: content.previousValue || "",
+        changePercent: content.changePercent || content.appreciation || "",
+        stats: content.stats || [],
+        message: content.body || content.intro || "",
+        ctaText: content.ctaText,
+      } as any);
+      break;
+
+    case "mortgage_renewal_alert":
+      element = MortgageRenewalAlert({
+        ...templateProps,
+        address: content.address || "",
+        renewalDate: content.renewalDate || content.date || "",
+        currentRate: content.currentRate || "",
+        tips: content.tips || content.highlights || [],
+        message: content.body || content.intro || "",
+        ctaText: content.ctaText,
+      } as any);
+      break;
+
+    case "inspection_reminder":
+      element = InspectionReminder({
+        ...templateProps,
+        address: content.address || "",
+        inspectionDate: content.inspectionDate || content.date || "",
+        inspectionType: content.inspectionType || "Home Inspection",
+        checklist: content.checklist || content.highlights || content.tips || [],
+        message: content.body || content.intro || "",
+        ctaText: content.ctaText,
+      } as any);
+      break;
+
+    case "year_in_review":
+      element = YearInReview({
+        ...templateProps,
+        year: content.year || new Date().getFullYear().toString(),
+        stats: content.stats || [],
+        highlights: content.highlights || [],
+        message: content.body || content.intro || "",
+        ctaText: content.ctaText,
+      } as any);
+      break;
+
+    case "community_event":
+      element = CommunityEvent({
+        ...templateProps,
+        eventName: content.eventName || content.subject || "",
+        date: content.date || "",
+        time: content.time || "",
+        location: content.location || content.address || "",
+        description: content.body || content.intro || "",
+        highlights: content.highlights || [],
+        ctaText: content.ctaText,
+      } as any);
+      break;
+
+    case "price_drop_alert":
+      element = PriceDropAlert({
+        ...templateProps,
+        address: content.address || "",
+        originalPrice: content.originalPrice || "",
+        newPrice: content.newPrice || content.price || "",
+        dropPercent: content.dropPercent || "",
+        photo: content.photo,
+        features: content.features || content.highlights || [],
+        message: content.body || content.intro || "",
+        ctaText: content.ctaText,
+      } as any);
+      break;
+
+    case "referral_thank_you":
+      element = ReferralThankYou({
+        ...templateProps,
+        referrerName: content.referrerName || content.name || firstName,
+        referredName: content.referredName || "",
+        message: content.body || content.intro || "",
+        reward: content.reward || content.funFact || "",
         ctaText: content.ctaText,
       } as any);
       break;
@@ -501,6 +661,50 @@ export async function approveNewsletter(newsletterId: string) {
   const result = await sendNewsletter(newsletterId);
   revalidatePath("/newsletters");
   return result;
+}
+
+/**
+ * Edit a newsletter draft's subject/body, then run voice learning
+ * to extract writing preferences from the realtor's changes.
+ */
+export async function editNewsletterDraft(
+  newsletterId: string,
+  originalSubject: string,
+  originalBody: string,
+  editedSubject: string,
+  editedBody: string
+): Promise<{ success: boolean; learnedRules?: string[]; error?: string }> {
+  try {
+    const tc = await getAuthenticatedTenantClient();
+    const realtorId = tc.realtorId;
+
+    // Update the newsletter with edited content
+    await tc
+      .from("newsletters")
+      .update({
+        subject: editedSubject,
+        html_body: editedBody,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", newsletterId);
+
+    // Run voice learning to extract writing preferences
+    const { extractVoiceRules } = await import("@/lib/voice-learning");
+    const learnedRules = await extractVoiceRules(
+      realtorId,
+      originalSubject,
+      originalBody,
+      editedSubject,
+      editedBody
+    );
+
+    revalidatePath("/newsletters");
+    revalidatePath("/newsletters/queue");
+    return { success: true, learnedRules };
+  } catch (e) {
+    console.error("Edit newsletter draft error:", e);
+    return { success: false, error: e instanceof Error ? e.message : "Edit failed" };
+  }
 }
 
 export async function skipNewsletter(newsletterId: string) {

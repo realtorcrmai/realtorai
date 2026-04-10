@@ -443,8 +443,8 @@ export default function OnboardingPage() {
                   {/* Import success */}
                   {importCount > 0 && importSource === "none" && (
                     <div className="text-center space-y-4">
-                      <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#0F7694]/10">
-                        <Check className="h-8 w-8 text-[#0F7694]" />
+                      <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-muted">
+                        <Check className="h-8 w-8 text-brand" />
                       </div>
                       <h2 className="text-xl font-bold">{importCount} contacts imported!</h2>
                       <p className="text-sm text-muted-foreground">

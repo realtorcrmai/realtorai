@@ -51,10 +51,10 @@ export function ListingStatsCard({ stats, featured, salePrice, listPrice }: List
       salePrice && listPrice ? ((salePrice - listPrice) / listPrice) * 100 : null;
 
     return (
-      <Card className="border-[#0F7694]/20 dark:border-blue-800 bg-[#0F7694]/5 dark:bg-blue-950/10">
+      <Card className="border-brand/20 dark:border-blue-800 bg-brand-muted dark:bg-blue-950/10">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-[#0F7694] dark:text-[#67D4E8]" />
+            <TrendingUp className="h-4 w-4 text-brand dark:text-brand-light" />
             Listing Performance Summary
           </CardTitle>
         </CardHeader>
@@ -68,13 +68,13 @@ export function ListingStatsCard({ stats, featured, salePrice, listPrice }: List
                 </div>
               )}
               {salePrice && (
-                <div className="flex-1 rounded-lg border border-[#0F7694]/20 dark:border-blue-800 bg-[#0F7694]/5 dark:bg-blue-950/30 p-4 text-center">
-                  <p className="text-xs text-[#0F7694] dark:text-[#67D4E8] mb-1">Sale Price</p>
-                  <p className="text-lg font-bold tabular-nums text-[#0A6880] dark:text-blue-300">
+                <div className="flex-1 rounded-lg border border-brand/20 dark:border-blue-800 bg-brand-muted dark:bg-blue-950/30 p-4 text-center">
+                  <p className="text-xs text-brand dark:text-brand-light mb-1">Sale Price</p>
+                  <p className="text-lg font-bold tabular-nums text-brand-dark dark:text-blue-300">
                     {formatPrice(salePrice)}
                   </p>
                   {priceDiff !== null && (
-                    <p className={`text-xs mt-1 ${priceDiff >= 0 ? "text-[#0F7694]" : "text-red-600"}`}>
+                    <p className={`text-xs mt-1 ${priceDiff >= 0 ? "text-brand" : "text-red-600"}`}>
                       {priceDiff >= 0 ? "+" : ""}{priceDiff.toFixed(1)}% vs list
                     </p>
                   )}

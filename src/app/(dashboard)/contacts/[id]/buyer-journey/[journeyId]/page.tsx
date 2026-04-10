@@ -51,7 +51,7 @@ export default async function BuyerJourneyDetailPage({
   const c = contact as { id: string; name: string };
 
   return (
-    <div className="overflow-y-auto p-4 md:p-6 lg:p-8 bg-[#f8f7fd] min-h-full">
+    <div className="overflow-y-auto p-4 md:p-6 lg:p-8 bg-muted/50 min-h-full">
       <div className="max-w-3xl mx-auto space-y-5">
 
         {/* Breadcrumb */}

@@ -20,7 +20,7 @@ const DATE_TYPE_CONFIG: Record<
 > = {
   birthday: { icon: Cake, label: "Birthday", color: "text-pink-500" },
   anniversary: { icon: Heart, label: "Anniversary", color: "text-red-500" },
-  mortgage_renewal: { icon: Home, label: "Mortgage Renewal", color: "text-[#0F7694]" },
+  mortgage_renewal: { icon: Home, label: "Mortgage Renewal", color: "text-brand" },
   other: { icon: Calendar, label: "Important Date", color: "text-amber-500" },
 };
 

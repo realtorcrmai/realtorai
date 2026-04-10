@@ -8,8 +8,8 @@ const PROPERTY_TYPES = [
     description: "Single-family home",
     gradient: "from-blue-500 to-[#0F7694]",
     bg: "from-[#0F7694]/5 to-[#0F7694]/10 dark:from-[#1a1535]/20 dark:to-[#1a1535]/30",
-    ring: "ring-[#0F7694]",
-    border: "border-[#0F7694]/30 dark:border-[#0F7694]/20",
+    ring: "ring-brand",
+    border: "border-brand/30 dark:border-brand/20",
   },
   {
     value: "Condo/Apartment",
@@ -18,8 +18,8 @@ const PROPERTY_TYPES = [
     description: "Apartment / strata",
     gradient: "from-[#0F7694] to-[#1a1535]",
     bg: "from-[#0F7694]/5 to-[#0F7694]/10 dark:from-[#1a1535]/30 dark:to-[#1a1535]/30",
-    ring: "ring-[#0F7694]",
-    border: "border-[#0F7694]/20 dark:border-[#0F7694]/20",
+    ring: "ring-brand",
+    border: "border-brand/20 dark:border-brand/20",
   },
   {
     value: "Townhouse",
@@ -29,7 +29,7 @@ const PROPERTY_TYPES = [
     gradient: "from-[#0F7694] to-[#0F7694]",
     bg: "from-[#0F7694] to-[#0F7694] dark:from-[#0F7694]/30 dark:to-[#0F7694]/30",
     ring: "ring-green-400",
-    border: "border-[#0F7694]/20 dark:border-green-800",
+    border: "border-brand/20 dark:border-green-800",
   },
   {
     value: "Land",
@@ -49,7 +49,7 @@ const PROPERTY_TYPES = [
     gradient: "from-[#67D4E8] to-[#0F7694]",
     bg: "from-[#0F7694]/5 to-[#0F7694]/10 dark:from-[#1a1535]/20 dark:to-[#1a1535]/30",
     ring: "ring-teal-400",
-    border: "border-[#0F7694]/20 dark:border-[#0F7694]/10",
+    border: "border-brand/20 dark:border-brand/10",
   },
   {
     value: "Multi-Family",

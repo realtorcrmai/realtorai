@@ -107,7 +107,7 @@ export function EmailEditorClient({ template }: { template: Template }) {
           <div className="flex items-center justify-between mb-1">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email Body</label>
             {template.is_ai_template && (
-              <span className="text-[10px] text-[#0F7694] bg-[#0F7694]/5 dark:bg-[#1a1535]/30 px-2 py-0.5 rounded-full font-medium">
+              <span className="text-[10px] text-brand bg-brand-muted dark:bg-foreground/30 px-2 py-0.5 rounded-full font-medium">
                 AI-generated at send time
               </span>
             )}

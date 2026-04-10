@@ -36,7 +36,7 @@ const CATEGORY_OPTIONS: {
     gradient: "from-blue-500 to-[#0F7694]",
     bg: "from-[#0F7694]/5 to-[#0F7694]/10 dark:from-[#1a1535]/20 dark:to-[#1a1535]/30",
     ring: "ring-blue-400",
-    border: "border-[#0F7694]/20 dark:border-blue-800",
+    border: "border-brand/20 dark:border-blue-800",
   },
   {
     value: "investment",
@@ -636,7 +636,7 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
         <Button
           type="submit"
           disabled={saving || !address}
-          className="bg-[#4f35d2] hover:bg-[#3d27a8] text-white px-6 h-11"
+          className="bg-primary hover:bg-[#3d27a8] text-white px-6 h-11"
         >
           {saving ? "Saving…" : existing ? "Save Changes →" : "Add to Portfolio →"}
         </Button>

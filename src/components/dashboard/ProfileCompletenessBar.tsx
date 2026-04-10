@@ -30,14 +30,14 @@ export function ProfileCompletenessBar({ completeness, missing }: Props) {
   if (completeness >= 100 || missing.length === 0) return null;
 
   const barColor =
-    completeness < 40 ? "bg-red-500" : completeness < 70 ? "bg-amber-500" : "bg-[#0F7694]/50";
+    completeness < 40 ? "bg-red-500" : completeness < 70 ? "bg-amber-500" : "bg-brand/50";
 
   const textColor =
     completeness < 40
       ? "text-red-700"
       : completeness < 70
         ? "text-amber-700"
-        : "text-[#0A6880]";
+        : "text-brand-dark";
 
   return (
     <div className="lf-card mx-4 mt-3 p-3 border-l-4 border-l-primary">

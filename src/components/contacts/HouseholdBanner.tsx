@@ -143,7 +143,7 @@ export function HouseholdBanner({
                   title={member.name}
                   className={`relative inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br ${
                     AVATAR_GRADIENTS[i % AVATAR_GRADIENTS.length]
-                  } text-white text-[11px] font-bold ring-2 ring-[#4f35d2] hover:ring-white/60 transition-all hover:scale-110 hover:z-10`}
+                  } text-white text-[11px] font-bold ring-2 ring-primary hover:ring-white/60 transition-all hover:scale-110 hover:z-10`}
                 >
                   {getInitials(member.name)}
                 </Link>
@@ -174,7 +174,7 @@ export function HouseholdBanner({
             <button
               type="button"
               onClick={() => setMode("create")}
-              className="px-3 py-1.5 text-xs font-medium text-white bg-[#4f35d2] rounded-md hover:bg-[#4f35d2]/90 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-md hover:bg-primary/90 transition-colors"
             >
               Create New
             </button>
@@ -182,7 +182,7 @@ export function HouseholdBanner({
               <button
                 type="button"
                 onClick={() => setMode("join")}
-                className="px-3 py-1.5 text-xs font-medium text-muted-foreground border border-border rounded-md hover:border-[#4f35d2]/50 hover:text-[#4f35d2] transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-muted-foreground border border-border rounded-md hover:border-primary/50 hover:text-primary transition-colors"
               >
                 Join Existing
               </button>
@@ -208,7 +208,7 @@ export function HouseholdBanner({
                   handleCreate();
                 }
               }}
-              className="w-full px-2.5 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-[#4f35d2]"
+              className="w-full px-2.5 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
               disabled={isPending}
               autoFocus
             />
@@ -225,7 +225,7 @@ export function HouseholdBanner({
                   handleCreate();
                 }
               }}
-              className="w-full px-2.5 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-[#4f35d2]"
+              className="w-full px-2.5 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
               disabled={isPending}
             />
           </div>
@@ -235,7 +235,7 @@ export function HouseholdBanner({
               type="button"
               onClick={handleCreate}
               disabled={isPending || !name.trim()}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-[#4f35d2] rounded-md hover:bg-[#4f35d2]/90 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
               {isPending && <Loader2 className="h-3 w-3 animate-spin" />}
               Create & Assign
@@ -265,7 +265,7 @@ export function HouseholdBanner({
           <select
             value={selectedHouseholdId}
             onChange={(e) => setSelectedHouseholdId(e.target.value)}
-            className="w-full px-2.5 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-[#4f35d2]"
+            className="w-full px-2.5 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
             disabled={isPending}
             autoFocus
           >
@@ -282,7 +282,7 @@ export function HouseholdBanner({
               type="button"
               onClick={handleJoin}
               disabled={isPending || !selectedHouseholdId}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-[#4f35d2] rounded-md hover:bg-[#4f35d2]/90 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
               {isPending && <Loader2 className="h-3 w-3 animate-spin" />}
               Join Household

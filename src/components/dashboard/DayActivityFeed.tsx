@@ -24,7 +24,7 @@ export type DayTask = {
 const PRIORITY_CONFIG: Record<string, { dot: string; label: string; gradient: string }> = {
   urgent: { dot: "bg-red-500 shadow-sm shadow-red-500/40", label: "Urgent", gradient: "from-red-50 to-red-50/0 dark:from-red-950/30 dark:to-transparent" },
   high: { dot: "bg-orange-500 shadow-sm shadow-orange-500/40", label: "High", gradient: "from-orange-50 to-orange-50/0 dark:from-orange-950/30 dark:to-transparent" },
-  medium: { dot: "bg-[#0F7694]", label: "Medium", gradient: "from-teal-50/50 to-teal-50/0 dark:from-teal-950/20 dark:to-transparent" },
+  medium: { dot: "bg-brand", label: "Medium", gradient: "from-teal-50/50 to-teal-50/0 dark:from-teal-950/20 dark:to-transparent" },
   low: { dot: "bg-gray-400", label: "Low", gradient: "" },
 };
 
@@ -36,7 +36,7 @@ const EVENT_TYPE_STYLE: Record<string, { icon: typeof Clock; accent: string; gra
 
 const SHOWING_STATUS_STYLE: Record<string, { label: string; color: string; bg: string; glow: string }> = {
   requested:  { label: "Pending",   color: "text-amber-700",        bg: "bg-amber-100",             glow: "" },
-  confirmed:  { label: "Confirmed", color: "text-[#007A47]",        bg: "bg-[#00C875]/15",          glow: "shadow-sm shadow-[#00C875]/30" },
+  confirmed:  { label: "Confirmed", color: "text-emerald-700",        bg: "bg-success/15",          glow: "shadow-sm shadow-[#00C875]/30" },
   denied:     { label: "Denied",    color: "text-red-700",          bg: "bg-red-100",               glow: "" },
   cancelled:  { label: "Cancelled", color: "text-gray-500",         bg: "bg-gray-100",              glow: "" },
 };
@@ -54,17 +54,17 @@ export function DayActivityFeed({ events, selectedDate, tasks }: DayActivityFeed
   const totalItems = dayEvents.length + dayTasks.length;
 
   return (
-    <div className="relative rounded-2xl overflow-hidden elevation-8 bg-card border border-[#0F7694]/20 flex flex-col h-full">
+    <div className="relative rounded-2xl overflow-hidden elevation-8 bg-card border border-brand/20 flex flex-col h-full">
       {/* Gold accent top border */}
       <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#0F7694]/60 via-[#0F7694] to-[#0F7694]/60 z-10" />
 
       <div className="flex items-center justify-between px-5 py-4">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[#1a1535]/40">Schedule</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-foreground/40">Schedule</p>
           <h2 className="text-xl font-bold tracking-tight text-foreground">{getDateLabel(selectedDate)}</h2>
         </div>
         {totalItems > 0 && (
-          <span className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#0F7694]/15 to-[#0F7694]/5 px-3 py-1.5 text-[11px] font-bold text-[#0A6880] shadow-sm">
+          <span className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#0F7694]/15 to-[#0F7694]/5 px-3 py-1.5 text-[11px] font-bold text-brand-dark shadow-sm">
             {totalItems} item{totalItems !== 1 ? "s" : ""}
           </span>
         )}
@@ -75,7 +75,7 @@ export function DayActivityFeed({ events, selectedDate, tasks }: DayActivityFeed
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="relative mb-5">
               <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-[#0F7694]/10 to-[#1a1535]/5 flex items-center justify-center">
-                <Sunrise className="h-9 w-9 text-[#0F7694]/40" />
+                <Sunrise className="h-9 w-9 text-brand/40" />
               </div>
               <div className="absolute -bottom-1 -right-1 h-8 w-8 rounded-xl bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900/30 dark:to-transparent flex items-center justify-center shadow-sm">
                 <Coffee className="h-4 w-4 text-amber-500/60" />

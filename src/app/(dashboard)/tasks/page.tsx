@@ -237,7 +237,7 @@ export default function TasksPage() {
             size="sm"
             onClick={bulkComplete}
             disabled={bulkLoading}
-            className="bg-[#0F7694] hover:bg-[#0A6880] text-white"
+            className="bg-brand hover:bg-brand-dark text-white"
           >
             <CheckCheck className="h-4 w-4 mr-1.5" />
             {bulkLoading ? "Completing..." : "Mark Complete"}

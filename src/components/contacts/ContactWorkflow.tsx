@@ -81,11 +81,11 @@ type StepStatus = "completed" | "in-progress" | "pending";
 
 const STATUS_STYLES = {
   completed: {
-    circle: "bg-[#00C875] shadow-sm shadow-[#00C875]/30",
-    connector: "bg-[#00C875]",
+    circle: "bg-success shadow-sm shadow-[#00C875]/30",
+    connector: "bg-success",
     text: "text-foreground",
     badge:
-      "bg-[#0F7694]/15 text-[#0A6880] dark:bg-[#00C875]/15 dark:text-[#00C875]",
+      "bg-brand-muted-strong text-brand-dark dark:bg-success/15 dark:text-success",
     badgeLabel: "COMPLETE",
   },
   "in-progress": {
@@ -289,7 +289,7 @@ export function ContactWorkflow({
       {/* Progress bar */}
       <div className="h-2.5 rounded-full bg-muted overflow-hidden">
         <div
-          className="h-full rounded-full bg-[#0F7694]/50 transition-all duration-500"
+          className="h-full rounded-full bg-brand/50 transition-all duration-500"
           style={{
             width: `${(completedCount / steps.length) * 100}%`,
           }}

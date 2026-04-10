@@ -56,13 +56,13 @@ function generateBrief({ events, tasks, selectedDate, pendingShowings, activeLis
 const LINE_DOT_COLORS: Record<string, string> = {
   neutral: "bg-muted-foreground/30",
   alert: "bg-amber-400 shadow-sm shadow-amber-400/40",
-  positive: "bg-[#67D4E8] shadow-sm shadow-[#0F7694]/30",
+  positive: "bg-brand-light shadow-sm shadow-[#0F7694]/30",
   info: "bg-primary/50",
 };
 const LINE_COLORS: Record<string, string> = {
   neutral: "text-muted-foreground",
   alert: "text-amber-600 dark:text-amber-400",
-  positive: "text-[#0F7694] dark:text-[#67D4E8]",
+  positive: "text-brand dark:text-brand-light",
   info: "text-primary",
 };
 
@@ -70,15 +70,15 @@ export function AIBriefCard(props: AIBriefCardProps) {
   const lines = useMemo(() => generateBrief(props), [props.events, props.tasks, props.selectedDate, props.pendingShowings, props.activeListings]);
 
   return (
-    <div className="relative rounded-2xl overflow-hidden elevation-4 bg-card border border-[#0F7694]/20">
+    <div className="relative rounded-2xl overflow-hidden elevation-4 bg-card border border-brand/20">
       {/* Gold accent top border */}
       <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#0F7694]/60 via-[#0F7694] to-[#0F7694]/60" />
       <div className="px-5 py-4">
         <div className="flex items-center gap-2.5 mb-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#0F7694] shadow-md shadow-[#0F7694]/20">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand shadow-md shadow-[#0F7694]/20">
             <Sparkles className="h-4 w-4 text-white" />
           </div>
-          <h3 className="text-xs font-bold uppercase tracking-widest text-[#1a1535]/40">AI Daily Brief</h3>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-foreground/40">AI Daily Brief</h3>
         </div>
         <div className="space-y-3">
           {lines.map((line, i) => (

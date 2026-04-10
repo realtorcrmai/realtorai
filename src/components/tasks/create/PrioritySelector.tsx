@@ -16,8 +16,8 @@ const PRIORITIES = [
     icon: "🔵",
     description: "This week",
     bg: "from-[#0F7694]/5 to-[#0F7694]/10 dark:from-[#1a1535]/20 dark:to-[#1a1535]/30",
-    ring: "ring-[#0F7694]",
-    border: "border-[#0F7694]/30 dark:border-[#0F7694]/20",
+    ring: "ring-brand",
+    border: "border-brand/30 dark:border-brand/20",
   },
   {
     value: "high",

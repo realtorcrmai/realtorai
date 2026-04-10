@@ -190,7 +190,7 @@ function UseCasesPanel({ feature }: { feature: HelpFeature }) {
               {scenario.expectedOutcome && (
                 <div>
                   <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Expected Outcome</h4>
-                  <p className="text-sm text-foreground bg-[#0F7694]/5 dark:bg-[#1a1535]/20 p-3 rounded-lg border border-[#0F7694]/20 dark:border-green-800">
+                  <p className="text-sm text-foreground bg-brand-muted dark:bg-foreground/20 p-3 rounded-lg border border-brand/20 dark:border-green-800">
                     {scenario.expectedOutcome}
                   </p>
                 </div>

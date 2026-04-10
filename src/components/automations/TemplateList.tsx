@@ -40,29 +40,29 @@ const CHANNEL_CONFIG: Record<
   sms: {
     label: "SMS",
     icon: "📱",
-    color: "bg-[#0F7694]/10 text-[#0A6880]",
+    color: "bg-brand-muted text-brand-dark",
   },
   whatsapp: {
     label: "WhatsApp",
     icon: "💬",
-    color: "bg-[#0F7694]/10 text-[#0A6880]",
+    color: "bg-brand-muted text-brand-dark",
   },
   email: {
     label: "Email",
     icon: "📧",
-    color: "bg-[#0F7694]/10 text-[#0A6880]",
+    color: "bg-brand-muted text-brand-dark",
   },
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
   general: "bg-gray-100 text-gray-800",
-  nurture: "bg-[#0F7694]/15 text-[#0A6880]",
-  post_close: "bg-[#0F7694]/10 text-[#0A6880]",
+  nurture: "bg-brand-muted-strong text-brand-dark",
+  post_close: "bg-brand-muted text-brand-dark",
   follow_up: "bg-amber-100 text-amber-800",
   reengagement: "bg-orange-100 text-orange-800",
   speed_to_contact: "bg-red-100 text-red-800",
-  referral: "bg-[#0F7694]/10 text-[#0A6880]",
-  showing: "bg-[#0F7694]/10 text-[#1a1535]",
+  referral: "bg-brand-muted text-brand-dark",
+  showing: "bg-brand-muted text-foreground",
 };
 
 type FormData = {

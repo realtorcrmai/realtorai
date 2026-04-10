@@ -203,18 +203,18 @@ export function PipelineBoard({ contacts, listings }: PipelineBoardProps) {
           <div className="hidden md:flex items-center gap-2 text-sm">
             {viewMode === "board" ? (
               <>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F7694]/5/80 border border-[#0F7694]/15 text-[#0A6880]">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-muted/80 border border-brand/15 text-brand-dark">
                   <BarChart3 className="h-3.5 w-3.5" />
                   <span className="font-bold">{filteredActiveDeals.length}</span>
                   <span className="text-xs opacity-75">deals</span>
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F7694]/5 border border-[#0F7694]/15 text-[#0A6880]">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-muted border border-brand/15 text-brand-dark">
                   <DollarSign className="h-3.5 w-3.5" />
                   <span className="font-bold text-xs">
                     ${totalValue.toLocaleString("en-CA")}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F7694]/5 border border-[#0F7694]/15 text-[#0A6880]">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-muted border border-brand/15 text-brand-dark">
                   <TrendingUp className="h-3.5 w-3.5" />
                   <span className="text-xs font-medium">GCI</span>
                   <span className="font-bold text-xs">
@@ -224,18 +224,18 @@ export function PipelineBoard({ contacts, listings }: PipelineBoardProps) {
               </>
             ) : (
               <>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F7694]/5 border border-[#0F7694]/15 text-[#0A6880]">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-muted border border-brand/15 text-brand-dark">
                   <Trophy className="h-3.5 w-3.5" />
                   <span className="font-bold">{wonDeals.length}</span>
                   <span className="text-xs opacity-75">won</span>
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F7694]/5 border border-[#0F7694]/15 text-[#0A6880]">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-muted border border-brand/15 text-brand-dark">
                   <DollarSign className="h-3.5 w-3.5" />
                   <span className="font-bold text-xs">
                     ${wonTotalValue.toLocaleString("en-CA")}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F7694]/5 border border-[#0F7694]/15 text-[#0A6880]">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-muted border border-brand/15 text-brand-dark">
                   <TrendingUp className="h-3.5 w-3.5" />
                   <span className="text-xs font-medium">GCI</span>
                   <span className="font-bold text-xs">
@@ -299,17 +299,17 @@ export function PipelineBoard({ contacts, listings }: PipelineBoardProps) {
             <div className="max-w-5xl mx-auto space-y-6">
               {/* Summary Stats */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="rounded-xl border border-[#0F7694]/15 bg-[#0F7694]/5 p-4">
-                  <p className="text-xs text-[#007A47] font-medium">Won Deals</p>
-                  <p className="text-2xl font-bold text-[#007A47] mt-1">{wonDeals.length}</p>
+                <div className="rounded-xl border border-brand/15 bg-brand-muted p-4">
+                  <p className="text-xs text-emerald-700 font-medium">Won Deals</p>
+                  <p className="text-2xl font-bold text-emerald-700 mt-1">{wonDeals.length}</p>
                 </div>
-                <div className="rounded-xl border border-[#0F7694]/15 bg-[#0F7694]/5 p-4">
-                  <p className="text-xs text-[#0A6880] font-medium">Total Volume</p>
-                  <p className="text-2xl font-bold text-[#1a1535] mt-1">${wonTotalValue > 0 ? (wonTotalValue / 1000000).toFixed(1) + "M" : "0"}</p>
+                <div className="rounded-xl border border-brand/15 bg-brand-muted p-4">
+                  <p className="text-xs text-brand-dark font-medium">Total Volume</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">${wonTotalValue > 0 ? (wonTotalValue / 1000000).toFixed(1) + "M" : "0"}</p>
                 </div>
-                <div className="rounded-xl border border-[#0F7694]/15 bg-[#0F7694]/5 p-4">
-                  <p className="text-xs text-[#0A6880] font-medium">Earned GCI</p>
-                  <p className="text-2xl font-bold text-[#1a1535] mt-1">${wonTotalGCI.toLocaleString("en-CA")}</p>
+                <div className="rounded-xl border border-brand/15 bg-brand-muted p-4">
+                  <p className="text-xs text-brand-dark font-medium">Earned GCI</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">${wonTotalGCI.toLocaleString("en-CA")}</p>
                 </div>
                 <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-4">
                   <p className="text-xs text-amber-600 font-medium">Avg Deal Size</p>
@@ -321,8 +321,8 @@ export function PipelineBoard({ contacts, listings }: PipelineBoardProps) {
               {wonDeals.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <Trophy className="h-4 w-4 text-[#0F7694]" />
-                    <h2 className="text-sm font-semibold text-[#0A6880]">Won Deals ({wonDeals.length})</h2>
+                    <Trophy className="h-4 w-4 text-brand" />
+                    <h2 className="text-sm font-semibold text-brand-dark">Won Deals ({wonDeals.length})</h2>
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                     {wonDeals.map((deal) => (
@@ -456,13 +456,13 @@ function ClosedDealCard({ deal }: { deal: DealWithRelations }) {
       <div
         className={`group rounded-xl border overflow-hidden transition-all hover:shadow-lg cursor-pointer ${
           isWon
-            ? "border-[#0F7694]/30 hover:border-[#0F7694]/50"
+            ? "border-brand/30 hover:border-brand/50"
             : "border-red-200 hover:border-red-300"
         }`}
       >
         {/* Left accent bar + content */}
         <div className="flex">
-          <div className={`w-1.5 shrink-0 ${isWon ? "bg-[#00C875]" : "bg-red-400"}`} />
+          <div className={`w-1.5 shrink-0 ${isWon ? "bg-success" : "bg-red-400"}`} />
           <div className="flex-1 p-4">
             {/* Title row */}
             <div className="flex items-center justify-between mb-2">
@@ -498,7 +498,7 @@ function ClosedDealCard({ deal }: { deal: DealWithRelations }) {
             </div>
 
             {/* Value row */}
-            <div className={`flex items-center justify-between pt-2 border-t border-[#0F7694]/15" : "border-red-100"}`}>
+            <div className={`flex items-center justify-between pt-2 border-t border-brand/15" : "border-red-100"}`}>
               <div className="flex items-center gap-3">
                 {deal.value && (
                   <span className="text-sm font-bold">
@@ -506,7 +506,7 @@ function ClosedDealCard({ deal }: { deal: DealWithRelations }) {
                   </span>
                 )}
                 {deal.commission_amount && isWon && (
-                  <span className="text-xs text-[#0F7694] font-semibold bg-[#0F7694]/5 px-1.5 py-0.5 rounded">
+                  <span className="text-xs text-brand font-semibold bg-brand-muted px-1.5 py-0.5 rounded">
                     GCI ${Number(deal.commission_amount).toLocaleString("en-CA")}
                   </span>
                 )}
