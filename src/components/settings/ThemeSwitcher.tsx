@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sun, Moon, Monitor, Check } from "lucide-react";
+import { Sun, Moon, Monitor, Check, PanelLeft, PanelTop } from "lucide-react";
+import { useLayout } from "@/components/layout/LayoutProvider";
+import { cn } from "@/lib/utils";
 
 // ── Theme Presets ────────────────────────────────────────────
 // Each preset defines the CSS custom property overrides.
@@ -120,6 +122,7 @@ const STORAGE_KEY_THEME = "lf-theme-preset";
 const STORAGE_KEY_MODE = "lf-color-mode";
 
 export function ThemeSwitcher() {
+  const { layout, setLayout } = useLayout();
   const [activeTheme, setActiveTheme] = useState("teal");
   const [colorMode, setColorMode] = useState<ColorMode>("light");
 
@@ -183,6 +186,37 @@ export function ThemeSwitcher() {
 
   return (
     <div className="space-y-6">
+      {/* Layout Mode */}
+      <div>
+        <h4 className="text-sm font-medium mb-2">Layout</h4>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setLayout("top-nav")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all text-sm font-medium flex-1",
+              layout === "top-nav"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-background text-muted-foreground hover:border-primary/30"
+            )}
+          >
+            <PanelTop className="h-4 w-4" />
+            Top Nav
+          </button>
+          <button
+            onClick={() => setLayout("sidebar")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all text-sm font-medium flex-1",
+              layout === "sidebar"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-background text-muted-foreground hover:border-primary/30"
+            )}
+          >
+            <PanelLeft className="h-4 w-4" />
+            Sidebar
+          </button>
+        </div>
+      </div>
+
       {/* Color Mode */}
       <div>
         <h4 className="text-sm font-semibold mb-3">Appearance</h4>
