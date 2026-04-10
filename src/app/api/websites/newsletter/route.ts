@@ -11,7 +11,7 @@ export async function OPTIONS(request: NextRequest) {
  * Body: { email, name?, consent (required, boolean) }
  */
 export async function POST(request: NextRequest) {
-  const auth = validateApiKey(request);
+  const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
   const body = await request.json();
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
         collected_via: "website_signup",
         collected_at: new Date().toISOString(),
       });
-    } catch {}
+    } catch (err) { console.error("[website-api] non-fatal:", err instanceof Error ? err.message : err); }
 
     return NextResponse.json(
       { success: true, contact_id: existing.id, message: "You're subscribed!" },
@@ -96,19 +96,19 @@ export async function POST(request: NextRequest) {
       collected_via: "website_signup",
       collected_at: new Date().toISOString(),
     });
-  } catch {}
+  } catch (err) { console.error("[website-api] non-fatal:", err instanceof Error ? err.message : err); }
 
   // Enroll in journey
   try {
     const { autoEnrollNewContact } = await import("@/actions/journeys");
     await autoEnrollNewContact(contact.id, "buyer");
-  } catch {}
+  } catch (err) { console.error("[website-api] non-fatal:", err instanceof Error ? err.message : err); }
 
   // Fire workflow trigger
   try {
     const { fireTrigger } = await import("@/lib/workflow-triggers");
     await fireTrigger({ type: "new_lead", contactId: contact.id, contactType: "buyer" });
-  } catch {}
+  } catch (err) { console.error("[website-api] non-fatal:", err instanceof Error ? err.message : err); }
 
   return NextResponse.json(
     { success: true, contact_id: contact.id, message: "You're subscribed!" },

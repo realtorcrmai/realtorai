@@ -2,7 +2,13 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { validateEnv } from "@/lib/env-check";
 import "./globals.css";
+
+// Validate required env vars on first server-side import.
+// In production: throws if any are missing (deploy fails fast).
+// In development: logs warnings but lets the server start.
+validateEnv();
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

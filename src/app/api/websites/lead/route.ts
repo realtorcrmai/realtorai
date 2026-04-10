@@ -11,7 +11,7 @@ export async function OPTIONS(request: NextRequest) {
  * Body: { name, phone, email?, message?, source_page?, property_interest?, type? }
  */
 export async function POST(request: NextRequest) {
-  const auth = validateApiKey(request);
+  const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
   const body = await request.json();
@@ -81,13 +81,13 @@ export async function POST(request: NextRequest) {
   try {
     const { autoEnrollNewContact } = await import("@/actions/journeys");
     await autoEnrollNewContact(contact.id, contactType as "buyer" | "seller");
-  } catch {}
+  } catch (err) { console.error("[website-api] non-fatal:", err instanceof Error ? err.message : err); }
 
   // Fire-and-forget: workflow triggers
   try {
     const { fireTrigger } = await import("@/lib/workflow-triggers");
     await fireTrigger({ type: "new_lead", contactId: contact.id, contactType });
-  } catch {}
+  } catch (err) { console.error("[website-api] non-fatal:", err instanceof Error ? err.message : err); }
 
   return NextResponse.json(
     { success: true, contact_id: contact.id },

@@ -160,11 +160,11 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         try {
           const { autoEnrollNewContact } = await import("@/actions/journeys");
           await autoEnrollNewContact(contact.id, "buyer");
-        } catch {}
+        } catch (err) { console.error("[website-api] non-fatal:", err instanceof Error ? err.message : err); }
         try {
           const { fireTrigger } = await import("@/lib/workflow-triggers");
           await fireTrigger({ type: "new_lead", contactId: contact.id, contactType: "buyer" });
-        } catch {}
+        } catch (err) { console.error("[website-api] non-fatal:", err instanceof Error ? err.message : err); }
       }
 
       return JSON.stringify({ success: true, message: "Lead saved! The agent will be in touch soon." });
@@ -254,7 +254,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
  * Body: { messages: [{ role, content }], session_id? }
  */
 export async function POST(request: NextRequest) {
-  const auth = validateApiKey(request);
+  const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
   const body = await request.json();
@@ -397,7 +397,7 @@ Rules:
         page_path: "/chat",
         device_type: request.headers.get("x-device-type") || null,
       });
-    } catch {}
+    } catch (err) { console.error("[website-api] non-fatal:", err instanceof Error ? err.message : err); }
 
     return NextResponse.json(
       { reply, listings, model: response.model },
