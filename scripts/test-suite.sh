@@ -72,6 +72,7 @@ ROUTES=(
   "/newsletters/control" "/newsletters/insights" "/newsletters/ghost"
   "/newsletters/suppressions" "/automations" "/automations/templates"
   "/contacts/segments" "/settings" "/inbox" "/login"
+  "/signup" "/personalize" "/onboarding"
 )
 
 for route in "${ROUTES[@]}"; do
@@ -265,7 +266,7 @@ echo ""
 echo "━━━ 5B. EXTENDED CRON AUTH ━━━"
 
 # Test every cron endpoint rejects requests without valid token
-CRON_ENDPOINTS="agent-evaluate agent-recommendations consent-expiry daily-digest greeting-automations social-publish voice-session-cleanup weekly-learning"
+CRON_ENDPOINTS="agent-evaluate agent-recommendations consent-expiry daily-digest greeting-automations social-publish voice-session-cleanup weekly-learning welcome-drip trial-expiry"
 for ENDPOINT in $CRON_ENDPOINTS; do
   CODE=$(curl -s -o /dev/null -w "%{http_code}" "${APP}/api/cron/${ENDPOINT}")
   [[ "$CODE" == "401" ]] && pass "Cron ${ENDPOINT} (no token) → 401" || fail "Cron ${ENDPOINT} no-auth" "HTTP $CODE (expected 401)"
@@ -283,7 +284,7 @@ echo ""
 echo "━━━ 5C. API AUTH ENFORCEMENT ━━━"
 
 # Verify user-facing endpoints require auth (return 401 without session)
-API_ENDPOINTS="deals reports dashboard/stats tasks/bulk-complete"
+API_ENDPOINTS="deals reports dashboard/stats tasks/bulk-complete onboarding/checklist"
 for ENDPOINT in $API_ENDPOINTS; do
   CODE=$(curl -s -o /dev/null -w "%{http_code}" "${APP}/api/${ENDPOINT}")
   [[ "$CODE" == "401" ]] && pass "GET /api/${ENDPOINT} requires auth → 401" || fail "/api/${ENDPOINT} auth" "HTTP $CODE"
