@@ -77,7 +77,7 @@ export function SegmentBuilderClient({ initialSegments }: { initialSegments: Seg
       {/* Create Button */}
       <button
         onClick={() => setShowBuilder(!showBuilder)}
-        className="px-4 py-2.5 rounded-xl bg-[#0F7694] text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
+        className="px-4 py-2.5 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
       >
         {showBuilder ? "Cancel" : "+ New Segment"}
       </button>
@@ -161,7 +161,7 @@ export function SegmentBuilderClient({ initialSegments }: { initialSegments: Seg
           <button
             onClick={handleCreate}
             disabled={pending || !name.trim()}
-            className="px-4 py-2 rounded-lg bg-[#0F7694] text-white text-sm font-semibold disabled:opacity-50"
+            className="px-4 py-2 rounded-lg bg-brand text-white text-sm font-semibold disabled:opacity-50"
           >
             {pending ? "Creating..." : "Create Segment"}
           </button>

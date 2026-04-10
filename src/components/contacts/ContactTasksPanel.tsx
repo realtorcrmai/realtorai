@@ -144,7 +144,7 @@ export function ContactTasksPanel({
           disabled={isPending}
           className={`mt-0.5 shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
             isComplete
-              ? "bg-[#0F7694]/50 border-green-500 text-white"
+              ? "bg-brand/50 border-green-500 text-white"
               : "border-muted-foreground/30 hover:border-primary"
           }`}
         >

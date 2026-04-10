@@ -131,7 +131,7 @@ export function KnowledgeBaseClient({ initialArticles }: KnowledgeBaseClientProp
             onClick={() => setFilter("all")}
             className={`text-xs px-3 py-1.5 rounded-full font-medium transition ${
               filter === "all"
-                ? "bg-[#0F7694] text-white"
+                ? "bg-brand text-white"
                 : "bg-muted text-muted-foreground hover:bg-muted/80"
             }`}
           >
@@ -145,7 +145,7 @@ export function KnowledgeBaseClient({ initialArticles }: KnowledgeBaseClientProp
                 onClick={() => setFilter(cat)}
                 className={`text-xs px-3 py-1.5 rounded-full font-medium transition ${
                   filter === cat
-                    ? "bg-[#0F7694] text-white"
+                    ? "bg-brand text-white"
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}
               >

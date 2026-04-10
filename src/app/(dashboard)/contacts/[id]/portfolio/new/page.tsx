@@ -23,7 +23,7 @@ export default async function PortfolioNewPage({
   if (!contact) notFound();
 
   return (
-    <div className="min-h-full bg-[#f8f7fd] dark:bg-background p-3 md:p-4 space-y-4">
+    <div className="min-h-full bg-muted/50 dark:bg-background p-3 md:p-4 space-y-4">
       {/* Back + title */}
       <div className="flex items-center gap-3">
         <Link

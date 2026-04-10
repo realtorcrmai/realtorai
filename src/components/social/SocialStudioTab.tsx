@@ -27,13 +27,13 @@ const CONTENT_TYPES: { type: ContentType; emoji: string; label: string }[] = [
 ];
 
 const PLATFORM_DISPLAY: Record<SocialPlatform, { emoji: string; label: string; colour: string }> = {
-  facebook: { emoji: "📘", label: "Facebook", colour: "bg-[#0F7694]/10 text-[#0A6880]" },
+  facebook: { emoji: "📘", label: "Facebook", colour: "bg-brand-muted text-brand-dark" },
   instagram: { emoji: "📸", label: "Instagram", colour: "bg-pink-100 text-pink-700" },
   tiktok: { emoji: "🎵", label: "TikTok", colour: "bg-gray-100 text-gray-700" },
   youtube: { emoji: "▶️", label: "YouTube", colour: "bg-red-100 text-red-700" },
-  linkedin: { emoji: "💼", label: "LinkedIn", colour: "bg-[#0F7694]/10 text-[#0A6880]" },
+  linkedin: { emoji: "💼", label: "LinkedIn", colour: "bg-brand-muted text-brand-dark" },
   pinterest: { emoji: "📌", label: "Pinterest", colour: "bg-rose-100 text-rose-700" },
-  google_business: { emoji: "🏢", label: "Google", colour: "bg-[#0F7694]/10 text-[#0A6880]" },
+  google_business: { emoji: "🏢", label: "Google", colour: "bg-brand-muted text-brand-dark" },
 };
 
 // ============================================================
@@ -106,7 +106,7 @@ export function SocialStudioTab({ brandKit, pendingDrafts, templates }: Props) {
   }
 
   function getScoreColour(score: number): string {
-    if (score > 70) return "bg-[#0F7694]/10 text-[#0A6880]";
+    if (score > 70) return "bg-brand-muted text-brand-dark";
     if (score >= 40) return "bg-amber-100 text-amber-700";
     return "bg-red-100 text-red-700";
   }
@@ -371,7 +371,7 @@ export function SocialStudioTab({ brandKit, pendingDrafts, templates }: Props) {
                   })}
 
                   {post.ai_generated && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[#0F7694]/15 text-[#0A6880]">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-brand-muted-strong text-brand-dark">
                       🤖 AI Generated
                     </span>
                   )}

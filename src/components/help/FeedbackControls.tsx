@@ -63,7 +63,7 @@ export function FeedbackControls({ slug, section }: FeedbackControlsProps) {
           aria-label="Yes, this was helpful"
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors",
-            rating === "up" ? "bg-[#0F7694]/10 text-[#0A6880]" : "hover:bg-accent text-muted-foreground"
+            rating === "up" ? "bg-brand-muted text-brand-dark" : "hover:bg-accent text-muted-foreground"
           )}
         >
           <ThumbsUp className="h-3.5 w-3.5" /> Yes

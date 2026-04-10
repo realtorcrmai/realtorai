@@ -30,10 +30,10 @@ export default function ContextBanner({ context }: ContextBannerProps) {
   }
 
   return (
-    <div className="px-4 py-2 text-xs bg-[#0F7694]/5 text-[#0A6880] rounded-t-lg border-b border-[#0F7694]/15 flex items-center gap-2 flex-wrap">
+    <div className="px-4 py-2 text-xs bg-brand-muted text-brand-dark rounded-t-lg border-b border-brand/15 flex items-center gap-2 flex-wrap">
       <span className="font-medium">Context:</span>
       {parts.map((p, i) => (
-        <span key={i} className="bg-white px-2 py-0.5 rounded text-[#0F7694] border border-[#0F7694]/15">{p}</span>
+        <span key={i} className="bg-white px-2 py-0.5 rounded text-brand border border-brand/15">{p}</span>
       ))}
     </div>
   );

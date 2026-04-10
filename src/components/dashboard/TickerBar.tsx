@@ -28,8 +28,8 @@ type TickerItem = {
 function buildItems(stats: DashboardStats): TickerItem[] {
   return [
     { label: "Active Listings", value: stats.activeListings, icon: Building2, href: "/listings", color: "text-[#C8F5F0]" },
-    { label: "Open Tasks", value: stats.openTasks, icon: ListTodo, href: "/tasks", color: "text-[#67D4E8]" },
-    { label: "Pending Showings", value: stats.pendingShowings, icon: Clock, href: "/showings", color: "text-[#0F7694]" },
+    { label: "Open Tasks", value: stats.openTasks, icon: ListTodo, href: "/tasks", color: "text-brand-light" },
+    { label: "Pending Showings", value: stats.pendingShowings, icon: Clock, href: "/showings", color: "text-brand" },
     { label: "Missing Docs", value: stats.missingDocs, icon: FileWarning, href: "/forms", color: "text-red-300", alert: stats.missingDocs > 0 },
   ];
 }
@@ -110,15 +110,15 @@ export function TickerBar({ initialStats }: { initialStats: DashboardStats }) {
         {/* Live indicator */}
         <div className="flex items-center gap-1.5 pl-3 border-l border-white/10 shrink-0">
           {mode === "realtime" ? (
-            <span className="flex items-center gap-1.5 text-[10px] text-[#67D4E8]">
+            <span className="flex items-center gap-1.5 text-[10px] text-brand-light">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#67D4E8] opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#67D4E8]" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-light opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-light" />
               </span>
               Live
             </span>
           ) : mode === "polling" ? (
-            <span className="flex items-center gap-1 text-[10px] text-[#67D4E8]">
+            <span className="flex items-center gap-1 text-[10px] text-brand-light">
               <RefreshCw className="h-3 w-3" />
               30s
             </span>

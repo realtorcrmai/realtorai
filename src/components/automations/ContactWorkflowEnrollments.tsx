@@ -111,9 +111,9 @@ export function ContactWorkflowEnrollments({
 
   function getStatusIcon(status: string) {
     switch (status) {
-      case "active": return <Play className="h-3 w-3 text-[#0F7694]" />;
+      case "active": return <Play className="h-3 w-3 text-brand" />;
       case "paused": return <Pause className="h-3 w-3 text-amber-500" />;
-      case "completed": return <CheckCircle2 className="h-3 w-3 text-[#0F7694]" />;
+      case "completed": return <CheckCircle2 className="h-3 w-3 text-brand" />;
       case "exited": return <XCircle className="h-3 w-3 text-gray-500" />;
       case "failed": return <AlertCircle className="h-3 w-3 text-red-500" />;
       default: return <Clock className="h-3 w-3 text-muted-foreground" />;
@@ -257,7 +257,7 @@ export function ContactWorkflowEnrollments({
                         type="button"
                         onClick={() => handleResume(e.id)}
                         disabled={isPending}
-                        className="p-1.5 text-muted-foreground hover:text-[#0F7694] transition-colors"
+                        className="p-1.5 text-muted-foreground hover:text-brand transition-colors"
                         title="Resume"
                       >
                         <Play className="h-3.5 w-3.5" />

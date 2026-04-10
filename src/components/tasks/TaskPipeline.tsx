@@ -14,10 +14,10 @@ type PhaseStatus = "completed" | "in-progress" | "pending";
 
 const PHASE_STYLES: Record<PhaseStatus, { bg: string; border: string; text: string; icon: string }> = {
   completed: {
-    bg: "bg-[#0F7694]/5 dark:bg-[#1a1535]/20",
-    border: "border-[#0F7694]/20 dark:border-[#0F7694]/10",
-    text: "text-[#0A6880] dark:text-[#67D4E8]",
-    icon: "bg-[#0F7694] shadow-sm shadow-[#0F7694]/30",
+    bg: "bg-brand-muted dark:bg-foreground/20",
+    border: "border-brand/20 dark:border-brand/10",
+    text: "text-brand-dark dark:text-brand-light",
+    icon: "bg-brand shadow-sm shadow-[#0F7694]/30",
   },
   "in-progress": {
     bg: "bg-orange-50 dark:bg-orange-950/30",

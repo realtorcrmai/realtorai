@@ -29,7 +29,7 @@ export function TopBar() {
           </SheetContent>
         </Sheet>
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#0F7694]">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand">
             <Home className="h-3.5 w-3.5 text-primary-foreground" />
           </div>
           <span className="font-bold text-sm">RealtorAI</span>

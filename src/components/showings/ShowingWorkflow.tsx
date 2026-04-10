@@ -39,10 +39,10 @@ type StepStatus = "completed" | "in-progress" | "pending";
 
 const STATUS_STYLES = {
   completed: {
-    circle: "bg-[#00C875] shadow-sm shadow-[#00C875]/30",
-    connector: "bg-[#00C875]",
+    circle: "bg-success shadow-sm shadow-[#00C875]/30",
+    connector: "bg-success",
     text: "text-foreground",
-    badge: "bg-[#00C875]/15 text-[#007A47] dark:bg-[#00C875]/15 dark:text-[#00C875]",
+    badge: "bg-success/15 text-emerald-700 dark:bg-success/15 dark:text-success",
     badgeLabel: "COMPLETE",
   },
   "in-progress": {

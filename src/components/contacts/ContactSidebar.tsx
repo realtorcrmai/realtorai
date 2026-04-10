@@ -92,20 +92,20 @@ type StageFilter = "all" | string;
 
 const TYPE_FILTERS: { value: TypeFilter; label: string; color: string }[] = [
   { value: "all", label: "All", color: "bg-gray-100 text-gray-700" },
-  { value: "customer", label: "Lead", color: "bg-[#0F7694]/10 text-[#0A6880]" },
-  { value: "buyer", label: "Buyer", color: "bg-[#0F7694]/10 text-[#0A6880]" },
-  { value: "seller", label: "Seller", color: "bg-[#0F7694]/15 text-[#0A6880]" },
+  { value: "customer", label: "Lead", color: "bg-brand-muted text-brand-dark" },
+  { value: "buyer", label: "Buyer", color: "bg-brand-muted text-brand-dark" },
+  { value: "seller", label: "Seller", color: "bg-brand-muted-strong text-brand-dark" },
   { value: "agent", label: "Agent", color: "bg-amber-100 text-amber-700" },
-  { value: "partner", label: "Partner", color: "bg-[#0F7694]/10 text-[#0A6880]" },
+  { value: "partner", label: "Partner", color: "bg-brand-muted text-brand-dark" },
 ];
 
 const STAGE_FILTERS: { value: StageFilter; label: string; dot: string }[] = [
   { value: "all", label: "All Stages", dot: "bg-gray-400" },
-  { value: "new", label: "New", dot: "bg-[#0F7694]" },
+  { value: "new", label: "New", dot: "bg-brand" },
   { value: "qualified", label: "Qualified", dot: "bg-amber-500" },
-  { value: "active_search", label: "Active", dot: "bg-[#0F7694]/50" },
+  { value: "active_search", label: "Active", dot: "bg-brand/50" },
   { value: "under_contract", label: "Contract", dot: "bg-orange-500" },
-  { value: "closed", label: "Closed", dot: "bg-[#0A6880]" },
+  { value: "closed", label: "Closed", dot: "bg-brand-dark" },
   { value: "cold", label: "Cold", dot: "bg-gray-400" },
 ];
 
@@ -258,15 +258,15 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
             >
               <Filter className="h-4 w-4" />
               {hasActiveFilter && (
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#0F7694]" />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-brand" />
               )}
             </button>
           </div>
         </div>
         {importResult && (
-          <div className="text-sm text-[#0F7694] bg-[#0F7694]/5 rounded px-2 py-1 flex items-center justify-between">
+          <div className="text-sm text-brand bg-brand-muted rounded px-2 py-1 flex items-center justify-between">
             <span>{importResult}</span>
-            <button onClick={() => setImportResult(null)} className="text-[#67D4E8] hover:text-[#0F7694]"><X className="h-3 w-3" /></button>
+            <button onClick={() => setImportResult(null)} className="text-brand-light hover:text-brand"><X className="h-3 w-3" /></button>
           </div>
         )}
 
@@ -389,14 +389,14 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
               const initials = getInitials(contact.name);
               const avatarBg =
                 contact.type === "seller"
-                  ? "bg-[#0F7694]/50"
+                  ? "bg-brand/50"
                   : contact.type === "partner"
-                  ? "bg-[#0F7694]"
+                  ? "bg-brand"
                   : contact.type === "customer"
-                  ? "bg-[#0F7694]/50"
+                  ? "bg-brand/50"
                   : contact.type === "agent"
                   ? "bg-orange-500"
-                  : "bg-[#0F7694]";
+                  : "bg-brand";
               const contactStage = (contact as Record<string, unknown>)
                 .stage_bar as string | null;
 
@@ -532,7 +532,7 @@ function GettingStartedChecklist({ contacts }: { contacts: Contact[] }) {
             )}
           >
             {check.done ? (
-              <div className="w-4 h-4 rounded-full bg-[#0F7694]/50 flex items-center justify-center shrink-0">
+              <div className="w-4 h-4 rounded-full bg-brand/50 flex items-center justify-center shrink-0">
                 <Check className="h-2.5 w-2.5 text-white" />
               </div>
             ) : (
@@ -543,7 +543,7 @@ function GettingStartedChecklist({ contacts }: { contacts: Contact[] }) {
         ))}
       </div>
       <div className="flex items-center gap-2">
-        <div className="flex-1 h-2 rounded-full bg-[#0F7694]/10/50 dark:bg-[#1a1535]/20 overflow-hidden">
+        <div className="flex-1 h-2 rounded-full bg-brand-muted/50 dark:bg-foreground/20 overflow-hidden">
           <div
             className="h-full rounded-full bg-gradient-to-r from-[#0F7694] to-[#0F7694] transition-all duration-500"
             style={{ width: `${pct}%` }}

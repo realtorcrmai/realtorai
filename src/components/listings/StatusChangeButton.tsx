@@ -24,7 +24,7 @@ const TRANSITIONS: Record<
       label: "Mark as Sold",
       emoji: "✅",
       target: "sold",
-      className: "bg-[#0A6880] hover:bg-[#004EB0] text-white",
+      className: "bg-brand-dark hover:bg-[#004EB0] text-white",
       confirmTitle: "Mark listing as Sold?",
       confirmDesc:
         "This will mark the property as sold and complete the workflow. This cannot be undone.",
@@ -35,7 +35,7 @@ const TRANSITIONS: Record<
       label: "Mark as Sold",
       emoji: "✅",
       target: "sold",
-      className: "bg-[#0A6880] hover:bg-[#004EB0] text-white",
+      className: "bg-brand-dark hover:bg-[#004EB0] text-white",
       confirmTitle: "Mark listing as Sold?",
       confirmDesc:
         "This will mark the property as sold and complete the workflow. This cannot be undone.",

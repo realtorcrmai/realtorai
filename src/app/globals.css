@@ -23,6 +23,14 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-light: var(--brand-light);
+  --color-brand-muted: var(--brand-muted);
+  --color-brand-muted-strong: var(--brand-muted-strong);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -106,6 +114,16 @@
   --sidebar-border: oklch(0.28 0.012 250);
   --sidebar-ring: oklch(0.50 0.11 220);
 
+  /* ── Brand accent colors (use these instead of hardcoded hex) ── */
+  --brand: oklch(0.50 0.11 220);             /* = primary, for bg-brand, text-brand */
+  --brand-foreground: oklch(0.99 0 0);
+  --brand-dark: oklch(0.42 0.10 220);        /* darker shade for hover/active */
+  --brand-light: oklch(0.72 0.10 210);       /* lighter shade for highlights */
+  --brand-muted: oklch(0.50 0.11 220 / 10%); /* 10% opacity for backgrounds */
+  --brand-muted-strong: oklch(0.50 0.11 220 / 15%); /* 15% for stronger bg */
+  --success: oklch(0.62 0.17 155);           /* green for positive states */
+  --success-foreground: oklch(0.99 0 0);
+
   /* ── Gradient endpoints — teal-based ── */
   --gradient-indigo-start: oklch(0.44 0.12 225);
   --gradient-indigo-end: oklch(0.52 0.10 210);
@@ -188,6 +206,15 @@
 
   --glass-bg: oklch(0.17 0.010 250 / 80%);
   --glass-border: oklch(1 0 0 / 10%);
+
+  --brand: oklch(0.58 0.12 220);
+  --brand-foreground: oklch(0.99 0 0);
+  --brand-dark: oklch(0.52 0.10 220);
+  --brand-light: oklch(0.72 0.10 210);
+  --brand-muted: oklch(0.58 0.12 220 / 12%);
+  --brand-muted-strong: oklch(0.58 0.12 220 / 18%);
+  --success: oklch(0.62 0.17 155);
+  --success-foreground: oklch(0.99 0 0);
 }
 
 @layer base {

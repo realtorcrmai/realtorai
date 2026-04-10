@@ -254,7 +254,7 @@ function SectionLabel({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="h-6 w-6 rounded-full bg-[#0F7694]/10 text-[#0F7694] text-xs font-bold flex items-center justify-center shrink-0">
+      <span className="h-6 w-6 rounded-full bg-brand-muted text-brand text-xs font-bold flex items-center justify-center shrink-0">
         {number}
       </span>
       <span className="text-sm font-semibold text-foreground/80">

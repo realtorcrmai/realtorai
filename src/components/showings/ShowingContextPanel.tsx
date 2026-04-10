@@ -56,7 +56,7 @@ export function ShowingContextPanel({ showing }: ShowingContextPanelProps) {
                 {listing.address}
               </Link>
               {showing.status === "confirmed" && listing.lockbox_code && (
-                <p className="text-xs font-medium text-[#0A6880]">
+                <p className="text-xs font-medium text-brand-dark">
                   Lockbox: {listing.lockbox_code}
                 </p>
               )}

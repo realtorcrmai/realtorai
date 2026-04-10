@@ -83,7 +83,7 @@ export function ListingPreviewCard({
               {propertyType && (
                 <Badge variant="secondary" className="text-sm">{propertyType}</Badge>
               )}
-              <Badge variant="outline" className="text-sm bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20">Active</Badge>
+              <Badge variant="outline" className="text-sm bg-brand-muted text-brand-dark border-brand/20">Active</Badge>
             </div>
           </div>
         </div>
@@ -92,7 +92,7 @@ export function ListingPreviewCard({
         <div className="flex items-center gap-2">
           <div className="flex-1 h-1.5 rounded-full bg-muted/30 overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${completionPct >= 70 ? "bg-[#0F7694]/50" : completionPct >= 40 ? "bg-amber-500" : "bg-red-400"}`}
+              className={`h-full rounded-full transition-all duration-500 ${completionPct >= 70 ? "bg-brand/50" : completionPct >= 40 ? "bg-amber-500" : "bg-red-400"}`}
               style={{ width: `${completionPct}%` }}
             />
           </div>

@@ -79,13 +79,13 @@ export default async function NewsletterAnalyticsPage() {
           label="Open Rate"
           value={`${analytics.openRate}%`}
           icon={<TrendingUp className="h-5 w-5 text-muted-foreground" />}
-          valueClassName={analytics.openRate > 40 ? "text-[#0F7694]" : "text-amber-500"}
+          valueClassName={analytics.openRate > 40 ? "text-brand" : "text-amber-500"}
         />
         <StatCard
           label="Click Rate"
           value={`${analytics.clickRate}%`}
           icon={<MousePointerClick className="h-5 w-5 text-muted-foreground" />}
-          valueClassName={analytics.clickRate > 10 ? "text-[#0F7694]" : "text-amber-500"}
+          valueClassName={analytics.clickRate > 10 ? "text-brand" : "text-amber-500"}
         />
       </div>
 
@@ -101,7 +101,7 @@ export default async function NewsletterAnalyticsPage() {
               <div>
                 <div
                   className={`text-2xl font-bold ${
-                    analytics.bounces === 0 ? "text-[#0F7694]" : "text-destructive"
+                    analytics.bounces === 0 ? "text-brand" : "text-destructive"
                   }`}
                 >
                   {analytics.bounces}
@@ -111,7 +111,7 @@ export default async function NewsletterAnalyticsPage() {
               <div>
                 <div
                   className={`text-2xl font-bold ${
-                    analytics.unsubscribes === 0 ? "text-[#0F7694]" : "text-amber-500"
+                    analytics.unsubscribes === 0 ? "text-brand" : "text-amber-500"
                   }`}
                 >
                   {analytics.unsubscribes}
@@ -175,7 +175,7 @@ export default async function NewsletterAnalyticsPage() {
                     <div className="text-center text-muted-foreground">{data.clicks}</div>
                     <div
                       className={`text-center font-semibold ${
-                        ctr > 10 ? "text-[#0F7694]" : "text-muted-foreground"
+                        ctr > 10 ? "text-brand" : "text-muted-foreground"
                       }`}
                     >
                       {ctr}%

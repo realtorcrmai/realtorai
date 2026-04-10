@@ -54,7 +54,7 @@ export function AIWorkingForYou({
               </p>
             </div>
           </div>
-          <Badge className="bg-[#0F7694]/10 text-[#0A6880] hover:bg-[#0F7694]/10 text-[11px]">
+          <Badge className="bg-brand-muted text-brand-dark hover:bg-brand-muted text-[11px]">
             Active
           </Badge>
         </div>
@@ -66,11 +66,11 @@ export function AIWorkingForYou({
             <p className="text-[10px] text-muted-foreground">Emails Sent</p>
           </div>
           <div className="bg-white/60 rounded-lg p-2.5 border text-center">
-            <p className="text-lg font-bold text-[#0F7694]">{openRate}%</p>
+            <p className="text-lg font-bold text-brand">{openRate}%</p>
             <p className="text-[10px] text-muted-foreground">Open Rate</p>
           </div>
           <div className="bg-white/60 rounded-lg p-2.5 border text-center">
-            <p className="text-lg font-bold text-[#0F7694]">{clickRate}%</p>
+            <p className="text-lg font-bold text-brand">{clickRate}%</p>
             <p className="text-[10px] text-muted-foreground">Click Rate</p>
           </div>
           <div className="bg-white/60 rounded-lg p-2.5 border text-center">
@@ -100,8 +100,8 @@ export function AIWorkingForYou({
                       <span
                         className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
                           story.contactType === "buyer"
-                            ? "bg-[#0F7694]/10 text-[#0A6880]"
-                            : "bg-[#0F7694]/10 text-[#0A6880]"
+                            ? "bg-brand-muted text-brand-dark"
+                            : "bg-brand-muted text-brand-dark"
                         }`}
                       >
                         {story.contactType.toUpperCase()}

@@ -120,9 +120,9 @@ export function StageBar({ contactId, contactType, currentStage, stageData }: St
                 {i > 0 && (
                   <div
                     className={`h-0.5 w-4 sm:w-6 md:w-8 transition-colors duration-300 ${
-                      isCompleted ? "bg-[#67D4E8]"
+                      isCompleted ? "bg-brand-light"
                         : isIncomplete ? "bg-amber-400"
-                        : isCurrent ? "bg-[#67D4E8]"
+                        : isCurrent ? "bg-brand-light"
                         : "bg-gray-200"
                     }`}
                   />
@@ -146,11 +146,11 @@ export function StageBar({ contactId, contactType, currentStage, stageData }: St
                       w-6 h-6 sm:w-7 sm:h-7
                       ${
                         isCompleted
-                          ? "bg-[#0F7694]/50 text-white shadow-sm"
+                          ? "bg-brand/50 text-white shadow-sm"
                           : isIncomplete
                           ? "bg-amber-500 text-white shadow-sm ring-2 ring-offset-1 ring-amber-300"
                           : isCurrent
-                          ? `${colors.dot} text-white shadow-md ring-2 ring-offset-1 ring-[#0F7694]`
+                          ? `${colors.dot} text-white shadow-md ring-2 ring-offset-1 ring-brand`
                           : "bg-gray-200 text-gray-400 group-hover:bg-gray-300"
                       }
                       ${isCurrent ? "animate-pulse-subtle" : ""}
@@ -173,7 +173,7 @@ export function StageBar({ contactId, contactType, currentStage, stageData }: St
                         isCurrent
                           ? `font-semibold ${colors.text}`
                           : isCompleted
-                          ? "font-medium text-[#0A6880]"
+                          ? "font-medium text-brand-dark"
                           : isIncomplete
                           ? "font-medium text-amber-600"
                           : "text-gray-400"
@@ -188,7 +188,7 @@ export function StageBar({ contactId, contactType, currentStage, stageData }: St
                     <span
                       className={`
                         mt-0.5 text-[8px] font-medium leading-none
-                        ${completeness.filled === completeness.total ? "text-[#0F7694]" : "text-amber-600"}
+                        ${completeness.filled === completeness.total ? "text-brand" : "text-amber-600"}
                       `}
                     >
                       {completeness.filled}/{completeness.total}
@@ -260,7 +260,7 @@ export function StageBar({ contactId, contactType, currentStage, stageData }: St
               {stageData[expandedStage].items.map((item) => (
                 <div key={item.label} className="flex items-start gap-1.5 text-[11px]">
                   <span className={`mt-0.5 shrink-0 w-3 h-3 rounded-full flex items-center justify-center text-[8px] ${
-                    item.filled ? "bg-[#0F7694]/10 text-[#0F7694]" : "bg-red-100 text-red-500"
+                    item.filled ? "bg-brand-muted text-brand" : "bg-red-100 text-red-500"
                   }`}>
                     {item.filled ? "✓" : "—"}
                   </span>
@@ -278,7 +278,7 @@ export function StageBar({ contactId, contactType, currentStage, stageData }: St
                 onClick={() => {
                   document.getElementById(stageData[expandedStage].sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
-                className="mt-2 text-[10px] text-[#0F7694] hover:text-[#1a1535] font-medium flex items-center gap-0.5"
+                className="mt-2 text-[10px] text-brand hover:text-foreground font-medium flex items-center gap-0.5"
               >
                 <ChevronDown className="w-3 h-3" /> Jump to section
               </button>

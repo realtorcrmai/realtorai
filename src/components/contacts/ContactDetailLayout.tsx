@@ -17,7 +17,7 @@ export function ContactDetailLayout({
   return (
     <div className="flex text-sm h-full">
       {/* CENTER — single scrollable unit */}
-      <div className="flex-1 overflow-y-auto bg-[#f8f7fd] dark:bg-background">
+      <div className="flex-1 overflow-y-auto bg-muted/50 dark:bg-background">
         <div className="p-3 md:p-4 space-y-2">
           {header}
           {tabs}

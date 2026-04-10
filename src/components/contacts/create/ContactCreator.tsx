@@ -165,7 +165,7 @@ export function ContactCreator() {
             </Link>
             <div>
               <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-[#0F7694]" />
+                <Sparkles className="h-5 w-5 text-brand" />
                 Meet Someone New
               </h1>
               <p className="text-sm text-muted-foreground">Add a new contact to your network</p>
@@ -246,7 +246,7 @@ export function ContactCreator() {
                 />
 
                 {isBuyer && (
-                  <div className="space-y-3 p-4 rounded-xl bg-[#0F7694]/5 dark:bg-blue-950/10 border border-blue-100/50 dark:border-blue-900/20">
+                  <div className="space-y-3 p-4 rounded-xl bg-brand-muted dark:bg-blue-950/10 border border-blue-100/50 dark:border-blue-900/20">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-sm text-muted-foreground mb-1 block">Budget min ($K)</label>
@@ -274,7 +274,7 @@ export function ContactCreator() {
                       {areas.length > 0 && (
                         <div className="flex gap-1.5 flex-wrap mt-2">
                           {areas.map((area) => (
-                            <span key={area} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#0F7694]/10 dark:bg-blue-900/30 text-[#0A6880] dark:text-blue-300 text-sm">
+                            <span key={area} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-muted dark:bg-blue-900/30 text-brand-dark dark:text-blue-300 text-sm">
                               {area}
                               <button onClick={() => setAreas(areas.filter(a => a !== area))} className="hover:text-red-500">
                                 <X className="h-3 w-3" />
@@ -294,7 +294,7 @@ export function ContactCreator() {
                             onClick={() => togglePropertyType(pt)}
                             className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
                               propertyTypes.includes(pt)
-                                ? "bg-[#0F7694] text-white shadow-sm"
+                                ? "bg-brand text-white shadow-sm"
                                 : "bg-white dark:bg-zinc-800 border border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
                             }`}
                           >
@@ -329,7 +329,7 @@ export function ContactCreator() {
                 )}
 
                 {isSeller && (
-                  <div className="space-y-3 p-4 rounded-xl bg-[#0F7694]/5/30 dark:bg-[#1a1535]/10 border border-[#0F7694]/15/50 dark:border-[#0F7694]/10">
+                  <div className="space-y-3 p-4 rounded-xl bg-brand-muted/30 dark:bg-foreground/10 border border-brand/15/50 dark:border-brand/10">
                     <div>
                       <label className="text-sm text-muted-foreground mb-1 block">Motivation</label>
                       <select value={motivation} onChange={(e) => setMotivation(e.target.value)} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm">
@@ -372,7 +372,7 @@ export function ContactCreator() {
               {showMore && (
                 <div className="space-y-4 animate-float-in">
                   {/* Structured Address */}
-                  <div className="p-4 rounded-xl bg-[#FAF8F4] dark:bg-[#1a1535]/10 border border-border/30 space-y-3">
+                  <div className="p-4 rounded-xl bg-[#FAF8F4] dark:bg-foreground/10 border border-border/30 space-y-3">
                     <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Residential Address</p>
                     <div>
                       <label className="text-sm text-muted-foreground mb-1 block">Street address</label>
@@ -413,8 +413,8 @@ export function ContactCreator() {
                       </div>
                     </div>
                     {postalCode.length >= 2 && city && (
-                      <p className="text-xs text-[#0F7694] flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#0F7694]/50" />
+                      <p className="text-xs text-brand flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand/50" />
                         Auto-detected: {city}, {province}
                       </p>
                     )}
@@ -485,14 +485,14 @@ export function ContactCreator() {
             <Button
               disabled={!canSubmit || submitting}
               onClick={handleSubmit}
-              className="w-full mt-4 h-12 text-base font-semibold bg-gradient-to-r from-[#0F7694] to-[#0F7694] hover:bg-[#0A6880] shadow-lg rounded-xl"
+              className="w-full mt-4 h-12 text-base font-semibold bg-gradient-to-r from-[#0F7694] to-[#0F7694] hover:bg-brand-dark shadow-lg rounded-xl"
               size="lg"
             >
               {submitting ? "Creating..." : canSubmit ? "Add to Network →" : "Fill required fields *"}
             </Button>
 
             {canSubmit && (
-              <p className="text-xs text-[#0F7694] text-center mt-1.5 font-medium">Ready to add to your network</p>
+              <p className="text-xs text-brand text-center mt-1.5 font-medium">Ready to add to your network</p>
             )}
           </div>
         </div>

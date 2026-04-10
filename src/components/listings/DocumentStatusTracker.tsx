@@ -108,7 +108,7 @@ export function DocumentStatusTracker({
             >
               <div className="flex items-center gap-3">
                 {isUploaded ? (
-                  <Check className="h-5 w-5 text-[#0F7694]" />
+                  <Check className="h-5 w-5 text-brand" />
                 ) : (
                   <X className="h-5 w-5 text-red-500" />
                 )}

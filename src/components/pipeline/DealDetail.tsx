@@ -212,7 +212,7 @@ export function DealDetail({
                     </div>
                   )}
                   {commissionAmount > 0 && (
-                    <p className="text-sm text-[#0A6880] font-medium mt-1">
+                    <p className="text-sm text-brand-dark font-medium mt-1">
                       GCI: ${commissionAmount.toLocaleString("en-CA")}
                       {deal.commission_pct && (
                         <span className="text-muted-foreground ml-1">
@@ -424,9 +424,9 @@ export function DealDetail({
 
           {/* What's Next — for closed deals */}
           {(deal.status === "won" || deal.status === "lost") && (
-            <Card className="border-[#0F7694]/15 bg-[#0F7694]/5">
+            <Card className="border-brand/15 bg-brand-muted">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-[#0A6880]">What&apos;s Next?</CardTitle>
+                <CardTitle className="text-sm text-brand-dark">What&apos;s Next?</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap items-center gap-2">

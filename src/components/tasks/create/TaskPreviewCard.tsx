@@ -90,7 +90,7 @@ export function TaskPreviewCard({
         <div className="flex items-center gap-2">
           <div className="flex-1 h-1.5 rounded-full bg-muted/30 overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${completionPct >= 70 ? "bg-[#0F7694]" : completionPct >= 40 ? "bg-amber-500" : "bg-red-400"}`}
+              className={`h-full rounded-full transition-all duration-500 ${completionPct >= 70 ? "bg-brand" : completionPct >= 40 ? "bg-amber-500" : "bg-red-400"}`}
               style={{ width: `${completionPct}%` }}
             />
           </div>

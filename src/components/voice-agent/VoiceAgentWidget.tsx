@@ -733,8 +733,8 @@ export function VoiceAgentWidget() {
         ) : (
           <div className="relative">
             <Bot className="h-6 w-6" />
-            <span className={cn("absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-white", connected ? "bg-[#0F7694]/50" : "bg-red-500")} />
-            {speaking && <span className="absolute -right-1 -bottom-1 h-3 w-3 rounded-full bg-[#0F7694] border-2 border-white animate-pulse" />}
+            <span className={cn("absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-white", connected ? "bg-brand/50" : "bg-red-500")} />
+            {speaking && <span className="absolute -right-1 -bottom-1 h-3 w-3 rounded-full bg-brand border-2 border-white animate-pulse" />}
           </div>
         )}
       </button>
@@ -792,13 +792,13 @@ export function VoiceAgentWidget() {
             <div className="flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-[#0F7694]/5 to-[#0F7694]/10 border-b shrink-0">
               <div className="flex items-center gap-0.5">
                 {[...Array(7)].map((_, i) => (
-                  <span key={i} className="w-1 bg-[#0F7694] rounded-full animate-pulse"
+                  <span key={i} className="w-1 bg-brand rounded-full animate-pulse"
                     style={{ height: `${6 + Math.random() * 12}px`, animationDelay: `${i * 0.08}s` }} />
                 ))}
               </div>
-              <span className="text-xs text-[#0A6880] font-medium">Speaking...</span>
-              <button onClick={stopSpeaking} className="p-0.5 rounded hover:bg-[#0F7694]/10">
-                <Square className="h-3 w-3 text-[#0F7694]" />
+              <span className="text-xs text-brand-dark font-medium">Speaking...</span>
+              <button onClick={stopSpeaking} className="p-0.5 rounded hover:bg-brand-muted">
+                <Square className="h-3 w-3 text-brand" />
               </button>
             </div>
           )}
@@ -877,7 +877,7 @@ export function VoiceAgentWidget() {
                 })}>
                   {msg.role === "nav" && <ArrowRight className="h-3 w-3 shrink-0" />}
                   {msg.content}
-                  {msg.streaming && <span className="inline-block w-0.5 h-4 bg-[#0F7694] ml-0.5 animate-pulse align-middle" />}
+                  {msg.streaming && <span className="inline-block w-0.5 h-4 bg-brand ml-0.5 animate-pulse align-middle" />}
                 </div>
               </div>
             ))}

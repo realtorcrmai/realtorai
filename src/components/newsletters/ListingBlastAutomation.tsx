@@ -21,7 +21,7 @@ export function ListingBlastAutomation() {
               </p>
             </div>
           </div>
-          <Badge className="bg-[#0F7694]/10 text-[#0A6880] hover:bg-[#0F7694]/10 text-[11px]">
+          <Badge className="bg-brand-muted text-brand-dark hover:bg-brand-muted text-[11px]">
             Active
           </Badge>
         </div>

@@ -72,9 +72,9 @@ export default function SignupPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f4f2ff] to-[#e8e4ff]">
         <div className="w-full max-w-md p-8 bg-white/90 backdrop-blur rounded-2xl shadow-lg text-center">
           <div className="text-5xl mb-4">🎉</div>
-          <h1 className="text-2xl font-bold text-[#1a1535] mb-2">Welcome to Realtors360!</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Welcome to Realtors360!</h1>
           <p className="text-sm text-gray-600 mb-4">Your account has been created. Signing you in...</p>
-          <div className="animate-pulse text-[#4f35d2] text-sm">Redirecting to dashboard...</div>
+          <div className="animate-pulse text-primary text-sm">Redirecting to dashboard...</div>
         </div>
       </div>
     );
@@ -88,7 +88,7 @@ export default function SignupPage() {
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#4f35d2] to-[#ff5c3a] mb-3">
             <span className="text-white text-xl font-bold">R</span>
           </div>
-          <h1 className="text-2xl font-bold text-[#1a1535]">Create your account</h1>
+          <h1 className="text-2xl font-bold text-foreground">Create your account</h1>
           <p className="text-sm text-gray-500 mt-1">Start managing your real estate business with AI</p>
         </div>
 
@@ -97,11 +97,11 @@ export default function SignupPage() {
           {[1, 2].map((s) => (
             <div key={s} className="flex items-center gap-2">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                step >= s ? "bg-[#4f35d2] text-white" : "bg-gray-200 text-gray-500"
+                step >= s ? "bg-primary text-white" : "bg-gray-200 text-gray-500"
               }`}>
                 {s}
               </div>
-              {s < 2 && <div className={`w-12 h-0.5 ${step > 1 ? "bg-[#4f35d2]" : "bg-gray-200"}`} />}
+              {s < 2 && <div className={`w-12 h-0.5 ${step > 1 ? "bg-primary" : "bg-gray-200"}`} />}
             </div>
           ))}
         </div>
@@ -109,7 +109,7 @@ export default function SignupPage() {
         <form onSubmit={handleSubmit} className="bg-white/90 backdrop-blur rounded-2xl shadow-lg p-6 space-y-4">
           {step === 1 && (
             <>
-              <h2 className="text-lg font-semibold text-[#1a1535]">Account Details</h2>
+              <h2 className="text-lg font-semibold text-foreground">Account Details</h2>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
@@ -119,7 +119,7 @@ export default function SignupPage() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Sarah Johnson"
                   required
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#4f35d2] focus:ring-1 focus:ring-[#4f35d2] outline-none text-sm"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm"
                 />
               </div>
 
@@ -131,7 +131,7 @@ export default function SignupPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="sarah@realty.ca"
                   required
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#4f35d2] focus:ring-1 focus:ring-[#4f35d2] outline-none text-sm"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm"
                 />
               </div>
 
@@ -144,7 +144,7 @@ export default function SignupPage() {
                   placeholder="Min 8 characters"
                   required
                   minLength={8}
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#4f35d2] focus:ring-1 focus:ring-[#4f35d2] outline-none text-sm"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm"
                 />
               </div>
 
@@ -156,7 +156,7 @@ export default function SignupPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repeat password"
                   required
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#4f35d2] focus:ring-1 focus:ring-[#4f35d2] outline-none text-sm"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm"
                 />
               </div>
 
@@ -178,7 +178,7 @@ export default function SignupPage() {
                   setError("");
                   setStep(2);
                 }}
-                className="w-full py-2.5 bg-[#4f35d2] text-white rounded-lg text-sm font-medium hover:bg-[#3d28a8] transition-colors"
+                className="w-full py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-[#3d28a8] transition-colors"
               >
                 Continue →
               </button>
@@ -187,7 +187,7 @@ export default function SignupPage() {
 
           {step === 2 && (
             <>
-              <h2 className="text-lg font-semibold text-[#1a1535]">Professional Info</h2>
+              <h2 className="text-lg font-semibold text-foreground">Professional Info</h2>
               <p className="text-xs text-gray-500">Optional — you can fill this in later from Settings</p>
 
               <div>
@@ -197,7 +197,7 @@ export default function SignupPage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="604-555-1234"
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#4f35d2] focus:ring-1 focus:ring-[#4f35d2] outline-none text-sm"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm"
                 />
               </div>
 
@@ -208,7 +208,7 @@ export default function SignupPage() {
                   value={brokerage}
                   onChange={(e) => setBrokerage(e.target.value)}
                   placeholder="24K Realty Group"
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#4f35d2] focus:ring-1 focus:ring-[#4f35d2] outline-none text-sm"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm"
                 />
               </div>
 
@@ -219,7 +219,7 @@ export default function SignupPage() {
                   value={licenseNumber}
                   onChange={(e) => setLicenseNumber(e.target.value)}
                   placeholder="Optional"
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#4f35d2] focus:ring-1 focus:ring-[#4f35d2] outline-none text-sm"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm"
                 />
               </div>
 
@@ -232,7 +232,7 @@ export default function SignupPage() {
                     onClick={() => setPlan("free")}
                     className={`p-3 rounded-xl border-2 text-left transition-all ${
                       plan === "free"
-                        ? "border-[#4f35d2] bg-[#4f35d2]/5"
+                        ? "border-primary bg-primary/5"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
@@ -245,7 +245,7 @@ export default function SignupPage() {
                     onClick={() => setPlan("professional")}
                     className={`p-3 rounded-xl border-2 text-left transition-all relative ${
                       plan === "professional"
-                        ? "border-[#4f35d2] bg-[#4f35d2]/5"
+                        ? "border-primary bg-primary/5"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
@@ -268,7 +268,7 @@ export default function SignupPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 py-2.5 bg-[#4f35d2] text-white rounded-lg text-sm font-medium hover:bg-[#3d28a8] transition-colors disabled:opacity-50"
+                  className="flex-1 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-[#3d28a8] transition-colors disabled:opacity-50"
                 >
                   {loading ? "Creating account..." : "Create Account"}
                 </button>
@@ -301,7 +301,7 @@ export default function SignupPage() {
           {/* Login link */}
           <p className="text-center text-xs text-gray-500">
             Already have an account?{" "}
-            <Link href="/login" className="text-[#4f35d2] font-medium hover:underline">
+            <Link href="/login" className="text-primary font-medium hover:underline">
               Sign in
             </Link>
           </p>

@@ -23,7 +23,7 @@ type StatItem = {
 
 function buildItems(stats: DashboardStats): StatItem[] {
   return [
-    { label: "Active Listings",  value: stats.activeListings,  icon: Building2,    href: "/listings", color: "text-[#0F7694]", iconBg: "bg-[#0F7694]/10" },
+    { label: "Active Listings",  value: stats.activeListings,  icon: Building2,    href: "/listings", color: "text-brand", iconBg: "bg-brand-muted" },
     { label: "Open Tasks",       value: stats.openTasks,       icon: ListTodo,     href: "/tasks",    color: "text-[#A25DDC]", iconBg: "bg-[#A25DDC]/10" },
     { label: "Pending Showings", value: stats.pendingShowings, icon: Clock,        href: "/showings", color: "text-[#FDAB3D]", iconBg: "bg-[#FDAB3D]/15" },
     { label: "Missing Docs",     value: stats.missingDocs,     icon: FileWarning,  href: "/forms",    color: "text-rose-600",  iconBg: "bg-rose-50", alert: stats.missingDocs > 0 },
@@ -149,7 +149,7 @@ export function GreetingTicker({ initialStats }: { initialStats: DashboardStats 
             className={cn(
               "h-1 rounded-full transition-all duration-500 ease-out",
               page === i
-                ? "w-4 bg-[#0F7694]"
+                ? "w-4 bg-brand"
                 : "w-1 bg-muted-foreground/25 hover:bg-muted-foreground/45"
             )}
           />

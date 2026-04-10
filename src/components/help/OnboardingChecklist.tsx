@@ -95,10 +95,10 @@ export function OnboardingChecklist() {
   // All done — show celebration then auto-dismiss after 5 seconds
   if (allComplete) {
     return (
-      <div className="fixed bottom-6 right-6 z-40 w-72 lf-card p-4 shadow-lg border border-[#0F7694]/20 bg-[#0F7694]/5 animate-in fade-in-0 zoom-in-95">
-        <p className="text-sm font-semibold text-[#0A6880]">🎉 You&apos;re all set!</p>
-        <p className="text-xs text-[#0F7694] mt-1">You&apos;ve completed the getting started checklist.</p>
-        <button onClick={dismiss} className="text-xs text-[#0F7694] hover:underline mt-2">Dismiss</button>
+      <div className="fixed bottom-6 right-6 z-40 w-72 lf-card p-4 shadow-lg border border-brand/20 bg-brand-muted animate-in fade-in-0 zoom-in-95">
+        <p className="text-sm font-semibold text-brand-dark">🎉 You&apos;re all set!</p>
+        <p className="text-xs text-brand mt-1">You&apos;ve completed the getting started checklist.</p>
+        <button onClick={dismiss} className="text-xs text-brand hover:underline mt-2">Dismiss</button>
       </div>
     );
   }
@@ -135,7 +135,7 @@ export function OnboardingChecklist() {
                 aria-label={item.complete ? `${item.label} completed` : `Mark ${item.label} as complete`}
               >
                 {item.complete ? (
-                  <Check className="h-4 w-4 text-[#0F7694]" />
+                  <Check className="h-4 w-4 text-brand" />
                 ) : (
                   <Circle className="h-4 w-4 text-muted-foreground/40" />
                 )}

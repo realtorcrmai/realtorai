@@ -68,8 +68,8 @@ const PLATFORM_EMOJI: Record<SocialPlatform, string> = {
 };
 
 const MEDIA_DISPLAY: Record<MediaType, { emoji: string; label: string; colour: string }> = {
-  image: { emoji: "🖼️", label: "Image", colour: "bg-[#0F7694]/10 text-[#0A6880]" },
-  carousel: { emoji: "📱", label: "Carousel", colour: "bg-[#0F7694]/15 text-[#0A6880]" },
+  image: { emoji: "🖼️", label: "Image", colour: "bg-brand-muted text-brand-dark" },
+  carousel: { emoji: "📱", label: "Carousel", colour: "bg-brand-muted-strong text-brand-dark" },
   video: { emoji: "🎬", label: "Video", colour: "bg-red-100 text-red-700" },
   reel: { emoji: "🎞️", label: "Reel", colour: "bg-pink-100 text-pink-700" },
   story: { emoji: "📖", label: "Story", colour: "bg-amber-100 text-amber-700" },
@@ -214,7 +214,7 @@ export function SocialTemplatesTab({ templates, onUseTemplate }: Props) {
 
                     {/* System badge */}
                     {template.is_system && (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-[#0F7694]/10 text-[#0A6880]">
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-brand-muted text-brand-dark">
                         🔒 System
                       </span>
                     )}

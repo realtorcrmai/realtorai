@@ -28,11 +28,11 @@ const channelIcons: Record<string, typeof MessageSquare> = {
 };
 
 const channelBadgeStyles: Record<string, string> = {
-  whatsapp: "bg-[#0F7694]/10 text-[#0A6880] dark:bg-[#1a1535]/40 dark:text-[#67D4E8]",
-  sms: "bg-[#0F7694]/10 text-[#0A6880] dark:bg-blue-900/40 dark:text-[#67D4E8]",
-  email: "bg-[#0F7694]/10 text-[#0A6880] dark:bg-[#1a1535]/40 dark:text-[#67D4E8]",
+  whatsapp: "bg-brand-muted text-brand-dark dark:bg-foreground/40 dark:text-brand-light",
+  sms: "bg-brand-muted text-brand-dark dark:bg-blue-900/40 dark:text-brand-light",
+  email: "bg-brand-muted text-brand-dark dark:bg-foreground/40 dark:text-brand-light",
   note: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
-  voice: "bg-[#0F7694]/10 text-[#0A6880] dark:bg-[#1a1535]/40 dark:text-[#67D4E8]",
+  voice: "bg-brand-muted text-brand-dark dark:bg-foreground/40 dark:text-brand-light",
 };
 
 const channelLabels: Record<string, string> = {
@@ -105,7 +105,7 @@ export function CommunicationTimeline({
                 onClick={() => setFilter(f.key)}
                 className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
                   isActive
-                    ? "bg-[#0F7694] text-white"
+                    ? "bg-brand text-white"
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}
               >
@@ -152,7 +152,7 @@ export function CommunicationTimeline({
                 className={cn(
                   "flex gap-3 p-3 rounded-lg transition-colors",
                   isInbound
-                    ? "bg-[#0F7694]/5 dark:bg-blue-950/20 border-l-2 border-l-blue-400"
+                    ? "bg-brand-muted dark:bg-blue-950/20 border-l-2 border-l-blue-400"
                     : "bg-muted/50 border-r-2 border-r-emerald-400 ml-4"
                 )}
               >
@@ -160,13 +160,13 @@ export function CommunicationTimeline({
                   <DirectionIcon
                     className={cn(
                       "h-4 w-4",
-                      isInbound ? "text-[#0F7694]" : "text-[#0F7694]"
+                      isInbound ? "text-brand" : "text-brand"
                     )}
                   />
                   <ChannelIcon
                     className={cn(
                       "h-4 w-4",
-                      isInbound ? "text-[#67D4E8]" : "text-[#67D4E8]"
+                      isInbound ? "text-brand-light" : "text-brand-light"
                     )}
                   />
                 </div>

@@ -15,7 +15,7 @@ export function AlertBanner({
   const variantStyles = {
     warning: "bg-amber-50 border-amber-200 text-amber-800",
     error: "bg-red-50 border-red-200 text-red-800",
-    info: "bg-[#0F7694]/5 border-[#0F7694]/20 text-[#0A6880]",
+    info: "bg-brand-muted border-brand/20 text-brand-dark",
   };
 
   return (

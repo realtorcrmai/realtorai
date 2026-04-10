@@ -5,9 +5,9 @@ import Link from "next/link";
 import type { Listing } from "@/types";
 
 const statusColors: Record<string, string> = {
-  active: "bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20",
+  active: "bg-brand-muted text-brand-dark border-brand/20",
   pending: "bg-amber-50 text-amber-700 border-amber-200",
-  sold: "bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20",
+  sold: "bg-brand-muted text-brand-dark border-brand/20",
 };
 
 export function PropertyHistoryPanel({
@@ -142,7 +142,7 @@ export function PropertyHistoryPanel({
               </div>
               <Badge
                 variant="outline"
-                className="bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20 text-[11px] px-1.5 py-0 shrink-0"
+                className="bg-brand-muted text-brand-dark border-brand/20 text-[11px] px-1.5 py-0 shrink-0"
               >
                 Sold
               </Badge>

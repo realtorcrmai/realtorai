@@ -17,7 +17,7 @@ interface ShowingEvent {
 }
 
 const statusBadgeStyles: Record<string, string> = {
-  confirmed: "bg-[#00C875]/10 text-[#007A47] dark:bg-[#0F7694]/20 dark:text-[#67D4E8]",
+  confirmed: "bg-success/10 text-emerald-700 dark:bg-brand/20 dark:text-brand-light",
   requested: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   denied: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
   cancelled: "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
@@ -81,7 +81,7 @@ export function CalendarSidebar() {
         {/* Quick stats */}
         <div className="grid grid-cols-2 gap-2">
           <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
-            <span className="h-2 w-2 rounded-full bg-[#00C875] shrink-0" />
+            <span className="h-2 w-2 rounded-full bg-success shrink-0" />
             <div>
               <p className="text-lg font-bold leading-tight">{confirmedCount}</p>
               <p className="text-[11px] text-muted-foreground">Confirmed</p>
