@@ -79,14 +79,19 @@ export type AgentRunResult = {
 /**
  * Run the agent for a single contact. The agent uses Claude tool_use
  * to gather context, make decisions, and take action.
+ *
+ * @param prefetchedContacts — optional Map of contact data batch-loaded by the
+ *   triage loop.  When provided the agent's `get_contact` tool returns the
+ *   cached row instead of issuing a DB query, eliminating N+1.
  */
 export async function runAgentForContact(
   db: SupabaseClient,
   realtorId: string,
   contactId: string,
-  trigger: string = 'scheduled'
+  trigger: string = 'scheduled',
+  prefetchedContacts?: Map<string, Record<string, unknown>>
 ): Promise<AgentRunResult> {
-  const ctx: ToolContext = { db, realtorId };
+  const ctx: ToolContext = { db, realtorId, prefetchedContacts };
   const runLog = logger.child({ realtorId, contactId, trigger });
 
   // Create agent_run record
@@ -257,12 +262,26 @@ export async function runTriageLoop(
     return { contactsEvaluated: 0, totalDecisions: 0, results: [] };
   }
 
+  // Batch-fetch all contact data in one query to avoid N+1 (each agent run
+  // would otherwise query the same contacts table individually).
+  const { data: contactRows } = await db
+    .from('contacts')
+    .select('id, name, email, phone, type, lead_status, stage_bar, pref_channel, tags, newsletter_intelligence, newsletter_unsubscribed, casl_consent_given, ai_lead_score, notes, updated_at')
+    .in('id', contactList);
+
+  const prefetchedContacts = new Map<string, Record<string, unknown>>();
+  for (const row of contactRows ?? []) {
+    prefetchedContacts.set(row.id, row as Record<string, unknown>);
+  }
+
+  triageLog.info({ prefetched: prefetchedContacts.size }, 'triage: contacts prefetched');
+
   // Run agent for each contact (sequential for now; M5+ can parallelize)
   const results: AgentRunResult[] = [];
   let totalDecisions = 0;
 
   for (const contactId of contactList) {
-    const result = await runAgentForContact(db, realtorId, contactId, 'triage');
+    const result = await runAgentForContact(db, realtorId, contactId, 'triage', prefetchedContacts);
     results.push(result);
     totalDecisions += result.decisions;
   }

@@ -40,6 +40,7 @@ const ConfigSchema = z.object({
   FLAG_AGENT_SCORING: z.enum(['on', 'off']).default('off'),
   FLAG_PROCESS_WORKFLOWS: z.enum(['on', 'off']).default('off'),
   FLAG_AGENT_TRIAGE: z.enum(['on', 'off']).default('off'),
+  FLAG_MARKET_SCRAPER: z.enum(['on', 'off']).default('off'),
 
   // Twilio (required for SMS/WhatsApp workflow steps)
   TWILIO_ACCOUNT_SID: z.string().optional().default(''),

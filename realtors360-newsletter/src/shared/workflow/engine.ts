@@ -24,6 +24,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { config } from '../../config.js';
 import { logger } from '../../lib/logger.js';
 import { sendEmail } from '../../lib/resend.js';
+import { buildEmailFromType, generatePlainText } from '../../lib/email-blocks.js';
 import { sendGenericMessage } from '../../lib/twilio.js';
 import { canSendToContact } from '../../lib/compliance.js';
 import { createWithRetry } from '../anthropic-retry.js';
@@ -289,21 +290,19 @@ async function executeAutoMessage(
 
     try {
       const emailSubject = subject || step.name;
-      // Simple branded HTML wrapper (newsletter service doesn't port CRM's email-blocks)
-      const htmlBody = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1a1535;">
-<p>${body.replace(/\n/g, '<br>')}</p>
-<hr style="border:none;border-top:1px solid #e5e5e5;margin:24px 0;">
-<p style="font-size:12px;color:#888;">Sent by ${variables.agent_name || 'Your Agent'}</p>
-</body></html>`;
+      const emailType = step.template_id || step.action_type || 'welcome';
+      // Apple-quality HTML via email-blocks (18 composable blocks)
+      const htmlBody = buildEmailFromType(emailType, contact.name, contact.type, emailSubject, body, variables.agent_name ? `Talk to ${variables.agent_name}` : 'View Details');
+      const textBody = generatePlainText(htmlBody);
 
       const result = await sendEmail({
         to: contact.email,
         subject: emailSubject,
         html: htmlBody,
-        text: body,
+        text: textBody,
         tags: [
           { name: 'contact_id', value: contact.id },
-          { name: 'email_type', value: step.template_id || 'workflow' },
+          { name: 'email_type', value: emailType },
         ],
       });
 

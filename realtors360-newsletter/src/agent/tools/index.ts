@@ -48,6 +48,8 @@ import { logDecision, LOG_DECISION_SCHEMA } from './write/log-decision.js';
 export type ToolContext = {
   db: SupabaseClient;
   realtorId: string;
+  /** Prefetched contact data keyed by contact ID — avoids N+1 queries in triage loop. */
+  prefetchedContacts?: Map<string, Record<string, unknown>>;
 };
 
 export type ToolHandler = (ctx: ToolContext, input: Record<string, unknown>) => Promise<unknown>;

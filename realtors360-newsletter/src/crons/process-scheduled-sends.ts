@@ -1,0 +1,147 @@
+/**
+ * Process Scheduled Sends Cron.
+ *
+ * Runs every 5 minutes. Picks up agent_drafts with status='approved'
+ * and scheduled_send_at <= now(), validates CASL compliance, sends via
+ * Resend, and tracks in the newsletters table.
+ *
+ * No feature flag needed — only processes drafts that were explicitly
+ * approved and scheduled by the agent or a realtor.
+ *
+ * Follows the same send pattern as agent/tools/write/send-email.ts:
+ * compliance check -> Resend send -> update draft -> track in newsletters.
+ */
+
+import { supabase } from '../lib/supabase.js';
+import { logger } from '../lib/logger.js';
+import { sendEmail } from '../lib/resend.js';
+import { canSendToContact } from '../lib/compliance.js';
+
+export async function runProcessScheduledSends(): Promise<void> {
+  const start = Date.now();
+  logger.info('cron: process-scheduled-sends starting');
+
+  try {
+    // Fetch all approved drafts whose scheduled time has arrived
+    const { data: drafts, error: fetchErr } = await supabase
+      .from('agent_drafts')
+      .select('*')
+      .eq('status', 'approved')
+      .lte('scheduled_send_at', new Date().toISOString())
+      .order('scheduled_send_at', { ascending: true });
+
+    if (fetchErr) {
+      logger.error({ err: fetchErr }, 'cron: process-scheduled-sends — failed to fetch drafts');
+      return;
+    }
+
+    if (!drafts || drafts.length === 0) {
+      logger.debug('cron: process-scheduled-sends — no drafts due');
+      return;
+    }
+
+    let sent = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    for (const draft of drafts) {
+      try {
+        // Load contact for compliance check
+        const { data: contact, error: contactErr } = await supabase
+          .from('contacts')
+          .select('id, email, newsletter_unsubscribed, casl_consent_given')
+          .eq('id', draft.contact_id)
+          .maybeSingle();
+
+        if (contactErr || !contact) {
+          logger.warn(
+            { draftId: draft.id, contactId: draft.contact_id, err: contactErr?.message },
+            'cron: process-scheduled-sends — contact not found, skipping'
+          );
+          skipped++;
+          continue;
+        }
+
+        // CASL compliance gate
+        const sendCheck = canSendToContact(contact);
+        if (!sendCheck.allowed) {
+          logger.info(
+            { draftId: draft.id, contactId: draft.contact_id, reason: sendCheck.reason },
+            'cron: process-scheduled-sends — compliance rejected, marking draft rejected'
+          );
+          await supabase
+            .from('agent_drafts')
+            .update({ status: 'rejected', updated_at: new Date().toISOString() })
+            .eq('id', draft.id);
+          skipped++;
+          continue;
+        }
+
+        // Send via Resend
+        const result = await sendEmail({
+          to: contact.email!,
+          subject: draft.subject,
+          html: draft.body_html,
+          text: draft.body_text || undefined,
+          tags: [
+            { name: 'contact_id', value: draft.contact_id },
+            { name: 'email_type', value: draft.email_type },
+            { name: 'draft_id', value: draft.id },
+          ],
+        });
+
+        const now = new Date().toISOString();
+
+        // Update draft status to sent
+        await supabase
+          .from('agent_drafts')
+          .update({
+            status: 'sent',
+            sent_at: now,
+            resend_message_id: result.id,
+            updated_at: now,
+          })
+          .eq('id', draft.id);
+
+        // Track in newsletters table
+        await supabase.from('newsletters').insert({
+          contact_id: draft.contact_id,
+          realtor_id: draft.realtor_id,
+          subject: draft.subject,
+          email_type: draft.email_type,
+          status: 'sent',
+          html_body: draft.body_html,
+          sent_at: now,
+          resend_message_id: result.id,
+          send_mode: 'agent_scheduled',
+          ai_context: { source: 'scheduled_send_cron', draft_id: draft.id },
+        });
+
+        logger.info(
+          { draftId: draft.id, contactId: draft.contact_id, resendId: result.id },
+          'cron: process-scheduled-sends — email sent'
+        );
+        sent++;
+      } catch (err) {
+        logger.error(
+          { err, draftId: draft.id, contactId: draft.contact_id },
+          'cron: process-scheduled-sends — send failed, continuing'
+        );
+        failed++;
+      }
+    }
+
+    logger.info(
+      {
+        total: drafts.length,
+        sent,
+        skipped,
+        failed,
+        durationMs: Date.now() - start,
+      },
+      'cron: process-scheduled-sends complete'
+    );
+  } catch (err) {
+    logger.error({ err, durationMs: Date.now() - start }, 'cron: process-scheduled-sends threw');
+  }
+}

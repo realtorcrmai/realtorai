@@ -3,6 +3,7 @@ import { Router, type Request, type Response } from 'express';
 import { supabase } from '../lib/supabase.js';
 import { config } from '../config.js';
 import { logger } from '../lib/logger.js';
+import { recordPositiveSignal, recordNegativeSignal } from '../agent/trust/trust-level.js';
 
 export const webhooksRouter: Router = Router();
 
@@ -256,6 +257,31 @@ webhooksRouter.post('/webhooks/resend', async (req: Request, res: Response) => {
     // Update contact intelligence on engagement events
     if (eventType === 'opened' || eventType === 'clicked') {
       await updateContactIntelligence(contactId, eventType, linkType, linkUrl);
+    }
+
+    // Trust level signals — feed engagement into L0→L1→L2→L3 promotion/demotion.
+    // Look up the realtor_id for this contact so trust is scoped per-tenant.
+    const { data: contactRow } = await supabase
+      .from('contacts')
+      .select('realtor_id')
+      .eq('id', contactId)
+      .maybeSingle();
+
+    if (contactRow?.realtor_id) {
+      const realtorId = contactRow.realtor_id as string;
+      try {
+        if (eventType === 'opened') {
+          await recordPositiveSignal(supabase, realtorId, contactId, 'open');
+        } else if (eventType === 'clicked') {
+          await recordPositiveSignal(supabase, realtorId, contactId, 'click');
+        } else if (eventType === 'bounced') {
+          await recordNegativeSignal(supabase, realtorId, contactId, 'bounce');
+        } else if (eventType === 'complained') {
+          await recordNegativeSignal(supabase, realtorId, contactId, 'complaint');
+        }
+      } catch (trustErr) {
+        log.warn({ err: trustErr, contactId }, 'webhook: trust level update failed (non-fatal)');
+      }
     }
 
     // Handle bounce — auto-unsubscribe
