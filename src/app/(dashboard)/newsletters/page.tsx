@@ -195,12 +195,20 @@ export default async function NewsletterDashboard() {
           <h1 className="text-3xl font-bold text-foreground">Email Marketing</h1>
           <p className="text-sm text-muted-foreground mt-1">AI-powered email marketing — one page, full control</p>
         </div>
-        <a
-          href="/newsletters/engine"
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-        >
-          ⚙️ Engine
-        </a>
+        <div className="flex items-center gap-2">
+          <a
+            href="/newsletters/learning"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+          >
+            🧠 Learning
+          </a>
+          <a
+            href="/newsletters/engine"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+          >
+            ⚙️ Engine
+          </a>
+        </div>
       </div>
 
       <EmailMarketingTabs queueCount={queue.length}>
@@ -213,13 +221,13 @@ export default async function NewsletterDashboard() {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mr-1">Health:</span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">🔥 {hotBuyers.length} Hot Buyers</span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-[#0F7694]/10 text-[#0A6880] border border-[#0F7694]/20">🔥 {hotSellers.length} Hot Sellers</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-brand-muted text-brand-dark border border-brand/20">🔥 {hotSellers.length} Hot Sellers</span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">🌡️ {warmContacts.length} Warm</span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#0F7694]/5 text-[#0A6880] border border-[#0F7694]/20">❄️ {coolingContacts.length + dormantContacts.length} Cold</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-brand-muted text-brand-dark border border-brand/20">❄️ {coolingContacts.length + dormantContacts.length} Cold</span>
                 <span className="text-muted-foreground mx-1">·</span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">📧 {dashboard.totalSent} sent</span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#0F7694]/5 text-[#0A6880] border border-[#0F7694]/20">📬 {dashboard.openRate}% opens</span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#0F7694]/10 text-[#0A6880] border border-[#0F7694]/20">🖱️ {dashboard.clickRate}% clicks</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-brand-muted text-brand-dark border border-brand/20">📬 {dashboard.openRate}% opens</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-brand-muted text-brand-dark border border-brand/20">🖱️ {dashboard.clickRate}% clicks</span>
               </div>
 
               {/* Row 2: ACT NOW — top 3 most urgent contacts (buyers + sellers mixed) */}
@@ -256,7 +264,7 @@ export default async function NewsletterDashboard() {
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1.5">
                                     <p className="text-xs font-semibold truncate">{c.name}</p>
-                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${isBuyer ? "bg-red-100 text-red-700" : "bg-[#0F7694]/10 text-[#0A6880]"}`}>
+                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${isBuyer ? "bg-red-100 text-red-700" : "bg-brand-muted text-brand-dark"}`}>
                                       {c.type === "customer" ? "LEAD" : isBuyer ? "BUYER" : "SELLER"}
                                     </span>
                                   </div>
@@ -332,8 +340,8 @@ export default async function NewsletterDashboard() {
                         <>
                           {dashboard.recentEvents.slice(0, 4).map((event: any) => (
                             <div key={event.id} className="flex items-center gap-2 text-xs">
-                              <span className="w-5 h-5 rounded-full bg-[#00C875]/10 flex items-center justify-center shrink-0">
-                                {event.event_type === "opened" ? <MailOpen className="h-3 w-3 text-[#0F7694]" /> :
+                              <span className="w-5 h-5 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+                                {event.event_type === "opened" ? <MailOpen className="h-3 w-3 text-brand" /> :
                                  event.event_type === "clicked" ? <MousePointerClick className="h-3 w-3 text-primary" /> :
                                  <Send className="h-3 w-3 text-muted-foreground" />}
                               </span>
@@ -437,7 +445,7 @@ export default async function NewsletterDashboard() {
 
                               <div className="flex items-center justify-between">
                                 {w.is_active ? (
-                                  <Badge className="bg-[#0F7694]/10 text-[#0A6880] hover:bg-[#0F7694]/10 text-[11px]">Active</Badge>
+                                  <Badge className="bg-brand-muted text-brand-dark hover:bg-brand-muted text-[11px]">Active</Badge>
                                 ) : (
                                   <Badge variant="secondary" className="text-[11px]">Paused</Badge>
                                 )}

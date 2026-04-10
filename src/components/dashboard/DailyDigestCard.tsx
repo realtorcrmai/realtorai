@@ -1,12 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Mail, MousePointerClick, Eye, TrendingUp, Phone } from "lucide-react";
+import Link from "next/link";
 
-type DigestData = {
+export type DigestData = {
   emails_sent: number;
   pending_drafts: number;
   opens_today: number;
@@ -15,125 +11,101 @@ type DigestData = {
   hot_leads: Array<{ name: string; type: string; score: number }>;
 };
 
-export function DailyDigestCard() {
-  const [digest, setDigest] = useState<DigestData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchDigest() {
-      try {
-        const res = await fetch("/api/cron/daily-digest", {
-          headers: { "X-Digest-Request": "true" },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setDigest(data.digest);
-        }
-      } catch { /* silent */ }
-      setLoading(false);
-    }
-    fetchDigest();
-  }, []);
-
-  if (loading) {
+export function DailyDigestCard({ digest }: { digest: DigestData | null }) {
+  // Empty state — no newsletter data yet
+  if (!digest || (digest.emails_sent === 0 && digest.pending_drafts === 0 && digest.hot_leads.length === 0 && digest.opens_today === 0)) {
     return (
-      <Card>
-        <CardContent className="p-4">
-          <div className="animate-pulse space-y-2">
-            <div className="h-4 bg-muted rounded w-3/4" />
-            <div className="h-8 bg-muted rounded w-1/2" />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="lf-card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold">📧 AI Email Digest</h3>
+          <span className="lf-badge lf-badge-info text-[10px]">Last 24h</span>
+        </div>
+        <div className="text-center py-6">
+          <p className="text-3xl mb-2">📭</p>
+          <p className="text-sm text-muted-foreground font-medium">No email activity yet</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Send your first newsletter to see engagement stats here.
+          </p>
+          <Link
+            href="/newsletters"
+            className="inline-block mt-3 text-xs font-medium text-[var(--lf-indigo)] hover:underline"
+          >
+            Go to Newsletters →
+          </Link>
+        </div>
+      </div>
     );
   }
 
-  if (!digest) return null;
-
   return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold">AI Email Summary</h3>
-          <Badge variant="secondary" className="text-[10px]">
-            Last 24h
-          </Badge>
-        </div>
+    <div className="lf-card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold">📧 AI Email Digest</h3>
+        <span className="lf-badge lf-badge-info text-[10px]">Last 24h</span>
+      </div>
 
-        {/* Stats row */}
-        <div className="grid grid-cols-4 gap-2 mb-4">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-              <Mail className="w-3 h-3" />
-            </div>
-            <p className="text-lg font-bold">{digest.emails_sent}</p>
-            <p className="text-[10px] text-muted-foreground">Sent</p>
-          </div>
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-              <Eye className="w-3 h-3" />
-            </div>
-            <p className="text-lg font-bold">{digest.opens_today}</p>
-            <p className="text-[10px] text-muted-foreground">Opens</p>
-          </div>
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-              <MousePointerClick className="w-3 h-3" />
-            </div>
-            <p className="text-lg font-bold">{digest.clicks_today}</p>
-            <p className="text-[10px] text-muted-foreground">Clicks</p>
-          </div>
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-              <TrendingUp className="w-3 h-3" />
-            </div>
-            <p className="text-lg font-bold">{digest.open_rate}%</p>
-            <p className="text-[10px] text-muted-foreground">Open Rate</p>
-          </div>
+      {/* Stats row */}
+      <div className="grid grid-cols-4 gap-2 mb-4">
+        <div className="text-center rounded-lg bg-[var(--lf-bg)] p-2">
+          <p className="text-lg font-bold text-[var(--lf-text)]">{digest.emails_sent}</p>
+          <p className="text-[10px] text-muted-foreground">Sent</p>
         </div>
+        <div className="text-center rounded-lg bg-[var(--lf-bg)] p-2">
+          <p className="text-lg font-bold text-[var(--lf-text)]">{digest.opens_today}</p>
+          <p className="text-[10px] text-muted-foreground">Opens</p>
+        </div>
+        <div className="text-center rounded-lg bg-[var(--lf-bg)] p-2">
+          <p className="text-lg font-bold text-[var(--lf-indigo)]">{digest.clicks_today}</p>
+          <p className="text-[10px] text-muted-foreground">Clicks</p>
+        </div>
+        <div className="text-center rounded-lg bg-[var(--lf-bg)] p-2">
+          <p className="text-lg font-bold text-[var(--lf-emerald)]">{digest.open_rate}%</p>
+          <p className="text-[10px] text-muted-foreground">Open Rate</p>
+        </div>
+      </div>
 
-        {/* Hot leads */}
-        {digest.hot_leads.length > 0 && (
-          <div className="mb-3">
-            <p className="text-xs font-medium text-red-600 mb-1">
-              🔥 Hot Leads — Act Today
-            </p>
-            {digest.hot_leads.map((lead, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between py-1 text-xs"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{lead.name}</span>
-                  <Badge variant="outline" className="text-[10px] px-1">
-                    {lead.type}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-red-600 font-semibold">
-                    Score: {lead.score}
-                  </span>
-                  <Button variant="outline" size="sm" className="h-5 text-[10px] px-2 gap-0.5">
-                    <Phone className="w-2.5 h-2.5" /> Call
-                  </Button>
-                </div>
+      {/* Hot leads */}
+      {digest.hot_leads.length > 0 && (
+        <div className="mb-3">
+          <p className="text-xs font-medium text-red-600 mb-1">
+            🔥 Hot Leads — Act Today
+          </p>
+          {digest.hot_leads.map((lead, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between py-1.5 text-xs border-b border-border/50 last:border-b-0"
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-[var(--lf-text)]">{lead.name}</span>
+                <span className="lf-badge text-[10px] px-1.5 py-0">{lead.type}</span>
               </div>
-            ))}
-          </div>
-        )}
+              <span
+                className="font-semibold"
+                style={{
+                  color: lead.score >= 70 ? "#dc2626" : lead.score >= 50 ? "#f59e0b" : "var(--lf-text)",
+                }}
+              >
+                Score: {lead.score}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
-        {/* Pending */}
-        {digest.pending_drafts > 0 && (
-          <div className="flex items-center justify-between pt-2 border-t border-border">
-            <span className="text-xs text-muted-foreground">
-              {digest.pending_drafts} email{digest.pending_drafts > 1 ? "s" : ""} pending review
-            </span>
-            <a href="/newsletters/queue" className="text-xs text-primary hover:underline">
-              Review →
-            </a>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      {/* Pending drafts */}
+      {digest.pending_drafts > 0 && (
+        <div className="flex items-center justify-between pt-2 border-t border-border/50">
+          <span className="text-xs text-muted-foreground">
+            📬 {digest.pending_drafts} email{digest.pending_drafts > 1 ? "s" : ""} pending review
+          </span>
+          <Link
+            href="/newsletters/queue"
+            className="text-xs font-medium text-[var(--lf-indigo)] hover:underline"
+          >
+            Review →
+          </Link>
+        </div>
+      )}
+    </div>
   );
 }

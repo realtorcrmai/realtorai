@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { approveNewsletter, skipNewsletter } from "@/actions/newsletters";
+import { approveNewsletter, skipNewsletter, editNewsletterDraft } from "@/actions/newsletters";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Send, X } from "lucide-react";
+import { CheckCircle2, Send, X, Pencil, Save, Undo2, Brain } from "lucide-react";
 
 interface QueueItem {
   id: string;
@@ -18,12 +18,42 @@ interface QueueItem {
   contacts: { id: string; name: string; email: string; type: string } | null;
 }
 
+interface VoiceLearningNotification {
+  id: string;
+  rules: string[];
+}
+
 export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[] }) {
   const [queue, setQueue] = useState(initialQueue);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editSubject, setEditSubject] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const [originalSubject, setOriginalSubject] = useState("");
+  const [originalBody, setOriginalBody] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Voice learning notification
+  const [voiceNotification, setVoiceNotification] = useState<VoiceLearningNotification | null>(null);
+  const notificationTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-dismiss voice learning notification after 6 seconds
+  useEffect(() => {
+    if (voiceNotification) {
+      if (notificationTimerRef.current) clearTimeout(notificationTimerRef.current);
+      notificationTimerRef.current = setTimeout(() => {
+        setVoiceNotification(null);
+      }, 6000);
+    }
+    return () => {
+      if (notificationTimerRef.current) clearTimeout(notificationTimerRef.current);
+    };
+  }, [voiceNotification]);
 
   const setLoading = (id: string, loading: boolean) => {
     setLoadingIds((prev) => {
@@ -39,6 +69,7 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
       await approveNewsletter(id);
       setQueue((q) => q.filter((item) => item.id !== id));
       if (previewId === id) setPreviewId(null);
+      if (editingId === id) setEditingId(null);
       setLoading(id, false);
       router.refresh();
     });
@@ -50,6 +81,7 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
       await skipNewsletter(id);
       setQueue((q) => q.filter((item) => item.id !== id));
       if (previewId === id) setPreviewId(null);
+      if (editingId === id) setEditingId(null);
       setLoading(id, false);
       router.refresh();
     });
@@ -64,12 +96,77 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
       }
       setQueue([]);
       setPreviewId(null);
+      setEditingId(null);
       setLoadingIds(new Set());
       router.refresh();
     });
   };
 
+  const startEditing = (item: QueueItem) => {
+    setEditingId(item.id);
+    setEditSubject(item.subject);
+    setEditBody(item.html_body);
+    setOriginalSubject(item.subject);
+    setOriginalBody(item.html_body);
+    setPreviewId(item.id);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditSubject("");
+    setEditBody("");
+    setOriginalSubject("");
+    setOriginalBody("");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId) return;
+
+    const hasChanges = editSubject !== originalSubject || editBody !== originalBody;
+    if (!hasChanges) {
+      cancelEditing();
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const result = await editNewsletterDraft(
+        editingId,
+        originalSubject,
+        originalBody,
+        editSubject,
+        editBody
+      );
+
+      if (result.success) {
+        // Update the queue item in local state
+        setQueue((q) =>
+          q.map((item) =>
+            item.id === editingId
+              ? { ...item, subject: editSubject, html_body: editBody }
+              : item
+          )
+        );
+
+        // Show voice learning notification if rules were learned
+        if (result.learnedRules && result.learnedRules.length > 0) {
+          setVoiceNotification({
+            id: editingId,
+            rules: result.learnedRules,
+          });
+        }
+
+        setEditingId(null);
+      }
+    } catch {
+      // Error handled silently -- the user sees the edit is still open
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const previewItem = queue.find((q) => q.id === previewId);
+  const isEditing = editingId !== null;
 
   if (queue.length === 0) {
     return (
@@ -85,14 +182,40 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
 
   return (
     <div className="space-y-4">
+      {/* Voice Learning Notification */}
+      {voiceNotification && (
+        <div className="flex items-start gap-3 rounded-lg border border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950/40 px-4 py-3 animate-fade-in">
+          <Brain className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-purple-900 dark:text-purple-100">
+              AI learned from your edit
+            </p>
+            <ul className="mt-1 space-y-0.5">
+              {voiceNotification.rules.map((rule, i) => (
+                <li key={i} className="text-xs text-purple-700 dark:text-purple-300">
+                  {rule}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <button
+            onClick={() => setVoiceNotification(null)}
+            className="text-purple-400 hover:text-purple-600 dark:hover:text-purple-200"
+            aria-label="Dismiss notification"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Bulk Actions */}
       {queue.length > 1 && (
         <div className="flex justify-end">
           <Button
             size="sm"
-            className="gap-2 bg-[#0A6880] hover:bg-[#0A6880] text-white"
+            className="gap-2 bg-brand-dark hover:bg-brand-dark text-white"
             onClick={handleBulkApprove}
-            disabled={pending}
+            disabled={pending || isEditing}
           >
             <Send className="h-4 w-4" />
             {pending ? "Sending..." : `Approve All (${queue.length})`}
@@ -106,6 +229,7 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
           {queue.map((item) => {
             const isLoading = loadingIds.has(item.id);
             const isSelected = previewId === item.id;
+            const isItemEditing = editingId === item.id;
             return (
               <Card
                 key={item.id}
@@ -114,7 +238,7 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
                     ? "ring-2 ring-primary border-primary"
                     : "hover:shadow-md"
                 } ${isLoading ? "opacity-60 pointer-events-none" : ""}`}
-                onClick={() => !isLoading && setPreviewId(item.id)}
+                onClick={() => !isLoading && !isItemEditing && setPreviewId(item.id)}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -122,9 +246,21 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
                       <p className="text-sm font-semibold text-foreground">
                         {item.contacts?.name || "Unknown"}
                       </p>
-                      <p className="text-sm text-muted-foreground mt-0.5 truncate">
-                        {item.subject}
-                      </p>
+                      {isItemEditing ? (
+                        <input
+                          type="text"
+                          value={editSubject}
+                          onChange={(e) => setEditSubject(e.target.value)}
+                          className="mt-1 w-full text-sm border border-border rounded-md px-2 py-1.5 bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                          placeholder="Email subject..."
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label="Edit email subject"
+                        />
+                      ) : (
+                        <p className="text-sm text-muted-foreground mt-0.5 truncate">
+                          {item.subject}
+                        </p>
+                      )}
                       <div className="flex flex-wrap items-center gap-1.5 mt-2">
                         <Badge variant="secondary" className="text-xs capitalize">
                           {item.email_type.replace(/_/g, " ")}
@@ -142,29 +278,75 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        size="sm"
-                        className="gap-1.5 bg-[#0A6880] hover:bg-[#0A6880] text-white"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleApprove(item.id);
-                        }}
-                        disabled={isLoading || pending}
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        {isLoading ? "..." : "Send"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSkip(item.id);
-                        }}
-                        disabled={isLoading || pending}
-                      >
-                        Skip
-                      </Button>
+                      {isItemEditing ? (
+                        <>
+                          <Button
+                            size="sm"
+                            className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSaveEdit();
+                            }}
+                            disabled={saving}
+                            aria-label="Save edits"
+                          >
+                            <Save className="h-3.5 w-3.5" />
+                            {saving ? "Saving..." : "Save"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cancelEditing();
+                            }}
+                            disabled={saving}
+                            aria-label="Cancel editing"
+                          >
+                            <Undo2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startEditing(item);
+                            }}
+                            disabled={isLoading || pending || (isEditing && !isItemEditing)}
+                            aria-label="Edit draft"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="gap-1.5 bg-brand-dark hover:bg-brand-dark text-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleApprove(item.id);
+                            }}
+                            disabled={isLoading || pending}
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            {isLoading ? "..." : "Send"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSkip(item.id);
+                            }}
+                            disabled={isLoading || pending}
+                          >
+                            Skip
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -178,7 +360,9 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
           <Card className="overflow-hidden sticky top-28 h-[min(calc(100vh-140px),700px)]">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-foreground truncate">{previewItem.subject}</p>
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {editingId === previewItem.id ? editSubject : previewItem.subject}
+                </p>
                 <p className="text-xs text-muted-foreground">To: {previewItem.contacts?.email}</p>
               </div>
               <Button
@@ -191,13 +375,28 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
                 <span className="sr-only">Close preview</span>
               </Button>
             </div>
-            <iframe
-              srcDoc={previewItem.html_body}
-              className="w-full border-none"
-              style={{ height: "calc(100% - 53px)" }}
-              title="Email Preview"
-              sandbox="allow-same-origin"
-            />
+            {editingId === previewItem.id ? (
+              <div className="p-3 h-[calc(100%-53px)] flex flex-col">
+                <label className="text-xs font-medium text-muted-foreground mb-1">
+                  Email Body (HTML)
+                </label>
+                <textarea
+                  value={editBody}
+                  onChange={(e) => setEditBody(e.target.value)}
+                  className="flex-1 w-full text-xs font-mono border border-border rounded-md px-3 py-2 bg-background text-foreground resize-none focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                  placeholder="Email HTML body..."
+                  aria-label="Edit email body"
+                />
+              </div>
+            ) : (
+              <iframe
+                srcDoc={previewItem.html_body}
+                className="w-full border-none"
+                style={{ height: "calc(100% - 53px)" }}
+                title="Email Preview"
+                sandbox="allow-same-origin"
+              />
+            )}
           </Card>
         )}
       </div>
