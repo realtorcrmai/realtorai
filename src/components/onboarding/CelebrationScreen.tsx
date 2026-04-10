@@ -82,11 +82,11 @@ export function CelebrationScreen({ destination = "/" }: CelebrationScreenProps)
     }
   }, [showWelcome]);
 
-  // Auto-redirect after 15s
+  // Auto-redirect after 15s — use hard redirect to force fresh session
   useEffect(() => {
-    const timer = setTimeout(() => router.push(destination), 15000);
+    const timer = setTimeout(() => { window.location.href = destination; }, 15000);
     return () => clearTimeout(timer);
-  }, [router, destination]);
+  }, [destination]);
 
   const reducedMotion = typeof window !== "undefined"
     && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -142,7 +142,7 @@ export function CelebrationScreen({ destination = "/" }: CelebrationScreenProps)
           {/* CTA button — fades in (Phase 3) */}
           {showButton && (
             <button
-              onClick={() => router.push(destination)}
+              onClick={() => { window.location.href = destination; }}
               className="px-8 py-3 bg-[#4f35d2] text-white rounded-xl text-sm font-semibold hover:bg-[#3d28a8] transition-all animate-fade-in shadow-lg shadow-[#4f35d2]/20"
             >
               Go to Dashboard

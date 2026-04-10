@@ -35,7 +35,7 @@ import {
   updateProfessionalInfo,
   seedSampleData,
   getOnboardingProgress,
-  createFamilyContacts,
+  saveFamilyInfo,
   sendTeamInvite,
   linkReferral,
 } from "@/actions/onboarding";
@@ -71,9 +71,10 @@ export default function OnboardingPage() {
   // Step 1: Phone
   const [phone, setPhone] = useState("");
 
-  // Step 1: Family members
-  type FamilyMember = { name: string; phone: string; email: string; relationship: string };
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+  // Step 1: Family details
+  const [spouseName, setSpouseName] = useState("");
+  const [kidsCount, setKidsCount] = useState("");
+  const [familyFile, setFamilyFile] = useState<File | null>(null);
 
   // Step 2: Contact import
   const [importSource, setImportSource] = useState<"none" | "gmail" | "apple">("none");
@@ -136,11 +137,19 @@ export default function OnboardingPage() {
     setLoading(false);
   };
 
-  // ── Step 1: Create family member contacts before advancing ──
+  // ── Step 1: Save family info before advancing ──
   const handleStep1Continue = async () => {
-    const validMembers = familyMembers.filter((m) => m.name.trim().length >= 2);
-    if (validMembers.length > 0) {
-      await createFamilyContacts(validMembers);
+    if (spouseName.trim() || kidsCount) {
+      await saveFamilyInfo({
+        spouse_name: spouseName.trim() || undefined,
+        kids_count: kidsCount ? parseInt(kidsCount, 10) : undefined,
+      });
+    }
+    // Upload family reference file if provided
+    if (familyFile) {
+      const formData = new FormData();
+      formData.append("file", familyFile);
+      await fetch("/api/contacts/import", { method: "POST", body: formData }).catch(() => {});
     }
     goNext();
   };
@@ -431,99 +440,59 @@ export default function OnboardingPage() {
                     </select>
                   </div>
 
-                  {/* Family members (optional — creates contacts) */}
+                  {/* Family details (optional) */}
                   <div className="space-y-3 pt-2 border-t">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Heart className="h-4 w-4 text-muted-foreground" />
-                        <Label className="text-sm text-muted-foreground">Family members (optional)</Label>
-                      </div>
-                      {familyMembers.length < 6 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs h-7"
-                          onClick={() => setFamilyMembers([...familyMembers, { name: "", phone: "", email: "", relationship: "spouse" }])}
-                        >
-                          <Plus className="h-3 w-3 mr-1" /> Add
-                        </Button>
-                      )}
+                    <div className="flex items-center gap-2">
+                      <Heart className="h-4 w-4 text-muted-foreground" />
+                      <Label className="text-sm text-muted-foreground">Family details (optional)</Label>
                     </div>
-                    {familyMembers.length === 0 && (
-                      <button
-                        onClick={() => setFamilyMembers([{ name: "", phone: "", email: "", relationship: "spouse" }])}
-                        className="w-full p-3 rounded-lg border-2 border-dashed border-gray-200 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors"
-                      >
-                        Add a family member as a contact
-                      </button>
-                    )}
-                    {familyMembers.map((member, i) => (
-                      <div key={i} className="space-y-2 p-3 rounded-lg bg-muted/30 border relative">
-                        <button
-                          onClick={() => setFamilyMembers(familyMembers.filter((_, j) => j !== i))}
-                          className="absolute top-2 right-2 text-muted-foreground hover:text-destructive"
-                          aria-label="Remove family member"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                        <div className="flex gap-2">
-                          <Input
-                            value={member.name}
-                            onChange={(e) => {
-                              const updated = [...familyMembers];
-                              updated[i] = { ...member, name: e.target.value };
-                              setFamilyMembers(updated);
-                            }}
-                            placeholder="Name"
-                            className="h-9 text-sm flex-1"
-                          />
-                          <select
-                            value={member.relationship}
-                            onChange={(e) => {
-                              const updated = [...familyMembers];
-                              updated[i] = { ...member, relationship: e.target.value };
-                              setFamilyMembers(updated);
-                            }}
-                            className="h-9 rounded-md border bg-background px-2 text-xs w-24"
+                    <Input
+                      value={spouseName}
+                      onChange={(e) => setSpouseName(e.target.value)}
+                      placeholder="Spouse / partner name"
+                    />
+                    <select
+                      value={kidsCount}
+                      onChange={(e) => setKidsCount(e.target.value)}
+                      className="w-full h-11 rounded-md border bg-background px-3 text-sm"
+                    >
+                      <option value="">Number of kids</option>
+                      <option value="0">No kids</option>
+                      <option value="1">1 kid</option>
+                      <option value="2">2 kids</option>
+                      <option value="3">3 kids</option>
+                      <option value="4">4+ kids</option>
+                    </select>
+                    {/* Upload family member contacts file */}
+                    <div className="space-y-1">
+                      <label className="flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-gray-200 hover:border-primary transition-colors cursor-pointer text-sm">
+                        <Upload className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="text-muted-foreground">
+                          {familyFile ? (
+                            <span className="text-foreground font-medium">{familyFile.name}</span>
+                          ) : (
+                            "Upload family member contacts (.csv)"
+                          )}
+                        </span>
+                        <input
+                          type="file"
+                          accept=".csv"
+                          onChange={(e) => setFamilyFile(e.target.files?.[0] || null)}
+                          className="hidden"
+                        />
+                        {familyFile && (
+                          <button
+                            onClick={(e) => { e.preventDefault(); setFamilyFile(null); }}
+                            className="ml-auto text-muted-foreground hover:text-destructive"
                           >
-                            <option value="spouse">Spouse</option>
-                            <option value="child">Child</option>
-                            <option value="parent">Parent</option>
-                            <option value="sibling">Sibling</option>
-                            <option value="other">Other</option>
-                          </select>
-                        </div>
-                        <div className="flex gap-2">
-                          <Input
-                            value={member.phone}
-                            onChange={(e) => {
-                              const updated = [...familyMembers];
-                              updated[i] = { ...member, phone: e.target.value };
-                              setFamilyMembers(updated);
-                            }}
-                            placeholder="Phone"
-                            type="tel"
-                            className="h-9 text-sm flex-1"
-                          />
-                          <Input
-                            value={member.email}
-                            onChange={(e) => {
-                              const updated = [...familyMembers];
-                              updated[i] = { ...member, email: e.target.value };
-                              setFamilyMembers(updated);
-                            }}
-                            placeholder="Email"
-                            type="email"
-                            className="h-9 text-sm flex-1"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                    {familyMembers.length > 0 && (
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </label>
                       <p className="text-xs text-muted-foreground">
-                        These will be added as contacts in your CRM
+                        CSV with name and phone columns — imported as contacts
                       </p>
-                    )}
+                    </div>
                   </div>
 
                   <div className="flex gap-3 pt-2">
@@ -590,6 +559,9 @@ export default function OnboardingPage() {
                               Upload your .vcf file from iCloud or iPhone
                             </p>
                           </div>
+                          {fetchingContacts && (
+                            <Loader2 className="h-5 w-5 animate-spin text-primary ml-auto shrink-0" />
+                          )}
                           <input
                             type="file"
                             accept=".vcf"
