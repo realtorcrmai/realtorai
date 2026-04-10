@@ -313,12 +313,12 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      {/* Left panel — sticky so it stays visible when right panel scrolls */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden sticky top-0 h-screen">
+    <div className="min-h-screen">
+      {/* Left panel — fixed so it never disappears when right panel scrolls */}
+      <div className="hidden lg:flex fixed top-0 left-0 w-1/2 h-screen bg-primary overflow-hidden z-10">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_oklch(0.60_0.20_260)_0%,_transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_oklch(0.40_0.15_240)_0%,_transparent_60%)]" />
-        <div className="relative z-10 flex flex-col justify-between p-12 text-primary-foreground">
+        <div className="relative z-10 flex flex-col justify-between p-12 text-primary-foreground w-full">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
               <Home className="h-5 w-5" />
@@ -355,8 +355,8 @@ export default function OnboardingPage() {
         </div>
       </div>
 
-      {/* Right panel — scrollable */}
-      <div className="flex flex-1 items-start justify-center p-6 bg-background overflow-y-auto max-h-screen">
+      {/* Right panel — scrollable, offset for fixed left panel */}
+      <div className="lg:ml-[50%] flex flex-1 items-start justify-center p-6 bg-background min-h-screen overflow-y-auto">
         <div className="w-full max-w-md space-y-6 py-8">
           {/* Mobile progress */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-4">
