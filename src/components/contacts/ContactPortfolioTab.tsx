@@ -124,7 +124,7 @@ export function ContactPortfolioTab({ contactId, items: initialItems }: ContactP
           <Building className="h-4 w-4" />
           Portfolio
           <span className="ml-1 px-2 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary normal-case tracking-normal">
-            {items.filter(i => i.status === "owned").length} owned
+            {items.length} {items.length === 1 ? "property" : "properties"}
           </span>
         </h3>
         <Link
@@ -140,8 +140,8 @@ export function ContactPortfolioTab({ contactId, items: initialItems }: ContactP
       <div className="p-3 rounded-lg bg-muted/30 grid grid-cols-3 gap-4 text-center">
         <div>
           <p className="text-xs text-muted-foreground">Properties</p>
-          <p className="text-2xl font-bold text-indigo-700">{items.filter(i => i.status === "owned").length}</p>
-          <p className="text-xs text-muted-foreground">owned</p>
+          <p className="text-2xl font-bold text-indigo-700">{items.length}</p>
+          <p className="text-xs text-muted-foreground">{items.filter(i => i.status === "owned").length} owned{items.filter(i => i.status === "selling").length > 0 ? `, ${items.filter(i => i.status === "selling").length} selling` : ""}</p>
         </div>
         {totalValue > 0 && (
           <div>
