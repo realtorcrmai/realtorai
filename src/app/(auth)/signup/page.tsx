@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 
@@ -23,8 +23,32 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "taken" | "disposable">("idle");
+  const emailCheckTimer = useRef<NodeJS.Timeout>(undefined);
 
   const strength = useMemo(() => getPasswordStrength(password), [password]);
+
+  // Real-time email availability check with 500ms debounce (S10)
+  useEffect(() => {
+    if (!email || !email.includes("@") || email.length < 5) {
+      setEmailStatus("idle");
+      return;
+    }
+    setEmailStatus("checking");
+    clearTimeout(emailCheckTimer.current);
+    emailCheckTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/auth/check-email?email=${encodeURIComponent(email)}`);
+        const data = await res.json();
+        if (data.available) setEmailStatus("available");
+        else if (data.reason === "disposable") setEmailStatus("disposable");
+        else setEmailStatus("taken");
+      } catch {
+        setEmailStatus("idle"); // fail-open
+      }
+    }, 500);
+    return () => clearTimeout(emailCheckTimer.current);
+  }, [email]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,8 +205,24 @@ export default function SignupPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="sarah@realty.ca"
                 required
-                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm"
+                className={`w-full px-4 py-2.5 rounded-lg border outline-none text-sm focus:ring-1 ${
+                  emailStatus === "disposable" || emailStatus === "taken"
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                    : "border-gray-200 focus:border-primary focus:ring-primary"
+                }`}
               />
+              {emailStatus === "disposable" && (
+                <p className="text-xs text-red-500 mt-1">Please use a non-disposable email</p>
+              )}
+              {emailStatus === "taken" && (
+                <p className="text-xs text-red-500 mt-1">
+                  This email is already registered.{" "}
+                  <Link href="/login" className="text-primary font-medium hover:underline">Sign in instead</Link>
+                </p>
+              )}
+              {emailStatus === "available" && email.includes("@") && (
+                <p className="text-xs text-green-500 mt-1">Email available</p>
+              )}
             </div>
 
             <div>

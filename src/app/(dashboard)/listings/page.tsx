@@ -21,17 +21,22 @@ export default async function ListingsPage() {
     <div className="flex items-center justify-center h-full min-h-[60vh]">
       <Card className="max-w-sm w-full animate-float-in">
         <CardContent className="py-12 text-center">
-          <Building2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+          <div className="text-4xl mb-4">🏠</div>
           <h2 className="text-lg font-semibold text-foreground mb-1">
-            No Listings Yet
+            Add your first listing and watch AI work
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Create your first listing using the form in the sidebar to get
-            started.
+          <p className="text-sm text-muted-foreground mb-4">
+            Create a listing and our AI will generate MLS remarks, social posts, and marketing content instantly.
           </p>
-          <div className="flex items-center justify-center gap-1.5 mt-4 text-xs text-muted-foreground/60">
+          <a
+            href="/listings"
+            className="inline-flex items-center justify-center px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Create Listing
+          </a>
+          <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-muted-foreground/60">
             <ArrowLeft className="h-3.5 w-3.5" />
-            <span>Use the form on the left to add one</span>
+            <span>Or use the form on the left</span>
           </div>
         </CardContent>
       </Card>
