@@ -203,3 +203,26 @@
 | 2026-04-10 | claude | Fix nav showing nothing - distinguish session loading (show all) from actual emp | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |
 | 2026-04-10 | claude | unknown | CODING:fix | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
 | 2026-04-10 | claude | unknown | CODING:fix | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Commit and push all changes to dev via PR | DEPLOY | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Push branch and create PR to dev | DEPLOY | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Revert feature gating enforcement — show all nav items for now | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING:fix | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Create detailed design doc for realtor signup + profile onboarding, comparing wi | DESIGN_SPEC | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING:fix | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING:fix | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING:fix | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Write SPEC_Realtor_Onboarding_v2.md — detailed design doc for signup and onboa | DESIGN_SPEC | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING:fix | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING:fix | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING:fix | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING:fix | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | DESIGN_SPEC | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING:feature | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Design fireworks/confetti celebration moment for post-signup landing, Monday.com | DESIGN_SPEC | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Create gap analysis doc comparing Realtors360 onboarding vs Monday.com, Follow U | GAP_ANALYSIS | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Implement all onboarding gaps to reach 95%+ across 9 categories — signup simpl | CODING:feature | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING:feature | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Sprint 1: Signup simplification (3 fields) + 14-day trial + DB migration | CODING:feature | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | DEPLOY | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Sprint 1: Signup simplification + trial logic in auth.ts | CODING:feature | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Revert unauthorized code changes from premature implementation | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |

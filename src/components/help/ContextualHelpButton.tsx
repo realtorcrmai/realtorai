@@ -69,10 +69,10 @@ export function ContextualHelpButton() {
         aria-expanded={open}
         aria-haspopup="dialog"
         className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+          "flex items-center justify-center size-8 shrink-0 aspect-square rounded-lg border transition-all",
           open
-            ? "bg-primary/10 text-primary"
-            : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            ? "bg-primary/10 text-primary border-primary/30 shadow-[0_3px_8px_rgba(0,0,0,0.15)]"
+            : "bg-card text-foreground/70 border-border shadow-[0_1px_3px_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.08)] hover:bg-accent hover:text-foreground hover:shadow-[0_3px_8px_rgba(0,0,0,0.15)]"
         )}
       >
         {open ? <X className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />}

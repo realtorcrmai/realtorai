@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Check, AlertTriangle, Info, Clock, Heart } from "lucide-react";
+import { Plus, Check } from "lucide-react";
 
 type ContextEntry = {
   id: string;
@@ -25,13 +25,13 @@ type Props = {
 
 const TYPE_CONFIG: Record<
   string,
-  { icon: typeof AlertTriangle; color: string; label: string }
+  { emoji: string; color: string; label: string }
 > = {
-  objection: { icon: AlertTriangle, color: "text-amber-600", label: "Objection" },
-  preference: { icon: Heart, color: "text-brand", label: "Preference" },
-  concern: { icon: AlertTriangle, color: "text-red-600", label: "Concern" },
-  info: { icon: Info, color: "text-gray-600", label: "Info" },
-  timeline: { icon: Clock, color: "text-brand", label: "Timeline" },
+  preference: { emoji: "💜", color: "text-brand", label: "Preference" },
+  objection: { emoji: "⚠️", color: "text-amber-600", label: "Objection" },
+  concern: { emoji: "🔴", color: "text-red-600", label: "Concern" },
+  timeline: { emoji: "🕐", color: "text-brand", label: "Timeline" },
+  info: { emoji: "ℹ️", color: "text-gray-600", label: "Info" },
 };
 
 export function ContextLog({ contactId, entries, autoShowForm = false, onAdd, onResolve }: Props) {
@@ -109,7 +109,7 @@ export function ContextLog({ contactId, entries, autoShowForm = false, onAdd, on
                       : "border-border hover:border-primary/50"
                   }`}
                 >
-                  {config.label}
+                  {config.emoji} {config.label}
                 </button>
               ))}
             </div>
@@ -147,13 +147,12 @@ export function ContextLog({ contactId, entries, autoShowForm = false, onAdd, on
         <div className="space-y-1.5">
           {active.map((entry) => {
             const config = TYPE_CONFIG[entry.context_type] || TYPE_CONFIG.info;
-            const Icon = config.icon;
             return (
               <div
                 key={entry.id}
                 className="flex items-start gap-2 text-xs group"
               >
-                <Icon className={`w-3 h-3 mt-0.5 flex-shrink-0 ${config.color}`} />
+                <span className="flex-shrink-0 text-sm leading-none mt-px">{config.emoji}</span>
                 <div className="flex-1 min-w-0">
                   <span>{entry.text}</span>
                   <span className="text-muted-foreground ml-1">

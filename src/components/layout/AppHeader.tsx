@@ -216,7 +216,11 @@ export function AppHeader() {
         <VoiceStatusIndicator />
 
         {/* Search shortcut hint */}
-        <span className="hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-border bg-muted text-[10px] text-muted-foreground font-mono">⌘K</span>
+        <button
+          onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
+          className="hidden md:flex items-center justify-center size-8 shrink-0 aspect-square rounded-lg border border-border bg-card text-[10px] text-foreground/70 font-mono shadow-[0_1px_3px_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.08)] hover:bg-accent hover:text-foreground hover:shadow-[0_3px_8px_rgba(0,0,0,0.15)] transition-all"
+          aria-label="Search (⌘K)"
+        >⌘K</button>
 
         {/* Help */}
         <ContextualHelpButton />

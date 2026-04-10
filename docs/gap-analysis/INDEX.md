@@ -39,3 +39,4 @@ Do NOT create a new version for:
 | Module | Latest Version | Date | Completion | PRD Reference |
 |--------|---------------|------|------------|---------------|
 | [Voice Agent](voice-agent/) | v1 | 2026-03-31 | ~25-30% | `docs/PRD_Voice_Agent_Complete.md`, `docs/PRD_Multi_Tenant_Voice_Agent_External_Assistants.md` |
+| [Onboarding](onboarding/) | v1 | 2026-04-10 | ~25% | `docs/PRD_Signup_Verification_Onboarding.md`, `docs/SPEC_Realtor_Onboarding_v2.md` |

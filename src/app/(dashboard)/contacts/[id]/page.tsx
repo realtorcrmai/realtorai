@@ -470,6 +470,21 @@ export default async function ContactDetailPage({
                       {contact.email && <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{contact.email}</span>}
                       <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" />{contact.pref_channel}</span>
                     </div>
+                    {/* Social profiles */}
+                    {contact.social_profiles && typeof contact.social_profiles === "object" && Object.keys(contact.social_profiles as Record<string, string>).length > 0 && (
+                      <div className="flex items-center gap-2 mt-1.5">
+                        {Object.entries(contact.social_profiles as Record<string, string>).map(([platform, handle]) => {
+                          const icons: Record<string, string> = { instagram: "📸", facebook: "📘", linkedin: "💼", twitter: "𝕏", tiktok: "🎵", youtube: "▶️" };
+                          const urls: Record<string, string> = { instagram: "instagram.com/", facebook: "facebook.com/", linkedin: "linkedin.com/in/", twitter: "x.com/", tiktok: "tiktok.com/@", youtube: "youtube.com/@" };
+                          return (
+                            <a key={platform} href={`https://${urls[platform] || ""}${handle}`} target="_blank" rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/50 border border-border/30 text-xs text-brand hover:bg-muted hover:underline transition-colors">
+                              <span>{icons[platform] || "🔗"}</span>@{handle}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <ContactForm
