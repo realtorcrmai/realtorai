@@ -1,6 +1,5 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
 import { z } from "zod";
 
 const createDealSchema = z.object({
@@ -14,15 +13,15 @@ const createDealSchema = z.object({
 });
 
 export async function GET(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
-  const supabase = createAdminClient();
   const url = new URL(req.url);
   const status = url.searchParams.get("status");
   const type = url.searchParams.get("type");
 
-  let query = supabase
+  let query = tc
     .from("deals")
     .select("*, contacts(id, name, phone, email, type), listings(id, address, list_price, status)")
     .order("updated_at", { ascending: false });
@@ -36,10 +35,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
-  const supabase = createAdminClient();
   const body = await req.json();
 
   const parsed = createDealSchema.safeParse(body);
@@ -50,17 +49,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { data: deal, error } = await supabase
+  const { data: deal, error } = await tc
     .from("deals")
     .insert({
-      title: body.title,
-      type: body.type,
-      stage: body.stage || "new_lead",
+      title: parsed.data.title,
+      type: parsed.data.type,
+      stage: parsed.data.stage || "new_lead",
       status: body.status || "active",
-      contact_id: body.contact_id || null,
-      listing_id: body.listing_id || null,
-      value: body.value || null,
-      commission_pct: body.commission_pct || null,
+      contact_id: parsed.data.contact_id || null,
+      listing_id: parsed.data.listing_id || null,
+      value: parsed.data.value || null,
+      commission_pct: parsed.data.commission_pct || null,
       commission_amount: body.commission_amount || null,
       close_date: body.close_date || null,
       possession_date: body.possession_date || null,
@@ -79,7 +78,7 @@ export async function POST(req: NextRequest) {
     );
     const items =
       body.type === "buyer" ? DEFAULT_BUYER_CHECKLIST : DEFAULT_SELLER_CHECKLIST;
-    await supabase.from("deal_checklist").insert(
+    await tc.from("deal_checklist").insert(
       items.map((item: string, i: number) => ({
         deal_id: deal.id,
         item,

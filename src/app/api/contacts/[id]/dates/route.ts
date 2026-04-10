@@ -1,6 +1,5 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
 import { z } from "zod";
 
 const createImportantDateSchema = z.object({
@@ -17,13 +16,16 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try {
+    tc = await getAuthenticatedTenantClient();
+  } catch {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
 
   const { id } = await params;
-  const supabase = createAdminClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("contact_important_dates")
     .select("*, contact_family_members(id, name)")
     .eq("contact_id", id)
@@ -37,11 +39,14 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try {
+    tc = await getAuthenticatedTenantClient();
+  } catch {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
 
   const { id } = await params;
-  const supabase = createAdminClient();
   const body = await req.json();
 
   const parsed = createImportantDateSchema.safeParse(body);
@@ -52,17 +57,17 @@ export async function POST(
     );
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("contact_important_dates")
     .insert({
       contact_id: id,
-      family_member_id: body.family_member_id || null,
-      date_type: body.date_type,
-      date_value: body.date_value,
-      label: body.label || null,
-      recurring: body.recurring ?? true,
-      remind_days_before: body.remind_days_before ?? 7,
-      notes: body.notes || null,
+      family_member_id: parsed.data.family_member_id || null,
+      date_type: parsed.data.date_type,
+      date_value: parsed.data.date_value,
+      label: parsed.data.label || null,
+      recurring: parsed.data.recurring ?? true,
+      remind_days_before: parsed.data.remind_days_before ?? 7,
+      notes: parsed.data.notes || null,
     })
     .select("*, contact_family_members(id, name)")
     .single();
@@ -70,18 +75,18 @@ export async function POST(
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Auto-create reminder task
-  if (body.date_value) {
-    const contact = await supabase.from("contacts").select("name").eq("id", id).single();
+  if (parsed.data.date_value) {
+    const contact = await tc.from("contacts").select("name").eq("id", id).single();
     const contactName = contact.data?.name || "Contact";
-    const dateLabel = body.label || body.date_type;
-    const remindDays = body.remind_days_before ?? 7;
+    const dateLabel = parsed.data.label || parsed.data.date_type;
+    const remindDays = parsed.data.remind_days_before ?? 7;
 
-    const nextOccurrence = getNextOccurrence(body.date_value);
+    const nextOccurrence = getNextOccurrence(parsed.data.date_value);
     const reminderDate = new Date(nextOccurrence);
     reminderDate.setDate(reminderDate.getDate() - remindDays);
 
     if (reminderDate > new Date()) {
-      await supabase.from("tasks").insert({
+      await tc.from("tasks").insert({
         title: `${dateLabel} reminder - ${contactName}`,
         description: `${contactName}'s ${dateLabel} is on ${nextOccurrence}. Plan a greeting or gift.`,
         status: "pending",
@@ -97,16 +102,19 @@ export async function POST(
 }
 
 export async function DELETE(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try {
+    tc = await getAuthenticatedTenantClient();
+  } catch {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
 
-  const supabase = createAdminClient();
   const url = new URL(req.url);
   const dateId = url.searchParams.get("date_id");
 
   if (!dateId) return NextResponse.json({ error: "date_id required" }, { status: 400 });
 
-  const { error } = await supabase.from("contact_important_dates").delete().eq("id", dateId);
+  const { error } = await tc.from("contact_important_dates").delete().eq("id", dateId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

@@ -24,7 +24,6 @@ import Anthropic from '@anthropic-ai/sdk';
 import { config } from '../../config.js';
 import { logger } from '../../lib/logger.js';
 import { sendEmail } from '../../lib/resend.js';
-import { buildEmailFromType, generatePlainText } from '../../lib/email-blocks.js';
 import { sendGenericMessage } from '../../lib/twilio.js';
 import { canSendToContact } from '../../lib/compliance.js';
 import { createWithRetry } from '../anthropic-retry.js';
@@ -90,24 +89,19 @@ type StepResult = {
 
 /* ───────────────────────── AI Content Generation ───────────────────────── */
 
-const EMAIL_SYSTEM_PROMPT = `You are an elite real estate email copywriter for a BC realtor. Your emails feel like they come from a trusted friend who knows real estate — never from a marketing machine.
+const EMAIL_SYSTEM = `You are an elite real estate email copywriter for a BC realtor. Your emails feel like they come from a trusted friend — never a marketing machine.
 
 RULES:
-- Open with something SPECIFIC to the contact — their neighbourhood, a property they viewed, the season. NEVER "I hope this finds you well" or "I wanted to reach out".
+- Open with something SPECIFIC to the contact. NEVER "I hope this finds you well" or "I wanted to reach out".
 - One idea per email. Short sentences. Contractions. Natural rhythm.
-- 120 words max for email body. Under 160 chars for SMS.
+- 120 words max for email. Under 160 chars for SMS.
 - Canadian spelling: neighbourhood, favourite, colour.
-- Subject lines under 50 chars with specifics, not generic headers.
-- If you don't have enough data to be specific, keep it SHORT and honest.
+- Subject under 50 chars, specific not generic.
+- If you lack data to be specific, keep it SHORT and honest.
 
-ANTI-PATTERNS (NEVER write these):
-- "I hope this email finds you well"
-- "As your trusted real estate advisor"
-- "Don't miss this incredible opportunity"
-- "In today's dynamic market"
-- Any sentence that could apply to ANY contact`;
+FORBIDDEN: "I hope this finds you well", "As your trusted advisor", "Don't miss this opportunity", "In today's dynamic market", any sentence that fits every contact.`;
 
-const SMS_SYSTEM_PROMPT = `You write SMS/WhatsApp messages for a BC realtor. Under 160 chars. Casual, friendly, specific. No fluff. Include one action if relevant.`;
+const SMS_SYSTEM = `You write SMS/WhatsApp for a BC realtor. Under 160 chars. Casual, friendly, specific. No fluff.`;
 
 /**
  * Generate message content via Claude for workflow steps with ai_template_intent.
@@ -129,17 +123,11 @@ async function generateAIContent(
     try {
       const { retrieveContext } = await import('../rag/retriever.js');
       const retrieved = await retrieveContext(
-        db,
-        `${contact.name} ${intent} recent interactions preferences`,
-        { contact_id: contact.id, content_type: ['message', 'activity', 'email'] },
-        5
+        db, `${contact.name} ${intent} recent interactions preferences`,
+        { contact_id: contact.id, content_type: ['message', 'activity', 'email'] }, 5
       );
-      if (retrieved.formatted) {
-        ragContext = `\nINTERACTION HISTORY (use specifics from this):\n${retrieved.formatted}\n`;
-      }
-    } catch {
-      // RAG unavailable — proceed without
-    }
+      if (retrieved.formatted) ragContext = `\nINTERACTION HISTORY:\n${retrieved.formatted}\n`;
+    } catch { /* RAG unavailable */ }
   }
 
   const listingInfo = listing
@@ -159,12 +147,11 @@ ${channel === 'email'
   const message = await createWithRetry(anthropic, {
     model: config.AI_SCORING_MODEL,
     max_tokens: 600,
-    system: channel === 'email' ? EMAIL_SYSTEM_PROMPT : SMS_SYSTEM_PROMPT,
+    system: channel === 'email' ? EMAIL_SYSTEM : SMS_SYSTEM,
     messages: [{ role: 'user', content: prompt }],
   });
 
   const text = message.content[0]?.type === 'text' ? message.content[0].text : '';
-
   try {
     return JSON.parse(text) as { subject?: string; body: string };
   } catch {
@@ -290,19 +277,21 @@ async function executeAutoMessage(
 
     try {
       const emailSubject = subject || step.name;
-      const emailType = step.template_id || step.action_type || 'welcome';
-      // Apple-quality HTML via email-blocks (18 composable blocks)
-      const htmlBody = buildEmailFromType(emailType, contact.name, contact.type, emailSubject, body, variables.agent_name ? `Talk to ${variables.agent_name}` : 'View Details');
-      const textBody = generatePlainText(htmlBody);
+      // Simple branded HTML wrapper (newsletter service doesn't port CRM's email-blocks)
+      const htmlBody = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1a1535;">
+<p>${body.replace(/\n/g, '<br>')}</p>
+<hr style="border:none;border-top:1px solid #e5e5e5;margin:24px 0;">
+<p style="font-size:12px;color:#888;">Sent by ${variables.agent_name || 'Your Agent'}</p>
+</body></html>`;
 
       const result = await sendEmail({
         to: contact.email,
         subject: emailSubject,
         html: htmlBody,
-        text: textBody,
+        text: body,
         tags: [
           { name: 'contact_id', value: contact.id },
-          { name: 'email_type', value: emailType },
+          { name: 'email_type', value: step.template_id || 'workflow' },
         ],
       });
 

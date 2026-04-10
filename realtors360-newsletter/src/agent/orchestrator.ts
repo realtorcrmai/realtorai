@@ -32,23 +32,23 @@ const AGENT_MODEL = 'claude-sonnet-4-20250514';
 
 const SYSTEM_PROMPT = `You are the Newsletter Agent for Realtors360 — an AI that helps BC real estate agents send the right email to the right contact at the right time.
 
-## YOUR WORKFLOW
-1. READ: Start with get_contact + get_engagement_intel. Then search_rag for their interaction history. Load relevant listings or market stats if needed.
-2. DECIDE: Check frequency caps (check_frequency_cap). Classify trust level (classify_trust_level). Only then generate copy (generate_copy) with REAL data from step 1 — never invent facts.
-3. WRITE: Draft the email (draft_email). If trust L0 → queue_for_approval. If L1+ and low-stakes type → send_email. Always log_decision with your reasoning.
+## YOUR WORKFLOW (follow this order every run)
+1. **READ**: Start with get_contact + get_engagement_intel. Then search_rag for their interaction history. Load relevant listings or market stats if needed.
+2. **DECIDE**: Check frequency caps (check_frequency_cap). Classify trust level (classify_trust_level). Use optimize_send_params to find their best email type + send time. Only then generate copy (generate_copy) with REAL data from step 1.
+3. **WRITE**: Draft the email (draft_email). If trust L0 → queue_for_approval. If L1+ and low-stakes → send_email. Always log_decision with reasoning.
 
-## EMAIL QUALITY STANDARDS — this is critical
-Your emails must feel like they come from a trusted friend who happens to be a real estate expert. NOT a marketing machine.
+## EMAIL QUALITY — this is critical
+Your emails must feel like they come from a trusted friend who knows real estate. NOT a marketing machine.
 
 MANDATORY:
-- Open with something SPECIFIC to the contact. Reference their neighbourhood, a listing they clicked, the season, their situation. NEVER generic openers.
+- Open with something SPECIFIC to the contact — their neighbourhood, a listing they clicked, the season.
 - One idea per email. 120 words max. Subject under 50 chars.
-- Write like you talk. Short sentences. Contractions. Natural rhythm.
+- Write like you talk. Short sentences. Contractions.
 - Be specific: "The 3-bed on Maple dropped $40K" beats "A property in your area has a new price".
-- Earn the CTA: it must follow naturally from the content.
-- Canadian spelling: neighbourhood, favourite, colour, centre.
+- Earn the CTA — it must follow naturally from the content.
+- Canadian spelling: neighbourhood, favourite, colour.
 
-FORBIDDEN (if you write these, the email will be rejected):
+FORBIDDEN (these will be rejected by the quality pipeline):
 - "I hope this finds you well"
 - "I wanted to reach out"
 - "As your trusted real estate advisor"
@@ -56,17 +56,14 @@ FORBIDDEN (if you write these, the email will be rejected):
 - "In today's dynamic market"
 - Any sentence that could apply to every contact on the list
 
-WHEN TO SKIP:
-If search_rag and get_engagement_intel return nothing useful AND you have no listing/market data to reference → log a "skip" decision. A skipped email is better than a generic one.
+PERSONALIZATION — use your tools:
+Before generating ANY email, you MUST call search_rag with a query about the contact's interests. If someone clicked on condos in Burnaby 3 times, your listing alert should lead with Burnaby condos. If search_rag returns nothing useful AND you have no data to reference → log a "skip" decision. A skipped email is better than a generic one.
 
 ## TRUST LEVELS
 - L0 (new): ALL emails → queue_for_approval
-- L1 (proven, ≥3 sends): Low-stakes (market_update, birthday, neighbourhood_guide) → auto-send. Everything else → queue.
-- L2 (engaged, ≥10 sends + reply): Most types auto-send. Cold pitch / re-engagement → queue.
-- L3 (deal closed): Full auto except legal-adjacent.
-
-## PERSONALIZATION — use your tools
-Before generating any email, you MUST call search_rag with a query like "[contact name] interests preferences recent interactions". Use what you find. If someone clicked on condos in Burnaby 3 times, your listing alert should lead with Burnaby condos — don't send them a Kitsilano detached home.`;
+- L1 (≥3 sends, 0 negatives): Low-stakes auto-send (market_update, birthday, neighbourhood_guide)
+- L2 (≥10 sends + reply): Most types auto-send. Cold pitch → queue.
+- L3 (deal closed): Full auto except legal-adjacent.`;
 
 export type AgentRunResult = {
   runId: string;
@@ -79,19 +76,14 @@ export type AgentRunResult = {
 /**
  * Run the agent for a single contact. The agent uses Claude tool_use
  * to gather context, make decisions, and take action.
- *
- * @param prefetchedContacts — optional Map of contact data batch-loaded by the
- *   triage loop.  When provided the agent's `get_contact` tool returns the
- *   cached row instead of issuing a DB query, eliminating N+1.
  */
 export async function runAgentForContact(
   db: SupabaseClient,
   realtorId: string,
   contactId: string,
-  trigger: string = 'scheduled',
-  prefetchedContacts?: Map<string, Record<string, unknown>>
+  trigger: string = 'scheduled'
 ): Promise<AgentRunResult> {
-  const ctx: ToolContext = { db, realtorId, prefetchedContacts };
+  const ctx: ToolContext = { db, realtorId };
   const runLog = logger.child({ realtorId, contactId, trigger });
 
   // Create agent_run record
@@ -124,6 +116,18 @@ Start by getting the contact's details and engagement intelligence, then decide 
     ];
 
     for (let turn = 0; turn < MAX_TURNS; turn++) {
+      // Context window protection: estimate total chars, bail if too large.
+      // Claude Sonnet has 200K tokens (~800K chars). Cap at 150K chars to
+      // leave room for the response + system prompt + tool schemas.
+      const totalChars = messages.reduce((sum, m) => {
+        const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+        return sum + content.length;
+      }, 0);
+      if (totalChars > 600_000) {
+        runLog.warn({ totalChars, turn }, 'agent: context window approaching limit, stopping early');
+        break;
+      }
+
       const response = await anthropic.messages.create({
         model: AGENT_MODEL,
         max_tokens: 1024,
@@ -262,26 +266,12 @@ export async function runTriageLoop(
     return { contactsEvaluated: 0, totalDecisions: 0, results: [] };
   }
 
-  // Batch-fetch all contact data in one query to avoid N+1 (each agent run
-  // would otherwise query the same contacts table individually).
-  const { data: contactRows } = await db
-    .from('contacts')
-    .select('id, name, email, phone, type, lead_status, stage_bar, pref_channel, tags, newsletter_intelligence, newsletter_unsubscribed, casl_consent_given, ai_lead_score, notes, updated_at')
-    .in('id', contactList);
-
-  const prefetchedContacts = new Map<string, Record<string, unknown>>();
-  for (const row of contactRows ?? []) {
-    prefetchedContacts.set(row.id, row as Record<string, unknown>);
-  }
-
-  triageLog.info({ prefetched: prefetchedContacts.size }, 'triage: contacts prefetched');
-
   // Run agent for each contact (sequential for now; M5+ can parallelize)
   const results: AgentRunResult[] = [];
   let totalDecisions = 0;
 
   for (const contactId of contactList) {
-    const result = await runAgentForContact(db, realtorId, contactId, 'triage', prefetchedContacts);
+    const result = await runAgentForContact(db, realtorId, contactId, 'triage');
     results.push(result);
     totalDecisions += result.decisions;
   }

@@ -50,7 +50,7 @@ export function DealCard({ deal }: DealCardProps) {
         </div>
 
         {/* Title */}
-        <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors pr-14">
+        <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors pr-14">
           {deal.title}
         </p>
 
@@ -73,7 +73,7 @@ export function DealCard({ deal }: DealCardProps) {
         {/* Value + Status row */}
         <div className="flex items-center justify-between mt-3">
           {deal.value ? (
-            <div className="flex items-center gap-1 text-xs font-semibold text-foreground">
+            <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
               <DollarSign className="h-3 w-3" />
               {Number(deal.value).toLocaleString("en-CA")}
             </div>

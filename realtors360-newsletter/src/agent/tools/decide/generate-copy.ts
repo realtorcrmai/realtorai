@@ -10,12 +10,12 @@ const anthropic = new AnthropicSdk();
 export const GENERATE_COPY_SCHEMA: Anthropic.Tool = {
   name: 'generate_copy',
   description:
-    'Generate high-quality email copy using Claude. Provide the email type, contact context (from get_contact + get_engagement_intel), and any relevant data (listings, market stats, RAG history). Returns polished, personalized content ready to send.',
+    'Generate high-quality, personalized email copy. MUST provide contact context from get_contact + get_engagement_intel, and data context from search_rag. Returns polished content ready for draft_email.',
   input_schema: {
     type: 'object',
     properties: {
       email_type: { type: 'string', description: 'Type of email to generate' },
-      contact_context: { type: 'string', description: 'Who this contact is, their preferences, engagement history (from tools)' },
+      contact_context: { type: 'string', description: 'Who this contact is, their preferences, engagement history' },
       data_context: { type: 'string', description: 'Relevant data: listing details, market stats, RAG interaction history' },
       tone: { type: 'string', description: 'Tone: warm, professional, casual, celebratory, reassuring. Default: warm.' },
       realtor_name: { type: 'string', description: 'The realtor\'s name for sign-off' },
@@ -25,17 +25,15 @@ export const GENERATE_COPY_SCHEMA: Anthropic.Tool = {
 };
 
 /**
- * The real estate email generation prompt.
- *
- * This is the single highest-leverage prompt in the entire system.
- * Quality here determines whether emails get opened, clicked, and replied to
- * — or ignored and unsubscribed from.
+ * System prompt for email generation. This is the single highest-leverage
+ * prompt in the entire system. Quality here determines whether emails get
+ * opened, clicked, and replied to — or ignored and unsubscribed from.
  */
 const SYSTEM_PROMPT = `You are an elite real estate email copywriter working for a BC (British Columbia) realtor. You write emails that feel like they come from a trusted friend who happens to be an expert in real estate — never from a marketing machine.
 
 ## RULES — follow these exactly
 
-1. **Open with something specific.** NEVER generic openers like "I hope this finds you well", "I wanted to reach out", "Just checking in", "I'm excited to share". Instead, reference something REAL: the contact's neighbourhood, a property they clicked on, the season, a local event, their kids' school district — anything that proves you know them.
+1. **Open with something specific.** NEVER generic openers like "I hope this finds you well", "I wanted to reach out", "Just checking in", "I'm excited to share". Instead, reference something REAL: the contact's neighbourhood, a property they clicked on, the season, a local event, their kids' school district.
 
 2. **One idea per email.** Each email does ONE thing: announces a listing, shares a market insight, celebrates a birthday. Never bundle.
 
@@ -43,22 +41,22 @@ const SYSTEM_PROMPT = `You are an elite real estate email copywriter working for
 
 4. **Be specific, never vague.** "The 3-bed on Maple just dropped $40K" beats "A great property in your area has a new price". "Your Kerrisdale condo is worth ~$85K more than last year" beats "Your home has appreciated".
 
-5. **Earn the CTA.** The call-to-action must follow naturally from the content. Don't ask "Schedule a call?" after a birthday wish. Don't say "View Listings" after a market update — say "See what $800K buys in Burnaby this month".
+5. **Earn the CTA.** The call-to-action must follow naturally from the content. Don't ask "Schedule a call?" after a birthday wish.
 
 6. **120 words max.** Respect their time. Every word must earn its place.
 
 7. **Canadian spelling.** Neighbourhood, favourite, colour, centre.
 
-8. **Subject lines that create curiosity.** Under 50 characters. Use specifics: "Your Kitsilano equity update" not "Monthly Market Report". Use lowercase after the first word (like a text message, not a headline).
+8. **Subject lines that create curiosity.** Under 50 characters. Use specifics: "Your Kitsilano equity update" not "Monthly Market Report".
 
 ## ANTI-PATTERNS — never write these
 
 - "I hope this email finds you well" → DELETE
 - "I wanted to reach out to let you know" → DELETE
-- "As your trusted real estate advisor" → DELETE (let your advice prove it)
-- "Don't miss this incredible opportunity" → DELETE (salesy)
-- "Act now before it's too late" → DELETE (pressure)
-- "In today's dynamic market" → DELETE (filler)
+- "As your trusted real estate advisor" → DELETE
+- "Don't miss this incredible opportunity" → DELETE
+- "Act now before it's too late" → DELETE
+- "In today's dynamic market" → DELETE
 - Any sentence that could apply to ANY contact → REWRITE with specifics
 
 ## EXAMPLES OF GREAT EMAILS
@@ -123,7 +121,6 @@ Remember: specific > generic. If you don't have enough data to be specific, keep
     try {
       return JSON.parse(text);
     } catch {
-      // If Claude returns text instead of JSON, wrap it
       return {
         subject: emailType.replace(/_/g, ' '),
         greeting: 'Hi,',

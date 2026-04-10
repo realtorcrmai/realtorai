@@ -1,18 +1,17 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
 
 export async function GET(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
-  const supabase = createAdminClient();
   const url = new URL(req.url);
   const ohId = url.searchParams.get("open_house_id");
 
   if (!ohId) return NextResponse.json({ error: "open_house_id required" }, { status: 400 });
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("open_house_visitors")
     .select("*")
     .eq("open_house_id", ohId)
@@ -23,15 +22,15 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
-  const supabase = createAdminClient();
   const body = await req.json();
 
   if (!body.open_house_id) return NextResponse.json({ error: "open_house_id required" }, { status: 400 });
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("open_house_visitors")
     .insert({
       open_house_id: body.open_house_id,
@@ -49,12 +48,12 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Update visitor count on open house
-  const { data: visitors } = await supabase
+  const { data: visitors } = await tc
     .from("open_house_visitors")
     .select("id", { count: "exact" })
     .eq("open_house_id", body.open_house_id);
 
-  await supabase
+  await tc
     .from("open_houses")
     .update({ visitor_count: visitors?.length || 0 })
     .eq("id", body.open_house_id);
@@ -63,33 +62,33 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
-  const supabase = createAdminClient();
   const url = new URL(req.url);
   const visitorId = url.searchParams.get("visitor_id");
 
   if (!visitorId) return NextResponse.json({ error: "visitor_id required" }, { status: 400 });
 
   // Get open_house_id before deleting
-  const { data: visitor } = await supabase
+  const { data: visitor } = await tc
     .from("open_house_visitors")
     .select("open_house_id")
     .eq("id", visitorId)
     .single();
 
-  const { error } = await supabase.from("open_house_visitors").delete().eq("id", visitorId);
+  const { error } = await tc.from("open_house_visitors").delete().eq("id", visitorId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Update visitor count
   if (visitor) {
-    const { data: visitors } = await supabase
+    const { data: visitors } = await tc
       .from("open_house_visitors")
       .select("id", { count: "exact" })
       .eq("open_house_id", visitor.open_house_id);
 
-    await supabase
+    await tc
       .from("open_houses")
       .update({ visitor_count: visitors?.length || 0 })
       .eq("id", visitor.open_house_id);

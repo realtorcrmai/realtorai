@@ -159,3 +159,14 @@
 
 **Why separate from PR #116:** PR #116 is the consolidation itself (file references + compliance log). This PR is about communicating the new reality to future developers/agents. Different concerns, cleaner review.
 | 2026-04-08 | claude | Commit housekeeping, push strange-wilson to dev via PR, delete all feature branc | DEPLOY | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Fix all 11 review issues on portfolio-coowner-ux branch | CODING:fix | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | unknown | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Remove AI Email Digest and Buyer Journey sections from Dashboard | CODING:fix | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Remove listings from feature gate so it always shows | CODING:fix | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Fix all contact API routes using createAdminClient instead of tenant client - ca | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Fix all contact API routes using createAdminClient instead of tenant client - ca | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Integrate Repliers API to pull MLS listings based on realtor broker ID | CODING:feature | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Fix all user-facing API routes using createAdminClient instead of tenant client  | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Auto-sync realtor's own MLS listings from CREA DDF API using agent key | CODING:feature | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Fix systemic multi-tenant isolation bug — all user-facing API routes using cre | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Fix systemic multi-tenant isolation bug — commit and PR | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |

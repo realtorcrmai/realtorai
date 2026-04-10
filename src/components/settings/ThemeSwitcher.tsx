@@ -123,16 +123,10 @@ export function ThemeSwitcher() {
   const [activeTheme, setActiveTheme] = useState("teal");
   const [colorMode, setColorMode] = useState<ColorMode>("light");
 
-  // Load saved preferences
-  useEffect(() => {
-    const savedTheme = localStorage.getItem(STORAGE_KEY_THEME) || "teal";
-    const savedMode = (localStorage.getItem(STORAGE_KEY_MODE) || "light") as ColorMode;
-    setActiveTheme(savedTheme);
-    setColorMode(savedMode);
-    applyTheme(savedTheme);
-    applyColorMode(savedMode);
-  }, []);
-
+  // Functions declared BEFORE the useEffect that calls them.
+  // React Compiler treats function declarations inside component
+  // bodies as const-like (no hoisting), so referencing them before
+  // their lexical position is an error.
   function applyTheme(themeId: string) {
     const preset = THEME_PRESETS.find(t => t.id === themeId);
     if (!preset) return;
@@ -177,6 +171,16 @@ export function ThemeSwitcher() {
     setColorMode(mode);
   }
 
+  // Load saved preferences on mount — AFTER function declarations.
+  useEffect(() => {
+    const savedTheme = localStorage.getItem(STORAGE_KEY_THEME) || "teal";
+    const savedMode = (localStorage.getItem(STORAGE_KEY_MODE) || "light") as ColorMode;
+    setActiveTheme(savedTheme);
+    setColorMode(savedMode);
+    applyTheme(savedTheme);
+    applyColorMode(savedMode);
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Color Mode */}
@@ -191,7 +195,7 @@ export function ThemeSwitcher() {
             <button
               key={mode}
               onClick={() => applyColorMode(mode)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all text-sm font-medium ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all text-sm font-medium ${
                 colorMode === mode
                   ? "border-brand bg-brand-muted text-brand"
                   : "border-border bg-background text-muted-foreground hover:border-brand/30"

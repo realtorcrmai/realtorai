@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, X, ArrowDownAZ, Clock, Upload, Download, GitMerge } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getAvatarColor } from "@/lib/avatar-color";
 import type { Contact } from "@/types";
 import { CONTACT_TYPE_COLORS, type ContactType } from "@/lib/constants";
 import {
@@ -387,16 +388,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
             {sorted.map((contact) => {
               const isActive = pathname === `/contacts/${contact.id}`;
               const initials = getInitials(contact.name);
-              const avatarBg =
-                contact.type === "seller"
-                  ? "bg-brand/50"
-                  : contact.type === "partner"
-                  ? "bg-brand"
-                  : contact.type === "customer"
-                  ? "bg-brand/50"
-                  : contact.type === "agent"
-                  ? "bg-orange-500"
-                  : "bg-brand";
+              const avatarStyle = getAvatarColor(contact.name);
               const contactStage = (contact as Record<string, unknown>)
                 .stage_bar as string | null;
 
@@ -412,11 +404,15 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                     <div className="flex items-center gap-3">
                       {/* Avatar */}
                       <div
-                        className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 ${avatarBg}`}
+                        className="relative h-9 w-9 rounded-full flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: avatarStyle.bg, color: avatarStyle.text }}
                       >
-                        <span className="text-xs font-semibold text-white">
+                        <span className="text-xs font-semibold">
                           {initials}
                         </span>
+                        {sorted.indexOf(contact) < 3 && (
+                          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        )}
                       </div>
 
                       {/* Info */}
@@ -428,7 +424,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                         >
                           {contact.name}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {contact.phone}
                         </p>
                         {/* Mini stage dots */}
@@ -441,7 +437,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                       {/* Type badge */}
                       <Badge
                         variant="secondary"
-                        className={`${CONTACT_TYPE_COLORS[contact.type as ContactType] ?? ""} text-sm px-1.5 py-0 shrink-0 capitalize`}
+                        className={`${CONTACT_TYPE_COLORS[contact.type as ContactType] ?? ""} text-xs px-1.5 py-0 shrink-0 capitalize`}
                       >
                         {contact.type}
                       </Badge>

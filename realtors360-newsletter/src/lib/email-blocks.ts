@@ -1,13 +1,10 @@
 /**
- * Email Block System — Apple-quality modular email builder.
+ * Email Block System — Apple-quality modular email builder
  *
- * Ported from `realestate-crm/src/lib/email-blocks.ts` (578 lines).
- * 18 composable blocks assembled per email type. Design inspired by
- * Apple marketing emails — SF Pro fonts, rounded corners, generous
- * whitespace, subtle gradients, luxury typography.
+ * Each block is a function that returns an HTML string.
+ * Templates are assembled by picking blocks based on email type + available data.
  *
  * Usage:
- *   import { assembleEmail, buildEmailFromType } from '../lib/email-blocks.js';
  *   const html = assembleEmail("listing_alert", { listing, contact, agent, content });
  */
 
@@ -22,6 +19,7 @@ export type EmailData = {
   contact: { name: string; firstName: string; type: string };
   agent: { name: string; brokerage: string; phone: string; initials?: string };
   content: { subject: string; intro: string; body: string; ctaText: string; ctaUrl?: string };
+  unsubscribeUrl?: string;
   listing?: {
     address: string; area: string; price: string | number;
     beds?: number; baths?: number; sqft?: string; year?: number;
@@ -44,7 +42,6 @@ export type EmailData = {
   mapPreview?: { imageUrl: string; caption?: string };
   videoThumbnail?: { thumbnailUrl: string; videoUrl?: string };
   socialProof?: { headline?: string; text: string; stats?: { value: string; label: string }[] };
-  unsubscribeUrl?: string;
 };
 
 type BlockFn = (data: EmailData) => string;
@@ -56,7 +53,7 @@ type BlockFn = (data: EmailData) => string;
 const FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Inter','Helvetica Neue',sans-serif";
 
 // ═══════════════════════════════════════════════
-// 18 COMPOSABLE BLOCKS
+// BLOCKS
 // ═══════════════════════════════════════════════
 
 const blocks: Record<string, BlockFn> = {
@@ -64,8 +61,8 @@ const blocks: Record<string, BlockFn> = {
   header: (d) => `
     <tr><td style="padding:20px 32px 16px;">
       <table width="100%"><tr>
-        <td><span style="font-size:15px;font-weight:700;color:#1d1d1f;letter-spacing:-0.3px;">Realtors360</span></td>
-        <td align="right"><span style="font-size:11px;color:#86868b;letter-spacing:0.5px;text-transform:uppercase;">${d.listing ? "New Listing" : "Update"}</span></td>
+        <td><span style="font-size:15px;font-weight:700;color:#1d1d1f;letter-spacing:-0.3px;">${d.agent.name}</span></td>
+        <td align="right"><span style="font-size:11px;color:#86868b;letter-spacing:0.5px;text-transform:uppercase;">${d.content.subject.includes("Welcome") ? "Welcome" : d.listing ? "New Listing" : "Update"}</span></td>
       </tr></table>
     </td></tr>`,
 
@@ -147,7 +144,7 @@ const blocks: Record<string, BlockFn> = {
     const grid = photos.slice(0, 4);
     return `
     <tr><td style="padding:24px 16px 0;">
-      <table width="100%" cellpadding="0" cellspacing="0" class="photo-grid"><tr>
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
         <td width="49%" style="padding:4px;"><img src="${grid[0]}" width="100%" style="display:block;border-radius:12px;"></td>
         <td width="2%"></td>
         <td width="49%" style="padding:4px;"><img src="${grid[1]}" width="100%" style="display:block;border-radius:12px;"></td>
@@ -299,7 +296,51 @@ const blocks: Record<string, BlockFn> = {
         <div style="font-size:12px;font-weight:700;color:#86868b;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Estimated Monthly Payment</div>
         <div style="font-size:32px;font-weight:800;color:#5856d6;letter-spacing:-1px;">${mc.monthly}</div>
         <div style="font-size:12px;color:#86868b;margin-top:4px;">${mc.details || "Based on 20% down, 5-year fixed rate"}</div>
+        <table width="100%" style="margin-top:12px;" cellpadding="0" cellspacing="0"><tr>
+          <td style="font-size:12px;color:#86868b;">Down payment: <strong style="color:#1d1d1f;">${mc.downPayment || "20%"}</strong></td>
+          <td style="font-size:12px;color:#86868b;text-align:right;">Rate: <strong style="color:#1d1d1f;">${mc.rate || "4.89%"}</strong></td>
+        </tr></table>
       </div>
+    </td></tr>`;
+  },
+
+  countdown: (d) => {
+    const cd = d.countdown;
+    if (!cd) return "";
+    return `
+    <tr><td style="padding:24px 32px 0;">
+      <div style="background:linear-gradient(135deg,#fef2f2,#fff7ed);border:1px solid #fecaca;border-radius:14px;padding:20px;text-align:center;">
+        <div style="font-size:11px;color:#dc2626;text-transform:uppercase;letter-spacing:2px;font-weight:600;">${cd.label || "Time Remaining"}</div>
+        <div style="font-size:48px;font-weight:800;color:#dc2626;margin-top:4px;letter-spacing:-2px;">${cd.value}</div>
+        <div style="font-size:13px;color:#92400e;margin-top:4px;">${cd.subtext || ""}</div>
+      </div>
+    </td></tr>`;
+  },
+
+  mapPreview: (d) => {
+    const mp = d.mapPreview;
+    if (!mp?.imageUrl) return "";
+    return `
+    <tr><td style="padding:24px 16px 0;">
+      <div style="border-radius:16px;overflow:hidden;">
+        <img src="${mp.imageUrl}" alt="Location map" width="568" style="display:block;width:100%;height:auto;">
+      </div>
+      ${mp.caption ? `<div style="text-align:center;padding:8px 32px 0;font-size:12px;color:#86868b;">${mp.caption}</div>` : ""}
+    </td></tr>`;
+  },
+
+  videoThumbnail: (d) => {
+    const vt = d.videoThumbnail;
+    if (!vt?.thumbnailUrl) return "";
+    return `
+    <tr><td style="padding:24px 16px 0;">
+      <a href="${vt.videoUrl || "#"}" style="display:block;position:relative;border-radius:16px;overflow:hidden;">
+        <img src="${vt.thumbnailUrl}" alt="Property video" width="568" style="display:block;width:100%;height:auto;">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:64px;height:64px;background:rgba(0,0,0,0.7);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+          <div style="width:0;height:0;border-top:12px solid transparent;border-bottom:12px solid transparent;border-left:20px solid #fff;margin-left:4px;"></div>
+        </div>
+        <div style="position:absolute;bottom:12px;left:12px;background:rgba(0,0,0,0.6);border-radius:6px;padding:4px 10px;font-size:11px;color:#fff;font-weight:500;">▶ Watch Property Tour</div>
+      </a>
     </td></tr>`;
   },
 
@@ -316,6 +357,7 @@ const blocks: Record<string, BlockFn> = {
           <td style="padding-left:14px;">
             <div style="font-size:14px;font-weight:600;color:#1d1d1f;">${sp.headline || d.agent.name + "'s Track Record"}</div>
             <div style="font-size:13px;color:#86868b;margin-top:2px;line-height:1.5;">${sp.text}</div>
+            ${sp.stats ? `<div style="margin-top:8px;display:flex;gap:16px;">${sp.stats.map((s: {value:string;label:string}) => `<span style="font-size:12px;"><strong style="color:#5856d6;">${s.value}</strong> <span style="color:#86868b;">${s.label}</span></span>`).join(" · ")}</div>` : ""}
           </td>
         </tr></table>
       </div>
@@ -358,21 +400,21 @@ const TEMPLATE_BLOCKS: Record<string, string[]> = {
   listing_alert: ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "priceComparison", "mortgageCalc", "openHouse", "cta", "agentCard", "footer"],
   welcome: ["header", "heroGradient", "personalNote", "propertyGrid", "socialProof", "cta", "agentCard", "footer"],
   market_update: ["header", "heroGradient", "statsRow", "personalNote", "recentSales", "propertyGrid", "cta", "agentCard", "footer"],
-  neighbourhood_guide: ["header", "heroGradient", "personalNote", "areaHighlights", "cta", "agentCard", "footer"],
+  neighbourhood_guide: ["header", "heroGradient", "personalNote", "areaHighlights", "mapPreview", "cta", "agentCard", "footer"],
   home_anniversary: ["header", "heroGradient", "personalNote", "anniversaryComparison", "areaHighlights", "cta", "agentCard", "footer"],
   just_sold: ["header", "heroImage", "priceBar", "personalNote", "testimonial", "socialProof", "cta", "agentCard", "footer"],
-  open_house: ["header", "heroGradient", "heroImage", "priceBar", "personalNote", "featureList", "openHouse", "cta", "agentCard", "footer"],
+  open_house: ["header", "heroGradient", "heroImage", "priceBar", "personalNote", "featureList", "mapPreview", "openHouse", "cta", "agentCard", "footer"],
   seller_report: ["header", "heroGradient", "statsRow", "personalNote", "recentSales", "countdown", "cta", "agentCard", "footer"],
   cma_preview: ["header", "heroGradient", "personalNote", "priceComparison", "recentSales", "socialProof", "cta", "agentCard", "footer"],
   re_engagement: ["header", "heroGradient", "personalNote", "statsRow", "propertyGrid", "cta", "agentCard", "footer"],
-  luxury_showcase: ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "cta", "agentCard", "footer"],
+  luxury_showcase: ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "videoThumbnail", "cta", "agentCard", "footer"],
   birthday: ["header", "heroGradient", "personalNote", "cta", "agentCard", "footer"],
   price_drop: ["header", "heroImage", "priceBar", "personalNote", "priceComparison", "cta", "agentCard", "footer"],
-  showing_confirmed: ["header", "personalNote", "openHouse", "cta", "agentCard", "footer"],
+  showing_confirmed: ["header", "heroGradient", "personalNote", "openHouse", "mapPreview", "cta", "agentCard", "footer"],
 };
 
 // ═══════════════════════════════════════════════
-// ASSEMBLER
+// ASSEMBLER — builds full email HTML from blocks
 // ═══════════════════════════════════════════════
 
 export function assembleEmail(emailType: string, data: EmailData): string {
@@ -386,10 +428,9 @@ export function assembleEmail(emailType: string, data: EmailData): string {
     .filter(Boolean)
     .join("\n");
 
-  return `<!DOCTYPE html><html lang="en"><head>
+  return `<!DOCTYPE html><html><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <meta name="color-scheme" content="light dark">
-<!--[if mso]><style>body{font-family:Arial,sans-serif}table{border-collapse:collapse}</style><![endif]-->
 <style>
   @media(prefers-color-scheme:dark){
     .email-body{background:#111!important}
@@ -412,22 +453,23 @@ ${renderedBlocks}
 </body></html>`;
 }
 
-// ═══════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════
+// Default brand config — used when DB config not available
+const DEFAULT_BRAND = { name: config.AGENT_NAME || "Your Agent", brokerage: "RE/MAX City Realty", phone: "604-555-0123", initials: (config.AGENT_NAME || "Y")[0] };
 
-const DEFAULT_BRAND = { name: config.AGENT_NAME, brokerage: "Realtors360", phone: config.AGENT_PHONE || "604-555-0123", initials: config.AGENT_NAME[0] || "R" };
-
+/**
+ * Get brand config from DB or use defaults.
+ * Caches for 5 minutes to avoid repeated DB calls.
+ */
 let brandCache: { data: typeof DEFAULT_BRAND; expires: number } | null = null;
 
-export async function getBrandConfig(realtorId?: string): Promise<typeof DEFAULT_BRAND> {
+export async function getBrandConfig(): Promise<typeof DEFAULT_BRAND> {
   if (brandCache && Date.now() < brandCache.expires) return brandCache.data;
   try {
     const { data } = await supabase
       .from("realtor_agent_config")
       .select("brand_config")
-      .eq("realtor_id", realtorId || config.DEMO_REALTOR_ID)
-      .maybeSingle();
+      .eq("realtor_id", config.DEMO_REALTOR_ID)
+      .single();
     if (data?.brand_config) {
       const bc = data.brand_config as Record<string, string>;
       const brand = {
@@ -439,10 +481,14 @@ export async function getBrandConfig(realtorId?: string): Promise<typeof DEFAULT
       brandCache = { data: brand, expires: Date.now() + 300000 };
       return brand;
     }
-  } catch { /* DB unavailable — use defaults */ }
+  } catch { /* fall through to default */ }
   return DEFAULT_BRAND;
 }
 
+/**
+ * Quick helper — build email with minimal input.
+ * Used by seed script and workflow engine.
+ */
 export function buildEmailFromType(
   emailType: string,
   contactName: string,
@@ -458,6 +504,9 @@ export function buildEmailFromType(
   });
 }
 
+/**
+ * Generate plain text version from HTML for email clients that don't render HTML.
+ */
 export function generatePlainText(html: string): string {
   return html
     .replace(/<style[\s\S]*?<\/style>/gi, "")

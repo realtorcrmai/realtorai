@@ -103,7 +103,7 @@ export function getUserFeatures(
 ): FeatureKey[] {
   // Inline plan→feature map to avoid circular import with plans.ts
   const PLAN_FEATURES: Record<string, string[]> = {
-    free: ["contacts", "calendar", "tasks"],
+    free: ["contacts", "calendar", "tasks", "listings"],
     professional: [
       "contacts", "calendar", "tasks",
       "newsletters", "automations",

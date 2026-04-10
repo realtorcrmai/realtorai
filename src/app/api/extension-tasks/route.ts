@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAuth } from "@/lib/api-auth";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 
 /**
  * POST /api/extension-tasks
@@ -8,10 +8,9 @@ import { requireAuth } from "@/lib/api-auth";
  * Auth: NextAuth session (called from CRM UI).
  */
 export async function POST(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
-
-  const supabase = createAdminClient();
+  let supabase;
+  try { supabase = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
   const body = await req.json();
 
   const { listing_id, task_type } = body;

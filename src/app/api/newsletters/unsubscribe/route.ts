@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Mark as unsubscribed
-  await supabase
+  const { error: updateError } = await supabase
     .from("contacts")
     .update({
       newsletter_unsubscribed: true,
@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
       },
     })
     .eq("id", contactId);
+  if (updateError) { return new NextResponse("Failed to unsubscribe", { status: 500 }); }
 
   // Pause all journeys
   await supabase

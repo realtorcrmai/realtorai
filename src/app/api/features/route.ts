@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAuth } from "@/lib/api-auth";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { FEATURES, getFeatureDefault } from "@/lib/constants/features";
 
 /**
@@ -9,15 +8,15 @@ import { FEATURES, getFeatureDefault } from "@/lib/constants/features";
  *   (no id)          → returns all overrides + merged defaults
  */
 export async function GET(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
-  const supabase = createAdminClient();
   const featureId = req.nextUrl.searchParams.get("id");
 
   if (featureId) {
     // Single feature lookup
-    const { data } = await supabase
+    const { data } = await tc
       .from("feature_overrides")
       .select("enabled")
       .eq("feature_id", featureId)
@@ -31,7 +30,7 @@ export async function GET(req: NextRequest) {
   }
 
   // All features: merge defaults with overrides
-  const { data: overrides } = await supabase
+  const { data: overrides } = await tc
     .from("feature_overrides")
     .select("feature_id, enabled");
 
@@ -55,8 +54,9 @@ export async function GET(req: NextRequest) {
  * Sets or clears a runtime override.
  */
 export async function PUT(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const body = await req.json();
   const { featureId, enabled } = body as {
@@ -71,17 +71,15 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  const supabase = createAdminClient();
-
   if (enabled === null) {
     // Remove override → revert to config default
-    await supabase
+    await tc
       .from("feature_overrides")
       .delete()
       .eq("feature_id", featureId);
   } else {
     // Upsert override
-    await supabase.from("feature_overrides").upsert(
+    await tc.from("feature_overrides").upsert(
       { feature_id: featureId, enabled },
       { onConflict: "feature_id" }
     );

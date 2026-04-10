@@ -1,16 +1,18 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
 
 export async function GET(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try {
+    tc = await getAuthenticatedTenantClient();
+  } catch {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
 
-  const supabase = createAdminClient();
   const url = new URL(req.url);
   const days = parseInt(url.searchParams.get("days") || "30");
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("contact_important_dates")
     .select("*, contacts(id, name, phone, email), contact_family_members(id, name)")
     .order("date_value");
@@ -22,15 +24,17 @@ export async function GET(req: NextRequest) {
   cutoff.setDate(cutoff.getDate() + days);
 
   const upcoming = (data || [])
-    .map((d) => {
-      const next = getNextOccurrence(d.date_value);
+    .map((d: Record<string, unknown>) => {
+      const next = getNextOccurrence(d.date_value as string);
       return { ...d, next_occurrence: next };
     })
-    .filter((d) => {
-      const next = new Date(d.next_occurrence);
+    .filter((d: Record<string, unknown>) => {
+      const next = new Date(d.next_occurrence as string);
       return next >= now && next <= cutoff;
     })
-    .sort((a, b) => a.next_occurrence.localeCompare(b.next_occurrence));
+    .sort((a: Record<string, unknown>, b: Record<string, unknown>) =>
+      (a.next_occurrence as string).localeCompare(b.next_occurrence as string)
+    );
 
   return NextResponse.json(upcoming);
 }

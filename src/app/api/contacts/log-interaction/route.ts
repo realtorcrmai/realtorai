@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 
 export async function POST(req: Request) {
   try {
+    const tc = await getAuthenticatedTenantClient();
     const body = await req.json();
     const { contactId, channel, triggeredByNewsletterId, notes, outcome, scoreImpact } = body;
 
@@ -10,10 +11,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "contactId and channel required" }, { status: 400 });
     }
 
-    const supabase = createAdminClient();
-
     // 1. Log to communications
-    await supabase.from("communications").insert({
+    await tc.from("communications").insert({
       contact_id: contactId,
       direction: channel.startsWith("call_inbound") ? "inbound" : "outbound",
       channel: channel.replace("_inbound", "").replace("_outbound", ""),
@@ -23,7 +22,7 @@ export async function POST(req: Request) {
 
     // 2. Update engagement score
     if (scoreImpact && scoreImpact > 0) {
-      const { data: contact } = await supabase
+      const { data: contact } = await tc
         .from("contacts")
         .select("newsletter_intelligence")
         .eq("id", contactId)
@@ -34,7 +33,7 @@ export async function POST(req: Request) {
         const currentScore = (intel.engagement_score as number) || 0;
         const newScore = Math.min(100, currentScore + scoreImpact);
 
-        await supabase
+        await tc
           .from("contacts")
           .update({
             newsletter_intelligence: {
@@ -50,7 +49,7 @@ export async function POST(req: Request) {
     }
 
     // 3. Log outcome event for attribution
-    await supabase.from("outcome_events").insert({
+    await tc.from("outcome_events").insert({
       contact_id: contactId,
       event_type: "direct_contact",
       newsletter_id: triggeredByNewsletterId || null,
@@ -58,7 +57,7 @@ export async function POST(req: Request) {
     });
 
     // 4. Log activity
-    await supabase.from("activity_log").insert({
+    await tc.from("activity_log").insert({
       contact_id: contactId,
       activity_type: "interaction_logged",
       description: `${channel}: ${notes || "No notes"}. Result: ${outcome}`,
@@ -67,6 +66,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof Error && error.message.includes("Not authenticated")) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }

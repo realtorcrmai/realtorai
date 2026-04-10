@@ -1,6 +1,5 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
 import { z } from "zod";
 
 const createPartySchema = z.object({
@@ -15,11 +14,11 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const { id } = await params;
-  const supabase = createAdminClient();
   const body = await req.json();
 
   const parsed = createPartySchema.safeParse(body);
@@ -30,15 +29,15 @@ export async function POST(
     );
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("deal_parties")
     .insert({
       deal_id: id,
-      role: body.role,
-      name: body.name,
-      phone: body.phone || null,
-      email: body.email || null,
-      company: body.company || null,
+      role: parsed.data.role,
+      name: parsed.data.name,
+      phone: parsed.data.phone || null,
+      email: parsed.data.email || null,
+      company: parsed.data.company || null,
     })
     .select()
     .single();
@@ -48,10 +47,10 @@ export async function POST(
 }
 
 export async function DELETE(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
-  const supabase = createAdminClient();
   const url = new URL(req.url);
   const partyId = url.searchParams.get("party_id");
 
@@ -59,7 +58,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "party_id required" }, { status: 400 });
   }
 
-  const { error } = await supabase.from("deal_parties").delete().eq("id", partyId);
+  const { error } = await tc.from("deal_parties").delete().eq("id", partyId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

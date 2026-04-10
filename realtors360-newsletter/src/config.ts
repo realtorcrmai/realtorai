@@ -24,8 +24,21 @@ const ConfigSchema = z.object({
   RESEND_FROM_EMAIL: z.string().default('onboarding@resend.dev'),
   RESEND_WEBHOOK_SECRET: z.string().optional(),
 
+  // AI model + agent identity (validated at startup, not process.env)
+  AI_SCORING_MODEL: z.string().default('claude-sonnet-4-20250514'),
+  AGENT_NAME: z.string().default('Your Agent'),
+  AGENT_PHONE: z.string().default(''),
+  AGENT_EMAIL: z.string().default(''),
+
   // Inter-service
   NEWSLETTER_SHARED_SECRET: z.string().optional(),
+  NEWSLETTER_SERVICE_URL: z.string().default('http://localhost:8080'),
+
+  // Sentry (optional — disabled when not set)
+  SENTRY_DSN: z.string().optional(),
+
+  // IP warm-up (optional — overrides auto-detection of first send date)
+  WARMUP_START_DATE: z.string().optional(),
 
   // AI model + agent identity
   AI_SCORING_MODEL: z.string().default('claude-sonnet-4-20250514'),

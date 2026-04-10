@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, MessageSquare } from "lucide-react";
+import { getAvatarColor } from "@/lib/avatar-color";
 import type { Contact } from "@/types";
 
 export function ContactCard({ contact }: { contact: Contact }) {
@@ -12,19 +13,16 @@ export function ContactCard({ contact }: { contact: Contact }) {
     .toUpperCase()
     .slice(0, 2);
 
+  const avatarStyle = getAvatarColor(contact.name);
+
   return (
     <Link href={`/contacts/${contact.id}`}>
       <Card className="hover:shadow-md transition-all cursor-pointer group">
         <CardContent className="p-5">
           <div className="flex items-start gap-3">
             <div
-              className={`flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold shrink-0 ${
-                contact.type === "seller" ? "bg-brand-muted text-brand-dark"
-                  : contact.type === "customer" ? "bg-brand-muted text-brand-dark"
-                  : contact.type === "agent" ? "bg-amber-50 text-amber-700"
-                  : contact.type === "partner" ? "bg-brand-muted text-brand-dark"
-                  : "bg-brand-muted text-brand-dark"
-              }`}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold shrink-0"
+              style={{ backgroundColor: avatarStyle.bg, color: avatarStyle.text }}
             >
               {initials}
             </div>

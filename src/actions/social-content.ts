@@ -166,7 +166,7 @@ export async function approvePost(postId: string) {
     brand_kit_id: (await tc.from("social_posts").select("brand_kit_id").eq("id", postId).single()).data?.brand_kit_id,
     post_id: postId,
     action: "approved",
-    actor: "demo@realtors360.com",
+    actor: "system",
   });
 
   revalidatePath("/social");
@@ -190,7 +190,7 @@ export async function skipPost(postId: string) {
     brand_kit_id: (await tc.from("social_posts").select("brand_kit_id").eq("id", postId).single()).data?.brand_kit_id,
     post_id: postId,
     action: "skipped",
-    actor: "demo@realtors360.com",
+    actor: "system",
   });
 
   revalidatePath("/social");
@@ -250,7 +250,7 @@ export async function regeneratePost(postId: string) {
       brand_kit_id: post.brand_kit_id,
       post_id: postId,
       action: "regenerated",
-      actor: "demo@realtors360.com",
+      actor: "system",
       original_caption: post.caption,
       edited_caption: newCaption,
     });
@@ -288,7 +288,7 @@ export async function updatePostCaption(postId: string, newCaption: string) {
       brand_kit_id: post.brand_kit_id,
       post_id: postId,
       action: "edited",
-      actor: "demo@realtors360.com",
+      actor: "system",
       original_caption: post.caption_original,
       edited_caption: newCaption,
     });
@@ -388,7 +388,7 @@ export async function createCustomDraft(params: {
     brand_kit_id: params.brandKitId,
     post_id: post.id,
     action: "created",
-    actor: "demo@realtors360.com",
+    actor: "system",
     metadata: { content_type: params.contentType, platforms: params.targetPlatforms, source: "manual_draft" },
   });
 
@@ -427,7 +427,7 @@ export async function disconnectSocialAccount(accountId: string) {
     await supabase.from("social_audit_log").insert({
       brand_kit_id: account.brand_kit_id,
       action: "account_disconnected",
-      actor: "demo@realtors360.com",
+      actor: "system",
       metadata: {
         account_id: accountId,
         platform: account.platform,

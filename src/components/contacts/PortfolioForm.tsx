@@ -156,7 +156,7 @@ function ContactSearchInput({
     fetch(`/api/contacts?search=${encodeURIComponent(debouncedQ)}&limit=6`)
       .then((r) => r.json())
       .then((d) => {
-        setResults(d.contacts ?? []);
+        setResults(Array.isArray(d) ? d : (d.contacts ?? []));
         setOpen(true);
       })
       .catch(() => setResults([]))
@@ -369,25 +369,22 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!address) { setError("Please enter the property address."); return; }
+    if (totalOwnership !== 100 && coOwners.length > 0) {
+      setError(`Total ownership is ${totalOwnership}% — must equal 100%.`);
+      return;
+    }
     setSaving(true);
     setError(null);
 
     // Create contacts for any new co-owners before saving the portfolio item
-    let resolvedCoOwners = [...coOwners];
+    const resolvedCoOwners = [...coOwners];
     for (let i = 0; i < resolvedCoOwners.length; i++) {
       const co = resolvedCoOwners[i];
       if (co.isNew) {
-        // We need the realtor_id — fetch it from the session via API
-        const sessionRes = await fetch("/api/auth/session");
-        const session = await sessionRes.json();
-        const realtorId = session?.user?.id;
-        if (!realtorId) { setError("Session expired — please reload."); setSaving(false); return; }
-
         const { contactId: newId, error: createErr } = await createContactFromCoOwner({
           name: co.name,
           phone: co.newPhone,
           email: co.newEmail,
-          realtorId,
         });
         if (createErr || !newId) {
           setError(`Could not create contact for "${co.name}": ${createErr}`);
@@ -399,7 +396,14 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
     }
 
     // Strip client-only fields before saving
-    const cleanCoOwners = resolvedCoOwners.map(({ isNew: _i, newPhone: _p, newEmail: _e, ...rest }) => rest);
+    const cleanCoOwners = resolvedCoOwners.map(
+      ({ isNew: _i, newPhone: _p, newEmail: _e, ...rest }) => ({
+        name: rest.name,
+        role: rest.role,
+        ownership_pct: rest.ownership_pct,
+        ...(rest.contact_id ? { contact_id: rest.contact_id } : {}),
+      })
+    );
 
     const payload = {
       contact_id: contactId,
@@ -411,7 +415,7 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
       property_type: propertyType || null,
       property_category: category,
       ownership_pct: myOwnership,
-      co_owners: cleanCoOwners as Record<string, unknown>[],
+      co_owners: cleanCoOwners,
       purchase_price: purchasePrice ? Number(purchasePrice) : null,
       purchase_date: purchaseDate || null,
       estimated_value: estimatedValue ? Number(estimatedValue) : null,
@@ -850,7 +854,7 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
         </div>
 
         {/* Live equity card */}
-        {equity !== null && (
+        {equity !== null && Number(estimatedValue) > 0 && (
           <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 rounded-xl">
             <p className="font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
               💰 Estimated Equity: ${equity.toLocaleString()}

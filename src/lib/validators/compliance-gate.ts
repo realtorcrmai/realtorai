@@ -46,6 +46,17 @@ export async function checkCompliance(
     return block("Contact not found");
   }
 
+  // Check canonical unsubscribe flag on contacts table
+  const { data: subCheck } = await supabase
+    .from("contacts")
+    .select("newsletter_unsubscribed")
+    .eq("id", input.contactId)
+    .single();
+
+  if (subCheck?.newsletter_unsubscribed === true) {
+    return block("Contact has unsubscribed — CASL/CAN-SPAM requires permanent block");
+  }
+
   // Check unsubscribe flag in intelligence
   const intel = contact.newsletter_intelligence as Record<string, unknown> | null;
   if (intel?.unsubscribed === true) {

@@ -15,7 +15,11 @@ export async function GET(req: NextRequest) {
   let query = supabase.from("contacts").select("*").order("created_at", { ascending: false });
 
   if (search) {
-    query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`);
+    // Sanitize: strip characters that could break PostgREST filter syntax
+    const sanitized = search.replace(/[,().*%\\]/g, "");
+    if (sanitized.length > 0) {
+      query = query.or(`name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%,email.ilike.%${sanitized}%`);
+    }
   }
   if (type && ["buyer", "seller", "customer", "agent", "partner", "other"].includes(type)) {
     query = query.eq("type", type);

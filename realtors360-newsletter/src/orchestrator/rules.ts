@@ -73,6 +73,7 @@ export async function resolveRuleForEvent(args: {
       .from('newsletters')
       .select('id', { count: 'exact', head: true })
       .eq('contact_id', args.contact_id)
+      .eq('realtor_id', args.realtor_id)
       .neq('status', 'failed')
       .gte('created_at', oneWeekAgo);
 
@@ -89,6 +90,7 @@ export async function resolveRuleForEvent(args: {
       .from('newsletters')
       .select('id', { count: 'exact', head: true })
       .eq('contact_id', args.contact_id)
+      .eq('realtor_id', args.realtor_id)
       .neq('status', 'failed')
       .gte('created_at', minHoursAgo);
 
