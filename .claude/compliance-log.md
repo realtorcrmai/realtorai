@@ -170,3 +170,36 @@
 | 2026-04-09 | claude | Auto-sync realtor's own MLS listings from CREA DDF API using agent key | CODING:feature | ✅ | classified | — | Auto-logged by completion-gate |
 | 2026-04-09 | claude | Fix systemic multi-tenant isolation bug — all user-facing API routes using cre | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |
 | 2026-04-09 | claude | Fix systemic multi-tenant isolation bug — commit and PR | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Analyze and optimize contacts page load performance | CODING:fix | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Fix issues in contacts perf optimization — restore activity scoring, remove li | CODING:fix | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Create DB functions to consolidate contact detail queries, then update page to u | CODING:feature | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Create DB functions + update contact detail page to use RPC calls | CODING:feature | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Commit and push contact perf DB functions | DEPLOY | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Start dev server | DEPLOY | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Fix Turbopack cache corruption and start dev server | DEPLOY | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Apply migration 093 contact detail functions | DEPLOY | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Apply migration 093 via Supabase Management API | DEPLOY | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Kill all node/next processes and restart fresh | DEPLOY | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Test contacts page loads correctly with new RPC functions | TESTING | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Fix Turbopack root config and restart dev server | DEPLOY | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Start dev server without Turbopack | DEPLOY | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Restore .next cache and restart | DEPLOY | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Restart dev server | DEPLOY | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Fix contacts page 404 error | CODING:fix | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Restart dev server | DEPLOY | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | Audit and fix font inconsistencies across contact page tabs and sections | CODING:fix | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | unknown | CODING:fix | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-09 | claude | unknown | CODING:fix | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING:fix | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING:feature | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING:feature | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING:feature | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Fix feature gate checklist item in quick-reference.md — add plan gating check | CONFIG | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Remove listings from free plan in features.ts PLAN_FEATURES | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Add featureKey to Listings nav item so it respects plan gating | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Make featureKey required on nav items in AppHeader and MobileNav to enforce plan | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING:fix | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Remove empty-array fallback that bypasses feature gating in AppHeader and Mobile | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Fix nav showing nothing - distinguish session loading (show all) from actual emp | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING:fix | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING:fix | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |

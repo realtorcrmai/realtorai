@@ -39,8 +39,10 @@ import { VoiceStatusIndicator } from "@/components/voice-agent/VoiceStatusIndica
 
 import type { FeatureKey } from "@/lib/features";
 
-const mainTabs: { href: string; label: string; icon: typeof Building2; featureKey?: FeatureKey }[] = [
-  { href: "/listings", label: "Listings", icon: Building2 },
+// featureKey is REQUIRED — every nav item must declare its plan gate.
+// Items without a featureKey bypass plan gating (TypeScript will catch omissions).
+const mainTabs: { href: string; label: string; icon: typeof Building2; featureKey: FeatureKey }[] = [
+  { href: "/listings", label: "Listings", icon: Building2, featureKey: "listings" },
   { href: "/contacts", label: "Contacts", icon: Users, featureKey: "contacts" },
   { href: "/showings", label: "Showings", icon: Clock, featureKey: "showings" },
   { href: "/calendar", label: "Calendar", icon: Calendar, featureKey: "calendar" },
@@ -65,14 +67,16 @@ export function AppHeader() {
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
 
-  const enabledFeatures = session?.user?.enabledFeatures ?? [];
+  const enabledFeatures = session?.user?.enabledFeatures;
+  const hasFeatureData = Array.isArray(enabledFeatures) && enabledFeatures.length > 0;
   const isAdmin = session?.user?.role === "admin";
 
-  const filteredMainTabs = enabledFeatures.length > 0
-    ? mainTabs.filter((tab) => !tab.featureKey || enabledFeatures.includes(tab.featureKey))
+  // Always filter when feature data is loaded; show all while session is loading
+  const filteredMainTabs = hasFeatureData
+    ? mainTabs.filter((tab) => enabledFeatures.includes(tab.featureKey))
     : mainTabs;
-  const filteredMoreItems = enabledFeatures.length > 0
-    ? moreItems.filter((item) => !item.featureKey || enabledFeatures.includes(item.featureKey))
+  const filteredMoreItems = hasFeatureData
+    ? moreItems.filter((item) => enabledFeatures.includes(item.featureKey))
     : moreItems;
   const allNav = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, featureKey: undefined as FeatureKey | undefined },

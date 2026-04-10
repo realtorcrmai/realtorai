@@ -1,24 +1,68 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronDown, ChevronUp, Sparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Plus, Sparkles, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { TypeSelector } from "./TypeSelector";
 import { ChannelSelector } from "./ChannelSelector";
 import { LivePreviewCard } from "./LivePreviewCard";
 import { createContact } from "@/actions/contacts";
-import { LEAD_SOURCES } from "@/lib/constants/contacts";
+import { LEAD_SOURCES, PARTNER_TYPES, PARTNER_TYPE_LABELS } from "@/lib/constants/contacts";
 
-export function ContactCreator() {
+interface ContactCreatorProps {
+  allContacts?: { id: string; name: string }[];
+}
+
+// ── Step definitions ──────────────────────────
+const STEPS = [
+  { key: "basics", label: "Basics" },
+  { key: "type", label: "Type" },
+  { key: "preferences", label: "Prefs" },
+  { key: "details", label: "Address" },
+  { key: "family", label: "Family" },
+  { key: "portfolio", label: "Portfolio" },
+] as const;
+
+type StepKey = (typeof STEPS)[number]["key"];
+
+// ── Types for inline collections ──────────────
+interface FamilyMemberDraft {
+  name: string;
+  relationship: string;
+  phone: string;
+  email: string;
+}
+
+interface PortfolioDraft {
+  address: string;
+  city: string;
+  property_type: string;
+  status: string;
+  notes: string;
+}
+
+// Context types matching ContextLog design
+interface ContextDraft { type: string; text: string }
+const CONTEXT_TYPES = [
+  { key: "preference", label: "Preference", emoji: "💜" },
+  { key: "objection", label: "Objection", emoji: "⚠️" },
+  { key: "concern", label: "Concern", emoji: "🔴" },
+  { key: "timeline", label: "Timeline", emoji: "🕐" },
+  { key: "info", label: "Info", emoji: "ℹ️" },
+] as const;
+
+const FAMILY_RELATIONSHIPS = ["Spouse", "Child", "Parent", "Sibling", "Partner", "Other"] as const;
+const PROPERTY_TYPES_LIST = ["Detached", "Townhome", "Condo", "Duplex", "Acreage", "Commercial", "Land"] as const;
+const PORTFOLIO_STATUSES = ["owned", "rented", "sold", "interested"] as const;
+
+export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
   const router = useRouter();
+  const [step, setStep] = useState<StepKey>("basics");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showMore, setShowMore] = useState(false);
-  const [showPrefs, setShowPrefs] = useState(false);
 
   // Form state
   const [name, setName] = useState("");
@@ -26,9 +70,20 @@ export function ContactCreator() {
   const [email, setEmail] = useState("");
   const [type, setType] = useState("");
   const [channel, setChannel] = useState("sms");
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(""); // kept for payload, built from contextEntries
   const [source, setSource] = useState("");
+
+  // Context entries (multi-type, matching ContextLog design)
+  const [contextEntries, setContextEntries] = useState<ContextDraft[]>([]);
+  const [ctxType, setCtxType] = useState("info");
+  const [ctxText, setCtxText] = useState("");
   const [leadStatus, setLeadStatus] = useState("new");
+
+  // Referred by & partner fields
+  const [referredById, setReferredById] = useState("");
+  const [partnerType, setPartnerType] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
 
   // Structured address
   const [street, setStreet] = useState("");
@@ -52,7 +107,36 @@ export function ContactCreator() {
   const [desiredPrice, setDesiredPrice] = useState("");
   const [listDate, setListDate] = useState("");
 
-  // BC postal code → city lookup (common areas)
+  // Family members (collected during wizard, saved after contact creation)
+  const [familyMembers, setFamilyMembers] = useState<FamilyMemberDraft[]>([]);
+  const [familyForm, setFamilyForm] = useState<FamilyMemberDraft>({ name: "", relationship: "Spouse", phone: "", email: "" });
+
+  // Portfolio properties
+  const [portfolioItems, setPortfolioItems] = useState<PortfolioDraft[]>([]);
+  const [portfolioForm, setPortfolioForm] = useState<PortfolioDraft>({ address: "", city: "", property_type: "", status: "owned", notes: "" });
+
+  // Auto-scroll preview ref
+  const previewRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll preview to relevant section when step changes
+  useEffect(() => {
+    if (!previewRef.current) return;
+    const sectionMap: Record<string, string> = {
+      basics: "[data-preview='contact']",
+      type: "[data-preview='pipeline']",
+      preferences: "[data-preview='preferences']",
+      details: "[data-preview='details']",
+      family: "[data-preview='family']",
+      portfolio: "[data-preview='portfolio']",
+    };
+    const selector = sectionMap[step];
+    if (selector) {
+      const el = previewRef.current.querySelector(selector);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [step]);
+
+  // BC postal code → city lookup
   const BC_POSTAL_CITIES: Record<string, string> = {
     V5: "Burnaby", V3: "Coquitlam", V6: "Vancouver", V7: "North Vancouver",
     V4: "Delta", V8: "Victoria", V1: "Kelowna", V2: "Abbotsford",
@@ -62,7 +146,6 @@ export function ContactCreator() {
   const handlePostalCodeChange = (val: string) => {
     const formatted = val.toUpperCase().replace(/[^A-Z0-9]/g, "");
     setPostalCode(formatted);
-    // Auto-fill city from first 2 characters
     if (formatted.length >= 2 && !city) {
       const prefix = formatted.substring(0, 2);
       const matched = BC_POSTAL_CITIES[prefix];
@@ -70,11 +153,9 @@ export function ContactCreator() {
     }
   };
 
-  // Auto-show preferences after type selection
   const isBuyer = type === "buyer";
   const isSeller = type === "seller";
-  const hasTypeForPrefs = isBuyer || isSeller;
-
+  const isPartner = type === "agent" || type === "partner";
   const canSubmit = name.length >= 2 && phone.length >= 10 && type;
 
   const addArea = () => {
@@ -90,6 +171,62 @@ export function ContactCreator() {
     );
   };
 
+  // ── Step navigation ──────────────────────────
+  const stepIndex = STEPS.findIndex(s => s.key === step);
+
+  const canGoNext = () => {
+    if (step === "basics") return name.length >= 2 && phone.length >= 10;
+    if (step === "type") return !!type;
+    return true;
+  };
+
+  const goNext = () => {
+    if (!canGoNext()) return;
+    const next = STEPS[stepIndex + 1];
+    if (next) setStep(next.key);
+  };
+
+  const goBack = () => {
+    const prev = STEPS[stepIndex - 1];
+    if (prev) setStep(prev.key);
+  };
+
+  const isLastStep = stepIndex === STEPS.length - 1;
+
+  // ── Family helpers ──────────────────────────
+  const addFamilyMember = () => {
+    if (!familyForm.name.trim()) return;
+    setFamilyMembers([...familyMembers, { ...familyForm, name: familyForm.name.trim() }]);
+    setFamilyForm({ name: "", relationship: "Spouse", phone: "", email: "" });
+  };
+
+  const removeFamilyMember = (i: number) => {
+    setFamilyMembers(familyMembers.filter((_, idx) => idx !== i));
+  };
+
+  // ── Portfolio helpers ──────────────────────────
+  const addPortfolioItem = () => {
+    if (!portfolioForm.address.trim()) return;
+    setPortfolioItems([...portfolioItems, { ...portfolioForm, address: portfolioForm.address.trim() }]);
+    setPortfolioForm({ address: "", city: "", property_type: "", status: "owned", notes: "" });
+  };
+
+  const removePortfolioItem = (i: number) => {
+    setPortfolioItems(portfolioItems.filter((_, idx) => idx !== i));
+  };
+
+  // ── Context helpers ──────────────────────────
+  const addContextEntry = () => {
+    if (!ctxText.trim()) return;
+    setContextEntries([...contextEntries, { type: ctxType, text: ctxText.trim() }]);
+    setCtxText("");
+  };
+
+  const removeContextEntry = (i: number) => {
+    setContextEntries(contextEntries.filter((_, idx) => idx !== i));
+  };
+
+  // ── Submit ──────────────────────────
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setSubmitting(true);
@@ -106,9 +243,12 @@ export function ContactCreator() {
         address: fullAddress || undefined,
         source: source || undefined,
         lead_status: leadStatus,
+        referred_by_id: referredById || undefined,
+        partner_type: partnerType || undefined,
+        company_name: companyName.trim() || undefined,
+        job_title: jobTitle.trim() || undefined,
       };
 
-      // Add buyer preferences
       if (isBuyer && (budgetMax || areas.length || propertyTypes.length)) {
         payload.buyer_preferences = {
           price_range_min: budgetMin ? parseInt(budgetMin) * 1000 : undefined,
@@ -120,7 +260,6 @@ export function ContactCreator() {
         };
       }
 
-      // Add seller preferences
       if (isSeller && (motivation || desiredPrice)) {
         payload.seller_preferences = {
           motivation: motivation || undefined,
@@ -136,9 +275,43 @@ export function ContactCreator() {
         return;
       }
 
+      // Save family, portfolio, and context entries in background
+      const contactId = (result as { id?: string })?.id;
+      if (contactId) {
+        const saves: Promise<unknown>[] = [];
+        for (const fm of familyMembers) {
+          saves.push(
+            fetch(`/api/contacts/${contactId}/family`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(fm),
+            }).catch(() => {})
+          );
+        }
+        for (const pi of portfolioItems) {
+          saves.push(
+            fetch(`/api/contacts/${contactId}/portfolio`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(pi),
+            }).catch(() => {})
+          );
+        }
+        for (const ctx of contextEntries) {
+          saves.push(
+            fetch("/api/contacts/context", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ contactId, contextType: ctx.type, text: ctx.text }),
+            }).catch(() => {})
+          );
+        }
+        await Promise.allSettled(saves);
+      }
+
       router.push("/contacts");
       router.refresh();
-    } catch (err) {
+    } catch {
       setError("Failed to create contact. Please try again.");
       setSubmitting(false);
     }
@@ -151,6 +324,7 @@ export function ContactCreator() {
     return min ? `${min} — ${max}` : `Up to ${max}`;
   };
 
+  // ── Render ──────────────────────────
   return (
     <div className="min-h-full overflow-y-auto bg-gradient-to-br from-[#FAF8F4] via-white to-[#0F7694]/5 dark:from-zinc-950 dark:via-background dark:to-[#1a1535]/5">
       {/* Header */}
@@ -168,16 +342,54 @@ export function ContactCreator() {
                 <Sparkles className="h-5 w-5 text-brand" />
                 Meet Someone New
               </h1>
-              <p className="text-sm text-muted-foreground">Add a new contact to your network</p>
+              <p className="text-sm text-muted-foreground">Step {stepIndex + 1} of {STEPS.length} — {STEPS[stepIndex].label}</p>
             </div>
           </div>
-          <div />
         </div>
       </div>
 
-      {/* Content — 2 column: form scrolls, preview fixed */}
-      <div className="max-w-6xl mx-auto px-6 py-8 flex gap-8">
-        {/* LEFT — Form (scrolls with page) */}
+      {/* Step indicator — constrained to left form column width (excludes 340px preview + 32px gap) */}
+      <div className="max-w-6xl mx-auto px-6 pt-6 lg:pr-[388px]">
+        <div className="flex items-center gap-1">
+          {STEPS.map((s, i) => {
+            const isActive = i === stepIndex;
+            const isDone = i < stepIndex;
+            return (
+              <div key={s.key} className="flex items-center flex-1">
+                <button
+                  type="button"
+                  onClick={() => { if (isDone) setStep(s.key); }}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all w-full ${
+                    isActive
+                      ? "bg-brand/10 text-brand border border-brand/20"
+                      : isDone
+                        ? "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/30 cursor-pointer hover:bg-emerald-100/50"
+                        : "bg-muted/30 text-muted-foreground border border-transparent"
+                  }`}
+                >
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                    isDone
+                      ? "bg-emerald-500 text-white"
+                      : isActive
+                        ? "bg-brand text-white"
+                        : "bg-muted text-muted-foreground"
+                  }`}>
+                    {isDone ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                  </span>
+                  <span className="hidden sm:inline truncate">{s.label}</span>
+                </button>
+                {i < STEPS.length - 1 && (
+                  <div className={`w-2 h-0.5 shrink-0 ${isDone ? "bg-emerald-300" : "bg-border"}`} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Content — 2 column */}
+      <div className="max-w-6xl mx-auto px-6 py-6 flex gap-8">
+        {/* LEFT — Step content */}
         <div className="flex-1 min-w-0">
           {error && (
             <div className="mb-6 p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/30 text-sm text-red-700 dark:text-red-300 flex items-center justify-between">
@@ -186,336 +398,497 @@ export function ContactCreator() {
             </div>
           )}
 
-          <div className="space-y-8">
-
-            {/* Section 1: Who are they? */}
-            <div className="space-y-4">
-              <SectionLabel number={1} label="Who are they?" required />
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block">Full name <span className="text-red-400">*</span></label>
-                  <Input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Sarah Miller"
-                    className="h-11 text-sm"
-                    autoFocus
-                  />
+          <div className="space-y-6">
+            {/* ── STEP 1: Basics ────────────────── */}
+            {step === "basics" && (
+              <div className="space-y-5 animate-float-in">
+                <SectionLabel label="Who are they?" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">Full name <span className="text-red-400">*</span></label>
+                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Sarah Miller" className="h-11 text-sm" autoFocus />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">Phone number <span className="text-red-400">*</span></label>
+                    <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="604-555-1234" className="h-11 text-sm" />
+                  </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-1.5 block">Phone number <span className="text-red-400">*</span></label>
-                  <Input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="604-555-1234"
-                    className="h-11 text-sm"
-                  />
+                  <label className="text-sm font-medium mb-1.5 block">Email address</label>
+                  <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="sarah@email.com" className="h-11 text-sm" type="email" />
                 </div>
               </div>
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">Email address</label>
-                <Input
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="sarah@email.com"
-                  className="h-11 text-sm"
-                  type="email"
-                />
+            )}
+
+            {/* ── STEP 2: Type & Channel ────────── */}
+            {step === "type" && (
+              <div className="space-y-8 animate-float-in">
+                <div className="space-y-4">
+                  <SectionLabel label="They are a..." />
+                  <TypeSelector value={type} onChange={setType} />
+                </div>
+                <div className="space-y-4">
+                  <SectionLabel label="Best way to reach them" />
+                  <ChannelSelector value={channel} onChange={setChannel} />
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Section 2: What type? */}
-            <div className="space-y-4">
-              <SectionLabel number={2} label="They are a..." required />
-              <TypeSelector value={type} onChange={(v) => { setType(v); if (v === "buyer" || v === "seller") setShowPrefs(true); }} />
-            </div>
-
-            {/* Section 3: How to reach them */}
-            <div className="space-y-4">
-              <SectionLabel number={3} label="Best way to reach them" required />
-              <ChannelSelector value={channel} onChange={setChannel} />
-            </div>
-
-            {/* Section 4: Preferences (auto-shown for buyer/seller) */}
-            {hasTypeForPrefs && (
-              <div className="space-y-4">
-                <SectionLabel
-                  number={4}
-                  label={isBuyer ? "What are they looking for?" : "Tell us about their property"}
-                  optional
-                />
-
+            {/* ── STEP 3: Preferences ──────────── */}
+            {step === "preferences" && (
+              <div className="space-y-6 animate-float-in">
                 {isBuyer && (
-                  <div className="space-y-3 p-4 rounded-xl bg-brand-muted dark:bg-blue-950/10 border border-blue-100/50 dark:border-blue-900/20">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-sm text-muted-foreground mb-1 block">Budget min ($K)</label>
-                        <Input value={budgetMin} onChange={(e) => setBudgetMin(e.target.value)} placeholder="500" className="h-10" type="number" />
+                  <>
+                    <SectionLabel label="What are they looking for?" />
+                    <div className="space-y-3 p-4 rounded-xl bg-brand-muted dark:bg-blue-950/10 border border-blue-100/50 dark:border-blue-900/20">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-sm text-muted-foreground mb-1 block">Budget min ($K)</label>
+                          <Input value={budgetMin} onChange={(e) => setBudgetMin(e.target.value)} placeholder="500" className="h-10" type="number" />
+                        </div>
+                        <div>
+                          <label className="text-sm text-muted-foreground mb-1 block">Budget max ($K)</label>
+                          <Input value={budgetMax} onChange={(e) => setBudgetMax(e.target.value)} placeholder="900" className="h-10" type="number" />
+                        </div>
                       </div>
                       <div>
-                        <label className="text-sm text-muted-foreground mb-1 block">Budget max ($K)</label>
-                        <Input value={budgetMax} onChange={(e) => setBudgetMax(e.target.value)} placeholder="900" className="h-10" type="number" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-sm text-muted-foreground mb-1 block">
-                        Preferred neighbourhoods to buy in
-                      </label>
-                      <p className="text-xs text-muted-foreground/60 mb-1.5">Where they want to purchase — not where they currently live</p>
-                      <div className="flex gap-2">
+                        <label className="text-sm text-muted-foreground mb-1 block">Preferred neighbourhoods</label>
+                        <p className="text-xs text-muted-foreground/60 mb-1.5">Where they want to purchase — press Enter to add</p>
                         <Input
                           value={areaInput}
                           onChange={(e) => setAreaInput(e.target.value)}
                           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addArea(); } }}
-                          placeholder="e.g. Burnaby, Coquitlam — press Enter to add"
+                          placeholder="e.g. Burnaby, Coquitlam"
                           className="h-10"
                         />
+                        {areas.length > 0 && (
+                          <div className="flex gap-1.5 flex-wrap mt-2">
+                            {areas.map((area) => (
+                              <span key={area} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-muted dark:bg-blue-900/30 text-brand-dark dark:text-blue-300 text-sm">
+                                {area}
+                                <button onClick={() => setAreas(areas.filter(a => a !== area))} className="hover:text-red-500"><X className="h-3 w-3" /></button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      {areas.length > 0 && (
-                        <div className="flex gap-1.5 flex-wrap mt-2">
-                          {areas.map((area) => (
-                            <span key={area} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-muted dark:bg-blue-900/30 text-brand-dark dark:text-blue-300 text-sm">
-                              {area}
-                              <button onClick={() => setAreas(areas.filter(a => a !== area))} className="hover:text-red-500">
-                                <X className="h-3 w-3" />
-                              </button>
-                            </span>
+                      <div>
+                        <label className="text-sm text-muted-foreground mb-1.5 block">Property types</label>
+                        <div className="flex flex-wrap gap-2">
+                          {["Detached", "Townhome", "Condo", "Duplex", "Acreage", "Commercial"].map((pt) => (
+                            <button key={pt} type="button" onClick={() => togglePropertyType(pt)}
+                              className={`px-3 py-1.5 rounded-lg text-sm transition-all ${propertyTypes.includes(pt) ? "bg-brand text-white shadow-sm" : "bg-white dark:bg-zinc-800 border border-border/50 text-muted-foreground hover:text-foreground hover:border-border"}`}>
+                              {pt}
+                            </button>
                           ))}
                         </div>
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-sm text-muted-foreground mb-1.5 block">Property types</label>
-                      <div className="flex flex-wrap gap-2">
-                        {["Detached", "Townhome", "Condo", "Duplex", "Acreage", "Commercial"].map((pt) => (
-                          <button
-                            key={pt}
-                            type="button"
-                            onClick={() => togglePropertyType(pt)}
-                            className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
-                              propertyTypes.includes(pt)
-                                ? "bg-brand text-white shadow-sm"
-                                : "bg-white dark:bg-zinc-800 border border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
-                            }`}
-                          >
-                            {pt}
-                          </button>
-                        ))}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-sm text-muted-foreground mb-1 block">Timeline</label>
+                          <select value={timeline} onChange={(e) => setTimeline(e.target.value)} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm">
+                            <option value="">Select...</option>
+                            <option value="immediately">Immediately</option>
+                            <option value="1-3 months">1-3 months</option>
+                            <option value="3-6 months">3-6 months</option>
+                            <option value="6-12 months">6-12 months</option>
+                            <option value="just browsing">Just browsing</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-sm text-muted-foreground mb-1 block">Financing</label>
+                          <select value={financing} onChange={(e) => setFinancing(e.target.value)} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm">
+                            <option value="">Select...</option>
+                            <option value="not_started">Not started</option>
+                            <option value="in_progress">In progress</option>
+                            <option value="preapproved">Pre-approved</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-sm text-muted-foreground mb-1 block">Timeline</label>
-                        <select value={timeline} onChange={(e) => setTimeline(e.target.value)} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm">
-                          <option value="">Select...</option>
-                          <option value="immediately">Immediately</option>
-                          <option value="1-3 months">1-3 months</option>
-                          <option value="3-6 months">3-6 months</option>
-                          <option value="6-12 months">6-12 months</option>
-                          <option value="just browsing">Just browsing</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-sm text-muted-foreground mb-1 block">Financing</label>
-                        <select value={financing} onChange={(e) => setFinancing(e.target.value)} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm">
-                          <option value="">Select...</option>
-                          <option value="not_started">Not started</option>
-                          <option value="in_progress">In progress</option>
-                          <option value="preapproved">Pre-approved</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
+                  </>
                 )}
 
                 {isSeller && (
-                  <div className="space-y-3 p-4 rounded-xl bg-brand-muted/30 dark:bg-foreground/10 border border-brand/15/50 dark:border-brand/10">
-                    <div>
-                      <label className="text-sm text-muted-foreground mb-1 block">Motivation</label>
-                      <select value={motivation} onChange={(e) => setMotivation(e.target.value)} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm">
-                        <option value="">Select...</option>
-                        <option value="downsizing">Downsizing</option>
-                        <option value="upsizing">Upsizing</option>
-                        <option value="relocating">Relocating</option>
-                        <option value="investment">Investment sale</option>
-                        <option value="divorce">Divorce/separation</option>
-                        <option value="estate">Estate sale</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
+                  <>
+                    <SectionLabel label="Tell us about their property" />
+                    <div className="space-y-3 p-4 rounded-xl bg-brand-muted/30 dark:bg-foreground/10 border border-brand/15 dark:border-brand/10">
                       <div>
-                        <label className="text-sm text-muted-foreground mb-1 block">Desired price ($K)</label>
-                        <Input value={desiredPrice} onChange={(e) => setDesiredPrice(e.target.value)} placeholder="850" className="h-10" type="number" />
+                        <label className="text-sm text-muted-foreground mb-1 block">Motivation</label>
+                        <select value={motivation} onChange={(e) => setMotivation(e.target.value)} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm">
+                          <option value="">Select...</option>
+                          <option value="downsizing">Downsizing</option>
+                          <option value="upsizing">Upsizing</option>
+                          <option value="relocating">Relocating</option>
+                          <option value="investment">Investment sale</option>
+                          <option value="divorce">Divorce/separation</option>
+                          <option value="estate">Estate sale</option>
+                          <option value="other">Other</option>
+                        </select>
                       </div>
-                      <div>
-                        <label className="text-sm text-muted-foreground mb-1 block">Earliest list date</label>
-                        <Input value={listDate} onChange={(e) => setListDate(e.target.value)} className="h-10" type="date" />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-sm text-muted-foreground mb-1 block">Desired price ($K)</label>
+                          <Input value={desiredPrice} onChange={(e) => setDesiredPrice(e.target.value)} placeholder="850" className="h-10" type="number" />
+                        </div>
+                        <div>
+                          <label className="text-sm text-muted-foreground mb-1 block">Earliest list date</label>
+                          <Input value={listDate} onChange={(e) => setListDate(e.target.value)} className="h-10" type="date" />
+                        </div>
                       </div>
                     </div>
+                  </>
+                )}
+
+                {isPartner && (
+                  <>
+                    <SectionLabel label="Professional details" />
+                    <div className="space-y-3 p-4 rounded-xl bg-amber-50/50 dark:bg-amber-950/10 border border-amber-100/50 dark:border-amber-900/20">
+                      <div>
+                        <label className="text-sm text-muted-foreground mb-1 block">Partner type</label>
+                        <select value={partnerType} onChange={(e) => setPartnerType(e.target.value)} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm">
+                          <option value="">Select type...</option>
+                          {PARTNER_TYPES.map((pt) => (
+                            <option key={pt} value={pt}>{PARTNER_TYPE_LABELS[pt]}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-sm text-muted-foreground mb-1 block">Company</label>
+                          <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="RE/MAX, TD Bank..." className="h-10" />
+                        </div>
+                        <div>
+                          <label className="text-sm text-muted-foreground mb-1 block">Job title</label>
+                          <Input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="Mortgage Specialist..." className="h-10" />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {!isBuyer && !isSeller && !isPartner && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <p className="text-sm">No extra preferences for this contact type.</p>
+                    <p className="text-xs mt-1">Click Next to continue to details.</p>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Section 5: More details (collapsible) */}
-            <div className="space-y-4">
-              <button
-                type="button"
-                onClick={() => setShowMore(!showMore)}
-                className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {showMore ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                More details (optional)
-              </button>
+            {/* ── STEP 5: Family ────────────────── */}
+            {step === "family" && (
+              <div className="space-y-5 animate-float-in">
+                <SectionLabel label="Family members" />
+                <p className="text-sm text-muted-foreground -mt-3">Add spouse, children, or other family members. You can skip this and add later.</p>
 
-              {showMore && (
-                <div className="space-y-4 animate-float-in">
-                  {/* Structured Address */}
-                  <div className="p-4 rounded-xl bg-[#FAF8F4] dark:bg-foreground/10 border border-border/30 space-y-3">
-                    <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Residential Address</p>
-                    <div>
-                      <label className="text-sm text-muted-foreground mb-1 block">Street address</label>
-                      <Input value={street} onChange={(e) => setStreet(e.target.value)} placeholder="123 Main Street, Unit 4" className="h-10" />
-                    </div>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <label className="text-sm text-muted-foreground mb-1 block">City</label>
-                        <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Vancouver" className="h-10" />
+                {familyMembers.length > 0 && (
+                  <div className="space-y-2">
+                    {familyMembers.map((fm, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-100/50">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{fm.name}</p>
+                          <p className="text-xs text-muted-foreground">{fm.relationship}{fm.phone ? ` — ${fm.phone}` : ""}</p>
+                        </div>
+                        <button type="button" onClick={() => removeFamilyMember(i)} className="text-muted-foreground hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
                       </div>
-                      <div>
-                        <label className="text-sm text-muted-foreground mb-1 block">Province</label>
-                        <select value={province} onChange={(e) => setProvince(e.target.value)} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm">
-                          <option value="BC">British Columbia</option>
-                          <option value="AB">Alberta</option>
-                          <option value="ON">Ontario</option>
-                          <option value="QC">Quebec</option>
-                          <option value="MB">Manitoba</option>
-                          <option value="SK">Saskatchewan</option>
-                          <option value="NS">Nova Scotia</option>
-                          <option value="NB">New Brunswick</option>
-                          <option value="NL">Newfoundland</option>
-                          <option value="PE">PEI</option>
-                          <option value="NT">NWT</option>
-                          <option value="YT">Yukon</option>
-                          <option value="NU">Nunavut</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-sm text-muted-foreground mb-1 block">Postal code</label>
-                        <Input
-                          value={postalCode}
-                          onChange={(e) => handlePostalCodeChange(e.target.value)}
-                          placeholder="V5H 2N2"
-                          className="h-10 uppercase"
-                          maxLength={7}
-                        />
-                      </div>
-                    </div>
-                    {postalCode.length >= 2 && city && (
-                      <p className="text-xs text-brand flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-brand/50" />
-                        Auto-detected: {city}, {province}
-                      </p>
-                    )}
+                    ))}
                   </div>
+                )}
 
+                <div className="p-4 rounded-xl bg-[#FAF8F4] dark:bg-foreground/10 border border-border/30 space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-sm font-medium mb-1.5 block">Source</label>
-                      <select value={source} onChange={(e) => setSource(e.target.value)} className="w-full h-11 rounded-lg border border-border bg-background px-3 text-sm">
-                        <option value="">How did you meet?</option>
-                        {LEAD_SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      <label className="text-sm text-muted-foreground mb-1 block">Name</label>
+                      <Input value={familyForm.name} onChange={(e) => setFamilyForm({ ...familyForm, name: e.target.value })} placeholder="Jane Doe" className="h-10" />
+                    </div>
+                    <div>
+                      <label className="text-sm text-muted-foreground mb-1 block">Relationship</label>
+                      <select value={familyForm.relationship} onChange={(e) => setFamilyForm({ ...familyForm, relationship: e.target.value })} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm">
+                        {FAMILY_RELATIONSHIPS.map((r) => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm text-muted-foreground mb-1 block">Phone</label>
+                      <Input value={familyForm.phone} onChange={(e) => setFamilyForm({ ...familyForm, phone: e.target.value })} placeholder="604-555-0000" className="h-10" />
+                    </div>
+                    <div>
+                      <label className="text-sm text-muted-foreground mb-1 block">Email</label>
+                      <Input value={familyForm.email} onChange={(e) => setFamilyForm({ ...familyForm, email: e.target.value })} placeholder="jane@email.com" className="h-10" />
+                    </div>
+                  </div>
+                  <Button type="button" variant="outline" onClick={addFamilyMember} disabled={!familyForm.name.trim()} className="gap-2 w-full">
+                    <Plus className="h-4 w-4" /> Add Family Member
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* ── STEP 6: Portfolio ────────────── */}
+            {step === "portfolio" && (
+              <div className="space-y-5 animate-float-in">
+                <SectionLabel label="Properties" />
+                <p className="text-sm text-muted-foreground -mt-3">Properties they own or are interested in. You can skip this and add later.</p>
+
+                {portfolioItems.length > 0 && (
+                  <div className="space-y-2">
+                    {portfolioItems.map((pi, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-blue-50/50 dark:bg-blue-950/10 border border-blue-100/50">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{pi.address}{pi.city ? `, ${pi.city}` : ""}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{pi.property_type || "Property"} — {pi.status}</p>
+                        </div>
+                        <button type="button" onClick={() => removePortfolioItem(i)} className="text-muted-foreground hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="p-4 rounded-xl bg-[#FAF8F4] dark:bg-foreground/10 border border-border/30 space-y-3">
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-1 block">Address</label>
+                    <Input value={portfolioForm.address} onChange={(e) => setPortfolioForm({ ...portfolioForm, address: e.target.value })} placeholder="456 Oak Ave" className="h-10" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-sm text-muted-foreground mb-1 block">City</label>
+                      <Input value={portfolioForm.city} onChange={(e) => setPortfolioForm({ ...portfolioForm, city: e.target.value })} placeholder="Vancouver" className="h-10" />
+                    </div>
+                    <div>
+                      <label className="text-sm text-muted-foreground mb-1 block">Type</label>
+                      <select value={portfolioForm.property_type} onChange={(e) => setPortfolioForm({ ...portfolioForm, property_type: e.target.value })} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm">
+                        <option value="">Select...</option>
+                        {PROPERTY_TYPES_LIST.map((pt) => <option key={pt} value={pt}>{pt}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-1.5 block">Lead status</label>
-                      <select value={leadStatus} onChange={(e) => setLeadStatus(e.target.value)} className="w-full h-11 rounded-lg border border-border bg-background px-3 text-sm">
-                        <option value="new">New</option>
-                        <option value="contacted">Contacted</option>
-                        <option value="qualified">Qualified</option>
-                        <option value="interested">Interested</option>
+                      <label className="text-sm text-muted-foreground mb-1 block">Status</label>
+                      <select value={portfolioForm.status} onChange={(e) => setPortfolioForm({ ...portfolioForm, status: e.target.value })} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm capitalize">
+                        {PORTFOLIO_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-1.5 block">Notes</label>
-                    <Textarea
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Anything you want to remember about this contact..."
-                      rows={3}
-                      className="text-sm resize-none"
-                    />
+                    <label className="text-sm text-muted-foreground mb-1 block">Notes</label>
+                    <Input value={portfolioForm.notes} onChange={(e) => setPortfolioForm({ ...portfolioForm, notes: e.target.value })} placeholder="Primary residence, rental property..." className="h-10" />
+                  </div>
+                  <Button type="button" variant="outline" onClick={addPortfolioItem} disabled={!portfolioForm.address.trim()} className="gap-2 w-full">
+                    <Plus className="h-4 w-4" /> Add Property
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* ── STEP 4: Details ──────────────── */}
+            {step === "details" && (
+              <div className="space-y-5 animate-float-in">
+                <SectionLabel label="Address & lead info" />
+                {/* Structured Address */}
+                <div className="p-4 rounded-xl bg-[#FAF8F4] dark:bg-foreground/10 border border-border/30 space-y-3">
+                  <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Residential Address</p>
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-1 block">Street address</label>
+                    <Input value={street} onChange={(e) => setStreet(e.target.value)} placeholder="123 Main Street, Unit 4" className="h-10" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-sm text-muted-foreground mb-1 block">City</label>
+                      <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Vancouver" className="h-10" />
+                    </div>
+                    <div>
+                      <label className="text-sm text-muted-foreground mb-1 block">Province</label>
+                      <select value={province} onChange={(e) => setProvince(e.target.value)} className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm">
+                        <option value="BC">British Columbia</option>
+                        <option value="AB">Alberta</option>
+                        <option value="ON">Ontario</option>
+                        <option value="QC">Quebec</option>
+                        <option value="MB">Manitoba</option>
+                        <option value="SK">Saskatchewan</option>
+                        <option value="NS">Nova Scotia</option>
+                        <option value="NB">New Brunswick</option>
+                        <option value="NL">Newfoundland</option>
+                        <option value="PE">PEI</option>
+                        <option value="NT">NWT</option>
+                        <option value="YT">Yukon</option>
+                        <option value="NU">Nunavut</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm text-muted-foreground mb-1 block">Postal code</label>
+                      <Input value={postalCode} onChange={(e) => handlePostalCodeChange(e.target.value)} placeholder="V5H 2N2" className="h-10 uppercase" maxLength={7} />
+                    </div>
+                  </div>
+                  {postalCode.length >= 2 && city && (
+                    <p className="text-xs text-brand flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-brand/50" />
+                      Auto-detected: {city}, {province}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">Source</label>
+                    <select value={source} onChange={(e) => setSource(e.target.value)} className="w-full h-11 rounded-lg border border-border bg-background px-3 text-sm">
+                      <option value="">How did you meet?</option>
+                      {LEAD_SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">Lead status</label>
+                    <select value={leadStatus} onChange={(e) => setLeadStatus(e.target.value)} className="w-full h-11 rounded-lg border border-border bg-background px-3 text-sm">
+                      <option value="new">New</option>
+                      <option value="contacted">Contacted</option>
+                      <option value="qualified">Qualified</option>
+                      <option value="interested">Interested</option>
+                    </select>
                   </div>
                 </div>
+
+                {allContacts.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">Referred by</label>
+                    <select value={referredById} onChange={(e) => setReferredById(e.target.value)} className="w-full h-11 rounded-lg border border-border bg-background px-3 text-sm">
+                      <option value="">Select referrer...</option>
+                      {allContacts.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Realtor Context — multi-entry with type tags */}
+                <div className="space-y-3">
+                  <label className="text-sm font-medium block">Realtor Context</label>
+
+                  {contextEntries.length > 0 && (
+                    <div className="space-y-1.5">
+                      {contextEntries.map((ctx, i) => {
+                        const cfg = CONTEXT_TYPES.find(c => c.key === ctx.type) || CONTEXT_TYPES[4];
+                        return (
+                          <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-muted/30 border border-border/20 text-sm group">
+                            <span className="shrink-0">{cfg.emoji}</span>
+                            <span className="flex-1 min-w-0">{ctx.text}</span>
+                            <button type="button" onClick={() => removeContextEntry(i)} className="text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 shrink-0">
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="p-3 rounded-xl bg-[#FAF8F4] dark:bg-foreground/10 border border-border/30 space-y-2">
+                    <div className="flex gap-1 flex-wrap">
+                      {CONTEXT_TYPES.map((ct) => (
+                        <button
+                          key={ct.key}
+                          type="button"
+                          onClick={() => setCtxType(ct.key)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                            ctxType === ct.key
+                              ? "bg-brand text-white shadow-sm"
+                              : "bg-white dark:bg-zinc-800 border border-border/50 text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {ct.emoji} {ct.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={ctxText}
+                        onChange={(e) => setCtxText(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addContextEntry(); } }}
+                        placeholder={
+                          ctxType === "objection" ? "e.g., Thinks Kits is too expensive"
+                          : ctxType === "preference" ? "e.g., Wants south-facing with mountain view"
+                          : ctxType === "concern" ? "e.g., Worried about interest rates"
+                          : ctxType === "timeline" ? "e.g., Needs to move by September"
+                          : "e.g., Works from home, needs office space"
+                        }
+                        className="h-9 text-sm flex-1"
+                      />
+                      <Button type="button" variant="outline" size="sm" onClick={addContextEntry} disabled={!ctxText.trim()} className="h-9 px-3">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── Step Navigation Buttons ────────── */}
+          <div className="flex items-center justify-between mt-8 pt-6 border-t border-border/30">
+            <div>
+              {stepIndex > 0 && (
+                <Button variant="outline" onClick={goBack} className="gap-2">
+                  <ArrowLeft className="h-4 w-4" /> Back
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              {!isLastStep ? (
+                <Button onClick={goNext} disabled={!canGoNext()} className="gap-2 bg-brand hover:bg-brand/90">
+                  Next <ArrowRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!canSubmit || submitting}
+                  className="gap-2 h-11 px-8 text-base font-semibold bg-gradient-to-r from-[#0F7694] to-[#0F7694] hover:bg-brand-dark shadow-lg rounded-xl"
+                  size="lg"
+                >
+                  {submitting ? "Creating..." : "Add to Network →"}
+                </Button>
               )}
             </div>
           </div>
         </div>
 
-        {/* RIGHT — Live Preview — fixed position alongside form */}
+        {/* RIGHT — Live Preview (fixed, scrollable if overflow, submit always pinned) */}
         <div className="hidden lg:block w-[340px] shrink-0">
-          <div className="fixed" style={{ width: "340px", top: "140px", maxHeight: "calc(100vh - 200px)", overflowY: "auto" }}>
-            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Live Preview</p>
-            <LivePreviewCard
-                name={name}
-                phone={phone}
-                email={email}
-                type={type}
-                channel={channel}
-                notes={notes}
-                source={source}
-                address={fullAddress}
-                leadStatus={leadStatus}
-                budgetDisplay={formatBudget()}
-                buyerAreas={areas}
-                propertyTypes={propertyTypes}
-                timeline={timeline}
-                financing={financing}
-                sellerMotivation={motivation}
-                desiredPrice={desiredPrice}
-                listDate={listDate}
+          <div className="fixed flex flex-col" style={{ width: "340px", top: "180px", maxHeight: "calc(100vh - 200px)" }}>
+            {/* Scrollable preview area */}
+            <div ref={previewRef} className="flex-1 min-h-0 overflow-y-auto">
+              <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Live Preview</p>
+              <LivePreviewCard
+                name={name} phone={phone} email={email} type={type} channel={channel}
+                notes={notes} source={source} address={fullAddress} leadStatus={leadStatus}
+                budgetDisplay={formatBudget()} buyerAreas={areas} propertyTypes={propertyTypes}
+                timeline={timeline} financing={financing} sellerMotivation={motivation}
+                desiredPrice={desiredPrice} listDate={listDate}
+                familyMembers={familyMembers} portfolioItems={portfolioItems} contextEntries={contextEntries}
               />
-            <p className="text-xs text-muted-foreground text-center mt-3 italic">
-              This is how the contact will appear in your CRM
-            </p>
+              <p className="text-xs text-muted-foreground text-center mt-3 mb-1 italic">
+                This is how the contact will appear in your CRM
+              </p>
+            </div>
 
-            {/* Primary action button — always visible with preview */}
-            <Button
-              disabled={!canSubmit || submitting}
-              onClick={handleSubmit}
-              className="w-full mt-4 h-12 text-base font-semibold bg-gradient-to-r from-[#0F7694] to-[#0F7694] hover:bg-brand-dark shadow-lg rounded-xl"
-              size="lg"
-            >
-              {submitting ? "Creating..." : canSubmit ? "Add to Network →" : "Fill required fields *"}
-            </Button>
-
-            {canSubmit && (
-              <p className="text-xs text-brand text-center mt-1.5 font-medium">Ready to add to your network</p>
-            )}
+            {/* Submit button — always visible, pinned to bottom of preview */}
+            <div className="shrink-0 pt-3">
+              <Button
+                disabled={!canSubmit || submitting}
+                onClick={canSubmit ? handleSubmit : undefined}
+                className="w-full h-12 text-base font-semibold bg-gradient-to-r from-[#0F7694] to-[#0F7694] hover:bg-brand-dark shadow-lg rounded-xl"
+                size="lg"
+              >
+                {submitting ? "Creating..." : canSubmit ? "Add to Network →" : "Fill required fields *"}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Bottom spacer for scroll clearance */}
-      <div className="h-8" />
     </div>
   );
 }
 
 // ── Section Label ──────────────────────────
-function SectionLabel({ number, label, optional, required }: { number: number; label: string; optional?: boolean; required?: boolean }) {
+function SectionLabel({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#0F7694] to-[#0F7694] flex items-center justify-center text-white text-xs font-bold shadow-sm">
-        {number}
-      </div>
-      <h2 className="text-sm font-semibold">
-        {label}
-        {required && <span className="text-red-400 ml-1">*</span>}
-      </h2>
-      {optional && <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">optional</span>}
-    </div>
+    <h2 className="text-base font-semibold text-foreground">{label}</h2>
   );
 }

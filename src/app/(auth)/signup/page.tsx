@@ -238,7 +238,7 @@ export default function SignupPage() {
                   >
                     <div className="text-sm font-semibold">Free</div>
                     <div className="text-xs text-gray-500">$0/mo</div>
-                    <div className="text-xs text-gray-400 mt-1">50 contacts, 3 listings</div>
+                    <div className="text-xs text-gray-400 mt-1">50 contacts, calendar, tasks</div>
                   </button>
                   <button
                     type="button"

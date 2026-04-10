@@ -14,22 +14,27 @@ import { cn } from "@/lib/utils";
 import { QuickAddButton } from "@/components/layout/QuickAddButton";
 import type { FeatureKey } from "@/lib/features";
 
-const navItems: { href: string; label: string; icon: typeof Building2; featureKey?: FeatureKey }[] = [
-  { href: "/", label: "Home", icon: LayoutDashboard },
+// featureKey is REQUIRED — every gated nav item must declare its plan gate.
+const navItems: { href: string; label: string; icon: typeof Building2; featureKey: FeatureKey }[] = [
   { href: "/contacts", label: "Contacts", icon: Users, featureKey: "contacts" },
   { href: "/tasks", label: "Tasks", icon: ListTodo, featureKey: "tasks" },
-  { href: "/listings", label: "Listings", icon: Building2 },
+  { href: "/listings", label: "Listings", icon: Building2, featureKey: "listings" },
   { href: "/calendar", label: "Calendar", icon: Calendar, featureKey: "calendar" },
 ];
+
+// Always-visible items (not plan-gated)
+const homeItem = { href: "/", label: "Home", icon: LayoutDashboard };
 
 export function MobileNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const enabledFeatures = session?.user?.enabledFeatures ?? [];
+  const enabledFeatures = session?.user?.enabledFeatures;
+  const hasFeatureData = Array.isArray(enabledFeatures) && enabledFeatures.length > 0;
 
-  const filteredItems = enabledFeatures.length > 0
-    ? navItems.filter((item) => !item.featureKey || enabledFeatures.includes(item.featureKey))
+  const gatedItems = hasFeatureData
+    ? navItems.filter((item) => enabledFeatures.includes(item.featureKey))
     : navItems;
+  const filteredItems = [homeItem, ...gatedItems];
 
   // Split items: first 2 on left, rest on right, with center + button
   const leftItems = filteredItems.slice(0, 2);

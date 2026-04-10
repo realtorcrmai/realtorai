@@ -55,6 +55,10 @@ export interface LivePreviewCardProps {
   sellerMotivation?: string;
   desiredPrice?: string;
   listDate?: string;
+  // Family, Portfolio & Context
+  familyMembers?: { name: string; relationship: string; phone: string; email: string }[];
+  portfolioItems?: { address: string; city: string; property_type: string; status: string; notes: string }[];
+  contextEntries?: { type: string; text: string }[];
 }
 
 function getInitials(name: string) {
@@ -81,6 +85,7 @@ export function LivePreviewCard({
   name, phone, email, type, channel, notes, source, address, leadStatus,
   budgetDisplay, buyerAreas, propertyTypes, timeline, financing,
   sellerMotivation, desiredPrice, listDate,
+  familyMembers = [], portfolioItems = [], contextEntries = [],
 }: LivePreviewCardProps) {
   const initials = getInitials(name);
   const gradient = AVATAR_GRADIENTS[type] || AVATAR_GRADIENTS.other;
@@ -108,7 +113,7 @@ export function LivePreviewCard({
 
       <div className="p-5 space-y-4">
         {/* Avatar + Name */}
-        <div className="flex items-center gap-4">
+        <div data-preview="contact" className="flex items-center gap-4">
           <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${type ? gradient : "from-gray-400 to-gray-500"} flex items-center justify-center text-white font-bold text-lg shadow-lg transition-all duration-300`}>
             {initials}
           </div>
@@ -141,7 +146,7 @@ export function LivePreviewCard({
         </div>
 
         {/* Contact info */}
-        <div className="space-y-1.5 border-t border-border/20 pt-3">
+        <div data-preview="details" className="space-y-1.5 border-t border-border/20 pt-3">
           <PreviewRow icon={Phone} label="Phone" value={phone} empty="Phone number" />
           <PreviewRow icon={Mail} label="Email" value={email} empty="Email address" />
           <PreviewRow icon={ChannelIcon} label="Channel" value={channel ? CHANNEL_LABELS[channel] : ""} empty="Preferred channel" />
@@ -151,7 +156,7 @@ export function LivePreviewCard({
 
         {/* Pipeline preview */}
         {type && type !== "other" && (
-          <div className="border-t border-border/20 pt-3">
+          <div data-preview="pipeline" className="border-t border-border/20 pt-3">
             <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">Pipeline</p>
             <div className="flex items-center gap-1.5">
               <div className={`w-3 h-3 rounded-full bg-gradient-to-br ${gradient} ring-2 ring-offset-1 ring-current shadow-sm`} />
@@ -168,7 +173,7 @@ export function LivePreviewCard({
 
         {/* Buyer Preferences */}
         {isBuyer && (
-          <div className="border-t border-border/20 pt-3">
+          <div data-preview="preferences" className="border-t border-border/20 pt-3">
             <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">Buyer Preferences</p>
             <div className="space-y-1.5">
               <PreviewRow icon={DollarSign} label="Budget" value={budgetDisplay} empty="Not set" />
@@ -202,7 +207,7 @@ export function LivePreviewCard({
 
         {/* Seller Preferences */}
         {isSeller && (
-          <div className="border-t border-border/20 pt-3">
+          <div data-preview="preferences" className="border-t border-border/20 pt-3">
             <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">Seller Preferences</p>
             <div className="space-y-1.5">
               <PreviewRow icon={Tag} label="Motivation" value={sellerMotivation} empty="Not set" />
@@ -212,13 +217,55 @@ export function LivePreviewCard({
           </div>
         )}
 
-        {/* Notes */}
-        {notes && (
+        {/* Context */}
+        {contextEntries.length > 0 && (
           <div className="border-t border-border/20 pt-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Notes</p>
-            <p className="text-sm text-muted-foreground italic">&ldquo;{notes}&rdquo;</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1.5">Context</p>
+            <div className="space-y-1">
+              {contextEntries.map((ctx, i) => (
+                <p key={i} className="text-xs text-muted-foreground">
+                  <span className="font-medium capitalize">{ctx.type}:</span> {ctx.text}
+                </p>
+              ))}
+            </div>
           </div>
         )}
+
+        {/* Family Members */}
+        <div data-preview="family" className="border-t border-border/20 pt-3">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">Family</p>
+          {familyMembers.length > 0 ? (
+            <div className="space-y-1.5">
+              {familyMembers.map((fm, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-[10px] font-bold text-emerald-700">{fm.name[0]}</span>
+                  <span className="font-medium">{fm.name}</span>
+                  <span className="text-muted-foreground text-xs">({fm.relationship})</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground/30 italic">No family added yet</p>
+          )}
+        </div>
+
+        {/* Portfolio */}
+        <div data-preview="portfolio" className="border-t border-border/20 pt-3">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">Portfolio</p>
+          {portfolioItems.length > 0 ? (
+            <div className="space-y-1.5">
+              {portfolioItems.map((pi, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  <Home className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                  <span className="font-medium truncate">{pi.address}</span>
+                  <span className="text-muted-foreground text-xs capitalize shrink-0">({pi.status})</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground/30 italic">No properties added yet</p>
+          )}
+        </div>
       </div>
     </div>
   );
