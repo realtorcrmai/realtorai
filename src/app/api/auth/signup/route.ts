@@ -65,8 +65,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to create account. Please try again." }, { status: 500 });
     }
 
-    // TODO: Send verification email (S5) — sendVerificationEmail(newUser.id, normalizedEmail)
-    // TODO: Send Day 0 welcome drip email (D1) — sendWelcomeEmail(newUser.id, normalizedEmail, name)
+    // Send Day 0 welcome drip email (D1) — fire and forget
+    import("@/actions/drip").then(({ sendDripEmail }) => {
+      sendDripEmail(newUser.id, normalizedEmail, name.trim(), 0).catch(console.error);
+    });
 
     return NextResponse.json({
       success: true,
