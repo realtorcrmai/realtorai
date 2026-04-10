@@ -374,19 +374,22 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
 
   function addCoOwner() {
     if (!newCoOwner.name) return;
+    // If no existing contact was selected from search, treat as new contact to create
+    const shouldCreateNew = newCoOwnerIsNew || !newCoOwner.contact_id;
     const entry: CoOwner = {
       ...newCoOwner,
-      isNew: newCoOwnerIsNew || undefined,
-      newPhone: newCoOwnerIsNew ? newCoOwnerPhone : undefined,
-      newEmail: newCoOwnerIsNew ? newCoOwnerEmail : undefined,
+      isNew: shouldCreateNew || undefined,
+      newPhone: shouldCreateNew ? newCoOwnerPhone : undefined,
+      newEmail: shouldCreateNew ? newCoOwnerEmail : undefined,
     };
     const newList = [...coOwners, entry];
     setCoOwners(newList);
     // Auto-adjust primary owner % to fill up to 100
     const newCoTotal = newList.reduce((s, o) => s + o.ownership_pct, 0);
     setOwnershipPct(String(Math.max(0, 100 - newCoTotal)));
-    // Reset form
-    setNewCoOwner({ name: "", role: "individual", ownership_pct: 50 });
+    // Reset form — suggest half of contact's remaining share for next co-owner
+    const contactRemaining = Math.max(0, 100 - newCoTotal);
+    setNewCoOwner({ name: "", role: "individual", ownership_pct: Math.max(1, Math.floor(contactRemaining / 2)) });
     setNewCoOwnerIsNew(false);
     setNewCoOwnerPhone("");
     setNewCoOwnerEmail("");
