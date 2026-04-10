@@ -37,7 +37,7 @@ unsubscribeRouter.get('/unsubscribe/:contactId/:token', async (req: Request, res
   const { contactId, token } = req.params;
 
   try {
-    const expectedToken = generateToken(contactId);
+    const expectedToken = generateToken(String(contactId));
 
     if (token !== expectedToken) {
       log.warn({ contactId }, 'unsubscribe: invalid token');
