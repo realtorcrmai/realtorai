@@ -3,6 +3,7 @@
 // Use this instead of raw createAdminClient() for all user-initiated operations
 
 import { SupabaseClient } from "@supabase/supabase-js";
+import { cache } from "react";
 import { createAdminClient } from "./admin";
 
 /**
@@ -181,8 +182,6 @@ export async function getRealtorId(): Promise<string> {
  *   const tc = await getAuthenticatedTenantClient();
  *   const { data } = await tc.from("contacts").select("*");
  */
-import { cache } from "react";
-
 export const getAuthenticatedTenantClient = cache(async () => {
   const realtorId = await getRealtorId();
   return tenantClient(realtorId);

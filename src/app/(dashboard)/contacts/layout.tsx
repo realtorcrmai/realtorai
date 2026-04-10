@@ -13,20 +13,44 @@ export default async function ContactsLayout({
 }) {
   const supabase = await getAuthenticatedTenantClient();
 
-  // Single query: only the fields the sidebar needs, sorted by last activity
-  const { data: contacts } = await supabase
-    .from("contacts")
-    .select("id, name, phone, type, stage_bar, lead_status, last_activity_date, created_at")
-    .order("last_activity_date", { ascending: false });
+  // Fetch contacts + lightweight activity counts (only FK columns, not full rows)
+  const [{ data: contacts }, { data: commCounts }, { data: taskCounts }, { data: enrollCounts }] = await Promise.all([
+    supabase
+      .from("contacts")
+      .select("id, name, phone, type, stage_bar, lead_status, last_activity_date, created_at")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("communications")
+      .select("contact_id"),
+    supabase
+      .from("tasks")
+      .select("contact_id")
+      .not("contact_id", "is", null),
+    supabase
+      .from("workflow_enrollments")
+      .select("contact_id"),
+  ]);
 
-  // Contacts without last_activity_date go to the bottom, sorted by created_at
+  // Build activity score per contact
+  const activityScore: Record<string, number> = {};
+  for (const c of commCounts ?? []) {
+    activityScore[c.contact_id] = (activityScore[c.contact_id] || 0) + 1;
+  }
+  for (const t of taskCounts ?? []) {
+    if (t.contact_id) activityScore[t.contact_id] = (activityScore[t.contact_id] || 0) + 1;
+  }
+  for (const e of enrollCounts ?? []) {
+    activityScore[e.contact_id] = (activityScore[e.contact_id] || 0) + 2;
+  }
+
+  // Sort: most activity first, then by last_activity_date, then created_at
   const sortedContacts = [...(contacts ?? [])].sort((a, b) => {
-    const dateA = a.last_activity_date || "";
-    const dateB = b.last_activity_date || "";
-    if (dateA && !dateB) return -1;
-    if (!dateA && dateB) return 1;
-    if (dateA && dateB) return new Date(dateB).getTime() - new Date(dateA).getTime();
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    const scoreA = activityScore[a.id] || 0;
+    const scoreB = activityScore[b.id] || 0;
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    const dateA = a.last_activity_date || a.created_at;
+    const dateB = b.last_activity_date || b.created_at;
+    return new Date(dateB).getTime() - new Date(dateA).getTime();
   });
 
   return (
