@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Check } from "lucide-react";
+import { Plus, Check, StickyNote } from "lucide-react";
 
 type ContextEntry = {
   id: string;
@@ -80,11 +80,12 @@ export function ContextLog({ contactId, entries, autoShowForm = false, onAdd, on
 
   return (
     <Card className="border-l-4 border-l-slate-400 bg-slate-50/20 dark:bg-slate-950/10">
-      <CardContent className="p-6">
+      <CardContent className="p-4">
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <StickyNote className="h-4 w-4" />
             Realtor Context
-          </h4>
+          </h3>
           <Button
             variant="ghost"
             size="sm"

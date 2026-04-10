@@ -55,16 +55,19 @@ export function FamilyTabPanel({ contactId, initialMembers }: FamilyTabPanelProp
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">Family Members</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {members.length} member{members.length !== 1 ? "s" : ""} on file
-          </p>
-        </div>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+          <Users className="h-4 w-4" />
+          Family Members
+          {members.length > 0 && (
+            <span className="ml-1 px-2 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary normal-case tracking-normal">
+              {members.length}
+            </span>
+          )}
+        </h3>
         <button
           onClick={() => router.push(`/contacts/${contactId}/family/new`)}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-sm"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-border hover:border-primary/50 text-muted-foreground hover:text-primary transition-colors"
         >
           <Plus className="h-3.5 w-3.5" />
           Add Member
@@ -73,20 +76,16 @@ export function FamilyTabPanel({ contactId, initialMembers }: FamilyTabPanelProp
 
       {/* Empty state */}
       {members.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-14 text-center">
-          <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center mb-3">
-            <Users className="h-7 w-7 text-muted-foreground/40" />
-          </div>
-          <p className="text-sm font-semibold text-foreground/70">No family members yet</p>
-          <p className="text-xs text-muted-foreground mt-1 max-w-[220px] leading-relaxed">
-            Add spouse, children, or other family members to personalize your outreach.
+        <div className="text-center py-6">
+          <p className="text-sm text-muted-foreground mb-3">
+            No family members yet — add spouse, children, or other family to personalize outreach.
           </p>
           <button
             onClick={() => router.push(`/contacts/${contactId}/family/new`)}
-            className="mt-4 flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border border-dashed border-border hover:border-primary hover:text-primary text-muted-foreground transition-all"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 transition-colors"
           >
-            <Plus className="h-3.5 w-3.5" />
-            Add first member
+            <Plus className="h-4 w-4" />
+            Add First Member
           </button>
         </div>
       )}

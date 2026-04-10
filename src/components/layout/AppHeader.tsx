@@ -212,8 +212,10 @@ export function AppHeader() {
           </Link>
         )}
 
-        {/* Voice Agent Status */}
-        <VoiceStatusIndicator />
+        {/* Voice Agent Status — professional+ only */}
+        {hasFeatureData && enabledFeatures.includes("assistant") && (
+          <VoiceStatusIndicator />
+        )}
 
         {/* Search shortcut hint */}
         <button
@@ -222,8 +224,10 @@ export function AppHeader() {
           aria-label="Search (⌘K)"
         >⌘K</button>
 
-        {/* Help */}
-        <ContextualHelpButton />
+        {/* Help — professional+ only */}
+        {hasFeatureData && enabledFeatures.includes("assistant") && (
+          <ContextualHelpButton />
+        )}
 
         {/* Quick Add */}
         <QuickAddButton />
