@@ -44,35 +44,6 @@ interface PortfolioDraft {
   notes: string;
 }
 
-// Social platforms
-const SOCIAL_PLATFORMS = [
-  { key: "instagram", label: "Instagram", icon: "📸", prefix: "instagram.com/", placeholder: "username" },
-  { key: "facebook", label: "Facebook", icon: "📘", prefix: "facebook.com/", placeholder: "profile.name" },
-  { key: "linkedin", label: "LinkedIn", icon: "💼", prefix: "linkedin.com/in/", placeholder: "firstname-lastname" },
-  { key: "twitter", label: "X / Twitter", icon: "𝕏", prefix: "x.com/", placeholder: "handle" },
-  { key: "tiktok", label: "TikTok", icon: "🎵", prefix: "tiktok.com/@", placeholder: "username" },
-  { key: "youtube", label: "YouTube", icon: "▶️", prefix: "youtube.com/@", placeholder: "channel" },
-] as const;
-
-/** Extract platform + handle from a pasted URL or raw handle */
-function parseSocialInput(input: string): { platform: string; handle: string } | null {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-  const urlPatterns: [RegExp, string][] = [
-    [/(?:instagram\.com|instagr\.am)\/([^/?#]+)/i, "instagram"],
-    [/facebook\.com\/([^/?#]+)/i, "facebook"],
-    [/linkedin\.com\/in\/([^/?#]+)/i, "linkedin"],
-    [/(?:twitter\.com|x\.com)\/([^/?#]+)/i, "twitter"],
-    [/tiktok\.com\/@?([^/?#]+)/i, "tiktok"],
-    [/youtube\.com\/@?([^/?#]+)/i, "youtube"],
-  ];
-  for (const [pattern, platform] of urlPatterns) {
-    const match = trimmed.match(pattern);
-    if (match) return { platform, handle: match[1].replace(/^@/, "") };
-  }
-  return null;
-}
-
 // Context types matching ContextLog design
 interface ContextDraft { type: string; text: string }
 const CONTEXT_TYPES = [
@@ -84,29 +55,6 @@ const CONTEXT_TYPES = [
 ] as const;
 
 const FAMILY_RELATIONSHIPS = ["Spouse", "Child", "Parent", "Sibling", "Partner", "Other"] as const;
-
-// ── North American formatters ──────────────────
-/** Format phone as (604) 555-1234 for display, store raw digits */
-function formatPhoneDisplay(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
-  // Strip leading 1 for display
-  const d = digits.startsWith("1") && digits.length > 10 ? digits.slice(1) : digits;
-  if (d.length <= 3) return d;
-  if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
-  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6, 10)}`;
-}
-
-/** Extract raw digits from formatted phone */
-function phoneDigits(formatted: string): string {
-  return formatted.replace(/\D/g, "");
-}
-
-/** Format Canadian postal code: V5H 2N2 */
-function formatPostalCode(raw: string): string {
-  const clean = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
-  if (clean.length <= 3) return clean;
-  return `${clean.slice(0, 3)} ${clean.slice(3, 6)}`;
-}
 const PROPERTY_TYPES_LIST = ["Detached", "Townhome", "Condo", "Duplex", "Acreage", "Commercial", "Land"] as const;
 const PORTFOLIO_STATUSES = ["owned", "rented", "sold", "interested"] as const;
 
@@ -124,11 +72,6 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
   const [channel, setChannel] = useState("sms");
   const [notes, setNotes] = useState(""); // kept for payload, built from contextEntries
   const [source, setSource] = useState("");
-
-  // Social profiles
-  const [socialProfiles, setSocialProfiles] = useState<Record<string, string>>({});
-  const [socialPlatform, setSocialPlatform] = useState("instagram");
-  const [socialInput, setSocialInput] = useState("");
 
   // Context entries (multi-type, matching ContextLog design)
   const [contextEntries, setContextEntries] = useState<ContextDraft[]>([]);
@@ -201,10 +144,10 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
   };
 
   const handlePostalCodeChange = (val: string) => {
-    const clean = val.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    setPostalCode(clean);
-    if (clean.length >= 2 && !city) {
-      const prefix = clean.substring(0, 2);
+    const formatted = val.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    setPostalCode(formatted);
+    if (formatted.length >= 2 && !city) {
+      const prefix = formatted.substring(0, 2);
       const matched = BC_POSTAL_CITIES[prefix];
       if (matched) setCity(matched);
     }
@@ -283,27 +226,6 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
     setContextEntries(contextEntries.filter((_, idx) => idx !== i));
   };
 
-  // ── Social helpers ──────────────────────────
-  const addSocialProfile = () => {
-    const input = socialInput.trim();
-    if (!input) return;
-    const parsed = parseSocialInput(input);
-    if (parsed) {
-      setSocialProfiles({ ...socialProfiles, [parsed.platform]: parsed.handle });
-      setSocialInput("");
-      setSocialPlatform(parsed.platform);
-      return;
-    }
-    setSocialProfiles({ ...socialProfiles, [socialPlatform]: input.replace(/^@/, "") });
-    setSocialInput("");
-  };
-
-  const removeSocialProfile = (platform: string) => {
-    const updated = { ...socialProfiles };
-    delete updated[platform];
-    setSocialProfiles(updated);
-  };
-
   // ── Submit ──────────────────────────
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -313,7 +235,7 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
     try {
       const payload: Record<string, unknown> = {
         name: name.trim(),
-        phone: phone.startsWith("1") ? phone : `1${phone}`, // stored as digits, server action adds +
+        phone: phone.trim(),
         email: email.trim() || undefined,
         type,
         pref_channel: channel,
@@ -325,7 +247,6 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
         partner_type: partnerType || undefined,
         company_name: companyName.trim() || undefined,
         job_title: jobTitle.trim() || undefined,
-        social_profiles: Object.keys(socialProfiles).length > 0 ? socialProfiles : undefined,
       };
 
       if (isBuyer && (budgetMax || areas.length || propertyTypes.length)) {
@@ -489,7 +410,7 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">Phone number <span className="text-red-400">*</span></label>
-                    <Input value={formatPhoneDisplay(phone)} onChange={(e) => setPhone(phoneDigits(e.target.value))} placeholder="(604) 555-1234" className="h-11 text-sm" />
+                    <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="604-555-1234" className="h-11 text-sm" />
                   </div>
                 </div>
                 <div>
@@ -667,7 +588,7 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
                       <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-100/50">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium">{fm.name}</p>
-                          <p className="text-xs text-muted-foreground">{fm.relationship}{fm.phone ? ` — ${formatPhoneDisplay(fm.phone)}` : ""}</p>
+                          <p className="text-xs text-muted-foreground">{fm.relationship}{fm.phone ? ` — ${fm.phone}` : ""}</p>
                         </div>
                         <button type="button" onClick={() => removeFamilyMember(i)} className="text-muted-foreground hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
                       </div>
@@ -691,7 +612,7 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-sm text-muted-foreground mb-1 block">Phone</label>
-                      <Input value={formatPhoneDisplay(familyForm.phone)} onChange={(e) => setFamilyForm({ ...familyForm, phone: phoneDigits(e.target.value) })} placeholder="(604) 555-0000" className="h-10" />
+                      <Input value={familyForm.phone} onChange={(e) => setFamilyForm({ ...familyForm, phone: e.target.value })} placeholder="604-555-0000" className="h-10" />
                     </div>
                     <div>
                       <label className="text-sm text-muted-foreground mb-1 block">Email</label>
@@ -796,7 +717,7 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
                     </div>
                     <div>
                       <label className="text-sm text-muted-foreground mb-1 block">Postal code</label>
-                      <Input value={formatPostalCode(postalCode)} onChange={(e) => handlePostalCodeChange(e.target.value)} placeholder="V5H 2N2" className="h-10" maxLength={7} />
+                      <Input value={postalCode} onChange={(e) => handlePostalCodeChange(e.target.value)} placeholder="V5H 2N2" className="h-10 uppercase" maxLength={7} />
                     </div>
                   </div>
                   {postalCode.length >= 2 && city && (
@@ -837,64 +758,6 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
                     </select>
                   </div>
                 )}
-
-                {/* Social Profiles — smart handle input */}
-                <div className="space-y-3">
-                  <label className="text-sm font-medium block">Social Media</label>
-
-                  {Object.keys(socialProfiles).length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {Object.entries(socialProfiles).map(([platform, handle]) => {
-                        const cfg = SOCIAL_PLATFORMS.find(p => p.key === platform);
-                        return (
-                          <div key={platform} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/50 border border-border/30 text-sm group">
-                            <span>{cfg?.icon || "🔗"}</span>
-                            <a href={`https://${cfg?.prefix || ""}${handle}`} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline font-medium">
-                              @{handle}
-                            </a>
-                            <button type="button" onClick={() => removeSocialProfile(platform)} className="text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 ml-0.5">
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  <div className="p-3 rounded-xl bg-[#FAF8F4] dark:bg-foreground/10 border border-border/30 space-y-2">
-                    <div className="flex gap-1 flex-wrap">
-                      {SOCIAL_PLATFORMS.map((p) => (
-                        <button
-                          key={p.key}
-                          type="button"
-                          onClick={() => setSocialPlatform(p.key)}
-                          className={`px-2 py-1 rounded-lg text-xs font-medium transition-all ${
-                            socialPlatform === p.key
-                              ? "bg-brand text-white shadow-sm"
-                              : socialProfiles[p.key]
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200/50"
-                                : "bg-white dark:bg-zinc-800 border border-border/50 text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          {p.icon} {p.label}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <Input
-                        value={socialInput}
-                        onChange={(e) => setSocialInput(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSocialProfile(); } }}
-                        placeholder={`${SOCIAL_PLATFORMS.find(p => p.key === socialPlatform)?.placeholder || "handle"} or paste profile URL`}
-                        className="h-9 text-sm flex-1"
-                      />
-                      <Button type="button" variant="outline" size="sm" onClick={addSocialProfile} disabled={!socialInput.trim()} className="h-9 px-3">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground">Type a handle or paste a full profile URL — platform auto-detected</p>
-                  </div>
-                </div>
 
                 {/* Realtor Context — multi-entry with type tags */}
                 <div className="space-y-3">
