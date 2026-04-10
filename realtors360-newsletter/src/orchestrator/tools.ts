@@ -1,6 +1,6 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import { supabase } from '../lib/supabase.js';
-import { retrieveContactContext } from '../lib/rag.js';
+import { retrieveContext } from '../shared/rag/retriever.js';
 import { logger } from '../lib/logger.js';
 
 /**
@@ -40,11 +40,18 @@ export const orchestratorTools: Anthropic.Tool[] = [
   },
   {
     name: 'rag_retrieve',
-    description: 'Get recent communications, click history, and engagement intelligence for a contact.',
+    description:
+      'Semantic search across the contact\'s full interaction history — communications, emails, activities, recommendations. Returns formatted context chunks ranked by relevance (hybrid HyDE + vector + full-text search). Use this to understand a contact\'s interests, past conversations, and engagement patterns before writing an email.',
     input_schema: {
       type: 'object',
-      properties: { contact_id: { type: 'string' } },
-      required: ['contact_id'],
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Natural language search query, e.g. "what properties has this contact shown interest in"',
+        },
+        contact_id: { type: 'string', description: 'UUID of the contact to scope results to' },
+      },
+      required: ['query', 'contact_id'],
     },
   },
   {
@@ -84,7 +91,7 @@ export async function executeTool(name: string, input: Record<string, unknown>):
     case 'get_realtor':
       return await toolGetRealtor(String(input.realtor_id));
     case 'rag_retrieve':
-      return await retrieveContactContext(String(input.contact_id));
+      return await toolRagRetrieve(String(input.query ?? ''), String(input.contact_id));
     case 'emit_email':
       // emit_email is captured by the orchestrator loop, not executed here
       return { ok: true };
@@ -125,4 +132,29 @@ async function toolGetRealtor(realtorId: string) {
   if (error) return { error: error.message };
   if (!data) return { error: 'realtor not found' };
   return data;
+}
+
+/**
+ * M4 hybrid RAG retrieval — replaces the M1 direct-DB-query stub.
+ *
+ * Uses HyDE (Claude Haiku hypothetical answer) + Voyage semantic search +
+ * Postgres full-text search, fused via 3-way Reciprocal Rank Fusion. Returns
+ * formatted context chunks the orchestrator can inject into the email-writing
+ * prompt. Falls back gracefully to empty context if RAG is unavailable.
+ */
+async function toolRagRetrieve(query: string, contactId: string) {
+  try {
+    const result = await retrieveContext(supabase, query, {
+      contact_id: contactId,
+      content_type: ['message', 'activity', 'email', 'recommendation'],
+    }, 8);
+    return {
+      context: result.formatted || '(no relevant context found)',
+      source_count: result.sources.length,
+      sources: result.sources.slice(0, 5),
+    };
+  } catch (err) {
+    logger.warn({ err, contactId }, 'tools: rag_retrieve failed, returning empty context');
+    return { context: '(RAG unavailable)', source_count: 0, sources: [] };
+  }
 }

@@ -32,6 +32,14 @@ const ConfigSchema = z.object({
   FLAG_RAG_BACKFILL: z.enum(['on', 'off']).default('off'),
   FLAG_WEEKLY_LEARNING: z.enum(['on', 'off']).default('off'),
   FLAG_AGENT_SCORING: z.enum(['on', 'off']).default('off'),
+  FLAG_PROCESS_WORKFLOWS: z.enum(['on', 'off']).default('off'),
+  FLAG_AGENT_TRIAGE: z.enum(['on', 'off']).default('off'),
+
+  // Twilio (required for SMS/WhatsApp workflow steps)
+  TWILIO_ACCOUNT_SID: z.string().optional().default(''),
+  TWILIO_AUTH_TOKEN: z.string().optional().default(''),
+  TWILIO_PHONE_NUMBER: z.string().optional().default(''),
+  TWILIO_WHATSAPP_NUMBER: z.string().optional().default(''),
 
   // Canary / test fixtures
   CANARY_TO_EMAIL: z.string().email().default('amandhindsa@outlook.com'),
