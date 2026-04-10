@@ -573,6 +573,7 @@ export default function OnboardingPage() {
                         setImportSource("none");
                         setImportedContacts([]);
                       }}
+                      onSkip={goNext}
                     />
                   )}
 
