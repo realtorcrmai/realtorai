@@ -226,3 +226,20 @@
 | 2026-04-10 | claude | unknown | DEPLOY | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
 | 2026-04-10 | claude | Sprint 1: Signup simplification + trial logic in auth.ts | CODING:feature | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
 | 2026-04-10 | claude | Revert unauthorized code changes from premature implementation | CODING:fix | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Commit and push all changes to dev via PR | DEPLOY | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | DEPLOY | ✅ | classified, checkpoint | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Rebase current branch on dev | DEPLOY | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Merge origin/dev into branch, resolve conflicts, push | DEPLOY | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Rebase branch on dev after merge | DEPLOY | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Check and merge PR #148 to dev | DEPLOY | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Update onboarding gap doc — add target state and remediation for all items to  | GAP_ANALYSIS | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Update onboarding gap doc v2 — target state 95%+ with remediation for every it | GAP_ANALYSIS | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | TESTING | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | End-to-end audit of onboarding gap doc — trace full user journey for missing h | GAP_ANALYSIS | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | TESTING | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Fix 11 remaining gaps in v3 gap doc — handoff conflicts, infra prereqs, test p | GAP_ANALYSIS | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Fix remaining 11 gaps in v3 gap doc | GAP_ANALYSIS | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING | ✅ | classified | — | Auto-logged by completion-gate |
