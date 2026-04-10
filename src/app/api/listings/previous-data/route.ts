@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAuth } from "@/lib/api-auth";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 
 export async function GET(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let supabase;
+  try { supabase = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const address = req.nextUrl.searchParams.get("address");
   const listingId = req.nextUrl.searchParams.get("listingId");
@@ -15,8 +15,6 @@ export async function GET(req: NextRequest) {
       { status: 400 }
     );
   }
-
-  const supabase = createAdminClient();
 
   // Find previous listings at the same address (case-insensitive), excluding current
   let query = supabase

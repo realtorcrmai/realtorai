@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { FamilyMemberForm } from "@/components/contacts/FamilyMemberForm";
 
 export default async function NewFamilyMemberPage({
@@ -7,8 +7,8 @@ export default async function NewFamilyMemberPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = createAdminClient();
-  const { data: contact } = await supabase
+  const tc = await getAuthenticatedTenantClient();
+  const { data: contact } = await tc
     .from("contacts")
     .select("name")
     .eq("id", id)

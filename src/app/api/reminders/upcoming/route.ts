@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAuth } from "@/lib/api-auth";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 
 export type UpcomingReminder = {
   id: string;
@@ -34,19 +33,18 @@ function getDaysUntilNextOccurrence(dateStr: string): number {
 }
 
 export async function GET() {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
-
-  const supabase = createAdminClient();
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   // Fetch important dates from contacts
-  const { data: importantDates } = await supabase
+  const { data: importantDates } = await tc
     .from("contact_important_dates")
     .select("id, contact_id, date_type, date_value, contacts(name)")
     .order("date_value");
 
   // Fetch mortgage renewals
-  const { data: mortgages } = await supabase
+  const { data: mortgages } = await tc
     .from("mortgages")
     .select("id, contact_id, renewal_date, contacts(name)")
     .not("renewal_date", "is", null);

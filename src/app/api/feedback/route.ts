@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 
 /**
  * POST /api/feedback — Record feedback on an email
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "newsletterId and source required" }, { status: 400 });
     }
 
-    const supabase = createAdminClient();
+    const supabase = await getAuthenticatedTenantClient();
 
     // Record feedback
     const { error } = await supabase.from("email_feedback").insert({

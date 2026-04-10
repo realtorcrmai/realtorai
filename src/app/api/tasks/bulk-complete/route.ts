@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAuth } from "@/lib/api-auth";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 
 export async function POST(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const body = await req.json();
   const { ids } = body as { ids?: string[] };
@@ -16,10 +16,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const supabase = createAdminClient();
   const completedAt = new Date().toISOString();
 
-  const { error, count } = await supabase
+  const { error, count } = await tc
     .from("tasks")
     .update({ status: "completed", completed_at: completedAt })
     .in("id", ids)

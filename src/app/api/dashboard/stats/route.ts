@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 
 export async function GET() {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
-
-  const supabase = createAdminClient();
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const [
     { count: activeListings },
@@ -16,25 +14,25 @@ export async function GET() {
     { data: allDocs },
     { count: totalContacts },
   ] = await Promise.all([
-    supabase
+    tc
       .from("listings")
       .select("*", { count: "exact", head: true })
       .eq("status", "active"),
-    supabase
+    tc
       .from("appointments")
       .select("*", { count: "exact", head: true })
       .eq("status", "requested"),
-    supabase
+    tc
       .from("tasks")
       .select("id, status")
       .neq("status", "completed"),
-    supabase
+    tc
       .from("listings")
       .select("id, status"),
-    supabase
+    tc
       .from("listing_documents")
       .select("listing_id, doc_type"),
-    supabase
+    tc
       .from("contacts")
       .select("*", { count: "exact", head: true }),
   ]);
@@ -42,10 +40,10 @@ export async function GET() {
   const openTasks = (tasks ?? []).length;
 
   const requiredTypes = ["FINTRAC", "DORTS", "PDS"];
-  const activeListingRows = (allListings ?? []).filter((l) => l.status === "active");
-  const missingDocs = activeListingRows.filter((listing) => {
-    const docs = (allDocs ?? []).filter((d) => d.listing_id === listing.id);
-    const docTypes = docs.map((d) => d.doc_type);
+  const activeListingRows = (allListings ?? []).filter((l: Record<string, unknown>) => l.status === "active");
+  const missingDocs = activeListingRows.filter((listing: Record<string, unknown>) => {
+    const docs = (allDocs ?? []).filter((d: Record<string, unknown>) => d.listing_id === listing.id);
+    const docTypes = docs.map((d: Record<string, unknown>) => d.doc_type);
     return requiredTypes.some((t) => !docTypes.includes(t));
   }).length;
 

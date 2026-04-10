@@ -39,8 +39,8 @@ import { VoiceStatusIndicator } from "@/components/voice-agent/VoiceStatusIndica
 
 import type { FeatureKey } from "@/lib/features";
 
-const mainTabs: { href: string; label: string; icon: typeof Building2; featureKey: FeatureKey }[] = [
-  { href: "/listings", label: "Listings", icon: Building2, featureKey: "listings" },
+const mainTabs: { href: string; label: string; icon: typeof Building2; featureKey?: FeatureKey }[] = [
+  { href: "/listings", label: "Listings", icon: Building2 },
   { href: "/contacts", label: "Contacts", icon: Users, featureKey: "contacts" },
   { href: "/showings", label: "Showings", icon: Clock, featureKey: "showings" },
   { href: "/calendar", label: "Calendar", icon: Calendar, featureKey: "calendar" },
@@ -69,10 +69,10 @@ export function AppHeader() {
   const isAdmin = session?.user?.role === "admin";
 
   const filteredMainTabs = enabledFeatures.length > 0
-    ? mainTabs.filter((tab) => enabledFeatures.includes(tab.featureKey))
+    ? mainTabs.filter((tab) => !tab.featureKey || enabledFeatures.includes(tab.featureKey))
     : mainTabs;
   const filteredMoreItems = enabledFeatures.length > 0
-    ? moreItems.filter((item) => enabledFeatures.includes(item.featureKey))
+    ? moreItems.filter((item) => !item.featureKey || enabledFeatures.includes(item.featureKey))
     : moreItems;
   const allNav = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, featureKey: undefined as FeatureKey | undefined },

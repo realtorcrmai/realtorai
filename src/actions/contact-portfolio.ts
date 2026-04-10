@@ -54,7 +54,12 @@ const AddPortfolioSchema = z.object({
   property_type: z.string().nullable().optional(),
   property_category: z.enum(["primary_residence","investment","vacation","commercial","other"]).nullable().optional(),
   ownership_pct: z.number().min(0).max(100).default(100),
-  co_owners: z.array(z.record(z.string(), z.unknown())).default([]),
+  co_owners: z.array(z.object({
+    name: z.string().min(1),
+    role: z.enum(["individual", "partner", "spouse", "trust", "corporation"]),
+    ownership_pct: z.number().min(0).max(100),
+    contact_id: z.string().optional(),
+  })).max(10).default([]),
   purchase_price: z.number().positive().nullable().optional(),
   purchase_date: z.string().nullable().optional(),
   estimated_value: z.number().positive().nullable().optional(),
@@ -199,38 +204,57 @@ export async function autoCreateFromListingClose(
       realtor_id: string;
     };
 
-    // Seller side: mark as sold
-    await tc.from("contact_portfolio").insert({
-      contact_id: l.seller_id,
-      address: l.address,
-      property_type: l.property_type,
-      status: "sold",
-      purchase_price: l.sold_price,
-      purchase_date: l.closing_date,
-      linked_listing_id: l.id,
-      notes: "Auto-created on listing close",
-    });
+    const { computeLifecycleStage } = await import("./contacts");
 
-    // Buyer side: mark as owned
-    if (l.buyer_contact_id) {
-      await tc.from("contact_portfolio").insert({
-        contact_id: l.buyer_contact_id,
+    // Seller side: mark as sold (skip if already exists for this listing)
+    const { data: existingSeller } = await tc
+      .from("contact_portfolio")
+      .select("id")
+      .eq("contact_id", l.seller_id)
+      .eq("linked_listing_id", l.id)
+      .maybeSingle();
+
+    if (!existingSeller) {
+      const { error: sellerInsertErr } = await tc.from("contact_portfolio").insert({
+        contact_id: l.seller_id,
         address: l.address,
         property_type: l.property_type,
-        status: "owned",
+        status: "sold",
         purchase_price: l.sold_price,
         purchase_date: l.closing_date,
         linked_listing_id: l.id,
         notes: "Auto-created on listing close",
       });
+      if (sellerInsertErr) return { error: sellerInsertErr.message };
+    }
 
-      // Advance buyer's lifecycle to past_client
-      const { computeLifecycleStage } = await import("./contacts");
+    // Buyer side: mark as owned (skip if already exists for this listing)
+    if (l.buyer_contact_id) {
+      const { data: existingBuyer } = await tc
+        .from("contact_portfolio")
+        .select("id")
+        .eq("contact_id", l.buyer_contact_id)
+        .eq("linked_listing_id", l.id)
+        .maybeSingle();
+
+      if (!existingBuyer) {
+        const { error: buyerInsertErr } = await tc.from("contact_portfolio").insert({
+          contact_id: l.buyer_contact_id,
+          address: l.address,
+          property_type: l.property_type,
+          status: "owned",
+          purchase_price: l.sold_price,
+          purchase_date: l.closing_date,
+          linked_listing_id: l.id,
+          notes: "Auto-created on listing close",
+        });
+        if (buyerInsertErr) return { error: buyerInsertErr.message };
+      }
+
       await computeLifecycleStage(l.buyer_contact_id, l.realtor_id);
     }
 
     // Advance seller's lifecycle to past_client
-    const { computeLifecycleStage } = await import("./contacts");
     await computeLifecycleStage(l.seller_id, l.realtor_id);
 
     revalidatePath(`/listings/${listingId}`);
@@ -304,8 +328,7 @@ export async function upsertPrimaryResidence(
       .maybeSingle();
 
     if (existing) {
-      // Update address fields only — preserve everything else
-      await tc
+      const { error: updateErr } = await tc
         .from("contact_portfolio")
         .update({
           address,
@@ -315,9 +338,9 @@ export async function upsertPrimaryResidence(
           updated_at: new Date().toISOString(),
         })
         .eq("id", existing.id);
+      if (updateErr) return { error: updateErr.message };
     } else {
-      // Create new primary residence entry
-      await tc
+      const { error: insertErr } = await tc
         .from("contact_portfolio")
         .insert({
           contact_id: contactId,
@@ -330,6 +353,7 @@ export async function upsertPrimaryResidence(
           ownership_pct: 100,
           notes: "Auto-created from contact address",
         });
+      if (insertErr) return { error: insertErr.message };
     }
 
     revalidatePath(`/contacts/${contactId}`);
@@ -342,33 +366,40 @@ export async function upsertPrimaryResidence(
 // ============================================================
 // createContactFromCoOwner
 // Creates a minimal contact record for a co-owner who isn't in the system yet.
+// Uses tenant client — realtor_id derived from authenticated session.
 // ============================================================
+
+function formatPhoneE164(phone: string): string {
+  const clean = phone.replace(/\D/g, "");
+  if (!clean) return "";
+  return clean.startsWith("1") ? `+${clean}` : `+1${clean}`;
+}
 
 export async function createContactFromCoOwner(data: {
   name: string;
   phone?: string;
   email?: string;
-  realtorId: string;
 }): Promise<{ contactId: string | null; error: string | null }> {
   try {
-    const { createAdminClient } = await import("@/lib/supabase/admin");
-    const supabase = createAdminClient();
+    const tc = await getAuthenticatedTenantClient();
 
-    const { data: row, error } = await supabase
+    const phone = data.phone?.trim() ? formatPhoneE164(data.phone.trim()) : "";
+    const email = data.email?.trim() || null;
+
+    const { data: row, error } = await tc
       .from("contacts")
       .insert({
         name: data.name.trim(),
-        phone: data.phone?.trim() || "",
-        email: data.email?.trim() || null,
+        phone,
+        email,
         type: "buyer",
         pref_channel: "sms",
-        realtor_id: data.realtorId,
         source: "portfolio_co_owner",
       })
       .select("id")
       .single();
 
-    if (error) return { contactId: null, error: error.message };
+    if (error) return { contactId: null, error: "Could not create contact. Please try again." };
     return { contactId: row.id, error: null };
   } catch (err) {
     return { contactId: null, error: String(err) };

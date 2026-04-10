@@ -1,6 +1,5 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
 import { z } from "zod";
 
 const createFamilyMemberSchema = z.object({
@@ -15,13 +14,16 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try {
+    tc = await getAuthenticatedTenantClient();
+  } catch {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
 
   const { id } = await params;
-  const supabase = createAdminClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("contact_family_members")
     .select("*")
     .eq("contact_id", id)
@@ -35,11 +37,14 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try {
+    tc = await getAuthenticatedTenantClient();
+  } catch {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
 
   const { id } = await params;
-  const supabase = createAdminClient();
   const body = await req.json();
 
   const parsed = createFamilyMemberSchema.safeParse(body);
@@ -50,15 +55,15 @@ export async function POST(
     );
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("contact_family_members")
     .insert({
       contact_id: id,
-      name: body.name,
-      relationship: body.relationship,
-      phone: body.phone || null,
-      email: body.email || null,
-      notes: body.notes || null,
+      name: parsed.data.name,
+      relationship: parsed.data.relationship,
+      phone: parsed.data.phone || null,
+      email: parsed.data.email || null,
+      notes: parsed.data.notes || null,
     })
     .select()
     .single();
@@ -68,10 +73,13 @@ export async function POST(
 }
 
 export async function PATCH(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try {
+    tc = await getAuthenticatedTenantClient();
+  } catch {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
 
-  const supabase = createAdminClient();
   const url = new URL(req.url);
   const memberId = url.searchParams.get("member_id");
   if (!memberId) return NextResponse.json({ error: "member_id required" }, { status: 400 });
@@ -80,14 +88,14 @@ export async function PATCH(req: NextRequest) {
   const parsed = createFamilyMemberSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Validation failed" }, { status: 400 });
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("contact_family_members")
     .update({
-      name: body.name,
-      relationship: body.relationship,
-      phone: body.phone || null,
-      email: body.email || null,
-      notes: body.notes || null,
+      name: parsed.data.name,
+      relationship: parsed.data.relationship,
+      phone: parsed.data.phone || null,
+      email: parsed.data.email || null,
+      notes: parsed.data.notes || null,
     })
     .eq("id", memberId)
     .select()
@@ -98,16 +106,19 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try {
+    tc = await getAuthenticatedTenantClient();
+  } catch {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
 
-  const supabase = createAdminClient();
   const url = new URL(req.url);
   const memberId = url.searchParams.get("member_id");
 
   if (!memberId) return NextResponse.json({ error: "member_id required" }, { status: 400 });
 
-  const { error } = await supabase.from("contact_family_members").delete().eq("id", memberId);
+  const { error } = await tc.from("contact_family_members").delete().eq("id", memberId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

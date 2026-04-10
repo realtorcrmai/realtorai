@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 
 /**
  * GET /api/contacts/export
  * Export all contacts as CSV download.
  */
 export async function GET() {
-  const supabase = createAdminClient();
+  let tc;
+  try {
+    tc = await getAuthenticatedTenantClient();
+  } catch {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
 
-  const { data: contacts, error } = await supabase
+  const { data: contacts, error } = await tc
     .from("contacts")
     .select("name, email, phone, type, pref_channel, notes, address, source, lead_status, stage_bar, tags, company_name, job_title, created_at")
     .order("created_at", { ascending: false });

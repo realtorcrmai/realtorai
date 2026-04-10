@@ -1,12 +1,11 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
 
 export async function GET(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
-  const supabase = createAdminClient();
   const url = new URL(req.url);
   const months = parseInt(url.searchParams.get("months") || "6");
 
@@ -14,7 +13,7 @@ export async function GET(req: NextRequest) {
   const future = new Date();
   future.setMonth(future.getMonth() + months);
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("mortgages")
     .select("*, deals(id, title, contact_id, contacts(id, name, phone, email))")
     .gte("renewal_date", now.toISOString().split("T")[0])

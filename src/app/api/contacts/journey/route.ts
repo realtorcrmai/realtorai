@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 
 export async function PATCH(req: Request) {
   try {
+    const tc = await getAuthenticatedTenantClient();
     const body = await req.json();
     const { journeyId, ...updates } = body;
 
@@ -10,11 +11,9 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "journeyId required" }, { status: 400 });
     }
 
-    const supabase = createAdminClient();
-
     // Handle remove
     if (updates.remove) {
-      const { error } = await supabase
+      const { error } = await tc
         .from("contact_journeys")
         .delete()
         .eq("id", journeyId);
@@ -37,7 +36,7 @@ export async function PATCH(req: Request) {
 
     updateData.updated_at = new Date().toISOString();
 
-    const { error } = await supabase
+    const { error } = await tc
       .from("contact_journeys")
       .update(updateData)
       .eq("id", journeyId);
@@ -45,6 +44,9 @@ export async function PATCH(req: Request) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof Error && error.message.includes("Not authenticated")) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
