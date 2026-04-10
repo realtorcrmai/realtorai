@@ -101,7 +101,7 @@ class TenantQueryBuilder {
   }
 
   /** UPSERT with automatic realtor_id injection */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   upsert(
     data: Record<string, unknown> | Record<string, unknown>[],
     options?: { onConflict?: string; ignoreDuplicates?: boolean; count?: string }
@@ -174,12 +174,16 @@ export async function getRealtorId(): Promise<string> {
 
 /**
  * Convenience: get a tenant-scoped client for the current authenticated user.
+ * Uses React cache() to deduplicate within a single server request —
+ * layout + page calling this function share the same auth() lookup.
  *
  * Usage:
  *   const tc = await getAuthenticatedTenantClient();
  *   const { data } = await tc.from("contacts").select("*");
  */
-export async function getAuthenticatedTenantClient() {
+import { cache } from "react";
+
+export const getAuthenticatedTenantClient = cache(async () => {
   const realtorId = await getRealtorId();
   return tenantClient(realtorId);
-}
+});

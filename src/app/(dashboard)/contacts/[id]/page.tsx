@@ -109,10 +109,12 @@ export default async function ContactDetailPage({
       .select("id, contact_id, label, date, notes")
       .eq("contact_id", id)
       .order("date", { ascending: true }),
-    // 4. All contacts (id, name only — for referral selectors)
+    // 4. Contacts (id, name only — for referral/relationship selectors)
     supabase
       .from("contacts")
-      .select("id, name"),
+      .select("id, name")
+      .order("name", { ascending: true })
+      .limit(200),
     // 5. Buyer listings (skip for sellers)
     !isSeller
       ? supabase
@@ -151,19 +153,22 @@ export default async function ContactDetailPage({
       .select("*, workflows(id, name, slug)")
       .eq("contact_id", id)
       .order("created_at", { ascending: false }),
-    // 11. Available workflows (was waterfall 2)
+    // 11. Available workflows — only active ones
     supabase
       .from("workflows")
       .select("id, slug, name, is_active")
+      .eq("is_active", true)
       .order("name", { ascending: true }),
     // 12. Activity log — deferred to tab click (lazy-loaded)
     Promise.resolve({ data: null }),
-    // 13. All listings for properties of interest (was waterfall 4)
+    // 13. Recent listings for properties of interest (buyers only)
     !isSeller
       ? supabase
           .from("listings")
           .select("id, address, list_price")
+          .eq("status", "active")
           .order("created_at", { ascending: false })
+          .limit(50)
       : Promise.resolve({ data: [] }),
     // 14. Referred-by contact name (was waterfall 5)
     contact.referred_by_id
@@ -191,11 +196,8 @@ export default async function ContactDetailPage({
     (contact as Record<string, unknown>).household_id
       ? supabase.from("contacts").select("id, name, type").eq("household_id", (contact as Record<string, unknown>).household_id as string)
       : Promise.resolve({ data: [] }),
-    // 19. ALL workflow steps (filter client-side) — was sequential waterfall
-    supabase
-      .from("workflow_steps")
-      .select("id, workflow_id, step_order, name, action_type, delay_minutes, delay_unit, delay_value, exit_on_reply")
-      .order("step_order", { ascending: true }),
+    // 19. Placeholder — workflow steps fetched in second batch after enrollments are known
+    Promise.resolve({ data: null }),
     // 20. Contact journey (for Prospect 360 progress bar)
     supabase
       .from("contact_journeys")
@@ -203,13 +205,13 @@ export default async function ContactDetailPage({
       .eq("contact_id", id)
       .limit(1)
       .maybeSingle(),
-    // 21. Newsletters sent to this contact (for email history timeline)
+    // 21. Newsletters sent to this contact (for email history timeline — no html_body)
     supabase
       .from("newsletters")
-      .select("id, subject, email_type, status, html_body, sent_at, created_at, quality_score, ai_context")
+      .select("id, subject, email_type, status, sent_at, created_at, quality_score, ai_context")
       .eq("contact_id", id)
       .order("created_at", { ascending: false })
-      .limit(30),
+      .limit(20),
     // 22. Contact context entries (objections, preferences, timeline)
     supabase
       .from("contact_context")
@@ -219,7 +221,7 @@ export default async function ContactDetailPage({
     // 23. Family members
     supabase
       .from("contact_family_members")
-      .select("*")
+      .select("id, contact_id, realtor_id, name, relationship, date_of_birth, notes, created_at")
       .eq("contact_id", id)
       .order("created_at", { ascending: true }),
     // 24. Buyer journeys (active/paused only — buyers only)
@@ -243,7 +245,7 @@ export default async function ContactDetailPage({
     // 26. Contact portfolio items
     supabase
       .from("contact_portfolio")
-      .select("*")
+      .select("id, contact_id, address, unit_number, city, province, postal_code, property_type, property_category, ownership_pct, co_owners, purchase_price, purchase_date, estimated_value, bc_assessed_value, mortgage_balance, monthly_rental_income, strata_fee, status, linked_listing_id, notes, created_at, updated_at")
       .eq("contact_id", id)
       .order("purchase_date", { ascending: false }),
   ]);
@@ -252,14 +254,29 @@ export default async function ContactDetailPage({
   const household = householdData;
   const householdMembers = (householdMembersData ?? []) as { id: string; name: string; type: string }[];
 
-  // Fetch newsletter events for email history timeline
+  // ── Second parallel batch: queries that depend on first-batch results ──
   const newsletterIds = (contactNewsletters ?? []).map((n: { id: string }) => n.id);
-  const { data: newsletterEvents } = newsletterIds.length > 0
-    ? await supabase
-        .from("newsletter_events")
-        .select("id, newsletter_id, event_type, metadata, created_at")
-        .in("newsletter_id", newsletterIds)
-    : { data: [] };
+  const enrolledWorkflowIds = (workflowEnrollments ?? [])
+    .filter((e: { status: string }) => e.status === "active" || e.status === "paused")
+    .map((e: { workflow_id: string }) => e.workflow_id);
+
+  const [{ data: newsletterEvents }, { data: scopedWorkflowSteps }] = await Promise.all([
+    // Newsletter events — only if there are newsletters
+    newsletterIds.length > 0
+      ? supabase
+          .from("newsletter_events")
+          .select("id, newsletter_id, event_type, metadata, created_at")
+          .in("newsletter_id", newsletterIds)
+      : Promise.resolve({ data: [] as any[] }),
+    // Workflow steps — only for enrolled workflows
+    enrolledWorkflowIds.length > 0
+      ? supabase
+          .from("workflow_steps")
+          .select("id, workflow_id, step_order, name, action_type, delay_minutes, delay_unit, delay_value, exit_on_reply")
+          .in("workflow_id", enrolledWorkflowIds)
+          .order("step_order", { ascending: true })
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
 
   // Merge events into newsletters
   const newslettersWithEvents = (contactNewsletters ?? []).map((nl: Record<string, unknown>) => ({
@@ -270,14 +287,8 @@ export default async function ContactDetailPage({
   // Parse intelligence
   const intel = contact.newsletter_intelligence as Record<string, unknown> | null;
 
-  // Filter workflow steps to only active/paused enrollment workflows (client-side)
-  const activeEnrollmentWorkflowIds = (workflowEnrollments ?? [])
-    .filter((e: { status: string }) => e.status === "active" || e.status === "paused")
-    .map((e: { workflow_id: string }) => e.workflow_id);
-  const activeWfIdSet = new Set(activeEnrollmentWorkflowIds);
-  const workflowSteps = (allWorkflowSteps ?? []).filter(
-    (s: { workflow_id: string }) => activeWfIdSet.has(s.workflow_id)
-  );
+  // Workflow steps are already scoped to enrolled workflows from second batch
+  const workflowSteps = scopedWorkflowSteps ?? [];
 
   // Group steps by workflow_id
   type WorkflowStepRow = {
