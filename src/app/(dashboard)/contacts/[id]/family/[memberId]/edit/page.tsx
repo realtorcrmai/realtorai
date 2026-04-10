@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { notFound } from "next/navigation";
 import { FamilyMemberForm } from "@/components/contacts/FamilyMemberForm";
 
@@ -8,11 +8,11 @@ export default async function EditFamilyMemberPage({
   params: Promise<{ id: string; memberId: string }>;
 }) {
   const { id, memberId } = await params;
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
   const [{ data: contact }, { data: member }] = await Promise.all([
-    supabase.from("contacts").select("name").eq("id", id).single(),
-    supabase.from("contact_family_members").select("*").eq("id", memberId).single(),
+    tc.from("contacts").select("name").eq("id", id).single(),
+    tc.from("contact_family_members").select("*").eq("id", memberId).single(),
   ]);
 
   if (!member) notFound();

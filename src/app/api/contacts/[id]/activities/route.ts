@@ -1,18 +1,20 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try {
+    tc = await getAuthenticatedTenantClient();
+  } catch {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
 
   const { id } = await params;
-  const supabase = createAdminClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("activity_log")
     .select("id, contact_id, listing_id, activity_type, description, metadata, created_at")
     .eq("contact_id", id)

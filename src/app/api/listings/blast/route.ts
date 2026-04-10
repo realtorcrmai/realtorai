@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { sendBatchEmails } from "@/lib/resend";
 
 export const maxDuration = 120;
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "listingId required" }, { status: 400 });
     }
 
-    const supabase = createAdminClient();
+    const supabase = await getAuthenticatedTenantClient();
 
     // 1. Get listing data
     const { data: listing, error: listingErr } = await supabase
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
 
       emails = (agents || [])
         .map((a: { email: string | null }) => a.email)
-        .filter((e): e is string => !!e && e.includes("@"));
+        .filter((e: string | null): e is string => !!e && e.includes("@"));
     }
 
     if (recipientEmails && Array.isArray(recipientEmails)) {
