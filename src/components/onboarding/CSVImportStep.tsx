@@ -17,8 +17,15 @@ const COLUMN_MAP: Record<string, string> = {
 
 const CRM_FIELDS = ["name", "first_name", "last_name", "email", "phone", "type", "notes", "ignore"];
 
+export type ReferralSuggestion = {
+  contact_id: string;
+  contact_name: string;
+  possible_referrer_id: string;
+  possible_referrer_name: string;
+};
+
 interface CSVImportStepProps {
-  onImported: (count: number) => void;
+  onImported: (count: number, suggestions?: ReferralSuggestion[]) => void;
   onSkip?: () => void;
 }
 
@@ -119,7 +126,7 @@ export function CSVImportStep({ onImported, onSkip }: CSVImportStepProps) {
       if (!res.ok) {
         setError(data.error || "Import failed");
       } else {
-        onImported(data.imported || contacts.length);
+        onImported(data.imported || contacts.length, data.referral_suggestions);
       }
     } catch {
       setError("Import failed. Please try again.");

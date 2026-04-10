@@ -40,6 +40,7 @@ async function handleJSONImport(tc: any, request: NextRequest) {
   let imported = 0;
   let skipped = 0;
   const errors: string[] = [];
+  const newContacts: Array<{ id: string; name: string }> = [];
 
   // Batch insert in chunks of 50
   for (let i = 0; i < contacts.length; i += 50) {
@@ -61,9 +62,12 @@ async function handleJSONImport(tc: any, request: NextRequest) {
     const { data, error } = await tc
       .from("contacts")
       .insert(rows)
-      .select("id");
+      .select("id, name");
 
-    if (data) imported += data.length;
+    if (data) {
+      imported += data.length;
+      newContacts.push(...data.map((d: { id: string; name: string }) => ({ id: d.id, name: d.name })));
+    }
     if (error) {
       errors.push(error.message);
       skipped += rows.length;
@@ -75,7 +79,67 @@ async function handleJSONImport(tc: any, request: NextRequest) {
     await tc.from("contacts").delete().eq("is_sample", true);
   }
 
-  return NextResponse.json({ ok: true, imported, skipped, errors: errors.slice(0, 5) });
+  // ── Referral detection: two-word names where second word matches an existing contact ──
+  const referralSuggestions: Array<{
+    contact_id: string;
+    contact_name: string;
+    possible_referrer_id: string;
+    possible_referrer_name: string;
+  }> = [];
+
+  if (newContacts.length > 0) {
+    // Get all contacts (including just-imported) for name matching
+    const { data: allContacts } = await tc
+      .from("contacts")
+      .select("id, name")
+      .not("name", "is", null);
+
+    if (allContacts && allContacts.length > 0) {
+      // Build first-name lookup: "anish" → [{ id, fullName: "Anish Kumar" }]
+      const firstNameMap = new Map<string, Array<{ id: string; name: string }>>();
+      for (const c of allContacts) {
+        if (!c.name) continue;
+        const firstName = c.name.split(/\s+/)[0]?.toLowerCase();
+        if (firstName && firstName.length >= 2) {
+          if (!firstNameMap.has(firstName)) firstNameMap.set(firstName, []);
+          firstNameMap.get(firstName)!.push({ id: c.id, name: c.name });
+        }
+      }
+
+      // Check newly imported contacts for two-word name pattern
+      const newContactIds = new Set(newContacts.map((c) => c.id));
+      for (const nc of newContacts) {
+        const parts = nc.name.trim().split(/\s+/);
+        if (parts.length !== 2) continue; // Only exact two-word names
+
+        const secondWord = parts[1].toLowerCase();
+        const matches = firstNameMap.get(secondWord) || [];
+
+        // Filter: don't suggest self, don't suggest other just-imported contacts
+        const validMatches = matches.filter(
+          (m) => m.id !== nc.id && !newContactIds.has(m.id)
+        );
+
+        if (validMatches.length > 0) {
+          // Take the best match (first one)
+          referralSuggestions.push({
+            contact_id: nc.id,
+            contact_name: parts[0],
+            possible_referrer_id: validMatches[0].id,
+            possible_referrer_name: validMatches[0].name,
+          });
+        }
+      }
+    }
+  }
+
+  return NextResponse.json({
+    ok: true,
+    imported,
+    skipped,
+    errors: errors.slice(0, 5),
+    referral_suggestions: referralSuggestions.slice(0, 10),
+  });
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

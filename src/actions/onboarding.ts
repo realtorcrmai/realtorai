@@ -167,6 +167,75 @@ export async function saveFamilyInfo(familyInfo: { spouse_name?: string; kids_co
   return { success: true };
 }
 
+// ── Create Family Member Contacts ──
+
+export async function createFamilyContacts(
+  members: Array<{ name: string; phone?: string; email?: string; relationship: string }>
+) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated" };
+
+  const supabase = createAdminClient();
+  const validMembers = members.filter((m) => m.name.trim().length >= 2);
+  if (validMembers.length === 0) return { success: true, created: 0 };
+
+  const created: Array<{ id: string; name: string; relationship: string }> = [];
+
+  for (const member of validMembers) {
+    const phone = member.phone?.trim() || null;
+    const email = member.email?.trim() || null;
+
+    const { data, error } = await supabase
+      .from("contacts")
+      .insert({
+        realtor_id: session.user.id,
+        name: member.name.trim(),
+        phone,
+        email,
+        type: "other",
+        source: "onboarding_family",
+        notes: `Family member (${member.relationship})`,
+        is_sample: false,
+      })
+      .select("id")
+      .single();
+
+    if (data) {
+      created.push({ id: data.id, name: member.name.trim(), relationship: member.relationship });
+    } else if (error) {
+      console.error(`[family-contacts] Error creating ${member.name}:`, error.message);
+    }
+  }
+
+  // Save family info on user record for profile reference
+  await supabase.from("users").update({
+    family_info: created.map((c) => ({
+      contact_id: c.id,
+      name: c.name,
+      relationship: c.relationship,
+    })),
+  }).eq("id", session.user.id);
+
+  return { success: true, created: created.length };
+}
+
+// ── Link Referral ──
+
+export async function linkReferral(contactId: string, referrerId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated" };
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("contacts")
+    .update({ referred_by_id: referrerId })
+    .eq("id", contactId)
+    .eq("realtor_id", session.user.id);
+
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
 // ── Send Team Invite ──
 
 export async function sendTeamInvite(emails: string[]) {

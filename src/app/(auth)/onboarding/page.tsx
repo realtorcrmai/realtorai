@@ -35,12 +35,13 @@ import {
   updateProfessionalInfo,
   seedSampleData,
   getOnboardingProgress,
-  saveFamilyInfo,
+  createFamilyContacts,
   sendTeamInvite,
+  linkReferral,
 } from "@/actions/onboarding";
 import { EmailSyncStep } from "@/components/onboarding/EmailSyncStep";
 import { MLSConnectionStep } from "@/components/onboarding/MLSConnectionStep";
-import { CSVImportStep } from "@/components/onboarding/CSVImportStep";
+import { CSVImportStep, type ReferralSuggestion } from "@/components/onboarding/CSVImportStep";
 import { CelebrationScreen } from "@/components/onboarding/CelebrationScreen";
 import { AIBioGenerator } from "@/components/onboarding/AIBioGenerator";
 
@@ -70,15 +71,18 @@ export default function OnboardingPage() {
   // Step 1: Phone
   const [phone, setPhone] = useState("");
 
-  // Step 1: Family details
-  const [spouseName, setSpouseName] = useState("");
-  const [kidsCount, setKidsCount] = useState("");
+  // Step 1: Family members
+  type FamilyMember = { name: string; phone: string; email: string; relationship: string };
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
 
   // Step 2: Contact import
   const [importSource, setImportSource] = useState<"none" | "gmail" | "apple">("none");
   const [importedContacts, setImportedContacts] = useState<unknown[]>([]);
   const [importCount, setImportCount] = useState(0);
   const [fetchingContacts, setFetchingContacts] = useState(false);
+
+  // Step 2: Referral suggestions (from import)
+  const [referralSuggestions, setReferralSuggestions] = useState<ReferralSuggestion[]>([]);
 
   // Step 5: Professional info
   const [brokerage, setBrokerage] = useState("");
@@ -132,13 +136,11 @@ export default function OnboardingPage() {
     setLoading(false);
   };
 
-  // ── Step 1: Save family info before advancing ──
+  // ── Step 1: Create family member contacts before advancing ──
   const handleStep1Continue = async () => {
-    if (spouseName.trim() || kidsCount) {
-      await saveFamilyInfo({
-        spouse_name: spouseName.trim() || undefined,
-        kids_count: kidsCount ? parseInt(kidsCount, 10) : undefined,
-      });
+    const validMembers = familyMembers.filter((m) => m.name.trim().length >= 2);
+    if (validMembers.length > 0) {
+      await createFamilyContacts(validMembers);
     }
     goNext();
   };
@@ -429,33 +431,99 @@ export default function OnboardingPage() {
                     </select>
                   </div>
 
-                  {/* Family details (optional) */}
+                  {/* Family members (optional — creates contacts) */}
                   <div className="space-y-3 pt-2 border-t">
-                    <div className="flex items-center gap-2">
-                      <Heart className="h-4 w-4 text-muted-foreground" />
-                      <Label className="text-sm text-muted-foreground">Family details (optional)</Label>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Heart className="h-4 w-4 text-muted-foreground" />
+                        <Label className="text-sm text-muted-foreground">Family members (optional)</Label>
+                      </div>
+                      {familyMembers.length < 6 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-7"
+                          onClick={() => setFamilyMembers([...familyMembers, { name: "", phone: "", email: "", relationship: "spouse" }])}
+                        >
+                          <Plus className="h-3 w-3 mr-1" /> Add
+                        </Button>
+                      )}
                     </div>
-                    <div className="space-y-2">
-                      <Input
-                        value={spouseName}
-                        onChange={(e) => setSpouseName(e.target.value)}
-                        placeholder="Spouse / partner name"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <select
-                        value={kidsCount}
-                        onChange={(e) => setKidsCount(e.target.value)}
-                        className="w-full h-11 rounded-md border bg-background px-3 text-sm"
+                    {familyMembers.length === 0 && (
+                      <button
+                        onClick={() => setFamilyMembers([{ name: "", phone: "", email: "", relationship: "spouse" }])}
+                        className="w-full p-3 rounded-lg border-2 border-dashed border-gray-200 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors"
                       >
-                        <option value="">Number of kids</option>
-                        <option value="0">No kids</option>
-                        <option value="1">1 kid</option>
-                        <option value="2">2 kids</option>
-                        <option value="3">3 kids</option>
-                        <option value="4">4+ kids</option>
-                      </select>
-                    </div>
+                        Add a family member as a contact
+                      </button>
+                    )}
+                    {familyMembers.map((member, i) => (
+                      <div key={i} className="space-y-2 p-3 rounded-lg bg-muted/30 border relative">
+                        <button
+                          onClick={() => setFamilyMembers(familyMembers.filter((_, j) => j !== i))}
+                          className="absolute top-2 right-2 text-muted-foreground hover:text-destructive"
+                          aria-label="Remove family member"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                        <div className="flex gap-2">
+                          <Input
+                            value={member.name}
+                            onChange={(e) => {
+                              const updated = [...familyMembers];
+                              updated[i] = { ...member, name: e.target.value };
+                              setFamilyMembers(updated);
+                            }}
+                            placeholder="Name"
+                            className="h-9 text-sm flex-1"
+                          />
+                          <select
+                            value={member.relationship}
+                            onChange={(e) => {
+                              const updated = [...familyMembers];
+                              updated[i] = { ...member, relationship: e.target.value };
+                              setFamilyMembers(updated);
+                            }}
+                            className="h-9 rounded-md border bg-background px-2 text-xs w-24"
+                          >
+                            <option value="spouse">Spouse</option>
+                            <option value="child">Child</option>
+                            <option value="parent">Parent</option>
+                            <option value="sibling">Sibling</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            value={member.phone}
+                            onChange={(e) => {
+                              const updated = [...familyMembers];
+                              updated[i] = { ...member, phone: e.target.value };
+                              setFamilyMembers(updated);
+                            }}
+                            placeholder="Phone"
+                            type="tel"
+                            className="h-9 text-sm flex-1"
+                          />
+                          <Input
+                            value={member.email}
+                            onChange={(e) => {
+                              const updated = [...familyMembers];
+                              updated[i] = { ...member, email: e.target.value };
+                              setFamilyMembers(updated);
+                            }}
+                            placeholder="Email"
+                            type="email"
+                            className="h-9 text-sm flex-1"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    {familyMembers.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        These will be added as contacts in your CRM
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex gap-3 pt-2">
@@ -533,9 +601,10 @@ export default function OnboardingPage() {
 
                       {/* CSV Import option (O5) */}
                       <CSVImportStep
-                        onImported={(count) => {
+                        onImported={(count, suggestions) => {
                           setImportCount(count);
                           setImportSource("none");
+                          if (suggestions?.length) setReferralSuggestions(suggestions);
                         }}
                         onSkip={goNext}
                       />
@@ -587,6 +656,47 @@ export default function OnboardingPage() {
                       <p className="text-sm text-muted-foreground">
                         You&apos;re ahead of 80% of new users
                       </p>
+
+                      {/* Referral suggestions */}
+                      {referralSuggestions.length > 0 && (
+                        <div className="space-y-2 text-left">
+                          <p className="text-sm font-medium">We noticed some possible referrals:</p>
+                          {referralSuggestions.map((s) => (
+                            <div
+                              key={s.contact_id}
+                              className="flex items-center gap-3 p-3 rounded-lg border bg-amber-50/50 text-sm"
+                            >
+                              <div className="flex-1">
+                                <span className="font-medium">{s.contact_name}</span>
+                                <span className="text-muted-foreground"> may have been referred by </span>
+                                <span className="font-medium">{s.possible_referrer_name}</span>
+                              </div>
+                              <div className="flex gap-1 shrink-0">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs bg-white"
+                                  onClick={async () => {
+                                    await linkReferral(s.contact_id, s.possible_referrer_id);
+                                    setReferralSuggestions((prev) => prev.filter((r) => r.contact_id !== s.contact_id));
+                                  }}
+                                >
+                                  <Check className="h-3 w-3 mr-1" /> Link
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 text-xs"
+                                  onClick={() => setReferralSuggestions((prev) => prev.filter((r) => r.contact_id !== s.contact_id))}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       <Button className="w-full" onClick={goNext}>
                         Continue <ArrowRight className="h-4 w-4 ml-1" />
                       </Button>
