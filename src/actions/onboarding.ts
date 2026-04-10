@@ -107,6 +107,7 @@ export async function updateProfessionalInfo(data: {
   licenseNumber?: string;
   bio?: string;
   timezone?: string;
+  phone?: string;
 }) {
   const session = await auth();
   if (!session?.user?.id) return { error: "Not authenticated" };
@@ -117,6 +118,7 @@ export async function updateProfessionalInfo(data: {
   if (data.licenseNumber !== undefined) updates.license_number = data.licenseNumber.trim() || null;
   if (data.bio !== undefined) updates.bio = data.bio.trim() || null;
   if (data.timezone !== undefined) updates.timezone = data.timezone;
+  if (data.phone !== undefined) updates.phone = data.phone.trim() || null;
 
   if (Object.keys(updates).length > 0) {
     await supabase.from("users").update(updates).eq("id", session.user.id);
