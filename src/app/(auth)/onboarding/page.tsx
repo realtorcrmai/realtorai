@@ -35,6 +35,7 @@ import { EmailSyncStep } from "@/components/onboarding/EmailSyncStep";
 import { MLSConnectionStep } from "@/components/onboarding/MLSConnectionStep";
 import { CSVImportStep } from "@/components/onboarding/CSVImportStep";
 import { CelebrationScreen } from "@/components/onboarding/CelebrationScreen";
+import { AIBioGenerator } from "@/components/onboarding/AIBioGenerator";
 
 const STEPS = [
   { num: 1, label: "Profile", icon: Camera },
@@ -605,6 +606,7 @@ export default function OnboardingPage() {
                         rows={3}
                         className="w-full rounded-md border bg-background px-3 py-2 text-sm resize-none"
                       />
+                      <AIBioGenerator bio={bio} onBioChange={setBio} hasBrokerage={brokerage.length > 0} />
                     </div>
                   </div>
 
