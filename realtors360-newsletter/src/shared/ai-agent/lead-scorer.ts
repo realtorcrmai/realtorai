@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { anthropic, CLAUDE_MODEL } from '../../lib/anthropic.js';
+import { config } from '../../config.js';
 import { createWithRetry } from '../anthropic-retry.js';
 import { retrieveContext } from '../rag/retriever.js';
 import { logger } from '../../lib/logger.js';
@@ -144,7 +145,7 @@ export interface ScoreBatchResult {
 // Constants
 // ---------------------------------------------------------------------------
 
-const SCORING_MODEL = process.env.AI_SCORING_MODEL || CLAUDE_MODEL;
+const SCORING_MODEL = config.AI_SCORING_MODEL;
 
 const SCORING_SYSTEM_PROMPT = `You are a real estate lead scoring AI for a BC REALTOR CRM.
 

@@ -2,6 +2,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import AnthropicSdk from '@anthropic-ai/sdk';
 import type { ToolContext } from '../index.js';
 import { createWithRetry } from '../../../shared/anthropic-retry.js';
+import { config } from '../../../config.js';
 import { logger } from '../../../lib/logger.js';
 
 const anthropic = new AnthropicSdk();
@@ -56,7 +57,7 @@ Return ONLY valid JSON, no markdown fences.`;
 
   try {
     const message = await createWithRetry(anthropic, {
-      model: process.env.AI_SCORING_MODEL || 'claude-sonnet-4-20250514',
+      model: config.AI_SCORING_MODEL,
       max_tokens: 600,
       messages: [{ role: 'user', content: prompt }],
     });

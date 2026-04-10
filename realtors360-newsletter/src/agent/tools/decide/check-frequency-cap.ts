@@ -25,11 +25,11 @@ export async function checkFrequencyCap(
 
   const [dailyRes, weeklyRes, lastSentRes] = await Promise.all([
     ctx.db.from('newsletters').select('id', { count: 'exact', head: true })
-      .eq('contact_id', contactId).eq('status', 'sent').gte('sent_at', oneDayAgo),
+      .eq('contact_id', contactId).eq('realtor_id', ctx.realtorId).eq('status', 'sent').gte('sent_at', oneDayAgo),
     ctx.db.from('newsletters').select('id', { count: 'exact', head: true })
-      .eq('contact_id', contactId).eq('status', 'sent').gte('sent_at', sevenDaysAgo),
+      .eq('contact_id', contactId).eq('realtor_id', ctx.realtorId).eq('status', 'sent').gte('sent_at', sevenDaysAgo),
     ctx.db.from('newsletters').select('sent_at')
-      .eq('contact_id', contactId).eq('status', 'sent')
+      .eq('contact_id', contactId).eq('realtor_id', ctx.realtorId).eq('status', 'sent')
       .order('sent_at', { ascending: false }).limit(1).maybeSingle(),
   ]);
 

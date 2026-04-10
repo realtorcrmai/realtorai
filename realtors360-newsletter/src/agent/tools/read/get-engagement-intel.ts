@@ -38,6 +38,7 @@ export async function getEngagementIntel(
       .from('newsletters')
       .select('id, email_type, status, sent_at')
       .eq('contact_id', contactId)
+      .eq('realtor_id', ctx.realtorId)
       .order('sent_at', { ascending: false })
       .limit(10),
   ]);

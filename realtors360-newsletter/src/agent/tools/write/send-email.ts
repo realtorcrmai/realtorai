@@ -40,6 +40,7 @@ export async function sendEmailTool(
     .from('contacts')
     .select('id, email, newsletter_unsubscribed, casl_consent_given')
     .eq('id', draft.contact_id)
+    .eq('realtor_id', ctx.realtorId)
     .maybeSingle();
 
   if (!contact) return { error: 'Contact not found' };

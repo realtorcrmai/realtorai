@@ -211,6 +211,9 @@ export function AppHeader() {
         {/* Voice Agent Status */}
         <VoiceStatusIndicator />
 
+        {/* Search shortcut hint */}
+        <span className="hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-border bg-muted text-[10px] text-muted-foreground font-mono">⌘K</span>
+
         {/* Help */}
         <ContextualHelpButton />
 

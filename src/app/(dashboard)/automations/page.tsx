@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { WORKFLOW_BLUEPRINTS } from "@/lib/constants";
 import { BackfillButton } from "@/components/automations/BackfillButton";
+import { AnimatedCounter } from "@/components/shared/AnimatedCounter";
 
 export const dynamic = "force-dynamic";
 
@@ -132,9 +133,9 @@ export default async function AutomationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
-                  {activeWorkflows}
+                  <AnimatedCounter value={activeWorkflows} />
                   <span className="text-sm font-normal text-muted-foreground">
-                    /{workflowList.length}
+                    /<AnimatedCounter value={workflowList.length} />
                   </span>
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -153,7 +154,7 @@ export default async function AutomationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
-                  {totalActiveEnrollments}
+                  <AnimatedCounter value={totalActiveEnrollments} />
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Active Enrollments
@@ -171,7 +172,7 @@ export default async function AutomationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
-                  {templateCount}
+                  <AnimatedCounter value={templateCount} />
                 </p>
                 <p className="text-xs text-muted-foreground">Templates</p>
               </div>
@@ -187,7 +188,7 @@ export default async function AutomationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
-                  {unreadCount}
+                  <AnimatedCounter value={unreadCount} />
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Unread Notifications

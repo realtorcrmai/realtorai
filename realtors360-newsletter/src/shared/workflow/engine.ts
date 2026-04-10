@@ -21,6 +21,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
+import { config } from '../../config.js';
 import { logger } from '../../lib/logger.js';
 import { sendEmail } from '../../lib/resend.js';
 import { sendGenericMessage } from '../../lib/twilio.js';
@@ -120,7 +121,7 @@ ${channel === 'email' ? 'Return JSON: { "subject": "...", "body": "..." }' : 'Re
 Return ONLY valid JSON, no markdown.`;
 
   const message = await createWithRetry(anthropic, {
-    model: process.env.AI_SCORING_MODEL || 'claude-sonnet-4-20250514',
+    model: config.AI_SCORING_MODEL,
     max_tokens: 500,
     messages: [{ role: 'user', content: prompt }],
   });
