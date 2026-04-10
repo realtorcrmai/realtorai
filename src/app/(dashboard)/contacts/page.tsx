@@ -89,17 +89,21 @@ export default async function ContactsPage({
     <div className="flex items-center justify-center h-full min-h-[60vh]">
       <Card className="max-w-sm w-full animate-float-in">
         <CardContent className="py-12 text-center">
-          <Users className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+          <div className="text-4xl mb-4">📇</div>
           <h2 className="text-lg font-semibold text-foreground mb-1">
-            No Contacts Yet
+            Your client relationships start here
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Add your first contact using the form in the sidebar to get
-            started.
+          <p className="text-sm text-muted-foreground mb-4">
+            Import your contacts from Gmail, CSV, or add them manually to get started.
           </p>
-          <div className="flex items-center justify-center gap-1.5 mt-4 text-xs text-muted-foreground/60">
-            <ArrowLeft className="h-3.5 w-3.5" />
-            <span>Use the form on the left to add one</span>
+          <div className="flex flex-col gap-2">
+            <a
+              href="/contacts/new"
+              className="inline-flex items-center justify-center px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Import Contacts
+            </a>
+            <span className="text-xs text-muted-foreground">Or use the form on the left to add one manually</span>
           </div>
         </CardContent>
       </Card>
