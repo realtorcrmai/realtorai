@@ -81,3 +81,26 @@ export const PLANS: Record<string, Plan> = {
 export type PlanId = keyof typeof PLANS;
 export const DEFAULT_PLAN: PlanId = "free";
 export const PLAN_IDS = Object.keys(PLANS) as PlanId[];
+
+/** Check if a user's trial is still active */
+export function isTrialActive(trialEndsAt: string | null | undefined): boolean {
+  if (!trialEndsAt) return false;
+  return new Date(trialEndsAt) > new Date();
+}
+
+/** Get the effective plan — trial plan if active, otherwise base plan */
+export function getEffectivePlan(
+  basePlan: string,
+  trialEndsAt: string | null | undefined,
+  trialPlan: string | null | undefined,
+): string {
+  if (trialPlan && isTrialActive(trialEndsAt)) return trialPlan;
+  return basePlan || "free";
+}
+
+/** Days remaining in trial (0 if expired or no trial) */
+export function trialDaysRemaining(trialEndsAt: string | null | undefined): number {
+  if (!trialEndsAt) return 0;
+  const diff = new Date(trialEndsAt).getTime() - Date.now();
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+}

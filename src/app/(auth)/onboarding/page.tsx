@@ -22,6 +22,8 @@ import {
   LayoutDashboard,
   Mail,
   Sparkles,
+  Phone,
+  Globe,
 } from "lucide-react";
 import {
   advanceOnboardingStep,
@@ -29,13 +31,20 @@ import {
   updateProfessionalInfo,
   seedSampleData,
 } from "@/actions/onboarding";
+import { EmailSyncStep } from "@/components/onboarding/EmailSyncStep";
+import { MLSConnectionStep } from "@/components/onboarding/MLSConnectionStep";
+import { CSVImportStep } from "@/components/onboarding/CSVImportStep";
+import { CelebrationScreen } from "@/components/onboarding/CelebrationScreen";
+import { AIBioGenerator } from "@/components/onboarding/AIBioGenerator";
 
 const STEPS = [
   { num: 1, label: "Profile", icon: Camera },
   { num: 2, label: "Contacts", icon: Users },
-  { num: 3, label: "Calendar", icon: Calendar },
-  { num: 4, label: "Details", icon: Building2 },
-  { num: 5, label: "Start", icon: ArrowRight },
+  { num: 3, label: "Email", icon: Mail },
+  { num: 4, label: "Calendar", icon: Calendar },
+  { num: 5, label: "Details", icon: Building2 },
+  { num: 6, label: "MLS", icon: Globe },
+  { num: 7, label: "Start", icon: ArrowRight },
 ];
 
 export default function OnboardingPage() {
@@ -57,7 +66,10 @@ export default function OnboardingPage() {
   const [vcardFile, setVcardFile] = useState<File | null>(null);
   const [fetchingContacts, setFetchingContacts] = useState(false);
 
-  // Step 4: Professional info
+  // Step 1: Phone (moved from signup — S1)
+  const [phone, setPhone] = useState("");
+
+  // Step 5: Professional info
   const [brokerage, setBrokerage] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
   const [bio, setBio] = useState("");
@@ -185,7 +197,7 @@ export default function OnboardingPage() {
     return () => clearTimeout(timer);
   }, [brokerage]);
 
-  // ── Step 4: Save professional info ──
+  // ── Step 5: Save professional info (includes phone from Step 1) ──
   const saveProfessionalInfo = async () => {
     setLoading(true);
     await updateProfessionalInfo({
@@ -193,16 +205,27 @@ export default function OnboardingPage() {
       licenseNumber,
       bio,
       timezone,
+      phone,
     });
     setLoading(false);
     goNext();
   };
 
-  // ── Step 5: Complete onboarding ──
+  // Celebration state
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationDest, setCelebrationDest] = useState("/");
+
+  // ── Step 7: Complete onboarding → show celebration ──
   const completeOnboarding = async (destination: string) => {
-    await advanceOnboardingStep(6);
-    router.push(destination);
+    await advanceOnboardingStep(8); // 7 steps + done = 8
+    setCelebrationDest(destination);
+    setShowCelebration(true);
   };
+
+  // Show celebration overlay after onboarding completion
+  if (showCelebration) {
+    return <CelebrationScreen destination={celebrationDest} />;
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -224,11 +247,13 @@ export default function OnboardingPage() {
               your workspace
             </h1>
             <p className="text-lg text-primary-foreground/80 max-w-md">
-              {step === 1 && "Add a photo so clients recognize you."}
+              {step === 1 && "Add a photo and phone so clients recognize you."}
               {step === 2 && "Import your contacts to get started fast."}
-              {step === 3 && "Connect your calendar for showing management."}
-              {step === 4 && "Add your professional details."}
-              {step === 5 && "You're all set! Choose where to start."}
+              {step === 3 && "Connect your email for conversation logging."}
+              {step === 4 && "Connect your calendar for showing management."}
+              {step === 5 && "Add your professional details."}
+              {step === 6 && "Connect your MLS for listing sync."}
+              {step === 7 && "You're all set! Choose where to start."}
             </p>
           </div>
           {/* Progress */}
@@ -321,6 +346,17 @@ export default function OnboardingPage() {
                   </div>
 
                   <div className="space-y-2">
+                    <Label>Phone number</Label>
+                    <Input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="604-555-1234"
+                    />
+                    <p className="text-xs text-muted-foreground">For showing notifications and client calls</p>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label>Timezone</Label>
                     <select
                       value={timezone}
@@ -410,6 +446,12 @@ export default function OnboardingPage() {
                         </label>
                       </div>
 
+                      {/* CSV Import option (O5) */}
+                      <CSVImportStep onImported={(count) => {
+                        setImportCount(count);
+                        setImportSource("none");
+                      }} />
+
                       <div className="flex gap-3 pt-2">
                         <Button variant="outline" onClick={goBack}>
                           <ArrowLeft className="h-4 w-4 mr-1" />
@@ -458,8 +500,17 @@ export default function OnboardingPage() {
                 </>
               )}
 
-              {/* ═══ Step 3: Google Calendar ═══ */}
+              {/* ═══ Step 3: Email Sync (NEW — I1) ═══ */}
               {step === 3 && (
+                <EmailSyncStep
+                  onNext={goNext}
+                  onBack={goBack}
+                  onSkip={goNext}
+                />
+              )}
+
+              {/* ═══ Step 4: Google Calendar (was Step 3) ═══ */}
+              {step === 4 && (
                 <>
                   <div className="text-center">
                     <h2 className="text-xl font-bold">Connect your calendar</h2>
@@ -499,8 +550,8 @@ export default function OnboardingPage() {
                 </>
               )}
 
-              {/* ═══ Step 4: Professional Details ═══ */}
-              {step === 4 && (
+              {/* ═══ Step 5: Professional Details (was Step 4) ═══ */}
+              {step === 5 && (
                 <>
                   <div className="text-center">
                     <h2 className="text-xl font-bold">Professional details</h2>
@@ -555,6 +606,7 @@ export default function OnboardingPage() {
                         rows={3}
                         className="w-full rounded-md border bg-background px-3 py-2 text-sm resize-none"
                       />
+                      <AIBioGenerator bio={bio} onBioChange={setBio} hasBrokerage={brokerage.length > 0} />
                     </div>
                   </div>
 
@@ -573,8 +625,17 @@ export default function OnboardingPage() {
                 </>
               )}
 
-              {/* ═══ Step 5: Choose Action ═══ */}
-              {step === 5 && (
+              {/* ═══ Step 6: MLS Connection (NEW — I4) ═══ */}
+              {step === 6 && (
+                <MLSConnectionStep
+                  onNext={goNext}
+                  onBack={goBack}
+                  onSkip={goNext}
+                />
+              )}
+
+              {/* ═══ Step 7: Choose Action (was Step 5) ═══ */}
+              {step === 7 && (
                 <>
                   <div className="text-center">
                     <h2 className="text-xl font-bold">You&apos;re all set!</h2>

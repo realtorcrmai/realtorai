@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { NetworkErrorBanner } from "@/components/shared/NetworkErrorBanner";
+import { EmailVerificationBanner } from "@/components/layout/EmailVerificationBanner";
+import { TrialBanner } from "@/components/layout/TrialBanner";
 import { OnboardingChecklist } from "@/components/help/OnboardingChecklist";
 import { CommandPalette } from "@/components/help/CommandPalette";
 import { VoiceAgentWidget } from "@/components/voice-agent/VoiceAgentWidget";
@@ -21,6 +23,8 @@ export default async function DashboardLayout({
     <LayoutProvider>
       <div className="flex flex-col h-screen overflow-hidden">
         <NetworkErrorBanner />
+        <TrialBanner />
+        <EmailVerificationBanner />
         <DashboardShellClient>
           {children}
         </DashboardShellClient>

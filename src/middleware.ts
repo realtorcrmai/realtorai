@@ -12,6 +12,8 @@ export async function middleware(request: NextRequest) {
     pathname === "/verify" ||
     pathname.startsWith("/verify/") ||
     pathname === "/onboarding" ||
+    pathname === "/personalize" ||
+    pathname.startsWith("/join/") ||
     pathname.startsWith("/docs") ||
     pathname.startsWith("/sdk/") ||
     pathname.startsWith("/_next/") ||
@@ -62,17 +64,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // ── Verification gate — check JWT claims without DB hit ──
+  // ── Onboarding gate — redirect unfinished users (PO8) ──
+  // Email/phone verification is non-blocking (banner-only, not redirect)
   try {
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-    if (token) {
-      if (token.emailVerified === false) {
-        if (!pathname.startsWith("/api")) return NextResponse.redirect(new URL("/verify", request.url));
-        return NextResponse.json({ error: "Email not verified" }, { status: 403 });
-      }
-      if (token.phoneVerified === false && token.emailVerified === true) {
-        if (!pathname.startsWith("/api")) return NextResponse.redirect(new URL("/verify/phone", request.url));
-        return NextResponse.json({ error: "Phone not verified" }, { status: 403 });
+    if (token && !pathname.startsWith("/api")) {
+      // Skip gates for demo/admin users
+      const isExempt = token.role === "admin" || (token.onboardingCompleted === true && token.personalizationCompleted === true);
+      if (!isExempt) {
+        if (token.personalizationCompleted === false) {
+          return NextResponse.redirect(new URL("/personalize", request.url));
+        }
+        if (token.onboardingCompleted === false) {
+          return NextResponse.redirect(new URL("/onboarding", request.url));
+        }
       }
     }
   } catch { /* JWT decode failure — allow through, session check already passed */ }
