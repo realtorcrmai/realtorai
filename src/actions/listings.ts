@@ -45,6 +45,18 @@ export async function createListing(formData: ListingFormData) {
   // Real-time RAG ingestion
   triggerIngest("listings", data.id);
 
+  // A4: Auto-generate MLS remarks on first listing (fire-and-forget)
+  try {
+    const { count } = await tc.from("listings").select("id", { count: "exact", head: true });
+    if ((count ?? 0) <= 1) {
+      import("@/lib/anthropic/creative-director").then(({ generateMLSRemarks }) => {
+        generateMLSRemarks(data.id).catch(console.error);
+      });
+    }
+  } catch {
+    // Don't fail listing creation if auto-remarks fails
+  }
+
   return { success: true, listing: data };
 }
 
