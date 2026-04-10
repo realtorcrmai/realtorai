@@ -34,6 +34,7 @@ import {
 import { EmailSyncStep } from "@/components/onboarding/EmailSyncStep";
 import { MLSConnectionStep } from "@/components/onboarding/MLSConnectionStep";
 import { CSVImportStep } from "@/components/onboarding/CSVImportStep";
+import { CelebrationScreen } from "@/components/onboarding/CelebrationScreen";
 
 const STEPS = [
   { num: 1, label: "Profile", icon: Camera },
@@ -209,11 +210,21 @@ export default function OnboardingPage() {
     goNext();
   };
 
-  // ── Step 7: Complete onboarding ──
+  // Celebration state
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationDest, setCelebrationDest] = useState("/");
+
+  // ── Step 7: Complete onboarding → show celebration ──
   const completeOnboarding = async (destination: string) => {
     await advanceOnboardingStep(8); // 7 steps + done = 8
-    router.push(destination);
+    setCelebrationDest(destination);
+    setShowCelebration(true);
   };
+
+  // Show celebration overlay after onboarding completion
+  if (showCelebration) {
+    return <CelebrationScreen destination={celebrationDest} />;
+  }
 
   return (
     <div className="flex min-h-screen">
