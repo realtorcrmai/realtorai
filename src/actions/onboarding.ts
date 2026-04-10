@@ -54,12 +54,21 @@ export async function advanceOnboardingStep(step: number) {
   const supabase = createAdminClient();
   await supabase.from("users").update({ onboarding_step: step }).eq("id", session.user.id);
 
-  if (step >= 6) {
+  if (step >= 8) {
     await supabase.from("users").update({ onboarding_completed: true }).eq("id", session.user.id);
     await supabase.from("signup_events").insert({
       user_id: session.user.id,
       event: "onboarding_complete",
     });
+
+    // A3 + A5 + A6: Fire AI tasks async on onboarding completion (fire-and-forget)
+    const userId = session.user.id;
+    import("@/actions/ai-onboarding").then(async ({ generateDashboardBriefing, suggestAutomations }) => {
+      await Promise.allSettled([
+        generateDashboardBriefing(userId),
+        suggestAutomations(userId),
+      ]);
+    }).catch(console.error);
   }
 
   return { success: true };

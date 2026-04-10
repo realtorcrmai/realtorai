@@ -6,6 +6,7 @@ import { EmailVerificationBanner } from "@/components/layout/EmailVerificationBa
 import { TrialBanner } from "@/components/layout/TrialBanner";
 import { OnboardingChecklist } from "@/components/help/OnboardingChecklist";
 import { CommandPalette } from "@/components/help/CommandPalette";
+import { FeatureDiscovery } from "@/components/help/FeatureDiscovery";
 import { VoiceAgentWidget } from "@/components/voice-agent/VoiceAgentWidget";
 import { LayoutProvider } from "@/components/layout/LayoutProvider";
 import { DashboardShellClient } from "@/components/layout/DashboardShellClient";
@@ -31,6 +32,7 @@ export default async function DashboardLayout({
         <VoiceAgentWidget />
         <OnboardingChecklist />
         <CommandPalette />
+        <FeatureDiscovery />
         <Toaster />
       </div>
     </LayoutProvider>
