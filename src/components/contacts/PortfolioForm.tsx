@@ -174,7 +174,8 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
   const [notes, setNotes]                     = useState(existing?.notes ?? "");
 
   function handleAddressSuggestion(s: AddressSuggestion) {
-    setAddress(s.fullAddress);
+    // Use street-only portion so city/province/postal don't duplicate into the street field
+    setAddress(s.streetAddress || s.fullAddress);
     if (s.city)       setCity(s.city);
     if (s.province)   setProvince(s.province);
     if (s.postalCode) setPostalCode(s.postalCode);
