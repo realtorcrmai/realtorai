@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Building, Plus } from "lucide-react";
@@ -47,6 +47,11 @@ export function ContactPortfolioTab({ contactId, items: initialItems }: ContactP
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [items, setItems] = useState<PortfolioItem[]>(initialItems);
+
+  // Sync local state when server data changes (e.g. after adding a property)
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
   const [filter, setFilter] = useState<FilterType>("all");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);

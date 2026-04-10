@@ -113,6 +113,40 @@ const PROPERTY_TYPES = [
   "Commercial", "Industrial", "Land/Lot", "Mixed-Use", "Other",
 ];
 
+// ── Formatters ──────────────────────────────────────────────
+
+/** Format Canadian postal code: "v5k0a1" → "V5K 0A1" */
+function formatPostalCode(raw: string): string {
+  const cleaned = raw.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  if (cleaned.length <= 3) return cleaned;
+  return cleaned.slice(0, 3) + " " + cleaned.slice(3, 6);
+}
+
+/** Format phone: strip non-digits, add +1 prefix and grouping: +1 (604) 555-0100 */
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 0) return "";
+  // If starts with 1 and has 11 digits, or 10 digits without leading 1
+  const national = digits.startsWith("1") && digits.length >= 11
+    ? digits.slice(1, 11)
+    : digits.slice(0, 10);
+  if (national.length <= 3) return national;
+  if (national.length <= 6) return `(${national.slice(0, 3)}) ${national.slice(3)}`;
+  return `+1 (${national.slice(0, 3)}) ${national.slice(3, 6)}-${national.slice(6, 10)}`;
+}
+
+/** Format currency input: "950000" → "950,000" (display only, strips commas for storage) */
+function formatCurrency(raw: string): string {
+  const digits = raw.replace(/[^0-9]/g, "");
+  if (!digits) return "";
+  return Number(digits).toLocaleString("en-CA");
+}
+
+/** Strip formatting to get raw number string */
+function unformatCurrency(formatted: string): string {
+  return formatted.replace(/[^0-9]/g, "");
+}
+
 // ── Sub-components ─────────────────────────────────────────
 
 /** Debounce helper */
@@ -300,13 +334,13 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
   const [newCoOwnerEmail, setNewCoOwnerEmail] = useState("");
 
   // ── Financials ────────────────────────────────────────────
-  const [purchasePrice, setPurchasePrice]     = useState(existing?.purchase_price ? String(existing.purchase_price) : "");
+  const [purchasePrice, setPurchasePrice]     = useState(existing?.purchase_price ? formatCurrency(String(existing.purchase_price)) : "");
   const [purchaseDate, setPurchaseDate]       = useState(existing?.purchase_date ?? "");
-  const [estimatedValue, setEstimatedValue]   = useState(existing?.estimated_value ? String(existing.estimated_value) : "");
-  const [bcAssessed, setBcAssessed]           = useState(existing?.bc_assessed_value ? String(existing.bc_assessed_value) : "");
-  const [mortgageBalance, setMortgageBalance] = useState(existing?.mortgage_balance ? String(existing.mortgage_balance) : "");
-  const [rentalIncome, setRentalIncome]       = useState(existing?.monthly_rental_income ? String(existing.monthly_rental_income) : "");
-  const [strataFee, setStrataFee]             = useState(existing?.strata_fee ? String(existing.strata_fee) : "");
+  const [estimatedValue, setEstimatedValue]   = useState(existing?.estimated_value ? formatCurrency(String(existing.estimated_value)) : "");
+  const [bcAssessed, setBcAssessed]           = useState(existing?.bc_assessed_value ? formatCurrency(String(existing.bc_assessed_value)) : "");
+  const [mortgageBalance, setMortgageBalance] = useState(existing?.mortgage_balance ? formatCurrency(String(existing.mortgage_balance)) : "");
+  const [rentalIncome, setRentalIncome]       = useState(existing?.monthly_rental_income ? formatCurrency(String(existing.monthly_rental_income)) : "");
+  const [strataFee, setStrataFee]             = useState(existing?.strata_fee ? formatCurrency(String(existing.strata_fee)) : "");
   const [notes, setNotes]                     = useState(existing?.notes ?? "");
 
   function handleAddressSuggestion(s: AddressSuggestion) {
@@ -315,7 +349,7 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
     setAddress(s.streetAddress || s.fullAddress);
     setCity(s.city);
     setProvince(s.province || "BC");
-    setPostalCode(s.postalCode);
+    setPostalCode(s.postalCode ? formatPostalCode(s.postalCode) : "");
   }
 
   const coOwnerTotal = coOwners.reduce((s, o) => s + o.ownership_pct, 0);
@@ -327,10 +361,15 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
   // Preview: what primary owner will become after the new co-owner is added
   const primaryAfterAdd = Math.max(0, 100 - coOwnerTotal - newCoOwner.ownership_pct);
 
-  function handleNewCoOwnerPctChange(pct: number) {
+  // Max % a new co-owner can take (all of contact's current share minus 1%)
+  const maxNewCoOwnerPct = Math.max(1, 100 - coOwnerTotal - 1);
+
+  function handleNewCoOwnerPctChange(rawPct: number) {
+    // Clamp to valid range: 1% to maxNewCoOwnerPct
+    const pct = Math.max(1, Math.min(rawPct, maxNewCoOwnerPct));
     setNewCoOwner((d) => ({ ...d, ownership_pct: pct }));
-    // Auto-preview: primary % will become 100 - coOwnerTotal - pct (clamped)
-    // (actual state update happens on addCoOwner)
+    // Live-update contact's ownership as user types
+    setOwnershipPct(String(Math.max(1, 100 - coOwnerTotal - pct)));
   }
 
   function addCoOwner() {
@@ -363,7 +402,7 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
   }
 
   const equity = estimatedValue && mortgageBalance
-    ? Number(estimatedValue) - Number(mortgageBalance)
+    ? Number(unformatCurrency(estimatedValue)) - Number(unformatCurrency(mortgageBalance))
     : null;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -416,13 +455,13 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
       property_category: category,
       ownership_pct: myOwnership,
       co_owners: cleanCoOwners,
-      purchase_price: purchasePrice ? Number(purchasePrice) : null,
+      purchase_price: purchasePrice ? Number(unformatCurrency(purchasePrice)) : null,
       purchase_date: purchaseDate || null,
-      estimated_value: estimatedValue ? Number(estimatedValue) : null,
-      bc_assessed_value: bcAssessed ? Number(bcAssessed) : null,
-      mortgage_balance: mortgageBalance ? Number(mortgageBalance) : null,
-      monthly_rental_income: rentalIncome ? Number(rentalIncome) : null,
-      strata_fee: strataFee ? Number(strataFee) : null,
+      estimated_value: estimatedValue ? Number(unformatCurrency(estimatedValue)) : null,
+      bc_assessed_value: bcAssessed ? Number(unformatCurrency(bcAssessed)) : null,
+      mortgage_balance: mortgageBalance ? Number(unformatCurrency(mortgageBalance)) : null,
+      monthly_rental_income: rentalIncome ? Number(unformatCurrency(rentalIncome)) : null,
+      strata_fee: strataFee ? Number(unformatCurrency(strataFee)) : null,
       status,
       notes: notes || null,
     };
@@ -544,8 +583,10 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
               <Input
                 className="h-11 uppercase"
                 placeholder="V5K 0A1"
+                maxLength={7}
                 value={postalCode}
                 onChange={(e) => setPostalCode(e.target.value.toUpperCase())}
+                onBlur={() => setPostalCode((v) => formatPostalCode(v))}
                 disabled={saving}
               />
             </div>
@@ -589,10 +630,16 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
                 max={100}
                 className="h-9 w-20 text-right"
                 value={ownershipPct}
-                onChange={(e) => setOwnershipPct(e.target.value)}
-                disabled={saving}
+                onChange={(e) => {
+                  const val = Math.max(1, Math.min(100 - coOwnerTotal, Number(e.target.value) || 1));
+                  setOwnershipPct(String(val));
+                }}
+                disabled={saving || coOwners.length > 0}
               />
               <span className="text-sm text-muted-foreground font-medium">%</span>
+              {coOwners.length > 0 && (
+                <span className="text-xs text-muted-foreground">(auto)</span>
+              )}
             </div>
           </div>
 
@@ -673,9 +720,10 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
                     <label className="text-sm font-medium mb-1.5 block">Phone <span className="text-xs font-normal text-muted-foreground">(optional)</span></label>
                     <Input
                       className="h-10"
-                      placeholder="+1 604 555 0100"
+                      placeholder="+1 (604) 555-0100"
                       value={newCoOwnerPhone}
                       onChange={(e) => setNewCoOwnerPhone(e.target.value)}
+                      onBlur={() => setNewCoOwnerPhone((v) => formatPhone(v))}
                     />
                   </div>
                   <div>
@@ -697,7 +745,7 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
                 <Input
                   type="number"
                   min={1}
-                  max={99}
+                  max={maxNewCoOwnerPct}
                   className="h-10 w-24"
                   value={newCoOwner.ownership_pct}
                   onChange={(e) => handleNewCoOwnerPctChange(Number(e.target.value))}
@@ -724,8 +772,9 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
             <button
               type="button"
               onClick={() => {
-                // Suggest splitting remaining % evenly
-                const suggested = Math.max(1, Math.floor(myOwnership / 2));
+                // Split contact's current ownership evenly with the new partner
+                const available = 100 - coOwnerTotal;
+                const suggested = Math.max(1, Math.floor(available / 2));
                 setNewCoOwner({ name: "", role: "individual", ownership_pct: suggested });
                 setAddingCoOwner(true);
               }}
@@ -774,11 +823,12 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
           <div>
             <label className="text-sm font-medium mb-1.5 block">Purchase Price ($)</label>
             <Input
-              type="number"
               className="h-11"
-              placeholder="e.g. 950000"
+              inputMode="numeric"
+              placeholder="e.g. 950,000"
               value={purchasePrice}
-              onChange={(e) => setPurchasePrice(e.target.value)}
+              onChange={(e) => setPurchasePrice(e.target.value.replace(/[^0-9,]/g, ""))}
+              onBlur={() => setPurchasePrice((v) => formatCurrency(v))}
               disabled={saving}
             />
           </div>
@@ -795,33 +845,36 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
           <div>
             <label className="text-sm font-medium mb-1.5 block">Estimated Market Value ($)</label>
             <Input
-              type="number"
               className="h-11"
-              placeholder="e.g. 1100000"
+              inputMode="numeric"
+              placeholder="e.g. 1,100,000"
               value={estimatedValue}
-              onChange={(e) => setEstimatedValue(e.target.value)}
+              onChange={(e) => setEstimatedValue(e.target.value.replace(/[^0-9,]/g, ""))}
+              onBlur={() => setEstimatedValue((v) => formatCurrency(v))}
               disabled={saving}
             />
           </div>
           <div>
             <label className="text-sm font-medium mb-1.5 block">BC Assessed Value ($)</label>
             <Input
-              type="number"
               className="h-11"
-              placeholder="e.g. 1020000"
+              inputMode="numeric"
+              placeholder="e.g. 1,020,000"
               value={bcAssessed}
-              onChange={(e) => setBcAssessed(e.target.value)}
+              onChange={(e) => setBcAssessed(e.target.value.replace(/[^0-9,]/g, ""))}
+              onBlur={() => setBcAssessed((v) => formatCurrency(v))}
               disabled={saving}
             />
           </div>
           <div>
             <label className="text-sm font-medium mb-1.5 block">Mortgage Balance ($)</label>
             <Input
-              type="number"
               className="h-11"
-              placeholder="e.g. 550000"
+              inputMode="numeric"
+              placeholder="e.g. 550,000"
               value={mortgageBalance}
-              onChange={(e) => setMortgageBalance(e.target.value)}
+              onChange={(e) => setMortgageBalance(e.target.value.replace(/[^0-9,]/g, ""))}
+              onBlur={() => setMortgageBalance((v) => formatCurrency(v))}
               disabled={saving}
             />
           </div>
@@ -829,11 +882,12 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
             <div>
               <label className="text-sm font-medium mb-1.5 block">Monthly Rental Income ($)</label>
               <Input
-                type="number"
                 className="h-11"
-                placeholder="e.g. 2800"
+                inputMode="numeric"
+                placeholder="e.g. 2,800"
                 value={rentalIncome}
-                onChange={(e) => setRentalIncome(e.target.value)}
+                onChange={(e) => setRentalIncome(e.target.value.replace(/[^0-9,]/g, ""))}
+                onBlur={() => setRentalIncome((v) => formatCurrency(v))}
                 disabled={saving}
               />
             </div>
@@ -842,11 +896,12 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
             <div>
               <label className="text-sm font-medium mb-1.5 block">Monthly Strata Fee ($)</label>
               <Input
-                type="number"
                 className="h-11"
+                inputMode="numeric"
                 placeholder="e.g. 450"
                 value={strataFee}
-                onChange={(e) => setStrataFee(e.target.value)}
+                onChange={(e) => setStrataFee(e.target.value.replace(/[^0-9,]/g, ""))}
+                onBlur={() => setStrataFee((v) => formatCurrency(v))}
                 disabled={saving}
               />
             </div>
@@ -854,13 +909,13 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
         </div>
 
         {/* Live equity card */}
-        {equity !== null && Number(estimatedValue) > 0 && (
+        {equity !== null && Number(unformatCurrency(estimatedValue)) > 0 && (
           <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 rounded-xl">
             <p className="font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
               💰 Estimated Equity: ${equity.toLocaleString()}
             </p>
             <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
-              {Math.round((equity / Number(estimatedValue)) * 100)}% equity ratio
+              {Math.round((equity / Number(unformatCurrency(estimatedValue))) * 100)}% equity ratio
             </p>
           </div>
         )}
@@ -891,7 +946,7 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
       <div className="flex gap-3 pt-2 pb-4">
         <Button
           type="submit"
-          disabled={saving || !address}
+          disabled={saving || !address.trim()}
           className="bg-primary hover:bg-[#3d27a8] text-white px-6 h-11"
         >
           {saving ? "Saving…" : existing ? "Save Changes →" : "Add to Portfolio →"}
