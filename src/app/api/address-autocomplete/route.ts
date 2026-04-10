@@ -56,12 +56,16 @@ export async function GET(req: NextRequest) {
           .join(" ");
         const streetAddress = [civic, street].filter(Boolean).join(" ");
 
+        // BC Geocoder rarely includes postalCode in autocomplete; try to parse it from fullAddress
+        const postalMatch = props.fullAddress.match(/\b([A-Z]\d[A-Z][\s-]?\d[A-Z]\d)\b/i);
+        const postalCode = props.postalCode || (postalMatch ? postalMatch[1].toUpperCase().replace(/\s/g, " ") : "");
+
         return {
           fullAddress: props.fullAddress,
           streetAddress,
           city: props.localityName ?? "",
           province: props.provinceCode ?? "BC",
-          postalCode: props.postalCode ?? "",
+          postalCode,
         } satisfies AddressSuggestion;
       })
       .filter((s): s is AddressSuggestion => s !== null)
