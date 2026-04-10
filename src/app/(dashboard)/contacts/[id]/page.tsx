@@ -79,7 +79,7 @@ export default async function ContactDetailPage({
     { data: allHouseholds },
     { data: householdData },
     { data: householdMembersData },
-    { data: allWorkflowSteps },
+    {}, // 19. Placeholder — workflow steps fetched in second batch
     { data: contactJourney },
     { data: contactNewsletters },
     { data: contactContextEntries },
@@ -109,12 +109,10 @@ export default async function ContactDetailPage({
       .select("id, contact_id, label, date, notes")
       .eq("contact_id", id)
       .order("date", { ascending: true }),
-    // 4. Contacts (id, name only — for referral/relationship selectors)
+    // 4. All contacts (id, name only — for referral/relationship selectors)
     supabase
       .from("contacts")
-      .select("id, name")
-      .order("name", { ascending: true })
-      .limit(200),
+      .select("id, name"),
     // 5. Buyer listings (skip for sellers)
     !isSeller
       ? supabase
@@ -161,14 +159,12 @@ export default async function ContactDetailPage({
       .order("name", { ascending: true }),
     // 12. Activity log — deferred to tab click (lazy-loaded)
     Promise.resolve({ data: null }),
-    // 13. Recent listings for properties of interest (buyers only)
+    // 13. Listings for properties of interest (buyers only)
     !isSeller
       ? supabase
           .from("listings")
           .select("id, address, list_price")
-          .eq("status", "active")
           .order("created_at", { ascending: false })
-          .limit(50)
       : Promise.resolve({ data: [] }),
     // 14. Referred-by contact name (was waterfall 5)
     contact.referred_by_id
