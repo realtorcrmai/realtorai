@@ -13,10 +13,10 @@ const TOTAL_SCREENS = 6;
 const SCREENS = [
   {
     question: "What describes you best?",
-    subtitle: "Select all that apply — this helps us personalize your experience",
+    subtitle: "This helps us personalize your experience",
     type: "cards" as const,
     field: "onboarding_persona" as const,
-    multiSelect: true,
+    multiSelect: false,
     options: [
       { value: "solo_agent", icon: "🏠", label: "Solo Agent", description: "I manage my own clients and listings" },
       { value: "team_lead", icon: "👥", label: "Team Lead", description: "I lead a team of agents" },
