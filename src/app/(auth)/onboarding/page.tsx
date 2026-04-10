@@ -24,12 +24,19 @@ import {
   Sparkles,
   Phone,
   Globe,
+  Heart,
+  UserPlus,
+  X,
+  Plus,
 } from "lucide-react";
 import {
   advanceOnboardingStep,
   uploadHeadshot,
   updateProfessionalInfo,
   seedSampleData,
+  getOnboardingProgress,
+  saveFamilyInfo,
+  sendTeamInvite,
 } from "@/actions/onboarding";
 import { EmailSyncStep } from "@/components/onboarding/EmailSyncStep";
 import { MLSConnectionStep } from "@/components/onboarding/MLSConnectionStep";
@@ -49,9 +56,10 @@ const STEPS = [
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState("");
 
   // Step 1: Headshot
@@ -59,21 +67,42 @@ export default function OnboardingPage() {
   const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Step 1: Phone
+  const [phone, setPhone] = useState("");
+
+  // Step 1: Family details
+  const [spouseName, setSpouseName] = useState("");
+  const [kidsCount, setKidsCount] = useState("");
+
   // Step 2: Contact import
   const [importSource, setImportSource] = useState<"none" | "gmail" | "apple">("none");
   const [importedContacts, setImportedContacts] = useState<unknown[]>([]);
   const [importCount, setImportCount] = useState(0);
-  const [vcardFile, setVcardFile] = useState<File | null>(null);
   const [fetchingContacts, setFetchingContacts] = useState(false);
-
-  // Step 1: Phone (moved from signup — S1)
-  const [phone, setPhone] = useState("");
 
   // Step 5: Professional info
   const [brokerage, setBrokerage] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
   const [bio, setBio] = useState("");
   const [brokerageSuggestions, setBrokerageSuggestions] = useState<string[]>([]);
+
+  // Step 7: Team invite
+  const [inviteEmails, setInviteEmails] = useState<string[]>([""]);
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteSent, setInviteSent] = useState(false);
+
+  // Celebration state
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationDest, setCelebrationDest] = useState("/");
+
+  // ── Resume progress on mount (Fix #3: step persistence) ──
+  useEffect(() => {
+    getOnboardingProgress().then((progress) => {
+      setStep(progress.step);
+      if (progress.avatarUrl) setAvatarPreview(progress.avatarUrl);
+      setInitialLoading(false);
+    }).catch(() => setInitialLoading(false));
+  }, []);
 
   const goNext = useCallback(async () => {
     setError("");
@@ -101,6 +130,17 @@ export default function OnboardingPage() {
       setAvatarPreview(null);
     }
     setLoading(false);
+  };
+
+  // ── Step 1: Save family info before advancing ──
+  const handleStep1Continue = async () => {
+    if (spouseName.trim() || kidsCount) {
+      await saveFamilyInfo({
+        spouse_name: spouseName.trim() || undefined,
+        kids_count: kidsCount ? parseInt(kidsCount, 10) : undefined,
+      });
+    }
+    goNext();
   };
 
   // ── Step 2: Gmail import ──
@@ -135,7 +175,6 @@ export default function OnboardingPage() {
   const handleVcardUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setVcardFile(file);
     setFetchingContacts(true);
     setError("");
 
@@ -181,7 +220,7 @@ export default function OnboardingPage() {
     setImportSource("none");
   };
 
-  // ── Step 4: Brokerage search ──
+  // ── Step 5: Brokerage search ──
   useEffect(() => {
     if (brokerage.length < 2) {
       setBrokerageSuggestions([]);
@@ -211,26 +250,43 @@ export default function OnboardingPage() {
     goNext();
   };
 
-  // Celebration state
-  const [showCelebration, setShowCelebration] = useState(false);
-  const [celebrationDest, setCelebrationDest] = useState("/");
+  // ── Step 7: Send team invites ──
+  const handleSendInvites = async () => {
+    const validEmails = inviteEmails.filter((e) => e.trim() && e.includes("@"));
+    if (validEmails.length === 0) return;
+    setInviteSending(true);
+    await sendTeamInvite(validEmails);
+    setInviteSending(false);
+    setInviteSent(true);
+  };
 
-  // ── Step 7: Complete onboarding → show celebration ──
+  // ── Step 7: Complete onboarding → refresh session → show celebration ──
   const completeOnboarding = async (destination: string) => {
-    await advanceOnboardingStep(8); // 7 steps + done = 8
+    await advanceOnboardingStep(8);
+    // Refresh the JWT so middleware sees onboardingCompleted=true
+    await updateSession();
     setCelebrationDest(destination);
     setShowCelebration(true);
   };
 
-  // Show celebration overlay after onboarding completion
+  // Show celebration overlay
   if (showCelebration) {
     return <CelebrationScreen destination={celebrationDest} />;
   }
 
+  // Loading state while resuming progress
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f4f2ff] to-[#e8e4ff]">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen">
-      {/* Left panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden">
+      {/* Left panel — sticky so it stays visible when right panel scrolls */}
+      <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden sticky top-0 h-screen">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_oklch(0.60_0.20_260)_0%,_transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_oklch(0.40_0.15_240)_0%,_transparent_60%)]" />
         <div className="relative z-10 flex flex-col justify-between p-12 text-primary-foreground">
@@ -270,9 +326,9 @@ export default function OnboardingPage() {
         </div>
       </div>
 
-      {/* Right panel */}
-      <div className="flex flex-1 items-center justify-center p-6 bg-background">
-        <div className="w-full max-w-md space-y-6">
+      {/* Right panel — scrollable */}
+      <div className="flex flex-1 items-start justify-center p-6 bg-background overflow-y-auto max-h-screen">
+        <div className="w-full max-w-md space-y-6 py-8">
           {/* Mobile progress */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
@@ -301,7 +357,7 @@ export default function OnboardingPage() {
                 </div>
               )}
 
-              {/* ═══ Step 1: Headshot + Timezone ═══ */}
+              {/* ═══ Step 1: Headshot + Phone + Family ═══ */}
               {step === 1 && (
                 <>
                   <div className="text-center">
@@ -373,8 +429,37 @@ export default function OnboardingPage() {
                     </select>
                   </div>
 
+                  {/* Family details (optional) */}
+                  <div className="space-y-3 pt-2 border-t">
+                    <div className="flex items-center gap-2">
+                      <Heart className="h-4 w-4 text-muted-foreground" />
+                      <Label className="text-sm text-muted-foreground">Family details (optional)</Label>
+                    </div>
+                    <div className="space-y-2">
+                      <Input
+                        value={spouseName}
+                        onChange={(e) => setSpouseName(e.target.value)}
+                        placeholder="Spouse / partner name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <select
+                        value={kidsCount}
+                        onChange={(e) => setKidsCount(e.target.value)}
+                        className="w-full h-11 rounded-md border bg-background px-3 text-sm"
+                      >
+                        <option value="">Number of kids</option>
+                        <option value="0">No kids</option>
+                        <option value="1">1 kid</option>
+                        <option value="2">2 kids</option>
+                        <option value="3">3 kids</option>
+                        <option value="4">4+ kids</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div className="flex gap-3 pt-2">
-                    <Button className="flex-1" onClick={goNext}>
+                    <Button className="flex-1" onClick={handleStep1Continue}>
                       Continue <ArrowRight className="h-4 w-4 ml-1" />
                     </Button>
                   </div>
@@ -447,23 +532,32 @@ export default function OnboardingPage() {
                       </div>
 
                       {/* CSV Import option (O5) */}
-                      <CSVImportStep onImported={(count) => {
-                        setImportCount(count);
-                        setImportSource("none");
-                      }} />
+                      <CSVImportStep
+                        onImported={(count) => {
+                          setImportCount(count);
+                          setImportSource("none");
+                        }}
+                        onSkip={goNext}
+                      />
 
                       <div className="flex gap-3 pt-2">
                         <Button variant="outline" onClick={goBack}>
                           <ArrowLeft className="h-4 w-4 mr-1" />
                           Back
                         </Button>
-                        <Button variant="outline" className="flex-1" onClick={async () => {
-                          await seedSampleData();
-                          goNext();
-                        }}>
-                          Skip — use sample data
+                        <Button className="flex-1" onClick={goNext}>
+                          Continue <ArrowRight className="h-4 w-4 ml-1" />
                         </Button>
                       </div>
+                      <button
+                        onClick={async () => {
+                          await seedSampleData();
+                          goNext();
+                        }}
+                        className="w-full text-xs text-muted-foreground hover:underline text-center"
+                      >
+                        Skip — use sample data
+                      </button>
                     </>
                   )}
 
@@ -500,7 +594,7 @@ export default function OnboardingPage() {
                 </>
               )}
 
-              {/* ═══ Step 3: Email Sync (NEW — I1) ═══ */}
+              {/* ═══ Step 3: Email Sync ═══ */}
               {step === 3 && (
                 <EmailSyncStep
                   onNext={goNext}
@@ -509,7 +603,7 @@ export default function OnboardingPage() {
                 />
               )}
 
-              {/* ═══ Step 4: Google Calendar (was Step 3) ═══ */}
+              {/* ═══ Step 4: Google Calendar ═══ */}
               {step === 4 && (
                 <>
                   <div className="text-center">
@@ -550,7 +644,7 @@ export default function OnboardingPage() {
                 </>
               )}
 
-              {/* ═══ Step 5: Professional Details (was Step 4) ═══ */}
+              {/* ═══ Step 5: Professional Details ═══ */}
               {step === 5 && (
                 <>
                   <div className="text-center">
@@ -606,7 +700,7 @@ export default function OnboardingPage() {
                         rows={3}
                         className="w-full rounded-md border bg-background px-3 py-2 text-sm resize-none"
                       />
-                      <AIBioGenerator bio={bio} onBioChange={setBio} hasBrokerage={brokerage.length > 0} />
+                      <AIBioGenerator bio={bio} onBioChange={setBio} />
                     </div>
                   </div>
 
@@ -625,7 +719,7 @@ export default function OnboardingPage() {
                 </>
               )}
 
-              {/* ═══ Step 6: MLS Connection (NEW — I4) ═══ */}
+              {/* ═══ Step 6: MLS Connection ═══ */}
               {step === 6 && (
                 <MLSConnectionStep
                   onNext={goNext}
@@ -634,7 +728,7 @@ export default function OnboardingPage() {
                 />
               )}
 
-              {/* ═══ Step 7: Choose Action (was Step 5) ═══ */}
+              {/* ═══ Step 7: Choose Action + Team Invite ═══ */}
               {step === 7 && (
                 <>
                   <div className="text-center">
@@ -680,6 +774,78 @@ export default function OnboardingPage() {
                         <ArrowRight className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />
                       </button>
                     ))}
+                  </div>
+
+                  {/* Team invite section */}
+                  <div className="border-t pt-4 mt-2 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <UserPlus className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm font-medium">Invite your team</p>
+                    </div>
+
+                    {inviteSent ? (
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 text-green-700 text-sm">
+                        <Check className="h-4 w-4" />
+                        Invitations sent! They&apos;ll receive an email shortly.
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-2">
+                          {inviteEmails.map((email, i) => (
+                            <div key={i} className="flex gap-2">
+                              <Input
+                                type="email"
+                                placeholder="colleague@example.com"
+                                value={email}
+                                onChange={(e) => {
+                                  const updated = [...inviteEmails];
+                                  updated[i] = e.target.value;
+                                  setInviteEmails(updated);
+                                }}
+                                className="h-9 text-sm"
+                              />
+                              {inviteEmails.length > 1 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-9 w-9 p-0 shrink-0"
+                                  onClick={() => setInviteEmails(inviteEmails.filter((_, j) => j !== i))}
+                                  aria-label="Remove email"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          {inviteEmails.length < 5 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs"
+                              onClick={() => setInviteEmails([...inviteEmails, ""])}
+                            >
+                              <Plus className="h-3 w-3 mr-1" /> Add another
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs ml-auto"
+                            disabled={inviteSending || !inviteEmails.some((e) => e.includes("@"))}
+                            onClick={handleSendInvites}
+                          >
+                            {inviteSending ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : (
+                              <Mail className="h-3 w-3 mr-1" />
+                            )}
+                            Send invites
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </>
               )}

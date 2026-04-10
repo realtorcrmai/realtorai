@@ -13,10 +13,10 @@ const TOTAL_SCREENS = 6;
 const SCREENS = [
   {
     question: "What describes you best?",
-    subtitle: "This helps us personalize your experience",
+    subtitle: "Select all that apply — this helps us personalize your experience",
     type: "cards" as const,
     field: "onboarding_persona" as const,
-    multiSelect: false,
+    multiSelect: true,
     options: [
       { value: "solo_agent", icon: "🏠", label: "Solo Agent", description: "I manage my own clients and listings" },
       { value: "team_lead", icon: "👥", label: "Team Lead", description: "I lead a team of agents" },
@@ -26,10 +26,10 @@ const SCREENS = [
   },
   {
     question: "What's your primary focus?",
-    subtitle: "We'll tailor your workspace to match",
+    subtitle: "Select all that apply — we'll tailor your workspace to match",
     type: "cards" as const,
     field: "onboarding_market" as const,
-    multiSelect: false,
+    multiSelect: true,
     options: [
       { value: "residential", icon: "🏡", label: "Residential", description: "Houses, condos, townhomes" },
       { value: "commercial", icon: "🏗️", label: "Commercial", description: "Office, retail, industrial" },

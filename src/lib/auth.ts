@@ -138,8 +138,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         // Skip DB lookup if role/features are already cached in the token
-        // Only fetch on sign-in or if data is missing
-        const needsUserFetch = !token.role || !token.enabledFeatures || trigger === "signIn" || account;
+        // Fetch on sign-in, update (session refresh), or if data is missing
+        const needsUserFetch = !token.role || !token.enabledFeatures || trigger === "signIn" || trigger === "update" || account;
 
         if (token.email && needsUserFetch && usersTableExists !== false) {
           const { data: existingUser, error: fetchError } = await supabase

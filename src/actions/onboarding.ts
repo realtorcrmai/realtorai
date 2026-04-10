@@ -3,6 +3,25 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { auth } from "@/lib/auth";
 
+// ── Onboarding Progress Resume ──
+
+export async function getOnboardingProgress(): Promise<{ step: number; avatarUrl: string | null }> {
+  const session = await auth();
+  if (!session?.user?.id) return { step: 1, avatarUrl: null };
+
+  const supabase = createAdminClient();
+  const { data: user } = await supabase
+    .from("users")
+    .select("onboarding_step, avatar_url")
+    .eq("id", session.user.id)
+    .single();
+
+  return {
+    step: Math.max(1, Math.min(user?.onboarding_step || 1, 7)),
+    avatarUrl: user?.avatar_url || null,
+  };
+}
+
 // ── Profile Completeness Calculation ──
 
 export async function recalculateProfileCompleteness(userId: string): Promise<number> {
@@ -135,6 +154,51 @@ export async function updateProfessionalInfo(data: {
   }
 
   return { success: true };
+}
+
+// ── Save Family Info ──
+
+export async function saveFamilyInfo(familyInfo: { spouse_name?: string; kids_count?: number }) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated" };
+
+  const supabase = createAdminClient();
+  await supabase.from("users").update({ family_info: familyInfo }).eq("id", session.user.id);
+  return { success: true };
+}
+
+// ── Send Team Invite ──
+
+export async function sendTeamInvite(emails: string[]) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated" };
+
+  if (!emails.length || emails.length > 10) return { error: "Provide 1-10 email addresses" };
+
+  const supabase = createAdminClient();
+
+  // Store invites in team_invites table (or pending_invites JSONB on users)
+  const rows = emails
+    .filter((e) => e.includes("@"))
+    .map((email) => ({
+      inviter_id: session.user.id,
+      email: email.trim().toLowerCase(),
+      status: "pending",
+    }));
+
+  if (rows.length === 0) return { error: "No valid email addresses" };
+
+  const { error } = await supabase.from("team_invites").insert(rows);
+
+  if (error) {
+    // Table may not exist yet — store on user record as fallback
+    console.error("[team-invite] Insert error:", error.message);
+    await supabase.from("users").update({
+      pending_team_invites: emails,
+    }).eq("id", session.user.id);
+  }
+
+  return { success: true, sent: rows.length };
 }
 
 // ── Brokerage Auto-Detect ──
