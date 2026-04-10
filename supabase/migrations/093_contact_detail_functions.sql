@@ -97,7 +97,7 @@ BEGIN
         'priority', t.priority,
         'category', t.category,
         'due_date', t.due_date,
-        'notes', t.description,
+        'notes', t.notes,
         'completed_at', t.completed_at,
         'created_at', t.created_at
       ) ORDER BY t.due_date ASC NULLS LAST), '[]'::jsonb)
@@ -113,7 +113,8 @@ BEGIN
         'doc_type', d.doc_type,
         'file_name', d.file_name,
         'file_url', d.file_url,
-        'uploaded_at', d.uploaded_at
+        'uploaded_at', d.uploaded_at,
+        'notes', d.notes
       ) ORDER BY d.uploaded_at DESC), '[]'::jsonb)
       FROM contact_documents d
       WHERE d.contact_id = p_contact_id AND d.realtor_id = p_realtor_id
@@ -139,8 +140,7 @@ BEGIN
         'contact_id', fm.contact_id,
         'name', fm.name,
         'relationship', fm.relationship,
-        'phone', fm.phone,
-        'email', fm.email,
+        'date_of_birth', fm.date_of_birth,
         'notes', fm.notes,
         'created_at', fm.created_at
       ) ORDER BY fm.created_at ASC), '[]'::jsonb)
@@ -221,7 +221,7 @@ BEGIN
         'referral_date', r.referral_date,
         'referral_type', r.referral_type,
         'status', r.status,
-        'referral_fee_percent', r.referral_fee_percent,
+        'commission_pct', r.commission_pct,
         'notes', r.notes,
         'closed_deal_id', r.closed_deal_id,
         'created_at', r.created_at,
@@ -243,7 +243,7 @@ BEGIN
         'referral_date', r.referral_date,
         'referral_type', r.referral_type,
         'status', r.status,
-        'referral_fee_percent', r.referral_fee_percent,
+        'commission_pct', r.commission_pct,
         'notes', r.notes,
         'closed_deal_id', r.closed_deal_id,
         'created_at', r.created_at,
