@@ -4,6 +4,7 @@ import PipelineSnapshot from "@/components/dashboard/PipelineSnapshot";
 import { GreetingTicker } from "@/components/dashboard/GreetingTicker";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { OnboardingBanner } from "@/components/dashboard/OnboardingBanner";
+import { WelcomeConfetti } from "@/components/dashboard/WelcomeConfetti";
 
 export const dynamic = "force-dynamic";
 
@@ -137,6 +138,9 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* ── Welcome confetti on first landing from onboarding ── */}
+        <WelcomeConfetti />
 
         {/* ── Onboarding Banner (PO6) ── */}
         <OnboardingBanner />

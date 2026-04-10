@@ -55,6 +55,25 @@ const STEPS = [
   { num: 7, label: "Start", icon: ArrowRight },
 ];
 
+/** Step 7: Auto-complete onboarding and redirect to dashboard */
+function Step7AutoComplete({ completeOnboarding }: { completeOnboarding: (dest: string) => Promise<void> }) {
+  const triggered = useRef(false);
+  useEffect(() => {
+    if (!triggered.current) {
+      triggered.current = true;
+      completeOnboarding("/");
+    }
+  }, [completeOnboarding]);
+
+  return (
+    <div className="text-center space-y-4 py-8">
+      <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+      <h2 className="text-xl font-bold">Setting up your dashboard...</h2>
+      <p className="text-sm text-muted-foreground">Just a moment</p>
+    </div>
+  );
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const { data: session, update: updateSession } = useSession();
@@ -271,16 +290,15 @@ export default function OnboardingPage() {
     setInviteSent(true);
   };
 
-  // ── Step 7: Complete onboarding → refresh session → show celebration ──
+  // ── Step 7: Complete onboarding → go straight to dashboard with fireworks ──
   const completeOnboarding = async (destination: string) => {
     await advanceOnboardingStep(8);
-    // Refresh the JWT so middleware sees onboardingCompleted=true
     await updateSession();
-    setCelebrationDest(destination);
-    setShowCelebration(true);
+    // Hard redirect with welcome flag — dashboard fires confetti on ?welcome=1
+    window.location.href = destination + (destination.includes("?") ? "&" : "?") + "welcome=1";
   };
 
-  // Show celebration overlay
+  // Show celebration overlay (kept for backward compat — Step 7 now goes direct)
   if (showCelebration) {
     return <CelebrationScreen destination={celebrationDest} />;
   }
@@ -811,126 +829,9 @@ export default function OnboardingPage() {
                 />
               )}
 
-              {/* ═══ Step 7: Choose Action + Team Invite ═══ */}
+              {/* ═══ Step 7: Auto-complete → Dashboard ═══ */}
               {step === 7 && (
-                <>
-                  <div className="text-center">
-                    <h2 className="text-xl font-bold">You&apos;re all set!</h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      What would you like to do first?
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    {[
-                      {
-                        icon: Users,
-                        label: "Manage my contacts",
-                        desc: "Organize, tag, and follow up with your clients",
-                        href: "/contacts",
-                      },
-                      {
-                        icon: Mail,
-                        label: "Set up email marketing",
-                        desc: "Create newsletters and automated drip campaigns",
-                        href: "/newsletters",
-                      },
-                      {
-                        icon: LayoutDashboard,
-                        label: "Explore the dashboard",
-                        desc: "See everything Realtors360 has to offer",
-                        href: "/",
-                      },
-                    ].map((option) => (
-                      <button
-                        key={option.href}
-                        onClick={() => completeOnboarding(option.href)}
-                        className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-muted hover:border-primary transition-colors text-left"
-                      >
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 shrink-0">
-                          <option.icon className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm">{option.label}</p>
-                          <p className="text-xs text-muted-foreground">{option.desc}</p>
-                        </div>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Team invite section */}
-                  <div className="border-t pt-4 mt-2 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <UserPlus className="h-4 w-4 text-muted-foreground" />
-                      <p className="text-sm font-medium">Invite your team</p>
-                    </div>
-
-                    {inviteSent ? (
-                      <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 text-green-700 text-sm">
-                        <Check className="h-4 w-4" />
-                        Invitations sent! They&apos;ll receive an email shortly.
-                      </div>
-                    ) : (
-                      <>
-                        <div className="space-y-2">
-                          {inviteEmails.map((email, i) => (
-                            <div key={i} className="flex gap-2">
-                              <Input
-                                type="email"
-                                placeholder="colleague@example.com"
-                                value={email}
-                                onChange={(e) => {
-                                  const updated = [...inviteEmails];
-                                  updated[i] = e.target.value;
-                                  setInviteEmails(updated);
-                                }}
-                                className="h-9 text-sm"
-                              />
-                              {inviteEmails.length > 1 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-9 w-9 p-0 shrink-0"
-                                  onClick={() => setInviteEmails(inviteEmails.filter((_, j) => j !== i))}
-                                  aria-label="Remove email"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                        <div className="flex gap-2">
-                          {inviteEmails.length < 5 && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-xs"
-                              onClick={() => setInviteEmails([...inviteEmails, ""])}
-                            >
-                              <Plus className="h-3 w-3 mr-1" /> Add another
-                            </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-xs ml-auto"
-                            disabled={inviteSending || !inviteEmails.some((e) => e.includes("@"))}
-                            onClick={handleSendInvites}
-                          >
-                            {inviteSending ? (
-                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                            ) : (
-                              <Mail className="h-3 w-3 mr-1" />
-                            )}
-                            Send invites
-                          </Button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </>
+                <Step7AutoComplete completeOnboarding={completeOnboarding} />
               )}
             </CardContent>
           </Card>
