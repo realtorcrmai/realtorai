@@ -1,7 +1,6 @@
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import Link from "next/link";
 import {
-  Wand2,
   Building2,
   ArrowRight,
   CheckCircle2,
@@ -10,6 +9,7 @@ import {
   Video,
   ImageIcon,
 } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { cn } from "@/lib/utils";
 import { MEDIA_STATUS_COLORS } from "@/lib/constants";
 
@@ -65,34 +65,18 @@ export default async function ContentPage() {
   ];
 
   return (
-    <div className="h-full overflow-y-auto p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
-      <div className="space-y-8">
-        {/* Header */}
-        <div className="animate-float-in">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-violet elevation-4">
-              <Wand2 className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                Content Engine
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                AI-powered MLS remarks, social media & video content
-              </p>
-            </div>
-          </div>
-        </div>
-
+    <>
+      <PageHeader
+        title="Content Engine"
+        subtitle="AI-powered MLS remarks, social media & video content"
+      />
+      <div className="p-6 space-y-6">
         {/* Stats Grid */}
-        <div
-          className="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-float-in"
-          style={{ animationDelay: "80ms" }}
-        >
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className="glass rounded-xl px-4 py-3 elevation-2 transition-all duration-200 hover:elevation-4"
+              className="bg-card border border-border rounded-lg px-4 py-3"
             >
               <div className="flex items-center gap-2">
                 <p className={cn("text-2xl font-bold", stat.color)}>
@@ -113,7 +97,7 @@ export default async function ContentPage() {
             Listings
           </h2>
           {totalListings === 0 ? (
-            <div className="glass rounded-xl p-12 elevation-2 text-center animate-float-in">
+            <div className="bg-card border border-border rounded-lg p-12 elevation-2 text-center animate-float-in">
               <Building2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-foreground mb-2">
                 No Listings Yet
@@ -149,7 +133,7 @@ export default async function ContentPage() {
                   <Link
                     key={listing.id}
                     href={`/content/${listing.id}`}
-                    className="glass rounded-xl p-5 elevation-2 hover:elevation-4 transition-all duration-200 group animate-float-in"
+                    className="bg-card border border-border rounded-lg p-5 elevation-2 hover:elevation-4 transition-all duration-200 group animate-float-in"
                   >
                     <div className="flex items-center gap-4">
                       {/* Hero image thumbnail */}
@@ -244,6 +228,6 @@ export default async function ContentPage() {
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }

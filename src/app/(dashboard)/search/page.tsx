@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { LISTING_STATUS_COLORS, type ListingStatus } from "@/lib/constants";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 type Listing = {
   id: string;
@@ -105,20 +106,9 @@ export default function PropertySearchPage() {
   const hasActiveFilters = searchQuery || statusFilter !== "all" || priceMin || priceMax;
 
   return (
-    <div className="h-full overflow-y-auto p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
-    <div className="space-y-8">
-      <div className="animate-float-in">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-blue elevation-4">
-            <Search className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Property Search</h1>
-            <p className="text-sm text-muted-foreground">Find properties for your buyers</p>
-          </div>
-        </div>
-      </div>
-
+    <>
+    <PageHeader title="Property Search" subtitle="Find properties for your buyers" />
+    <div className="p-6 space-y-6">
       {/* Search bar */}
       <div className="flex gap-2">
         <div className="relative flex-1">
@@ -335,6 +325,6 @@ export default function PropertySearchPage() {
         </div>
       )}
     </div>
-    </div>
+    </>
   );
 }

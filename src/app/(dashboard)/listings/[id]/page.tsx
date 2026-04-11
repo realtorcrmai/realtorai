@@ -134,7 +134,7 @@ export default async function ListingDetailPage({
 
           {/* Listing Header — compact */}
           <Card className="animate-float-in overflow-hidden border-0 shadow-md">
-            <div className="h-1.5 bg-gradient-to-r from-teal-500 via-blue-500 to-indigo-500" />
+            <div className="h-1.5 bg-brand" />
             <CardContent className="p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1.5 min-w-0">

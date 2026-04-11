@@ -20,6 +20,7 @@ import {
 import { WORKFLOW_BLUEPRINTS } from "@/lib/constants";
 import { BackfillButton } from "@/components/automations/BackfillButton";
 import { AnimatedCounter } from "@/components/shared/AnimatedCounter";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -104,25 +105,13 @@ export default async function AutomationsPage() {
   }
 
   return (
-    <div className="space-y-6 animate-float-in">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-indigo elevation-4">
-            <Zap className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Automations
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Manage workflow automations, message templates, and notifications
-            </p>
-          </div>
-        </div>
-        <BackfillButton />
-      </div>
-
+    <>
+      <PageHeader
+        title="Automations"
+        subtitle="Manage workflow automations, message templates, and notifications"
+        actions={<BackfillButton />}
+      />
+      <div className="p-6 space-y-6">
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
@@ -355,6 +344,7 @@ export default async function AutomationsPage() {
           })}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

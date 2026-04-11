@@ -217,46 +217,45 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 
 ## Design System — Realtors360
 
-The UI uses a custom glassmorphism design language. All custom styles are defined as CSS custom properties in `globals.css`.
+The UI uses a HubSpot-inspired design language: clean, flat, professional. No glassmorphism or gradients. Custom styles are defined as CSS custom properties in `globals.css`. Legacy `lf-*` variables remain in the CSS but are deprecated — use the new palette.
 
 ### Key Variables
 ```css
---lf-bg: #f4f2ff           /* Light purple background */
---lf-indigo: #4f35d2        /* Primary brand color */
---lf-coral: #ff5c3a         /* Accent / CTA color */
---lf-teal: #00bfa5          /* Success accent */
---lf-emerald: #059669       /* Positive states */
---lf-text: #1a1535          /* Primary text */
---lf-r: 13px                /* Border radius */
---lf-sh: 0 2px 12px rgba(79,53,210,.08)  /* Card shadow */
---lf-font-heading: 'Bricolage Grotesque'
---lf-font-body: 'Bricolage Grotesque'
+--primary: #2D3E50          /* Navy — sidebar, headings */
+--brand: #FF7A59            /* Coral — CTAs, active indicators */
+--background: #F5F8FA       /* Light grey page background */
+--sidebar: #2D3E50          /* Navy sidebar background */
+--sidebar-primary: #FF7A59  /* Coral active indicator in sidebar */
+--success: #00BDA5          /* Teal — success states */
+--destructive: #D94F57      /* Red — errors, delete actions */
+--card: #FFFFFF             /* White card background */
+--border: #E5E7EB           /* Light grey borders */
 ```
 
 ### Component Classes
-- `.lf-card` — Glass card with backdrop-blur, white 85% opacity
-- `.lf-glass` — Glass panel for header/nav
-- `.lf-btn` — Primary indigo button
-- `.lf-btn-ghost` — Outlined button variant
-- `.lf-btn-sm` — Small button
-- `.lf-btn-success` / `.lf-btn-danger` — Semantic variants
-- `.lf-badge` — Status badge (variants: `-done`, `-active`, `-pending`, `-blocked`, `-info`)
-- `.lf-input` / `.lf-select` / `.lf-textarea` — Form elements
-- `.lf-phase-num` — Workflow phase indicator (circle with number)
-- `.lf-enrich-row` — Data enrichment row with hover effect
+- `PageHeader` component — used on every page for breadcrumbs, tabs, and action buttons
+- `DataTable` component — used for all list views (contacts, listings, showings, etc.)
+- `bg-card border-border rounded-lg` — standard card styling (no glass, no blur)
+- `bg-brand text-white` — primary CTA buttons
+- Button variant `brand` — coral CTA buttons via shadcn Button
+- Badge variants: `success`, `warning`, `info` — semantic status indicators
+- Legacy `.lf-card`, `.lf-glass`, `.lf-btn` classes are **deprecated** — do not use in new code
 
 ### Layout
-- Fixed glass header: 60px height
-- Horizontal pill navigation: 40px height
-- Content area: `margin-top: 100px` (header + nav), `padding: 18px`
-- Animated gradient background canvas (`.wf-canvas`)
-- Sidebar components exist (`Sidebar.tsx`, `SidebarLayout.tsx`, `MobileSidebarSheet.tsx`) but the default layout uses `AppHeader` with horizontal nav + `MobileNav` bottom bar
+- Navy sidebar: 240px wide (`w-60`), `bg-sidebar`, fixed left
+- Top header: 56px (`h-14`), `bg-card border-b border-border`
+- Content area: `flex-1 overflow-y-auto bg-background`
+- Mobile: bottom navigation bar with coral active states
+- No animated gradient background — flat `bg-background` everywhere
+- No horizontal pill navigation — sidebar handles all navigation
 
 ### Conventions
-- Emoji icons throughout UI (no Lucide icons on pages, only in some components)
-- Gradient avatars: seller = indigo→coral, buyer = indigo→purple
-- Status colors: green = confirmed/done, amber = pending, red = denied/blocked
-- All pages use `lf-glass` header bar with gradient title text
+- Every page uses the `PageHeader` component (breadcrumbs, tabs, actions)
+- List views use the `DataTable` component with sorting, filtering, pagination
+- No gradients, no glass effects, no backdrop-blur in new code
+- Sidebar navigation organized in 3 groups: Main, Tools, Admin
+- Lucide icons in sidebar navigation; emoji icons on page content
+- Status colors: green (`--success`) = confirmed/done, amber = pending, red (`--destructive`) = denied/blocked
 
 ---
 

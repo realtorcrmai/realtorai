@@ -447,11 +447,11 @@ export default async function ContactDetailPage({
     <>
       {/* Contact Card Header */}
       <div id="section-contact-info" className="animate-float-in relative z-20">
-            <Card className="shadow-md border border-brand/20 dark:border-brand/10 overflow-visible bg-gradient-to-r from-[#0F7694]/5 via-[#0F7694]/5 to-[#0F7694]/3 dark:from-[#1a1535]/20 dark:via-[#1a1535]/20 dark:to-[#1a1535]/10">
+            <Card className="border border-border overflow-visible">
               <CardContent className="p-4">
                 {/* Row 1: Avatar + Name + Badges + Actions */}
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0F7694] to-rose-500 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white font-bold text-lg shrink-0">
                     {contact.name.split(/\s+/).map((w: string) => w[0]).join("").substring(0, 2).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -638,10 +638,10 @@ export default async function ContactDetailPage({
 
   // Build right panel JSX
   const rightPanelJsx = (
-      <aside className="hidden lg:block w-[320px] shrink-0 border-l p-4 bg-gradient-to-b from-slate-50 via-white to-[#0F7694]/3 dark:from-card/50 dark:via-card/30 dark:to-[#1a1535]/10 overflow-y-auto space-y-4">
+      <aside className="hidden lg:block w-[320px] shrink-0 border-l border-border p-4 bg-card overflow-y-auto space-y-4">
         {/* Engagement — 1st section */}
         {intel && (
-          <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-[#0F7694] pl-4 rounded-sm shrink-0">
+          <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
             <IntelligencePanel
               intelligence={intel}
               totalEmails={newslettersWithEvents.length}
@@ -651,7 +651,7 @@ export default async function ContactDetailPage({
 
         {/* Prospect Controls — journey pause/resume, trust, frequency */}
         {(contactJourney || contact.type === "buyer" || contact.type === "seller") && (
-          <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-[#67D4E8] pl-4 rounded-sm shrink-0">
+          <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-brand pl-4 rounded-sm shrink-0">
             <ProspectControls
               contactId={id}
               contactName={contact.name}
@@ -662,7 +662,7 @@ export default async function ContactDetailPage({
         )}
 
         {/* Quick Log — log calls, texts, meetings */}
-        <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-[#0F7694] pl-4 rounded-sm shrink-0">
+        <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
           <QuickLogForm
             contactId={id}
             contactName={contact.name}
@@ -678,7 +678,7 @@ export default async function ContactDetailPage({
         </div>
 
         {/* Network Stats — 2nd section */}
-        <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-[#0F7694] pl-4 rounded-sm shrink-0">
+        <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
           <NetworkStatsCard
             connectionCount={relationships.length}
             referralCount={allReferrals.length}
@@ -691,7 +691,7 @@ export default async function ContactDetailPage({
         </div>
 
         {/* Referrals */}
-        <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-[#67D4E8] pl-4 rounded-sm shrink-0">
+        <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-brand pl-4 rounded-sm shrink-0">
           <ReferralsPanel
             contact={contact}
             referredByName={referredByName}
@@ -702,7 +702,7 @@ export default async function ContactDetailPage({
         </div>
 
         {/* Relationships — grows to fill remaining space */}
-        <div className="pt-3 border-l-4 border-l-[#67D4E8] pl-4 rounded-sm">
+        <div className="pt-3 border-l-4 border-l-brand pl-4 rounded-sm">
           <RelationshipManager
             contactId={contact.id}
             relationships={relationships}
@@ -712,7 +712,7 @@ export default async function ContactDetailPage({
           {/* Contextual Tips — fills remaining space when sections are empty */}
           {(!intel || Object.keys(intel).length === 0) && relationships.length === 0 && allReferrals.length === 0 && (
             <div className="mt-4 pt-4 border-t border-border/30">
-              <div className="rounded-xl bg-gradient-to-br from-[#0F7694]/5/50 to-[#0F7694]/3 dark:from-[#1a1535]/20 dark:to-[#1a1535]/10 border border-brand/15/50 dark:border-foreground/20 p-4">
+              <div className="rounded-xl bg-muted/50 dark:bg-muted/20 border border-border p-4">
                 <div className="flex items-start gap-2.5">
                   <span className="text-lg">💡</span>
                   <div>

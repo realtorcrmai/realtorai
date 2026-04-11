@@ -1,19 +1,17 @@
 export const dynamic = "force-dynamic";
 
-import Link from "next/link";
 import { getNewsletterAnalytics } from "@/actions/newsletters";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   Send,
   MailOpen,
   MousePointerClick,
   BarChart3,
-  ArrowLeft,
   Heart,
   Trophy,
   TrendingUp,
 } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 const emailTypeLabels: Record<string, string> = {
   new_listing_alert: "Listing Alerts",
@@ -40,24 +38,16 @@ export default async function NewsletterAnalyticsPage() {
   const brandScore = calculateBrandScore(analytics);
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="mb-1">
-            <Link href="/newsletters">
-              <Button variant="ghost" size="sm" className="gap-1.5 -ml-2 text-muted-foreground hover:text-foreground">
-                <ArrowLeft className="h-4 w-4" />
-                Back to Dashboard
-              </Button>
-            </Link>
-          </div>
-          <h1 className="text-3xl font-bold text-foreground">Newsletter Analytics</h1>
-          <p className="text-sm text-muted-foreground mt-1">Last 30 days</p>
-        </div>
-        <BarChart3 className="h-8 w-8 text-muted-foreground/40" />
-      </div>
-
+    <>
+      <PageHeader
+        title="Newsletter Analytics"
+        subtitle="Last 30 days"
+        breadcrumbs={[
+          { label: "Email Marketing", href: "/newsletters" },
+          { label: "Analytics" },
+        ]}
+      />
+      <div className="p-6 space-y-6">
       {/* Overview Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <StatCard
@@ -187,7 +177,8 @@ export default async function NewsletterAnalyticsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }
 

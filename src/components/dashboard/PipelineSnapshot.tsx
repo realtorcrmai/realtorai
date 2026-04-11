@@ -36,9 +36,7 @@ export default function PipelineSnapshot({
   const totalCount = stages.reduce((sum, s) => sum + s.count, 0);
 
   return (
-    <div className="relative rounded-2xl overflow-hidden elevation-4 bg-card border border-brand/20 border-t-[#0F7694]">
-      {/* Gold accent top border */}
-      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#0F7694]/60 via-[#0F7694] to-[#0F7694]/60" />
+    <div className="rounded-lg overflow-hidden bg-card border border-border">
     <div className="p-5">
       {/* Header row */}
       <div className="flex items-center justify-between mb-4">

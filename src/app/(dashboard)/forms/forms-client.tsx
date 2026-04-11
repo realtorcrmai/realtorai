@@ -8,6 +8,7 @@ import { ExternalLink, Info, FileCheck, Pencil, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { BC_FORMS } from "@/lib/forms/constants";
 import Link from "next/link";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 type ListingOption = { id: string; address: string };
 type FormStatus = Record<string, "draft" | "completed">;
@@ -36,16 +37,9 @@ export default function FormsPageClient({
   const optional = BC_FORMS.filter((f) => !f.required);
 
   return (
-    <div className="h-full overflow-y-auto p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
-      <div className="space-y-8">
-        <div className="animate-float-in space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">
-            BC real estate documents
-          </p>
-          <h1 className="text-3xl font-bold tracking-tight">
-            BC Standard Forms
-          </h1>
-        </div>
+    <>
+      <PageHeader title="BC Forms" subtitle="BC real estate standard documents" />
+      <div className="p-6 space-y-6">
 
         {/* Listing selector + admin link */}
         <div className="flex flex-wrap items-center gap-3">
@@ -121,7 +115,7 @@ export default function FormsPageClient({
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
 

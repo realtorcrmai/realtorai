@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, X } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import * as XLSX from "xlsx";
 
 type ImportedRow = {
@@ -92,20 +93,9 @@ export default function ImportPage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-4 md:p-6 lg:p-8 pb-20 md:pb-6">
-    <div className="space-y-8">
-      <div className="animate-float-in">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-cyan elevation-4">
-            <Upload className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Excel Import</h1>
-            <p className="text-sm text-muted-foreground">Bulk import listings from spreadsheets</p>
-          </div>
-        </div>
-      </div>
-
+    <>
+    <PageHeader title="Import Listings" subtitle="Bulk import listings from spreadsheets" />
+    <div className="p-6 space-y-6">
       {/* Template download */}
       <Card>
         <CardContent className="p-5 flex items-center justify-between gap-4 flex-wrap">
@@ -238,7 +228,7 @@ export default function ImportPage() {
         </Card>
       )}
     </div>
-    </div>
+    </>
   );
 }
 
