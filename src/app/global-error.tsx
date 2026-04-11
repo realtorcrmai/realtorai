@@ -1,10 +1,12 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
+import { useEffect } from "react";
 import { RefreshCw } from "lucide-react";
 
 /**
  * Root-level error boundary for errors outside the dashboard layout.
- * Uses inline styles since global CSS may not be loaded when this renders.
+ * Reports to Sentry + uses inline styles since global CSS may not be loaded.
  */
 export default function GlobalError({
   error,
@@ -13,6 +15,9 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
   return (
     <html lang="en">
       <body

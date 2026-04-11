@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   // Fix Turbopack workspace root detection (picks up parent package-lock.json otherwise)
@@ -44,4 +45,10 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: "listingflow",
+  project: "realtors360-crm-frontend",
+  silent: true,
+  widenClientFileUpload: true,
+  disableLogger: true,
+});
