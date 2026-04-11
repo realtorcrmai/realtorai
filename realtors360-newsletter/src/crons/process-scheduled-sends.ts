@@ -14,8 +14,8 @@
 
 import { supabase } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
-import { sendEmail } from '../lib/resend.js';
 import { canSendToContact } from '../lib/compliance.js';
+import { sendWithTracking } from '../lib/send-with-tracking.js';
 
 export async function runProcessScheduledSends(): Promise<void> {
   const start = Date.now();
@@ -77,20 +77,28 @@ export async function runProcessScheduledSends(): Promise<void> {
           continue;
         }
 
-        // Send via Resend
-        const result = await sendEmail({
+        // Send with tracking (handles newsletter insert + web view URL + unsubscribe URL)
+        const tracked = await sendWithTracking({
+          db: supabase,
           to: contact.email!,
           subject: draft.subject,
           html: draft.body_html,
           text: draft.body_text || undefined,
-          tags: [
-            { name: 'contact_id', value: draft.contact_id },
-            { name: 'email_type', value: draft.email_type },
-            { name: 'draft_id', value: draft.id },
-          ],
+          contactId: draft.contact_id,
+          realtorId: draft.realtor_id,
+          emailType: draft.email_type,
+          sendMode: 'agent_scheduled',
+          aiContext: { source: 'scheduled_send', draft_id: draft.id },
+          tags: [{ name: 'draft_id', value: draft.id }],
         });
 
         const now = new Date().toISOString();
+
+        if (!tracked.ok) {
+          await supabase.from('agent_drafts').update({ status: 'failed', updated_at: now }).eq('id', draft.id);
+          logger.warn({ draftId: draft.id, error: tracked.error }, 'scheduled-send: send failed');
+          continue;
+        }
 
         // Update draft status to sent
         await supabase
@@ -98,27 +106,13 @@ export async function runProcessScheduledSends(): Promise<void> {
           .update({
             status: 'sent',
             sent_at: now,
-            resend_message_id: result.id,
+            resend_message_id: tracked.resendId,
             updated_at: now,
           })
           .eq('id', draft.id);
 
-        // Track in newsletters table
-        await supabase.from('newsletters').insert({
-          contact_id: draft.contact_id,
-          realtor_id: draft.realtor_id,
-          subject: draft.subject,
-          email_type: draft.email_type,
-          status: 'sent',
-          html_body: draft.body_html,
-          sent_at: now,
-          resend_message_id: result.id,
-          send_mode: 'agent_scheduled',
-          ai_context: { source: 'scheduled_send_cron', draft_id: draft.id },
-        });
-
         logger.info(
-          { draftId: draft.id, contactId: draft.contact_id, resendId: result.id },
+          { draftId: draft.id, contactId: draft.contact_id, resendId: tracked.resendId },
           'cron: process-scheduled-sends — email sent'
         );
         sent++;

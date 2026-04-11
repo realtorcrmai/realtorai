@@ -24,7 +24,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { config } from '../../config.js';
 import { logger } from '../../lib/logger.js';
 import { parseAIJson, unescapeNewlines } from '../../lib/parse-ai-json.js';
-import { sendEmail } from '../../lib/resend.js';
+import { sendWithTracking } from '../../lib/send-with-tracking.js';
 import { sendGenericMessage } from '../../lib/twilio.js';
 import { canSendToContact } from '../../lib/compliance.js';
 import { createWithRetry } from '../anthropic-retry.js';
@@ -280,36 +280,27 @@ async function executeAutoMessage(
 
     try {
       const emailSubject = subject || step.name;
-      // Simple branded HTML wrapper (newsletter service doesn't port CRM's email-blocks)
-      const htmlBody = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1a1535;">
-<p>${body.replace(/\n/g, '<br>')}</p>
-<hr style="border:none;border-top:1px solid #e5e5e5;margin:24px 0;">
-<p style="font-size:12px;color:#888;">Sent by ${variables.agent_name || 'Your Agent'}</p>
-</body></html>`;
+      const emailTypeVal = step.template_id || step.action_type || 'welcome';
+      const { buildEmailFromType, generatePlainText } = await import('../../lib/email-blocks.js');
+      const htmlBody = buildEmailFromType(emailTypeVal, contact.name, contact.type, emailSubject, body, variables.agent_name ? `Talk to ${variables.agent_name}` : 'View Details');
+      const textBody = generatePlainText(htmlBody);
 
-      const result = await sendEmail({
+      const tracked = await sendWithTracking({
+        db,
         to: contact.email,
         subject: emailSubject,
         html: htmlBody,
-        text: body,
-        tags: [
-          { name: 'contact_id', value: contact.id },
-          { name: 'email_type', value: step.template_id || 'workflow' },
-        ],
+        text: textBody,
+        contactId: contact.id,
+        realtorId: '',  // Set by sendWithTracking from the contact's realtor_id in the DB
+        emailType: emailTypeVal,
+        sendMode: 'workflow_auto',
+        aiContext: { source: 'workflow', step_name: step.name, workflow_id: step.workflow_id },
       });
 
-      // Track in newsletters table
-      await db.from('newsletters').insert({
-        contact_id: contact.id,
-        subject: emailSubject,
-        email_type: step.template_id || step.action_type,
-        status: 'sent',
-        html_body: htmlBody,
-        sent_at: new Date().toISOString(),
-        resend_message_id: result.id || null,
-        send_mode: 'auto',
-        ai_context: { source: 'workflow', step_name: step.name, workflow_id: step.workflow_id },
-      });
+      if (!tracked.ok) {
+        return { success: true, result: { channel: 'email', logged: true, sendError: tracked.error } };
+      }
 
       // Log to communications
       await db.from('communications').insert({
@@ -319,7 +310,7 @@ async function executeAutoMessage(
         body: `Subject: ${emailSubject}\n\n${body}`,
       });
 
-      return { success: true, result: { channel: 'email', messageId: result.id } };
+      return { success: true, result: { channel: 'email', messageId: tracked.resendId } };
     } catch (emailErr) {
       await db.from('communications').insert({
         contact_id: contact.id,

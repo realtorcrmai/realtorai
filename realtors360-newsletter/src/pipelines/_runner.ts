@@ -222,13 +222,17 @@ export async function runPipeline(
   }
 
   // Now send — the row already exists so the cap is enforced even if we
-  // crash right here.
+  // crash right here. Replace web view URL placeholder before sending.
+  const { config: appConfig } = await import('../config.js');
+  const webViewUrl = `${appConfig.NEWSLETTER_SERVICE_URL}/emails/${nl.id}`;
+  const finalHtml = html.replace(/\{\{web_view_url\}\}/g, webViewUrl);
+
   let resendId: string;
   try {
     const sendResult = await sendEmail({
       to: contactRes.data.email!,
       subject: draft.subject,
-      html,
+      html: finalHtml,
       tags: [
         { name: 'email_type', value: rule.email_type },
         { name: 'event_id', value: event.id },
