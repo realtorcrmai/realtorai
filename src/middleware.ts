@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -65,23 +64,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // ── Onboarding gate — redirect unfinished users (PO8) ──
-  // Email/phone verification is non-blocking (banner-only, not redirect)
-  try {
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-    if (token && !pathname.startsWith("/api")) {
-      // Skip gates for demo/admin users
-      const isExempt = token.role === "admin" || (token.onboardingCompleted === true && token.personalizationCompleted === true);
-      if (!isExempt) {
-        if (token.personalizationCompleted === false) {
-          return NextResponse.redirect(new URL("/personalize", request.url));
-        }
-        if (token.onboardingCompleted === false) {
-          return NextResponse.redirect(new URL("/onboarding", request.url));
-        }
-      }
-    }
-  } catch { /* JWT decode failure — allow through, session check already passed */ }
+  // Onboarding gate moved to dashboard layout (server-side) for reliable
+  // DB-fresh checks — middleware JWT can be stale after onboarding completion.
 
   return NextResponse.next();
 }

@@ -73,7 +73,7 @@ export async function advanceOnboardingStep(step: number) {
   const supabase = createAdminClient();
   await supabase.from("users").update({ onboarding_step: step }).eq("id", session.user.id);
 
-  if (step >= 8) {
+  if (step >= 6) {
     await supabase.from("users").update({ onboarding_completed: true }).eq("id", session.user.id);
     await supabase.from("signup_events").insert({
       user_id: session.user.id,
