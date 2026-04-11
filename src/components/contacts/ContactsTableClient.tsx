@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { DataTable } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Phone, Mail } from "lucide-react";
+import { Search, Phone, Mail, Eye } from "lucide-react";
+import { ContactPreviewSheet } from "@/components/contacts/ContactPreviewSheet";
 
 interface ContactRow {
   id: string;
@@ -74,6 +75,8 @@ function hashColor(name: string) {
 export function ContactsTableClient({ contacts }: { contacts: ContactRow[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [previewContact, setPreviewContact] = useState<ContactRow | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const filtered = contacts.filter((c) => {
     if (!search) return true;
@@ -99,6 +102,15 @@ export function ContactsTableClient({ contacts }: { contacts: ContactRow[] }) {
         />
       </div>
       <DataTable
+        selectable={true}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        bulkActions={(ids) => (
+          <div className="flex items-center gap-2">
+            <button className="px-3 py-1.5 text-xs font-medium rounded-md border border-border bg-background hover:bg-muted" onClick={() => { /* placeholder */ }}>Add Tag</button>
+            <button className="px-3 py-1.5 text-xs font-medium rounded-md border border-border bg-background hover:bg-muted" onClick={() => { /* placeholder */ }}>Change Stage</button>
+          </div>
+        )}
         columns={[
           {
             key: "name",
@@ -154,6 +166,9 @@ export function ContactsTableClient({ contacts }: { contacts: ContactRow[] }) {
         ariaLabel="Contacts list"
         rowActions={(row) => (
           <div className="flex items-center gap-0.5">
+            <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); setPreviewContact(row); }} className="p-1.5 hover:bg-muted rounded-md" aria-label={`Preview ${row.name}`}>
+              <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
             {row.phone && (
               <a href={`tel:${row.phone}`} className="p-1.5 hover:bg-muted rounded-md" aria-label={`Call ${row.name}`}>
                 <Phone className="h-3.5 w-3.5 text-muted-foreground" />
@@ -166,6 +181,11 @@ export function ContactsTableClient({ contacts }: { contacts: ContactRow[] }) {
             )}
           </div>
         )}
+      />
+      <ContactPreviewSheet
+        contact={previewContact}
+        open={!!previewContact}
+        onOpenChange={(open) => { if (!open) setPreviewContact(null); }}
       />
     </div>
   );

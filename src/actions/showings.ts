@@ -148,7 +148,7 @@ export async function createShowingRequest(
 
 export async function updateShowingStatus(
   appointmentId: string,
-  status: "confirmed" | "denied" | "cancelled"
+  status: "confirmed" | "denied" | "cancelled" | "completed"
 ) {
   const tc = await getAuthenticatedTenantClient();
 
@@ -205,6 +205,42 @@ export async function updateShowingStatus(
       }
     } catch {
       // Don't fail status update if triggers fail
+    }
+  }
+
+  // Post-showing feedback request when marking as completed
+  if (status === "completed") {
+    try {
+      const { data: appointment } = await tc
+        .from("appointments")
+        .select("buyer_agent_name, buyer_agent_phone, listing_id, listings(address)")
+        .eq("id", appointmentId)
+        .single();
+
+      if (appointment?.buyer_agent_phone) {
+        const listing = appointment.listings as { address?: string } | null;
+        const feedbackMsg = `Hi ${appointment.buyer_agent_name || "there"}, how did the showing at ${listing?.address || "the property"} go? Reply with your feedback. Thanks!`;
+
+        // Only send if Twilio is configured
+        if (process.env.TWILIO_ACCOUNT_SID) {
+          const { sendGenericMessage } = await import("@/lib/twilio");
+          await sendGenericMessage({
+            to: appointment.buyer_agent_phone,
+            channel: "sms",
+            body: feedbackMsg,
+          });
+        }
+
+        // Log the outbound communication
+        await tc.from("communications").insert({
+          direction: "outbound",
+          channel: "sms",
+          body: `Feedback request sent to ${appointment.buyer_agent_name || "buyer agent"}`,
+          related_id: appointmentId,
+        });
+      }
+    } catch {
+      // Don't fail the status update if feedback fails
     }
   }
 

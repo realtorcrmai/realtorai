@@ -8,6 +8,17 @@ import type { Json } from "@/types/database";
 import { enforceConsistency } from "@/lib/contact-consistency";
 import { triggerIngest } from "@/lib/rag/realtime-ingest";
 
+export async function getContactCommunications(contactId: string, limit = 5) {
+  const tc = await getAuthenticatedTenantClient();
+  const { data } = await tc
+    .from("communications")
+    .select("id, direction, channel, body, created_at")
+    .eq("contact_id", contactId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return data ?? [];
+}
+
 export async function createContact(formData: ContactFormData, force = false) {
   const parsed = contactSchema.safeParse(formData);
   if (!parsed.success) {

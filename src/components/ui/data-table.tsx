@@ -25,6 +25,7 @@ interface DataTableProps<T> {
   onSelectionChange?: (ids: Set<string>) => void;
   ariaLabel?: string;
   rowActions?: (row: T) => React.ReactNode;
+  bulkActions?: (selectedIds: Set<string>) => React.ReactNode;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,6 +42,7 @@ export function DataTable<T extends Record<string, any>>({
   onSelectionChange,
   ariaLabel,
   rowActions,
+  bulkActions,
 }: DataTableProps<T>) {
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -217,6 +219,15 @@ export function DataTable<T extends Record<string, any>>({
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {bulkActions && selectedIds && selectedIds.size > 0 && (
+        <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 rounded-xl shadow-xl bg-card border border-border">
+          <span className="text-sm font-medium text-muted-foreground">{selectedIds.size} selected</span>
+          <button onClick={() => onSelectionChange?.(new Set())} className="text-sm text-muted-foreground hover:text-foreground">Clear</button>
+          <div className="h-4 w-px bg-border" />
+          {bulkActions(selectedIds)}
         </div>
       )}
     </div>

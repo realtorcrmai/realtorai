@@ -17,6 +17,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/sdk/") ||
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/favicon") ||
+    pathname.startsWith("/logo-") ||
+    pathname === "/logo-animated.html" ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/health") ||
     pathname.startsWith("/api/webhooks") ||
@@ -71,5 +73,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|logo-.*\\.html|logo-.*\\.mp4|logo-.*\\.svg).*)"],
 };
