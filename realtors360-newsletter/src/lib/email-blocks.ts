@@ -34,6 +34,7 @@ export type EmailData = {
   tagLine?: string;
   webViewUrl?: string;
   heroImageUrl?: string;  // Neighbourhood/area photo for non-listing emails
+  photos?: string[];      // Generic photo array for non-listing emails (area, lifestyle, etc.)
   listing?: {
     address: string; area: string; price: string | number;
     beds?: number; baths?: number; sqft?: string; year?: number;
@@ -294,6 +295,35 @@ const blocks: Record<string, BlockFn> = {
     </td></tr>`;
   },
 
+  // ── 9b. General Photo Stack — for non-listing emails (uses d.photos) ──
+  generalPhotoStack: (d) => {
+    const photos = d.photos;
+    if (!photos || photos.length === 0) return '';
+    return photos.map((photo, i) => `
+    <tr><td style="padding:${i === 0 ? '32px' : '6px'} 0 0;line-height:0;font-size:0;">
+      <img src="${photo}" alt="Photo ${i + 1}" width="660" style="display:block;width:100%;height:auto;border:0;" class="mobile-img">
+    </td></tr>`).join('');
+  },
+
+  // ── 9c. General Two Column — for non-listing emails ──
+  generalTwoColumn: (d) => {
+    const photos = d.photos;
+    if (!photos || photos.length < 2) return '';
+    return `
+    <tr><td style="padding:32px 0 0;line-height:0;font-size:0;">
+      <!--[if mso]><table width="660" cellpadding="0" cellspacing="0"><tr><td width="328" valign="top"><![endif]-->
+      <div style="display:inline-block;width:49.7%;vertical-align:top;">
+        <img src="${photos[0]}" alt="Photo" width="328" style="display:block;width:100%;height:auto;border:0;" class="mobile-stack">
+      </div>
+      <!--[if mso]></td><td width="4"></td><td width="328" valign="top"><![endif]-->
+      <div style="display:inline-block;width:0.6%;"></div>
+      <div style="display:inline-block;width:49.7%;vertical-align:top;">
+        <img src="${photos[1]}" alt="Photo" width="328" style="display:block;width:100%;height:auto;border:0;" class="mobile-stack">
+      </div>
+      <!--[if mso]></td></tr></table><![endif]-->
+    </td></tr>`;
+  },
+
   // ── 10. Agent Profile ────────────────────────
   agentProfile: (d) => {
     const initials = d.agent.initials || d.agent.name.split(' ').map(n => n[0]).join('').slice(0, 2);
@@ -495,24 +525,26 @@ const TEMPLATE_BLOCKS: Record<string, string[]> = {
   ],
   market_update: [
     'brandHeader', 'smartHero', 'serifTitle', 'description', 'marketStatsGrid',
-    'recentSalesTable', 'dividerLine', 'luxuryButton',
+    'recentSalesTable', 'dividerLine', 'generalTwoColumn', 'luxuryButton',
     'agentProfile', 'complianceFooter',
   ],
   just_sold: [
     'brandHeader', 'smartHero', 'serifTitle', 'specsBar', 'priceDisplay',
-    'description', 'photoStack', 'testimonialBlock', 'dividerLine', 'agentProfile', 'complianceFooter',
+    'description', 'photoStack', 'dividerLine', 'testimonialBlock',
+    'agentProfile', 'complianceFooter',
   ],
   birthday: [
-    'brandHeader', 'smartHero', 'birthdayCelebration', 'description', 'dividerLine',
-    'agentProfile', 'complianceFooter',
+    'brandHeader', 'smartHero', 'birthdayCelebration', 'description',
+    'generalPhotoStack', 'dividerLine', 'agentProfile', 'complianceFooter',
   ],
   home_anniversary: [
     'brandHeader', 'smartHero', 'serifTitle', 'description', 'anniversaryValue',
-    'neighbourhoodHighlights', 'luxuryButton', 'agentProfile', 'complianceFooter',
+    'generalTwoColumn', 'neighbourhoodHighlights', 'luxuryButton',
+    'agentProfile', 'complianceFooter',
   ],
   open_house: [
     'brandHeader', 'luxuryHero', 'serifTitle', 'specsBar', 'priceDisplay',
-    'openHouseCard', 'description', 'twoColumnPhotos', 'viewListingCta',
+    'openHouseCard', 'description', 'photoStack', 'viewListingCta',
     'agentProfile', 'complianceFooter',
   ],
   price_drop: [
@@ -520,28 +552,29 @@ const TEMPLATE_BLOCKS: Record<string, string[]> = {
     'description', 'photoStack', 'luxuryButton', 'agentProfile', 'complianceFooter',
   ],
   neighbourhood_guide: [
-    'brandHeader', 'smartHero', 'serifTitle', 'description', 'neighbourhoodHighlights',
-    'twoColumnPhotos', 'luxuryButton', 'agentProfile', 'complianceFooter',
+    'brandHeader', 'smartHero', 'serifTitle', 'description', 'generalPhotoStack',
+    'neighbourhoodHighlights', 'generalTwoColumn', 'luxuryButton',
+    'agentProfile', 'complianceFooter',
   ],
   showing_confirmed: [
-    'brandHeader', 'gradientHero', 'serifTitle', 'openHouseCard', 'description',
-    'luxuryButton', 'agentProfile', 'complianceFooter',
+    'brandHeader', 'smartHero', 'serifTitle', 'openHouseCard', 'description',
+    'photoStack', 'luxuryButton', 'agentProfile', 'complianceFooter',
   ],
   welcome: [
-    'brandHeader', 'smartHero', 'serifTitle', 'description', 'marketStatsGrid',
-    'luxuryButton', 'socialLinks', 'agentProfile', 'complianceFooter',
+    'brandHeader', 'smartHero', 'serifTitle', 'description', 'generalTwoColumn',
+    'marketStatsGrid', 'luxuryButton', 'socialLinks', 'agentProfile', 'complianceFooter',
   ],
   re_engagement: [
-    'brandHeader', 'smartHero', 'serifTitle', 'description', 'marketStatsGrid',
-    'luxuryButton', 'agentProfile', 'complianceFooter',
+    'brandHeader', 'smartHero', 'serifTitle', 'description', 'generalPhotoStack',
+    'marketStatsGrid', 'luxuryButton', 'agentProfile', 'complianceFooter',
   ],
   seller_report: [
-    'brandHeader', 'smartHero', 'serifTitle', 'marketStatsGrid', 'recentSalesTable',
-    'description', 'luxuryButton', 'agentProfile', 'complianceFooter',
+    'brandHeader', 'smartHero', 'serifTitle', 'marketStatsGrid', 'generalTwoColumn',
+    'recentSalesTable', 'description', 'luxuryButton', 'agentProfile', 'complianceFooter',
   ],
   cma_preview: [
-    'brandHeader', 'smartHero', 'serifTitle', 'description', 'marketStatsGrid',
-    'recentSalesTable', 'testimonialBlock', 'luxuryButton',
+    'brandHeader', 'smartHero', 'serifTitle', 'description', 'generalPhotoStack',
+    'marketStatsGrid', 'recentSalesTable', 'testimonialBlock', 'luxuryButton',
     'agentProfile', 'complianceFooter',
   ],
 };
