@@ -58,7 +58,7 @@ const moreItems: { href: string; label: string; icon: typeof Building2; featureK
   { href: "/forms", label: "BC Forms", icon: FileText, featureKey: "forms" },
   { href: "/newsletters", label: "Email Marketing", icon: Mail, featureKey: "newsletters" },
   { href: "/websites", label: "Website Marketing", icon: Globe, featureKey: "website" },
-  { href: "/search", label: "MLS Browse", icon: Search, featureKey: "mls-browse" },
+  { href: "/mls-browse", label: "MLS Browse", icon: Search, featureKey: "mls-browse" },
 ];
 
 export function AppHeader() {
@@ -123,7 +123,7 @@ export function AppHeader() {
           </div>
           <div className="flex items-center gap-2">
             <span className="font-bold text-lg tracking-tight text-foreground">
-              RealtorAI
+              Realtors360
             </span>
             <span className="text-[9px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
               BC AI Agent
@@ -278,7 +278,7 @@ export function AppHeader() {
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--sidebar-primary)]">
                   <Home className="h-4 w-4 text-[var(--sidebar-primary-foreground)]" />
                 </div>
-                <span className="font-bold text-base">RealtorAI</span>
+                <span className="font-bold text-base">Realtors360</span>
               </div>
               {/* Nav */}
               <nav className="flex-1 overflow-y-auto p-3 space-y-1">
@@ -324,7 +324,7 @@ export function AppHeader() {
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
             <Home className="h-3.5 w-3.5 text-primary-foreground" />
           </div>
-          <span className="font-bold text-sm">RealtorAI</span>
+          <span className="font-bold text-sm">Realtors360</span>
           <span className="text-[8px] font-semibold tracking-wider uppercase px-1 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
             BC AI Agent
           </span>

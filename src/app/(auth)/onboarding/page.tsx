@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useSession, signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { ContactImportPreview } from "@/components/onboarding/ContactImportPreview";
 import {
@@ -36,7 +36,6 @@ import {
   sendTeamInvite,
   linkReferral,
 } from "@/actions/onboarding";
-import { EmailSyncStep } from "@/components/onboarding/EmailSyncStep";
 import { MLSConnectionStep } from "@/components/onboarding/MLSConnectionStep";
 import { CSVImportStep, type ReferralSuggestion } from "@/components/onboarding/CSVImportStep";
 import { CelebrationScreen } from "@/components/onboarding/CelebrationScreen";
@@ -45,15 +44,13 @@ import { AIBioGenerator } from "@/components/onboarding/AIBioGenerator";
 const STEPS = [
   { num: 1, label: "Profile", icon: Camera },
   { num: 2, label: "Contacts", icon: Users },
-  { num: 3, label: "Email", icon: Mail },
-  { num: 4, label: "Calendar", icon: Calendar },
-  { num: 5, label: "Details", icon: Building2 },
-  { num: 6, label: "MLS", icon: Globe },
-  { num: 7, label: "Start", icon: ArrowRight },
+  { num: 3, label: "Details", icon: Building2 },
+  { num: 4, label: "MLS", icon: Globe },
+  { num: 5, label: "Start", icon: ArrowRight },
 ];
 
-/** Step 7: Auto-complete onboarding and redirect to dashboard */
-function Step7AutoComplete({ completeOnboarding }: { completeOnboarding: (dest: string) => Promise<void> }) {
+/** Step 5: Auto-complete onboarding and redirect to dashboard */
+function StepAutoComplete({ completeOnboarding }: { completeOnboarding: (dest: string) => Promise<void> }) {
   const triggered = useRef(false);
   useEffect(() => {
     if (!triggered.current) {
@@ -314,9 +311,9 @@ export default function OnboardingPage() {
     setInviteSent(true);
   };
 
-  // ── Step 7: Complete onboarding → go straight to dashboard with fireworks ──
+  // ── Complete onboarding → go straight to dashboard with fireworks ──
   const completeOnboarding = async (destination: string) => {
-    await advanceOnboardingStep(8);
+    await advanceOnboardingStep(6);
     await updateSession();
     // Hard redirect with welcome flag — dashboard fires confetti on ?welcome=1
     window.location.href = destination + (destination.includes("?") ? "&" : "?") + "welcome=1";
@@ -616,53 +613,8 @@ export default function OnboardingPage() {
                 </>
               )}
 
-              {/* ═══ Step 3: Email Sync ═══ */}
+              {/* ═══ Step 3: Professional Details ═══ */}
               {step === 3 && (
-                <EmailSyncStep
-                  onNext={goNext}
-                  onBack={goBack}
-                  onSkip={goNext}
-                />
-              )}
-
-              {/* ═══ Step 4: Google Calendar ═══ */}
-              {step === 4 && (
-                <>
-                  <h1 className="text-2xl md:text-3xl font-bold text-foreground text-center mb-2 animate-fade-in">
-                    Connect your calendar
-                  </h1>
-                  <p className="text-gray-500 text-sm text-center mb-8">
-                    See showings and tasks on your Google Calendar
-                  </p>
-
-                  <button
-                    onClick={() => signIn("google", { callbackUrl: "/onboarding" })}
-                    className="w-full flex items-center gap-4 p-5 rounded-xl border-2 border-white/40 bg-white/30 backdrop-blur-sm hover:border-[#4f35d2] transition-colors text-left mb-4"
-                  >
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 shrink-0">
-                      <Calendar className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">Connect Google Calendar</p>
-                      <p className="text-xs text-gray-500">Sync showings, tasks, and appointments</p>
-                    </div>
-                  </button>
-
-                  <p className="text-xs text-center text-gray-400 mb-6">
-                    Already connected? Continue below.
-                  </p>
-
-                  <button onClick={goNext} className="w-full max-w-xs mx-auto block py-3 bg-[#4f35d2] text-white rounded-xl text-sm font-semibold hover:bg-[#3d28a8] transition-colors">
-                    Continue
-                  </button>
-                  <button onClick={goNext} className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 transition-colors text-center">
-                    Skip for now
-                  </button>
-                </>
-              )}
-
-              {/* ═══ Step 5: Professional Details ═══ */}
-              {step === 5 && (
                 <>
                   <h1 className="text-2xl md:text-3xl font-bold text-foreground text-center mb-2 animate-fade-in">
                     Professional details
@@ -724,8 +676,8 @@ export default function OnboardingPage() {
                 </>
               )}
 
-              {/* ═══ Step 6: MLS Connection ═══ */}
-              {step === 6 && (
+              {/* ═══ Step 4: MLS Connection ═══ */}
+              {step === 4 && (
                 <MLSConnectionStep
                   onNext={goNext}
                   onBack={goBack}
@@ -733,9 +685,9 @@ export default function OnboardingPage() {
                 />
               )}
 
-              {/* ═══ Step 7: Auto-complete → Dashboard ═══ */}
-              {step === 7 && (
-                <Step7AutoComplete completeOnboarding={completeOnboarding} />
+              {/* ═══ Step 5: Auto-complete → Dashboard ═══ */}
+              {step === 5 && (
+                <StepAutoComplete completeOnboarding={completeOnboarding} />
               )}
         </div>
       </div>

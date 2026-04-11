@@ -9,7 +9,7 @@ export async function GET() {
   }
 
   const result = await getChecklistItems(session.user.id);
-  return NextResponse.json(result);
+  return NextResponse.json({ ...result, name: session.user.name ?? "" });
 }
 
 export async function POST(request: Request) {

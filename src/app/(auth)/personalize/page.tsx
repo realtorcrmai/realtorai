@@ -95,7 +95,7 @@ function getHeading(screen: number, firstName: string): string {
 }
 
 export default function PersonalizePage() {
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const router = useRouter();
   const [screen, setScreen] = useState(0);
   const [selections, setSelections] = useState<Record<string, string | string[] | null>>({});
@@ -173,6 +173,7 @@ export default function PersonalizePage() {
       // Go to loading screen (Screen 6)
       setScreen(TOTAL_SCREENS - 1);
       await completePersonalization();
+      await updateSession(); // Refresh JWT so middleware sees personalization_completed = true
       setTimeout(() => router.push("/onboarding"), 2000);
     }
     setSaving(false);
@@ -189,6 +190,7 @@ export default function PersonalizePage() {
     } else {
       setScreen(TOTAL_SCREENS - 1);
       await completePersonalization();
+      await updateSession(); // Refresh JWT so middleware sees personalization_completed = true
       setTimeout(() => router.push("/onboarding"), 2000);
     }
     setSaving(false);

@@ -168,7 +168,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               token.emailVerified = existingUser.email_verified ?? true;
               token.phoneVerified = existingUser.phone_verified ?? false;
               token.onboardingCompleted = existingUser.onboarding_completed ?? true;
-              token.personalizationCompleted = existingUser.personalization_completed ?? false;
+              // Default to true for pre-existing users (column didn't exist before migration 095)
+              token.personalizationCompleted = existingUser.personalization_completed ?? (existingUser.onboarding_completed ? true : false);
               token.trialEndsAt = existingUser.trial_ends_at ?? null;
               // Resolve effective plan: trial plan if active, otherwise base plan
               const { getEffectivePlan } = await import("@/lib/plans");
