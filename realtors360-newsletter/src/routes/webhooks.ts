@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase.js';
 import { config } from '../config.js';
 import { logger } from '../lib/logger.js';
 import { recordPositiveSignal, recordNegativeSignal } from '../agent/trust/trust-level.js';
+import { suppressContact } from '../lib/suppression.js';
 
 export const webhooksRouter: Router = Router();
 
@@ -296,6 +297,35 @@ webhooksRouter.post('/webhooks/resend', async (req: Request, res: Response) => {
         .from('contact_journeys')
         .update({ is_paused: true, pause_reason: eventType })
         .eq('contact_id', contactId);
+
+      // Auto-suppress after 3 bounces for the same contact
+      if (eventType === 'bounced' && contactRow?.realtor_id) {
+        try {
+          const { count: bounceCount } = await supabase
+            .from('newsletter_events')
+            .select('id', { count: 'exact', head: true })
+            .eq('contact_id', contactId)
+            .eq('event_type', 'bounced');
+
+          if (bounceCount !== null && bounceCount >= 3) {
+            await suppressContact(
+              supabase,
+              contactId,
+              contactRow.realtor_id as string,
+              `Auto-suppressed after ${bounceCount} bounces`
+            );
+            log.info(
+              { contactId, bounceCount },
+              'webhook: contact auto-suppressed after 3+ bounces'
+            );
+          }
+        } catch (suppressErr) {
+          log.warn(
+            { err: suppressErr, contactId },
+            'webhook: auto-suppress check failed (non-fatal)'
+          );
+        }
+      }
     }
 
     log.info({ eventType, contactId, newsletterId }, 'webhook: processed');

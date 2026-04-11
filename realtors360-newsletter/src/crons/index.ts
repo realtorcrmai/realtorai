@@ -10,6 +10,7 @@ import { runProcessWorkflows } from './process-workflows.js';
 import { runAgentTriage } from './agent-triage.js';
 import { runProcessScheduledSends } from './process-scheduled-sends.js';
 import { scrapeMarketStats } from './scrape-market-stats.js';
+import { runWeeklyDigest } from './weekly-digest.js';
 
 /**
  * Cron registry.
@@ -159,4 +160,18 @@ export function startCrons(): void {
     { flag: config.FLAG_MARKET_SCRAPER },
     'cron: registered scrape-market-stats (0 2 * * 0 America/Vancouver)'
   );
+
+  // Weekly realtor digest (Monday 8 AM Vancouver). Sends each active realtor
+  // a summary of the past 7 days: emails sent, open/click rates, top contacts,
+  // agent decisions, cost. No feature flag — always active.
+  cron.schedule(
+    '0 8 * * 1',
+    () => {
+      runWeeklyDigest().catch((err) =>
+        logger.error({ err }, 'cron: weekly-digest threw')
+      );
+    },
+    { timezone: 'America/Vancouver' }
+  );
+  logger.info('cron: registered weekly-digest (0 8 * * 1 America/Vancouver)');
 }

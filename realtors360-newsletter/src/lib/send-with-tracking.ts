@@ -66,12 +66,17 @@ export async function sendWithTracking(args: TrackedSendArgs): Promise<TrackedSe
       .replace(/\{\{web_view_url\}\}/g, webViewUrl)
       .replace(/\{\{unsubscribe_url\}\}/g, `${config.NEWSLETTER_SERVICE_URL}/unsubscribe/${contactId}/${generateToken(contactId)}`);
 
-    // 3. Send via Resend
+    // 3. Send via Resend — include RFC 8058 List-Unsubscribe headers
+    const unsubscribeUrl = `${config.NEWSLETTER_SERVICE_URL}/unsubscribe/${contactId}/${generateToken(contactId)}`;
     const result = await sendEmail({
       to,
       subject,
       html: finalHtml,
       text: args.text,
+      headers: {
+        'List-Unsubscribe': `<mailto:unsubscribe@realtors360.ai>, <${unsubscribeUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
       tags: [
         { name: 'contact_id', value: contactId },
         { name: 'email_type', value: emailType },

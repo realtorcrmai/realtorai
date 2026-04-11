@@ -86,6 +86,25 @@ const CLR = {
 // HELPER — format price
 // ═══════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════
+// HELPER — append UTM params to CTA URLs
+// ═══════════════════════════════════════════════
+
+export function addUtm(url: string, emailType: string): string {
+  if (!url || url === '#') return url;
+  try {
+    const u = new URL(url);
+    u.searchParams.set('utm_source', 'realtors360');
+    u.searchParams.set('utm_medium', 'email');
+    u.searchParams.set('utm_campaign', emailType);
+    return u.toString();
+  } catch {
+    // Relative URL or malformed — append as query string
+    const sep = url.includes('?') ? '&' : '?';
+    return `${url}${sep}utm_source=realtors360&utm_medium=email&utm_campaign=${encodeURIComponent(emailType)}`;
+  }
+}
+
 function fmtPrice(p: string | number | undefined): string {
   if (!p) return '';
   if (typeof p === 'number') return `$${p.toLocaleString('en-US')}`;
@@ -577,6 +596,10 @@ const TEMPLATE_BLOCKS: Record<string, string[]> = {
     'marketStatsGrid', 'recentSalesTable', 'testimonialBlock', 'luxuryButton',
     'agentProfile', 'complianceFooter',
   ],
+  realtor_digest: [
+    'brandHeader', 'serifTitle', 'description', 'marketStatsGrid',
+    'dividerLine', 'agentProfile', 'complianceFooter',
+  ],
 };
 
 // ═══════════════════════════════════════════════
@@ -584,6 +607,11 @@ const TEMPLATE_BLOCKS: Record<string, string[]> = {
 // ═══════════════════════════════════════════════
 
 export function assembleEmail(emailType: string, data: EmailData): string {
+  // Apply UTM tags to all CTA URLs before rendering blocks
+  if (data.content.ctaUrl) {
+    data.content.ctaUrl = addUtm(data.content.ctaUrl, emailType);
+  }
+
   const blockList = TEMPLATE_BLOCKS[emailType] || TEMPLATE_BLOCKS.welcome;
 
   const renderedBlocks = blockList

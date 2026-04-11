@@ -4,6 +4,7 @@ import { eventsRouter } from './routes/events.js';
 import { webhooksRouter } from './routes/webhooks.js';
 import { metricsRouter } from './routes/metrics.js';
 import { webViewRouter } from './routes/web-view.js';
+import { previewRouter } from './routes/preview.js';
 import { logger } from './lib/logger.js';
 
 export function createApp(): Express {
@@ -32,6 +33,7 @@ export function createApp(): Express {
   app.use(webhooksRouter);
   app.use(metricsRouter);
   app.use(webViewRouter);
+  app.use(previewRouter);
 
   // 404
   app.use((req, res) => {
