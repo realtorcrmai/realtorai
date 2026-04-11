@@ -80,6 +80,9 @@ export async function advanceOnboardingStep(step: number) {
       event: "onboarding_complete",
     });
 
+    // Seed sample contacts so the dashboard doesn't look empty
+    await seedSampleData();
+
     // A3 + A5 + A6: Fire AI tasks async on onboarding completion (fire-and-forget)
     const userId = session.user.id;
     import("@/actions/ai-onboarding").then(async ({ generateDashboardBriefing, suggestAutomations }) => {
@@ -316,37 +319,62 @@ export async function seedSampleData() {
 
   if ((count || 0) > 0) return { success: true, message: "Already has contacts" };
 
-  // Seed 3 demo contacts
+  // Seed 5 demo contacts with realistic data so the page looks populated
   await supabase.from("contacts").insert([
     {
       realtor_id: session.user.id,
       name: "Sarah Chen",
-      email: null, // null to prevent accidental emails
-      phone: null,
+      email: "sarah.chen@example.com",
+      phone: "+16045550101",
       type: "buyer",
       source: "sample",
       is_sample: true,
-      notes: "Sample buyer contact — replace with your real contacts",
+      pref_channel: "email",
+      notes: "Looking for a 2BR condo in Vancouver. Budget $650K-$800K.",
     },
     {
       realtor_id: session.user.id,
       name: "James Patel",
-      email: null,
-      phone: null,
+      email: "james.patel@example.com",
+      phone: "+16045550102",
       type: "seller",
       source: "sample",
       is_sample: true,
-      notes: "Sample seller contact — replace with your real contacts",
+      pref_channel: "sms",
+      notes: "Owns townhouse on Main St. Considering selling in spring.",
     },
     {
       realtor_id: session.user.id,
       name: "Lisa Wong",
-      email: null,
-      phone: null,
-      type: "agent",
+      email: "lisa.wong@example.com",
+      phone: "+16045550103",
+      type: "buyer",
       source: "sample",
       is_sample: true,
-      notes: "Sample agent contact — replace with your real contacts",
+      pref_channel: "email",
+      notes: "First-time buyer. Pre-approved for $550K. Wants East Van.",
+    },
+    {
+      realtor_id: session.user.id,
+      name: "Michael Torres",
+      email: "m.torres@example.com",
+      phone: "+16045550104",
+      type: "seller",
+      source: "sample",
+      is_sample: true,
+      pref_channel: "phone",
+      notes: "Investment property owner. Has 3 units in Burnaby.",
+    },
+    {
+      realtor_id: session.user.id,
+      name: "Emily Nakamura",
+      email: "emily.n@example.com",
+      phone: "+16045550105",
+      type: "buyer",
+      source: "sample",
+      is_sample: true,
+      pref_channel: "email",
+      notes: "Relocating from Toronto. Looking for family home with yard.",
     },
   ]);
 

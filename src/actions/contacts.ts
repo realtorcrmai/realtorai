@@ -101,6 +101,19 @@ export async function createContact(formData: ContactFormData, force = false) {
   // Real-time RAG ingestion
   triggerIngest("contacts", data.id);
 
+  // Auto-cleanup: remove sample contacts once user has 5+ real contacts
+  (async () => {
+    try {
+      const { count } = await tc
+        .from("contacts")
+        .select("id", { count: "exact", head: true })
+        .eq("is_sample", false);
+      if ((count ?? 0) >= 5) {
+        await tc.from("contacts").delete().eq("is_sample", true);
+      }
+    } catch { /* non-critical */ }
+  })();
+
   return { success: true, contact: data };
 }
 

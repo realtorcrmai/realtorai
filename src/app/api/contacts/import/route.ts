@@ -151,6 +151,11 @@ async function handleJSONImport(_tc: any, request: NextRequest) {
     }
   }
 
+  // Auto-cleanup sample contacts if user now has 5+ real contacts
+  if (imported >= 5) {
+    supabase.from("contacts").delete().eq("realtor_id", session.user.id).eq("is_sample", true).then(() => {});
+  }
+
   return NextResponse.json({
     ok: true,
     imported,
@@ -335,6 +340,11 @@ async function handleFormDataImport(tc: any, request: NextRequest) {
         relErrors.push(`Row ${meta.rowNum}: family_of "${meta.familyOfRaw}" not found`);
       }
     }
+  }
+
+  // Auto-cleanup sample contacts if user now has 5+ real contacts
+  if (imported >= 5) {
+    tc.from("contacts").delete().eq("is_sample", true).then(() => {});
   }
 
   return NextResponse.json({
