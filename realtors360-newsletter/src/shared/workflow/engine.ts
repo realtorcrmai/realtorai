@@ -23,6 +23,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import { config } from '../../config.js';
 import { logger } from '../../lib/logger.js';
+import { parseAIJson, unescapeNewlines } from '../../lib/parse-ai-json.js';
 import { sendEmail } from '../../lib/resend.js';
 import { sendGenericMessage } from '../../lib/twilio.js';
 import { canSendToContact } from '../../lib/compliance.js';
@@ -152,11 +153,13 @@ ${channel === 'email'
   });
 
   const text = message.content[0]?.type === 'text' ? message.content[0].text : '';
-  try {
-    return JSON.parse(text) as { subject?: string; body: string };
-  } catch {
-    return { body: text };
+  const parsed = parseAIJson<{ subject?: string; body: string }>(text);
+  if (parsed) {
+    if (typeof parsed.body === 'string') parsed.body = unescapeNewlines(parsed.body);
+    if (typeof parsed.subject === 'string') parsed.subject = unescapeNewlines(parsed.subject);
+    return parsed;
   }
+  return { body: unescapeNewlines(text) };
 }
 
 /* ───────────────────────── Frequency Check ───────────────────────── */

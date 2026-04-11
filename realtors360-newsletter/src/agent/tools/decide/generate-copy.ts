@@ -4,6 +4,7 @@ import type { ToolContext } from '../index.js';
 import { createWithRetry } from '../../../shared/anthropic-retry.js';
 import { config } from '../../../config.js';
 import { logger } from '../../../lib/logger.js';
+import { parseAIJson, unescapeNewlines } from '../../../lib/parse-ai-json.js';
 
 const anthropic = new AnthropicSdk();
 
@@ -118,18 +119,25 @@ Remember: specific > generic. If you don't have enough data to be specific, keep
 
     const text = message.content[0]?.type === 'text' ? message.content[0].text : '';
 
-    try {
-      return JSON.parse(text);
-    } catch {
-      return {
-        subject: emailType.replace(/_/g, ' '),
-        greeting: 'Hi,',
-        body_paragraphs: [text.slice(0, 500)],
-        cta_label: 'Learn More',
-        cta_url: '#',
-        signoff: `— ${realtorName}`,
-      };
+    const parsed = parseAIJson<Record<string, unknown>>(text);
+    if (parsed) {
+      // Unescape literal \n in body paragraphs
+      if (Array.isArray(parsed.body_paragraphs)) {
+        parsed.body_paragraphs = (parsed.body_paragraphs as string[]).map(unescapeNewlines);
+      }
+      if (typeof parsed.body === 'string') {
+        parsed.body = unescapeNewlines(parsed.body as string);
+      }
+      return parsed;
     }
+    return {
+      subject: emailType.replace(/_/g, ' '),
+      greeting: 'Hi,',
+      body_paragraphs: [unescapeNewlines(text.slice(0, 500))],
+      cta_label: 'Learn More',
+      cta_url: '#',
+      signoff: `— ${realtorName}`,
+    };
   } catch (err) {
     logger.error({ err, emailType }, 'generate_copy: Claude call failed');
     return { error: 'Failed to generate copy', details: String(err) };
