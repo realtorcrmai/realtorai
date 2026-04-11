@@ -63,18 +63,20 @@ type BlockFn = (data: EmailData) => string;
 // DESIGN TOKENS
 // ═══════════════════════════════════════════════
 
-const SERIF = "Georgia, 'Playfair Display', 'Times New Roman', serif";
-const SANS = "'DM Sans', 'Inter', 'Helvetica Neue', Arial, sans-serif";
+// Apple design language: SF Pro, extreme whitespace, dark-on-light, blue accents
+const SERIF = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif";
+const SANS = "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif";
 const CLR = {
-  text: '#1a1a1a',
-  muted: '#777777',
-  light: '#a0a0a0',
-  border: '#e8e8e8',
-  bg: '#ffffff',
-  frame: '#ffffff',      // Pure white — no grey frame. Luxury = space, not borders.
-  cream: '#f8f5f0',
-  dark: '#1a1a1a',
-  accent: '#2c2c2c',
+  text: '#1d1d1f',       // Apple primary text
+  muted: '#6e6e73',      // Apple secondary text
+  light: '#86868b',      // Apple tertiary text
+  border: '#d2d2d7',     // Apple separator
+  bg: '#ffffff',          // White
+  frame: '#ffffff',       // No frame — pure white like apple.com
+  cream: '#fbfbfd',       // Apple off-white for cards
+  dark: '#000000',        // Pure black for hero overlays
+  accent: '#0071e3',      // Apple blue
+  surfaceGrey: '#f5f5f7', // Apple light grey surface
 };
 
 // ═══════════════════════════════════════════════
@@ -93,100 +95,116 @@ function fmtPrice(p: string | number | undefined): string {
 
 const blocks: Record<string, BlockFn> = {
 
-  // ── 1. Brand Header ──────────────────────────
+  // ── 1. Brand Header — minimal Apple nav style ──────────────────
   brandHeader: (d) => {
     const tag = d.tagLine || (
-      d.listing ? 'NEW LISTING' :
-      d.market ? 'MARKET UPDATE' :
-      d.anniversary ? 'HOME ANNIVERSARY' :
-      'UPDATE'
+      d.listing ? 'New Listing' :
+      d.market ? 'Market Update' :
+      d.anniversary ? 'Home Anniversary' :
+      'Update'
     );
     return `
-    <tr><td style="padding:40px 48px 24px;" class="mobile-pad">
+    <tr><td style="padding:20px 48px;background:${CLR.surfaceGrey};" class="mobile-pad">
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align:middle;">
           ${d.logoUrl
-            ? `<img src="${d.logoUrl}" alt="${d.agent.name}" height="28" style="display:block;height:28px;width:auto;">`
-            : `<span style="font-family:${SERIF};font-size:18px;font-weight:700;color:${CLR.text};letter-spacing:-0.3px;">${d.agent.name}</span>`
+            ? `<img src="${d.logoUrl}" alt="${d.agent.name}" height="20" style="display:block;height:20px;width:auto;opacity:0.8;">`
+            : `<span style="font-family:${SANS};font-size:14px;font-weight:600;color:${CLR.text};letter-spacing:-0.2px;">${d.agent.name}</span>`
           }
         </td>
         <td align="right" style="vertical-align:middle;">
-          <span style="font-family:${SANS};font-size:10px;font-weight:600;color:${CLR.light};letter-spacing:2px;text-transform:uppercase;">${tag}</span>
+          <span style="font-family:${SANS};font-size:12px;font-weight:400;color:${CLR.accent};">${tag}</span>
         </td>
       </tr></table>
-      <div style="border-bottom:1px solid ${CLR.border};margin-top:16px;"></div>
     </td></tr>`;
   },
 
-  // ── 2. Luxury Hero ───────────────────────────
+  // ── 2. Hero — full-bleed with dark gradient overlay + text (Apple iPhone style) ──
   luxuryHero: (d) => {
     const photo = d.listing?.photos?.[0];
     if (!photo) return '';
+    const title = d.listing?.address || d.content.subject;
+    const area = d.listing?.area || '';
     return `
-    <tr><td style="padding:0;line-height:0;font-size:0;">
-      <img src="${photo}" alt="${d.listing?.address || 'Property'}" width="660" style="display:block;width:100%;height:auto;border:0;">
+    <tr><td style="padding:0;line-height:0;font-size:0;position:relative;">
+      <div style="position:relative;background:#000;">
+        <img src="${photo}" alt="${title}" width="660" style="display:block;width:100%;height:auto;border:0;opacity:0.85;" class="mobile-img">
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:48px 48px 44px;background:linear-gradient(0deg,rgba(0,0,0,0.7) 0%,transparent 100%);">
+          <p style="font-family:${SANS};font-size:12px;font-weight:500;color:rgba(255,255,255,0.7);letter-spacing:1px;text-transform:uppercase;margin:0;">${area}</p>
+          <h1 style="font-family:${SERIF};font-size:36px;font-weight:600;color:#ffffff;margin:8px 0 0;line-height:1.15;letter-spacing:-0.5px;">${title}</h1>
+        </div>
+      </div>
     </td></tr>`;
   },
 
-  // ── 3. Serif Title ───────────────────────────
+  // ── 3. Title — huge centered Apple-style ──────────────────
   serifTitle: (d) => {
     const title = d.listing?.address || d.content.subject;
     const subtitle = d.listing?.area || d.content.intro;
     return `
-    <tr><td style="padding:44px 48px 0;text-align:center;" class="mobile-pad mobile-title">
-      <h1 style="font-family:${SERIF};font-size:30px;font-weight:normal;color:${CLR.text};margin:0;line-height:1.35;letter-spacing:0.2px;">${title}</h1>
-      ${subtitle ? `<p style="font-family:${SANS};font-size:14px;font-weight:400;color:${CLR.muted};margin:12px 0 0;line-height:1.6;letter-spacing:0.5px;">${subtitle}</p>` : ''}
+    <tr><td style="padding:56px 48px 0;text-align:center;" class="mobile-pad">
+      <h1 style="font-family:${SERIF};font-size:40px;font-weight:600;color:${CLR.text};margin:0;line-height:1.15;letter-spacing:-0.8px;" class="mobile-title">${title}</h1>
+      ${subtitle ? `<p style="font-family:${SANS};font-size:17px;font-weight:400;color:${CLR.muted};margin:16px 0 0;line-height:1.5;">${subtitle}</p>` : ''}
     </td></tr>`;
   },
 
-  // ── 4. Specs Bar ─────────────────────────────
+  // ── 4. Specs — Apple's clean metric style ─────────────────
   specsBar: (d) => {
     if (!d.listing) return '';
-    const parts: string[] = [];
-    if (d.listing.beds != null) parts.push(`BEDS: ${d.listing.beds}`);
-    if (d.listing.baths != null) parts.push(`BATHS: ${d.listing.baths}`);
-    if (d.listing.sqft) parts.push(`SIZE: ${d.listing.sqft} sq.ft.`);
-    if (d.listing.year) parts.push(`YEAR: ${d.listing.year}`);
-    if (!parts.length) return '';
+    const items: Array<{ val: string; label: string }> = [];
+    if (d.listing.beds != null) items.push({ val: String(d.listing.beds), label: 'Bedrooms' });
+    if (d.listing.baths != null) items.push({ val: String(d.listing.baths), label: 'Bathrooms' });
+    if (d.listing.sqft) items.push({ val: d.listing.sqft, label: 'Sq. Ft.' });
+    if (d.listing.year) items.push({ val: String(d.listing.year), label: 'Year Built' });
+    if (!items.length) return '';
     return `
-    <tr><td style="padding:28px 48px 0;text-align:center;" class="mobile-pad">
-      <p style="font-family:${SANS};font-size:11px;font-weight:400;color:${CLR.light};letter-spacing:3px;text-transform:uppercase;margin:0;">${parts.join(' &nbsp;&nbsp;|&nbsp;&nbsp; ')}</p>
+    <tr><td style="padding:40px 48px 0;" class="mobile-pad">
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+        ${items.map((item, i) => `
+          ${i > 0 ? `<td width="1" style="background:${CLR.border};"></td>` : ''}
+          <td style="text-align:center;padding:0 16px;">
+            <p style="font-family:${SERIF};font-size:28px;font-weight:600;color:${CLR.text};margin:0;letter-spacing:-0.5px;" class="mobile-price">${item.val}</p>
+            <p style="font-family:${SANS};font-size:11px;font-weight:400;color:${CLR.light};margin:6px 0 0;letter-spacing:0.5px;">${item.label}</p>
+          </td>
+        `).join('')}
+      </tr></table>
     </td></tr>`;
   },
 
-  // ── 5. Price Display ─────────────────────────
+  // ── 5. Price — large centered with Apple blue accent ──────
   priceDisplay: (d) => {
     if (!d.listing?.price) return '';
     const price = fmtPrice(d.listing.price);
     const prev = d.listing.previousPrice ? fmtPrice(d.listing.previousPrice) : '';
     return `
-    <tr><td style="padding:28px 48px 0;text-align:center;" class="mobile-pad">
-      ${prev ? `<p style="font-family:${SANS};font-size:13px;color:${CLR.light};margin:0 0 6px;text-decoration:line-through;">${prev}</p>` : ''}
-      <p style="font-family:${SERIF};font-size:28px;font-weight:normal;color:${CLR.text};margin:0;letter-spacing:0.5px;">Offered at ${price}</p>
+    <tr><td style="padding:36px 48px 0;text-align:center;" class="mobile-pad">
+      ${prev ? `<p style="font-family:${SANS};font-size:14px;color:${CLR.light};margin:0 0 8px;text-decoration:line-through;">${prev}</p>` : ''}
+      <p style="font-family:${SERIF};font-size:32px;font-weight:600;color:${CLR.text};margin:0;letter-spacing:-0.5px;" class="mobile-price">${price}</p>
+      <p style="font-family:${SANS};font-size:12px;color:${CLR.muted};margin:8px 0 0;letter-spacing:0.3px;">List Price</p>
     </td></tr>`;
   },
 
-  // ── 6. Description ───────────────────────────
+  // ── 6. Description — Apple body copy style ────────────────
   description: (d) => {
     const text = d.content.body || d.content.intro;
     if (!text) return '';
     return `
-    <tr><td style="padding:32px 48px 0;" class="mobile-pad mobile-desc">
-      <p style="font-family:${SANS};font-size:15px;font-weight:400;color:${CLR.text};line-height:1.85;margin:0;text-align:justify;">${text}</p>
+    <tr><td style="padding:36px 56px 0;" class="mobile-pad">
+      <p style="font-family:${SANS};font-size:17px;font-weight:400;color:${CLR.text};line-height:1.65;margin:0;text-align:center;letter-spacing:-0.1px;">${text}</p>
     </td></tr>`;
   },
 
-  // ── 7. Open House Card ───────────────────────
+  // ── 7. Open House Card — Apple surface grey ──────────────
   openHouseCard: (d) => {
     if (!d.listing?.openHouseDate) return '';
     return `
-    <tr><td style="padding:36px 48px 0;" class="mobile-pad">
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:${CLR.cream};"><tr>
-        <td style="padding:36px 40px;text-align:center;" class="mobile-oh-pad">
-          <p style="font-family:${SANS};font-size:10px;font-weight:500;color:${CLR.light};letter-spacing:3px;text-transform:uppercase;margin:0;">Open House</p>
-          <p style="font-family:${SERIF};font-size:22px;font-weight:normal;color:${CLR.text};margin:14px 0 0;line-height:1.4;">${d.listing.openHouseDate}</p>
-          ${d.listing.openHouseTime ? `<p style="font-family:${SANS};font-size:15px;font-weight:400;color:${CLR.muted};margin:6px 0 0;">${d.listing.openHouseTime}</p>` : ''}
-          ${d.listing.address ? `<p style="font-family:${SANS};font-size:13px;font-weight:400;color:${CLR.light};margin:12px 0 0;">${d.listing.address}</p>` : ''}
+    <tr><td style="padding:40px 48px 0;" class="mobile-pad">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:${CLR.surfaceGrey};border-radius:18px;"><tr>
+        <td style="padding:40px 44px;text-align:center;" class="mobile-oh-pad">
+          <p style="font-family:${SANS};font-size:12px;font-weight:600;color:${CLR.accent};letter-spacing:0.5px;text-transform:uppercase;margin:0;">Open House</p>
+          <p style="font-family:${SERIF};font-size:24px;font-weight:600;color:${CLR.text};margin:16px 0 0;line-height:1.3;letter-spacing:-0.3px;">${d.listing.openHouseDate}</p>
+          ${d.listing.openHouseTime ? `<p style="font-family:${SANS};font-size:17px;font-weight:400;color:${CLR.muted};margin:8px 0 0;">${d.listing.openHouseTime}</p>` : ''}
+          ${d.listing.address ? `<p style="font-family:${SANS};font-size:14px;font-weight:400;color:${CLR.light};margin:14px 0 0;">${d.listing.address}</p>` : ''}
         </td>
       </tr></table>
     </td></tr>`;
@@ -227,40 +245,33 @@ const blocks: Record<string, BlockFn> = {
   agentProfile: (d) => {
     const initials = d.agent.initials || d.agent.name.split(' ').map(n => n[0]).join('').slice(0, 2);
     return `
-    <tr><td style="padding:44px 48px 0;" class="mobile-pad mobile-agent-pad">
-      <div style="border-top:1px solid ${CLR.border};padding-top:28px;"></div>
-      <table width="100%" cellpadding="0" cellspacing="0"><tr>
-        <td width="56" style="vertical-align:top;">
-          ${d.agent.photoUrl
-            ? `<img src="${d.agent.photoUrl}" alt="${d.agent.name}" width="52" height="52" style="display:block;width:52px;height:52px;border-radius:50%;object-fit:cover;">`
-            : `<div style="width:52px;height:52px;border-radius:50%;background:${CLR.dark};text-align:center;line-height:52px;color:#fff;font-family:${SANS};font-size:18px;font-weight:600;">${initials}</div>`
-          }
-        </td>
-        <td style="padding-left:16px;vertical-align:top;">
-          <p style="font-family:${SERIF};font-size:16px;font-weight:700;color:${CLR.text};margin:0;">${d.agent.name}</p>
-          ${d.agent.title ? `<p style="font-family:${SANS};font-size:13px;color:${CLR.muted};margin:2px 0 0;">${d.agent.title}</p>` : ''}
-          <p style="font-family:${SANS};font-size:13px;color:${CLR.muted};margin:2px 0 0;">${d.agent.brokerage}</p>
-          <p style="font-family:${SANS};font-size:13px;margin:6px 0 0;">
-            <a href="tel:${d.agent.phone}" style="color:${CLR.text};text-decoration:none;">${d.agent.phone}</a>
-            ${d.agent.email ? ` &nbsp;&middot;&nbsp; <a href="mailto:${d.agent.email}" style="color:${CLR.text};text-decoration:none;">${d.agent.email}</a>` : ''}
-          </p>
-        </td>
-      </tr></table>
+    <tr><td style="padding:48px 48px 0;text-align:center;" class="mobile-pad mobile-agent-pad">
+      <div style="border-top:1px solid ${CLR.border};padding-top:36px;"></div>
+      ${d.agent.photoUrl
+        ? `<img src="${d.agent.photoUrl}" alt="${d.agent.name}" width="64" height="64" style="display:inline-block;width:64px;height:64px;border-radius:50%;object-fit:cover;">`
+        : `<div style="display:inline-block;width:64px;height:64px;border-radius:50%;background:${CLR.surfaceGrey};text-align:center;line-height:64px;color:${CLR.text};font-family:${SANS};font-size:22px;font-weight:600;">${initials}</div>`
+      }
+      <p style="font-family:${SANS};font-size:17px;font-weight:600;color:${CLR.text};margin:14px 0 0;">${d.agent.name}</p>
+      ${d.agent.title ? `<p style="font-family:${SANS};font-size:14px;font-weight:400;color:${CLR.muted};margin:4px 0 0;">${d.agent.title} · ${d.agent.brokerage}</p>` : `<p style="font-family:${SANS};font-size:14px;font-weight:400;color:${CLR.muted};margin:4px 0 0;">${d.agent.brokerage}</p>`}
+      <p style="font-family:${SANS};font-size:14px;margin:12px 0 0;">
+        <a href="tel:${d.agent.phone}" style="color:${CLR.accent};text-decoration:none;">${d.agent.phone}</a>
+        ${d.agent.email ? ` &nbsp;&middot;&nbsp; <a href="mailto:${d.agent.email}" style="color:${CLR.accent};text-decoration:none;">${d.agent.email}</a>` : ''}
+      </p>
     </td></tr>`;
   },
 
-  // ── 11. View Listing CTA ─────────────────────
+  // ── 11. View Listing CTA — Apple text link style ──────────
   viewListingCta: (d) => `
-    <tr><td style="padding:28px 40px 0;text-align:center;" class="mobile-pad">
-      <a href="${d.content.ctaUrl || '#'}" style="font-family:${SANS};font-size:12px;font-weight:600;color:${CLR.text};letter-spacing:2px;text-transform:uppercase;text-decoration:none;border-bottom:1px solid ${CLR.text};padding-bottom:2px;">VIEW FULL LISTING</a>
+    <tr><td style="padding:36px 48px 0;text-align:center;" class="mobile-pad">
+      <a href="${d.content.ctaUrl || '#'}" style="font-family:${SANS};font-size:17px;font-weight:400;color:${CLR.accent};text-decoration:none;">View listing &rsaquo;</a>
     </td></tr>`,
 
-  // ── 12. Luxury Button ────────────────────────
+  // ── 12. Button — Apple pill shape ────────────────────
   luxuryButton: (d) => `
-    <tr><td style="padding:28px 40px 0;text-align:center;" class="mobile-pad">
-      <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${d.content.ctaUrl || '#'}" style="height:44px;v-text-anchor:middle;width:220px;" fill="true" stroke="false"><v:fill type="tile" color="${CLR.dark}" /><v:textbox inset="0,0,0,0"><center style="color:#ffffff;font-family:${SANS};font-size:13px;font-weight:600;letter-spacing:1.5px;">${d.content.ctaText}</center></v:textbox></v:roundrect><![endif]-->
+    <tr><td style="padding:40px 48px 0;text-align:center;" class="mobile-pad">
+      <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${d.content.ctaUrl || '#'}" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="50%" fill="true" stroke="false"><v:fill type="tile" color="${CLR.accent}" /><v:textbox inset="0,0,0,0"><center style="color:#ffffff;font-family:${SANS};font-size:15px;font-weight:500;">${d.content.ctaText}</center></v:textbox></v:roundrect><![endif]-->
       <!--[if !mso]><!-->
-      <a href="${d.content.ctaUrl || '#'}" style="display:inline-block;background:${CLR.dark};color:#ffffff;padding:13px 36px;font-family:${SANS};font-size:13px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;text-decoration:none;mso-hide:all;">${d.content.ctaText}</a>
+      <a href="${d.content.ctaUrl || '#'}" style="display:inline-block;background:${CLR.accent};color:#ffffff;padding:14px 44px;border-radius:980px;font-family:${SANS};font-size:15px;font-weight:500;text-decoration:none;letter-spacing:-0.1px;mso-hide:all;">${d.content.ctaText}</a>
       <!--<![endif]-->
     </td></tr>`,
 
