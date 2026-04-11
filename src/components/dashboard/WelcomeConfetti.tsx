@@ -81,7 +81,7 @@ export function WelcomeConfetti() {
       <div className="relative z-10 flex items-center justify-between px-6 py-5">
         <div>
           <h2 className="text-xl font-bold text-white mb-1">
-            Welcome to RealtorAI{firstName ? `, ${firstName}` : ""}! 🎉
+            Welcome to Realtors360{firstName ? `, ${firstName}` : ""}! 🎉
           </h2>
           <p className="text-white/80 text-sm">
             Your AI-powered real estate CRM is ready. Let&apos;s get started!
