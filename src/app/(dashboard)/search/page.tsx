@@ -117,6 +117,7 @@ export default function PropertySearchPage() {
             placeholder="Search by address, MLS #, or seller name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search properties"
             className="pl-10"
           />
         </div>

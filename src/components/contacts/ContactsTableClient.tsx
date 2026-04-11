@@ -94,6 +94,7 @@ export function ContactsTableClient({ contacts }: { contacts: ContactRow[] }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9"
+          aria-label="Search contacts"
         />
       </div>
       <DataTable
@@ -137,6 +138,7 @@ export function ContactsTableClient({ contacts }: { contacts: ContactRow[] }) {
         data={filtered}
         onRowClick={(row) => router.push(`/contacts/${row.id}`)}
         emptyMessage="No contacts found."
+        ariaLabel="Contacts list"
       />
     </div>
   );

@@ -137,6 +137,7 @@ export default function ImportPage() {
               accept=".xlsx,.xls"
               className="hidden"
               onChange={handleFile}
+              aria-label="Upload Excel spreadsheet"
             />
           </div>
         </CardContent>

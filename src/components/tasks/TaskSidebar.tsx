@@ -55,6 +55,7 @@ export function TaskSidebar({ initialTasks }: { initialTasks: Task[] }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-8 h-9 text-sm"
+            aria-label="Search tasks"
           />
         </div>
 

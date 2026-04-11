@@ -53,6 +53,7 @@ export default function FormsPageClient({
                 value={selectedListing}
                 onChange={(e) => setSelectedListing(e.target.value)}
                 className="w-full h-10 rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/50"
+                aria-label="Select listing for forms"
               >
                 {listings.map((l) => (
                   <option key={l.id} value={l.id}>

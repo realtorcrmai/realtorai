@@ -60,6 +60,7 @@ export function ShowingsTableClient({ showings }: { showings: ShowingRow[] }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
+            aria-label="Search showings"
           />
         </div>
         <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-0.5">
@@ -119,6 +120,7 @@ export function ShowingsTableClient({ showings }: { showings: ShowingRow[] }) {
         data={filtered}
         onRowClick={(row) => router.push(`/showings/${row.id}`)}
         emptyMessage="No showings found."
+        ariaLabel="Showings list"
       />
     </div>
   );

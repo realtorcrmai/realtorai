@@ -60,6 +60,7 @@ export function ListingsTableClient({ listings }: { listings: ListingRow[] }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9"
+          aria-label="Search listings"
         />
       </div>
       <DataTable
@@ -109,6 +110,7 @@ export function ListingsTableClient({ listings }: { listings: ListingRow[] }) {
         data={filtered}
         onRowClick={(row) => router.push(`/listings/${row.id}`)}
         emptyMessage="No listings found."
+        ariaLabel="Listings list"
       />
     </div>
   );

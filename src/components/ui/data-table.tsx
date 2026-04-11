@@ -23,6 +23,7 @@ interface DataTableProps<T> {
   selectable?: boolean;
   selectedIds?: Set<string>;
   onSelectionChange?: (ids: Set<string>) => void;
+  ariaLabel?: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -37,6 +38,7 @@ export function DataTable<T extends Record<string, any>>({
   selectable,
   selectedIds,
   onSelectionChange,
+  ariaLabel,
 }: DataTableProps<T>) {
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -85,7 +87,7 @@ export function DataTable<T extends Record<string, any>>({
   return (
     <div className={cn("border border-border rounded-lg overflow-hidden bg-card", className)}>
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full" aria-label={ariaLabel}>
           <thead>
             <tr className="bg-muted/60 border-b border-border">
               {selectable && (
