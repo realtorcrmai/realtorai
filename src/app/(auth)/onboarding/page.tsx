@@ -139,15 +139,26 @@ export default function OnboardingPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate client-side
+    if (file.size > 5 * 1024 * 1024) { setError("Image must be under 5MB"); return; }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) { setError("Only JPG, PNG, and WebP accepted"); return; }
+
     setAvatarPreview(URL.createObjectURL(file));
     setLoading(true);
+    setError("");
 
-    const formData = new FormData();
-    formData.append("file", file);
-    const result = await uploadHeadshot(formData);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/onboarding/upload-avatar", { method: "POST", body: formData });
+      const result = await res.json();
 
-    if ("error" in result && result.error) {
-      setError(result.error);
+      if (!res.ok || result.error) {
+        setError(result.error || "Upload failed");
+        setAvatarPreview(null);
+      }
+    } catch {
+      setError("Upload failed. Please try again.");
       setAvatarPreview(null);
     }
     setLoading(false);
