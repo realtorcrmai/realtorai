@@ -33,6 +33,7 @@ export type EmailData = {
   logoUrl?: string;
   tagLine?: string;
   webViewUrl?: string;
+  heroImageUrl?: string;  // Neighbourhood/area photo for non-listing emails
   listing?: {
     address: string; area: string; price: string | number;
     beds?: number; baths?: number; sqft?: string; year?: number;
@@ -140,6 +141,52 @@ const blocks: Record<string, BlockFn> = {
         </div>
       </div>
     </td></tr>`;
+  },
+
+  // ── 2b. Area Hero — neighbourhood photo for non-listing emails ──
+  areaHero: (d) => {
+    const photo = d.heroImageUrl;
+    if (!photo) return '';
+    return `
+    <tr><td style="padding:0;line-height:0;font-size:0;">
+      <img src="${photo}" alt="${d.content.subject}" width="660" style="display:block;width:100%;height:auto;border:0;" class="mobile-img">
+    </td></tr>`;
+  },
+
+  // ── 2c. Gradient Hero — dark gradient with title text (fallback when no photo) ──
+  gradientHero: (d) => {
+    const title = d.content.subject;
+    const subtitle = d.listing?.area || '';
+    return `
+    <tr><td style="padding:0;">
+      <div style="background:linear-gradient(135deg, #1d1d1f 0%, #2c2c2e 40%, #3a3a3c 100%);padding:72px 48px;text-align:center;" class="mobile-pad">
+        <p style="font-family:${SANS};font-size:12px;font-weight:500;color:rgba(255,255,255,0.5);letter-spacing:2px;text-transform:uppercase;margin:0;">${d.tagLine || 'Market Update'}</p>
+        <h1 style="font-family:${SERIF};font-size:36px;font-weight:600;color:#ffffff;margin:16px 0 0;line-height:1.2;letter-spacing:-0.5px;" class="mobile-title">${title}</h1>
+        ${subtitle ? `<p style="font-family:${SANS};font-size:16px;font-weight:400;color:rgba(255,255,255,0.6);margin:12px 0 0;">${subtitle}</p>` : ''}
+      </div>
+    </td></tr>`;
+  },
+
+  // ── 2d. Smart Hero — uses photo if available, gradient if not ──
+  smartHero: (d) => {
+    const photo = d.heroImageUrl || d.listing?.photos?.[0];
+    if (photo) {
+      // Photo with dark overlay + text
+      const title = d.listing?.address || d.content.subject;
+      const area = d.listing?.area || '';
+      return `
+      <tr><td style="padding:0;line-height:0;font-size:0;">
+        <div style="position:relative;background:#000;">
+          <img src="${photo}" alt="${title}" width="660" style="display:block;width:100%;height:auto;border:0;opacity:0.8;" class="mobile-img">
+          <div style="position:absolute;bottom:0;left:0;right:0;padding:56px 48px 48px;background:linear-gradient(0deg,rgba(0,0,0,0.75) 0%,transparent 100%);">
+            ${area ? `<p style="font-family:${SANS};font-size:12px;font-weight:500;color:rgba(255,255,255,0.6);letter-spacing:1.5px;text-transform:uppercase;margin:0;">${area}</p>` : ''}
+            <h1 style="font-family:${SERIF};font-size:34px;font-weight:600;color:#ffffff;margin:${area ? '8' : '0'}px 0 0;line-height:1.15;letter-spacing:-0.5px;" class="mobile-title">${title}</h1>
+          </div>
+        </div>
+      </td></tr>`;
+    }
+    // Fallback: gradient hero
+    return blocks.gradientHero(d);
   },
 
   // ── 3. Title — huge centered Apple-style ──────────────────
@@ -446,20 +493,20 @@ const TEMPLATE_BLOCKS: Record<string, string[]> = {
     'description', 'luxuryButton', 'agentProfile', 'complianceFooter',
   ],
   market_update: [
-    'brandHeader', 'serifTitle', 'description', 'marketStatsGrid',
-    'recentSalesTable', 'dividerLine', 'description', 'luxuryButton',
+    'brandHeader', 'smartHero', 'serifTitle', 'description', 'marketStatsGrid',
+    'recentSalesTable', 'dividerLine', 'luxuryButton',
     'agentProfile', 'complianceFooter',
   ],
   just_sold: [
-    'brandHeader', 'luxuryHero', 'serifTitle', 'specsBar', 'priceDisplay',
+    'brandHeader', 'smartHero', 'serifTitle', 'specsBar', 'priceDisplay',
     'description', 'testimonialBlock', 'dividerLine', 'agentProfile', 'complianceFooter',
   ],
   birthday: [
-    'brandHeader', 'birthdayCelebration', 'description', 'dividerLine',
+    'brandHeader', 'smartHero', 'birthdayCelebration', 'description', 'dividerLine',
     'agentProfile', 'complianceFooter',
   ],
   home_anniversary: [
-    'brandHeader', 'serifTitle', 'description', 'anniversaryValue',
+    'brandHeader', 'smartHero', 'serifTitle', 'description', 'anniversaryValue',
     'neighbourhoodHighlights', 'luxuryButton', 'agentProfile', 'complianceFooter',
   ],
   open_house: [
@@ -472,27 +519,27 @@ const TEMPLATE_BLOCKS: Record<string, string[]> = {
     'description', 'luxuryButton', 'agentProfile', 'complianceFooter',
   ],
   neighbourhood_guide: [
-    'brandHeader', 'serifTitle', 'description', 'neighbourhoodHighlights',
+    'brandHeader', 'smartHero', 'serifTitle', 'description', 'neighbourhoodHighlights',
     'twoColumnPhotos', 'luxuryButton', 'agentProfile', 'complianceFooter',
   ],
   showing_confirmed: [
-    'brandHeader', 'serifTitle', 'openHouseCard', 'description',
+    'brandHeader', 'gradientHero', 'serifTitle', 'openHouseCard', 'description',
     'luxuryButton', 'agentProfile', 'complianceFooter',
   ],
   welcome: [
-    'brandHeader', 'serifTitle', 'description', 'marketStatsGrid',
+    'brandHeader', 'smartHero', 'serifTitle', 'description', 'marketStatsGrid',
     'luxuryButton', 'socialLinks', 'agentProfile', 'complianceFooter',
   ],
   re_engagement: [
-    'brandHeader', 'serifTitle', 'description', 'marketStatsGrid',
+    'brandHeader', 'smartHero', 'serifTitle', 'description', 'marketStatsGrid',
     'luxuryButton', 'agentProfile', 'complianceFooter',
   ],
   seller_report: [
-    'brandHeader', 'serifTitle', 'marketStatsGrid', 'recentSalesTable',
+    'brandHeader', 'smartHero', 'serifTitle', 'marketStatsGrid', 'recentSalesTable',
     'description', 'luxuryButton', 'agentProfile', 'complianceFooter',
   ],
   cma_preview: [
-    'brandHeader', 'serifTitle', 'description', 'marketStatsGrid',
+    'brandHeader', 'smartHero', 'serifTitle', 'description', 'marketStatsGrid',
     'recentSalesTable', 'testimonialBlock', 'luxuryButton',
     'agentProfile', 'complianceFooter',
   ],
