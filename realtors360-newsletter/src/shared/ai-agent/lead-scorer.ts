@@ -31,7 +31,7 @@ import { logger } from '../../lib/logger.js';
  *      would be invisible to the realtor's tenant client, which is the
  *      bug class M3-C caught in `lib/learning-engine.ts`.
  *
- *   4. RAG context comes from the local `shared/rag/retriever.ts` STUB.
+ *   4. RAG context comes from `shared/rag/retriever.ts` (M4 hybrid HyDE+semantic+FTS).
  *      M4 will replace the stub with the full hybrid retriever; the call
  *      site here is the M4 acceptance criterion (no further changes
  *      should be needed).
