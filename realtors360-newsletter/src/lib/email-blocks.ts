@@ -102,7 +102,7 @@ const blocks: Record<string, BlockFn> = {
       'UPDATE'
     );
     return `
-    <tr><td style="padding:40px 48px 24px;">
+    <tr><td style="padding:40px 48px 24px;" class="mobile-pad">
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align:middle;">
           ${d.logoUrl
@@ -133,7 +133,7 @@ const blocks: Record<string, BlockFn> = {
     const title = d.listing?.address || d.content.subject;
     const subtitle = d.listing?.area || d.content.intro;
     return `
-    <tr><td style="padding:44px 48px 0;text-align:center;">
+    <tr><td style="padding:44px 48px 0;text-align:center;" class="mobile-pad mobile-title">
       <h1 style="font-family:${SERIF};font-size:30px;font-weight:normal;color:${CLR.text};margin:0;line-height:1.35;letter-spacing:0.2px;">${title}</h1>
       ${subtitle ? `<p style="font-family:${SANS};font-size:14px;font-weight:400;color:${CLR.muted};margin:12px 0 0;line-height:1.6;letter-spacing:0.5px;">${subtitle}</p>` : ''}
     </td></tr>`;
@@ -149,7 +149,7 @@ const blocks: Record<string, BlockFn> = {
     if (d.listing.year) parts.push(`YEAR: ${d.listing.year}`);
     if (!parts.length) return '';
     return `
-    <tr><td style="padding:28px 48px 0;text-align:center;">
+    <tr><td style="padding:28px 48px 0;text-align:center;" class="mobile-pad">
       <p style="font-family:${SANS};font-size:11px;font-weight:400;color:${CLR.light};letter-spacing:3px;text-transform:uppercase;margin:0;">${parts.join(' &nbsp;&nbsp;|&nbsp;&nbsp; ')}</p>
     </td></tr>`;
   },
@@ -160,7 +160,7 @@ const blocks: Record<string, BlockFn> = {
     const price = fmtPrice(d.listing.price);
     const prev = d.listing.previousPrice ? fmtPrice(d.listing.previousPrice) : '';
     return `
-    <tr><td style="padding:28px 48px 0;text-align:center;">
+    <tr><td style="padding:28px 48px 0;text-align:center;" class="mobile-pad">
       ${prev ? `<p style="font-family:${SANS};font-size:13px;color:${CLR.light};margin:0 0 6px;text-decoration:line-through;">${prev}</p>` : ''}
       <p style="font-family:${SERIF};font-size:28px;font-weight:normal;color:${CLR.text};margin:0;letter-spacing:0.5px;">Offered at ${price}</p>
     </td></tr>`;
@@ -171,7 +171,7 @@ const blocks: Record<string, BlockFn> = {
     const text = d.content.body || d.content.intro;
     if (!text) return '';
     return `
-    <tr><td style="padding:32px 48px 0;">
+    <tr><td style="padding:32px 48px 0;" class="mobile-pad mobile-desc">
       <p style="font-family:${SANS};font-size:15px;font-weight:400;color:${CLR.text};line-height:1.85;margin:0;text-align:justify;">${text}</p>
     </td></tr>`;
   },
@@ -180,9 +180,9 @@ const blocks: Record<string, BlockFn> = {
   openHouseCard: (d) => {
     if (!d.listing?.openHouseDate) return '';
     return `
-    <tr><td style="padding:36px 48px 0;">
+    <tr><td style="padding:36px 48px 0;" class="mobile-pad">
       <table width="100%" cellpadding="0" cellspacing="0" style="background:${CLR.cream};"><tr>
-        <td style="padding:36px 40px;text-align:center;">
+        <td style="padding:36px 40px;text-align:center;" class="mobile-oh-pad">
           <p style="font-family:${SANS};font-size:10px;font-weight:500;color:${CLR.light};letter-spacing:3px;text-transform:uppercase;margin:0;">Open House</p>
           <p style="font-family:${SERIF};font-size:22px;font-weight:normal;color:${CLR.text};margin:14px 0 0;line-height:1.4;">${d.listing.openHouseDate}</p>
           ${d.listing.openHouseTime ? `<p style="font-family:${SANS};font-size:15px;font-weight:400;color:${CLR.muted};margin:6px 0 0;">${d.listing.openHouseTime}</p>` : ''}
@@ -227,7 +227,7 @@ const blocks: Record<string, BlockFn> = {
   agentProfile: (d) => {
     const initials = d.agent.initials || d.agent.name.split(' ').map(n => n[0]).join('').slice(0, 2);
     return `
-    <tr><td style="padding:44px 48px 0;">
+    <tr><td style="padding:44px 48px 0;" class="mobile-pad mobile-agent-pad">
       <div style="border-top:1px solid ${CLR.border};padding-top:28px;"></div>
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
         <td width="56" style="vertical-align:top;">
@@ -251,13 +251,13 @@ const blocks: Record<string, BlockFn> = {
 
   // ── 11. View Listing CTA ─────────────────────
   viewListingCta: (d) => `
-    <tr><td style="padding:28px 40px 0;text-align:center;">
+    <tr><td style="padding:28px 40px 0;text-align:center;" class="mobile-pad">
       <a href="${d.content.ctaUrl || '#'}" style="font-family:${SANS};font-size:12px;font-weight:600;color:${CLR.text};letter-spacing:2px;text-transform:uppercase;text-decoration:none;border-bottom:1px solid ${CLR.text};padding-bottom:2px;">VIEW FULL LISTING</a>
     </td></tr>`,
 
   // ── 12. Luxury Button ────────────────────────
   luxuryButton: (d) => `
-    <tr><td style="padding:28px 40px 0;text-align:center;">
+    <tr><td style="padding:28px 40px 0;text-align:center;" class="mobile-pad">
       <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${d.content.ctaUrl || '#'}" style="height:44px;v-text-anchor:middle;width:220px;" fill="true" stroke="false"><v:fill type="tile" color="${CLR.dark}" /><v:textbox inset="0,0,0,0"><center style="color:#ffffff;font-family:${SANS};font-size:13px;font-weight:600;letter-spacing:1.5px;">${d.content.ctaText}</center></v:textbox></v:roundrect><![endif]-->
       <!--[if !mso]><!-->
       <a href="${d.content.ctaUrl || '#'}" style="display:inline-block;background:${CLR.dark};color:#ffffff;padding:13px 36px;font-family:${SANS};font-size:13px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;text-decoration:none;mso-hide:all;">${d.content.ctaText}</a>
@@ -272,14 +272,14 @@ const blocks: Record<string, BlockFn> = {
     if (d.agent.facebook) links.push(`<a href="${d.agent.facebook}" style="color:${CLR.light};text-decoration:none;font-size:13px;font-weight:500;">Facebook</a>`);
     if (!links.length) return '';
     return `
-    <tr><td style="padding:20px 40px 0;text-align:center;">
+    <tr><td style="padding:20px 40px 0;text-align:center;" class="mobile-pad">
       <p style="font-family:${SANS};margin:0;">${links.join(' &nbsp;&middot;&nbsp; ')}</p>
     </td></tr>`;
   },
 
   // ── 14. Compliance Footer ────────────────────
   complianceFooter: (d) => `
-    <tr><td style="padding:36px 48px 44px;text-align:center;border-top:1px solid ${CLR.border};margin-top:24px;">
+    <tr><td style="padding:36px 48px 44px;text-align:center;border-top:1px solid" class="mobile-footer ${CLR.border};margin-top:24px;">
       <p style="font-family:${SANS};font-size:12px;color:${CLR.muted};margin:0;line-height:1.7;">
         ${d.agent.name} &middot; ${d.agent.brokerage}
         ${d.agent.brokerageAddress ? `<br>${d.agent.brokerageAddress}` : ''}
@@ -304,7 +304,7 @@ const blocks: Record<string, BlockFn> = {
       { value: d.market.inventoryChange || '--', label: 'Inventory' },
     ];
     return `
-    <tr><td style="padding:24px 40px 0;">
+    <tr><td style="padding:24px 40px 0;" class="mobile-pad">
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
         ${stats.map((s, i) => `
           ${i > 0 ? '<td width="1" style="background:' + CLR.border + ';"></td>' : ''}
@@ -322,7 +322,7 @@ const blocks: Record<string, BlockFn> = {
     const sales = d.market?.recentSales;
     if (!sales?.length) return '';
     return `
-    <tr><td style="padding:24px 40px 0;">
+    <tr><td style="padding:24px 40px 0;" class="mobile-pad">
       <p style="font-family:${SANS};font-size:10px;font-weight:600;color:${CLR.light};letter-spacing:2px;text-transform:uppercase;margin:0 0 12px;">Recent Sales</p>
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr style="border-bottom:1px solid ${CLR.border};">
@@ -345,7 +345,7 @@ const blocks: Record<string, BlockFn> = {
     const t = d.testimonial;
     if (!t) return '';
     return `
-    <tr><td style="padding:28px 40px 0;text-align:center;">
+    <tr><td style="padding:28px 40px 0;text-align:center;" class="mobile-pad">
       <p style="font-family:${SERIF};font-size:20px;font-style:italic;font-weight:400;color:${CLR.text};line-height:1.6;margin:0;">&ldquo;${t.quote}&rdquo;</p>
       <p style="font-family:${SANS};font-size:13px;font-weight:600;color:${CLR.text};margin:16px 0 0;">${t.name}</p>
       ${t.role ? `<p style="font-family:${SANS};font-size:12px;color:${CLR.muted};margin:2px 0 0;">${t.role}</p>` : ''}
@@ -356,7 +356,7 @@ const blocks: Record<string, BlockFn> = {
   anniversaryValue: (d) => {
     if (!d.anniversary) return '';
     return `
-    <tr><td style="padding:24px 40px 0;">
+    <tr><td style="padding:24px 40px 0;" class="mobile-pad">
       <table width="100%" cellpadding="0" cellspacing="0" style="background:${CLR.frame};"><tr>
         <td style="padding:24px;text-align:center;">
           <table width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -383,7 +383,7 @@ const blocks: Record<string, BlockFn> = {
     const highlights = d.anniversary?.areaHighlights || d.listing?.features;
     if (!highlights?.length) return '';
     return `
-    <tr><td style="padding:24px 40px 0;">
+    <tr><td style="padding:24px 40px 0;" class="mobile-pad">
       <p style="font-family:${SANS};font-size:10px;font-weight:600;color:${CLR.light};letter-spacing:2px;text-transform:uppercase;margin:0 0 16px;">Neighbourhood Highlights</p>
       ${highlights.map(h => `
       <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px;"><tr>
@@ -400,13 +400,13 @@ const blocks: Record<string, BlockFn> = {
 
   // ── 20. Birthday Celebration ─────────────────
   birthdayCelebration: (d) => `
-    <tr><td style="padding:40px 40px 0;text-align:center;">
+    <tr><td style="padding:40px 40px 0;text-align:center;" class="mobile-pad">
       <p style="font-family:${SERIF};font-size:32px;font-weight:400;color:${CLR.text};margin:0;line-height:1.3;">Happy Birthday,<br>${d.contact.firstName}!</p>
     </td></tr>`,
 
   // ── 21. Divider Line ─────────────────────────
   dividerLine: () => `
-    <tr><td style="padding:24px 40px 0;">
+    <tr><td style="padding:24px 40px 0;" class="mobile-pad">
       <div style="border-bottom:1px solid ${CLR.border};"></div>
     </td></tr>`,
 
@@ -537,15 +537,22 @@ export function assembleEmail(emailType: string, data: EmailData): string {
   :root[data-ogsc] .email-outer{background:#1a1a1a!important}
   :root[data-ogsc] .email-inner{background:#222222!important}
 
-  /* Mobile */
+  /* Mobile — responsive overrides */
   @media only screen and (max-width:680px){
-    .email-inner{width:100%!important}
+    .email-inner{width:100%!important;min-width:100%!important}
     .mobile-pad{padding-left:20px!important;padding-right:20px!important}
+    .mobile-pad-sm{padding-left:16px!important;padding-right:16px!important}
     .mobile-full{padding-left:0!important;padding-right:0!important}
     .mobile-stack{display:block!important;width:100%!important}
     .mobile-hide{display:none!important}
     .mobile-title{font-size:22px!important}
-    .mobile-price{font-size:22px!important}
+    .mobile-price{font-size:20px!important}
+    .mobile-specs{font-size:9px!important;letter-spacing:2px!important}
+    .mobile-desc{font-size:14px!important;line-height:1.7!important}
+    .mobile-img{width:100%!important;height:auto!important}
+    .mobile-agent-pad{padding-left:20px!important;padding-right:20px!important}
+    .mobile-oh-pad{padding:24px 20px!important}
+    .mobile-footer{padding:24px 20px 32px!important}
   }
 </style>
 </head>
