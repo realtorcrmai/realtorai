@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Realtors360</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 120px;
+      height: 120px;
+      background: transparent;
+      overflow: hidden;
+    }
+
+    .scene {
+      width: 120px;
+      height: 120px;
+      perspective: 400px;
+    }
+
+    .icon-3d {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotateX(1deg) rotateY(0deg); }
+      25% { transform: translateY(-3px) rotateX(0deg) rotateY(2deg); }
+      50% { transform: translateY(-1px) rotateX(-1deg) rotateY(0deg); }
+      75% { transform: translateY(-4px) rotateX(0deg) rotateY(-2deg); }
+    }
+
+    .shield {
+      position: absolute;
+      inset: 6px;
+      border-radius: 18px;
+      background: linear-gradient(155deg, #2e4258 0%, #1c2d40 40%, #162536 100%);
+      box-shadow:
+        0 8px 24px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.08),
+        inset 0 -1px 4px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-style: preserve-3d;
+    }
+
+    .glare-ring {
+      position: absolute;
+      inset: -1px;
+      border-radius: 19px;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .glare-ring::before {
+      content: '';
+      position: absolute;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: conic-gradient(
+        from 0deg,
+        transparent 0deg, transparent 250deg,
+        rgba(201,169,110,0.5) 280deg,
+        rgba(255,255,255,0.25) 305deg,
+        rgba(201,169,110,0.5) 330deg,
+        transparent 360deg
+      );
+      animation: revolve 4s linear infinite;
+    }
+
+    @keyframes revolve {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .shield-mask {
+      position: absolute;
+      inset: 1.5px;
+      border-radius: 17px;
+      background: linear-gradient(155deg, #2e4258 0%, #1c2d40 40%, #162536 100%);
+      pointer-events: none;
+    }
+
+    .icon-svg {
+      position: relative;
+      z-index: 2;
+      width: 72px;
+      height: 72px;
+    }
+
+    .circle-group {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: spin-rev 6s linear 0.5s infinite;
+    }
+
+    .circle-arc {
+      stroke-dasharray: 220 82;
+      stroke-dashoffset: 0;
+      filter: drop-shadow(0 0 3px rgba(201,169,110,0.6));
+    }
+
+    @keyframes spin-rev {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(-360deg); }
+    }
+
+    .roof { filter: drop-shadow(0 0 2px rgba(201,169,110,0.3)); }
+  </style>
+</head>
+<body>
+  <div class="scene">
+    <div class="icon-3d">
+      <div class="shield">
+        <div class="glare-ring"></div>
+        <div class="shield-mask"></div>
+        <svg class="icon-svg" viewBox="0 0 120 120" fill="none">
+          <g class="circle-group">
+            <circle class="circle-arc"
+              cx="60" cy="52" r="46"
+              stroke="#C9A96E" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.9"/>
+          </g>
+          <path class="roof" d="M30 62L60 30L90 62"
+            stroke="#C9A96E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <line x1="42" y1="54" x2="42" y2="72" stroke="#C9A96E" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="78" y1="54" x2="78" y2="72" stroke="#C9A96E" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="36" y1="72" x2="84" y2="72" stroke="#C9A96E" stroke-width="2.5" stroke-linecap="round"/>
+          <rect x="52" y="58" width="16" height="14" rx="2" fill="#C9A96E" opacity="0.2"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

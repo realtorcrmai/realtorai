@@ -7,6 +7,7 @@ import { fetchBusyBlocks, isSlotAvailable } from "@/lib/google-calendar";
 import { revalidatePath } from "next/cache";
 import { showingSchema, type ShowingFormData } from "@/lib/schemas";
 import { emitNewsletterEvent } from "@/lib/newsletter-events";
+import { createNotification } from "@/lib/notifications";
 
 export async function createShowingRequest(
   formData: ShowingFormData
@@ -136,6 +137,19 @@ export async function createShowingRequest(
       .eq("id", appointment.id);
   }
 
+  // Notification: new showing requested
+  try {
+    await createNotification(tc.realtorId, {
+      type: "showing_requested",
+      title: "New showing request",
+      body: `${buyerAgentName} requested a showing at ${listing.address}`,
+      related_type: "appointment",
+      related_id: appointment.id,
+    });
+  } catch {
+    // Don't fail showing creation if notification fails
+  }
+
   revalidatePath("/showings");
   revalidatePath(`/listings/${listingId}`);
 
@@ -159,6 +173,36 @@ export async function updateShowingStatus(
 
   if (error) {
     return { error: "Failed to update appointment status" };
+  }
+
+  // Notification for status changes
+  try {
+    const notifTypeMap: Record<string, { type: string; title: string }> = {
+      confirmed: { type: "showing_confirmed", title: "Showing confirmed" },
+      denied: { type: "showing_cancelled", title: "Showing denied" },
+      cancelled: { type: "showing_cancelled", title: "Showing cancelled" },
+      completed: { type: "showing_confirmed", title: "Showing completed" },
+    };
+    const notifMeta = notifTypeMap[status];
+    if (notifMeta) {
+      // Fetch minimal appointment info for notification body
+      const { data: notifAppt } = await tc
+        .from("appointments")
+        .select("buyer_agent_name, listing_id, listings(address)")
+        .eq("id", appointmentId)
+        .single();
+      const notifListing = (notifAppt as Record<string, unknown>)?.listings as { address?: string } | null;
+      const agentName = (notifAppt as Record<string, unknown>)?.buyer_agent_name as string | null;
+      await createNotification(tc.realtorId, {
+        type: notifMeta.type,
+        title: notifMeta.title,
+        body: `${agentName || "Agent"} — ${notifListing?.address || "property"}`,
+        related_type: "appointment",
+        related_id: appointmentId,
+      });
+    }
+  } catch {
+    // Don't fail status update if notification fails
   }
 
   // Fire showing_completed trigger for buyer contacts when showing is confirmed

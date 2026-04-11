@@ -1,7 +1,8 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { Bell, Search, Menu } from "lucide-react";
+import { Search, Menu } from "lucide-react";
+import { NotificationDropdown } from "@/components/layout/NotificationDropdown";
 
 export function MondayHeader() {
   const { data: session } = useSession();
@@ -22,10 +23,7 @@ export function MondayHeader() {
         <button className="p-2 rounded-lg hover:bg-muted transition-colors" aria-label="Search">
           <Search className="h-4 w-4 text-muted-foreground" />
         </button>
-        <button className="p-2 rounded-lg hover:bg-muted transition-colors relative" aria-label="Notifications">
-          <Bell className="h-4 w-4 text-muted-foreground" />
-          <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-brand rounded-full" aria-hidden="true" />
-        </button>
+        <NotificationDropdown />
         <div className="h-8 w-8 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-semibold ml-1">
           {initials}
         </div>

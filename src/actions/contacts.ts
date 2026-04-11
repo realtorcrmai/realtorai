@@ -7,6 +7,7 @@ import { contactSchema, type ContactFormData } from "@/lib/schemas";
 import type { Json } from "@/types/database";
 import { enforceConsistency } from "@/lib/contact-consistency";
 import { triggerIngest } from "@/lib/rag/realtime-ingest";
+import { createNotification } from "@/lib/notifications";
 
 export async function getContactCommunications(contactId: string, limit = 5) {
   const tc = await getAuthenticatedTenantClient();
@@ -90,6 +91,19 @@ export async function createContact(formData: ContactFormData, force = false) {
 
   if (error) {
     return { error: "Failed to create contact" };
+  }
+
+  // Notification: new lead added
+  try {
+    await createNotification(tc.realtorId, {
+      type: "new_lead",
+      title: `New lead: ${parsed.data.name}`,
+      body: `${parsed.data.type} contact added`,
+      related_type: "contact",
+      related_id: data.id,
+    });
+  } catch {
+    // Don't fail contact creation if notification fails
   }
 
   revalidatePath("/contacts");
