@@ -181,29 +181,50 @@ export default function OnboardingPage() {
     goNext();
   };
 
-  // ── Step 2: Gmail import ──
-  const fetchGmailContacts = async () => {
+  // ── Step 2: Google CSV upload (exported from contacts.google.com) ──
+  const handleGoogleCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     setFetchingContacts(true);
     setError("");
 
     try {
-      const res = await fetch("/api/contacts/import-gmail");
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter((l) => l.trim());
+      if (lines.length < 2) { setError("No contacts found in file"); setFetchingContacts(false); return; }
+
+      // Google Contacts CSV has columns like: Name, Given Name, Family Name, E-mail 1 - Value, Phone 1 - Value
+      const headers = lines[0].split(",").map((h) => h.trim().replace(/"/g, ""));
+      const nameIdx = headers.findIndex((h) => /^(name|full name)$/i.test(h));
+      const givenIdx = headers.findIndex((h) => /given name/i.test(h));
+      const familyIdx = headers.findIndex((h) => /family name/i.test(h));
+      const emailIdx = headers.findIndex((h) => /e-?mail/i.test(h));
+      const phoneIdx = headers.findIndex((h) => /phone/i.test(h));
+
+      const contacts = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(",").map((c) => c.trim().replace(/"/g, ""));
+        const name = (nameIdx >= 0 ? cols[nameIdx] : "") || [cols[givenIdx] || "", cols[familyIdx] || ""].filter(Boolean).join(" ");
+        if (!name) continue;
+        contacts.push({
+          name,
+          email: emailIdx >= 0 ? cols[emailIdx] || null : null,
+          phone: phoneIdx >= 0 ? cols[phoneIdx] || null : null,
+        });
+      }
+
+      if (contacts.length === 0) { setError("No contacts found"); setFetchingContacts(false); return; }
+
+      const res = await fetch("/api/contacts/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contacts, source: "google_csv" }),
+      });
       const data = await res.json();
-
-      if (data.needs_auth) {
-        signIn("google", { callbackUrl: "/onboarding" });
-        return;
-      }
-      if (!res.ok) {
-        setError(data.error || "Failed to fetch contacts");
-        setFetchingContacts(false);
-        return;
-      }
-
-      setImportedContacts(data.contacts);
-      setImportSource("gmail");
+      if (!res.ok) { setError(data.error || "Import failed"); }
+      else { setImportCount(data.imported || 0); }
     } catch {
-      setError("Failed to connect to Gmail");
+      setError("Failed to import Google contacts");
     } finally {
       setFetchingContacts(false);
     }
@@ -241,12 +262,7 @@ export default function OnboardingPage() {
   };
 
   const handleImportSelected = async (selected: unknown[]) => {
-    const endpoint =
-      importSource === "gmail"
-        ? "/api/contacts/import-gmail"
-        : "/api/contacts/import-vcard";
-
-    const res = await fetch(endpoint, {
+    const res = await fetch("/api/contacts/import-vcard", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contacts: selected }),
@@ -467,11 +483,7 @@ export default function OnboardingPage() {
                       </p>
 
                       <div className="space-y-3">
-                        <button
-                          onClick={fetchGmailContacts}
-                          disabled={fetchingContacts}
-                          className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-[#4f35d2] transition-colors text-left"
-                        >
+                        <label className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-white/40 bg-white/30 backdrop-blur-sm hover:border-[#4f35d2] transition-colors text-left cursor-pointer">
                           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 shrink-0">
                             <svg className="h-5 w-5" viewBox="0 0 24 24">
                               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
@@ -481,13 +493,14 @@ export default function OnboardingPage() {
                             </svg>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold">Import from Gmail</p>
-                            <p className="text-xs text-gray-500">One-click — read-only, never modify</p>
+                            <p className="text-sm font-semibold">Import from Google</p>
+                            <p className="text-xs text-gray-500">Upload .csv from contacts.google.com</p>
                           </div>
                           {fetchingContacts && <Loader2 className="h-4 w-4 animate-spin text-[#4f35d2] shrink-0" />}
-                        </button>
+                          <input type="file" accept=".csv" onChange={handleGoogleCsvUpload} className="hidden" />
+                        </label>
 
-                        <label className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 hover:border-[#4f35d2] transition-colors text-left cursor-pointer">
+                        <label className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-white/40 bg-white/30 backdrop-blur-sm hover:border-[#4f35d2] transition-colors text-left cursor-pointer">
                           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 shrink-0">
                             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
                               <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83" fill="#000" />
