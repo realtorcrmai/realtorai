@@ -84,21 +84,21 @@
   --secondary-foreground: #33475b;
 
   --muted: #eaf0f6;
-  --muted-foreground: #7c98b6;
+  --muted-foreground: #516f90;
 
   --accent: #eaf0f6;
   --accent-foreground: #33475b;
 
-  --destructive: #d94f57;
+  --destructive: #b93e45;
 
   /* ── Borders & inputs ── */
   --border: #cbd6e2;
   --input: #cbd6e2;
-  --ring: #ff7a59;
+  --ring: #c4502b;
 
   /* ── Charts ── */
-  --chart-1: #ff7a59;
-  --chart-2: #00bda5;
+  --chart-1: #c4502b;
+  --chart-2: #00756a;
   --chart-3: #516f90;
   --chart-4: #f5c26b;
   --chart-5: #7c98b6;
@@ -108,7 +108,7 @@
   /* ── Sidebar: Dark Navy ── */
   --sidebar: #2d3e50;
   --sidebar-foreground: #eaf0f6;
-  --sidebar-primary: #ff7a59;
+  --sidebar-primary: #c4502b;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #3a4f63;
   --sidebar-accent-foreground: #eaf0f6;
@@ -116,13 +116,13 @@
   --sidebar-ring: #ff7a59;
 
   /* ── Brand accent: Coral ── */
-  --brand: #ff7a59;
+  --brand: #c4502b;
   --brand-foreground: #ffffff;
-  --brand-dark: #e8603c;
+  --brand-dark: #a3421f;
   --brand-light: #ff9a7a;
-  --brand-muted: rgba(255, 122, 89, 0.10);
-  --brand-muted-strong: rgba(255, 122, 89, 0.15);
-  --success: #00bda5;
+  --brand-muted: rgba(196, 80, 43, 0.10);
+  --brand-muted-strong: rgba(196, 80, 43, 0.15);
+  --success: #00756a;
   --success-foreground: #ffffff;
 
   /* ── Glass tokens (flat — no blur) ── */
@@ -159,7 +159,7 @@
   --secondary-foreground: #eaf0f6;
 
   --muted: #2d3e50;
-  --muted-foreground: #7c98b6;
+  --muted-foreground: #90adc4;
 
   --accent: #2d3e50;
   --accent-foreground: #eaf0f6;
@@ -168,22 +168,22 @@
 
   --border: #3a4f63;
   --input: #3a4f63;
-  --ring: #ff7a59;
+  --ring: #c4502b;
 
-  --chart-1: #ff7a59;
-  --chart-2: #00bda5;
+  --chart-1: #c4502b;
+  --chart-2: #00756a;
   --chart-3: #7c98b6;
   --chart-4: #f5c26b;
   --chart-5: #516f90;
 
   --sidebar: #1a2332;
   --sidebar-foreground: #eaf0f6;
-  --sidebar-primary: #ff7a59;
+  --sidebar-primary: #c4502b;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #2d3e50;
   --sidebar-accent-foreground: #eaf0f6;
   --sidebar-border: #2d3e50;
-  --sidebar-ring: #ff7a59;
+  --sidebar-ring: #e8603c;
 
   --glass-bg: #243447;
   --glass-border: #3a4f63;

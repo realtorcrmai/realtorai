@@ -79,7 +79,7 @@ export function MondaySidebar() {
 
   function GroupHeader({ label }: { label: string }) {
     return (
-      <div className="text-xs uppercase tracking-wider text-sidebar-foreground/40 px-4 pt-4 pb-2 font-semibold">
+      <div className="text-xs uppercase tracking-wider text-sidebar-foreground/70 px-4 pt-4 pb-2 font-semibold">
         {label}
       </div>
     );

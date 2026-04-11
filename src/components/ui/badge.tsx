@@ -22,9 +22,9 @@ const badgeVariants = cva(
         success:
           "bg-success/10 text-success border-success/20 [a]:hover:bg-success/20",
         warning:
-          "bg-[#f5c26b]/10 text-[#c87d2f] border-[#f5c26b]/20 [a]:hover:bg-[#f5c26b]/20",
+          "bg-[#f5c26b]/10 text-[#8a5a1e] border-[#f5c26b]/20 [a]:hover:bg-[#f5c26b]/20",
         info:
-          "bg-[#516f90]/10 text-[#516f90] border-[#516f90]/20 [a]:hover:bg-[#516f90]/20",
+          "bg-[#516f90]/10 text-[#3d5468] border-[#516f90]/20 [a]:hover:bg-[#516f90]/20",
       },
     },
     defaultVariants: {

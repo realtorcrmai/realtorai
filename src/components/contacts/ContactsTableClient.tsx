@@ -24,7 +24,7 @@ const STAGE_COLORS: Record<string, string> = {
   qualified: "bg-brand/10 text-brand border-brand/20",
   active_search: "bg-brand/10 text-brand-dark border-brand/20",
   active_listing: "bg-brand/10 text-brand-dark border-brand/20",
-  under_contract: "bg-[#f5c26b]/10 text-[#c87d2f] border-[#f5c26b]/20",
+  under_contract: "bg-[#f5c26b]/10 text-[#8a5a1e] border-[#f5c26b]/20",
   closed: "bg-success/10 text-success border-success/20",
   cold: "bg-muted text-muted-foreground",
 };

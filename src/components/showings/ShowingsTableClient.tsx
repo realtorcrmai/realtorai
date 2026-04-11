@@ -20,7 +20,7 @@ interface ShowingRow {
 
 const STATUS_STYLES: Record<string, { className: string; label: string }> = {
   confirmed: { className: "bg-success/15 text-success border-success/30 font-semibold", label: "Confirmed" },
-  requested: { className: "bg-[#f5c26b]/15 text-[#c87d2f] border-[#f5c26b]/30", label: "Requested" },
+  requested: { className: "bg-[#f5c26b]/15 text-[#8a5a1e] border-[#f5c26b]/30", label: "Requested" },
   denied: { className: "bg-destructive/15 text-destructive border-destructive/30", label: "Denied" },
   cancelled: { className: "bg-muted text-muted-foreground border-border", label: "Cancelled" },
   completed: { className: "bg-primary/15 text-primary border-primary/30", label: "Completed" },

@@ -141,7 +141,7 @@ export function DataTable<T extends Record<string, any>>({
                   onKeyDown={onRowClick ? (e) => { if (e.key === "Enter") onRowClick(row); } : undefined}
                   className={cn(
                     "border-b border-border last:border-b-0 transition-colors",
-                    onRowClick && "cursor-pointer hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-inset"
+                    onRowClick && "cursor-pointer hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
                   )}
                 >
                   {selectable && (
@@ -187,16 +187,18 @@ export function DataTable<T extends Record<string, any>>({
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={safePage <= 1}
                 className="p-1.5 rounded hover:bg-muted disabled:opacity-30"
+                aria-label="Previous page"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <span className="text-xs text-muted-foreground">
-                {safePage} / {totalPages}
+              <span className="text-xs text-muted-foreground" aria-live="polite">
+                Page {safePage} of {totalPages}
               </span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={safePage >= totalPages}
                 className="p-1.5 rounded hover:bg-muted disabled:opacity-30"
+                aria-label="Next page"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>

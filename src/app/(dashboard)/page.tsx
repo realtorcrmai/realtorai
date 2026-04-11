@@ -148,7 +148,7 @@ export default async function DashboardPage() {
             <Card className="border-l-4 border-l-[#f5c26b] transition-shadow group-hover:shadow-md">
               <CardContent className="p-4 flex items-center gap-3">
                 <div className="h-10 w-10 rounded-lg bg-[#f5c26b]/10 flex items-center justify-center shrink-0">
-                  <Clock className="h-5 w-5 text-[#c87d2f]" />
+                  <Clock className="h-5 w-5 text-[#8a5a1e]" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Pending Showings</p>

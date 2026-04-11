@@ -20,9 +20,9 @@ interface ListingRow {
 
 const STATUS_STYLES: Record<string, { className: string; label: string }> = {
   active: { className: "bg-success/15 text-success border-success/30 font-semibold", label: "Active" },
-  pending: { className: "bg-[#f5c26b]/15 text-[#c87d2f] border-[#f5c26b]/30 font-semibold", label: "Pending" },
+  pending: { className: "bg-[#f5c26b]/15 text-[#8a5a1e] border-[#f5c26b]/30 font-semibold", label: "Pending" },
   sold: { className: "bg-primary/15 text-primary border-primary/30 font-semibold", label: "Sold" },
-  conditional: { className: "bg-[#f5c26b]/15 text-[#c87d2f] border-[#f5c26b]/30", label: "Conditional" },
+  conditional: { className: "bg-[#f5c26b]/15 text-[#8a5a1e] border-[#f5c26b]/30", label: "Conditional" },
   expired: { className: "bg-destructive/15 text-destructive border-destructive/30", label: "Expired" },
   withdrawn: { className: "bg-muted text-muted-foreground border-border", label: "Withdrawn" },
 };
