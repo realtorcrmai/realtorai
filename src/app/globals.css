@@ -57,164 +57,145 @@
 }
 
 /* ─────────────────────────────────────────────
-   LIGHT THEME — Clean, Professional, Vibrant
-   Primary: Teal (real-estate industry standard).
-   Background: Soft lavender tint with gradient blobs.
-   Cards: Semi-transparent white (glassmorphism).
+   LIGHT THEME — HubSpot-Inspired Professional CRM
+   Primary: Dark Navy (#2D3E50) for trust & authority.
+   Accent: Coral (#FF7A59) for CTAs & active states.
+   Background: Light gray (#F5F8FA) — clean & airy.
+   Cards: Solid white with subtle borders.
    ───────────────────────────────────────────── */
 
 :root {
   /* ── Core surfaces ── */
-  --background: #f6f7fb;                      /* neutral gray — Monday.com clean */
-  --foreground: #333333;                    /* Monday.com main text — softer than near-black */
+  --background: #f5f8fa;
+  --foreground: #33475b;
 
-  --card: oklch(1 0 0);                    /* solid white — no transparency */
-  --card-foreground: #333333;
+  --card: #ffffff;
+  --card-foreground: #33475b;
 
-  --popover: oklch(1 0 0);                  /* solid white for popovers */
-  --popover-foreground: oklch(0.145 0 0);
+  --popover: #ffffff;
+  --popover-foreground: #33475b;
 
-  /* ── Primary: Professional Teal ── */
-  --primary: oklch(0.50 0.11 220);          /* ≈ rgb(15, 118, 148) — trustworthy teal */
-  --primary-foreground: oklch(0.99 0 0);
+  /* ── Primary: Dark Navy ── */
+  --primary: #2d3e50;
+  --primary-foreground: #ffffff;
 
-  /* ── Secondary & Muted — neutral gray ── */
-  --secondary: #f0f1f3;
-  --secondary-foreground: oklch(0.20 0 0);
+  /* ── Secondary & Muted ── */
+  --secondary: #eaf0f6;
+  --secondary-foreground: #33475b;
 
-  --muted: #f0f1f3;
-  --muted-foreground: #676879;              /* Monday.com secondary text */
+  --muted: #eaf0f6;
+  --muted-foreground: #7c98b6;
 
-  --accent: #e8eaed;
-  --accent-foreground: oklch(0.20 0 0);
+  --accent: #eaf0f6;
+  --accent-foreground: #33475b;
 
-  --destructive: oklch(0.577 0.245 27.325);
+  --destructive: #d94f57;
 
   /* ── Borders & inputs ── */
-  --border: #e6e9ef;                       /* Monday.com neutral border */
-  --input: #e6e9ef;
-  --ring: oklch(0.50 0.11 220);            /* matches primary */
+  --border: #cbd6e2;
+  --input: #cbd6e2;
+  --ring: #ff7a59;
 
   /* ── Charts ── */
-  --chart-1: oklch(0.50 0.11 220);         /* teal */
-  --chart-2: oklch(0.55 0.14 160);         /* green */
-  --chart-3: oklch(0.52 0.11 255);         /* blue */
-  --chart-4: oklch(0.62 0.17 45);          /* orange */
-  --chart-5: oklch(0.52 0.14 320);         /* magenta */
+  --chart-1: #ff7a59;
+  --chart-2: #00bda5;
+  --chart-3: #516f90;
+  --chart-4: #f5c26b;
+  --chart-5: #7c98b6;
 
-  --radius: 0.25rem;
+  --radius: 0.375rem;
 
-  /* ── Sidebar: Dark charcoal ── */
-  --sidebar: oklch(0.18 0.012 250);
-  --sidebar-foreground: oklch(0.92 0 0);
-  --sidebar-primary: oklch(0.58 0.11 220);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.24 0.012 250);
-  --sidebar-accent-foreground: oklch(0.92 0 0);
-  --sidebar-border: oklch(0.28 0.012 250);
-  --sidebar-ring: oklch(0.50 0.11 220);
+  /* ── Sidebar: Dark Navy ── */
+  --sidebar: #2d3e50;
+  --sidebar-foreground: #eaf0f6;
+  --sidebar-primary: #ff7a59;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #3a4f63;
+  --sidebar-accent-foreground: #eaf0f6;
+  --sidebar-border: #3a4f63;
+  --sidebar-ring: #ff7a59;
 
-  /* ── Brand accent colors (use these instead of hardcoded hex) ── */
-  --brand: oklch(0.50 0.11 220);             /* = primary, for bg-brand, text-brand */
-  --brand-foreground: oklch(0.99 0 0);
-  --brand-dark: oklch(0.42 0.10 220);        /* darker shade for hover/active */
-  --brand-light: oklch(0.72 0.10 210);       /* lighter shade for highlights */
-  --brand-muted: oklch(0.50 0.11 220 / 10%); /* 10% opacity for backgrounds */
-  --brand-muted-strong: oklch(0.50 0.11 220 / 15%); /* 15% for stronger bg */
-  --success: oklch(0.62 0.17 155);           /* green for positive states */
-  --success-foreground: oklch(0.99 0 0);
+  /* ── Brand accent: Coral ── */
+  --brand: #ff7a59;
+  --brand-foreground: #ffffff;
+  --brand-dark: #e8603c;
+  --brand-light: #ff9a7a;
+  --brand-muted: rgba(255, 122, 89, 0.10);
+  --brand-muted-strong: rgba(255, 122, 89, 0.15);
+  --success: #00bda5;
+  --success-foreground: #ffffff;
 
-  /* ── Gradient endpoints — teal-based ── */
-  --gradient-indigo-start: oklch(0.44 0.12 225);
-  --gradient-indigo-end: oklch(0.52 0.10 210);
-  --gradient-violet-start: oklch(0.46 0.12 280);
-  --gradient-violet-end: oklch(0.54 0.10 300);
-  --gradient-blue-start: oklch(0.48 0.12 250);
-  --gradient-blue-end: oklch(0.56 0.10 235);
-  --gradient-teal-start: oklch(0.48 0.11 205);
-  --gradient-teal-end: oklch(0.56 0.09 190);
-  --gradient-emerald-start: oklch(0.52 0.14 158);
-  --gradient-emerald-end: oklch(0.60 0.11 145);
-  --gradient-amber-start: oklch(0.66 0.16 75);
-  --gradient-amber-end: oklch(0.73 0.13 60);
-  --gradient-rose-start: oklch(0.52 0.20 12);
-  --gradient-rose-end: oklch(0.58 0.17 352);
-  --gradient-cyan-start: oklch(0.54 0.11 215);
-  --gradient-cyan-end: oklch(0.61 0.09 200);
-  --gradient-orange-start: oklch(0.60 0.17 50);
-  --gradient-orange-end: oklch(0.67 0.14 40);
-
-  /* ── Glass tokens (translucent for glassmorphism) ── */
-  --glass-bg: oklch(1 0 0);
-  --glass-border: oklch(0 0 0 / 8%);
+  /* ── Glass tokens (flat — no blur) ── */
+  --glass-bg: #ffffff;
+  --glass-border: #cbd6e2;
   --glass-blur: 0px;
 
   /* ── Elevation shadows ── */
-  --shadow-2: 0 1px 2px oklch(0 0 0 / 5%);
-  --shadow-4: 0 1px 3px oklch(0 0 0 / 5%);
-  --shadow-8: 0 2px 4px oklch(0 0 0 / 5%);
-  --shadow-16: 0 2px 6px oklch(0 0 0 / 5%);
-  --shadow-colored: 0 4px 14px oklch(0.50 0.11 220 / 18%);
+  --shadow-2: 0 1px 3px rgba(45, 62, 80, 0.06);
+  --shadow-4: 0 1px 4px rgba(45, 62, 80, 0.08);
+  --shadow-8: 0 2px 8px rgba(45, 62, 80, 0.08);
+  --shadow-16: 0 4px 12px rgba(45, 62, 80, 0.10);
+  --shadow-colored: 0 4px 14px rgba(255, 122, 89, 0.15);
 }
 
 /* ─────────────────────────────────────────────
-   DARK THEME
+   DARK THEME — Navy-based dark mode
    ───────────────────────────────────────────── */
 
 .dark {
-  --background: oklch(0.13 0.008 250);
-  --foreground: oklch(0.95 0 0);
+  --background: #1a2332;
+  --foreground: #eaf0f6;
 
-  --card: oklch(0.17 0.010 250);
-  --card-foreground: oklch(0.95 0 0);
+  --card: #243447;
+  --card-foreground: #eaf0f6;
 
-  --popover: oklch(0.17 0.010 250);
-  --popover-foreground: oklch(0.95 0 0);
+  --popover: #243447;
+  --popover-foreground: #eaf0f6;
 
-  --primary: oklch(0.58 0.12 220);
-  --primary-foreground: oklch(0.99 0 0);
+  --primary: #ff7a59;
+  --primary-foreground: #ffffff;
 
-  --secondary: oklch(0.22 0.008 250);
-  --secondary-foreground: oklch(0.95 0 0);
+  --secondary: #2d3e50;
+  --secondary-foreground: #eaf0f6;
 
-  --muted: oklch(0.22 0.008 250);
-  --muted-foreground: oklch(0.65 0 0);
+  --muted: #2d3e50;
+  --muted-foreground: #7c98b6;
 
-  --accent: oklch(0.22 0.008 250);
-  --accent-foreground: oklch(0.95 0 0);
+  --accent: #2d3e50;
+  --accent-foreground: #eaf0f6;
 
-  --destructive: oklch(0.704 0.191 22.216);
+  --destructive: #ff6b6b;
 
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.58 0.12 220);
+  --border: #3a4f63;
+  --input: #3a4f63;
+  --ring: #ff7a59;
 
-  --chart-1: oklch(0.58 0.12 220);
-  --chart-2: oklch(0.55 0.14 160);
-  --chart-3: oklch(0.55 0.11 255);
-  --chart-4: oklch(0.62 0.17 45);
-  --chart-5: oklch(0.55 0.14 320);
+  --chart-1: #ff7a59;
+  --chart-2: #00bda5;
+  --chart-3: #7c98b6;
+  --chart-4: #f5c26b;
+  --chart-5: #516f90;
 
-  --sidebar: oklch(0.13 0.008 250);
-  --sidebar-foreground: oklch(0.92 0 0);
-  --sidebar-primary: oklch(0.58 0.12 220);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.22 0.008 250);
-  --sidebar-accent-foreground: oklch(0.92 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.58 0.12 220);
+  --sidebar: #1a2332;
+  --sidebar-foreground: #eaf0f6;
+  --sidebar-primary: #ff7a59;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2d3e50;
+  --sidebar-accent-foreground: #eaf0f6;
+  --sidebar-border: #2d3e50;
+  --sidebar-ring: #ff7a59;
 
-  --glass-bg: oklch(0.17 0.010 250 / 80%);
-  --glass-border: oklch(1 0 0 / 10%);
+  --glass-bg: #243447;
+  --glass-border: #3a4f63;
 
-  --brand: oklch(0.58 0.12 220);
-  --brand-foreground: oklch(0.99 0 0);
-  --brand-dark: oklch(0.52 0.10 220);
-  --brand-light: oklch(0.72 0.10 210);
-  --brand-muted: oklch(0.58 0.12 220 / 12%);
-  --brand-muted-strong: oklch(0.58 0.12 220 / 18%);
-  --success: oklch(0.62 0.17 155);
-  --success-foreground: oklch(0.99 0 0);
+  --brand: #ff7a59;
+  --brand-foreground: #ffffff;
+  --brand-dark: #e8603c;
+  --brand-light: #ff9a7a;
+  --brand-muted: rgba(255, 122, 89, 0.12);
+  --brand-muted-strong: rgba(255, 122, 89, 0.18);
+  --success: #00bda5;
+  --success-foreground: #ffffff;
 }
 
 @layer base {
@@ -232,11 +213,9 @@
 /* ─── Utility Classes ─── */
 
 @layer utilities {
-  /* Acrylic / Glass surface */
+  /* Flat card surface (replaces glassmorphism) */
   .glass {
     background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
     border: 1px solid var(--glass-border);
   }
 
@@ -247,33 +226,17 @@
   .elevation-16 { box-shadow: var(--shadow-16); }
   .elevation-colored { box-shadow: var(--shadow-colored); }
 
-  /* Gradient tile backgrounds */
-  .gradient-indigo {
-    background: linear-gradient(135deg, var(--gradient-indigo-start), var(--gradient-indigo-end));
-  }
-  .gradient-violet {
-    background: linear-gradient(135deg, var(--gradient-violet-start), var(--gradient-violet-end));
-  }
-  .gradient-blue {
-    background: linear-gradient(135deg, var(--gradient-blue-start), var(--gradient-blue-end));
-  }
-  .gradient-teal {
-    background: linear-gradient(135deg, var(--gradient-teal-start), var(--gradient-teal-end));
-  }
-  .gradient-emerald {
-    background: linear-gradient(135deg, var(--gradient-emerald-start), var(--gradient-emerald-end));
-  }
-  .gradient-amber {
-    background: linear-gradient(135deg, var(--gradient-amber-start), var(--gradient-amber-end));
-  }
-  .gradient-rose {
-    background: linear-gradient(135deg, var(--gradient-rose-start), var(--gradient-rose-end));
-  }
-  .gradient-cyan {
-    background: linear-gradient(135deg, var(--gradient-cyan-start), var(--gradient-cyan-end));
-  }
+  /* Gradient classes neutralized — flat design, kept as no-ops for backward compat */
+  .gradient-indigo,
+  .gradient-violet,
+  .gradient-blue,
+  .gradient-teal,
+  .gradient-emerald,
+  .gradient-amber,
+  .gradient-rose,
+  .gradient-cyan,
   .gradient-orange {
-    background: linear-gradient(135deg, var(--gradient-orange-start), var(--gradient-orange-end));
+    background: var(--primary);
   }
 
   /* ─── Page transition animations ─── */

@@ -1,22 +1,42 @@
 # Environments — Realtors360 CRM
 
 > **Source of truth** for which Supabase projects, Vercel environments, and branches map to dev vs production. If you're a developer or AI agent starting work on this repo, **read this first**.
-> Last updated: 2026-04-09 (post Supabase consolidation)
+> Last updated: 2026-04-10 (newsletter service live on Render)
 
 ---
 
 ## TL;DR
 
-| | Dev | Production |
-|---|---|---|
-| **Supabase project** | `qcohfohjihazivkforsj` ("realtyaicontent") | **not set up yet — planned** |
-| **Git branch** | `dev` | `main` (nothing there yet — reserved) |
-| **Vercel environment** | Preview | Production |
-| **Deploy URL** | `https://realestate-crm-git-dev-amandhindsas-projects.vercel.app` | `https://realestate-crm-jade-ten.vercel.app` (stale until main is populated) |
-| **Deploy trigger** | Auto on push to `dev` | Auto on push to `main` (not triggered yet) |
-| **Region** | us-west-2 | TBD |
+| | Dev / Current Production |
+|---|---|
+| **Supabase project** | `qcohfohjihazivkforsj` ("realtyaicontent") |
+| **Git branch** | `dev` (all active development + deployments) |
+| **CRM (Next.js)** | Vercel Preview — `https://realestate-crm-git-dev-amandhindsas-projects.vercel.app` |
+| **Newsletter Agent** | **Render (LIVE)** — auto-deploys from `dev` branch, root dir `realtors360-newsletter` |
+| **Deploy trigger** | Auto on push to `dev` for both CRM + Newsletter |
+| **Region** | us-west-2 (Supabase), Render region TBD |
 
-**Currently the CRM has one real environment: dev.** A separate production project + environment is being set up later. Until then, do not assume anything in this repo is "live for real customers."
+### Services currently running
+
+| Service | Platform | Status | Health Check |
+|---------|----------|--------|-------------|
+| **CRM** | Vercel | Live | `https://realestate-crm-git-dev-amandhindsas-projects.vercel.app` |
+| **Newsletter Agent** | Render ($7/mo) | **Live** | `https://<render-url>/health` |
+| **Database** | Supabase | Live | Dashboard: https://supabase.com/dashboard/project/qcohfohjihazivkforsj |
+
+### Newsletter Agent Feature Flags (set in Render env vars)
+
+| Flag | Status | What it does |
+|------|--------|-------------|
+| `FLAG_SAVED_SEARCH` | ON | Matches new listings to saved buyer searches (every 15 min) |
+| `FLAG_PROCESS_WORKFLOWS` | ON | **The critical port** — workflow step processing (every 2 min). CRM Vercel cron should be disabled when this is ON. |
+| `FLAG_AGENT_SCORING` | ON | Lead scoring + recommendations (every 15 min) |
+| `FLAG_AGENT_TRIAGE` | ON | Newsletter AI agent evaluates contacts hourly |
+| `FLAG_WEEKLY_LEARNING` | ON | Adaptive learning cycle (Monday 6am Vancouver) |
+| `FLAG_RAG_BACKFILL` | ON | RAG embeddings backfill (Sunday 3am Vancouver) |
+| `FLAG_MARKET_SCRAPER` | ON | Market stats for 8 BC areas (Sunday 2am Vancouver) |
+
+**`main` branch** is reserved for future separate production environment. Not in active use yet.
 
 ---
 
@@ -176,19 +196,19 @@ The encrypted `.env.vault` was last re-encrypted on **2026-04-01** — before th
          │
          ▼   (PR)
          ▼
-    dev branch ─────────────► Vercel Preview auto-deploy
-                              URL: realestate-crm-git-dev-amandhindsas-projects.vercel.app
-                              DB: qcohfohjihazivkforsj
-                              env: Preview
-                              Status: live for dev testing
+    dev branch ─────┬───────► Vercel Preview auto-deploy (CRM)
+                    │         URL: realestate-crm-git-dev-amandhindsas-projects.vercel.app
+                    │         DB: qcohfohjihazivkforsj
+                    │
+                    └───────► Render auto-deploy (Newsletter Agent)
+                              Root: realtors360-newsletter/
+                              DB: qcohfohjihazivkforsj (same)
+                              12 crons, 19 agent tools, all flags ON
          │
          ▼   (PR from dev → main, requires 1 approval)
          ▼
     main branch ────────────► Vercel Production auto-deploy
-                              URL: realestate-crm-jade-ten.vercel.app
-                              DB: qcohfohjihazivkforsj (same as dev, for now)
-                              env: Production
-                              Status: ⚠ nothing merged yet — prod is dormant
+                              Status: ⚠ reserved — not in active use yet
 ```
 
 ### Rules
@@ -202,18 +222,17 @@ The encrypted `.env.vault` was last re-encrypted on **2026-04-01** — before th
 
 ## Other external services
 
-None of these are affected by the dev/prod split. They're shared:
-
 | Service | Purpose | Project / Account | Notes |
 |---|---|---|---|
-| Anthropic Claude | AI content + agent layer | Shared API key | Per `.env.local` → `ANTHROPIC_API_KEY` |
-| Resend | Email sending | Shared API key | Per `.env.local` → `RESEND_API_KEY`, from address `onboarding@resend.dev` |
-| Twilio | SMS + WhatsApp | Shared account | Per `.env.local` → `TWILIO_*` |
+| **Render** | Newsletter Agent hosting | `realtors360-newsletter` service ($7/mo) | Auto-deploys from `dev`, root dir `realtors360-newsletter`. Env vars set in Render dashboard. |
+| Anthropic Claude | AI content + agent layer | Shared API key | Used by both CRM + Newsletter service |
+| Resend | Email sending + webhooks | Shared API key | From: `onboarding@resend.dev` (sandbox — verify domain for production) |
+| Twilio | SMS + WhatsApp | Shared account | Used by CRM showings + Newsletter workflow steps |
 | Google Calendar / OAuth | Calendar sync + login | Shared client ID | Per `.env.local` → `GOOGLE_CLIENT_ID/SECRET` |
-| Voyage AI | RAG embeddings | Shared API key | Per `.env.local` → `VOYAGE_API_KEY` (if configured) |
+| Voyage AI | RAG embeddings | Shared API key | Used by Newsletter RAG backfill + retriever |
 | Kling AI | Video/image generation | Shared API key | Per `.env.local` → `KLING_*` (if configured) |
 | BC Geocoder | Address autocomplete | Free public API | No key required |
-| Realtors360 Python form server | BCREA form rendering | Local only (`localhost:8767`) | Not deployed anywhere in Vercel |
+| Realtors360 Python form server | BCREA form rendering | Local only (`localhost:8767`) | Not deployed to cloud |
 
 **When you add a new external service**, decide up-front whether it needs separate dev vs prod credentials (e.g., Stripe test mode vs live mode) and set both env scopes accordingly.
 
@@ -225,14 +244,18 @@ If you're Claude Code or another agent working in this repo, here's what you nee
 
 - **DB target:** Always `qcohfohjihazivkforsj` (Supabase). Never assume any other project ref.
 - **Branch you're probably on:** `dev` (or a feature branch off it). Use `git branch --show-current` to confirm.
-- **Where local dev talks to:** qcohfoh via `.env.local`. Run `cat .env.local | grep NEXT_PUBLIC_SUPABASE_URL` to verify.
-- **Where preview deploys talk to:** qcohfoh via Vercel Preview env vars.
-- **Where production deploys talk to:** qcohfoh too (same DB, until prod is split). Via Vercel Production env vars.
-- **Migration files:** `supabase/migrations/*.sql`. Never modify an applied migration — always create a new one.
-- **Running SQL against the dev DB:** Use `scripts/apply-newsletter-migrations.mjs` (needs `SUPABASE_ACCESS_TOKEN`) or paste into the dashboard SQL editor.
-- **Adding env vars:** Use `vercel env add <name> preview` AND `vercel env add <name> production` so both environments stay in sync. Also add to `.env.local.example` with a placeholder value.
-- **Before any destructive operation:** back up via `scripts/apply-newsletter-migrations.mjs` (or similar) and wrap DELETE statements in `BEGIN; ... ROLLBACK;` for audit.
-- **After the consolidation**, some code paths may reference features that were in ybgilju but dropped during the migration due to schema drift. If you hit a `column does not exist` error on `listings.current_phase` or similar, the column was stripped. Either add it back with a migration or update the code.
+- **Two deployed services:**
+  - **CRM** → Vercel (auto-deploy from `dev`) → `realestate-crm-git-dev-amandhindsas-projects.vercel.app`
+  - **Newsletter Agent** → Render (auto-deploy from `dev`, root dir `realtors360-newsletter`) → check Render dashboard for URL
+- **Newsletter Agent is LIVE** with all 7 feature flags ON. 19 tools, 12 crons, 121 tests. Code at `realtors360-newsletter/`.
+- **Both services share the same Supabase DB** (`qcohfohjihazivkforsj`). Changes to DB schema affect both.
+- **Newsletter env vars** are set in the Render dashboard (not Vercel). CRM env vars are in Vercel.
+- **Migration files:** `supabase/migrations/*.sql`. Latest: 097. Never modify applied migrations — create new ones.
+- **Running SQL:** Use dashboard SQL editor at https://supabase.com/dashboard/project/qcohfohjihazivkforsj/sql/new
+- **Adding CRM env vars:** `vercel env add <name> preview` + `vercel env add <name> production`
+- **Adding Newsletter env vars:** Render dashboard → Environment tab
+- **Before any destructive operation:** wrap in `BEGIN; ... ROLLBACK;` first.
+- **`FLAG_PROCESS_WORKFLOWS=on` on Render** means the CRM's Vercel cron for process-workflows should be DISABLED to avoid double-processing.
 
 ---
 

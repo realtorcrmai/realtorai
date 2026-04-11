@@ -27,24 +27,23 @@ Read the playbook before every task. It covers: pre-flight, task classification,
 
 **Full reference:** `docs/ENVIRONMENTS.md` — always read this before running migrations, changing env vars, or deploying.
 
-**Quick summary as of 2026-04-09 (post-consolidation):**
+**Quick summary as of 2026-04-10:**
 
-| | Dev | Production |
-|---|---|---|
-| **Supabase project** | `qcohfohjihazivkforsj` ("realtyaicontent") | not set up yet — planned |
-| **Git branch** | `dev` | `main` (reserved, currently empty of live traffic) |
-| **Vercel env** | Preview | Production |
-| **Deploy URL** | `https://realestate-crm-git-dev-amandhindsas-projects.vercel.app` | `https://realestate-crm-jade-ten.vercel.app` |
-| **Auto-deploy** | On push to `dev` | On push to `main` |
+| Service | Platform | Status | Auto-deploy |
+|---------|----------|--------|-------------|
+| **CRM (Next.js)** | Vercel Preview | Live | Push to `dev` |
+| **Newsletter Agent** | **Render ($7/mo)** | **Live — all flags ON** | Push to `dev` (root: `realtors360-newsletter`) |
+| **Database** | Supabase `qcohfohjihazivkforsj` | Live | — |
 
 **Critical rules:**
-- **One Supabase project right now: `qcohfohjihazivkforsj`.** Every env scope (Preview + Production + local + GitHub secrets) points at it. Two other projects (`ybgiljuclpsuhbmdhust`, `rsfjescdjuubxadfjyxb`) are orphaned and pending deletion — **do not reference them**.
-- **The `main` branch is not production yet.** Nothing has been merged to main since 2026-04-07. Until the real production environment is set up, `dev` is the only live environment.
-- **`.env.vault` is stale** (last re-encrypted 2026-04-01). Do not `./scripts/vault.sh decrypt` and blindly use the values — they point at the old `ybgilju` project. The canonical env values live in Vercel; run `vercel env pull .env.local` to get current values.
+- **Two live services deploy from `dev`.** CRM → Vercel, Newsletter → Render. Both share the same Supabase DB.
+- **Newsletter Agent is LIVE on Render** with 19 tools, 12 crons, all 7 feature flags ON. Env vars are in the Render dashboard (not Vercel).
+- **`FLAG_PROCESS_WORKFLOWS=on` on Render** means the CRM's Vercel cron for process-workflows should be DISABLED to avoid double-processing.
+- **One Supabase project: `qcohfohjihazivkforsj`.** Two orphaned projects (`ybgiljuclpsuhbmdhust`, `rsfjescdjuubxadfjyxb`) pending deletion — do not reference them.
+- **`main` branch is reserved** for future production. `dev` is the only active branch.
+- **CRM env vars** → Vercel dashboard. **Newsletter env vars** → Render dashboard. Don't mix them up.
 - **Never push directly to `dev` or `main`** — always via PR.
-- **Two demo realtor users exist** after consolidation: `7de22757-...` = `demo-legacy@realestatecrm.com` (owns 518 of the 698 contacts), `e044c0c6-...` = `demo@realestatecrm.com` (owns the rest). Log in as the legacy one to see most contact data.
-- **Migrations run via `scripts/apply-newsletter-migrations.mjs`** with `SUPABASE_ACCESS_TOKEN` env var (generate at https://supabase.com/dashboard/account/tokens). Never paste SQL directly into the editor for destructive operations — wrap in `BEGIN; ... ROLLBACK;` first.
-- **Use `printf` not `echo` when piping values to `vercel env add`** — `echo` adds a trailing newline that breaks env var values.
+- **Migrations:** paste SQL into https://supabase.com/dashboard/project/qcohfohjihazivkforsj/sql/new. Latest: 097.
 
 **Full details, migration file catalogue, orphan table notes, deploy flow diagram, and follow-up items — all in `docs/ENVIRONMENTS.md`.**
 

@@ -50,7 +50,7 @@ export function MobileNav() {
         className={cn(
           "flex flex-col items-center gap-1 py-2.5 px-2 min-w-[44px] min-h-[44px] text-[10px] font-medium transition-colors",
           isActive
-            ? "text-primary"
+            ? "text-brand"
             : "text-muted-foreground"
         )}
       >
@@ -61,7 +61,7 @@ export function MobileNav() {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/95 backdrop-blur-sm md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card md:hidden">
       <div className="flex items-end justify-around">
         {leftItems.map((item) => (
           <NavLink key={item.href} item={item} />
@@ -69,7 +69,7 @@ export function MobileNav() {
 
         {/* Raised center Quick Add button */}
         <div className="flex flex-col items-center -mt-4">
-          <div className="rounded-full bg-card p-1 shadow-lg border border-border/50">
+          <div className="rounded-full bg-brand p-1 shadow-lg text-white">
             <QuickAddButton />
           </div>
           <span className="text-[10px] font-medium text-muted-foreground mt-0.5">Add</span>

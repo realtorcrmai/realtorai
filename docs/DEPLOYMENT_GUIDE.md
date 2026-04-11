@@ -7,15 +7,15 @@
 
 ## Quick Reference
 
-| Service | Port | Platform | Branch | URL |
-|---------|------|----------|--------|-----|
-| **CRM (Next.js)** | 3000 | Vercel | `dev` → Preview, `main` → Production | `realestate-crm-git-dev-amandhindsas-projects.vercel.app` |
-| **Newsletter Engine** | 8080 | Render (planned) | `main` | Not deployed yet |
-| **Website Agent** | 8768 | Local / Railway (planned) | — | `localhost:8768` |
-| **Form Server** | 8767 | Local | — | `localhost:8767` |
-| **Voice Agent** | 8768 | Local | — | `localhost:8768` |
+| Service | Port | Platform | Branch | Status |
+|---------|------|----------|--------|--------|
+| **CRM (Next.js)** | 3000 | Vercel | `dev` → Preview | **LIVE** |
+| **Newsletter Agent** | 8080 | Render ($7/mo) | `dev` (root: `realtors360-newsletter`) | **LIVE** — all flags ON |
+| **Website Agent** | 8768 | Local / Railway (planned) | — | Local only |
+| **Form Server** | 8767 | Local | — | Local only |
+| **Voice Agent** | 8768 | Local | — | Local only |
 
-**Database:** Supabase project `qcohfohjihazivkforsj` ("realtyaicontent") — single instance for dev + prod until production setup.
+**Database:** Supabase project `qcohfohjihazivkforsj` — shared by CRM + Newsletter Agent.
 
 **Repo:** `https://github.com/realtorcrmai/realtorai`
 
