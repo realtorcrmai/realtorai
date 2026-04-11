@@ -4,6 +4,7 @@ import { logger } from './lib/logger.js';
 import { startWorker, stopWorker } from './workers/index.js';
 import { startCrons } from './crons/index.js';
 import { closeRedis } from './lib/redis.js';
+import { initSentry } from './lib/sentry.js';
 
 /**
  * Web entry point.
@@ -13,6 +14,8 @@ import { closeRedis } from './lib/redis.js';
  * its own process via `worker.ts`.
  */
 async function main(): Promise<void> {
+  initSentry();
+
   const app = createApp();
 
   const server = app.listen(config.PORT, () => {

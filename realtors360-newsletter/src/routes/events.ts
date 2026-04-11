@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { supabase } from '../lib/supabase.js';
 import { config } from '../config.js';
 import { logger } from '../lib/logger.js';
+import { captureException } from '../lib/sentry.js';
 
 export const eventsRouter: Router = Router();
 
@@ -71,6 +72,7 @@ eventsRouter.post('/events', async (req: Request, res: Response) => {
 
   if (error) {
     logger.error({ err: error }, 'events: insert failed');
+    captureException(new Error(error.message), { path: '/events', event_type: parsed.data.event_type });
     return res.status(500).json({ error: 'insert failed' });
   }
 

@@ -24,6 +24,9 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { logger } from '../lib/logger.js';
+import { captureException } from '../lib/sentry.js';
+import { startTimer } from '../lib/timer.js';
+import { generateTraceId } from '../lib/trace.js';
 import { getToolSchemas, executeTool, type ToolContext } from './tools/index.js';
 
 const anthropic = new Anthropic();
@@ -84,7 +87,8 @@ export async function runAgentForContact(
   trigger: string = 'scheduled'
 ): Promise<AgentRunResult> {
   const ctx: ToolContext = { db, realtorId };
-  const runLog = logger.child({ realtorId, contactId, trigger });
+  const traceId = generateTraceId();
+  const runLog = logger.child({ traceId, realtorId, contactId, trigger });
 
   // Create agent_run record
   const { data: run, error: runErr } = await db
@@ -94,6 +98,7 @@ export async function runAgentForContact(
       trigger_type: trigger,
       contact_ids_evaluated: [contactId],
       status: 'running',
+      metadata: { traceId },
     })
     .select('id')
     .single();
@@ -116,6 +121,8 @@ Start by getting the contact's details and engagement intelligence, then decide 
     ];
 
     for (let turn = 0; turn < MAX_TURNS; turn++) {
+      const turnElapsed = startTimer();
+
       // Context window protection: estimate total chars, bail if too large.
       // Claude Sonnet has 200K tokens (~800K chars). Cap at 150K chars to
       // leave room for the response + system prompt + tool schemas.
@@ -189,6 +196,8 @@ Start by getting the contact's details and engagement intelligence, then decide 
       }
 
       messages.push({ role: 'user', content: toolResults });
+
+      runLog.debug({ turn, durationMs: turnElapsed() }, 'agent: turn complete');
     }
 
     // Update run record
@@ -204,6 +213,7 @@ Start by getting the contact's details and engagement intelligence, then decide 
     return { runId, contactId, decisions, status: decisions > 0 ? 'completed' : 'no_action' };
   } catch (err) {
     runLog.error({ err }, 'agent: run failed');
+    captureException(err instanceof Error ? err : new Error(String(err)), { contactId, realtorId, trigger });
     await db
       .from('agent_runs')
       .update({
@@ -228,7 +238,8 @@ export async function runTriageLoop(
   db: SupabaseClient,
   realtorId: string
 ): Promise<{ contactsEvaluated: number; totalDecisions: number; results: AgentRunResult[] }> {
-  const triageLog = logger.child({ realtorId, phase: 'triage' });
+  const triageTraceId = generateTraceId();
+  const triageLog = logger.child({ traceId: triageTraceId, realtorId, phase: 'triage' });
 
   // Find contacts that might need attention:
   // 1. Contacts with pending email events

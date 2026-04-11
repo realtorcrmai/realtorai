@@ -21,6 +21,8 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { logger } from '../../lib/logger.js';
+import { captureException } from '../../lib/sentry.js';
+import { startTimer } from '../../lib/timer.js';
 
 // READ tools
 import { listContacts, LIST_CONTACTS_SCHEMA } from './read/list-contacts.js';
@@ -104,10 +106,14 @@ export async function executeTool(
     return { error: `Unknown tool: ${name}` };
   }
 
+  const elapsed = startTimer();
   try {
-    return await tool.handler(ctx, input);
+    const result = await tool.handler(ctx, input);
+    logger.debug({ tool: name, durationMs: elapsed() }, 'agent: tool completed');
+    return result;
   } catch (err) {
-    logger.error({ err, tool: name }, 'agent: tool execution failed');
+    logger.error({ err, tool: name, durationMs: elapsed() }, 'agent: tool execution failed');
+    captureException(err instanceof Error ? err : new Error(String(err)), { tool: name });
     return { error: `Tool ${name} failed: ${err instanceof Error ? err.message : String(err)}` };
   }
 }

@@ -23,6 +23,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import { config } from '../../config.js';
 import { logger } from '../../lib/logger.js';
+import { captureException } from '../../lib/sentry.js';
 import { parseAIJson, unescapeNewlines } from '../../lib/parse-ai-json.js';
 import { sendWithTracking } from '../../lib/send-with-tracking.js';
 import { sendGenericMessage } from '../../lib/twilio.js';
@@ -128,7 +129,7 @@ async function generateAIContent(
         { contact_id: contact.id, content_type: ['message', 'activity', 'email'] }, 5
       );
       if (retrieved.formatted) ragContext = `\nINTERACTION HISTORY:\n${retrieved.formatted}\n`;
-    } catch { /* RAG unavailable */ }
+    } catch (err) { logger.debug({ err }, 'workflow: RAG unavailable, continuing without'); }
   }
 
   const listingInfo = listing
@@ -637,6 +638,7 @@ export async function processWorkflowQueue(
     } catch (err) {
       errors.push(`Enrollment ${enrollment.id}: ${String(err)}`);
       enrollmentLog.error({ err }, 'workflow: enrollment processing threw');
+      captureException(err instanceof Error ? err : new Error(String(err)), { enrollmentId: enrollment.id, contactId: enrollment.contact_id });
     }
   }
 

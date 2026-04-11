@@ -1,6 +1,8 @@
 import { supabase } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
 import { config } from '../config.js';
+import { captureException } from '../lib/sentry.js';
+import { startTimer } from '../lib/timer.js';
 import { scoreBatch } from '../shared/ai-agent/lead-scorer.js';
 
 /**
@@ -44,6 +46,7 @@ export async function runAgentScoring(): Promise<void> {
 
   if (fetchErr) {
     logger.error({ err: fetchErr }, 'cron/agent-scoring: contact fetch failed');
+    captureException(new Error(fetchErr.message), { cron: 'agent-scoring' });
     return;
   }
 
@@ -78,6 +81,7 @@ export async function runAgentScoring(): Promise<void> {
     result = await scoreBatch(supabase, contactsToScore);
   } catch (err) {
     logger.error({ err }, 'cron/agent-scoring: scoreBatch threw');
+    captureException(err instanceof Error ? err : new Error(String(err)), { cron: 'agent-scoring', contactCount: contactsToScore.length });
     return;
   }
 

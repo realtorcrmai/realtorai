@@ -3,6 +3,7 @@ import { Router, type Request, type Response } from 'express';
 import { supabase } from '../lib/supabase.js';
 import { config } from '../config.js';
 import { logger } from '../lib/logger.js';
+import { captureException } from '../lib/sentry.js';
 import { recordPositiveSignal, recordNegativeSignal } from '../agent/trust/trust-level.js';
 import { suppressContact } from '../lib/suppression.js';
 
@@ -120,7 +121,8 @@ async function updateContactIntelligence(
     )
   );
 
-  await supabase.from('contacts').update({ newsletter_intelligence: intel }).eq('id', contactId);
+  const { error: updateErr } = await supabase.from('contacts').update({ newsletter_intelligence: intel }).eq('id', contactId);
+  if (updateErr) logger.warn({ err: updateErr, contactId }, 'webhook: intel update failed');
 }
 
 // ── Svix signature verification ────────────────────────────────
@@ -332,6 +334,7 @@ webhooksRouter.post('/webhooks/resend', async (req: Request, res: Response) => {
     return res.json({ ok: true });
   } catch (err) {
     log.error({ err }, 'webhook: handler error');
+    captureException(err instanceof Error ? err : new Error(String(err)), { path: '/webhooks/resend' });
     return res.status(500).json({ error: 'Internal error' });
   }
 });

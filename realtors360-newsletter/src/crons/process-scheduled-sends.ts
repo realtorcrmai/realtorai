@@ -14,6 +14,7 @@
 
 import { supabase } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
+import { captureException } from '../lib/sentry.js';
 import { canSendToContact } from '../lib/compliance.js';
 import { sendWithTracking } from '../lib/send-with-tracking.js';
 
@@ -121,6 +122,7 @@ export async function runProcessScheduledSends(): Promise<void> {
           { err, draftId: draft.id, contactId: draft.contact_id },
           'cron: process-scheduled-sends — send failed, continuing'
         );
+        captureException(err instanceof Error ? err : new Error(String(err)), { cron: 'process-scheduled-sends', draftId: draft.id });
         failed++;
       }
     }
@@ -137,5 +139,6 @@ export async function runProcessScheduledSends(): Promise<void> {
     );
   } catch (err) {
     logger.error({ err, durationMs: Date.now() - start }, 'cron: process-scheduled-sends threw');
+    captureException(err instanceof Error ? err : new Error(String(err)), { cron: 'process-scheduled-sends' });
   }
 }

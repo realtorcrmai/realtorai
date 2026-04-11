@@ -11,6 +11,7 @@
 import { config } from '../config.js';
 import { supabase } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
+import { captureException } from '../lib/sentry.js';
 import { runTriageLoop } from '../agent/orchestrator.js';
 
 export async function runAgentTriage(): Promise<void> {
@@ -45,6 +46,7 @@ export async function runAgentTriage(): Promise<void> {
         totalDecisions += result.totalDecisions;
       } catch (err) {
         logger.error({ err, realtorId }, 'cron: agent-triage failed for realtor');
+        captureException(err instanceof Error ? err : new Error(String(err)), { cron: 'agent-triage', realtorId });
       }
     }
 
@@ -59,5 +61,6 @@ export async function runAgentTriage(): Promise<void> {
     );
   } catch (err) {
     logger.error({ err, durationMs: Date.now() - start }, 'cron: agent-triage threw');
+    captureException(err instanceof Error ? err : new Error(String(err)), { cron: 'agent-triage' });
   }
 }

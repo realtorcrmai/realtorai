@@ -16,6 +16,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { sendEmail } from './resend.js';
 import { config } from '../config.js';
 import { logger } from './logger.js';
+import { captureException } from './sentry.js';
 
 export type TrackedSendArgs = {
   db: SupabaseClient;
@@ -98,6 +99,7 @@ export async function sendWithTracking(args: TrackedSendArgs): Promise<TrackedSe
     return { ok: true, newsletterId, resendId: result.id };
   } catch (err) {
     logger.error({ err, contactId, emailType }, 'send-tracked: send failed');
+    captureException(err instanceof Error ? err : new Error(String(err)), { contactId, emailType });
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
 }

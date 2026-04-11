@@ -3,6 +3,7 @@ import { render } from '@react-email/render';
 import React from 'react';
 import { supabase } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
+import { generateTraceId } from '../lib/trace.js';
 import { generateEmail } from '../orchestrator/index.js';
 import { resolveRuleForEvent } from '../orchestrator/rules.js';
 import { sendEmail } from '../lib/resend.js';
@@ -77,7 +78,8 @@ export async function runPipeline(
   event: EventRow,
   config: PipelineConfig
 ): Promise<PipelineResult> {
-  const log = logger.child({ event_id: event.id, event_type: event.event_type });
+  const traceId = generateTraceId();
+  const log = logger.child({ traceId, event_id: event.id, event_type: event.event_type });
 
   // ── Phase 1: Resolve recipient ───────────────────────────────
   const recipientContactId = config.resolveRecipientContactId(event);
