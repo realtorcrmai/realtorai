@@ -75,14 +75,16 @@ export function ContactPreviewSheet({ contact, open, onOpenChange }: ContactPrev
 
   const contactId = contact?.id ?? null;
   useEffect(() => {
+    let cancelled = false;
     if (open && contactId) {
       setLoading(true);
       setComms([]);
       getContactCommunications(contactId, 5)
-        .then((data) => setComms(data as Communication[]))
-        .catch(() => setComms([]))
-        .finally(() => setLoading(false));
+        .then((data) => { if (!cancelled) setComms(data as Communication[]); })
+        .catch(() => { if (!cancelled) setComms([]); })
+        .finally(() => { if (!cancelled) setLoading(false); });
     }
+    return () => { cancelled = true; };
   }, [open, contactId]);
 
   if (!contact) return null;

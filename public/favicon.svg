@@ -1,11 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <!-- Navy background circle -->
-  <circle cx="32" cy="32" r="30" fill="#2D3E50"/>
-  <!-- Gold arc (330 degrees) -->
-  <path d="M32 8 A24 24 0 1 1 20.2 11" stroke="#C9A96E" strokeWidth="2" strokeLinecap="round" fill="none"/>
+  <style>
+    .spin { animation: s 3s linear infinite; transform-origin: 32px 28px; }
+    @keyframes s { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+  </style>
+  <!-- Dark circle background -->
+  <circle cx="32" cy="32" r="32" fill="#2D3E50"/>
+  <!-- Rotating gold arc -->
+  <g class="spin">
+    <circle cx="32" cy="28" r="22" stroke="#E4C378" stroke-width="2.5" stroke-linecap="round" fill="none" stroke-dasharray="100 38" opacity="0.9"/>
+  </g>
   <!-- Gold roofline -->
-  <path d="M20 38L32 22L44 38" stroke="#C9A96E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-  <!-- Gold pillar + base -->
-  <line x1="32" y1="38" x2="32" y2="46" stroke="#C9A96E" strokeWidth="2" strokeLinecap="round"/>
-  <line x1="24" y1="46" x2="40" y2="46" stroke="#C9A96E" strokeWidth="2" strokeLinecap="round"/>
+  <path d="M18 38L32 22L46 38" stroke="#E4C378" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Pillars + base -->
+  <line x1="22" y1="38" x2="22" y2="46" stroke="#E4C378" stroke-width="2" stroke-linecap="round"/>
+  <line x1="42" y1="38" x2="42" y2="46" stroke="#E4C378" stroke-width="2" stroke-linecap="round"/>
+  <line x1="18" y1="46" x2="46" y2="46" stroke="#E4C378" stroke-width="2" stroke-linecap="round"/>
+  <!-- Door glow -->
+  <rect x="28" y="38" width="8" height="8" rx="1" fill="#E4C378" opacity="0.2"/>
 </svg>

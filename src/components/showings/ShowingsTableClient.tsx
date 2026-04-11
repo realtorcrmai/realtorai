@@ -100,7 +100,7 @@ export function ShowingsTableClient({ showings }: { showings: ShowingRow[] }) {
             header: "Date / Time",
             sortable: true,
             render: (r) =>
-              <span className="text-muted-foreground">{new Date(r.start_time).toLocaleDateString("en-CA", {
+              <span className="text-muted-foreground">{new Date(r.start_time).toLocaleString("en-CA", {
                 month: "short",
                 day: "numeric",
                 year: "numeric",

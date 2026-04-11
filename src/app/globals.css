@@ -315,6 +315,12 @@
   animation: draw-check 0.3s ease-out 0.1s both;
 }
 
+/* Logo notification pulse */
+@keyframes logo-pulse {
+  0%, 100% { filter: drop-shadow(0 0 18px currentColor); transform: scale(1); }
+  50% { filter: drop-shadow(0 0 28px currentColor) brightness(1.15); transform: scale(1.03); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-bounce-once { animation: none; }
   .animate-draw-check { animation: none; stroke-dashoffset: 0; }

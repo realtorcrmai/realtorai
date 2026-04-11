@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useTransition } from "react";
+import { useState, useEffect, useCallback, useTransition, useRef } from "react";
 import { Bell } from "lucide-react";
 import {
   Popover,
@@ -62,14 +62,19 @@ export function NotificationDropdown() {
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
   const [, startTransition] = useTransition();
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => { mountedRef.current = false; };
+  }, []);
 
   // Fetch unread count on mount and periodically
   useEffect(() => {
-    let mounted = true;
     async function fetchCount() {
       try {
         const count = await getUnreadCount();
-        if (mounted) setUnreadCount(count);
+        if (!mountedRef.current) return;
+        setUnreadCount(count);
       } catch {
         // Graceful: table may not exist yet
       }
@@ -77,7 +82,6 @@ export function NotificationDropdown() {
     fetchCount();
     const interval = setInterval(fetchCount, 30_000);
     return () => {
-      mounted = false;
       clearInterval(interval);
     };
   }, []);
@@ -89,6 +93,7 @@ export function NotificationDropdown() {
       (async () => {
         try {
           const data = await getNotifications(15);
+          if (!mountedRef.current) return;
           setNotifications(data as Notification[]);
           setLoaded(true);
         } catch {

@@ -16,6 +16,27 @@
       overflow: hidden;
     }
 
+    /* ── Star-field ── */
+    .starfield {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: #fff;
+      border-radius: 50%;
+      opacity: 0;
+      animation: twinkle var(--dur) ease-in-out var(--delay) infinite;
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0; }
+      50% { opacity: var(--brightness); }
+    }
+
     /* ── Ambient background ── */
     .ambient {
       position: fixed;
@@ -25,42 +46,37 @@
     .ambient::before {
       content: '';
       position: absolute;
-      top: 25%;
-      left: 35%;
-      width: 600px;
-      height: 600px;
+      top: 25%; left: 35%;
+      width: 600px; height: 600px;
       background: radial-gradient(circle, rgba(228,195,120,0.08) 0%, transparent 60%);
       animation: pulse-glow 5s ease-in-out infinite;
     }
     .ambient::after {
       content: '';
       position: absolute;
-      bottom: 20%;
-      right: 30%;
-      width: 400px;
-      height: 400px;
+      bottom: 20%; right: 30%;
+      width: 400px; height: 400px;
       background: radial-gradient(circle, rgba(45,62,80,0.12) 0%, transparent 60%);
       animation: pulse-glow 7s ease-in-out infinite reverse;
     }
-
     @keyframes pulse-glow {
       0%, 100% { transform: scale(1); opacity: 0.5; }
       50% { transform: scale(1.3); opacity: 1; }
     }
 
-    /* ── Scene wrapper ── */
+    /* ── Scene ── */
     .scene {
       position: relative;
       z-index: 1;
       width: 420px;
-      height: 420px;
+      height: 460px; /* extra room for reflection */
       perspective: 900px;
     }
 
-    /* ── 3D Icon — the floating shield ── */
+    /* ── 3D floating shield ── */
     .icon-3d {
-      width: 100%;
-      height: 100%;
+      width: 420px;
+      height: 420px;
       position: relative;
       transform-style: preserve-3d;
       animation:
@@ -69,24 +85,18 @@
     }
 
     @keyframes entrance {
-      from {
-        opacity: 0;
-        transform: translateY(100px) rotateX(40deg) rotateY(-15deg) scale(0.5);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) rotateX(0deg) rotateY(0deg) scale(1);
-      }
+      from { opacity: 0; transform: translateY(100px) rotateX(40deg) rotateY(-15deg) scale(0.5); }
+      to   { opacity: 1; transform: translateY(0) rotateX(0deg) rotateY(0deg) scale(1); }
     }
 
     @keyframes float {
       0%, 100% { transform: translateY(0) rotateX(2deg) rotateY(0deg); }
-      25% { transform: translateY(-14px) rotateX(0deg) rotateY(4deg); }
-      50% { transform: translateY(-8px) rotateX(-2deg) rotateY(0deg); }
-      75% { transform: translateY(-16px) rotateX(0deg) rotateY(-4deg); }
+      25%  { transform: translateY(-14px) rotateX(0deg) rotateY(4deg); }
+      50%  { transform: translateY(-8px) rotateX(-2deg) rotateY(0deg); }
+      75%  { transform: translateY(-16px) rotateX(0deg) rotateY(-4deg); }
     }
 
-    /* ── Shield (main card) — animated gradient shift ── */
+    /* ── Shield — animated gradient ── */
     .shield {
       position: absolute;
       inset: 25px;
@@ -103,29 +113,22 @@
       align-items: center;
       justify-content: center;
       transform-style: preserve-3d;
-      transform: translateZ(0px);
     }
-
     @keyframes shield-shift {
       0%, 100% { background-position: 0% 0%; }
       33% { background-position: 100% 50%; }
       66% { background-position: 50% 100%; }
     }
-
-    /* ── Top-left specular highlight ── */
     .shield::before {
       content: '';
       position: absolute;
-      top: 8px;
-      left: 8px;
-      right: 40%;
-      bottom: 55%;
+      top: 8px; left: 8px; right: 40%; bottom: 55%;
       border-radius: 32px 32px 80px 20px;
       background: linear-gradient(155deg, rgba(255,255,255,0.07) 0%, transparent 100%);
       pointer-events: none;
     }
 
-    /* ── Revolving glare — brighter gold ── */
+    /* ── Revolving glare ── */
     .glare-ring {
       position: absolute;
       inset: -2px;
@@ -133,32 +136,23 @@
       overflow: hidden;
       pointer-events: none;
     }
-
     .glare-ring::before {
       content: '';
       position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
       background: conic-gradient(
         from 0deg,
-        transparent 0deg,
-        transparent 250deg,
+        transparent 0deg, transparent 250deg,
         rgba(228,195,120,0.5) 280deg,
         rgba(255,235,170,0.25) 305deg,
         rgba(228,195,120,0.5) 330deg,
         transparent 360deg
       );
-      animation: revolve-glare 4s linear infinite;
+      animation: revolve 4s linear infinite;
     }
+    @keyframes revolve { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-    @keyframes revolve-glare {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-
-    /* ── Inner border (masks glare inside) ── */
     .shield-inner-mask {
       position: absolute;
       inset: 2px;
@@ -169,7 +163,7 @@
       pointer-events: none;
     }
 
-    /* ── SVG icon layer ── */
+    /* ── SVG icon ── */
     .icon-svg {
       position: relative;
       z-index: 2;
@@ -177,50 +171,53 @@
       height: 230px;
     }
 
-    /* ── Main circle — counter-rotates ── */
+    /* ── Main circle — counter-rotates with comet trail ── */
     .circle-360-group {
       transform-box: fill-box;
       transform-origin: center;
-      animation: spin-reverse 6s linear 3s infinite;
+      animation: spin-rev 6s linear 3s infinite;
     }
-
     .circle-360 {
       stroke-dasharray: 220 82;
       stroke-dashoffset: 302;
-      animation: draw-circle 2.5s ease-out 1s forwards;
+      animation: draw-in 2.5s ease-out 1s forwards;
       filter: drop-shadow(0 0 10px rgba(228,195,120,0.6));
     }
+    /* Comet trail — fainter, slightly behind */
+    .circle-trail {
+      stroke-dasharray: 120 182;
+      stroke-dashoffset: 302;
+      animation: draw-in 2.5s ease-out 1s forwards;
+      filter: drop-shadow(0 0 14px rgba(228,195,120,0.3));
+    }
 
-    /* ── Second orbit ring — thinner, faster, clockwise ── */
+    /* ── Outer orbit — easing speed variation ── */
     .orbit-outer-group {
       transform-box: fill-box;
       transform-origin: center;
-      animation: spin-forward 3.5s linear 3s infinite;
+      animation: spin-fwd-ease 4s ease-in-out 3s infinite;
     }
-
     .orbit-outer {
       stroke-dasharray: 60 260;
       stroke-dashoffset: 320;
-      animation: draw-orbit 2s ease-out 2s forwards;
+      animation: draw-in 2s ease-out 2s forwards;
       filter: drop-shadow(0 0 6px rgba(240,216,144,0.4));
     }
-
-    @keyframes draw-circle {
-      to { stroke-dashoffset: 0; }
+    /* Orbit comet trail */
+    .orbit-trail {
+      stroke-dasharray: 30 290;
+      stroke-dashoffset: 320;
+      animation: draw-in 2s ease-out 2s forwards;
+      filter: drop-shadow(0 0 10px rgba(240,216,144,0.2));
     }
 
-    @keyframes draw-orbit {
-      to { stroke-dashoffset: 0; }
-    }
-
-    @keyframes spin-reverse {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(-360deg); }
-    }
-
-    @keyframes spin-forward {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+    @keyframes draw-in { to { stroke-dashoffset: 0; } }
+    @keyframes spin-rev { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+    @keyframes spin-fwd-ease {
+      0%   { transform: rotate(0deg); }
+      30%  { transform: rotate(140deg); }
+      70%  { transform: rotate(220deg); }
+      100% { transform: rotate(360deg); }
     }
 
     /* ── Roofline — breathing glow ── */
@@ -231,96 +228,132 @@
         draw-stroke 1.5s ease-out 0.6s forwards,
         roof-glow 3s ease-in-out 2.5s infinite;
     }
-
     @keyframes roof-glow {
       0%, 100% { filter: drop-shadow(0 0 4px rgba(228,195,120,0.3)); }
-      50% { filter: drop-shadow(0 0 12px rgba(240,216,144,0.7)); }
+      50% { filter: drop-shadow(0 0 14px rgba(240,216,144,0.8)); }
     }
+    @keyframes draw-stroke { to { stroke-dashoffset: 0; } }
 
     .pillar-left, .pillar-right {
-      stroke-dasharray: 50;
-      stroke-dashoffset: 50;
+      stroke-dasharray: 50; stroke-dashoffset: 50;
       animation: draw-stroke 0.8s ease-out 1.6s forwards;
     }
-
     .base-line {
-      stroke-dasharray: 100;
-      stroke-dashoffset: 100;
+      stroke-dasharray: 100; stroke-dashoffset: 100;
       animation: draw-stroke 0.6s ease-out 2s forwards;
     }
 
+    /* ── Door — flicker light inside ── */
     .door-rect {
       opacity: 0;
       animation: door-fade 0.8s ease-out 2.2s forwards;
     }
+    @keyframes door-fade { to { opacity: 0.25; } }
 
-    @keyframes draw-stroke {
-      to { stroke-dashoffset: 0; }
+    .door-light {
+      opacity: 0;
+      animation: door-light-in 0.8s ease-out 2.4s forwards, door-flicker 4s ease-in-out 3.2s infinite;
+    }
+    @keyframes door-light-in { to { opacity: 0.4; } }
+    @keyframes door-flicker {
+      0%, 100% { opacity: 0.35; }
+      20% { opacity: 0.5; }
+      40% { opacity: 0.3; }
+      60% { opacity: 0.55; }
+      80% { opacity: 0.25; }
     }
 
-    @keyframes door-fade {
-      to { opacity: 0.25; }
+    /* ── Roof peak sparkle ── */
+    .peak-sparkle {
+      opacity: 0;
+      animation: peak-flash 5s ease-in-out 3s infinite;
+    }
+    @keyframes peak-flash {
+      0%, 90%, 100% { opacity: 0; transform: scale(0.5); }
+      95% { opacity: 1; transform: scale(1.5); }
+      97% { opacity: 0.3; transform: scale(1); }
     }
 
-    /* ── Sparkles — brighter ── */
+    /* ── Sparkles ── */
     .sparkle {
-      position: absolute;
-      z-index: 3;
-      width: 5px;
-      height: 5px;
+      position: absolute; z-index: 3;
+      width: 5px; height: 5px;
       background: #E8D48C;
       border-radius: 50%;
       opacity: 0;
       filter: blur(0.5px);
       animation: sparkle 4s ease-in-out infinite;
     }
-
     .sparkle:nth-child(1) { top: 20%; left: 28%; animation-delay: 1.5s; }
     .sparkle:nth-child(2) { top: 50%; right: 22%; animation-delay: 3s; }
     .sparkle:nth-child(3) { top: 70%; left: 35%; animation-delay: 5s; width: 3px; height: 3px; }
     .sparkle:nth-child(4) { top: 30%; right: 35%; animation-delay: 7s; width: 4px; height: 4px; }
-
     @keyframes sparkle {
       0%, 100% { opacity: 0; transform: scale(0); }
       40% { opacity: 1; transform: scale(2); }
       60% { opacity: 0.6; transform: scale(1); }
     }
 
-    /* ── 3D shadow beneath ── */
-    .floor-shadow {
+    /* ── Reflection below shield ── */
+    .reflection {
       position: absolute;
-      bottom: -10px;
+      bottom: -8px;
+      left: 25px; right: 25px;
+      height: 100px;
+      border-radius: 0 0 42px 42px;
+      overflow: hidden;
+      transform: scaleY(-1) translateY(60px);
+      opacity: 0.12;
+      filter: blur(4px);
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent 80%);
+      -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent 80%);
+      pointer-events: none;
+      animation: entrance 1.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .reflection-inner {
+      width: 100%;
+      height: 370px;
+      border-radius: 42px;
+      background: linear-gradient(155deg, #2e4258 0%, #1c2d40 40%, #162536 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .reflection-icon {
+      width: 150px;
+      height: 150px;
+      opacity: 0.6;
+    }
+
+    /* ── Floor glow (under reflection) ── */
+    .floor-glow {
+      position: absolute;
+      bottom: -16px;
       left: 50%;
       transform: translateX(-50%);
-      width: 280px;
-      height: 36px;
-      background: radial-gradient(ellipse, rgba(228,195,120,0.12) 0%, transparent 70%);
+      width: 300px;
+      height: 40px;
+      background: radial-gradient(ellipse, rgba(228,195,120,0.15) 0%, transparent 70%);
       border-radius: 50%;
       animation:
         shadow-entrance 1.8s cubic-bezier(0.16, 1, 0.3, 1) both,
         shadow-pulse 6s ease-in-out 1.8s infinite;
     }
-
     @keyframes shadow-entrance {
       from { opacity: 0; transform: translateX(-50%) scaleX(0.3); }
-      to { opacity: 1; transform: translateX(-50%) scaleX(1); }
+      to   { opacity: 1; transform: translateX(-50%) scaleX(1); }
     }
-
     @keyframes shadow-pulse {
       0%, 100% { transform: translateX(-50%) scaleX(1); opacity: 0.5; }
-      25% { transform: translateX(-50%) scaleX(0.85); opacity: 0.35; }
-      50% { transform: translateX(-50%) scaleX(0.95); opacity: 0.45; }
-      75% { transform: translateX(-50%) scaleX(0.8); opacity: 0.3; }
+      50% { transform: translateX(-50%) scaleX(0.85); opacity: 0.35; }
     }
 
-    /* ── Floating particles ── */
+    /* ── Floating particles (parallax-ready) ── */
     .particles {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
+      position: fixed; inset: 0; z-index: 0;
       pointer-events: none;
+      transition: transform 0.3s ease-out;
     }
-
     .particle {
       position: absolute;
       background: #E4C378;
@@ -328,41 +361,37 @@
       opacity: 0;
       animation: particle-float 10s ease-in-out infinite;
     }
-
-    .particle:nth-child(1) { width: 3px; height: 3px; left: 12%; top: 25%; animation-delay: 0s; }
-    .particle:nth-child(2) { width: 2px; height: 2px; left: 78%; top: 18%; animation-delay: 2s; }
-    .particle:nth-child(3) { width: 3px; height: 3px; left: 22%; top: 72%; animation-delay: 4s; }
-    .particle:nth-child(4) { width: 2px; height: 2px; left: 82%; top: 65%; animation-delay: 6s; }
-    .particle:nth-child(5) { width: 4px; height: 4px; left: 45%; top: 10%; animation-delay: 1s; }
-    .particle:nth-child(6) { width: 2px; height: 2px; left: 60%; top: 85%; animation-delay: 3.5s; }
-    .particle:nth-child(7) { width: 3px; height: 3px; left: 8%; top: 55%; animation-delay: 5.5s; }
-    .particle:nth-child(8) { width: 2px; height: 2px; left: 90%; top: 40%; animation-delay: 7.5s; }
-    .particle:nth-child(9) { width: 3px; height: 3px; left: 55%; top: 90%; animation-delay: 8.5s; }
-    .particle:nth-child(10) { width: 2px; height: 2px; left: 30%; top: 8%; animation-delay: 9s; }
-
+    .particle:nth-child(1)  { width: 3px; height: 3px; left: 12%; top: 25%; animation-delay: 0s; }
+    .particle:nth-child(2)  { width: 2px; height: 2px; left: 78%; top: 18%; animation-delay: 2s; }
+    .particle:nth-child(3)  { width: 3px; height: 3px; left: 22%; top: 72%; animation-delay: 4s; }
+    .particle:nth-child(4)  { width: 2px; height: 2px; left: 82%; top: 65%; animation-delay: 6s; }
+    .particle:nth-child(5)  { width: 4px; height: 4px; left: 45%; top: 10%; animation-delay: 1s; }
+    .particle:nth-child(6)  { width: 2px; height: 2px; left: 60%; top: 85%; animation-delay: 3.5s; }
+    .particle:nth-child(7)  { width: 3px; height: 3px; left: 8%;  top: 55%; animation-delay: 5.5s; }
+    .particle:nth-child(8)  { width: 2px; height: 2px; left: 90%; top: 40%; animation-delay: 7.5s; }
+    .particle:nth-child(9)  { width: 3px; height: 3px; left: 55%; top: 90%; animation-delay: 8.5s; }
+    .particle:nth-child(10) { width: 2px; height: 2px; left: 30%; top: 8%;  animation-delay: 9s; }
     @keyframes particle-float {
-      0% { opacity: 0; transform: translateY(0) scale(0); }
-      15% { opacity: 0.4; transform: translateY(-15px) scale(1); }
-      70% { opacity: 0.2; transform: translateY(-90px) scale(0.4); }
+      0%   { opacity: 0; transform: translateY(0) scale(0); }
+      15%  { opacity: 0.4; transform: translateY(-15px) scale(1); }
+      70%  { opacity: 0.2; transform: translateY(-90px) scale(0.4); }
       100% { opacity: 0; transform: translateY(-130px) scale(0); }
     }
   </style>
 </head>
 <body>
 
+  <!-- Star-field -->
+  <div class="starfield" id="starfield"></div>
+
   <div class="ambient"></div>
 
-  <div class="particles">
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
+  <div class="particles" id="particles">
+    <div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div><div class="particle"></div>
   </div>
 
   <div class="scene">
@@ -392,17 +421,32 @@
               <stop offset="0%" stop-color="#F5E0A0"/>
               <stop offset="100%" stop-color="#E4C378"/>
             </linearGradient>
+            <radialGradient id="doorGlow" cx="50%" cy="40%" r="60%">
+              <stop offset="0%" stop-color="#F5E0A0"/>
+              <stop offset="100%" stop-color="#E4C378"/>
+            </radialGradient>
+            <radialGradient id="peakGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#fff"/>
+              <stop offset="40%" stop-color="#F5E0A0"/>
+              <stop offset="100%" stop-color="transparent"/>
+            </radialGradient>
           </defs>
 
-          <!-- Outer orbit ring — thinner, faster, clockwise -->
+          <!-- Outer orbit — easing speed, comet trail -->
           <g class="orbit-outer-group">
+            <circle class="orbit-trail"
+              cx="60" cy="52" r="52"
+              stroke="#F5E0A0" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.12"/>
             <circle class="orbit-outer"
               cx="60" cy="52" r="52"
               stroke="url(#goldOrbit)" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.6"/>
           </g>
 
-          <!-- Main circle — counter-rotates -->
+          <!-- Main circle — counter-rotates, comet trail -->
           <g class="circle-360-group">
+            <circle class="circle-trail"
+              cx="60" cy="52" r="46"
+              stroke="#F0D890" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.08"/>
             <circle class="circle-360"
               cx="60" cy="52" r="46"
               stroke="url(#goldCircle)" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.95"/>
@@ -413,71 +457,97 @@
             d="M30 62L60 30L90 62"
             stroke="url(#goldRoof)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 
-          <!-- Left pillar -->
-          <line class="pillar-left"
-            x1="42" y1="54" x2="42" y2="72"
-            stroke="#E4C378" stroke-width="2" stroke-linecap="round"/>
+          <!-- Roof peak sparkle -->
+          <circle class="peak-sparkle" cx="60" cy="30" r="4" fill="url(#peakGlow)" opacity="0"/>
 
-          <!-- Right pillar -->
-          <line class="pillar-right"
-            x1="78" y1="54" x2="78" y2="72"
-            stroke="#E4C378" stroke-width="2" stroke-linecap="round"/>
+          <!-- Pillars -->
+          <line class="pillar-left"  x1="42" y1="54" x2="42" y2="72" stroke="#E4C378" stroke-width="2" stroke-linecap="round"/>
+          <line class="pillar-right" x1="78" y1="54" x2="78" y2="72" stroke="#E4C378" stroke-width="2" stroke-linecap="round"/>
 
-          <!-- Base line -->
-          <line class="base-line"
-            x1="36" y1="72" x2="84" y2="72"
-            stroke="#E4C378" stroke-width="2" stroke-linecap="round"/>
+          <!-- Base -->
+          <line class="base-line" x1="36" y1="72" x2="84" y2="72" stroke="#E4C378" stroke-width="2" stroke-linecap="round"/>
 
           <!-- Door -->
-          <rect class="door-rect"
-            x="52" y="58" width="16" height="14" rx="2"
-            fill="#E4C378"/>
+          <rect class="door-rect" x="52" y="58" width="16" height="14" rx="2" fill="#E4C378"/>
+          <!-- Door light flicker -->
+          <rect class="door-light" x="54" y="60" width="12" height="10" rx="1.5" fill="url(#doorGlow)"/>
         </svg>
       </div>
 
-      <div class="floor-shadow"></div>
+      <!-- Reflection -->
+      <div class="reflection">
+        <div class="reflection-inner">
+          <svg class="reflection-icon" viewBox="0 0 120 120" fill="none">
+            <circle cx="60" cy="52" r="46" stroke="#E4C378" stroke-width="4" fill="none" opacity="0.4" stroke-dasharray="220 82"/>
+            <path d="M30 62L60 30L90 62" stroke="#E4C378" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.4"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="floor-glow"></div>
     </div>
   </div>
 
-  <!-- Mouse tilt interaction -->
   <script>
-    const scene = document.querySelector('.scene');
+    // ── Generate star-field ──
+    const starfield = document.getElementById('starfield');
+    for (let i = 0; i < 60; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      star.style.left = Math.random() * 100 + '%';
+      star.style.top = Math.random() * 100 + '%';
+      star.style.setProperty('--dur', (3 + Math.random() * 5) + 's');
+      star.style.setProperty('--delay', (Math.random() * 6) + 's');
+      star.style.setProperty('--brightness', (0.15 + Math.random() * 0.4));
+      if (Math.random() > 0.7) {
+        star.style.width = '3px';
+        star.style.height = '3px';
+      }
+      starfield.appendChild(star);
+    }
+
+    // ── Mouse tilt (shield) + parallax (particles) ──
     const icon = document.getElementById('icon3d');
+    const particles = document.getElementById('particles');
     let tiltX = 0, tiltY = 0, targetX = 0, targetY = 0;
+    let pX = 0, pY = 0, pTargetX = 0, pTargetY = 0;
     let entered = false;
 
-    // Wait for entrance animation
     setTimeout(() => { entered = true; }, 2000);
 
     document.addEventListener('mousemove', (e) => {
       if (!entered) return;
-      const rect = scene.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      targetX = ((e.clientY - cy) / (window.innerHeight / 2)) * -12;
-      targetY = ((e.clientX - cx) / (window.innerWidth / 2)) * 12;
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+      targetX = ((e.clientY - cy) / cy) * -12;
+      targetY = ((e.clientX - cx) / cx) * 12;
+      // Particles move at 30% rate for depth
+      pTargetX = ((e.clientX - cx) / cx) * -15;
+      pTargetY = ((e.clientY - cy) / cy) * -10;
     });
 
     document.addEventListener('mouseleave', () => {
-      targetX = 0;
-      targetY = 0;
+      targetX = 0; targetY = 0;
+      pTargetX = 0; pTargetY = 0;
     });
 
     function animate() {
       tiltX += (targetX - tiltX) * 0.06;
       tiltY += (targetY - tiltY) * 0.06;
-      if (entered && icon.style) {
-        // Combine with the float animation by applying tilt via a wrapper perspective
+      pX += (pTargetX - pX) * 0.04;
+      pY += (pTargetY - pY) * 0.04;
+      if (entered) {
         icon.style.setProperty('--tiltX', tiltX + 'deg');
         icon.style.setProperty('--tiltY', tiltY + 'deg');
+        particles.style.transform = `translate(${pX}px, ${pY}px)`;
       }
       requestAnimationFrame(animate);
     }
     animate();
 
-    // Override float to include tilt
-    const style = document.createElement('style');
-    style.textContent = `
+    // Inject tilt-aware float
+    const s = document.createElement('style');
+    s.textContent = `
       .icon-3d {
         animation:
           entrance 1.8s cubic-bezier(0.16, 1, 0.3, 1) both,
@@ -485,13 +555,12 @@
       }
       @keyframes float-tilt {
         0%, 100% { transform: translateY(0) rotateX(calc(2deg + var(--tiltX, 0deg))) rotateY(var(--tiltY, 0deg)); }
-        25% { transform: translateY(-14px) rotateX(var(--tiltX, 0deg)) rotateY(calc(4deg + var(--tiltY, 0deg))); }
-        50% { transform: translateY(-8px) rotateX(calc(-2deg + var(--tiltX, 0deg))) rotateY(var(--tiltY, 0deg)); }
-        75% { transform: translateY(-16px) rotateX(var(--tiltX, 0deg)) rotateY(calc(-4deg + var(--tiltY, 0deg))); }
+        25%  { transform: translateY(-14px) rotateX(var(--tiltX, 0deg)) rotateY(calc(4deg + var(--tiltY, 0deg))); }
+        50%  { transform: translateY(-8px) rotateX(calc(-2deg + var(--tiltX, 0deg))) rotateY(var(--tiltY, 0deg)); }
+        75%  { transform: translateY(-16px) rotateX(var(--tiltX, 0deg)) rotateY(calc(-4deg + var(--tiltY, 0deg))); }
       }
     `;
-    document.head.appendChild(style);
+    document.head.appendChild(s);
   </script>
-
 </body>
 </html>

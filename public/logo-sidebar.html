@@ -32,18 +32,9 @@
         float 6s ease-in-out 1s infinite;
     }
 
-    /* ── Entrance: draw in from nothing ── */
     @keyframes sidebar-entrance {
-      from {
-        opacity: 0;
-        transform: scale(0.5) rotate(-30deg);
-        filter: blur(4px);
-      }
-      to {
-        opacity: 1;
-        transform: scale(1) rotate(0deg);
-        filter: blur(0px);
-      }
+      from { opacity: 0; transform: scale(0.5) rotate(-30deg); filter: blur(4px); }
+      to   { opacity: 1; transform: scale(1) rotate(0deg); filter: blur(0px); }
     }
 
     @keyframes float {
@@ -57,55 +48,59 @@
       width: 100%;
       height: 100%;
       filter: drop-shadow(0 0 6px rgba(228,195,120,0.3));
-      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.5s ease;
     }
 
-    /* ── Hover: quick spin ── */
+    /* Hover spin */
     .scene:hover .icon-svg {
       transform: rotate(360deg);
-      filter: drop-shadow(0 0 10px rgba(228,195,120,0.5));
+      filter: drop-shadow(0 0 12px rgba(228,195,120,0.6));
     }
 
-    /* ── Main circle — counter-rotating ── */
+    /* ── Main circle — counter-rotating, comet trail ── */
     .circle-group {
       transform-box: fill-box;
       transform-origin: center;
       animation: spin-rev 6s linear 1.5s infinite;
     }
-
     .circle-arc {
       stroke-dasharray: 200 60;
       stroke-dashoffset: 260;
       animation: draw-in 1.5s ease-out 0.3s forwards;
       filter: drop-shadow(0 0 5px rgba(228,195,120,0.5));
     }
+    .circle-trail {
+      stroke-dasharray: 100 160;
+      stroke-dashoffset: 260;
+      animation: draw-in 1.5s ease-out 0.3s forwards;
+      filter: drop-shadow(0 0 8px rgba(228,195,120,0.2));
+    }
 
-    /* ── Outer orbit — thinner, faster, clockwise ── */
+    /* ── Outer orbit — easing speed, comet trail ── */
     .orbit-group {
       transform-box: fill-box;
       transform-origin: center;
-      animation: spin-fwd 3.5s linear 2s infinite;
+      animation: spin-fwd-ease 4s ease-in-out 2s infinite;
     }
-
     .orbit-arc {
       stroke-dasharray: 50 230;
       stroke-dashoffset: 280;
       animation: draw-in 1.2s ease-out 0.8s forwards;
       filter: drop-shadow(0 0 4px rgba(240,216,144,0.35));
     }
-
-    @keyframes draw-in {
-      to { stroke-dashoffset: 0; }
+    .orbit-trail {
+      stroke-dasharray: 25 255;
+      stroke-dashoffset: 280;
+      animation: draw-in 1.2s ease-out 0.8s forwards;
     }
 
-    @keyframes spin-rev {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(-360deg); }
-    }
-
-    @keyframes spin-fwd {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+    @keyframes draw-in { to { stroke-dashoffset: 0; } }
+    @keyframes spin-rev { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+    @keyframes spin-fwd-ease {
+      0%   { transform: rotate(0deg); }
+      30%  { transform: rotate(140deg); }
+      70%  { transform: rotate(220deg); }
+      100% { transform: rotate(360deg); }
     }
 
     /* ── Roofline — breathing glow ── */
@@ -116,46 +111,58 @@
         draw-stroke 1s ease-out 0.2s forwards,
         roof-glow 3s ease-in-out 1.5s infinite;
     }
-
-    @keyframes draw-stroke {
-      to { stroke-dashoffset: 0; }
-    }
-
+    @keyframes draw-stroke { to { stroke-dashoffset: 0; } }
     @keyframes roof-glow {
       0%, 100% { filter: drop-shadow(0 0 3px rgba(228,195,120,0.3)); }
       50% { filter: drop-shadow(0 0 10px rgba(240,216,144,0.7)); }
     }
 
-    .pillar {
-      stroke-dasharray: 50;
-      stroke-dashoffset: 50;
-      animation: draw-stroke 0.6s ease-out 0.8s forwards;
+    /* ── Peak sparkle ── */
+    .peak-sparkle {
+      opacity: 0;
+      animation: peak-flash 5s ease-in-out 2s infinite;
+    }
+    @keyframes peak-flash {
+      0%, 90%, 100% { opacity: 0; transform: scale(0.5); }
+      95% { opacity: 1; transform: scale(1.5); }
+      97% { opacity: 0.3; transform: scale(1); }
     }
 
+    .pillar {
+      stroke-dasharray: 50; stroke-dashoffset: 50;
+      animation: draw-stroke 0.6s ease-out 0.8s forwards;
+    }
     .base {
-      stroke-dasharray: 100;
-      stroke-dashoffset: 100;
+      stroke-dasharray: 100; stroke-dashoffset: 100;
       animation: draw-stroke 0.5s ease-out 1s forwards;
     }
 
+    /* ── Door with flicker light ── */
     .door {
       opacity: 0;
       animation: door-in 0.5s ease-out 1.2s forwards;
     }
+    @keyframes door-in { to { opacity: 0.18; } }
 
-    @keyframes door-in {
-      to { opacity: 0.18; }
+    .door-light {
+      opacity: 0;
+      animation: door-light-in 0.5s ease-out 1.3s forwards, door-flicker 4s ease-in-out 1.8s infinite;
+    }
+    @keyframes door-light-in { to { opacity: 0.35; } }
+    @keyframes door-flicker {
+      0%, 100% { opacity: 0.3; }
+      20% { opacity: 0.45; }
+      40% { opacity: 0.25; }
+      60% { opacity: 0.5; }
+      80% { opacity: 0.2; }
     }
 
-    /* ── Gold shimmer pulse ── */
+    /* ── Gold shimmer ── */
     @keyframes shimmer {
       0%, 100% { opacity: 0.9; }
       50% { opacity: 1; }
     }
-
-    .gold-el {
-      animation: shimmer 3s ease-in-out infinite;
-    }
+    .gold-el { animation: shimmer 3s ease-in-out infinite; }
   </style>
 </head>
 <body>
@@ -177,17 +184,32 @@
             <stop offset="0%" stop-color="#F5E0A0"/>
             <stop offset="100%" stop-color="#E4C378"/>
           </linearGradient>
+          <radialGradient id="dGlow" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#F5E0A0"/>
+            <stop offset="100%" stop-color="#E4C378"/>
+          </radialGradient>
+          <radialGradient id="pGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#fff"/>
+            <stop offset="40%" stop-color="#F5E0A0"/>
+            <stop offset="100%" stop-color="transparent"/>
+          </radialGradient>
         </defs>
 
-        <!-- Outer orbit ring — thinner, faster, clockwise -->
+        <!-- Outer orbit — easing speed, comet trail -->
         <g class="orbit-group">
+          <circle class="orbit-trail gold-el"
+            cx="60" cy="58" r="52"
+            stroke="#F5E0A0" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.08"/>
           <circle class="orbit-arc gold-el"
             cx="60" cy="58" r="52"
             stroke="url(#gOrbit)" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.5"/>
         </g>
 
-        <!-- Main revolving circle arc -->
+        <!-- Main circle — counter-rotating, comet trail -->
         <g class="circle-group">
+          <circle class="circle-trail gold-el"
+            cx="60" cy="58" r="44"
+            stroke="#F0D890" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.06"/>
           <circle class="circle-arc gold-el"
             cx="60" cy="58" r="44"
             stroke="url(#gCircle)" stroke-width="4.5" stroke-linecap="round" fill="none"/>
@@ -196,6 +218,9 @@
         <!-- Roofline with breathing glow -->
         <path class="roof gold-el" d="M32 68L60 34L88 68"
           stroke="url(#gRoof)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+        <!-- Roof peak sparkle -->
+        <circle class="peak-sparkle" cx="60" cy="34" r="3.5" fill="url(#pGlow)" opacity="0"/>
 
         <!-- Pillars -->
         <line class="pillar gold-el" x1="44" y1="60" x2="44" y2="80" stroke="#E4C378" stroke-width="3" stroke-linecap="round"/>
@@ -206,6 +231,8 @@
 
         <!-- Door -->
         <rect class="door" x="52" y="64" width="16" height="16" rx="2" fill="#E4C378"/>
+        <!-- Door light flicker -->
+        <rect class="door-light" x="54" y="66" width="12" height="12" rx="1.5" fill="url(#dGlow)"/>
       </svg>
     </div>
   </div>

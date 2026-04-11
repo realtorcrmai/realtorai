@@ -261,7 +261,7 @@ export default async function DashboardPage() {
           hotLeads={hotLeadsCount}
           pendingShowings={pendingShowings ?? 0}
           missingDocs={listingsWithMissing.length}
-          confirmedToday={confirmedThisWeek?.length ?? 0}
+          confirmedThisWeek={confirmedThisWeek?.length ?? 0}
         />
 
         {/* Activity Feed + Deal Pipeline */}

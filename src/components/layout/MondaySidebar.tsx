@@ -69,12 +69,35 @@ function SidebarGroupHeader({ label }: { label: string }) {
   );
 }
 
+// Map page sections to accent colors for logo glow
+const SECTION_COLORS: Record<string, string> = {
+  "/": "#FF7A59",           // coral — dashboard
+  "/contacts": "#00BDA5",   // teal
+  "/listings": "#E4C378",   // gold
+  "/showings": "#7C98B6",   // slate
+  "/calendar": "#9B59B6",   // purple
+  "/tasks": "#F39C12",      // amber
+  "/content": "#E74C3C",    // red
+  "/newsletters": "#3498DB",// blue
+  "/automations": "#1ABC9C",// green
+  "/forms": "#95A5A6",      // gray
+  "/search": "#D4B060",     // dark gold
+  "/import": "#8E44AD",     // violet
+  "/settings": "#7F8C8D",   // muted
+};
+
+function getSectionColor(pathname: string): string {
+  if (pathname === "/") return SECTION_COLORS["/"];
+  const section = "/" + pathname.split("/")[1];
+  return SECTION_COLORS[section] || "#FF7A59";
+}
+
 export function MondaySidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const userName = session?.user?.name || "User";
   const userEmail = session?.user?.email || "";
-  const initials = userName.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
+  const initials = userName.split(" ").map((w: string) => w[0]).filter(Boolean).join("").toUpperCase().slice(0, 2) || "U";
 
   const enabledFeatures: string[] = (session?.user as Record<string, unknown>)?.enabledFeatures as string[] || [];
 
@@ -82,6 +105,27 @@ export function MondaySidebar() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const recentItems = useRecentItems((s) => s.items);
+
+  // Active section glow color
+  const glowColor = getSectionColor(pathname);
+
+  // Notification pulse — poll for unread count
+  const [hasUnread, setHasUnread] = useState(false);
+  useEffect(() => {
+    let active = true;
+    const check = async () => {
+      try {
+        const res = await fetch("/api/notifications?limit=1&unread=true");
+        if (res.ok) {
+          const data = await res.json();
+          if (active) setHasUnread((data.notifications?.length ?? 0) > 0);
+        }
+      } catch { /* ignore */ }
+    };
+    check();
+    const interval = setInterval(check, 30000);
+    return () => { active = false; clearInterval(interval); };
+  }, []);
 
   function isVisible(featureKey?: FeatureKey) {
     if (!featureKey) return true;
@@ -110,8 +154,14 @@ export function MondaySidebar() {
 
   return (
     <aside className="hidden md:flex flex-col w-60 shrink-0 bg-sidebar h-full overflow-y-auto">
-      {/* Brand */}
-      <div className="flex flex-col items-center justify-center h-[140px] px-3 shrink-0">
+      {/* Brand — logo glow changes per active section, pulses on notifications */}
+      <div
+        className={cn(
+          "flex flex-col items-center justify-center h-[140px] px-3 shrink-0 transition-all duration-700",
+          hasUnread && "animate-[logo-pulse_2s_ease-in-out_infinite]"
+        )}
+        style={{ filter: `drop-shadow(0 0 18px ${glowColor}30)` }}
+      >
         <LogoVideo size={72} />
         <div className="text-center mt-1">
           <span className="text-[15px] font-semibold text-sidebar-foreground tracking-tight">Realtors360</span>

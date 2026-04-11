@@ -71,10 +71,12 @@ export function PageHeader({
 
       {/* Tab row */}
       {tabs && tabs.length > 0 && (
-        <div className="flex items-center gap-0 px-6 -mb-px overflow-x-auto">
+        <div className="flex items-center gap-0 px-6 -mb-px overflow-x-auto" role="tablist">
           {tabs.map((tab) => (
             <button
               type="button"
+              role="tab"
+              aria-selected={activeTab === tab.value}
               key={tab.value}
               onClick={() => onTabChange?.(tab.value)}
               className={cn(

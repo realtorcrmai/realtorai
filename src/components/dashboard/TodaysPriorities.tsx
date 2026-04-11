@@ -8,7 +8,7 @@ interface TodaysPrioritiesProps {
   hotLeads: number;
   pendingShowings: number;
   missingDocs: number;
-  confirmedToday: number;
+  confirmedThisWeek: number;
 }
 
 interface PriorityRow {
@@ -24,14 +24,14 @@ export default function TodaysPriorities({
   hotLeads,
   pendingShowings,
   missingDocs,
-  confirmedToday,
+  confirmedThisWeek,
 }: TodaysPrioritiesProps) {
   const rows: PriorityRow[] = [
     { icon: "\uD83D\uDD34", label: "overdue tasks", count: overdueTasks, href: "/tasks", urgency: 1 },
     { icon: "\uD83D\uDFE1", label: "pending showings", count: pendingShowings, href: "/showings", urgency: 2 },
     { icon: "\uD83D\uDD25", label: "hot leads (score >= 60)", count: hotLeads, href: "/contacts", urgency: 3 },
     { icon: "\uD83D\uDCCB", label: "listings missing docs", count: missingDocs, href: "/listings", urgency: 4 },
-    { icon: "\u2705", label: "confirmed showings this week", count: confirmedToday, href: "/showings?status=confirmed", urgency: 5 },
+    { icon: "\u2705", label: "confirmed showings this week", count: confirmedThisWeek, href: "/showings?status=confirmed", urgency: 5 },
   ];
 
   const visible = rows.filter((r) => r.count > 0).sort((a, b) => a.urgency - b.urgency);

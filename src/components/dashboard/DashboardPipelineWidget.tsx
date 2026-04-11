@@ -46,16 +46,24 @@ export default function DashboardPipelineWidget({ deals }: DashboardPipelineWidg
     );
   }
 
+  const STAGE_GROUPS: Record<string, string[]> = {
+    new: ["new", "discovery", "lead"],
+    active: ["active", "showing", "qualified"],
+    contract: ["under_contract", "negotiation", "offer", "pending"],
+  };
+
+  function getStageGroup(stage: string): string {
+    const s = (stage || "new").toLowerCase();
+    for (const [group, stages] of Object.entries(STAGE_GROUPS)) {
+      if (stages.includes(s)) return group;
+    }
+    return "new"; // default
+  }
+
   const grouped: Record<string, Deal[]> = { new: [], active: [], contract: [] };
   for (const deal of deals) {
-    const stage = deal.stage?.toLowerCase() ?? "new";
-    if (stage.includes("contract")) {
-      grouped.contract.push(deal);
-    } else if (stage === "active" || stage === "qualified") {
-      grouped.active.push(deal);
-    } else {
-      grouped.new.push(deal);
-    }
+    const group = getStageGroup(deal.stage);
+    grouped[group].push(deal);
   }
 
   return (
