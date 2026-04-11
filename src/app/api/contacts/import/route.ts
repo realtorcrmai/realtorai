@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { auth } from "@/lib/auth";
 
 /**
  * POST /api/contacts/import
@@ -33,7 +35,12 @@ export async function POST(request: NextRequest) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function handleJSONImport(tc: any, request: NextRequest) {
+async function handleJSONImport(_tc: any, request: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
   const { contacts, source } = await request.json();
   if (!Array.isArray(contacts) || contacts.length === 0) {
     return NextResponse.json({ error: "No contacts provided" }, { status: 400 });
@@ -42,6 +49,8 @@ async function handleJSONImport(tc: any, request: NextRequest) {
     return NextResponse.json({ error: "Maximum 5000 contacts per import" }, { status: 422 });
   }
 
+  const supabase = createAdminClient();
+  const realtorId = session.user.id;
   const validTypes = new Set(["buyer", "seller", "customer", "agent", "partner", "lead", "other"]);
   let imported = 0;
   let skipped = 0;
@@ -54,6 +63,7 @@ async function handleJSONImport(tc: any, request: NextRequest) {
     const rows = batch
       .filter((c: Record<string, string>) => c.name || c.email)
       .map((c: Record<string, string>) => ({
+        realtor_id: realtorId,
         name: c.name || "Unknown",
         email: c.email || null,
         phone: c.phone ? normalizePhone(c.phone) : null,
@@ -65,16 +75,17 @@ async function handleJSONImport(tc: any, request: NextRequest) {
 
     if (rows.length === 0) { skipped += batch.length; continue; }
 
-    const { data, error } = await tc
+    const { data, error } = await supabase
       .from("contacts")
       .insert(rows)
       .select("id, name");
 
     if (data) {
       imported += data.length;
-      newContacts.push(...data.map((d: { id: string; name: string }) => ({ id: d.id, name: d.name })));
+      newContacts.push(...data.map((d) => ({ id: d.id, name: d.name })));
     }
     if (error) {
+      console.error("[contacts/import] Insert error:", error.message);
       errors.push(error.message);
       skipped += rows.length;
     }
@@ -82,7 +93,7 @@ async function handleJSONImport(tc: any, request: NextRequest) {
 
   // Clean up sample data if user now has real contacts
   if (imported > 0) {
-    await tc.from("contacts").delete().eq("is_sample", true);
+    await supabase.from("contacts").delete().eq("realtor_id", realtorId).eq("is_sample", true);
   }
 
   // ── Referral detection: two-word names where second word matches an existing contact ──
@@ -95,9 +106,10 @@ async function handleJSONImport(tc: any, request: NextRequest) {
 
   if (newContacts.length > 0) {
     // Get all contacts (including just-imported) for name matching
-    const { data: allContacts } = await tc
+    const { data: allContacts } = await supabase
       .from("contacts")
       .select("id, name")
+      .eq("realtor_id", realtorId)
       .not("name", "is", null);
 
     if (allContacts && allContacts.length > 0) {
