@@ -40,6 +40,32 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+function SidebarNavLink({ item, active }: { item: NavItem; active: boolean }) {
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      className={cn(
+        "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+        active
+          ? "bg-sidebar-primary/15 text-white border-l-[3px] border-sidebar-primary font-medium"
+          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+      )}
+    >
+      <Icon className="h-[18px] w-[18px] shrink-0" />
+      {item.label}
+    </Link>
+  );
+}
+
+function SidebarGroupHeader({ label }: { label: string }) {
+  return (
+    <div className="text-xs uppercase tracking-wider text-sidebar-foreground/70 px-4 pt-4 pb-2 font-semibold">
+      {label}
+    </div>
+  );
+}
+
 export function MondaySidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
@@ -59,29 +85,18 @@ export function MondaySidebar() {
     return pathname.startsWith(href);
   }
 
-  function NavLink({ item }: { item: NavItem }) {
-    const active = isActive(item.href);
+  function renderNavGroup(label: string, items: NavItem[]) {
+    const visible = items.filter(item => isVisible(item.featureKey));
+    if (visible.length === 0) return null;
     return (
-      <Link
-        href={item.href}
-        className={cn(
-          "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-          active
-            ? "bg-sidebar-primary/15 text-white border-l-[3px] border-sidebar-primary font-medium"
-            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
-        )}
-      >
-        <item.icon className="h-[18px] w-[18px] shrink-0" />
-        {item.label}
-      </Link>
-    );
-  }
-
-  function GroupHeader({ label }: { label: string }) {
-    return (
-      <div className="text-xs uppercase tracking-wider text-sidebar-foreground/70 px-4 pt-4 pb-2 font-semibold">
-        {label}
-      </div>
+      <>
+        <SidebarGroupHeader label={label} />
+        <div className="px-2 space-y-0.5">
+          {visible.map(item => (
+            <SidebarNavLink key={item.href} item={item} active={isActive(item.href)} />
+          ))}
+        </div>
+      </>
     );
   }
 
@@ -98,29 +113,9 @@ export function MondaySidebar() {
         <span className="text-sm font-semibold text-sidebar-foreground">Realtors360</span>
       </div>
 
-      {/* MAIN group */}
-      <GroupHeader label="Main" />
-      <div className="px-2 space-y-0.5">
-        {MAIN_NAV.filter(item => isVisible(item.featureKey)).map(item => (
-          <NavLink key={item.href} item={item} />
-        ))}
-      </div>
-
-      {/* TOOLS group */}
-      <GroupHeader label="Tools" />
-      <div className="px-2 space-y-0.5">
-        {TOOLS_NAV.filter(item => isVisible(item.featureKey)).map(item => (
-          <NavLink key={item.href} item={item} />
-        ))}
-      </div>
-
-      {/* ADMIN group */}
-      <GroupHeader label="Admin" />
-      <div className="px-2 space-y-0.5">
-        {ADMIN_NAV.filter(item => isVisible(item.featureKey)).map(item => (
-          <NavLink key={item.href} item={item} />
-        ))}
-      </div>
+      {renderNavGroup("Main", MAIN_NAV)}
+      {renderNavGroup("Tools", TOOLS_NAV)}
+      {renderNavGroup("Admin", ADMIN_NAV)}
 
       {/* Spacer */}
       <div className="flex-1" />
