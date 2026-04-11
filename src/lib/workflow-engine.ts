@@ -32,6 +32,11 @@ type Contact = {
   lead_status: string;
   tags: Json;
   stage_bar: string | null;
+  // CASL + unsubscribe fields — read by executeAutoMessage before sending email.
+  // See src/lib/compliance/can-send.ts for the enforcement rules.
+  newsletter_unsubscribed: boolean | null;
+  casl_consent_given: boolean | null;
+  casl_consent_date: string | null;
 };
 
 type StepRow = {
@@ -208,6 +213,26 @@ async function executeAutoMessage(
   if (channel === "email") {
     if (!contact.email) {
       return { success: false, error: "Contact has no email address" };
+    }
+
+    // Central CASL + unsubscribe gate. A workflow step is commercial
+    // email by default — there's no per-step "this is transactional"
+    // flag, so we enforce strict consent here.
+    // See src/lib/compliance/can-send.ts
+    const { canSendToContact } = await import("@/lib/compliance/can-send");
+    const sendCheck = canSendToContact(contact);
+    if (!sendCheck.allowed) {
+      // Log to communications as a skipped message for audit trail
+      await supabase.from("communications").insert({
+        contact_id: contact.id,
+        direction: "outbound",
+        channel: "email",
+        body: `[SKIPPED — ${sendCheck.reason}] Would have sent: ${step.name}`,
+      });
+      return {
+        success: false,
+        error: `Skipped: ${sendCheck.reason}`,
+      };
     }
 
     try {
@@ -412,10 +437,11 @@ export async function executeStep(
 ): Promise<{ success: boolean; result?: Record<string, unknown>; error?: string }> {
   const supabase = createAdminClient();
 
-  // Fetch contact (include newsletter_intelligence for send governor)
+  // Fetch contact (include newsletter_intelligence for send governor AND
+  // CASL fields for the compliance gate in executeAutoMessage).
   const { data: contact } = await supabase
     .from("contacts")
-    .select("id, name, phone, email, type, pref_channel, lead_status, tags, stage_bar, newsletter_intelligence")
+    .select("id, name, phone, email, type, pref_channel, lead_status, tags, stage_bar, newsletter_intelligence, newsletter_unsubscribed, casl_consent_given, casl_consent_date")
     .eq("id", enrollment.contact_id)
     .single();
 

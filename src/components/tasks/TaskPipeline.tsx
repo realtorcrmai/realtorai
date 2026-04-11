@@ -14,10 +14,10 @@ type PhaseStatus = "completed" | "in-progress" | "pending";
 
 const PHASE_STYLES: Record<PhaseStatus, { bg: string; border: string; text: string; icon: string }> = {
   completed: {
-    bg: "bg-green-50 dark:bg-green-950/30",
-    border: "border-green-200 dark:border-green-800",
-    text: "text-green-700 dark:text-green-400",
-    icon: "bg-green-500 shadow-sm shadow-green-500/30",
+    bg: "bg-brand-muted dark:bg-foreground/20",
+    border: "border-brand/20 dark:border-brand/10",
+    text: "text-brand-dark dark:text-brand-light",
+    icon: "bg-brand shadow-sm shadow-[#0F7694]/30",
   },
   "in-progress": {
     bg: "bg-orange-50 dark:bg-orange-950/30",
@@ -104,7 +104,7 @@ export function TaskPipeline({ tasks }: { tasks: Task[] }) {
       {/* Progress bar */}
       <div className="h-2.5 rounded-full bg-muted overflow-hidden">
         <div
-          className="h-full rounded-full bg-green-500 transition-all duration-500"
+          className="h-full rounded-full bg-gradient-to-r from-[#00C875] to-[#007A47] transition-all duration-500"
           style={{ width: `${pct}%` }}
         />
       </div>

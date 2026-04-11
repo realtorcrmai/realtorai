@@ -72,6 +72,7 @@ export async function createContact(formData: ContactFormData, force = false) {
       buyer_preferences: (parsed.data.buyer_preferences as Json) ?? null,
       seller_preferences: (parsed.data.seller_preferences as Json) ?? null,
       demographics: (parsed.data.demographics as Json) ?? null,
+      social_profiles: (parsed.data.social_profiles as Json) ?? null,
     })
     .select()
     .single();
@@ -166,6 +167,7 @@ export async function updateContact(
   if (formData.job_title !== undefined) updatePayload.job_title = formData.job_title || null;
   if (formData.typical_client_profile !== undefined) updatePayload.typical_client_profile = formData.typical_client_profile || null;
   if (formData.referral_agreement_terms !== undefined) updatePayload.referral_agreement_terms = formData.referral_agreement_terms || null;
+  if (formData.social_profiles !== undefined) updatePayload.social_profiles = formData.social_profiles || null;
 
   // Enforce cross-field consistency (stage↔status, type↔stage, tags)
   if (oldContact && needsConsistency) {
@@ -192,6 +194,16 @@ export async function updateContact(
 
   revalidatePath("/contacts");
   revalidatePath(`/contacts/${id}`);
+
+  // Sync address → primary residence portfolio entry
+  if (formData.address) {
+    try {
+      const { upsertPrimaryResidence } = await import("@/actions/contact-portfolio");
+      await upsertPrimaryResidence(id, formData.address);
+    } catch {
+      // Non-critical — don't fail the contact update
+    }
+  }
 
   // Fire workflow triggers for status/tag changes
   try {
@@ -434,7 +446,7 @@ export async function createContactTask(
     due_date?: string;
     priority?: string;
     category?: string;
-    notes?: string;
+    description?: string;
   }
 ) {
   const tc = await getAuthenticatedTenantClient();
@@ -444,7 +456,7 @@ export async function createContactTask(
     due_date: data.due_date || null,
     priority: data.priority || "medium",
     category: data.category || "general",
-    notes: data.notes || null,
+    description: data.description || null,
     status: "pending",
   });
 
@@ -720,4 +732,157 @@ async function autoEnrollAndWelcome(
         : `Welcome email for new ${contactType} lead. Using generic welcome template — no area preferences specified yet.`,
     },
   });
+}
+
+// ============================================================
+// computeLifecycleStage
+// Derives and persists the contact's lifecycle_stage from their
+// current roles and active transactions. Called after any mutation
+// that could change stage (journey create/close, listing create/close, role change).
+// ============================================================
+
+type LifecycleStage =
+  | "prospect" | "nurture" | "active_buyer" | "active_seller"
+  | "dual_client" | "under_contract" | "closed" | "past_client" | "referral_partner";
+
+export async function computeLifecycleStage(
+  contactId: string,
+  realtorId: string
+): Promise<{ stage: LifecycleStage; error: string | null }> {
+  try {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const supabase = createAdminClient();
+
+    // Load contact roles
+    const { data: contact } = await supabase
+      .from("contacts")
+      .select("roles, lifecycle_stage")
+      .eq("id", contactId)
+      .eq("realtor_id", realtorId)
+      .single();
+
+    if (!contact) return { stage: "prospect", error: "Contact not found" };
+
+    const roles: string[] = (contact as { roles: string[] }).roles ?? [];
+
+    // referral_partner takes precedence over everything
+    if (roles.includes("referral_partner")) {
+      await _persistStage(supabase, contactId, realtorId, "referral_partner");
+      return { stage: "referral_partner", error: null };
+    }
+
+    // Check active buyer journeys
+    const { data: journeys } = await supabase
+      .from("buyer_journeys")
+      .select("status")
+      .eq("contact_id", contactId)
+      .eq("realtor_id", realtorId)
+      .not("status", "in", '("closed","cancelled","paused")');
+
+    const activeJourneys = journeys ?? [];
+    const underContractJourney = activeJourneys.some((j: { status: string }) =>
+      ["conditional", "firm"].includes(j.status)
+    );
+
+    // Check active seller listings
+    const { data: listings } = await supabase
+      .from("listings")
+      .select("status")
+      .eq("seller_id", contactId)
+      .eq("realtor_id", realtorId)
+      .not("status", "in", '("sold","expired","withdrawn")');
+
+    const activeListing = (listings ?? []).length > 0;
+
+    // Check all transactions closed
+    const { data: allJourneys } = await supabase
+      .from("buyer_journeys")
+      .select("status")
+      .eq("contact_id", contactId)
+      .eq("realtor_id", realtorId);
+
+    const { data: allListings } = await supabase
+      .from("listings")
+      .select("status")
+      .eq("seller_id", contactId)
+      .eq("realtor_id", realtorId);
+
+    const hadTransactions =
+      (allJourneys ?? []).length > 0 || (allListings ?? []).length > 0;
+    const allClosed =
+      hadTransactions &&
+      (allJourneys ?? []).every((j: { status: string }) =>
+        ["closed", "cancelled"].includes(j.status)
+      ) &&
+      (allListings ?? []).every((l: { status: string }) =>
+        ["sold", "expired", "withdrawn"].includes(l.status)
+      );
+
+    let stage: LifecycleStage = "prospect";
+
+    if (underContractJourney) {
+      stage = "under_contract";
+    } else if (allClosed && hadTransactions) {
+      stage = "past_client";
+    } else {
+      const isBuyer = activeJourneys.length > 0 || roles.includes("buyer");
+      const isSeller = activeListing || roles.includes("seller");
+
+      if (isBuyer && isSeller) {
+        stage = "dual_client";
+      } else if (isBuyer) {
+        stage = "active_buyer";
+      } else if (isSeller) {
+        stage = "active_seller";
+      } else if (hadTransactions) {
+        stage = "nurture";
+      }
+    }
+
+    await _persistStage(supabase, contactId, realtorId, stage);
+    return { stage, error: null };
+  } catch (err) {
+    return { stage: "prospect", error: String(err) };
+  }
+}
+
+async function _persistStage(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  contactId: string,
+  realtorId: string,
+  stage: LifecycleStage
+): Promise<void> {
+  await supabase
+    .from("contacts")
+    .update({ lifecycle_stage: stage, updated_at: new Date().toISOString() })
+    .eq("id", contactId)
+    .eq("realtor_id", realtorId);
+}
+
+// ============================================================
+// setLifecycleStage — manual override
+// ============================================================
+
+export async function setLifecycleStage(
+  contactId: string,
+  stage: LifecycleStage
+): Promise<{ error: string | null }> {
+  try {
+    const tc = await getAuthenticatedTenantClient();
+
+    const { error } = await tc
+      .from("contacts")
+      .update({ lifecycle_stage: stage, updated_at: new Date().toISOString() })
+      .eq("id", contactId);
+
+    if (error) return { error: error.message };
+
+    revalidatePath(`/contacts/${contactId}`);
+    revalidatePath("/contacts");
+
+    return { error: null };
+  } catch (err) {
+    return { error: String(err) };
+  }
 }

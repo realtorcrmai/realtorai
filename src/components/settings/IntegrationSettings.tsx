@@ -99,7 +99,7 @@ export function IntegrationSettings() {
                   <div
                     className={`flex h-10 w-10 items-center justify-center rounded-xl ${
                       integration?.is_active
-                        ? "bg-emerald-50 text-emerald-600"
+                        ? "bg-brand-muted text-brand"
                         : "bg-muted text-muted-foreground"
                     }`}
                   >
@@ -114,7 +114,7 @@ export function IntegrationSettings() {
                 </div>
                 <div className="flex items-center gap-2">
                   {integration?.is_active && (
-                    <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
+                    <span className="flex items-center gap-1 text-xs font-medium text-brand bg-brand-muted px-2.5 py-1 rounded-full">
                       <CheckCircle2 className="h-3 w-3" />
                       Connected
                     </span>
@@ -301,7 +301,7 @@ function IntegrationForm({
         <div
           className={`flex items-center gap-2 p-3 rounded-lg text-sm ${
             testResult.success
-              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              ? "bg-brand-muted text-brand-dark border border-brand/20"
               : "bg-red-50 text-red-700 border border-red-200"
           }`}
         >
@@ -322,7 +322,7 @@ function IntegrationForm({
           <span
             className={
               existing.test_status === "success"
-                ? "text-emerald-600"
+                ? "text-brand"
                 : "text-red-600"
             }
           >

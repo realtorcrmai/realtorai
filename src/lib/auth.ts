@@ -99,6 +99,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             "https://www.googleapis.com/auth/calendar.readonly",
             "https://www.googleapis.com/auth/gmail.send",
             "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/contacts.readonly",
           ].join(" "),
           access_type: "offline",
           prompt: "consent",
@@ -128,6 +129,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           token.accessToken = account.access_token;
           token.refreshToken = account.refresh_token;
+          token.emailVerified = true; // Google verified the email
+        }
+
+        // OAuth providers = email auto-verified
+        if (account && ["google", "apple", "facebook"].includes(account.provider)) {
+          token.emailVerified = true;
         }
 
         // Skip DB lookup if role/features are already cached in the token
@@ -137,7 +144,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (token.email && needsUserFetch && usersTableExists !== false) {
           const { data: existingUser, error: fetchError } = await supabase
             .from("users")
-            .select("id, role, plan, enabled_features, is_active")
+            .select("id, role, plan, enabled_features, is_active, email_verified, phone_verified, onboarding_completed, trial_ends_at, trial_plan, personalization_completed")
             .eq("email", token.email)
             .single();
 
@@ -157,16 +164,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
             if (existingUser) {
               token.role = existingUser.role;
-              token.plan = existingUser.plan || "free";
               token.userId = existingUser.id;
-              // Resolve features: plan + release gate + optional overrides
-              token.enabledFeatures = getUserFeatures(
+              token.emailVerified = existingUser.email_verified ?? true;
+              token.phoneVerified = existingUser.phone_verified ?? false;
+              token.onboardingCompleted = existingUser.onboarding_completed ?? true;
+              token.personalizationCompleted = existingUser.personalization_completed ?? false;
+              token.trialEndsAt = existingUser.trial_ends_at ?? null;
+              // Resolve effective plan: trial plan if active, otherwise base plan
+              const { getEffectivePlan } = await import("@/lib/plans");
+              const effectivePlan = getEffectivePlan(
                 existingUser.plan || "free",
+                existingUser.trial_ends_at,
+                existingUser.trial_plan,
+              );
+              token.plan = effectivePlan;
+              token.enabledFeatures = getUserFeatures(
+                effectivePlan,
                 existingUser.enabled_features
               );
             } else if (trigger === "signIn" || account) {
               const isAdmin = ADMIN_EMAIL && token.email === ADMIN_EMAIL;
               const defaultPlan = isAdmin ? "admin" : "free";
+              // New users get 14-day Professional trial (S7)
+              const trialEndsAt = isAdmin ? null : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+              const trialPlan = isAdmin ? null : "professional";
               const { data: newUser, error: insertError } = await supabase
                 .from("users")
                 .insert({
@@ -174,19 +195,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                   name: token.name as string | undefined,
                   role: isAdmin ? "admin" : "realtor",
                   plan: defaultPlan,
+                  trial_ends_at: trialEndsAt,
+                  trial_plan: trialPlan,
+                  personalization_completed: false,
+                  onboarding_completed: false,
                 })
-                .select("id, role, plan, enabled_features")
+                .select("id, role, plan, enabled_features, trial_ends_at, trial_plan")
                 .single();
 
               if (insertError) {
                 console.error("[auth] Error inserting user:", insertError.message);
               }
 
-              token.role = newUser?.role ?? "realtor";
-              token.plan = newUser?.plan ?? defaultPlan;
-              token.userId = newUser?.id;
-              token.enabledFeatures = getUserFeatures(
+              const { getEffectivePlan } = await import("@/lib/plans");
+              const effectivePlan = getEffectivePlan(
                 newUser?.plan ?? defaultPlan,
+                newUser?.trial_ends_at,
+                newUser?.trial_plan,
+              );
+              token.role = newUser?.role ?? "realtor";
+              token.plan = effectivePlan;
+              token.userId = newUser?.id;
+              token.personalizationCompleted = false;
+              token.onboardingCompleted = false;
+              token.trialEndsAt = trialEndsAt;
+              token.enabledFeatures = getUserFeatures(
+                effectivePlan,
                 newUser?.enabled_features
               );
             }
@@ -209,6 +243,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Multi-tenancy: userId = realtorId (the tenant identifier)
       session.user.id = (token.userId as string) || (token.sub as string) || "";
       (session.user as unknown as Record<string, unknown>).realtorId = (token.userId as string) || (token.sub as string) || "";
+      (session.user as unknown as Record<string, unknown>).emailVerified = token.emailVerified ?? true;
+      (session.user as unknown as Record<string, unknown>).phoneVerified = token.phoneVerified ?? false;
+      (session.user as unknown as Record<string, unknown>).onboardingCompleted = token.onboardingCompleted ?? true;
+      (session.user as unknown as Record<string, unknown>).personalizationCompleted = token.personalizationCompleted ?? false;
+      (session.user as unknown as Record<string, unknown>).trialEndsAt = token.trialEndsAt ?? null;
       return session;
     },
   },

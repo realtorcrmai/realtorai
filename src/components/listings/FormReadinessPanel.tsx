@@ -120,7 +120,7 @@ export function FormReadinessPanel({
         <div className="h-2.5 rounded-full bg-muted overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-500 ${
-              progressPct === 100 ? "bg-green-500" : "bg-green-500/70"
+              progressPct === 100 ? "bg-brand/50" : "bg-brand/50/70"
             }`}
             style={{ width: `${progressPct}%` }}
           />
@@ -142,7 +142,7 @@ export function FormReadinessPanel({
             >
               <div className="flex items-center gap-2.5">
                 {isUploaded ? (
-                  <Check className="h-4.5 w-4.5 text-green-600 shrink-0" />
+                  <Check className="h-4.5 w-4.5 text-brand shrink-0" />
                 ) : (
                   <X className="h-4.5 w-4.5 text-red-500 shrink-0" />
                 )}
@@ -199,7 +199,7 @@ export function FormReadinessPanel({
                 {status && (
                   <div className="absolute top-1 right-1">
                     {status === "completed" ? (
-                      <FileCheck className="h-3.5 w-3.5 text-green-600" />
+                      <FileCheck className="h-3.5 w-3.5 text-brand" />
                     ) : (
                       <Pencil className="h-3 w-3 text-amber-500" />
                     )}

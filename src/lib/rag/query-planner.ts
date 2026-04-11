@@ -3,6 +3,7 @@
 // ============================================================
 
 import Anthropic from '@anthropic-ai/sdk';
+import { createWithRetry } from '@/lib/anthropic/retry';
 import { MODELS, MAX_TOKENS, TOP_K_BY_INTENT, CONTENT_TYPES_BY_INTENT } from './constants';
 import type { QueryPlan, QueryIntent, UIContext } from './types';
 
@@ -56,7 +57,7 @@ export async function planQuery(
 User message: "${message}"`;
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await createWithRetry(anthropic, {
       model: MODELS.TIER1_PLANNER,
       max_tokens: MAX_TOKENS.TIER1_PLANNER,
       system: SYSTEM_PROMPT,

@@ -1,12 +1,53 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
+
+// Contact Picker API — only available on iOS Safari 14.5+ and Chrome on Android
+interface ContactAddress { city?: string; region?: string; country?: string; postalCode?: string; streetAddress?: string; }
+interface NativeContact { name?: string[]; tel?: string[]; email?: string[]; address?: ContactAddress[]; }
+interface ContactsManager {
+  select(props: string[], opts?: { multiple?: boolean }): Promise<NativeContact[]>;
+  getProperties(): Promise<string[]>;
+}
+declare global { interface Navigator { contacts?: ContactsManager; } }
+
+const IMPORT_SOURCES = [
+  {
+    id: "google",
+    label: "Google Contacts",
+    icon: "📱",
+    desc: "Pick directly from your Gmail / Google account",
+    href: "/contacts/import-gmail",
+    badge: "Picker",
+    badgeColor: "bg-blue-100 text-blue-700",
+  },
+  {
+    id: "apple",
+    label: "Apple / vCard",
+    icon: "🍎",
+    desc: "Export .vcf from Contacts app, Outlook, or iCloud",
+    href: null, // handled inline (file upload below)
+    badge: "File upload",
+    badgeColor: "bg-gray-100 text-gray-600",
+  },
+  {
+    id: "csv",
+    label: "CSV Spreadsheet",
+    icon: "📋",
+    desc: "From any CRM, spreadsheet, or custom export",
+    href: null, // handled inline
+    badge: "File upload",
+    badgeColor: "bg-gray-100 text-gray-600",
+  },
+];
 
 interface ImportResult {
   ok: boolean;
   imported: number;
   skipped: number;
+  referrals_linked: number;
+  families_linked: number;
   errors: string[];
   total: number;
 }
@@ -19,6 +60,9 @@ interface ParsedRow {
   notes?: string;
   address?: string;
   source?: string;
+  referred_by?: string;
+  family_of?: string;
+  family_relationship?: string;
 }
 
 type FileType = "csv" | "vcf";
@@ -33,6 +77,17 @@ export default function ContactImportPage() {
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState("");
   const [dragOver, setDragOver] = useState(false);
+  const [pickerSupported, setPickerSupported] = useState(false);
+  const [pickerLoading, setPickerLoading] = useState(false);
+
+  // Detect Contact Picker API support (iOS Safari 14.5+ / Chrome Android)
+  useEffect(() => {
+    setPickerSupported(
+      typeof navigator !== "undefined" &&
+      "contacts" in navigator &&
+      typeof navigator.contacts?.select === "function"
+    );
+  }, []);
 
   const parseCSV = useCallback((text: string) => {
     const lines = text.split(/\r?\n/).filter((l) => l.trim());
@@ -50,11 +105,14 @@ export default function ContactImportPage() {
       return;
     }
 
-    const emailIdx = headerRow.indexOf("email");
-    const typeIdx = headerRow.indexOf("type");
-    const notesIdx = headerRow.indexOf("notes");
-    const addressIdx = headerRow.indexOf("address");
-    const sourceIdx = headerRow.indexOf("source");
+    const emailIdx      = headerRow.indexOf("email");
+    const typeIdx       = headerRow.indexOf("type");
+    const notesIdx      = headerRow.indexOf("notes");
+    const addressIdx    = headerRow.indexOf("address");
+    const sourceIdx     = headerRow.indexOf("source");
+    const referredByIdx = headerRow.indexOf("referred_by");
+    const familyOfIdx   = headerRow.indexOf("family_of");
+    const familyRelIdx  = headerRow.indexOf("family_relationship");
 
     const rows: ParsedRow[] = [];
     for (let i = 1; i < lines.length; i++) {
@@ -66,11 +124,14 @@ export default function ContactImportPage() {
       rows.push({
         name,
         phone,
-        email: emailIdx >= 0 ? cols[emailIdx]?.trim() : undefined,
-        type: typeIdx >= 0 ? cols[typeIdx]?.trim() : undefined,
-        notes: notesIdx >= 0 ? cols[notesIdx]?.trim() : undefined,
-        address: addressIdx >= 0 ? cols[addressIdx]?.trim() : undefined,
-        source: sourceIdx >= 0 ? cols[sourceIdx]?.trim() : undefined,
+        email:               emailIdx      >= 0 ? cols[emailIdx]?.trim()      || undefined : undefined,
+        type:                typeIdx       >= 0 ? cols[typeIdx]?.trim()        || undefined : undefined,
+        notes:               notesIdx      >= 0 ? cols[notesIdx]?.trim()       || undefined : undefined,
+        address:             addressIdx    >= 0 ? cols[addressIdx]?.trim()     || undefined : undefined,
+        source:              sourceIdx     >= 0 ? cols[sourceIdx]?.trim()      || undefined : undefined,
+        referred_by:         referredByIdx >= 0 ? cols[referredByIdx]?.trim()  || undefined : undefined,
+        family_of:           familyOfIdx   >= 0 ? cols[familyOfIdx]?.trim()    || undefined : undefined,
+        family_relationship: familyRelIdx  >= 0 ? cols[familyRelIdx]?.trim()   || undefined : undefined,
       });
     }
 
@@ -143,6 +204,58 @@ export default function ContactImportPage() {
     setStep("preview");
   }, []);
 
+  const handleNativePicker = useCallback(async () => {
+    if (!navigator.contacts) return;
+    setPickerLoading(true);
+    setError("");
+    try {
+      const available = await navigator.contacts.getProperties();
+      const props = (["name", "tel", "email", "address"] as const).filter((p) =>
+        available.includes(p)
+      );
+      const picked: NativeContact[] = await navigator.contacts.select(props, { multiple: true });
+      if (!picked || picked.length === 0) {
+        setPickerLoading(false);
+        return;
+      }
+
+      const rows: ParsedRow[] = picked.map((c) => {
+        const addrObj = c.address?.[0];
+        const addrParts = addrObj
+          ? [addrObj.streetAddress, addrObj.city, addrObj.region, addrObj.postalCode, addrObj.country]
+              .filter(Boolean)
+              .join(", ")
+          : undefined;
+        return {
+          name:    c.name?.[0]?.trim()  || "Unknown",
+          phone:   c.tel?.[0]?.replace(/[^\d+]/g, "") || "",
+          email:   c.email?.[0]?.trim() || undefined,
+          address: addrParts            || undefined,
+          source:  "native_contacts",
+        };
+      }).filter((r) => r.name !== "Unknown" || r.phone);
+
+      if (rows.length === 0) {
+        setError("No usable contacts found (need at least a name or phone)");
+        setPickerLoading(false);
+        return;
+      }
+
+      setHeaders(["name", "phone", "email", "address"]);
+      setRawLines([]);
+      setFile(null);
+      setFileType("csv"); // native contacts go through the same CSV import endpoint
+      setParsedRows(rows);
+      setStep("preview");
+    } catch (err: unknown) {
+      // User cancelled — no error
+      if (err instanceof Error && err.name !== "AbortError") {
+        setError("Could not access contacts. Please check permissions.");
+      }
+    }
+    setPickerLoading(false);
+  }, []);
+
   const handleFileSelect = useCallback((selectedFile: File) => {
     const ext = selectedFile.name.split(".").pop()?.toLowerCase();
 
@@ -180,19 +293,26 @@ export default function ContactImportPage() {
   }, [handleFileSelect]);
 
   const handleImport = async () => {
-    if (!file) return;
+    if (!file && parsedRows.length === 0) return;
     setStep("importing");
     setError("");
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      let res: Response;
 
-      const endpoint = fileType === "vcf" ? "/api/contacts/import-vcard" : "/api/contacts/import";
-      const res = await fetch(endpoint, {
-        method: "POST",
-        body: formData,
-      });
+      if (!file) {
+        // Native Contact Picker path — POST JSON rows directly
+        res = await fetch("/api/contacts/import-native", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contacts: parsedRows }),
+        });
+      } else {
+        const formData = new FormData();
+        formData.append("file", file);
+        const endpoint = fileType === "vcf" ? "/api/contacts/import-vcard" : "/api/contacts/import";
+        res = await fetch(endpoint, { method: "POST", body: formData });
+      }
 
       const data = await res.json();
 
@@ -266,6 +386,78 @@ export default function ContactImportPage() {
 
       {/* Step 1: Upload */}
       {step === "upload" && (
+        <div className="space-y-4">
+          {/* Source selector */}
+          <div className="grid grid-cols-3 gap-3">
+            {IMPORT_SOURCES.map((src) => (
+              src.href ? (
+                <Link
+                  key={src.id}
+                  href={src.href}
+                  className="lf-card p-4 flex flex-col gap-2 hover:border-[var(--lf-indigo)]/50 hover:shadow-md transition-all group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl">{src.icon}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${src.badgeColor}`}>
+                      {src.badge}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm group-hover:text-[var(--lf-indigo)] transition-colors">
+                      {src.label}
+                    </div>
+                    <div className="text-xs text-[var(--lf-text)]/50 mt-0.5">{src.desc}</div>
+                  </div>
+                </Link>
+              ) : src.id === "apple" ? (
+                <div key={src.id} className="lf-card p-4 flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl">{src.icon}</span>
+                    {pickerSupported ? (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                        Native
+                      </span>
+                    ) : (
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${src.badgeColor}`}>
+                        {src.badge}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm">{src.label}</div>
+                    <div className="text-xs text-[var(--lf-text)]/50 mt-0.5">
+                      {pickerSupported
+                        ? "Tap to pick contacts directly from your device"
+                        : src.desc}
+                    </div>
+                  </div>
+                  {pickerSupported && (
+                    <button
+                      onClick={handleNativePicker}
+                      disabled={pickerLoading}
+                      className="mt-1 w-full lf-btn text-xs py-1.5 disabled:opacity-50"
+                    >
+                      {pickerLoading ? "Opening..." : "📲 Pick Contacts"}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div key={src.id} className="lf-card p-4 flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl">{src.icon}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${src.badgeColor}`}>
+                      {src.badge}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm">{src.label}</div>
+                    <div className="text-xs text-[var(--lf-text)]/50 mt-0.5">{src.desc}</div>
+                  </div>
+                </div>
+              )
+            ))}
+          </div>
+
         <div className="lf-card p-8">
           <div
             className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors ${
@@ -300,18 +492,32 @@ export default function ContactImportPage() {
             {/* CSV Guide */}
             <div className="p-4 bg-gray-50 rounded-lg">
               <h3 className="text-sm font-semibold mb-2">📋 CSV Format</h3>
-              <p className="text-xs text-gray-600 mb-2">Required: <strong>name</strong>, <strong>phone</strong></p>
-              <p className="text-xs text-gray-600 mb-3">Optional: email, type, notes, address, source</p>
-              <div className="bg-white rounded border p-3 font-mono text-xs overflow-x-auto">
-                <div className="text-gray-500">name,phone,email,type</div>
-                <div>Sarah Johnson,604-555-1234,sarah@email.com,buyer</div>
+              <p className="text-xs text-gray-600 mb-1">Required: <strong>name</strong>, <strong>phone</strong></p>
+              <p className="text-xs text-gray-600 mb-1">Optional: email, type, notes, address, source</p>
+              <p className="text-xs text-gray-600 mb-3">
+                References:{" "}
+                <span className="font-medium text-amber-700">referred_by</span>{" "}
+                <span className="font-medium text-rose-700">family_of</span>{" "}
+                <span className="font-medium text-rose-700">family_relationship</span>
+              </p>
+              <div className="bg-white rounded border p-2 font-mono text-[10px] overflow-x-auto text-gray-700 leading-5">
+                <div className="text-gray-400">name,phone,type,referred_by,family_of,family_relationship</div>
+                <div>Sarah Johnson,604-555-1234,buyer,,,</div>
+                <div>Mike Johnson,604-555-5678,buyer,,Sarah Johnson,spouse</div>
+                <div>Emma Johnson,604-555-9999,buyer,,Sarah Johnson,child</div>
+                <div>David Lee,778-555-1111,buyer,Sarah Johnson,,</div>
               </div>
+              <p className="text-[10px] text-gray-500 mt-2">
+                <strong>referred_by</strong> — name or phone of who referred this contact<br/>
+                <strong>family_of</strong> — name or phone of the primary contact<br/>
+                <strong>family_relationship</strong> — spouse · child · parent · sibling · other
+              </p>
               <a
-                href="data:text/csv;charset=utf-8,name,phone,email,type,notes%0ASarah Johnson,604-555-1234,sarah@email.com,buyer,Looking for 3BR%0AMike Thompson,778-555-5678,mike@email.com,seller,Wants to list"
+                href={`data:text/csv;charset=utf-8,name,phone,email,type,notes,referred_by,family_of,family_relationship%0ASarah Johnson,604-555-1234,sarah@email.com,buyer,Primary contact,,,,%0AMike Johnson,604-555-5678,,buyer,,, Sarah Johnson,spouse%0AEmma Johnson,778-555-9999,,buyer,,,Sarah Johnson,child%0ADavid Lee,778-555-1111,,buyer,,Sarah Johnson,,`}
                 download="contacts_template.csv"
                 className="inline-block mt-3 text-xs text-[var(--lf-indigo)] hover:underline"
               >
-                ⬇️ Download CSV template
+                ⬇️ Download CSV template (with family columns)
               </a>
             </div>
 
@@ -340,6 +546,7 @@ export default function ContactImportPage() {
               </div>
             </div>
           </div>
+        </div>
         </div>
       )}
 
@@ -375,8 +582,11 @@ export default function ContactImportPage() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">#</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Name</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Phone</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Type</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Email</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Address</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 bg-amber-50">Referred By</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 bg-rose-50">Family Of</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 bg-rose-50">Relationship</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Notes</th>
                 </tr>
               </thead>
@@ -386,9 +596,24 @@ export default function ContactImportPage() {
                     <td className="px-3 py-2 text-xs text-gray-400">{i + 1}</td>
                     <td className="px-3 py-2 font-medium">{row.name}</td>
                     <td className="px-3 py-2 text-gray-600">{row.phone || <span className="text-amber-500 text-xs">No phone</span>}</td>
-                    <td className="px-3 py-2 text-gray-600">{row.email || "—"}</td>
-                    <td className="px-3 py-2 text-gray-500 text-xs max-w-[200px] truncate">{row.address || "—"}</td>
-                    <td className="px-3 py-2 text-gray-500 text-xs max-w-[200px] truncate">{row.notes || "—"}</td>
+                    <td className="px-3 py-2 text-gray-500 text-xs">{row.type || "buyer"}</td>
+                    <td className="px-3 py-2 text-gray-600 text-xs">{row.email || "—"}</td>
+                    <td className="px-3 py-2 text-xs bg-amber-50/40">
+                      {row.referred_by
+                        ? <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">🔗 {row.referred_by}</span>
+                        : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-3 py-2 text-xs bg-rose-50/40">
+                      {row.family_of
+                        ? <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-medium">👨‍👩‍👧 {row.family_of}</span>
+                        : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-3 py-2 text-xs bg-rose-50/40">
+                      {row.family_relationship
+                        ? <span className="capitalize text-rose-600">{row.family_relationship}</span>
+                        : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-3 py-2 text-gray-500 text-xs max-w-[160px] truncate">{row.notes || "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -417,7 +642,7 @@ export default function ContactImportPage() {
           <div className="text-5xl mb-4">🎉</div>
           <h2 className="text-xl font-bold mb-2">Import Complete</h2>
 
-          <div className="grid grid-cols-3 gap-4 max-w-md mx-auto my-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-lg mx-auto my-6">
             <div className="p-3 bg-green-50 rounded-lg">
               <div className="text-2xl font-bold text-green-700">{result.imported}</div>
               <div className="text-xs text-green-600">Imported</div>
@@ -426,10 +651,18 @@ export default function ContactImportPage() {
               <div className="text-2xl font-bold text-yellow-700">{result.skipped}</div>
               <div className="text-xs text-yellow-600">Skipped</div>
             </div>
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-700">{result.total}</div>
-              <div className="text-xs text-blue-600">Total</div>
-            </div>
+            {(result.referrals_linked ?? 0) > 0 && (
+              <div className="p-3 bg-amber-50 rounded-lg">
+                <div className="text-2xl font-bold text-amber-700">{result.referrals_linked}</div>
+                <div className="text-xs text-amber-600">Referrals linked</div>
+              </div>
+            )}
+            {(result.families_linked ?? 0) > 0 && (
+              <div className="p-3 bg-rose-50 rounded-lg">
+                <div className="text-2xl font-bold text-rose-700">{result.families_linked}</div>
+                <div className="text-xs text-rose-600">Family links</div>
+              </div>
+            )}
           </div>
 
           {result.skipped > 0 && (

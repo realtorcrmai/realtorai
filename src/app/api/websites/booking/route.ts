@@ -11,7 +11,7 @@ export async function OPTIONS(request: NextRequest) {
  * Body: { name, phone, email?, date, time, appointment_type?, notes? }
  */
 export async function POST(request: NextRequest) {
-  const auth = validateApiKey(request);
+  const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
   const body = await request.json();
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     try {
       const { autoEnrollNewContact } = await import("@/actions/journeys");
       await autoEnrollNewContact(contactId, "buyer");
-    } catch {}
+    } catch (err) { console.error("[website-api] non-fatal:", err instanceof Error ? err.message : err); }
   }
 
   // Create task for the appointment

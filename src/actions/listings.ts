@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { listingSchema, type ListingFormData } from "@/lib/schemas";
 import { validateStageForType } from "@/lib/contact-consistency";
 import { triggerIngest } from "@/lib/rag/realtime-ingest";
+import { emitNewsletterEvent } from "@/lib/newsletter-events";
 
 export async function createListing(formData: ListingFormData) {
   const parsed = listingSchema.safeParse(formData);
@@ -44,6 +45,18 @@ export async function createListing(formData: ListingFormData) {
   // Real-time RAG ingestion
   triggerIngest("listings", data.id);
 
+  // A4: Auto-generate MLS remarks on first listing (fire-and-forget)
+  try {
+    const { count } = await tc.from("listings").select("id", { count: "exact", head: true });
+    if ((count ?? 0) <= 1) {
+      import("@/lib/anthropic/creative-director").then(({ generateMLSRemarks }) => {
+        generateMLSRemarks(data.id).catch(console.error);
+      });
+    }
+  } catch {
+    // Don't fail listing creation if auto-remarks fails
+  }
+
   return { success: true, listing: data };
 }
 
@@ -70,12 +83,18 @@ export async function updateListing(
       Number(updateData.sold_price) * (Number(updateData.commission_rate) / 100);
   }
 
-  // Check if price changed (for blast automation trigger)
+  // Check if price changed (for blast automation trigger + newsletter event)
   const priceChanged = updateData.list_price !== undefined;
   let oldPrice: number | null = null;
+  let sellerIdForEvent: string | null = null;
   if (priceChanged) {
-    const { data: current } = await tc.from("listings").select("list_price, status").eq("id", id).single();
-    oldPrice = current?.list_price;
+    const { data: current } = await tc
+      .from("listings")
+      .select("list_price, status, seller_id")
+      .eq("id", id)
+      .single();
+    oldPrice = current?.list_price ?? null;
+    sellerIdForEvent = (current as { seller_id?: string } | null)?.seller_id ?? null;
   }
 
   const { error } = await tc
@@ -93,6 +112,27 @@ export async function updateListing(
 
   // Real-time RAG re-ingestion
   triggerIngest("listings", id);
+
+  // Newsletter Engine v3: emit listing_price_dropped when price actually decreased.
+  // Non-blocking — failure logged, never thrown.
+  if (
+    priceChanged &&
+    typeof updateData.list_price === "number" &&
+    typeof oldPrice === "number" &&
+    updateData.list_price < oldPrice
+  ) {
+    await emitNewsletterEvent(tc, {
+      event_type: "listing_price_dropped",
+      listing_id: id,
+      contact_id: sellerIdForEvent,
+      event_data: {
+        listing_id: id,
+        seller_id: sellerIdForEvent,
+        old_price: oldPrice,
+        new_price: updateData.list_price,
+      },
+    });
+  }
 
   return { success: true };
 }
@@ -184,10 +224,10 @@ export async function updateListingStatus(
 ) {
   const tc = await getAuthenticatedTenantClient();
 
-  // Fetch current listing to validate transition
+  // Fetch current listing to validate transition (also grab seller_id for newsletter event)
   const { data: listing } = await tc
     .from("listings")
-    .select("status")
+    .select("status, seller_id")
     .eq("id", id)
     .single();
 
@@ -200,12 +240,58 @@ export async function updateListingStatus(
     };
   }
 
+  // FINTRAC compliance gate — added 2026-04-09 after QA audit found 22
+  // active listings with zero seller_identities rows.
+  //
+  // BC/federal regulation requires FINTRAC Part XV.1 identity verification
+  // for every real estate transaction. A listing cannot transition to
+  // "active" (open for marketing + offers) without at least one
+  // seller_identities row recording the seller's verified ID.
+  //
+  // Transitions to "sold" or "pending" are also gated because those
+  // imply a transaction is in flight. Only transitions TO "draft",
+  // "withdrawn", or other non-active terminal states are exempt.
+  //
+  // Override: if an environment really needs to bypass this (e.g. dev
+  // with test data), set env var BYPASS_FINTRAC_GATE=true. Do NOT set
+  // this in production.
+  const FINTRAC_GATED_STATUSES = new Set(["active", "pending", "sold"]);
+  if (FINTRAC_GATED_STATUSES.has(newStatus) && process.env.BYPASS_FINTRAC_GATE !== "true") {
+    const { count: identityCount } = await tc.raw
+      .from("seller_identities")
+      .select("id", { count: "exact", head: true })
+      .eq("listing_id", id);
+
+    if ((identityCount ?? 0) === 0) {
+      return {
+        error:
+          `FINTRAC compliance: cannot set listing to "${newStatus}" without at least one seller identity record. ` +
+          `Add a seller_identities row via the Phase 1 intake form (full name, DOB, citizenship, ID type/number/expiry) before activating this listing.`,
+      };
+    }
+  }
+
   const { error } = await tc
     .from("listings")
     .update({ status: newStatus })
     .eq("id", id);
 
   if (error) return { error: "Failed to update listing status" };
+
+  // Newsletter Engine v3: emit listing_sold when transitioning to sold.
+  // Non-blocking — failure logged, never thrown.
+  if (newStatus === "sold") {
+    const sellerId = (listing as { seller_id?: string | null }).seller_id ?? null;
+    await emitNewsletterEvent(tc, {
+      event_type: "listing_sold",
+      listing_id: id,
+      contact_id: sellerId,
+      event_data: {
+        listing_id: id,
+        seller_id: sellerId,
+      },
+    });
+  }
 
   revalidatePath("/listings");
   revalidatePath(`/listings/${id}`);

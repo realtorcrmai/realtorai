@@ -41,7 +41,7 @@ export function AIWorkingForYou({
   upcomingSends,
 }: AIWorkingForYouProps) {
   return (
-    <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-indigo-50/50">
+    <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-[#0F7694]/5">
       <CardContent className="p-5 space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -54,7 +54,7 @@ export function AIWorkingForYou({
               </p>
             </div>
           </div>
-          <Badge className="bg-green-100 text-green-800 hover:bg-green-100 text-[11px]">
+          <Badge className="bg-brand-muted text-brand-dark hover:bg-brand-muted text-[11px]">
             Active
           </Badge>
         </div>
@@ -66,11 +66,11 @@ export function AIWorkingForYou({
             <p className="text-[10px] text-muted-foreground">Emails Sent</p>
           </div>
           <div className="bg-white/60 rounded-lg p-2.5 border text-center">
-            <p className="text-lg font-bold text-emerald-600">{openRate}%</p>
+            <p className="text-lg font-bold text-brand">{openRate}%</p>
             <p className="text-[10px] text-muted-foreground">Open Rate</p>
           </div>
           <div className="bg-white/60 rounded-lg p-2.5 border text-center">
-            <p className="text-lg font-bold text-purple-600">{clickRate}%</p>
+            <p className="text-lg font-bold text-brand">{clickRate}%</p>
             <p className="text-[10px] text-muted-foreground">Click Rate</p>
           </div>
           <div className="bg-white/60 rounded-lg p-2.5 border text-center">
@@ -100,8 +100,8 @@ export function AIWorkingForYou({
                       <span
                         className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
                           story.contactType === "buyer"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-orange-100 text-orange-700"
+                            ? "bg-brand-muted text-brand-dark"
+                            : "bg-brand-muted text-brand-dark"
                         }`}
                       >
                         {story.contactType.toUpperCase()}

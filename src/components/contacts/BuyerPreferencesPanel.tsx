@@ -27,11 +27,13 @@ const TIMELINE_OPTIONS = [
 export function BuyerPreferencesPanel({
   contactId,
   preferences,
+  initialEditing = false,
 }: {
   contactId: string;
   preferences: BuyerPreferences | null;
+  initialEditing?: boolean;
 }) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(initialEditing);
   const [form, setForm] = useState<BuyerPreferences>(
     preferences ?? {}
   );
@@ -219,11 +221,11 @@ export function BuyerPreferencesPanel({
             </div>
           )}
           {preferences?.pre_approval_amount && (
-            <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/20">
-              <p className="text-xs text-emerald-600 dark:text-emerald-500 uppercase font-medium">
+            <div className="p-3 rounded-lg bg-brand-muted dark:bg-foreground/20">
+              <p className="text-xs text-brand dark:text-brand uppercase font-medium">
                 Pre-Approved
               </p>
-              <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 mt-1">
+              <p className="text-sm font-bold text-brand-dark dark:text-brand-light mt-1">
                 {Number(preferences.pre_approval_amount).toLocaleString("en-CA", {
                   style: "currency",
                   currency: "CAD",
@@ -261,7 +263,7 @@ export function BuyerPreferencesPanel({
               {preferences.preferred_areas.map((a) => (
                 <span
                   key={a}
-                  className="px-2.5 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                  className="px-2.5 py-1 text-xs font-medium rounded-full bg-brand-muted text-brand-dark dark:bg-blue-900/30 dark:text-brand-light"
                 >
                   {a}
                 </span>
@@ -528,7 +530,7 @@ export function BuyerPreferencesPanel({
               {(form.preferred_areas ?? []).map((area) => (
                 <span
                   key={area}
-                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-brand-muted text-brand-dark dark:bg-blue-900/30 dark:text-brand-light"
                 >
                   {area}
                   <button

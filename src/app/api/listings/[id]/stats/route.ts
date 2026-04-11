@@ -1,16 +1,15 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const { id } = await params;
-  const supabase = createAdminClient();
 
   const [
     { data: listing },
@@ -18,10 +17,10 @@ export async function GET(
     { data: appointments },
     { data: openHouses },
   ] = await Promise.all([
-    supabase.from("listings").select("created_at").eq("id", id).single(),
-    supabase.from("listing_activities").select("*").eq("listing_id", id).order("date", { ascending: false }),
-    supabase.from("appointments").select("id, status").eq("listing_id", id),
-    supabase.from("open_houses").select("id, visitor_count, status").eq("listing_id", id),
+    tc.from("listings").select("created_at").eq("id", id).single(),
+    tc.from("listing_activities").select("*").eq("listing_id", id).order("date", { ascending: false }),
+    tc.from("appointments").select("id, status").eq("listing_id", id),
+    tc.from("open_houses").select("id, visitor_count, status").eq("listing_id", id),
   ]);
 
   const now = new Date();
@@ -29,14 +28,14 @@ export async function GET(
   const daysOnMarket = Math.max(0, Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)));
 
   const acts = activities || [];
-  const totalViews = acts.filter((a) => a.activity_type === "view").reduce((s, a) => s + a.count, 0);
-  const totalInquiries = acts.filter((a) => a.activity_type === "inquiry").reduce((s, a) => s + a.count, 0);
-  const totalOffers = acts.filter((a) => a.activity_type === "offer").length;
+  const totalViews = acts.filter((a: Record<string, unknown>) => a.activity_type === "view").reduce((s: number, a: Record<string, unknown>) => s + (a.count as number), 0);
+  const totalInquiries = acts.filter((a: Record<string, unknown>) => a.activity_type === "inquiry").reduce((s: number, a: Record<string, unknown>) => s + (a.count as number), 0);
+  const totalOffers = acts.filter((a: Record<string, unknown>) => a.activity_type === "offer").length;
   const totalShowings = (appointments || []).length;
-  const confirmedShowings = (appointments || []).filter((a) => a.status === "confirmed").length;
+  const confirmedShowings = (appointments || []).filter((a: Record<string, unknown>) => a.status === "confirmed").length;
   const totalOpenHouses = (openHouses || []).length;
-  const completedOpenHouses = (openHouses || []).filter((o) => o.status === "completed").length;
-  const totalVisitors = (openHouses || []).reduce((s, o) => s + o.visitor_count, 0);
+  const completedOpenHouses = (openHouses || []).filter((o: Record<string, unknown>) => o.status === "completed").length;
+  const totalVisitors = (openHouses || []).reduce((s: number, o: Record<string, unknown>) => s + (o.visitor_count as number), 0);
 
   return NextResponse.json({
     days_on_market: daysOnMarket,
@@ -56,14 +55,14 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const { id } = await params;
-  const supabase = createAdminClient();
   const body = await req.json();
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("listing_activities")
     .insert({
       listing_id: id,

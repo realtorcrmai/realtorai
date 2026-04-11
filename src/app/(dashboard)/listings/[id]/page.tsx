@@ -5,6 +5,7 @@ import { MapPin, DollarSign, Key, Clock, User } from "lucide-react";
 import { ManualStatusOverride } from "@/components/listings/ManualStatusOverride";
 import { ListingWorkflow } from "@/components/listings/ListingWorkflow";
 import { FormReadinessPanel } from "@/components/listings/FormReadinessPanel";
+import { SellerIdentitiesPanel } from "@/components/listings/SellerIdentitiesPanel";
 import { ConveyancingPackButton } from "@/components/listings/ConveyancingPackButton";
 import { ShowingRequestForm } from "@/components/showings/ShowingRequestForm";
 import { ShowingStatusBadge } from "@/components/showings/ShowingStatusBadge";
@@ -48,6 +49,8 @@ export default async function ListingDetailPage({
     { data: showings },
     { data: allListings },
     { data: formSubmissions },
+    { data: buyerMatches },
+    { data: sellerIdentities },
   ] = await Promise.all([
     supabase
       .from("listing_documents")
@@ -66,6 +69,22 @@ export default async function ListingDetailPage({
       .from("form_submissions")
       .select("form_key, status")
       .eq("listing_id", id),
+    // Buyer match: find active journeys whose price range and property type overlap
+    supabase
+      .from("buyer_journeys")
+      .select("id, contact_id, min_price, max_price, preferred_property_types, preferred_areas, contacts(id, name)")
+      .not("status", "in", "(closed,cancelled)")
+      .or(
+        `max_price.is.null,max_price.gte.${listing.list_price ?? 0}`
+      )
+      .limit(5),
+    // FINTRAC seller identities for the Phase 1 compliance panel.
+    // Listing cannot transition to active/pending/sold without ≥1 row.
+    supabase
+      .from("seller_identities")
+      .select("*")
+      .eq("listing_id", id)
+      .order("sort_order", { ascending: true }),
   ]);
 
   // Build form status map for the right panel
@@ -84,6 +103,33 @@ export default async function ListingDetailPage({
         <div className="space-y-6">
           {hasMissingDocs && (
             <AlertBanner message="Missing Required Documents — Upload FINTRAC, DORTS, and PDS before creating showings or generating conveyancing packs." />
+          )}
+
+          {/* Buyer Match Banner */}
+          {(buyerMatches ?? []).length > 0 && (
+            <div className="rounded-xl border border-teal-200 bg-teal-50/60 p-3 flex items-start gap-3">
+              <span className="text-xl shrink-0">🎯</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-teal-800">
+                  {(buyerMatches ?? []).length} potential buyer{(buyerMatches ?? []).length !== 1 ? "s" : ""} match this listing
+                </p>
+                <div className="flex flex-wrap gap-2 mt-1.5">
+                  {(buyerMatches ?? []).map((match: Record<string, unknown>) => {
+                    const contact = match.contacts as { id: string; name: string } | null;
+                    if (!contact) return null;
+                    return (
+                      <Link
+                        key={match.id as string}
+                        href={`/contacts/${contact.id}`}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 text-xs font-medium hover:bg-teal-200 transition-colors"
+                      >
+                        👤 {contact.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Listing Header — compact */}
@@ -236,7 +282,15 @@ export default async function ListingDetailPage({
       </div>
 
       {/* RIGHT PANEL — fixed, own scroll */}
-      <aside className="hidden lg:block w-[340px] shrink-0 border-l overflow-y-auto p-6 bg-card/30">
+      <aside className="hidden lg:block w-[340px] shrink-0 border-l overflow-y-auto p-6 bg-card/30 space-y-4">
+        {/* FINTRAC seller identity panel — rendered first so missing
+            compliance data is the first thing a realtor sees on an
+            unverified listing. See src/components/listings/
+            SellerIdentitiesPanel.tsx for the form. */}
+        <SellerIdentitiesPanel
+          listingId={id}
+          initialIdentities={(sellerIdentities ?? []) as never}
+        />
         <FormReadinessPanel
           listingId={id}
           documents={(documents ?? []) as ListingDocument[]}

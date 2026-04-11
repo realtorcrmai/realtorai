@@ -177,7 +177,7 @@ export default function TasksPage() {
                 type="checkbox"
                 checked={allSelected}
                 onChange={toggleSelectAll}
-                className="h-4 w-4 cursor-pointer accent-indigo-600"
+                className="h-4 w-4 cursor-pointer accent-[#0F7694]"
                 aria-label="Select all incomplete tasks"
                 title={allSelected ? "Deselect all" : "Select all incomplete tasks"}
               />
@@ -221,7 +221,7 @@ export default function TasksPage() {
 
       {/* Floating bulk action bar */}
       {someSelected && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl bg-white dark:bg-zinc-900 border border-border">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-4 py-2 rounded-xl shadow-xl bg-white dark:bg-zinc-900 border border-border">
           <span className="text-sm font-medium text-muted-foreground">
             {selectedIds.size} selected
           </span>
@@ -237,7 +237,7 @@ export default function TasksPage() {
             size="sm"
             onClick={bulkComplete}
             disabled={bulkLoading}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="bg-brand hover:bg-brand-dark text-white"
           >
             <CheckCheck className="h-4 w-4 mr-1.5" />
             {bulkLoading ? "Completing..." : "Mark Complete"}

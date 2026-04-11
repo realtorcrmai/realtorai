@@ -149,10 +149,10 @@ export function GenerateStep({
       )}
 
       {/* Generate All */}
-      <div className="glass rounded-xl p-5 elevation-2 animate-float-in border border-indigo-100">
+      <div className="glass rounded-xl p-5 elevation-2 animate-float-in border border-brand/15">
         <div className="flex items-center justify-between">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-cyan-500 text-white">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand text-white">
               <Sparkles className="h-6 w-6" />
             </div>
             <div>
@@ -170,7 +170,7 @@ export function GenerateStep({
             disabled={isPending || generatingType !== null}
             className={cn(
               "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
-              "bg-gradient-to-r from-violet-600 to-cyan-600 text-white hover:from-violet-700 hover:to-cyan-700 elevation-2",
+              "bg-brand text-white hover:from-[#a37b35] hover:to-[#1a1535] elevation-2",
               (isPending || generatingType !== null) &&
                 "opacity-70 cursor-not-allowed"
             )}
@@ -184,8 +184,8 @@ export function GenerateStep({
           </button>
         </div>
         {generateAllResult && (
-          <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-            <p className="text-sm text-emerald-700 font-medium">
+          <div className="mt-3 p-3 bg-brand-muted border border-brand/20 rounded-lg">
+            <p className="text-sm text-brand-dark font-medium">
               {generateAllResult}
             </p>
           </div>
@@ -196,7 +196,7 @@ export function GenerateStep({
       <div className="glass rounded-xl p-6 elevation-2 animate-float-in">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-muted text-brand">
               <Video className="h-6 w-6" />
             </div>
             <div>
@@ -247,7 +247,7 @@ export function GenerateStep({
             }
             className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200",
-              "bg-violet-600 text-white hover:bg-violet-700 elevation-2",
+              "bg-brand text-white hover:bg-brand-dark elevation-2",
               (isPending || generatingType === "video") &&
                 "opacity-70 cursor-not-allowed"
             )}
@@ -263,10 +263,10 @@ export function GenerateStep({
 
         {/* Active task progress */}
         {generatingType === "video" && activeTaskId && (
-          <div className="mt-4 p-3 bg-violet-50 border border-violet-200 rounded-lg">
+          <div className="mt-4 p-3 bg-brand-muted border border-brand/20 rounded-lg">
             <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin text-violet-600" />
-              <span className="text-sm text-violet-700 font-medium">
+              <Loader2 className="h-4 w-4 animate-spin text-brand" />
+              <span className="text-sm text-brand-dark font-medium">
                 Processing video... This may take a few minutes.
               </span>
             </div>
@@ -281,7 +281,7 @@ export function GenerateStep({
       >
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-100 text-cyan-600">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-muted text-brand">
               <ImageIcon className="h-6 w-6" />
             </div>
             <div>
@@ -331,7 +331,7 @@ export function GenerateStep({
             }
             className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200",
-              "bg-cyan-600 text-white hover:bg-cyan-700 elevation-2",
+              "bg-brand text-white hover:bg-brand-dark elevation-2",
               (isPending || generatingType === "image") &&
                 "opacity-70 cursor-not-allowed"
             )}
@@ -347,10 +347,10 @@ export function GenerateStep({
 
         {/* Active task progress */}
         {generatingType === "image" && activeTaskId && (
-          <div className="mt-4 p-3 bg-cyan-50 border border-cyan-200 rounded-lg">
+          <div className="mt-4 p-3 bg-brand-muted border border-brand/20 rounded-lg">
             <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
-              <span className="text-sm text-cyan-700 font-medium">
+              <Loader2 className="h-4 w-4 animate-spin text-brand" />
+              <span className="text-sm text-brand-dark font-medium">
                 Processing image... This may take a few minutes.
               </span>
             </div>

@@ -39,10 +39,10 @@ type StepStatus = "completed" | "in-progress" | "pending";
 
 const STATUS_STYLES = {
   completed: {
-    circle: "bg-green-500 shadow-sm shadow-green-500/30",
-    connector: "bg-green-500",
+    circle: "bg-success shadow-sm shadow-[#00C875]/30",
+    connector: "bg-success",
     text: "text-foreground",
-    badge: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+    badge: "bg-success/15 text-emerald-700 dark:bg-success/15 dark:text-success",
     badgeLabel: "COMPLETE",
   },
   "in-progress": {
@@ -158,7 +158,7 @@ export function ShowingWorkflow({
       {/* Progress bar */}
       <div className="h-2.5 rounded-full bg-muted overflow-hidden">
         <div
-          className="h-full rounded-full bg-green-500 transition-all duration-500"
+          className="h-full rounded-full bg-gradient-to-r from-[#00C875] to-[#007A47] transition-all duration-500"
           style={{
             width: `${(completedCount / SHOWING_STEPS.length) * 100}%`,
           }}

@@ -1,0 +1,6 @@
+{
+  "type": "CODING:fix",
+  "tier": "Small",
+  "description": "Dashboard tiles hidden by enabledFeatures filter — show all tiles always",
+  "phases": { "classified": true }
+}

@@ -1,0 +1,8 @@
+import Anthropic from '@anthropic-ai/sdk';
+import { config } from '../config.js';
+
+export const anthropic = new Anthropic({
+  apiKey: config.ANTHROPIC_API_KEY,
+});
+
+export const CLAUDE_MODEL = 'claude-sonnet-4-5';

@@ -190,28 +190,44 @@ export default async function NewsletterDashboard() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Email Marketing</h1>
-        <p className="text-sm text-muted-foreground mt-1">AI-powered email marketing — one page, full control</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Email Marketing</h1>
+          <p className="text-sm text-muted-foreground mt-1">AI-powered email marketing — one page, full control</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <a
+            href="/newsletters/learning"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+          >
+            🧠 Learning
+          </a>
+          <a
+            href="/newsletters/engine"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+          >
+            ⚙️ Engine
+          </a>
+        </div>
       </div>
 
       <EmailMarketingTabs queueCount={queue.length}>
         {{
           /* ═══ OVERVIEW ═══ */
           overview: (
-            <div className="space-y-3">
+            <div className="space-y-4 stagger-children">
 
               {/* Row 1: Compact stat pills */}
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mr-1">Health:</span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">🔥 {hotBuyers.length} Hot Buyers</span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-700 border border-orange-200">🔥 {hotSellers.length} Hot Sellers</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-brand-muted text-brand-dark border border-brand/20">🔥 {hotSellers.length} Hot Sellers</span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">🌡️ {warmContacts.length} Warm</span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200">❄️ {coolingContacts.length + dormantContacts.length} Cold</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-brand-muted text-brand-dark border border-brand/20">❄️ {coolingContacts.length + dormantContacts.length} Cold</span>
                 <span className="text-muted-foreground mx-1">·</span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">📧 {dashboard.totalSent} sent</span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">📬 {dashboard.openRate}% opens</span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">🖱️ {dashboard.clickRate}% clicks</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-brand-muted text-brand-dark border border-brand/20">📬 {dashboard.openRate}% opens</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-brand-muted text-brand-dark border border-brand/20">🖱️ {dashboard.clickRate}% clicks</span>
               </div>
 
               {/* Row 2: ACT NOW — top 3 most urgent contacts (buyers + sellers mixed) */}
@@ -221,7 +237,7 @@ export default async function NewsletterDashboard() {
                   .slice(0, 4);
                 if (urgent.length === 0) return null;
                 return (
-                  <Card className="border-red-200 bg-gradient-to-r from-red-50/80 to-orange-50/80">
+                  <Card className="border-red-200 bg-gradient-to-r from-rose-50/80 to-[#0F7694]/5">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
@@ -240,7 +256,7 @@ export default async function NewsletterDashboard() {
                             <div key={c.id} className="flex items-center justify-between p-2.5 bg-white/70 rounded-lg border border-red-100">
                               <div className="flex items-center gap-2.5 min-w-0">
                                 <div className="relative">
-                                  <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${isBuyer ? "from-red-500 to-amber-500" : "from-orange-500 to-red-500"} flex items-center justify-center text-white text-xs font-bold`}>
+                                  <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${isBuyer ? "from-rose-500 to-[#0F7694]" : "from-[#0F7694] to-rose-500"} flex items-center justify-center text-white text-xs font-bold`}>
                                     {(c.name || "?")[0]}
                                   </div>
                                   {daysSince !== null && daysSince <= 2 && <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse" />}
@@ -248,7 +264,7 @@ export default async function NewsletterDashboard() {
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1.5">
                                     <p className="text-xs font-semibold truncate">{c.name}</p>
-                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${isBuyer ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>
+                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${isBuyer ? "bg-red-100 text-red-700" : "bg-brand-muted text-brand-dark"}`}>
                                       {c.type === "customer" ? "LEAD" : isBuyer ? "BUYER" : "SELLER"}
                                     </span>
                                   </div>
@@ -269,7 +285,7 @@ export default async function NewsletterDashboard() {
               })()}
 
               {/* Row 3: Pipeline (compact) + AI Activity (side by side) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Compact Pipeline — merged buyer + seller */}
                 <Card>
                   <CardContent className="p-4">
@@ -324,8 +340,8 @@ export default async function NewsletterDashboard() {
                         <>
                           {dashboard.recentEvents.slice(0, 4).map((event: any) => (
                             <div key={event.id} className="flex items-center gap-2 text-xs">
-                              <span className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                                {event.event_type === "opened" ? <MailOpen className="h-3 w-3 text-emerald-600" /> :
+                              <span className="w-5 h-5 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+                                {event.event_type === "opened" ? <MailOpen className="h-3 w-3 text-brand" /> :
                                  event.event_type === "clicked" ? <MousePointerClick className="h-3 w-3 text-primary" /> :
                                  <Send className="h-3 w-3 text-muted-foreground" />}
                               </span>
@@ -407,7 +423,7 @@ export default async function NewsletterDashboard() {
                       return (
                         <a key={w.id} href={`/automations/workflows/${w.id}`} className="group">
                           <Card className="h-full transition-shadow hover:shadow-md group-hover:border-primary/30">
-                            <CardContent className="p-5 space-y-3">
+                            <CardContent className="p-4 space-y-2">
                               <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-3">
                                   <span className="text-2xl">{icon}</span>
@@ -429,7 +445,7 @@ export default async function NewsletterDashboard() {
 
                               <div className="flex items-center justify-between">
                                 {w.is_active ? (
-                                  <Badge className="bg-green-100 text-green-800 hover:bg-green-100 text-[11px]">Active</Badge>
+                                  <Badge className="bg-brand-muted text-brand-dark hover:bg-brand-muted text-[11px]">Active</Badge>
                                 ) : (
                                   <Badge variant="secondary" className="text-[11px]">Paused</Badge>
                                 )}
@@ -479,7 +495,7 @@ function HotContactCard({ title, contacts, warningText, emptyText, bottomStat, g
 }) {
   return (
     <Card className={contacts.length > 0 ? "border-red-200 bg-red-50/30" : ""}>
-      <CardContent className="p-5">
+      <CardContent className="p-4">
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-base font-semibold">{title}</h3>
           <Badge variant={contacts.length > 0 ? "destructive" : "secondary"} className="text-xs">{contacts.length} ready to act</Badge>

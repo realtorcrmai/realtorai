@@ -72,6 +72,7 @@ ROUTES=(
   "/newsletters/control" "/newsletters/insights" "/newsletters/ghost"
   "/newsletters/suppressions" "/automations" "/automations/templates"
   "/contacts/segments" "/settings" "/inbox" "/login"
+  "/signup" "/personalize" "/onboarding"
 )
 
 for route in "${ROUTES[@]}"; do
@@ -259,6 +260,42 @@ CODE=$(curl -s -o /dev/null -w "%{http_code}" "${APP}/api/cron/agent-scoring")
 
 CODE=$(curl -s -o /dev/null -w "%{http_code}" "${APP}/api/cron/agent-scoring" -H "Authorization: Bearer wrong-token")
 [[ "$CODE" == "401" ]] && pass "Cron agent-scoring (wrong token) → 401" || fail "Cron scoring wrong-auth" "HTTP $CODE"
+
+# ── 5B. EXTENDED CRON AUTH (all cron endpoints must reject no-token) ───
+echo ""
+echo "━━━ 5B. EXTENDED CRON AUTH ━━━"
+
+# Test every cron endpoint rejects requests without valid token
+CRON_ENDPOINTS="agent-evaluate agent-recommendations consent-expiry daily-digest greeting-automations social-publish voice-session-cleanup weekly-learning welcome-drip trial-expiry"
+for ENDPOINT in $CRON_ENDPOINTS; do
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" "${APP}/api/cron/${ENDPOINT}")
+  [[ "$CODE" == "401" ]] && pass "Cron ${ENDPOINT} (no token) → 401" || fail "Cron ${ENDPOINT} no-auth" "HTTP $CODE (expected 401)"
+done
+
+# newsletters/process and reminders/check (cron-like endpoints)
+CODE=$(curl -s -o /dev/null -w "%{http_code}" "${APP}/api/newsletters/process")
+[[ "$CODE" == "401" ]] && pass "newsletters/process (no token) → 401" || fail "newsletters/process no-auth" "HTTP $CODE"
+
+CODE=$(curl -s -o /dev/null -w "%{http_code}" "${APP}/api/reminders/check")
+[[ "$CODE" == "401" ]] && pass "reminders/check (no token) → 401" || fail "reminders/check no-auth" "HTTP $CODE"
+
+# ── 5C. API AUTH ENFORCEMENT ───────────────────────────────
+echo ""
+echo "━━━ 5C. API AUTH ENFORCEMENT ━━━"
+
+# Verify user-facing endpoints require auth (return 401 without session)
+API_ENDPOINTS="deals reports dashboard/stats tasks/bulk-complete onboarding/checklist"
+for ENDPOINT in $API_ENDPOINTS; do
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" "${APP}/api/${ENDPOINT}")
+  [[ "$CODE" == "401" ]] && pass "GET /api/${ENDPOINT} requires auth → 401" || fail "/api/${ENDPOINT} auth" "HTTP $CODE"
+done
+
+# POST endpoints also require auth
+CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${APP}/api/deals" -H "Content-Type: application/json" -d '{"title":"Test"}')
+[[ "$CODE" == "401" ]] && pass "POST /api/deals requires auth → 401" || fail "POST /api/deals auth" "HTTP $CODE"
+
+CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${APP}/api/listings" -H "Content-Type: application/json" -d '{"address":"Test"}')
+[[ "$CODE" == "401" ]] && pass "POST /api/listings requires auth → 401" || fail "POST /api/listings auth" "HTTP $CODE"
 
 # ── 6. CASCADE DELETE TEST ─────────────────────────────────
 echo ""

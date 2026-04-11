@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, X, ArrowDownAZ, Clock, Upload, Download, GitMerge } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getAvatarColor } from "@/lib/avatar-color";
 import type { Contact } from "@/types";
 import { CONTACT_TYPE_COLORS, type ContactType } from "@/lib/constants";
 import {
@@ -92,20 +93,20 @@ type StageFilter = "all" | string;
 
 const TYPE_FILTERS: { value: TypeFilter; label: string; color: string }[] = [
   { value: "all", label: "All", color: "bg-gray-100 text-gray-700" },
-  { value: "customer", label: "Lead", color: "bg-green-100 text-green-700" },
-  { value: "buyer", label: "Buyer", color: "bg-blue-100 text-blue-700" },
-  { value: "seller", label: "Seller", color: "bg-purple-100 text-purple-700" },
-  { value: "agent", label: "Agent", color: "bg-orange-100 text-orange-700" },
-  { value: "partner", label: "Partner", color: "bg-teal-100 text-teal-700" },
+  { value: "customer", label: "Lead", color: "bg-brand-muted text-brand-dark" },
+  { value: "buyer", label: "Buyer", color: "bg-brand-muted text-brand-dark" },
+  { value: "seller", label: "Seller", color: "bg-brand-muted-strong text-brand-dark" },
+  { value: "agent", label: "Agent", color: "bg-amber-100 text-amber-700" },
+  { value: "partner", label: "Partner", color: "bg-brand-muted text-brand-dark" },
 ];
 
 const STAGE_FILTERS: { value: StageFilter; label: string; dot: string }[] = [
   { value: "all", label: "All Stages", dot: "bg-gray-400" },
-  { value: "new", label: "New", dot: "bg-sky-500" },
+  { value: "new", label: "New", dot: "bg-brand" },
   { value: "qualified", label: "Qualified", dot: "bg-amber-500" },
-  { value: "active_search", label: "Active", dot: "bg-green-500" },
+  { value: "active_search", label: "Active", dot: "bg-brand/50" },
   { value: "under_contract", label: "Contract", dot: "bg-orange-500" },
-  { value: "closed", label: "Closed", dot: "bg-emerald-600" },
+  { value: "closed", label: "Closed", dot: "bg-brand-dark" },
   { value: "cold", label: "Cold", dot: "bg-gray-400" },
 ];
 
@@ -258,15 +259,15 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
             >
               <Filter className="h-4 w-4" />
               {hasActiveFilter && (
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary" />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-brand" />
               )}
             </button>
           </div>
         </div>
         {importResult && (
-          <div className="text-sm text-emerald-600 bg-emerald-50 rounded px-2 py-1 flex items-center justify-between">
+          <div className="text-sm text-brand bg-brand-muted rounded px-2 py-1 flex items-center justify-between">
             <span>{importResult}</span>
-            <button onClick={() => setImportResult(null)} className="text-emerald-400 hover:text-emerald-600"><X className="h-3 w-3" /></button>
+            <button onClick={() => setImportResult(null)} className="text-brand-light hover:text-brand"><X className="h-3 w-3" /></button>
           </div>
         )}
 
@@ -387,16 +388,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
             {sorted.map((contact) => {
               const isActive = pathname === `/contacts/${contact.id}`;
               const initials = getInitials(contact.name);
-              const avatarBg =
-                contact.type === "seller"
-                  ? "bg-purple-500"
-                  : contact.type === "partner"
-                  ? "bg-teal-500"
-                  : contact.type === "customer"
-                  ? "bg-green-500"
-                  : contact.type === "agent"
-                  ? "bg-orange-500"
-                  : "bg-blue-500";
+              const avatarStyle = getAvatarColor(contact.name);
               const contactStage = (contact as Record<string, unknown>)
                 .stage_bar as string | null;
 
@@ -412,11 +404,15 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                     <div className="flex items-center gap-3">
                       {/* Avatar */}
                       <div
-                        className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 ${avatarBg}`}
+                        className="relative h-9 w-9 rounded-full flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: avatarStyle.bg, color: avatarStyle.text }}
                       >
-                        <span className="text-xs font-semibold text-white">
+                        <span className="text-xs font-semibold">
                           {initials}
                         </span>
+                        {sorted.indexOf(contact) < 3 && (
+                          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        )}
                       </div>
 
                       {/* Info */}
@@ -428,7 +424,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                         >
                           {contact.name}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {contact.phone}
                         </p>
                         {/* Mini stage dots */}
@@ -441,7 +437,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                       {/* Type badge */}
                       <Badge
                         variant="secondary"
-                        className={`${CONTACT_TYPE_COLORS[contact.type as ContactType] ?? ""} text-sm px-1.5 py-0 shrink-0 capitalize`}
+                        className={`${CONTACT_TYPE_COLORS[contact.type as ContactType] ?? ""} text-xs px-1.5 py-0 shrink-0 capitalize`}
                       >
                         {contact.type}
                       </Badge>
@@ -455,7 +451,7 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
       </div>
 
       {/* Pipeline Summary — matches right panel design */}
-      <div className="border-t border-l-4 border-l-indigo-400 px-4 py-3 bg-gradient-to-r from-indigo-50/30 to-transparent dark:from-indigo-950/10">
+      <div className="border-t border-l-4 border-l-[#0F7694] px-4 py-3 bg-gradient-to-r from-[#0F7694]/5/30 to-transparent dark:from-[#1a1535]/10">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Pipeline</h3>
         <div className="space-y-0.5">
           {STAGE_FILTERS.filter(s => s.value !== "all").map((stage) => {
@@ -520,7 +516,7 @@ function GettingStartedChecklist({ contacts }: { contacts: Contact[] }) {
   const pct = Math.round((completed / total) * 100);
 
   return (
-    <div className="border-t border-l-4 border-l-emerald-400 px-4 py-3 bg-gradient-to-r from-emerald-50/20 to-transparent dark:from-emerald-950/10">
+    <div className="border-t border-l-4 border-l-emerald-400 px-4 py-3 bg-gradient-to-r from-[#0F7694]/20 to-transparent dark:from-[#0F7694]/10">
       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">Getting Started</h3>
       <div className="space-y-1 mb-3">
         {checks.map((check, i) => (
@@ -532,7 +528,7 @@ function GettingStartedChecklist({ contacts }: { contacts: Contact[] }) {
             )}
           >
             {check.done ? (
-              <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+              <div className="w-4 h-4 rounded-full bg-brand/50 flex items-center justify-center shrink-0">
                 <Check className="h-2.5 w-2.5 text-white" />
               </div>
             ) : (
@@ -543,9 +539,9 @@ function GettingStartedChecklist({ contacts }: { contacts: Contact[] }) {
         ))}
       </div>
       <div className="flex items-center gap-2">
-        <div className="flex-1 h-2 rounded-full bg-emerald-100/50 dark:bg-emerald-900/20 overflow-hidden">
+        <div className="flex-1 h-2 rounded-full bg-brand-muted/50 dark:bg-foreground/20 overflow-hidden">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
+            className="h-full rounded-full bg-gradient-to-r from-[#0F7694] to-[#0F7694] transition-all duration-500"
             style={{ width: `${pct}%` }}
           />
         </div>

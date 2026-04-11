@@ -177,8 +177,8 @@ export default function LoginPage() {
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { label: "Kunal (Pro)", email: "demo@realestatecrm.com", color: "bg-indigo-100 text-indigo-700 hover:bg-indigo-200" },
-                    { label: "Sarah (Studio)", email: "sarah@realtors360.com", color: "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" },
+                    { label: "Kunal (Pro)", email: "demo@realestatecrm.com", color: "bg-brand-muted text-brand-dark hover:bg-brand/20" },
+                    { label: "Sarah (Studio)", email: "sarah@realtors360.com", color: "bg-brand-muted text-brand-dark hover:bg-brand-muted-strong" },
                     { label: "Mike (Pro)", email: "mike@realtors360.com", color: "bg-amber-100 text-amber-700 hover:bg-amber-200" },
                     { label: "Priya (Free)", email: "priya@realtors360.com", color: "bg-pink-100 text-pink-700 hover:bg-pink-200" },
                     { label: "Admin", email: "admin@realtors360.com", color: "bg-gray-100 text-gray-700 hover:bg-gray-200 col-span-2" },

@@ -524,7 +524,7 @@ export function VoiceAgentPanel() {
             <span
               className={cn(
                 "h-2 w-2 rounded-full",
-                connected ? "bg-emerald-400" : "bg-red-400"
+                connected ? "bg-brand-light" : "bg-red-400"
               )}
             />
           </div>
@@ -559,7 +559,7 @@ export function VoiceAgentPanel() {
             {[...Array(5)].map((_, i) => (
               <span
                 key={i}
-                className="w-0.5 bg-primary rounded-full animate-pulse"
+                className="w-0.5 bg-brand rounded-full animate-pulse"
                 style={{
                   height: `${8 + Math.random() * 8}px`,
                   animationDelay: `${i * 0.1}s`,
@@ -611,7 +611,7 @@ export function VoiceAgentPanel() {
               )}
               {msg.content}
               {msg.streaming && (
-                <span className="inline-block w-0.5 h-4 bg-primary ml-0.5 animate-pulse align-middle" />
+                <span className="inline-block w-0.5 h-4 bg-brand ml-0.5 animate-pulse align-middle" />
               )}
             </div>
           </div>

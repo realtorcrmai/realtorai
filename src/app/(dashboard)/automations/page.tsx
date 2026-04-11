@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { WORKFLOW_BLUEPRINTS } from "@/lib/constants";
 import { BackfillButton } from "@/components/automations/BackfillButton";
+import { AnimatedCounter } from "@/components/shared/AnimatedCounter";
 
 export const dynamic = "force-dynamic";
 
@@ -132,9 +133,9 @@ export default async function AutomationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
-                  {activeWorkflows}
+                  <AnimatedCounter value={activeWorkflows} />
                   <span className="text-sm font-normal text-muted-foreground">
-                    /{workflowList.length}
+                    /<AnimatedCounter value={workflowList.length} />
                   </span>
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -153,7 +154,7 @@ export default async function AutomationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
-                  {totalActiveEnrollments}
+                  <AnimatedCounter value={totalActiveEnrollments} />
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Active Enrollments
@@ -171,7 +172,7 @@ export default async function AutomationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
-                  {templateCount}
+                  <AnimatedCounter value={templateCount} />
                 </p>
                 <p className="text-xs text-muted-foreground">Templates</p>
               </div>
@@ -187,7 +188,7 @@ export default async function AutomationsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">
-                  {unreadCount}
+                  <AnimatedCounter value={unreadCount} />
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Unread Notifications
@@ -257,7 +258,7 @@ export default async function AutomationsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger-children">
           {workflowList.map((workflow: { id: string; slug: string; name: string; description?: string; workflow_steps: unknown; is_active: boolean; created_at: string; contact_type?: string }) => {
             const blueprint = blueprintsBySlug[workflow.slug];
             const icon = blueprint?.icon ?? "⚙️";
@@ -278,7 +279,7 @@ export default async function AutomationsPage() {
                 className="group"
               >
                 <Card className="h-full transition-shadow hover:shadow-md group-hover:border-indigo-200">
-                  <CardContent className="py-5 space-y-3">
+                  <CardContent className="py-4 space-y-2">
                     {/* Top row: icon + status */}
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">

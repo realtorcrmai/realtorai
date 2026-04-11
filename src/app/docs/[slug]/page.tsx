@@ -107,7 +107,7 @@ export default async function PublicDocsPage({ params }: Props) {
                   </ol>
                 )}
                 {s.expectedOutcome && (
-                  <p className="text-sm text-green-700 bg-green-50 p-3 rounded-lg">{s.expectedOutcome}</p>
+                  <p className="text-sm text-brand-dark bg-brand-muted p-3 rounded-lg">{s.expectedOutcome}</p>
                 )}
               </div>
             ))}

@@ -92,7 +92,7 @@ export default function ChatFullPage() {
                   <button
                     key={suggestion}
                     onClick={() => sendMessage(suggestion)}
-                    className="text-xs text-left px-3 py-2 bg-white border border-gray-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition"
+                    className="text-xs text-left px-3 py-2 bg-white border border-gray-200 rounded-lg hover:border-brand/30 hover:bg-brand-muted transition"
                   >
                     {suggestion}
                   </button>
@@ -112,9 +112,9 @@ export default function ChatFullPage() {
             <div className="flex justify-start mb-3">
               <div className="bg-white border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
                 <div className="flex gap-1">
-                  <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="w-2 h-2 bg-brand-light rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 bg-brand-light rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 bg-brand-light rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                 </div>
               </div>
             </div>

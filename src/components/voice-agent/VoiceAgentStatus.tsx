@@ -3,7 +3,7 @@
 import type { VoiceSessionStatus } from "@/types/voice-agent";
 
 const statusConfig: Record<VoiceSessionStatus | "disconnected", { color: string; label: string }> = {
-  active: { color: "bg-emerald-500", label: "Voice Active" },
+  active: { color: "bg-brand/50", label: "Voice Active" },
   idle: { color: "bg-amber-500", label: "Voice Idle" },
   offline: { color: "bg-gray-400", label: "Voice Offline" },
   expired: { color: "bg-gray-400", label: "Session Expired" },

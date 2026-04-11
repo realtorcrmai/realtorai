@@ -8,8 +8,16 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = "https://ybgiljuclpsuhbmdhust.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InliZ2lsanVjbHBzdWhibWRodXN0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzI2Nzc5MSwiZXhwIjoyMDg4ODQzNzkxfQ.qdu6B5jdtckJ23nErIiVuQOzGbPqn_SrEJxQrL9buEk";
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error("❌ Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  console.error("   Run with:  node --env-file=.env.local scripts/<script>.mjs");
+  console.error("   Or export them: source .env.local && node scripts/<script>.mjs");
+  process.exit(1);
+}
+
 const CRON_SECRET = process.env.CRON_SECRET || "listingflow-cron-secret-2026";
 const BASE_URL = "http://localhost:3000";
 

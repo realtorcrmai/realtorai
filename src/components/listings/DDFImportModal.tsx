@@ -224,7 +224,7 @@ export function DDFImportModal() {
                   {msg && (
                     <p
                       className={`text-xs mt-1 ${
-                        state === "error" ? "text-red-600" : "text-emerald-600"
+                        state === "error" ? "text-red-600" : "text-brand"
                       }`}
                     >
                       {msg}
@@ -258,7 +258,7 @@ export function DDFImportModal() {
                       </Button>
                     )}
                     {state === "success" && (
-                      <Button size="sm" variant="outline" className="h-7 text-xs text-emerald-600" disabled>
+                      <Button size="sm" variant="outline" className="h-7 text-xs text-brand" disabled>
                         <Check className="h-3 w-3" />
                       </Button>
                     )}

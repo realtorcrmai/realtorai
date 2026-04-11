@@ -21,7 +21,7 @@ const STATUS_COLORS: Record<string, string> = {
 const INTEREST_CONFIG: Record<string, { icon: typeof Flame; color: string }> = {
   hot: { icon: Flame, color: "text-red-500" },
   warm: { icon: ThermometerSun, color: "text-amber-500" },
-  cold: { icon: Snowflake, color: "text-blue-500" },
+  cold: { icon: Snowflake, color: "text-brand" },
 };
 
 interface OpenHouseSectionProps {
@@ -196,7 +196,7 @@ export function OpenHouseSection({ listingId, openHouses: initial }: OpenHouseSe
                                     <div className="flex items-center gap-2">
                                       <span className="font-medium">{v.name}</span>
                                       {interest && <interest.icon className={`h-3.5 w-3.5 ${interest.color}`} />}
-                                      {v.wants_followup && <Badge variant="outline" className="text-[10px] px-1 py-0 bg-blue-50 text-blue-700 border-blue-200">Follow-up</Badge>}
+                                      {v.wants_followup && <Badge variant="outline" className="text-[10px] px-1 py-0 bg-brand-muted text-brand-dark border-brand/20">Follow-up</Badge>}
                                     </div>
                                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                       {v.phone && <span>{v.phone}</span>}

@@ -164,7 +164,7 @@ export function VoiceAgentDashboard() {
               🔔 Notifications {unreadCount > 0 && <span className="lf-badge lf-badge-active">{unreadCount}</span>}
             </h2>
             <div className="flex items-center gap-2 text-xs text-[var(--lf-muted)] mb-2">
-              <span className={`w-2 h-2 rounded-full ${sseConnected ? "bg-emerald-500" : "bg-gray-400"}`} />
+              <span className={`w-2 h-2 rounded-full ${sseConnected ? "bg-brand/50" : "bg-gray-400"}`} />
               <span>{sseConnected ? "Connected" : "Reconnecting..."}</span>
             </div>
             {notifications.length === 0 ? (
@@ -201,7 +201,7 @@ export function VoiceAgentDashboard() {
                 <div key={p.name} className="flex items-center justify-between">
                   <span className="text-[var(--lf-muted)]">{p.name}</span>
                   <span className="flex items-center gap-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full ${p.value !== "—" ? "bg-emerald-500" : "bg-gray-300"}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full ${p.value !== "—" ? "bg-brand/50" : "bg-gray-300"}`} />
                     {p.value}
                   </span>
                 </div>

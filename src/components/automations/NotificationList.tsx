@@ -179,7 +179,7 @@ export function NotificationList({
                   {/* Unread dot */}
                   <div className="pt-1 w-3 shrink-0">
                     {!n.is_read && (
-                      <span className="block h-2.5 w-2.5 rounded-full bg-primary" />
+                      <span className="block h-2.5 w-2.5 rounded-full bg-brand" />
                     )}
                   </div>
 

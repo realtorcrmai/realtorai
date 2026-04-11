@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireVoiceAgentAuth } from "@/lib/voice-agent-auth";
 import Anthropic from "@anthropic-ai/sdk";
+import { createWithRetry } from "@/lib/anthropic/retry";
 import { z } from "zod";
 
 const draftSchema = z.object({
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   const typeLabel = typeLabels[email_type] || `a ${email_type.replace(/_/g, " ")}`;
 
-  const message = await anthropic.messages.create({
+  const message = await createWithRetry(anthropic, {
     model: "claude-haiku-4-5-20251001",
     max_tokens: 600,
     system: `You are a professional real estate agent's email assistant. Write concise, warm, professional emails. Return ONLY valid JSON with "subject" and "body" keys. The body should be plain text (no HTML). Keep emails under 150 words.`,

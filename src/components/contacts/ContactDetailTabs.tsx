@@ -16,9 +16,17 @@ import { SellerPreferencesPanel } from "@/components/contacts/SellerPreferencesP
 import { ContactTasksPanel } from "@/components/contacts/ContactTasksPanel";
 import { ContactDocumentsPanel } from "@/components/contacts/ContactDocumentsPanel";
 import { PropertiesOfInterestPanel } from "@/components/contacts/PropertiesOfInterestPanel";
+import { BuyerJourneyPanel } from "@/components/contacts/BuyerJourneyPanel";
+import { ContactPortfolioTab } from "@/components/contacts/ContactPortfolioTab";
+import type { BuyerJourney } from "@/actions/buyer-journeys";
+import type { BuyerJourneyProperty } from "@/actions/buyer-journey-properties";
+import type { PortfolioItem } from "@/actions/contact-portfolio";
 import { WorkflowStepperCard } from "@/components/contacts/WorkflowStepperCard";
 import ActivityTimeline from "@/components/contacts/ActivityTimeline";
 import { ContextLog } from "@/components/contacts/ContextLog";
+import { FamilyTabPanel } from "@/components/contacts/FamilyWizard";
+import { PropertyDealsTab } from "@/components/contacts/PropertyDealsTab";
+import type { ContactFamilyMember } from "@/types";
 import type {
   Contact,
   Communication,
@@ -38,7 +46,7 @@ type TaskRow = {
   priority: string;
   category: string;
   due_date: string | null;
-  notes: string | null;
+  description: string | null;
   completed_at: string | null;
   created_at: string;
 };
@@ -98,6 +106,12 @@ export type ContactDetailTabsProps = {
   contactId: string;
   contact: Contact;
   isSeller: boolean;
+  isBuyer: boolean;
+
+  // Buyer journey + portfolio
+  buyerJourneys: BuyerJourney[];
+  recentJourneyProperties: (BuyerJourneyProperty & { journeyStatus?: string })[];
+  portfolioItems: PortfolioItem[];
 
   // Overview tab
   sortedEnrollments: EnrollmentRow[];
@@ -132,6 +146,9 @@ export type ContactDetailTabsProps = {
   allContacts: { id: string; name: string }[];
   documents: ContactDocument[];
   contextEntries: Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>;
+
+  // Family tab
+  familyMembers: ContactFamilyMember[];
 };
 
 // Check if preferences object has any meaningful data set
@@ -151,6 +168,11 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
     contactId,
     contact,
     isSeller,
+    isBuyer,
+    // Buyer journey + portfolio
+    buyerJourneys,
+    recentJourneyProperties,
+    portfolioItems,
     // Overview
     sortedEnrollments,
     stepsByWorkflow,
@@ -181,9 +203,17 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
     allContacts,
     documents,
     contextEntries,
+    // Family
+    familyMembers,
   } = props;
 
   const [currentTab, setCurrentTab] = useState("overview");
+
+  // ── Quick Setup tile triggers — open panels inline without tab switch ──
+  const [triggerPrefs, setTriggerPrefs] = useState(false);
+  const [triggerContext, setTriggerContext] = useState(false);
+  const [triggerProperties, setTriggerProperties] = useState(false);
+  const [triggerDocs, setTriggerDocs] = useState(false);
 
   // ── Lazy-load activity log when Activity tab is selected ──
   const [lazyActivities, setLazyActivities] = useState<ActivityRow[] | null>(activities);
@@ -219,6 +249,22 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
         </TabsTrigger>
         <TabsTrigger value="deals" className="rounded-lg">
           🏠 Deals
+        </TabsTrigger>
+        <TabsTrigger value="family" className="rounded-lg">
+          👨‍👩‍👧 Family
+          {familyMembers.length > 0 && (
+            <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-bold px-1">
+              {familyMembers.length}
+            </span>
+          )}
+        </TabsTrigger>
+        <TabsTrigger value="portfolio" className="rounded-lg">
+          🏘️ Portfolio
+          {portfolioItems.length > 0 && (
+            <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-bold px-1">
+              {portfolioItems.length}
+            </span>
+          )}
         </TabsTrigger>
       </TabsList>
 
@@ -257,7 +303,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             }
 
             // Preferences
-            if (prefsHasData) {
+            if (prefsHasData || triggerPrefs) {
               filledPanels.push(
                 isSeller ? (
                   <Card key="prefs" id="section-seller-preferences" className="border-l-4 border-l-indigo-400 bg-indigo-50/20 dark:bg-indigo-950/10">
@@ -268,24 +314,39 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
                 ) : (
                   <Card key="prefs" id="section-buyer-preferences" className="border-l-4 border-l-teal-400 bg-teal-50/20 dark:bg-teal-950/10">
                     <CardContent className="p-4">
-                      <BuyerPreferencesPanel contactId={contactId} preferences={buyerPreferences} />
+                      <BuyerPreferencesPanel contactId={contactId} preferences={buyerPreferences} initialEditing={!prefsHasData && triggerPrefs} />
                     </CardContent>
                   </Card>
                 )
               );
             }
 
+            // Buyer Journey Panel (buyers + dual clients)
+            if (isBuyer && buyerJourneys.length > 0) {
+              filledPanels.push(
+                <Card key="buyer-journey" id="section-buyer-journey" className="border-l-4 border-l-indigo-400 bg-indigo-50/20 dark:bg-indigo-950/10">
+                  <CardContent className="p-4">
+                    <BuyerJourneyPanel
+                      contactId={contactId}
+                      journeys={buyerJourneys}
+                      recentProperties={recentJourneyProperties}
+                    />
+                  </CardContent>
+                </Card>
+              );
+            }
+
             // Context
-            if (contextHasData) {
+            if (contextHasData || triggerContext) {
               filledPanels.push(
                 <div key="context">
-                  <ContextLog contactId={contactId} entries={contextEntries} />
+                  <ContextLog contactId={contactId} entries={contextEntries} autoShowForm={!contextHasData && triggerContext} />
                 </div>
               );
             }
 
             // Properties of interest
-            if (propertiesHasData) {
+            if (propertiesHasData || triggerProperties) {
               filledPanels.push(
                 <Card key="properties" id="section-properties-interest" className="border-l-4 border-l-sky-400 bg-sky-50/20 dark:bg-sky-950/10">
                   <CardContent className="p-4">
@@ -296,11 +357,11 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             }
 
             // Documents
-            if (docsHasData) {
+            if (docsHasData || triggerDocs) {
               filledPanels.push(
                 <Card key="docs" className="border-l-4 border-l-amber-400 bg-amber-50/10 dark:bg-amber-950/10">
                   <CardContent className="p-4">
-                    <ContactDocumentsPanel contactId={contactId} documents={documents} />
+                    <ContactDocumentsPanel contactId={contactId} documents={documents} autoShowUpload={!docsHasData && triggerDocs} />
                   </CardContent>
                 </Card>
               );
@@ -308,39 +369,39 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
 
             // Quick Setup actions for empty sections
             const emptyActions: React.ReactNode[] = [];
-            if (!prefsHasData) {
+            if (!prefsHasData && !triggerPrefs) {
               emptyActions.push(
                 <QuickSetupTile key="prefs" icon="🎯" label="Set Preferences"
                   description={isSeller ? "Motivation, pricing, timeline" : "Budget, areas, property type"}
                   color="indigo"
-                  onClick={() => { const btn = document.querySelector('[data-pref-edit]') as HTMLButtonElement; if (btn) btn.click(); }}
+                  onClick={() => setTriggerPrefs(true)}
                 />
               );
             }
-            if (!contextHasData) {
+            if (!contextHasData && !triggerContext) {
               emptyActions.push(
                 <QuickSetupTile key="context" icon="📝" label="Add Context"
                   description="Notes, objections, preferences"
                   color="teal"
-                  onClick={() => { const el = document.getElementById("context-add-btn"); if (el) el.click(); }}
+                  onClick={() => setTriggerContext(true)}
                 />
               );
             }
-            if (!isSeller && !propertiesHasData) {
+            if (!isSeller && !propertiesHasData && !triggerProperties) {
               emptyActions.push(
                 <QuickSetupTile key="properties" icon="🏠" label="Add Property"
                   description="Track properties of interest"
                   color="sky"
-                  onClick={() => {}}
+                  onClick={() => setTriggerProperties(true)}
                 />
               );
             }
-            if (!docsHasData) {
+            if (!docsHasData && !triggerDocs) {
               emptyActions.push(
                 <QuickSetupTile key="docs" icon="📄" label="Upload Doc"
                   description="Contracts, ID, pre-approval"
                   color="amber"
-                  onClick={() => { const el = document.getElementById("doc-upload-btn"); if (el) el.click(); }}
+                  onClick={() => setTriggerDocs(true)}
                 />
               );
             }
@@ -479,6 +540,28 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
               </CardContent>
             </Card>
           )}
+        </div>
+      </TabsContent>
+
+      {/* ── FAMILY TAB ─────────────────────────────────────── */}
+      <TabsContent value="family" className="">
+        <div className="space-y-3">
+          <Card className="border-l-4 border-l-rose-400 bg-rose-50/15 dark:bg-rose-950/10">
+            <CardContent className="p-4">
+              <FamilyTabPanel contactId={contactId} initialMembers={familyMembers} />
+            </CardContent>
+          </Card>
+        </div>
+      </TabsContent>
+
+      {/* ── PORTFOLIO TAB ──────────────────────────────────── */}
+      <TabsContent value="portfolio" className="">
+        <div className="space-y-3">
+          <Card className="border-l-4 border-l-indigo-400 bg-indigo-50/15 dark:bg-indigo-950/10">
+            <CardContent className="p-4">
+              <ContactPortfolioTab contactId={contactId} items={portfolioItems} />
+            </CardContent>
+          </Card>
         </div>
       </TabsContent>
     </Tabs>

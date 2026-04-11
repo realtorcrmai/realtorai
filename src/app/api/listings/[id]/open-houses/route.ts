@@ -1,6 +1,5 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
 import { z } from "zod";
 
 const createOpenHouseSchema = z.object({
@@ -37,13 +36,13 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const { id } = await params;
-  const supabase = createAdminClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("open_houses")
     .select("*, open_house_visitors(count)")
     .eq("listing_id", id)
@@ -57,11 +56,11 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const { id } = await params;
-  const supabase = createAdminClient();
   const body = await req.json();
 
   const parsed = createOpenHouseSchema.safeParse(body);
@@ -72,16 +71,16 @@ export async function POST(
     );
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("open_houses")
     .insert({
       listing_id: id,
-      date: body.date,
-      start_time: body.start_time,
-      end_time: body.end_time,
-      type: body.type || "public",
-      status: body.status || "scheduled",
-      notes: body.notes || null,
+      date: parsed.data.date,
+      start_time: parsed.data.start_time,
+      end_time: parsed.data.end_time,
+      type: parsed.data.type || "public",
+      status: parsed.data.status || "scheduled",
+      notes: parsed.data.notes || null,
     })
     .select()
     .single();
@@ -89,21 +88,21 @@ export async function POST(
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Also log as a listing activity
-  await supabase.from("listing_activities").insert({
+  await tc.from("listing_activities").insert({
     listing_id: id,
     activity_type: "open_house",
-    date: body.date,
-    notes: `${body.type || "public"} open house scheduled`,
+    date: parsed.data.date,
+    notes: `${parsed.data.type || "public"} open house scheduled`,
   });
 
   return NextResponse.json(data, { status: 201 });
 }
 
 export async function PATCH(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
-  const supabase = createAdminClient();
   const body = await req.json();
 
   const parsed = patchOpenHouseSchema.safeParse(body);
@@ -115,7 +114,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const { open_house_id, ...updates } = parsed.data;
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("open_houses")
     .update(updates)
     .eq("id", open_house_id)
@@ -127,16 +126,16 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
-  const supabase = createAdminClient();
   const url = new URL(req.url);
   const ohId = url.searchParams.get("open_house_id");
 
   if (!ohId) return NextResponse.json({ error: "open_house_id required" }, { status: 400 });
 
-  const { error } = await supabase.from("open_houses").delete().eq("id", ohId);
+  const { error } = await tc.from("open_houses").delete().eq("id", ohId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

@@ -253,10 +253,10 @@ export default function PropertySearchPage() {
                 <div
                   className={`h-1 ${
                     listing.status === "active"
-                      ? "bg-emerald-500"
+                      ? "bg-brand"
                       : listing.status === "pending"
                         ? "bg-amber-500"
-                        : "bg-blue-500"
+                        : "bg-brand"
                   }`}
                 />
                 <CardHeader className="pb-2 pt-4">
@@ -283,7 +283,7 @@ export default function PropertySearchPage() {
                   {/* Price */}
                   {listing.list_price && (
                     <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-emerald-500" />
+                      <DollarSign className="h-4 w-4 text-brand" />
                       <span className="text-lg font-bold">
                         ${listing.list_price.toLocaleString()}
                       </span>

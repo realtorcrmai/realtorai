@@ -18,13 +18,15 @@ import type { ContactDocument } from "@/types";
 export function ContactDocumentsPanel({
   contactId,
   documents,
+  autoShowUpload = false,
 }: {
   contactId: string;
   documents: ContactDocument[];
+  autoShowUpload?: boolean;
 }) {
   const [uploading, setUploading] = useState(false);
   const [docType, setDocType] = useState<string>("Other");
-  const [showUpload, setShowUpload] = useState(false);
+  const [showUpload, setShowUpload] = useState(autoShowUpload);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 

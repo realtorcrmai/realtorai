@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getRealtorConfig } from "@/actions/config";
 import type { GreetingRule } from "@/actions/config";
 import Anthropic from "@anthropic-ai/sdk";
+import { createWithRetry } from "@/lib/anthropic/retry";
 
 // ── Types ───────────────────────────────────────────────────
 interface GreetingCandidate {
@@ -181,13 +182,16 @@ export async function evaluateGreetings(): Promise<{
 
       if (contactIds.length === 0) continue;
 
-      // Fetch contact details
-      // Exclude agents from greetings — they only receive listing blasts
+      // Fetch contact details.
+      // CASL: greetings are commercial email, so enforce casl_consent_given=true
+      // at the DB level + filterSendable() as belt-and-suspenders.
+      // Exclude agents from greetings — they only receive listing blasts.
       const { data: contacts } = await supabase
         .from("contacts")
-        .select("id, name, type, email, newsletter_unsubscribed, newsletter_intelligence, stage_bar, notes")
+        .select("id, name, type, email, newsletter_unsubscribed, casl_consent_given, casl_consent_date, newsletter_intelligence, stage_bar, notes")
         .in("id", contactIds)
         .eq("newsletter_unsubscribed", false)
+        .eq("casl_consent_given", true)
         .not("email", "is", null)
         .not("type", "eq", "agent")
         .limit(200);
@@ -362,7 +366,7 @@ Return JSON array:
 
   try {
     const model = process.env.AI_SCORING_MODEL || "claude-sonnet-4-20250514";
-    const msg = await anthropic.messages.create({
+    const msg = await createWithRetry(anthropic, {
       model,
       max_tokens: 3000,
       messages: [{ role: "user", content: prompt }],
@@ -407,10 +411,12 @@ Return JSON array:
 // ── Helpers ──────────────────────────────────────────────────
 
 async function getContactIdsByRecipients(supabase: ReturnType<typeof createAdminClient>, recipients: string): Promise<string[]> {
+  // CASL: all greeting-candidate contacts must have explicit consent.
   let query = supabase
     .from("contacts")
     .select("id")
     .eq("newsletter_unsubscribed", false)
+    .eq("casl_consent_given", true)
     .not("email", "is", null)
     .not("type", "eq", "agent"); // Agents only get listing blasts, not greetings
 
@@ -425,40 +431,5 @@ async function getContactIdsByRecipients(supabase: ReturnType<typeof createAdmin
   return (data || []).map((c: { id: string }) => c.id);
 }
 
-function wrapGreetingHtml(body: string, occasion: string, agentName: string, brokerage: string): string {
-  const colors: Record<string, string> = {
-    birthday: "#ec4899", home_anniversary: "#4f35d2", christmas: "#16a34a",
-    new_year: "#7c3aed", diwali: "#f59e0b", lunar_new_year: "#dc2626",
-    canada_day: "#dc2626", thanksgiving: "#ea580c", valentines: "#ec4899",
-    mothers_day: "#ec4899", fathers_day: "#2563eb",
-  };
-  const emojis: Record<string, string> = {
-    birthday: "🎂", home_anniversary: "🏠", christmas: "🎄",
-    new_year: "🎆", diwali: "🪔", lunar_new_year: "🧧",
-    canada_day: "🍁", thanksgiving: "🦃", valentines: "💝",
-    mothers_day: "💐", fathers_day: "👔",
-  };
-  const color = colors[occasion] || "#4f35d2";
-  const emoji = emojis[occasion] || "✨";
-
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');</style>
-</head><body style="margin:0;padding:0;background:#f5f5f7;font-family:'Inter',-apple-system,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f7;">
-<tr><td align="center" style="padding:24px 16px;">
-<table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
-  <tr><td><div style="background:linear-gradient(135deg,${color}22,${color}11);padding:32px;text-align:center;">
-    <div style="font-size:40px;margin-bottom:8px;">${emoji}</div>
-  </div></td></tr>
-  <tr><td style="padding:24px 32px;">${body}</td></tr>
-  <tr><td style="padding:0 32px 24px;">
-    <table width="100%" style="border-top:1px solid #e5e7eb;padding-top:16px;">
-    <tr><td width="36"><div style="width:36px;height:36px;border-radius:50%;background:${color};text-align:center;line-height:36px;color:#fff;font-weight:700;font-size:15px;">${agentName[0]}</div></td>
-    <td style="padding-left:10px;"><div style="font-size:13px;font-weight:600;color:#1d1d1f;">${agentName}</div><div style="font-size:11px;color:#6b7280;">${brokerage}</div></td></tr>
-    </table>
-  </td></tr>
-  <tr><td style="padding:12px 32px 16px;text-align:center;background:#f9fafb;border-top:1px solid #f3f4f6;">
-    <p style="font-size:10px;color:#9ca3af;margin:0;"><a href="#" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a></p>
-  </td></tr>
-</table></td></tr></table></body></html>`;
-}
+// Dead code removed: wrapGreetingHtml() was never called.
+// Greeting emails now use buildEmailFromType() from email-blocks.ts (see line ~264).

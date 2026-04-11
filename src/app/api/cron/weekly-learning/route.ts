@@ -8,7 +8,7 @@ export async function GET(req: Request) {
   // Verify cron secret
   const authHeader = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -23,13 +23,12 @@ export async function GET(req: Request) {
 
     const realtorIds = configs?.map((c) => c.realtor_id) || [];
 
-    // If no configs exist, create one for the demo user
     if (realtorIds.length === 0) {
-      await supabase.from("realtor_agent_config").upsert(
-        { realtor_id: "demo@realestatecrm.com" },
-        { onConflict: "realtor_id" }
-      );
-      realtorIds.push("demo@realestatecrm.com");
+      return NextResponse.json({
+        success: true, realtors: [], contactsUpdated: 0,
+        timestamp: new Date().toISOString(),
+        reason: "No realtor_agent_config entries found",
+      });
     }
 
     // Run learning cycle for each realtor

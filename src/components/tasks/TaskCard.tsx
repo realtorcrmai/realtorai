@@ -102,7 +102,7 @@ export function TaskCard({ task, onUpdate, isSelected = false, onToggleSelect }:
           checked={isSelected}
           onChange={() => onToggleSelect(task.id)}
           onClick={(e) => e.stopPropagation()}
-          className="mt-1 shrink-0 h-4 w-4 cursor-pointer accent-indigo-600"
+          className="mt-1 shrink-0 h-4 w-4 cursor-pointer accent-[#0F7694]"
           aria-label={`Select task: ${task.title}`}
         />
       )}
@@ -114,9 +114,9 @@ export function TaskCard({ task, onUpdate, isSelected = false, onToggleSelect }:
         title={`Mark as ${nextStatus()}`}
       >
         {task.status === "completed" ? (
-          <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+          <CheckCircle2 className="h-5 w-5 text-success" />
         ) : task.status === "in_progress" ? (
-          <Clock className="h-5 w-5 text-blue-500" />
+          <Clock className="h-5 w-5 text-brand" />
         ) : (
           <Circle className="h-5 w-5 text-muted-foreground/50 hover:text-primary" />
         )}
@@ -127,7 +127,7 @@ export function TaskCard({ task, onUpdate, isSelected = false, onToggleSelect }:
         <div className="flex items-start justify-between gap-2">
           <p
             className={cn(
-              "text-xs md:text-sm font-medium",
+              "text-sm font-medium",
               task.status === "completed" && "line-through text-muted-foreground"
             )}
           >
@@ -139,7 +139,7 @@ export function TaskCard({ task, onUpdate, isSelected = false, onToggleSelect }:
         </div>
 
         {task.description && (
-          <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 line-clamp-1 md:line-clamp-2">
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
             {task.description}
           </p>
         )}
@@ -203,10 +203,10 @@ export function TaskCard({ task, onUpdate, isSelected = false, onToggleSelect }:
         {task.status !== "completed" && (
           <button
             onClick={() => updateStatus("completed")}
-            className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors"
+            className="p-1 rounded hover:bg-brand-muted dark:hover:bg-brand-muted transition-colors"
             title="Complete"
           >
-            <ArrowRight className="h-3.5 w-3.5 text-emerald-500" />
+            <ArrowRight className="h-3.5 w-3.5 text-brand" />
           </button>
         )}
         <button

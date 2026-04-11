@@ -1,12 +1,10 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
 
 export async function GET() {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
-
-  const supabase = createAdminClient();
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const [
     { data: contacts },
@@ -16,12 +14,12 @@ export async function GET() {
     { data: tasks },
     { data: communications },
   ] = await Promise.all([
-    supabase.from("contacts").select("*"),
-    supabase.from("listings").select("*"),
-    supabase.from("deals").select("*"),
-    supabase.from("appointments").select("*"),
-    supabase.from("tasks").select("*"),
-    supabase.from("communications").select("*"),
+    tc.from("contacts").select("*"),
+    tc.from("listings").select("*"),
+    tc.from("deals").select("*"),
+    tc.from("appointments").select("*"),
+    tc.from("tasks").select("*"),
+    tc.from("communications").select("*"),
   ]);
 
   const allContacts = contacts ?? [];
@@ -109,12 +107,12 @@ export async function GET() {
       year: "numeric",
     });
     const monthDeals = allDeals.filter(
-      (deal) => deal.created_at.slice(0, 7) === monthKey
+      (deal: Record<string, unknown>) => (deal.created_at as string).slice(0, 7) === monthKey
     );
     monthlyDeals.push({
       month: monthLabel,
       count: monthDeals.length,
-      value: monthDeals.reduce((s, deal) => s + (Number(deal.value) || 0), 0),
+      value: monthDeals.reduce((s: number, deal: Record<string, unknown>) => s + (Number(deal.value) || 0), 0),
     });
   }
 

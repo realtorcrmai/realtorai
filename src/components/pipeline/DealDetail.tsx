@@ -212,7 +212,7 @@ export function DealDetail({
                     </div>
                   )}
                   {commissionAmount > 0 && (
-                    <p className="text-sm text-emerald-600 font-medium mt-1">
+                    <p className="text-sm text-brand-dark font-medium mt-1">
                       GCI: ${commissionAmount.toLocaleString("en-CA")}
                       {deal.commission_pct && (
                         <span className="text-muted-foreground ml-1">
@@ -275,7 +275,7 @@ export function DealDetail({
                 </CardTitle>
                 <div className="h-2 w-24 bg-muted rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-primary rounded-full transition-all"
+                    className="h-full bg-gradient-to-r from-[#67D4E8] to-[#0F7694] rounded-full transition-all"
                     style={{
                       width: `${checklist.length > 0 ? (completedCount / checklist.length) * 100 : 0}%`,
                     }}
@@ -424,9 +424,9 @@ export function DealDetail({
 
           {/* What's Next — for closed deals */}
           {(deal.status === "won" || deal.status === "lost") && (
-            <Card className="border-blue-100 bg-blue-50/30">
+            <Card className="border-brand/15 bg-brand-muted">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-blue-700">What&apos;s Next?</CardTitle>
+                <CardTitle className="text-sm text-brand-dark">What&apos;s Next?</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap items-center gap-2">

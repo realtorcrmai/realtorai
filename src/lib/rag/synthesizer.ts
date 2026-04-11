@@ -3,6 +3,7 @@
 // ============================================================
 
 import Anthropic from '@anthropic-ai/sdk';
+import { createWithRetry } from '@/lib/anthropic/retry';
 import { MODELS, MAX_TOKENS, SESSION } from './constants';
 import type { QueryPlan, RagMessage, UIContext, SearchResult } from './types';
 
@@ -48,7 +49,7 @@ export async function synthesize(input: SynthesizeInput): Promise<SynthesizeOutp
   const systemPrompt = buildSystemPrompt(input);
   const messages = buildMessages(input);
 
-  const response = await anthropic.messages.create({
+  const response = await createWithRetry(anthropic, {
     model,
     max_tokens: maxTokens,
     system: [
@@ -173,7 +174,7 @@ export async function generateDirect(
   }
   messages.push({ role: 'user', content: message });
 
-  const response = await anthropic.messages.create({
+  const response = await createWithRetry(anthropic, {
     model: MODELS.TIER3_STANDARD,
     max_tokens: 500,
     system: systemPrompt,

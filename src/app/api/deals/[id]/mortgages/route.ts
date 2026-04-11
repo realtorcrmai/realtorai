@@ -1,6 +1,5 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
 import { z } from "zod";
 
 const mortgageSchema = z.object({
@@ -58,13 +57,13 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const { id } = await params;
-  const supabase = createAdminClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("mortgages")
     .select("*")
     .eq("deal_id", id)
@@ -78,11 +77,11 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const { id } = await params;
-  const supabase = createAdminClient();
   const body = await req.json();
 
   const parsed = mortgageSchema.safeParse(body);
@@ -93,24 +92,24 @@ export async function POST(
     );
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("mortgages")
     .insert({
       deal_id: id,
-      contact_id: body.contact_id || null,
-      lender_name: body.lender_name,
-      mortgage_amount: body.mortgage_amount || null,
-      interest_rate: body.interest_rate || null,
-      mortgage_type: body.mortgage_type || "fixed",
-      term_months: body.term_months || null,
-      amortization_years: body.amortization_years || null,
-      start_date: body.start_date || null,
-      renewal_date: body.renewal_date || null,
-      monthly_payment: body.monthly_payment || null,
-      lender_contact: body.lender_contact || null,
-      lender_phone: body.lender_phone || null,
-      lender_email: body.lender_email || null,
-      notes: body.notes || null,
+      contact_id: parsed.data.contact_id || null,
+      lender_name: parsed.data.lender_name,
+      mortgage_amount: parsed.data.mortgage_amount || null,
+      interest_rate: parsed.data.interest_rate || null,
+      mortgage_type: parsed.data.mortgage_type || "fixed",
+      term_months: parsed.data.term_months || null,
+      amortization_years: parsed.data.amortization_years || null,
+      start_date: parsed.data.start_date || null,
+      renewal_date: parsed.data.renewal_date || null,
+      monthly_payment: parsed.data.monthly_payment || null,
+      lender_contact: parsed.data.lender_contact || null,
+      lender_phone: parsed.data.lender_phone || null,
+      lender_email: parsed.data.lender_email || null,
+      notes: parsed.data.notes || null,
     })
     .select()
     .single();
@@ -118,18 +117,38 @@ export async function POST(
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Auto-create renewal task if renewal_date is set
-  if (body.renewal_date) {
-    await createRenewalTask(supabase, id, body.contact_id, body.lender_name, body.renewal_date);
+  if (parsed.data.renewal_date) {
+    const renewal = new Date(parsed.data.renewal_date);
+    const reminder = new Date(renewal);
+    reminder.setDate(reminder.getDate() - 90);
+
+    if (reminder > new Date()) {
+      const { data: deal } = await tc
+        .from("deals")
+        .select("title, contact_id")
+        .eq("id", id)
+        .single();
+
+      await tc.from("tasks").insert({
+        title: `Mortgage renewal reminder - ${deal?.title || "Deal"}`,
+        description: `Mortgage with ${parsed.data.lender_name} renews on ${parsed.data.renewal_date}. Contact buyer 90 days before to discuss renewal options.`,
+        status: "pending",
+        priority: "high",
+        category: "follow_up",
+        due_date: reminder.toISOString().split("T")[0],
+        contact_id: parsed.data.contact_id || deal?.contact_id || null,
+      });
+    }
   }
 
   return NextResponse.json(data, { status: 201 });
 }
 
 export async function PATCH(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
-  const supabase = createAdminClient();
   const body = await req.json();
 
   const parsed = patchMortgageSchema.safeParse(body);
@@ -142,7 +161,7 @@ export async function PATCH(req: NextRequest) {
 
   const { mortgage_id, ...updates } = parsed.data;
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("mortgages")
     .update(updates)
     .eq("id", mortgage_id)
@@ -154,10 +173,10 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
-  const supabase = createAdminClient();
   const url = new URL(req.url);
   const mortgageId = url.searchParams.get("mortgage_id");
 
@@ -165,40 +184,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "mortgage_id required" }, { status: 400 });
   }
 
-  const { error } = await supabase.from("mortgages").delete().eq("id", mortgageId);
+  const { error } = await tc.from("mortgages").delete().eq("id", mortgageId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
-}
-
-async function createRenewalTask(
-  supabase: ReturnType<typeof createAdminClient>,
-  dealId: string,
-  contactId: string | null,
-  lenderName: string,
-  renewalDate: string
-) {
-  // Create a task 90 days before renewal date to remind realtor
-  const renewal = new Date(renewalDate);
-  const reminder = new Date(renewal);
-  reminder.setDate(reminder.getDate() - 90);
-
-  // Only create if reminder is in the future
-  if (reminder > new Date()) {
-    // Get deal info for task title
-    const { data: deal } = await supabase
-      .from("deals")
-      .select("title, contact_id")
-      .eq("id", dealId)
-      .single();
-
-    await supabase.from("tasks").insert({
-      title: `Mortgage renewal reminder - ${deal?.title || "Deal"}`,
-      description: `Mortgage with ${lenderName} renews on ${renewalDate}. Contact buyer 90 days before to discuss renewal options.`,
-      status: "pending",
-      priority: "high",
-      category: "follow_up",
-      due_date: reminder.toISOString().split("T")[0],
-      contact_id: contactId || deal?.contact_id || null,
-    });
-  }
 }

@@ -32,7 +32,7 @@ type Task = {
   priority: string;
   category: string;
   due_date: string | null;
-  notes: string | null;
+  description: string | null;
   completed_at: string | null;
   created_at: string;
 };
@@ -50,7 +50,8 @@ export function ContactTasksPanel({
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("medium");
   const [category, setCategory] = useState("general");
-  const [notes, setNotes] = useState("");
+  const [description, setDescription] = useState("");
+  const [saveError, setSaveError] = useState("");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -70,19 +71,24 @@ export function ContactTasksPanel({
 
   function handleAdd() {
     if (!title.trim()) return;
+    setSaveError("");
     startTransition(async () => {
-      await createContactTask(contactId, {
+      const result = await createContactTask(contactId, {
         title: title.trim(),
         due_date: dueDate || undefined,
         priority,
         category,
-        notes: notes || undefined,
+        description: description || undefined,
       });
+      if (result?.error) {
+        setSaveError(result.error);
+        return;
+      }
       setTitle("");
       setDueDate("");
       setPriority("medium");
       setCategory("general");
-      setNotes("");
+      setDescription("");
       setShowAdd(false);
       router.refresh();
     });
@@ -138,7 +144,7 @@ export function ContactTasksPanel({
           disabled={isPending}
           className={`mt-0.5 shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
             isComplete
-              ? "bg-green-500 border-green-500 text-white"
+              ? "bg-brand/50 border-green-500 text-white"
               : "border-muted-foreground/30 hover:border-primary"
           }`}
         >
@@ -153,17 +159,17 @@ export function ContactTasksPanel({
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             {priorityConfig && (
               <span
-                className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${priorityConfig.bg} ${priorityConfig.color}`}
+                className={`px-1.5 py-0.5 text-xs font-medium rounded ${priorityConfig.bg} ${priorityConfig.color}`}
               >
                 {task.priority}
               </span>
             )}
-            <span className="text-[10px] text-muted-foreground capitalize">
+            <span className="text-xs text-muted-foreground capitalize">
               {task.category?.replace("_", " ")}
             </span>
             {task.due_date && (
               <span
-                className={`flex items-center gap-0.5 text-[10px] ${
+                className={`flex items-center gap-0.5 text-xs ${
                   isOverdue ? "text-red-600 font-medium" : "text-muted-foreground"
                 }`}
               >
@@ -175,8 +181,8 @@ export function ContactTasksPanel({
               </span>
             )}
           </div>
-          {task.notes && (
-            <p className="text-xs text-muted-foreground mt-1">{task.notes}</p>
+          {task.description && (
+            <p className="text-xs text-muted-foreground mt-1">{task.description}</p>
           )}
         </div>
         <button
@@ -234,7 +240,7 @@ export function ContactTasksPanel({
           />
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <label className="text-[10px] text-muted-foreground uppercase font-medium">
+              <label className="text-xs text-muted-foreground uppercase font-medium">
                 Due Date
               </label>
               <input
@@ -246,7 +252,7 @@ export function ContactTasksPanel({
               />
             </div>
             <div>
-              <label className="text-[10px] text-muted-foreground uppercase font-medium">
+              <label className="text-xs text-muted-foreground uppercase font-medium">
                 Priority
               </label>
               <select
@@ -263,7 +269,7 @@ export function ContactTasksPanel({
               </select>
             </div>
             <div>
-              <label className="text-[10px] text-muted-foreground uppercase font-medium">
+              <label className="text-xs text-muted-foreground uppercase font-medium">
                 Category
               </label>
               <select
@@ -282,13 +288,16 @@ export function ContactTasksPanel({
             </div>
           </div>
           <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
             placeholder="Notes (optional)..."
             rows={2}
-            className="w-full px-3 py-2 text-xs border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+            className="w-full px-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary resize-none"
             disabled={isPending}
           />
+          {saveError && (
+            <p className="text-xs text-red-600">{saveError}</p>
+          )}
           <div className="flex items-center gap-2">
             <Button
               size="sm"

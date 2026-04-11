@@ -108,9 +108,9 @@ export function NetworkStatsCard({
   const filledItems = breakdown?.items.filter((i) => i.filled) ?? [];
 
   const stats = [
-    { label: "Connections", value: connectionCount.toString(), color: "text-indigo-600" },
-    { label: "Referrals", value: referralCount.toString(), color: "text-teal-600" },
-    { label: "Network Value", value: formatNetworkValue(networkValue), color: "text-emerald-600" },
+    { label: "Connections", value: connectionCount.toString(), color: "text-brand" },
+    { label: "Referrals", value: referralCount.toString(), color: "text-brand" },
+    { label: "Network Value", value: formatNetworkValue(networkValue), color: "text-brand" },
   ];
 
   return (
@@ -123,7 +123,7 @@ export function NetworkStatsCard({
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-2">
         {stats.map((stat) => (
-          <div key={stat.label} className="bg-[#f8f7fd] rounded-lg p-3 text-center">
+          <div key={stat.label} className="bg-muted/50 rounded-lg p-3 text-center">
             <p className={`text-lg font-bold ${stat.color}`}>{stat.value}</p>
             <p className="text-[11px] text-muted-foreground">{stat.label}</p>
           </div>
@@ -132,13 +132,13 @@ export function NetworkStatsCard({
 
       {/* Data Score — clickable */}
       <div
-        className="bg-[#f8f7fd] rounded-lg p-3 cursor-pointer hover:bg-[#f0eeff] transition-colors"
+        className="bg-muted/50 rounded-lg p-3 cursor-pointer hover:bg-[#f0eeff] transition-colors"
         onClick={() => setShowBreakdown(!showBreakdown)}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">Data Score</span>
-            <span className={`text-lg font-bold ${effectiveScore >= 80 ? "text-emerald-600" : effectiveScore >= 50 ? "text-amber-600" : "text-red-500"}`}>
+            <span className={`text-lg font-bold ${effectiveScore >= 80 ? "text-brand" : effectiveScore >= 50 ? "text-amber-600" : "text-red-500"}`}>
               {effectiveScore}%
             </span>
           </div>
@@ -150,7 +150,7 @@ export function NetworkStatsCard({
         {/* Progress bar */}
         <div className="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all ${effectiveScore >= 80 ? "bg-emerald-500" : effectiveScore >= 50 ? "bg-amber-500" : "bg-red-400"}`}
+            className={`h-full rounded-full transition-all ${effectiveScore >= 80 ? "bg-brand/50" : effectiveScore >= 50 ? "bg-amber-500" : "bg-red-400"}`}
             style={{ width: `${effectiveScore}%` }}
           />
         </div>
@@ -177,10 +177,10 @@ export function NetworkStatsCard({
             {/* Filled items */}
             {filledItems.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-emerald-600 mb-1.5">Completed ({filledItems.length})</p>
+                <p className="text-xs font-semibold text-brand mb-1.5">Completed ({filledItems.length})</p>
                 {filledItems.map((item) => (
                   <div key={item.label} className="flex items-center gap-2 py-0.5">
-                    <span className="text-emerald-500 text-xs">✓</span>
+                    <span className="text-brand text-xs">✓</span>
                     <span className="text-xs text-muted-foreground">{item.label}</span>
                   </div>
                 ))}

@@ -23,10 +23,10 @@ type StatItem = {
 
 function buildItems(stats: DashboardStats): StatItem[] {
   return [
-    { label: "Active Listings", value: stats.activeListings, icon: Building2, href: "/listings", color: "text-blue-600", iconBg: "bg-blue-50" },
-    { label: "Open Tasks", value: stats.openTasks, icon: ListTodo, href: "/tasks", color: "text-indigo-600", iconBg: "bg-indigo-50" },
-    { label: "Pending Showings", value: stats.pendingShowings, icon: Clock, href: "/showings", color: "text-teal-600", iconBg: "bg-teal-50" },
-    { label: "Missing Docs", value: stats.missingDocs, icon: FileWarning, href: "/forms", color: "text-rose-600", iconBg: "bg-rose-50", alert: stats.missingDocs > 0 },
+    { label: "Active Listings",  value: stats.activeListings,  icon: Building2,    href: "/listings", color: "text-brand", iconBg: "bg-brand-muted" },
+    { label: "Open Tasks",       value: stats.openTasks,       icon: ListTodo,     href: "/tasks",    color: "text-[#A25DDC]", iconBg: "bg-[#A25DDC]/10" },
+    { label: "Pending Showings", value: stats.pendingShowings, icon: Clock,        href: "/showings", color: "text-[#FDAB3D]", iconBg: "bg-[#FDAB3D]/15" },
+    { label: "Missing Docs",     value: stats.missingDocs,     icon: FileWarning,  href: "/forms",    color: "text-rose-600",  iconBg: "bg-rose-50", alert: stats.missingDocs > 0 },
   ];
 }
 
@@ -109,25 +109,9 @@ export function GreetingTicker({ initialStats }: { initialStats: DashboardStats 
   const pair = page === 0 ? items.slice(0, 2) : items.slice(2, 4);
 
   return (
-    <div className="flex items-center gap-3">
-      {/* Dot indicators with glow */}
-      <div className="flex flex-col gap-1.5 shrink-0">
-        {[0, 1].map((i) => (
-          <button
-            key={i}
-            onClick={() => goTo(i)}
-            className={cn(
-              "w-1.5 rounded-full transition-all duration-700 ease-out",
-              page === i
-                ? "h-4 bg-primary shadow-[0_0_6px_rgba(79,70,229,0.4)]"
-                : "h-1.5 bg-muted-foreground/20 hover:bg-muted-foreground/40"
-            )}
-          />
-        ))}
-      </div>
-
+    <div className="flex flex-col items-end gap-1.5">
       {/* Cards with crossfade + slide */}
-      <div className="relative overflow-hidden h-[52px] w-[280px]">
+      <div className="relative overflow-hidden h-[52px] w-[300px]">
         <div
           className={cn(
             "flex items-center gap-2 h-full transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]",
@@ -154,6 +138,22 @@ export function GreetingTicker({ initialStats }: { initialStats: DashboardStats 
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Horizontal dot indicators below cards */}
+      <div className="flex items-center gap-1.5 pr-1.5">
+        {[0, 1].map((i) => (
+          <button
+            key={i}
+            onClick={() => goTo(i)}
+            className={cn(
+              "h-1 rounded-full transition-all duration-500 ease-out",
+              page === i
+                ? "w-4 bg-brand"
+                : "w-1 bg-muted-foreground/25 hover:bg-muted-foreground/45"
+            )}
+          />
+        ))}
       </div>
     </div>
   );

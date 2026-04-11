@@ -42,7 +42,7 @@ export function VoiceStatusIndicator() {
       <span className="text-sm">🎙️</span>
       <span
         className={`h-2 w-2 rounded-full ${
-          connected ? "bg-green-500" : "bg-red-400"
+          connected ? "bg-brand/50" : "bg-red-400"
         }`}
       />
     </Link>

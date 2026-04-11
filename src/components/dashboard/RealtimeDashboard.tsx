@@ -52,12 +52,12 @@ const EVENT_ICONS: Record<RealtimeEvent["type"], typeof UserPlus> = {
 };
 
 const EVENT_COLORS: Record<RealtimeEvent["type"], string> = {
-  new_lead: "text-blue-600",
-  showing_request: "text-teal-600",
-  task_completed: "text-green-600",
-  listing_sold: "text-emerald-600",
-  listing_active: "text-indigo-600",
-  message_received: "text-violet-600",
+  new_lead: "text-brand",
+  showing_request: "text-brand",
+  task_completed: "text-brand",
+  listing_sold: "text-brand",
+  listing_active: "text-brand",
+  message_received: "text-brand",
 };
 
 // ── Quick Stats (real-time) ─────────────────────────────────
@@ -74,17 +74,17 @@ function RealtimeQuickStats({
     {
       label: "Active Listings",
       value: stats.activeListings,
-      color: "text-indigo-600 dark:text-indigo-400",
+      color: "text-brand dark:text-brand-light",
     },
     {
       label: "Open Tasks",
       value: stats.openTasks,
-      color: "text-blue-600 dark:text-blue-400",
+      color: "text-brand dark:text-brand-light",
     },
     {
       label: "Pending Showings",
       value: stats.pendingShowings,
-      color: "text-teal-600 dark:text-teal-400",
+      color: "text-brand dark:text-brand-light",
     },
     {
       label: "Missing Docs",
@@ -117,12 +117,12 @@ function RealtimeQuickStats({
       {/* Connection indicator — subtle */}
       <div className="col-span-2 sm:col-span-4 flex items-center justify-end gap-1.5 -mt-1">
         {mode === "realtime" ? (
-          <span className="flex items-center gap-1 text-[10px] text-emerald-600/60">
+          <span className="flex items-center gap-1 text-[10px] text-brand/60">
             <Wifi className="h-3 w-3" />
             Live
           </span>
         ) : mode === "polling" ? (
-          <span className="flex items-center gap-1 text-[10px] text-blue-500/60">
+          <span className="flex items-center gap-1 text-[10px] text-brand/60">
             <RefreshCw className="h-3 w-3" />
             Auto-refresh (30s)
           </span>
@@ -145,8 +145,8 @@ function LiveActivityFeed({ events }: { events: RealtimeEvent[] }) {
     <div className="glass rounded-xl p-4 elevation-2">
       <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-2">
         <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-brand/50" />
         </span>
         Live Activity
       </h2>

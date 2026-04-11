@@ -65,7 +65,7 @@ export function GalleryStep({ assets, className }: GalleryStepProps) {
       {completedAssets.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <CheckCircle2 className="h-4 w-4 text-brand" />
             Completed ({completedAssets.length})
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger-children">
@@ -106,9 +106,9 @@ export function GalleryStep({ assets, className }: GalleryStepProps) {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {asset.asset_type === "video" ? (
-                        <Video className="h-4 w-4 text-violet-600" />
+                        <Video className="h-4 w-4 text-brand" />
                       ) : (
-                        <ImageIcon className="h-4 w-4 text-cyan-600" />
+                        <ImageIcon className="h-4 w-4 text-brand" />
                       )}
                       <span className="text-sm font-semibold text-foreground capitalize">
                         {asset.asset_type}
@@ -180,9 +180,9 @@ export function GalleryStep({ assets, className }: GalleryStepProps) {
                 >
                   <div className="flex items-center gap-3">
                     {asset.asset_type === "video" ? (
-                      <Video className="h-5 w-5 text-violet-600" />
+                      <Video className="h-5 w-5 text-brand" />
                     ) : (
-                      <ImageIcon className="h-5 w-5 text-cyan-600" />
+                      <ImageIcon className="h-5 w-5 text-brand" />
                     )}
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-foreground capitalize">

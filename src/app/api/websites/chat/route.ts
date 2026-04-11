@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { createWithRetry } from "@/lib/anthropic/retry";
 import { validateApiKey, corsHeaders, handleCORS, normalizePhone, createAdminClient } from "@/lib/website-api";
 
 export async function OPTIONS(request: NextRequest) {
@@ -159,11 +160,11 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         try {
           const { autoEnrollNewContact } = await import("@/actions/journeys");
           await autoEnrollNewContact(contact.id, "buyer");
-        } catch {}
+        } catch (err) { console.error("[website-api] non-fatal:", err instanceof Error ? err.message : err); }
         try {
           const { fireTrigger } = await import("@/lib/workflow-triggers");
           await fireTrigger({ type: "new_lead", contactId: contact.id, contactType: "buyer" });
-        } catch {}
+        } catch (err) { console.error("[website-api] non-fatal:", err instanceof Error ? err.message : err); }
       }
 
       return JSON.stringify({ success: true, message: "Lead saved! The agent will be in touch soon." });
@@ -253,7 +254,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
  * Body: { messages: [{ role, content }], session_id? }
  */
 export async function POST(request: NextRequest) {
-  const auth = validateApiKey(request);
+  const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
   const body = await request.json();
@@ -320,7 +321,7 @@ Rules:
 
   try {
     // Initial Claude call
-    let response = await anthropic.messages.create({
+    let response = await createWithRetry(anthropic, {
       model: "claude-sonnet-4-20250514",
       max_tokens: 1024,
       system: systemPrompt,
@@ -362,7 +363,7 @@ Rules:
       allMessages.push({ role: "user", content: toolResults as unknown as string });
 
       // Continue conversation
-      response = await anthropic.messages.create({
+      response = await createWithRetry(anthropic, {
         model: "claude-sonnet-4-20250514",
         max_tokens: 1024,
         system: systemPrompt,
@@ -381,7 +382,7 @@ Rules:
     const toolBlocks = response.content.filter(
       (b): b is Anthropic.ToolUseBlock => b.type === "tool_use"
     );
-    let listings: unknown[] = [];
+    const listings: unknown[] = [];
     for (const tb of toolBlocks) {
       if (tb.name === "search_listings") {
         // Find the corresponding result — it was already processed above
@@ -396,7 +397,7 @@ Rules:
         page_path: "/chat",
         device_type: request.headers.get("x-device-type") || null,
       });
-    } catch {}
+    } catch (err) { console.error("[website-api] non-fatal:", err instanceof Error ? err.message : err); }
 
     return NextResponse.json(
       { reply, listings, model: response.model },

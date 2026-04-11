@@ -61,7 +61,7 @@ export default function AIRecommendations({ recommendations }: { recommendations
         <div className="flex items-center gap-2">
           <span className="text-base">{"\uD83E\uDDE0"}</span>
           <h2 className="text-sm font-semibold text-foreground">AI Recommendations</h2>
-          <span className="text-xs font-bold text-white bg-indigo-600 rounded-full px-2 py-0.5">
+          <span className="text-xs font-bold text-white bg-brand rounded-full px-2 py-0.5">
             {recs.length}
           </span>
         </div>

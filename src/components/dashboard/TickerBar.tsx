@@ -27,9 +27,9 @@ type TickerItem = {
 
 function buildItems(stats: DashboardStats): TickerItem[] {
   return [
-    { label: "Active Listings", value: stats.activeListings, icon: Building2, href: "/listings", color: "text-sky-300" },
-    { label: "Open Tasks", value: stats.openTasks, icon: ListTodo, href: "/tasks", color: "text-indigo-300" },
-    { label: "Pending Showings", value: stats.pendingShowings, icon: Clock, href: "/showings", color: "text-teal-300" },
+    { label: "Active Listings", value: stats.activeListings, icon: Building2, href: "/listings", color: "text-[#C8F5F0]" },
+    { label: "Open Tasks", value: stats.openTasks, icon: ListTodo, href: "/tasks", color: "text-brand-light" },
+    { label: "Pending Showings", value: stats.pendingShowings, icon: Clock, href: "/showings", color: "text-brand" },
     { label: "Missing Docs", value: stats.missingDocs, icon: FileWarning, href: "/forms", color: "text-red-300", alert: stats.missingDocs > 0 },
   ];
 }
@@ -77,7 +77,7 @@ export function TickerBar({ initialStats }: { initialStats: DashboardStats }) {
   };
 
   return (
-    <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-3 md:p-4 elevation-8 relative overflow-hidden">
+    <div className="rounded-2xl bg-gradient-to-r from-[#1a1535] via-[#1a1535] to-[#1a1535] p-3 md:p-4 elevation-8 relative overflow-hidden">
       {/* Subtle gradient shimmer */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent pointer-events-none" />
 
@@ -110,15 +110,15 @@ export function TickerBar({ initialStats }: { initialStats: DashboardStats }) {
         {/* Live indicator */}
         <div className="flex items-center gap-1.5 pl-3 border-l border-white/10 shrink-0">
           {mode === "realtime" ? (
-            <span className="flex items-center gap-1.5 text-[10px] text-emerald-400">
+            <span className="flex items-center gap-1.5 text-[10px] text-brand-light">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-light opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-light" />
               </span>
               Live
             </span>
           ) : mode === "polling" ? (
-            <span className="flex items-center gap-1 text-[10px] text-blue-400">
+            <span className="flex items-center gap-1 text-[10px] text-brand-light">
               <RefreshCw className="h-3 w-3" />
               30s
             </span>

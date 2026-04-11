@@ -34,8 +34,8 @@ function getReasonIcon(reason: string) {
   const r = reason.toLowerCase();
   if (r.includes("frequency") || r.includes("cap")) return <Timer className="h-4 w-4 text-amber-500" />;
   if (r.includes("sunset") || r.includes("paused")) return <Ban className="h-4 w-4 text-red-500" />;
-  if (r.includes("declining") || r.includes("inactive")) return <TrendingDown className="h-4 w-4 text-blue-500" />;
-  if (r.includes("weekend")) return <Moon className="h-4 w-4 text-purple-500" />;
+  if (r.includes("declining") || r.includes("inactive")) return <TrendingDown className="h-4 w-4 text-brand" />;
+  if (r.includes("weekend")) return <Moon className="h-4 w-4 text-brand" />;
   return <ShieldOff className="h-4 w-4 text-muted-foreground" />;
 }
 
@@ -196,7 +196,7 @@ export function HeldBackList({ emails }: { emails: SuppressedEmail[] }) {
                       {contact.phone && (
                         <a
                           href={`tel:${contact.phone}`}
-                          className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium"
+                          className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md bg-brand-muted text-brand-dark hover:bg-brand-muted font-medium"
                         >
                           <Phone className="h-3 w-3" /> Call
                         </a>

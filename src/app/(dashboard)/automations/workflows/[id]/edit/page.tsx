@@ -38,7 +38,7 @@ export default async function EditWorkflowPage({
           <span className="text-sm text-muted-foreground">/</span>
           <span className="text-sm font-semibold">{workflow.name}</span>
           {workflow.is_default && (
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400">
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-brand-muted text-brand-dark dark:bg-foreground/20 dark:text-brand-light">
               Default
             </span>
           )}

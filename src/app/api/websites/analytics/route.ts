@@ -12,7 +12,7 @@ export async function OPTIONS(request: NextRequest) {
  * Or single event: { event_type, page_url, ... }
  */
 export async function POST(request: NextRequest) {
-  const auth = validateApiKey(request);
+  const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
   const body = await request.json();

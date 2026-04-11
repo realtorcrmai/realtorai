@@ -1,32 +1,31 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const { id } = await params;
-  const supabase = createAdminClient();
 
   const [{ data: deal, error }, { data: parties }, { data: checklist }] =
     await Promise.all([
-      supabase
+      tc
         .from("deals")
         .select(
           "*, contacts(id, name, phone, email, type), listings(id, address, list_price, status, mls_number)"
         )
         .eq("id", id)
         .single(),
-      supabase
+      tc
         .from("deal_parties")
         .select("*")
         .eq("deal_id", id)
         .order("created_at"),
-      supabase
+      tc
         .from("deal_checklist")
         .select("*")
         .eq("deal_id", id)
@@ -41,11 +40,11 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const { id } = await params;
-  const supabase = createAdminClient();
   const body = await req.json();
 
   // Calculate commission_amount if value and commission_pct provided
@@ -54,7 +53,7 @@ export async function PATCH(
       Math.round(body.value * (body.commission_pct / 100) * 100) / 100;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("deals")
     .update(body)
     .eq("id", id)
@@ -69,13 +68,13 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const { id } = await params;
-  const supabase = createAdminClient();
 
-  const { error } = await supabase.from("deals").delete().eq("id", id);
+  const { error } = await tc.from("deals").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

@@ -43,6 +43,7 @@ export async function scoreEmailQuality(
 ): Promise<QualityScore> {
   try {
     const Anthropic = (await import("@anthropic-ai/sdk")).default;
+    const { createWithRetry } = await import("@/lib/anthropic/retry");
     const client = new Anthropic();
 
     const prompt = `Rate this email on 7 dimensions (1-10 each). Return ONLY valid JSON.
@@ -69,7 +70,7 @@ DIMENSIONS:
 
 Return JSON: {"personalization":N,"relevance":N,"tone":N,"value":N,"cta_clarity":N,"length":N,"uniqueness":N,"issues":["issue1"]}`;
 
-    const response = await client.messages.create({
+    const response = await createWithRetry(client, {
       model: "claude-haiku-4-5-20251001",
       max_tokens: 300,
       messages: [{ role: "user", content: prompt }],

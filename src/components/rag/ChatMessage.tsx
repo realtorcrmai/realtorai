@@ -19,7 +19,7 @@ export default function ChatMessage({ message, sessionId, messageIndex }: ChatMe
         <div
           className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
             isUser
-              ? 'bg-indigo-500 text-white rounded-br-md'
+              ? 'bg-brand text-white rounded-br-md'
               : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm'
           }`}
         >

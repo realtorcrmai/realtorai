@@ -15,8 +15,16 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ybgiljuclpsuhbmdhust.supabase.co";
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InliZ2lsanVjbHBzdWhibWRodXN0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzI2Nzc5MSwiZXhwIjoyMDg4ODQzNzkxfQ.qdu6B5jdtckJ23nErIiVuQOzGbPqn_SrEJxQrL9buEk";
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  console.error("❌ Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  console.error("   Run with:  node --env-file=.env.local scripts/<script>.mjs");
+  console.error("   Or export them: source .env.local && node scripts/<script>.mjs");
+  process.exit(1);
+}
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const P = "+1604555"; // Demo phone prefix
 
@@ -139,6 +147,8 @@ async function seed() {
   const { data: emailDupes } = await supabase.from("contacts").select("id").in("email", demoEmails);
   const allOldIds = [...new Set([...(old || []).map(c => c.id), ...(emailDupes || []).map(c => c.id)])];
   if (allOldIds.length) {
+    await supabase.from("contact_dates").delete().in("contact_id", allOldIds);
+    await supabase.from("contact_context").delete().in("contact_id", allOldIds);
     await supabase.from("newsletter_events").delete().in("contact_id", allOldIds);
     await supabase.from("newsletters").delete().in("contact_id", allOldIds);
     await supabase.from("contact_journeys").delete().in("contact_id", allOldIds);
@@ -147,6 +157,11 @@ async function seed() {
     await supabase.from("contacts").delete().in("id", allOldIds);
     console.log(`  Removed ${allOldIds.length} contacts + related data`);
   }
+  // Clean up demo agent config + learning log
+  await supabase.from("agent_learning_log").delete().eq("realtor_id", "demo-realtor");
+  await supabase.from("realtor_agent_config").delete().eq("realtor_id", "demo-realtor");
+  // Clean up demo listings (tagged with [demo-seed] in notes)
+  await supabase.from("listings").delete().like("notes", "%[demo-seed]%");
 
   // ── FIX STALE ENROLLMENTS ──
   // Clean up completed enrollments that still have next_run_at (stale data)
@@ -318,6 +333,368 @@ async function seed() {
     }}).eq("id", map[c.n]);
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // A. CONTACT DATES (birthdays + closing anniversaries)
+  // ═══════════════════════════════════════════════════════════
+  console.log("\n📅 Creating contact dates...");
+  // Cleanup any existing demo contact dates
+  const demoContactIds = Object.values(map);
+  if (demoContactIds.length) {
+    await supabase.from("contact_dates").delete().in("contact_id", demoContactIds);
+  }
+
+  const contactDates = [
+    // Birthdays — spread across months
+    { name: "Aman Singh",        label: "Birthday",             date: "1992-03-15", event_type: "birthday",             recurring: true },
+    { name: "Sarah Chen",        label: "Birthday",             date: "1988-06-22", event_type: "birthday",             recurring: true },
+    { name: "Tom Richards",      label: "Birthday",             date: "1985-09-08", event_type: "birthday",             recurring: true },
+    { name: "David Kim",         label: "Birthday",             date: "1995-01-30", event_type: "birthday",             recurring: true },
+    { name: "Emily Wang",        label: "Birthday",             date: "1990-11-12", event_type: "birthday",             recurring: true },
+    { name: "Linda Martinez",    label: "Birthday",             date: "1978-04-19", event_type: "birthday",             recurring: true },
+    { name: "Kevin Ng",          label: "Birthday",             date: "1983-07-04", event_type: "birthday",             recurring: true },
+    { name: "Amanda Foster",     label: "Birthday",             date: "1991-12-25", event_type: "birthday",             recurring: true },
+    { name: "Mike Thompson",     label: "Birthday",             date: "1970-02-14", event_type: "birthday",             recurring: true },
+    { name: "George Nakamura",   label: "Birthday",             date: "1965-08-31", event_type: "birthday",             recurring: true },
+    // Closing anniversaries — past clients
+    { name: "Kevin Ng",          label: "Closing Anniversary",  date: "2025-04-10", event_type: "closing_anniversary",  recurring: true, notes: "Bought 2BR condo in Kits — $985K" },
+    { name: "Amanda Foster",     label: "Closing Anniversary",  date: "2025-10-05", event_type: "closing_anniversary",  recurring: true, notes: "Bought 3BR in Kitsilano — $1.28M" },
+    { name: "George Nakamura",   label: "Closing Anniversary",  date: "2025-04-15", event_type: "closing_anniversary",  recurring: true, notes: "Sold 4BR in Dunbar — $2.35M" },
+    { name: "William Hughes",    label: "Closing Anniversary",  date: "2024-03-22", event_type: "closing_anniversary",  recurring: true, notes: "Sold 3BR in Kelowna — $1.1M" },
+    { name: "Maria Santos",      label: "Closing Anniversary",  date: "2025-10-18", event_type: "closing_anniversary",  recurring: true, notes: "Sold 2BR townhouse in Burnaby — $875K" },
+    { name: "Patricia Wilson",   label: "Closing Anniversary",  date: "2024-12-02", event_type: "closing_anniversary",  recurring: true, notes: "Sold family home in Point Grey — $3.8M" },
+  ];
+
+  let cdCount = 0;
+  for (const cd of contactDates) {
+    if (!map[cd.name]) continue;
+    const { error } = await supabase.from("contact_dates").insert({
+      contact_id: map[cd.name],
+      label: cd.label,
+      date: cd.date,
+      event_type: cd.event_type,
+      recurring: cd.recurring,
+      auto_workflow: true,
+      notes: cd.notes || null,
+    });
+    if (!error) cdCount++;
+    else console.log(`  ❌ ${cd.name} ${cd.label}: ${error.message}`);
+  }
+  console.log(`  ${cdCount} contact dates created`);
+
+
+  // ═══════════════════════════════════════════════════════════
+  // B. REALTOR AGENT CONFIG (AI agent settings)
+  // ═══════════════════════════════════════════════════════════
+  console.log("\n🤖 Upserting realtor agent config...");
+  await supabase.from("realtor_agent_config").delete().eq("realtor_id", "demo-realtor");
+
+  const { error: racErr } = await supabase.from("realtor_agent_config").upsert({
+    realtor_id: "demo-realtor",
+    brand_config: {
+      voice_rules: [
+        "Never use exclamation marks",
+        "Always mention specific neighbourhood names",
+        "Keep subject lines under 50 chars",
+        "Use metric measurements (sq m, km) for international clients",
+        "Sign off with first name only, never full name",
+      ],
+      greeting_rules: [
+        { occasion: "birthday",         enabled: true,  approval: "auto" },
+        { occasion: "home_anniversary", enabled: true,  approval: "review" },
+        { occasion: "christmas",        enabled: true,  approval: "auto" },
+        { occasion: "lunar_new_year",   enabled: true,  approval: "review" },
+        { occasion: "diwali",           enabled: false, approval: "review" },
+      ],
+      logo_url: null,
+      signature: "Kunal — RE/MAX City Realty, Vancouver",
+      primary_color: "#4f35d2",
+    },
+    voice_rules: [
+      "Never use exclamation marks",
+      "Always mention specific neighbourhood names",
+      "Keep subject lines under 50 chars",
+    ],
+    frequency_caps: {
+      lead:           { per_week: 2, min_gap_hours: 48 },
+      active:         { per_week: 3, min_gap_hours: 18 },
+      under_contract: { per_week: 1, min_gap_hours: 72 },
+      past_client:    { per_month: 2, min_gap_hours: 168 },
+      dormant:        { per_month: 1, min_gap_hours: 336 },
+    },
+    sending_enabled: true,
+    skip_weekends: false,
+    default_send_day: "tuesday",
+    default_send_hour: 9,
+    quiet_hours: { start: "20:00", end: "07:00" },
+    escalation_thresholds: { soft_alert: 40, hot_lead: 60, urgent: 80 },
+    dormancy_days: 60,
+    auto_sunset_days: 90,
+    re_engagement_attempts: 2,
+    content_rankings: [
+      { type: "listing_alert",       effectiveness: 0.82, sample_size: 124 },
+      { type: "neighbourhood_guide", effectiveness: 0.71, sample_size: 45 },
+      { type: "market_update",       effectiveness: 0.65, sample_size: 98 },
+      { type: "home_anniversary",    effectiveness: 0.58, sample_size: 18 },
+    ],
+    total_emails_analyzed: 312,
+    total_conversions: 9,
+    learning_confidence: "medium",
+    last_learning_cycle: daysAgo(1),
+  }, { onConflict: "realtor_id" });
+  console.log(racErr ? `  ❌ ${racErr.message}` : "  ✅ realtor_agent_config upserted");
+
+
+  // ═══════════════════════════════════════════════════════════
+  // C. AGENT LEARNING LOG (AI adaptation history)
+  // ═══════════════════════════════════════════════════════════
+  console.log("\n📚 Creating agent learning log entries...");
+  await supabase.from("agent_learning_log").delete().eq("realtor_id", "demo-realtor");
+
+  const learningEntries = [
+    {
+      change_type: "voice_rule", field_changed: "voice_rules",
+      old_value: null,
+      new_value: { rule: "Never use exclamation marks" },
+      reason: "Realtor edited 3 consecutive emails removing exclamation marks — inferred rule",
+      auto_applied: true, approved: true, created_at: daysAgo(12),
+    },
+    {
+      change_type: "voice_rule", field_changed: "voice_rules",
+      old_value: null,
+      new_value: { rule: "Always mention specific neighbourhood names" },
+      reason: "Realtor added neighbourhood names to 5 of 6 reviewed emails — pattern detected",
+      auto_applied: true, approved: true, created_at: daysAgo(10),
+    },
+    {
+      change_type: "timing", field_changed: "default_send_hour",
+      old_value: { hour: 9 },
+      new_value: { hour: 10 },
+      reason: "Open rate 34% higher at 10 AM vs 9 AM across 42 emails over 3 weeks",
+      auto_applied: false, approved: null, created_at: daysAgo(3),
+    },
+    {
+      change_type: "frequency", field_changed: "frequency_caps.dormant",
+      old_value: { per_month: 2 },
+      new_value: { per_month: 1 },
+      reason: "Raj Patel, Chris Wong: 0 opens in 90 days — recommend reducing dormant frequency",
+      auto_applied: true, approved: true, created_at: daysAgo(5),
+    },
+    {
+      change_type: "content_ranking", field_changed: "content_rankings",
+      old_value: { listing_alert: 0.75 },
+      new_value: { listing_alert: 0.82 },
+      reason: "Listing alerts with school info get 2.1x clicks from family buyers (Aman, Sarah, Tom)",
+      auto_applied: true, approved: true, created_at: daysAgo(7),
+    },
+    {
+      change_type: "sequence", field_changed: "buyer_sequence",
+      old_value: { sequence: ["welcome", "listing_alert", "neighbourhood_guide", "market_update"] },
+      new_value: { sequence: ["welcome", "neighbourhood_guide", "listing_alert", "market_update"] },
+      reason: "Neighbourhood guides sent before first listing alert show 28% higher engagement — swapping order",
+      auto_applied: false, approved: true, created_at: daysAgo(8),
+    },
+    {
+      change_type: "threshold", field_changed: "escalation_thresholds.hot_lead",
+      old_value: { threshold: 55 },
+      new_value: { threshold: 60 },
+      reason: "3 false positives at score 55-59 last month — raising hot lead threshold to reduce noise",
+      auto_applied: true, approved: true, created_at: daysAgo(4),
+    },
+    {
+      change_type: "content_ranking", field_changed: "content_rankings",
+      old_value: null,
+      new_value: { finding: "Subject lines with neighbourhood name get 22% higher open rate" },
+      reason: "A/B test across 38 emails: 'New in Kitsilano' vs 'New listing alert' — neighbourhood wins",
+      auto_applied: true, approved: true, created_at: daysAgo(2),
+    },
+  ];
+
+  let llCount = 0;
+  for (const entry of learningEntries) {
+    const { error } = await supabase.from("agent_learning_log").insert({
+      realtor_id: "demo-realtor",
+      ...entry,
+    });
+    if (!error) llCount++;
+    else console.log(`  ❌ ${entry.change_type}: ${error.message}`);
+  }
+  console.log(`  ${llCount} learning log entries created`);
+
+
+  // ═══════════════════════════════════════════════════════════
+  // D. CONTACT CONTEXT (Prospect 360 structured notes)
+  // ═══════════════════════════════════════════════════════════
+  console.log("\n🎯 Creating contact context entries...");
+  if (demoContactIds.length) {
+    await supabase.from("contact_context").delete().in("contact_id", demoContactIds);
+  }
+
+  const contextEntries = [
+    // Aman Singh — hot buyer, family with 2 kids
+    { name: "Aman Singh", context_type: "preference", text: "Wants south-facing yard for kids to play — non-negotiable" },
+    { name: "Aman Singh", context_type: "objection",  text: "Concerned about Kits Elementary wait list — wants guarantee of catchment", is_resolved: false },
+    { name: "Aman Singh", context_type: "timeline",   text: "Lease ends July 31 — must close by then or needs temporary housing" },
+    { name: "Aman Singh", context_type: "info",        text: "Pre-approved $1.3M with TD, rate hold expires Aug 15" },
+    // Sarah Chen — hot buyer, family-focused
+    { name: "Sarah Chen", context_type: "preference", text: "Must have 2-car garage — husband works from van, needs secure parking" },
+    { name: "Sarah Chen", context_type: "timeline",   text: "Lease ends July 31, must close by then" },
+    { name: "Sarah Chen", context_type: "preference", text: "Walking distance to French immersion school strongly preferred" },
+    // Linda Martinez — active seller
+    { name: "Linda Martinez", context_type: "concern",   text: "Worried about pricing too high in current market — wants data-backed CMA" },
+    { name: "Linda Martinez", context_type: "timeline",  text: "Moving to Victoria in 6 weeks — needs firm timeline for closing" },
+    { name: "Linda Martinez", context_type: "info",      text: "Had bad experience with previous agent who overpriced — build trust with realistic numbers" },
+    // Tom Richards — warm buyer
+    { name: "Tom Richards", context_type: "preference", text: "Ground-floor unit preferred — bad knee, no walk-ups" },
+    { name: "Tom Richards", context_type: "objection",  text: "Thinks Mt Pleasant is overpriced vs East Van — needs comp data", is_resolved: false },
+    // David Kim — first-time buyer
+    { name: "David Kim", context_type: "concern",   text: "First-time buyer anxiety — wants extra hand-holding through process" },
+    { name: "David Kim", context_type: "preference", text: "Wants to be near Commercial Drive for restaurants and nightlife" },
+    // Mike Thompson — under contract, downsizing
+    { name: "Mike Thompson", context_type: "preference", text: "Needs building with pet-friendly policy — has a golden retriever" },
+    { name: "Mike Thompson", context_type: "info",       text: "Selling West Van home concurrently — coordinating two closings" },
+    // Susan Park — estate sale seller
+    { name: "Susan Park", context_type: "concern",   text: "Estate sale — emotionally difficult, needs patience and sensitivity" },
+    { name: "Susan Park", context_type: "info",       text: "3 beneficiaries must all agree on price — decision-making is slow" },
+    // Jessica Liu — relocating from Toronto
+    { name: "Jessica Liu", context_type: "timeline",  text: "Relocating from Toronto in September — all viewings must be virtual until August" },
+    { name: "Jessica Liu", context_type: "preference", text: "Needs home office space — both parents work remote" },
+  ];
+
+  let ccCount = 0;
+  for (const ctx of contextEntries) {
+    if (!map[ctx.name]) continue;
+    const { error } = await supabase.from("contact_context").insert({
+      contact_id: map[ctx.name],
+      context_type: ctx.context_type,
+      text: ctx.text,
+      is_resolved: ctx.is_resolved ?? false,
+    });
+    if (!error) ccCount++;
+    else console.log(`  ❌ ${ctx.name} ${ctx.context_type}: ${error.message}`);
+  }
+  console.log(`  ${ccCount} contact context entries created`);
+
+
+  // ═══════════════════════════════════════════════════════════
+  // E. REAL VANCOUVER LISTINGS (6 properties)
+  // ═══════════════════════════════════════════════════════════
+  console.log("\n🏠 Creating Vancouver listings...");
+  // Clean up demo listings by notes marker
+  await supabase.from("listings").delete().like("notes", "%[demo-seed]%");
+
+  const listings = [
+    {
+      address: "2156 W 3rd Ave, Vancouver, BC V6K 1L1",
+      seller_name: "Linda Martinez",
+      lockbox_code: "8832",
+      status: "active",
+      mls_number: "R2912345",
+      list_price: 2100000.00,
+      property_type: "Residential",
+      prop_type: "detached",
+      hero_image_url: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&q=80",
+      notes: "3BR/2BA detached in Dunbar. 2,450 sqft, 33x122 lot. Hardwood floors, updated kitchen 2023. South-facing backyard. Walk to Dunbar shops. [demo-seed]",
+      current_phase: 4,
+      mls_status: "pending",
+    },
+    {
+      address: "4571 W 8th Ave, Vancouver, BC V6R 2A5",
+      seller_name: "Susan Park",
+      lockbox_code: "7714",
+      status: "active",
+      mls_number: "R2923456",
+      list_price: 3450000.00,
+      property_type: "Residential",
+      prop_type: "detached",
+      hero_image_url: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80",
+      notes: "4BR/3BA estate in Kerrisdale. 3,100 sqft, 50x130 lot. Original character home, oak panelling, formal dining. Needs updating. Quiet cul-de-sac. [demo-seed]",
+      current_phase: 7,
+      mls_status: "active",
+    },
+    {
+      address: "1203-1480 Howe St, Vancouver, BC V6Z 1R8",
+      seller_name: "Robert Chang",
+      lockbox_code: "3309",
+      status: "active",
+      mls_number: "R2934567",
+      list_price: 685000.00,
+      property_type: "Condo/Apartment",
+      prop_type: "condo",
+      hero_image_url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80",
+      notes: "1BR+den/1BA in Yaletown. 680 sqft. Floor-to-ceiling windows, city view. Concierge, gym, rooftop deck. 1 parking + 1 storage. Built 2018. [demo-seed]",
+      current_phase: 3,
+      mls_status: "pending",
+    },
+    {
+      address: "45-2729 158th St, Surrey, BC V3Z 0T9",
+      seller_name: "Mohammed Al-Rashid",
+      lockbox_code: "5521",
+      status: "pending",
+      mls_number: "R2945678",
+      list_price: 799000.00,
+      property_type: "Townhouse",
+      prop_type: "townhouse",
+      hero_image_url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80",
+      notes: "3BR/2.5BA townhouse in Grandview Surrey. 1,520 sqft. End unit, double garage, private patio. Near transit. Built 2020. Offer accepted $815K. [demo-seed]",
+      current_phase: 6,
+      mls_status: "active",
+    },
+    {
+      address: "3887 W 16th Ave, Vancouver, BC V6R 3C8",
+      seller_name: "Patricia Wilson",
+      lockbox_code: "9943",
+      status: "active",
+      mls_number: "R2956789",
+      list_price: 4200000.00,
+      property_type: "Residential",
+      prop_type: "detached",
+      hero_image_url: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80",
+      notes: "5BR/4BA family home in Point Grey. 3,800 sqft, 60x130 lot. Renovated 2019, chef kitchen, heated pool. Walk to UBC. Mountain views. [demo-seed]",
+      current_phase: 8,
+      mls_status: "active",
+    },
+    {
+      address: "508-2188 W 41st Ave, Vancouver, BC V6M 0B7",
+      seller_name: "George Nakamura",
+      lockbox_code: "6617",
+      status: "sold",
+      mls_number: "R2867890",
+      list_price: 1150000.00,
+      property_type: "Condo/Apartment",
+      prop_type: "condo",
+      hero_image_url: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80",
+      notes: "2BR/2BA in Kerrisdale. 1,050 sqft. Corner unit, mountain view, in-suite laundry. Sold $1,175K — 12 days on market. [demo-seed]",
+      current_phase: 8,
+      mls_status: "sold",
+    },
+  ];
+
+  let listCount = 0;
+  for (const l of listings) {
+    const sellerId = map[l.seller_name];
+    if (!sellerId) { console.log(`  ❌ ${l.address}: seller ${l.seller_name} not found`); continue; }
+    const { error } = await supabase.from("listings").insert({
+      address: l.address,
+      seller_id: sellerId,
+      lockbox_code: l.lockbox_code,
+      status: l.status,
+      mls_number: l.mls_number,
+      list_price: l.list_price,
+      property_type: l.property_type,
+      prop_type: l.prop_type,
+      hero_image_url: l.hero_image_url,
+      notes: l.notes,
+      current_phase: l.current_phase,
+      mls_status: l.mls_status,
+      showing_window_start: "10:00",
+      showing_window_end: "18:00",
+    });
+    if (!error) { listCount++; console.log(`  ✅ ${l.address}`); }
+    else console.log(`  ❌ ${l.address}: ${error.message}`);
+  }
+  console.log(`  ${listCount} listings created`);
+
+
   // ── SUMMARY ──
   const buyers = C.filter(c => c.t === "buyer").length;
   const sellers = C.filter(c => c.t === "seller").length;
@@ -326,11 +703,16 @@ async function seed() {
   console.log("\n" + "═".repeat(55));
   console.log("📊 SEED COMPLETE");
   console.log("═".repeat(55));
-  console.log(`  Contacts:   ${Object.keys(map).length} (${buyers}B ${sellers}S ${agents}A)`);
-  console.log(`  Journeys:   ${jCount}`);
-  console.log(`  Emails:     ${nlCount} sent + ${drafts} drafts + ${suppressed} suppressed`);
-  console.log(`  Events:     ${evCount} (opens + clicks)`);
-  console.log(`  Real email: Aman Singh → amandhindsa@outlook.com`);
+  console.log(`  Contacts:      ${Object.keys(map).length} (${buyers}B ${sellers}S ${agents}A)`);
+  console.log(`  Journeys:      ${jCount}`);
+  console.log(`  Emails:        ${nlCount} sent + ${drafts} drafts + ${suppressed} suppressed`);
+  console.log(`  Events:        ${evCount} (opens + clicks)`);
+  console.log(`  Contact Dates: ${cdCount} (birthdays + anniversaries)`);
+  console.log(`  Agent Config:  1 realtor_agent_config`);
+  console.log(`  Learning Log:  ${llCount} entries`);
+  console.log(`  Context Notes: ${ccCount} entries`);
+  console.log(`  Listings:      ${listCount} Vancouver properties`);
+  console.log(`  Real email:    Aman Singh → amandhindsa@outlook.com`);
   console.log("═".repeat(55));
   console.log("\n✅ Open http://localhost:3000/newsletters\n");
 }

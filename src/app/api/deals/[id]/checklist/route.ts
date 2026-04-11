@@ -1,6 +1,5 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/api-auth";
 import { z } from "zod";
 
 const createChecklistItemSchema = z.object({
@@ -13,11 +12,11 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const { id } = await params;
-  const supabase = createAdminClient();
   const body = await req.json();
 
   const parsed = createChecklistItemSchema.safeParse(body);
@@ -28,9 +27,9 @@ export async function POST(
     );
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("deal_checklist")
-    .insert({ deal_id: id, item: body.item, due_date: body.due_date || null, sort_order: body.sort_order ?? 0 })
+    .insert({ deal_id: id, item: parsed.data.item, due_date: parsed.data.due_date || null, sort_order: parsed.data.sort_order ?? 0 })
     .select()
     .single();
 
@@ -42,12 +41,12 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const { id } = await params;
   void id; // deal_id context
-  const supabase = createAdminClient();
   const body = await req.json();
 
   const patchChecklistSchema = z.object({
@@ -73,7 +72,7 @@ export async function PATCH(
   if (parsed.data.item !== undefined) update.item = parsed.data.item;
   if (parsed.data.due_date !== undefined) update.due_date = parsed.data.due_date;
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("deal_checklist")
     .update(update)
     .eq("id", parsed.data.checklist_id)

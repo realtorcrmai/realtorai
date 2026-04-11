@@ -19,11 +19,16 @@ import { JourneyProgressBar } from "@/components/contacts/JourneyProgressBar";
 import { EmailHistoryTimeline } from "@/components/contacts/EmailHistoryTimeline";
 import { IntelligencePanel } from "@/components/contacts/IntelligencePanel";
 import { ContextLog } from "@/components/contacts/ContextLog";
+import { ProspectControls } from "@/components/contacts/ProspectControls";
+import { QuickLogForm } from "@/components/contacts/QuickLogForm";
 import { WebsiteActivityLoader } from "@/components/contacts/WebsiteActivityLoader";
 import { DeleteContactButton } from "@/components/contacts/DeleteContactButton";
 import { ContactDetailLayout } from "@/components/contacts/ContactDetailLayout";
 import { Button } from "@/components/ui/button";
 import type { Contact, Communication, Listing, ContactDate, ContactDocument, BuyerPreferences, SellerPreferences, Demographics } from "@/types";
+import type { BuyerJourney } from "@/actions/buyer-journeys";
+import type { BuyerJourneyProperty } from "@/actions/buyer-journey-properties";
+import type { PortfolioItem } from "@/actions/contact-portfolio";
 import {
   CONTACT_TYPE_COLORS,
   LEAD_STATUS_LABELS,
@@ -41,203 +46,99 @@ export default async function ContactDetailPage({
 }) {
   const { id } = await params;
   const supabase = await getAuthenticatedTenantClient();
+  const realtorId = supabase.realtorId;
 
-  const { data: contact } = await supabase
+  // ── Lightweight type check (1 query, minimal columns) ──────
+  const { data: contactMeta } = await supabase
     .from("contacts")
-    .select("*")
+    .select("type")
     .eq("id", id)
     .single();
 
-  if (!contact) notFound();
+  if (!contactMeta) notFound();
 
-  const isSeller = contact.type === "seller";
+  const isSeller = contactMeta.type === "seller";
+  const isBuyer = contactMeta.type === "buyer" || contactMeta.type === "dual";
 
-  // ── Single parallel batch: ALL queries at once ─────────────
-  // No waterfalls — everything fetched in one round-trip
+  // ── Two RPC calls + ~6 conditional queries in parallel (was 28 queries) ──
   const [
-    { data: communications },
+    { data: detailRpc },
+    { data: networkRpc },
     { data: listings },
-    { data: contactDates },
-    { data: allContacts },
     { data: buyerListings },
-    { data: tasks },
-    { data: contactDocuments },
-    { data: referralsAsReferrer },
-    { data: referralsAsReferred },
-    { data: workflowEnrollments },
+    { data: allContacts },
     { data: availableWorkflows },
-    { data: activityLog },
     { data: allListings },
-    { data: referredByContact },
-    { data: relationshipsData },
     { data: allHouseholds },
-    { data: householdData },
-    { data: householdMembersData },
-    { data: allWorkflowSteps },
-    { data: contactJourney },
-    { data: contactNewsletters },
-    { data: contactContextEntries },
+    { data: buyerJourneysData },
+    { data: journeyPropertiesData },
   ] = await Promise.all([
-    // 1. Communications — limit to recent 50
-    supabase
-      .from("communications")
-      .select("id, contact_id, direction, channel, body, related_id, created_at")
-      .eq("contact_id", id)
-      .order("created_at", { ascending: false })
-      .limit(50),
-    // 2. Seller listings (skip for buyers)
+    // RPC 1: Core contact data (contact, comms, tasks, docs, dates, family, context, portfolio, journey, household, referred-by)
+    supabase.raw.rpc("get_contact_detail", { p_contact_id: id, p_realtor_id: realtorId }),
+    // RPC 2: Network data (relationships, referrals, enrollments+steps, newsletters+events)
+    supabase.raw.rpc("get_contact_network", { p_contact_id: id, p_realtor_id: realtorId }),
+    // Seller listings (conditional — need full Listing type for stage bar)
     isSeller
-      ? supabase
-          .from("listings")
-          .select("*")
-          .eq("seller_id", id)
-          .order("created_at", { ascending: false })
+      ? supabase.from("listings").select("*").eq("seller_id", id).order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
-    // 3. Contact dates
-    supabase
-      .from("contact_dates")
-      .select("id, contact_id, label, date, notes")
-      .eq("contact_id", id)
-      .order("date", { ascending: true }),
-    // 4. All contacts (id, name only — for referral selectors)
-    supabase
-      .from("contacts")
-      .select("id, name"),
-    // 5. Buyer listings (skip for sellers)
+    // Buyer listings (conditional)
     !isSeller
-      ? supabase
-          .from("listings")
-          .select("*")
-          .eq("buyer_id", id)
-          .order("created_at", { ascending: false })
+      ? supabase.from("listings").select("*").eq("buyer_id", id).order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
-    // 6. Tasks
-    supabase
-      .from("tasks")
-      .select("id, contact_id, title, status, priority, category, due_date, notes, completed_at, created_at")
-      .eq("contact_id", id)
-      .order("due_date", { ascending: true }),
-    // 7. Contact documents
-    supabase
-      .from("contact_documents")
-      .select("id, contact_id, doc_type, file_name, file_url, uploaded_at, notes")
-      .eq("contact_id", id)
-      .order("uploaded_at", { ascending: false }),
-    // 8. Referrals as referrer
-    supabase
-      .from("referrals")
-      .select("*, referred_client:contacts!referred_client_contact_id(id, name, type), closed_deal:listings!closed_deal_id(id, address)")
-      .eq("referred_by_contact_id", id)
-      .order("referral_date", { ascending: false }),
-    // 9. Referrals as referred
-    supabase
-      .from("referrals")
-      .select("*, referrer:contacts!referred_by_contact_id(id, name, type), closed_deal:listings!closed_deal_id(id, address)")
-      .eq("referred_client_contact_id", id)
-      .order("referral_date", { ascending: false }),
-    // 10. Workflow enrollments (was waterfall 2)
-    supabase
-      .from("workflow_enrollments")
-      .select("*, workflows(id, name, slug)")
-      .eq("contact_id", id)
-      .order("created_at", { ascending: false }),
-    // 11. Available workflows (was waterfall 2)
-    supabase
-      .from("workflows")
-      .select("id, slug, name, is_active")
-      .order("name", { ascending: true }),
-    // 12. Activity log — deferred to tab click (lazy-loaded)
-    Promise.resolve({ data: null }),
-    // 13. All listings for properties of interest (was waterfall 4)
+    // All contacts (for referral/relationship selectors)
+    supabase.from("contacts").select("id, name"),
+    // Available workflows (active only)
+    supabase.from("workflows").select("id, slug, name, is_active").eq("is_active", true).order("name", { ascending: true }),
+    // All listings for buyer properties of interest
     !isSeller
-      ? supabase
-          .from("listings")
-          .select("id, address, list_price")
-          .order("created_at", { ascending: false })
+      ? supabase.from("listings").select("id, address, list_price").order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
-    // 14. Referred-by contact name (was waterfall 5)
-    contact.referred_by_id
-      ? supabase
-          .from("contacts")
-          .select("name")
-          .eq("id", contact.referred_by_id)
-          .single()
-      : Promise.resolve({ data: null }),
-    // 15. Relationships (both directions)
-    supabase
-      .from("contact_relationships")
-      .select("*, contact_a:contacts!contact_a_id(id, name, type), contact_b:contacts!contact_b_id(id, name, type)")
-      .or(`contact_a_id.eq.${id},contact_b_id.eq.${id}`),
-    // 16. All households (for selector)
-    supabase
-      .from("households")
-      .select("id, name")
-      .order("name"),
-    // 17. Household detail (if contact has household_id) — was sequential
-    (contact as Record<string, unknown>).household_id
-      ? supabase.from("households").select("*").eq("id", (contact as Record<string, unknown>).household_id as string).single()
-      : Promise.resolve({ data: null }),
-    // 18. Household members (if contact has household_id) — was sequential
-    (contact as Record<string, unknown>).household_id
-      ? supabase.from("contacts").select("id, name, type").eq("household_id", (contact as Record<string, unknown>).household_id as string)
+    // All households (for selector)
+    supabase.from("households").select("id, name").order("name"),
+    // Buyer journeys (conditional)
+    isBuyer
+      ? supabase.from("buyer_journeys")
+          .select("id, status, min_price, max_price, preferred_property_types, preferred_areas, notes, created_at, updated_at")
+          .eq("contact_id", id).not("status", "in", "(closed,cancelled)").order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
-    // 19. ALL workflow steps (filter client-side) — was sequential waterfall
-    supabase
-      .from("workflow_steps")
-      .select("id, workflow_id, step_order, name, action_type, delay_minutes, delay_unit, delay_value, exit_on_reply")
-      .order("step_order", { ascending: true }),
-    // 20. Contact journey (for Prospect 360 progress bar)
-    supabase
-      .from("contact_journeys")
-      .select("id, journey_type, current_phase, phase_entered_at, next_email_at, is_paused, send_mode, trust_level, created_at")
-      .eq("contact_id", id)
-      .limit(1)
-      .maybeSingle(),
-    // 21. Newsletters sent to this contact (for email history timeline)
-    supabase
-      .from("newsletters")
-      .select("id, subject, email_type, status, html_body, sent_at, created_at, quality_score, ai_context")
-      .eq("contact_id", id)
-      .order("created_at", { ascending: false })
-      .limit(30),
-    // 22. Contact context entries (objections, preferences, timeline)
-    supabase
-      .from("contact_context")
-      .select("id, context_type, text, is_resolved, resolved_note, created_at")
-      .eq("contact_id", id)
-      .order("created_at", { ascending: false }),
+    // Buyer journey properties (conditional)
+    isBuyer
+      ? supabase.from("buyer_journey_properties")
+          .select("id, journey_id, address, status, interest_level, list_price, notes, offer_price, offer_status, offer_date, subjects, created_at, buyer_journeys!inner(contact_id)")
+          .eq("buyer_journeys.contact_id", id).order("created_at", { ascending: false }).limit(10)
+      : Promise.resolve({ data: [] }),
   ]);
 
-  const referredByName = referredByContact?.name ?? null;
-  const household = householdData;
-  const householdMembers = (householdMembersData ?? []) as { id: string; name: string; type: string }[];
+  // ── Unpack RPC results ─────────────────────────────────────
+  const detail = (detailRpc ?? {}) as Record<string, any>;
+  const network = (networkRpc ?? {}) as Record<string, any>;
 
-  // Fetch newsletter events for email history timeline
-  const newsletterIds = (contactNewsletters ?? []).map((n: { id: string }) => n.id);
-  const { data: newsletterEvents } = newsletterIds.length > 0
-    ? await supabase
-        .from("newsletter_events")
-        .select("id, newsletter_id, event_type, metadata, created_at")
-        .in("newsletter_id", newsletterIds)
-    : { data: [] };
+  const contact = detail.contact;
+  if (!contact) notFound();
 
-  // Merge events into newsletters
-  const newslettersWithEvents = (contactNewsletters ?? []).map((nl: Record<string, unknown>) => ({
-    ...nl,
-    events: (newsletterEvents ?? []).filter((e: { newsletter_id: string }) => e.newsletter_id === nl.id),
-  }));
+  const communications = detail.communications ?? [];
+  const tasks = detail.tasks ?? [];
+  const contactDocuments = detail.documents ?? [];
+  const contactDates = detail.dates ?? [];
+  const familyMembersData = detail.family_members ?? [];
+  const contactContextEntries = detail.context_entries ?? [];
+  const portfolioData = detail.portfolio ?? [];
+  const contactJourney = detail.journey ?? null;
+  const referredByName = detail.referred_by_name ?? null;
+  const household = detail.household ?? null;
+  const householdMembers = (detail.household_members ?? []) as { id: string; name: string; type: string }[];
+
+  const relationshipsData = network.relationships ?? [];
+  const referralsAsReferrer = network.referrals_as_referrer ?? [];
+  const referralsAsReferred = network.referrals_as_referred ?? [];
+  const workflowEnrollments = network.enrollments ?? [];
+  const newslettersWithEvents = network.newsletters ?? [];
 
   // Parse intelligence
   const intel = contact.newsletter_intelligence as Record<string, unknown> | null;
 
-  // Filter workflow steps to only active/paused enrollment workflows (client-side)
-  const activeEnrollmentWorkflowIds = (workflowEnrollments ?? [])
-    .filter((e: { status: string }) => e.status === "active" || e.status === "paused")
-    .map((e: { workflow_id: string }) => e.workflow_id);
-  const activeWfIdSet = new Set(activeEnrollmentWorkflowIds);
-  const workflowSteps = (allWorkflowSteps ?? []).filter(
-    (s: { workflow_id: string }) => activeWfIdSet.has(s.workflow_id)
-  );
+  // Extract workflow steps from enrollment data (already nested by the RPC)
+  const workflowSteps = workflowEnrollments.flatMap((e: any) => e.steps ?? []);
 
   // Group steps by workflow_id
   type WorkflowStepRow = {
@@ -267,7 +168,7 @@ export default async function ContactDetailPage({
     priority: string;
     category: string;
     due_date: string | null;
-    notes: string | null;
+    description: string | null;
     completed_at: string | null;
     created_at: string;
   }[];
@@ -546,11 +447,11 @@ export default async function ContactDetailPage({
     <>
       {/* Contact Card Header */}
       <div id="section-contact-info" className="animate-float-in relative z-20">
-            <Card className="shadow-md border border-violet-200/60 dark:border-violet-900/30 overflow-visible bg-gradient-to-r from-violet-50/50 via-indigo-50/40 to-teal-50/30 dark:from-violet-950/20 dark:via-indigo-950/20 dark:to-teal-950/10">
+            <Card className="shadow-md border border-brand/20 dark:border-brand/10 overflow-visible bg-gradient-to-r from-[#0F7694]/5 via-[#0F7694]/5 to-[#0F7694]/3 dark:from-[#1a1535]/20 dark:via-[#1a1535]/20 dark:to-[#1a1535]/10">
               <CardContent className="p-4">
                 {/* Row 1: Avatar + Name + Badges + Actions */}
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-rose-500 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0F7694] to-rose-500 flex items-center justify-center text-white font-bold text-lg shrink-0">
                     {contact.name.split(/\s+/).map((w: string) => w[0]).join("").substring(0, 2).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -569,6 +470,21 @@ export default async function ContactDetailPage({
                       {contact.email && <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{contact.email}</span>}
                       <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" />{contact.pref_channel}</span>
                     </div>
+                    {/* Social profiles */}
+                    {contact.social_profiles && typeof contact.social_profiles === "object" && Object.keys(contact.social_profiles as Record<string, string>).length > 0 && (
+                      <div className="flex items-center gap-2 mt-1.5">
+                        {Object.entries(contact.social_profiles as Record<string, string>).map(([platform, handle]) => {
+                          const icons: Record<string, string> = { instagram: "📸", facebook: "📘", linkedin: "💼", twitter: "𝕏", tiktok: "🎵", youtube: "▶️" };
+                          const urls: Record<string, string> = { instagram: "instagram.com/", facebook: "facebook.com/", linkedin: "linkedin.com/in/", twitter: "x.com/", tiktok: "tiktok.com/@", youtube: "youtube.com/@" };
+                          return (
+                            <a key={platform} href={`https://${urls[platform] || ""}${handle}`} target="_blank" rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/50 border border-border/30 text-xs text-brand hover:bg-muted hover:underline transition-colors">
+                              <span>{icons[platform] || "🔗"}</span>@{handle}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <ContactForm
@@ -581,23 +497,23 @@ export default async function ContactDetailPage({
                 </div>
 
                 {/* Row 2: Pipeline bar or Convert button */}
-                <div className="mt-3 pt-2 border-t border-indigo-50 dark:border-indigo-900/20">
+                <div className="mt-3 pt-2 border-t border-brand/10 dark:border-foreground/20">
                   {contact.type === "customer" ? (
-                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <span className="text-sm text-green-800 font-medium flex-1">This is an unqualified lead. Convert when ready:</span>
+                    <div className="flex items-center gap-2 p-3 bg-brand-muted border border-brand/20 rounded-lg">
+                      <span className="text-sm text-brand-dark font-medium flex-1">This is an unqualified lead. Convert when ready:</span>
                       <form action={async () => {
                         "use server";
                         const { convertContactType } = await import("@/actions/contacts");
                         await convertContactType(id, "buyer");
                       }}>
-                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700">Convert to Buyer</button>
+                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-brand text-white font-medium hover:bg-brand-dark">Convert to Buyer</button>
                       </form>
                       <form action={async () => {
                         "use server";
                         const { convertContactType } = await import("@/actions/contacts");
                         await convertContactType(id, "seller");
                       }}>
-                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-purple-600 text-white font-medium hover:bg-purple-700">Convert to Seller</button>
+                        <button type="submit" className="text-sm px-3 py-1.5 rounded-md bg-brand text-white font-medium hover:bg-brand-dark">Convert to Seller</button>
                       </form>
                     </div>
                   ) : (
@@ -655,10 +571,18 @@ export default async function ContactDetailPage({
             />
           </div>
 
-          {/* Journey Progress Bar — temporarily removed to fit viewport */}
-          {/* TODO: Re-add as compact version or move into a tab */}
+          {/* Journey Progress Bar */}
+          {contactJourney && (
+            <JourneyProgressBar
+              contactType={contact.type}
+              currentPhase={contactJourney.current_phase}
+              engagementScore={(intel as Record<string, unknown> | null)?.engagement_score as number ?? 0}
+              phaseEnteredAt={contactJourney.phase_entered_at}
+              enrolledAt={contactJourney.created_at}
+            />
+          )}
 
-          {/* Email History */}
+          {/* Prospect 360 — Email History + Quick Log */}
           {newslettersWithEvents.length > 0 && (
             <Card>
               <CardContent className="p-4">
@@ -704,15 +628,20 @@ export default async function ContactDetailPage({
             allContacts={(allContacts ?? []) as { id: string; name: string }[]}
             documents={typedDocuments}
             contextEntries={(contactContextEntries ?? []) as Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>}
+            familyMembers={(familyMembersData ?? []) as import("@/types").ContactFamilyMember[]}
+            isBuyer={isBuyer}
+            buyerJourneys={(buyerJourneysData ?? []) as BuyerJourney[]}
+            recentJourneyProperties={(journeyPropertiesData ?? []) as BuyerJourneyProperty[]}
+            portfolioItems={(portfolioData ?? []) as PortfolioItem[]}
           />
   );
 
   // Build right panel JSX
   const rightPanelJsx = (
-      <aside className="hidden lg:block w-[320px] shrink-0 border-l p-4 bg-gradient-to-b from-slate-50 via-white to-teal-50/30 dark:from-card/50 dark:via-card/30 dark:to-teal-950/10 overflow-y-auto space-y-4">
+      <aside className="hidden lg:block w-[320px] shrink-0 border-l p-4 bg-gradient-to-b from-slate-50 via-white to-[#0F7694]/3 dark:from-card/50 dark:via-card/30 dark:to-[#1a1535]/10 overflow-y-auto space-y-4">
         {/* Engagement — 1st section */}
         {intel && (
-          <div className="pb-3 border-b border-indigo-100 dark:border-indigo-900/30 border-l-4 border-l-indigo-400 pl-4 rounded-sm shrink-0">
+          <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-[#0F7694] pl-4 rounded-sm shrink-0">
             <IntelligencePanel
               intelligence={intel}
               totalEmails={newslettersWithEvents.length}
@@ -720,8 +649,36 @@ export default async function ContactDetailPage({
           </div>
         )}
 
+        {/* Prospect Controls — journey pause/resume, trust, frequency */}
+        {(contactJourney || contact.type === "buyer" || contact.type === "seller") && (
+          <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-[#67D4E8] pl-4 rounded-sm shrink-0">
+            <ProspectControls
+              contactId={id}
+              contactName={contact.name}
+              journey={contactJourney as { id: string; journey_type: string; current_phase: string; is_paused: boolean; send_mode: string; next_email_at: string | null; trust_level: number } | null}
+              aiContextNotes={(contact as Record<string, unknown>).ai_context_notes as string | null}
+            />
+          </div>
+        )}
+
+        {/* Quick Log — log calls, texts, meetings */}
+        <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-[#0F7694] pl-4 rounded-sm shrink-0">
+          <QuickLogForm
+            contactId={id}
+            contactName={contact.name}
+            recentEmails={(newslettersWithEvents ?? [])
+              .filter((nl: Record<string, unknown>) => nl.status === "sent")
+              .slice(0, 5)
+              .map((nl: Record<string, unknown>) => ({
+                id: nl.id as string,
+                subject: nl.subject as string,
+                sent_at: nl.sent_at as string | null,
+              }))}
+          />
+        </div>
+
         {/* Network Stats — 2nd section */}
-        <div className="border-b border-teal-100 dark:border-teal-900/30 pb-3 pt-3 border-l-4 border-l-teal-400 pl-4 rounded-sm shrink-0">
+        <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-[#0F7694] pl-4 rounded-sm shrink-0">
           <NetworkStatsCard
             connectionCount={relationships.length}
             referralCount={allReferrals.length}
@@ -734,7 +691,7 @@ export default async function ContactDetailPage({
         </div>
 
         {/* Referrals */}
-        <div className="border-b border-orange-100 dark:border-orange-900/30 pb-3 pt-3 border-l-4 border-l-orange-400 pl-4 rounded-sm shrink-0">
+        <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-[#67D4E8] pl-4 rounded-sm shrink-0">
           <ReferralsPanel
             contact={contact}
             referredByName={referredByName}
@@ -745,7 +702,7 @@ export default async function ContactDetailPage({
         </div>
 
         {/* Relationships — grows to fill remaining space */}
-        <div className="pt-3 border-l-4 border-l-violet-400 pl-4 rounded-sm">
+        <div className="pt-3 border-l-4 border-l-[#67D4E8] pl-4 rounded-sm">
           <RelationshipManager
             contactId={contact.id}
             relationships={relationships}
@@ -755,7 +712,7 @@ export default async function ContactDetailPage({
           {/* Contextual Tips — fills remaining space when sections are empty */}
           {(!intel || Object.keys(intel).length === 0) && relationships.length === 0 && allReferrals.length === 0 && (
             <div className="mt-4 pt-4 border-t border-border/30">
-              <div className="rounded-xl bg-gradient-to-br from-indigo-50/50 to-teal-50/30 dark:from-indigo-950/20 dark:to-teal-950/10 border border-indigo-100/50 dark:border-indigo-900/20 p-4">
+              <div className="rounded-xl bg-gradient-to-br from-[#0F7694]/5/50 to-[#0F7694]/3 dark:from-[#1a1535]/20 dark:to-[#1a1535]/10 border border-brand/15/50 dark:border-foreground/20 p-4">
                 <div className="flex items-start gap-2.5">
                   <span className="text-lg">💡</span>
                   <div>
@@ -767,15 +724,15 @@ export default async function ContactDetailPage({
                     </p>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-medium shrink-0">1</span>
+                        <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">1</span>
                         <span className="text-muted-foreground">Add a <strong className="text-foreground">relationship</strong></span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-medium shrink-0">2</span>
+                        <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">2</span>
                         <span className="text-muted-foreground">Set <strong className="text-foreground">preferences</strong></span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-medium shrink-0">3</span>
+                        <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">3</span>
                         <span className="text-muted-foreground">Send first <strong className="text-foreground">email</strong></span>
                       </div>
                     </div>

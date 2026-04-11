@@ -108,7 +108,7 @@ export function BaseLayout({ previewText, branding, children, unsubscribeUrl }: 
 }
 
 const main = {
-  backgroundColor: "#f6f5ff",
+  backgroundColor: "#ffffff",
   fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
   padding: "20px 0",
 };
@@ -119,7 +119,7 @@ const container = {
   backgroundColor: "#ffffff",
   borderRadius: "12px",
   overflow: "hidden" as const,
-  boxShadow: "0 2px 12px rgba(79,53,210,0.06)",
+  boxShadow: "none",
 };
 
 const header = {

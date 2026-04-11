@@ -78,7 +78,7 @@ export function GhostComparisonPanel() {
                 onClick={() => setDays(d)}
                 className={`text-xs px-2.5 py-1 rounded-full font-medium ${
                   days === d
-                    ? "bg-primary text-white"
+                    ? "bg-brand text-white"
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}
               >
@@ -103,11 +103,11 @@ export function GhostComparisonPanel() {
           <div className="space-y-3">
             {/* Summary stats */}
             <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-green-50 rounded-lg p-2.5 border border-green-200">
-                <p className="text-lg font-bold text-green-700">
+              <div className="bg-brand-muted rounded-lg p-2.5 border border-brand/20">
+                <p className="text-lg font-bold text-brand-dark">
                   {comparisons.filter((c) => c.match).length}
                 </p>
-                <p className="text-[10px] text-green-600">AI Matched</p>
+                <p className="text-[10px] text-brand">AI Matched</p>
               </div>
               <div className="bg-amber-50 rounded-lg p-2.5 border border-amber-200">
                 <p className="text-lg font-bold text-amber-700">
@@ -136,7 +136,7 @@ export function GhostComparisonPanel() {
                     </Badge>
                   </div>
                   {comp.match ? (
-                    <Badge className="bg-green-100 text-green-700 text-[10px]">Match</Badge>
+                    <Badge className="bg-brand-muted text-brand-dark text-[10px]">Match</Badge>
                   ) : comp.actual ? (
                     <Badge className="bg-amber-100 text-amber-700 text-[10px]">Different</Badge>
                   ) : (
@@ -144,12 +144,12 @@ export function GhostComparisonPanel() {
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-purple-50/50 rounded p-2">
-                    <p className="text-[10px] text-purple-600 font-medium mb-0.5">AI Would Send:</p>
+                  <div className="bg-brand-muted rounded p-2">
+                    <p className="text-[10px] text-brand font-medium mb-0.5">AI Would Send:</p>
                     <p className="text-gray-700 truncate">{comp.ghost.subject}</p>
                   </div>
-                  <div className="bg-blue-50/50 rounded p-2">
-                    <p className="text-[10px] text-blue-600 font-medium mb-0.5">Actually Sent:</p>
+                  <div className="bg-brand-muted rounded p-2">
+                    <p className="text-[10px] text-brand-dark font-medium mb-0.5">Actually Sent:</p>
                     <p className="text-gray-700 truncate">
                       {comp.actual?.subject || "Nothing sent"}
                     </p>

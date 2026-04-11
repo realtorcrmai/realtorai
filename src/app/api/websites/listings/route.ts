@@ -11,7 +11,7 @@ export async function OPTIONS(request: NextRequest) {
  * Query params: type, area, minPrice, maxPrice, limit, offset
  */
 export async function GET(request: NextRequest) {
-  const auth = validateApiKey(request);
+  const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
   const supabase = createAdminClient();

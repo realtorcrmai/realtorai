@@ -139,7 +139,7 @@ export function QuickActionBar({
         variant="outline"
         size="sm"
         onClick={handleCall}
-        className="text-xs bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-800/30 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+        className="text-xs bg-brand-muted border-brand/20 text-brand-dark hover:bg-brand-muted hover:text-brand-dark dark:bg-foreground/20 dark:border-brand/15/30 dark:text-brand-light dark:hover:bg-brand-dark/40"
       >
         <Phone className="h-3.5 w-3.5 mr-1.5" />
         Call
@@ -155,7 +155,7 @@ export function QuickActionBar({
         variant="outline"
         size="sm"
         onClick={() => setMode("text")}
-        className="text-xs bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800 dark:bg-blue-950/20 dark:border-blue-800/30 dark:text-blue-400 dark:hover:bg-blue-950/40"
+        className="text-xs bg-brand-muted border-brand/20 text-brand-dark hover:bg-brand-muted hover:text-brand-dark dark:bg-blue-950/20 dark:border-blue-800/30 dark:text-brand-light dark:hover:bg-blue-950/40"
       >
         <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
         Text
@@ -173,7 +173,7 @@ export function QuickActionBar({
         variant="outline"
         size="sm"
         onClick={scrollToTasks}
-        className="text-xs bg-violet-50 border-violet-200 text-violet-700 hover:bg-violet-100 hover:text-violet-800 dark:bg-violet-950/20 dark:border-violet-800/30 dark:text-violet-400 dark:hover:bg-violet-950/40"
+        className="text-xs bg-brand-muted border-brand/20 text-brand-dark hover:bg-brand-muted hover:text-brand-dark dark:bg-foreground/20 dark:border-brand/15 dark:text-brand-light dark:hover:bg-foreground/40"
       >
         <ListTodo className="h-3.5 w-3.5 mr-1.5" />
         Add Task

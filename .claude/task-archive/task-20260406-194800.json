@@ -1,0 +1,13 @@
+{
+  "type": "CODING:bugfix",
+  "tier": "L2",
+  "confidence": 0.85,
+  "affected_files": [
+    "~/Library/CloudStorage/OneDrive-Personal/INventory Management/app/server.py",
+    "~/Library/CloudStorage/OneDrive-Personal/INventory Management/app/templates/index.html"
+  ],
+  "description": "Monthly report using old/incomplete data - fix to use complete inventory data",
+  "phases": {
+    "classified": true
+  }
+}

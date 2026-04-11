@@ -75,7 +75,7 @@ export function SellerSalesSection({ deals }: SellerSalesSectionProps) {
           <Building2 className="h-4 w-4" />
           Sales & Transactions
           {wonDeals.length > 0 && (
-            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] px-1.5 py-0">
+            <Badge className="bg-brand-muted text-brand-dark border-brand/30 text-[10px] px-1.5 py-0">
               {wonDeals.length} Sold
             </Badge>
           )}
@@ -98,10 +98,10 @@ export function SellerSalesSection({ deals }: SellerSalesSectionProps) {
                 key={deal.id}
                 className={`rounded-lg border transition-colors ${
                   isWon
-                    ? "border-emerald-200 bg-emerald-50/30"
+                    ? "border-brand/20 bg-brand-muted/30"
                     : isLost
                     ? "border-muted bg-muted/20 opacity-60"
-                    : "border-blue-200 bg-blue-50/30"
+                    : "border-brand/20 bg-brand-muted"
                 }`}
               >
                 {/* Summary row */}
@@ -118,10 +118,10 @@ export function SellerSalesSection({ deals }: SellerSalesSectionProps) {
                         variant="outline"
                         className={`text-[10px] px-1.5 py-0 ${
                           isWon
-                            ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                            ? "bg-brand-muted text-brand-dark border-brand/30"
                             : isLost
                             ? "bg-red-100 text-red-800 border-red-300"
-                            : "bg-blue-100 text-blue-800 border-blue-300"
+                            : "bg-brand-muted text-brand-dark border-brand/30"
                         }`}
                       >
                         {isWon ? "Sold" : isLost ? "Lost" : STAGE_LABELS[deal.stage] ?? deal.stage}
@@ -157,7 +157,7 @@ export function SellerSalesSection({ deals }: SellerSalesSectionProps) {
                         </span>
                       )}
                       {deal.commission_amount && (
-                        <span className="flex items-center gap-1 text-emerald-700">
+                        <span className="flex items-center gap-1 text-brand-dark">
                           <Percent className="h-3 w-3" />
                           GCI {formatCurrency(deal.commission_amount)}
                         </span>

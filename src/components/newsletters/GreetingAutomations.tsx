@@ -118,7 +118,7 @@ export function GreetingAutomations({ initialRules }: { initialRules?: GreetingR
         </div>
         <div className="flex items-center gap-2">
           {saveStatus === "saving" && <span className="text-[10px] text-muted-foreground animate-pulse">Saving...</span>}
-          {saveStatus === "saved" && <span className="text-[10px] text-emerald-600 font-medium">Saved</span>}
+          {saveStatus === "saved" && <span className="text-[10px] text-brand font-medium">Saved</span>}
           {activeCount < OCCASIONS.length && (
             <button
               onClick={enableAll}
@@ -131,9 +131,9 @@ export function GreetingAutomations({ initialRules }: { initialRules?: GreetingR
       </div>
 
       {/* AI personalization note */}
-      <div className="flex items-start gap-2.5 p-3 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-xl">
-        <Sparkles className="h-4 w-4 text-purple-500 mt-0.5 shrink-0" />
-        <p className="text-[11px] text-purple-800 leading-relaxed">
+      <div className="flex items-start gap-2.5 p-3 bg-gradient-to-r from-[#0F7694]/5 to-[#0F7694]/10 border border-brand/15 rounded-xl">
+        <Sparkles className="h-4 w-4 text-brand mt-0.5 shrink-0" />
+        <p className="text-[11px] text-brand-dark leading-relaxed">
           <strong>AI writes every greeting uniquely.</strong> Each contact gets a personalized message based on their name, relationship history, property details, and the occasion. No two emails are the same.
         </p>
       </div>
@@ -156,7 +156,7 @@ export function GreetingAutomations({ initialRules }: { initialRules?: GreetingR
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-semibold">{occasion.name}</p>
-                        {isEnabled && <Badge className="bg-emerald-100 text-emerald-700 text-[9px] px-1.5 py-0">Active</Badge>}
+                        {isEnabled && <Badge className="bg-brand-muted text-brand-dark text-[9px] px-1.5 py-0">Active</Badge>}
                       </div>
                       <p className="text-[11px] text-muted-foreground">{occasion.desc}</p>
                       <p className="text-[10px] text-muted-foreground/70 mt-0.5">{occasion.timing}</p>
@@ -172,7 +172,7 @@ export function GreetingAutomations({ initialRules }: { initialRules?: GreetingR
                       )}
                       <button
                         onClick={() => toggleOccasion(occasion.id)}
-                        className={`relative w-10 h-5.5 rounded-full transition-colors ${isEnabled ? "bg-emerald-500" : "bg-gray-300"}`}
+                        className={`relative w-10 h-5.5 rounded-full transition-colors ${isEnabled ? "bg-brand/50" : "bg-gray-300"}`}
                       >
                         <span className={`absolute top-[2px] w-4.5 h-4.5 rounded-full bg-white shadow transition-transform ${isEnabled ? "left-[19px]" : "left-[2px]"}`} style={{ width: 18, height: 18 }} />
                       </button>
@@ -258,7 +258,7 @@ export function GreetingAutomations({ initialRules }: { initialRules?: GreetingR
                       )}
                       <button
                         onClick={() => toggleOccasion(occasion.id)}
-                        className={`relative w-10 h-5.5 rounded-full transition-colors ${isEnabled ? "bg-emerald-500" : "bg-gray-300"}`}
+                        className={`relative w-10 h-5.5 rounded-full transition-colors ${isEnabled ? "bg-brand/50" : "bg-gray-300"}`}
                       >
                         <span className={`absolute top-[2px] rounded-full bg-white shadow transition-transform ${isEnabled ? "left-[19px]" : "left-[2px]"}`} style={{ width: 18, height: 18 }} />
                       </button>
@@ -315,7 +315,7 @@ export function GreetingAutomations({ initialRules }: { initialRules?: GreetingR
       {/* Summary footer */}
       {activeCount > 0 && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
-          <div className={`w-2 h-2 rounded-full ${activeCount > 0 ? "bg-emerald-500 animate-pulse" : "bg-gray-300"}`} />
+          <div className={`w-2 h-2 rounded-full ${activeCount > 0 ? "bg-brand/50 animate-pulse" : "bg-gray-300"}`} />
           <span>
             {activeCount} greeting{activeCount > 1 ? "s" : ""} active — AI will generate personalized emails when each occasion arrives
           </span>

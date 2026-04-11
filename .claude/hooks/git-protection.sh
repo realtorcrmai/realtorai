@@ -25,9 +25,9 @@ if echo "$COMMAND" | grep -qE 'git\s+push\s+.*\s+(main|dev)\b'; then
     exit 2
 fi
 
-# Block force push (but allow normal push with -u flag)
-if echo "$COMMAND" | grep -qE 'git\s+push\s+--force\b'; then
-    echo "BLOCKED: Force push is not allowed. It can destroy remote history." >&2
+# Block force push (but allow --force-with-lease which is safe, and normal push with -u flag)
+if echo "$COMMAND" | grep -qE 'git\s+push\s+--force\b' && ! echo "$COMMAND" | grep -q 'force-with-lease'; then
+    echo "BLOCKED: Force push is not allowed. It can destroy remote history. Use --force-with-lease instead." >&2
     exit 2
 fi
 if echo "$COMMAND" | grep -qE 'git\s+push\s+-[a-zA-Z]*f'; then

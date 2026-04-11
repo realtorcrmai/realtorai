@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { AddressAutocompleteInput } from "@/components/shared/AddressAutocompleteInput";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -23,8 +24,17 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { createContact, updateContact } from "@/actions/contacts";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import type { Contact } from "@/types";
+
+const SOCIAL_PLATFORMS = [
+  { key: "instagram", label: "Instagram", icon: "📸", placeholder: "username" },
+  { key: "facebook", label: "Facebook", icon: "📘", placeholder: "profile.name" },
+  { key: "linkedin", label: "LinkedIn", icon: "💼", placeholder: "firstname-lastname" },
+  { key: "twitter", label: "X / Twitter", icon: "𝕏", placeholder: "handle" },
+  { key: "tiktok", label: "TikTok", icon: "🎵", placeholder: "username" },
+  { key: "youtube", label: "YouTube", icon: "▶️", placeholder: "channel" },
+] as const;
 import {
   LEAD_STATUSES,
   LEAD_STATUS_LABELS,
@@ -52,6 +62,8 @@ const formSchema = z.object({
   job_title: z.string().optional(),
   typical_client_profile: z.string().optional(),
   referral_agreement_terms: z.string().optional(),
+  // Social media
+  social_profiles: z.record(z.string(), z.string()).optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -81,6 +93,12 @@ export function ContactFormContent({
   const [submitting, setSubmitting] = useState(false);
   const [duplicates, setDuplicates] = useState<DuplicateContact[] | null>(null);
   const [pendingPayload, setPendingPayload] = useState<FormData | null>(null);
+  const [socialProfiles, setSocialProfiles] = useState<Record<string, string>>(
+    (contact?.social_profiles as Record<string, string>) ?? {}
+  );
+  const [showSocial, setShowSocial] = useState(
+    Object.keys((contact?.social_profiles as Record<string, string>) ?? {}).length > 0
+  );
 
   const {
     register,
@@ -128,6 +146,7 @@ export function ContactFormContent({
   function buildPayload(data: FormData) {
     return {
       ...data,
+      social_profiles: Object.keys(socialProfiles).length > 0 ? socialProfiles : undefined,
       ...(data.type !== "partner" && {
         partner_type: undefined,
         company_name: undefined,
@@ -245,8 +264,8 @@ export function ContactFormContent({
 
       {/* ── Partner-specific Fields ───────────────────────── */}
       {selectedType === "partner" && (
-        <div className="space-y-4 rounded-lg border border-teal-200 bg-teal-50/50 p-4">
-          <p className="text-sm font-semibold text-teal-800">Partner Details</p>
+        <div className="space-y-4 rounded-lg border border-brand/20 bg-brand-muted p-4">
+          <p className="text-sm font-semibold text-brand-dark">Partner Details</p>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -313,7 +332,12 @@ export function ContactFormContent({
 
       <div>
         <Label htmlFor="address">Address (optional)</Label>
-        <Input {...register("address")} placeholder="123 Main St, Vancouver, BC" />
+        <AddressAutocompleteInput
+          value={watch("address") ?? ""}
+          onChange={(val) => setValue("address", val, { shouldValidate: false })}
+          placeholder="123 Main St, Vancouver, BC"
+          disabled={submitting}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -383,6 +407,47 @@ export function ContactFormContent({
       <div>
         <Label htmlFor="notes">Notes (optional)</Label>
         <Textarea {...register("notes")} placeholder="Additional notes..." />
+      </div>
+
+      {/* Social Media Profiles */}
+      <div>
+        {!showSocial ? (
+          <button
+            type="button"
+            onClick={() => setShowSocial(true)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add social media profiles
+          </button>
+        ) : (
+          <div className="space-y-3 rounded-lg border border-border p-3">
+            <Label className="text-xs text-muted-foreground">Social Media</Label>
+            <div className="space-y-2">
+              {SOCIAL_PLATFORMS.map((p) => (
+                <div key={p.key} className="flex items-center gap-2">
+                  <span className="w-5 text-center shrink-0">{p.icon}</span>
+                  <Input
+                    value={socialProfiles[p.key] ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/^@/, "").trim();
+                      setSocialProfiles((prev) => {
+                        if (!val) {
+                          const updated = { ...prev };
+                          delete updated[p.key];
+                          return updated;
+                        }
+                        return { ...prev, [p.key]: val };
+                      });
+                    }}
+                    placeholder={p.placeholder}
+                    className="h-8 text-sm"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {duplicates && duplicates.length > 0 && (

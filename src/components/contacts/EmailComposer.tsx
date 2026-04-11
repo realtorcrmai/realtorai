@@ -77,7 +77,7 @@ export default function EmailComposer({
         onClick={() => !disabled && setOpen(true)}
         disabled={disabled}
         title={disabled ? "No email address" : `Email ${contactEmail}`}
-        className="inline-flex items-center justify-center rounded-md border px-3 h-8 text-xs font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800"
+        className="inline-flex items-center justify-center rounded-md border px-3 h-8 text-xs font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none bg-brand-muted border-brand/20 text-brand-dark hover:bg-brand-muted hover:text-brand-dark"
       >
         <Mail className="h-3.5 w-3.5 mr-1.5" />
         Email
@@ -138,7 +138,7 @@ export default function EmailComposer({
 
           {/* Sync Result */}
           {syncResult && (
-            <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 rounded-md px-3 py-2">
+            <div className="flex items-center gap-2 text-sm text-brand-dark bg-brand-muted rounded-md px-3 py-2">
               <Check className="h-4 w-4 shrink-0" />
               {syncResult}
             </div>

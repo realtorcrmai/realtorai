@@ -1,18 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAuth } from "@/lib/api-auth";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { taskSchema } from "@/lib/schemas";
 
 export async function GET(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
-  const supabase = createAdminClient();
   const searchParams = req.nextUrl.searchParams;
   const status = searchParams.get("status")?.toLowerCase();
   const priority = searchParams.get("priority")?.toLowerCase();
 
-  let query = supabase
+  let query = tc
     .from("tasks")
     .select("*, contacts(name), listings(address)")
     .order("created_at", { ascending: false });
@@ -34,8 +33,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const body = await req.json();
   const parsed = taskSchema.safeParse(body);
@@ -47,8 +47,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("tasks")
     .insert({
       ...parsed.data,
@@ -68,8 +67,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const body = await req.json();
   const { id, ...updates } = body;
@@ -78,14 +78,12 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Task ID required" }, { status: 400 });
   }
 
-  const supabase = createAdminClient();
-
   // If completing, set completed_at
   if (updates.status === "completed") {
     updates.completed_at = new Date().toISOString();
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("tasks")
     .update(updates)
     .eq("id", id)
@@ -100,8 +98,9 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
-  if (unauthorized) return unauthorized;
+  let tc;
+  try { tc = await getAuthenticatedTenantClient(); }
+  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
@@ -110,8 +109,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Task ID required" }, { status: 400 });
   }
 
-  const supabase = createAdminClient();
-  const { error } = await supabase.from("tasks").delete().eq("id", id);
+  const { error } = await tc.from("tasks").delete().eq("id", id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

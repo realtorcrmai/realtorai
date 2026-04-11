@@ -4,20 +4,20 @@ import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, MessageSquare, Smartphone, MapPin, Tag, Calendar, DollarSign, Home, Briefcase } from "lucide-react";
 
 const AVATAR_GRADIENTS: Record<string, string> = {
-  buyer: "from-blue-500 to-indigo-600",
-  seller: "from-purple-500 to-indigo-600",
-  customer: "from-green-500 to-emerald-600",
-  agent: "from-orange-500 to-amber-600",
-  partner: "from-teal-500 to-cyan-600",
+  buyer: "from-blue-500 to-[#0F7694]",
+  seller: "from-[#0F7694] to-[#1a1535]",
+  customer: "from-[#0F7694] to-[#0F7694]",
+  agent: "from-[#67D4E8] to-[#0F7694]",
+  partner: "from-[#67D4E8] to-[#0F7694]",
   other: "from-gray-500 to-slate-600",
 };
 
 const TYPE_BADGE_COLORS: Record<string, string> = {
-  buyer: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-  seller: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-  customer: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-  agent: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-  partner: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300",
+  buyer: "bg-brand-muted text-brand-dark dark:bg-blue-900/30 dark:text-blue-300",
+  seller: "bg-brand-muted-strong text-brand-dark dark:bg-brand/20 dark:text-brand-light",
+  customer: "bg-brand-muted text-brand-dark dark:bg-foreground/30 dark:text-brand-light",
+  agent: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+  partner: "bg-brand-muted text-brand-dark dark:bg-foreground/30 dark:text-brand-light",
   other: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
 };
 
@@ -55,6 +55,10 @@ export interface LivePreviewCardProps {
   sellerMotivation?: string;
   desiredPrice?: string;
   listDate?: string;
+  // Family, Portfolio & Context
+  familyMembers?: { name: string; relationship: string; phone: string; email: string }[];
+  portfolioItems?: { address: string; city: string; property_type: string; status: string; notes: string }[];
+  contextEntries?: { type: string; text: string }[];
 }
 
 function getInitials(name: string) {
@@ -81,6 +85,7 @@ export function LivePreviewCard({
   name, phone, email, type, channel, notes, source, address, leadStatus,
   budgetDisplay, buyerAreas, propertyTypes, timeline, financing,
   sellerMotivation, desiredPrice, listDate,
+  familyMembers = [], portfolioItems = [], contextEntries = [],
 }: LivePreviewCardProps) {
   const initials = getInitials(name);
   const gradient = AVATAR_GRADIENTS[type] || AVATAR_GRADIENTS.other;
@@ -102,13 +107,13 @@ export function LivePreviewCard({
   const completionPct = Math.min(100, Math.round((filledFields / totalFields) * 100));
 
   return (
-    <div className="rounded-2xl border border-border/30 bg-gradient-to-br from-white via-white to-slate-50/80 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-800/50 shadow-lg overflow-hidden transition-all duration-300">
+    <div className="rounded-2xl border border-border/30 bg-gradient-to-br from-white via-white to-[#FAF8F4] dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-800/50 shadow-lg overflow-hidden transition-all duration-300">
       {/* Colored top bar */}
       <div className={`h-1.5 bg-gradient-to-r ${type ? gradient : "from-gray-300 to-gray-400"}`} />
 
       <div className="p-5 space-y-4">
         {/* Avatar + Name */}
-        <div className="flex items-center gap-4">
+        <div data-preview="contact" className="flex items-center gap-4">
           <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${type ? gradient : "from-gray-400 to-gray-500"} flex items-center justify-center text-white font-bold text-lg shadow-lg transition-all duration-300`}>
             {initials}
           </div>
@@ -133,7 +138,7 @@ export function LivePreviewCard({
         <div className="flex items-center gap-2">
           <div className="flex-1 h-1.5 rounded-full bg-muted/30 overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${completionPct >= 70 ? "bg-emerald-500" : completionPct >= 40 ? "bg-amber-500" : "bg-red-400"}`}
+              className={`h-full rounded-full transition-all duration-500 ${completionPct >= 70 ? "bg-brand/50" : completionPct >= 40 ? "bg-amber-500" : "bg-red-400"}`}
               style={{ width: `${completionPct}%` }}
             />
           </div>
@@ -141,7 +146,7 @@ export function LivePreviewCard({
         </div>
 
         {/* Contact info */}
-        <div className="space-y-1.5 border-t border-border/20 pt-3">
+        <div data-preview="details" className="space-y-1.5 border-t border-border/20 pt-3">
           <PreviewRow icon={Phone} label="Phone" value={phone} empty="Phone number" />
           <PreviewRow icon={Mail} label="Email" value={email} empty="Email address" />
           <PreviewRow icon={ChannelIcon} label="Channel" value={channel ? CHANNEL_LABELS[channel] : ""} empty="Preferred channel" />
@@ -151,7 +156,7 @@ export function LivePreviewCard({
 
         {/* Pipeline preview */}
         {type && type !== "other" && (
-          <div className="border-t border-border/20 pt-3">
+          <div data-preview="pipeline" className="border-t border-border/20 pt-3">
             <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">Pipeline</p>
             <div className="flex items-center gap-1.5">
               <div className={`w-3 h-3 rounded-full bg-gradient-to-br ${gradient} ring-2 ring-offset-1 ring-current shadow-sm`} />
@@ -168,7 +173,7 @@ export function LivePreviewCard({
 
         {/* Buyer Preferences */}
         {isBuyer && (
-          <div className="border-t border-border/20 pt-3">
+          <div data-preview="preferences" className="border-t border-border/20 pt-3">
             <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">Buyer Preferences</p>
             <div className="space-y-1.5">
               <PreviewRow icon={DollarSign} label="Budget" value={budgetDisplay} empty="Not set" />
@@ -178,7 +183,7 @@ export function LivePreviewCard({
                 {(buyerAreas?.length ?? 0) > 0 ? (
                   <div className="flex gap-1 flex-wrap">
                     {buyerAreas!.map((a) => (
-                      <span key={a} className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 text-xs font-medium">{a}</span>
+                      <span key={a} className="px-1.5 py-0.5 rounded bg-brand-muted dark:bg-blue-950/30 text-brand-dark dark:text-blue-300 text-xs font-medium">{a}</span>
                     ))}
                   </div>
                 ) : (
@@ -202,7 +207,7 @@ export function LivePreviewCard({
 
         {/* Seller Preferences */}
         {isSeller && (
-          <div className="border-t border-border/20 pt-3">
+          <div data-preview="preferences" className="border-t border-border/20 pt-3">
             <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">Seller Preferences</p>
             <div className="space-y-1.5">
               <PreviewRow icon={Tag} label="Motivation" value={sellerMotivation} empty="Not set" />
@@ -212,13 +217,55 @@ export function LivePreviewCard({
           </div>
         )}
 
-        {/* Notes */}
-        {notes && (
+        {/* Context */}
+        {contextEntries.length > 0 && (
           <div className="border-t border-border/20 pt-3">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Notes</p>
-            <p className="text-sm text-muted-foreground italic">&ldquo;{notes}&rdquo;</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1.5">Context</p>
+            <div className="space-y-1">
+              {contextEntries.map((ctx, i) => (
+                <p key={i} className="text-xs text-muted-foreground">
+                  <span className="font-medium capitalize">{ctx.type}:</span> {ctx.text}
+                </p>
+              ))}
+            </div>
           </div>
         )}
+
+        {/* Family Members */}
+        <div data-preview="family" className="border-t border-border/20 pt-3">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">Family</p>
+          {familyMembers.length > 0 ? (
+            <div className="space-y-1.5">
+              {familyMembers.map((fm, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-[10px] font-bold text-emerald-700">{fm.name[0]}</span>
+                  <span className="font-medium">{fm.name}</span>
+                  <span className="text-muted-foreground text-xs">({fm.relationship})</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground/30 italic">No family added yet</p>
+          )}
+        </div>
+
+        {/* Portfolio */}
+        <div data-preview="portfolio" className="border-t border-border/20 pt-3">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">Portfolio</p>
+          {portfolioItems.length > 0 ? (
+            <div className="space-y-1.5">
+              {portfolioItems.map((pi, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  <Home className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                  <span className="font-medium truncate">{pi.address}</span>
+                  <span className="text-muted-foreground text-xs capitalize shrink-0">({pi.status})</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground/30 italic">No properties added yet</p>
+          )}
+        </div>
       </div>
     </div>
   );

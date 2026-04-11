@@ -64,7 +64,7 @@ export default function FormTemplatesPage() {
         </div>
 
         {/* Info */}
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
+        <div className="p-4 bg-brand-muted border border-brand/20 rounded-xl text-sm text-brand-dark">
           Upload official PDF form templates here. The system extracts fillable
           fields automatically. Map PDF fields to CRM data (listing address,
           seller name, etc.) so forms are pre-filled when opened.
@@ -124,7 +124,7 @@ export default function FormTemplatesPage() {
                               {fieldNames.length} fields
                             </span>
                             {mappingCount > 0 && (
-                              <span className="text-xs text-green-600">
+                              <span className="text-xs text-brand">
                                 {mappingCount} mapped
                               </span>
                             )}

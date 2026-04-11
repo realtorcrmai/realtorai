@@ -69,7 +69,7 @@ export default function ChatWidget({ uiContext = {} }: ChatWidgetProps) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-indigo-500 text-white rounded-full shadow-lg hover:bg-indigo-600 transition flex items-center justify-center text-2xl"
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-brand text-white rounded-full shadow-lg hover:bg-brand transition flex items-center justify-center text-2xl"
         title="AI Assistant"
       >
         🤖
@@ -80,10 +80,10 @@ export default function ChatWidget({ uiContext = {} }: ChatWidgetProps) {
   return (
     <div className="fixed bottom-6 right-6 z-50 w-[420px] h-[600px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
+      <div className="flex items-center justify-between px-4 py-3 bg-brand text-white">
         <div>
           <h3 className="font-semibold text-sm">🤖 AI Assistant</h3>
-          <p className="text-[10px] text-indigo-100">RAG-powered — grounded in your CRM data</p>
+          <p className="text-[10px] text-[#C8F5F0]">RAG-powered — grounded in your CRM data</p>
         </div>
         <button onClick={() => setOpen(false)} className="text-white/80 hover:text-white text-lg">✕</button>
       </div>
@@ -112,9 +112,9 @@ export default function ChatWidget({ uiContext = {} }: ChatWidgetProps) {
           <div className="flex justify-start mb-3">
             <div className="bg-white border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
               <div className="flex gap-1">
-                <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span className="w-2 h-2 bg-brand-light rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 bg-brand-light rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 bg-brand-light rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           </div>

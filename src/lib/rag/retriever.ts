@@ -4,6 +4,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
+import { createWithRetry } from '@/lib/anthropic/retry';
 import { embedQuery, embedText } from './embeddings';
 import { fullTextSearch } from './fallback';
 import { RETRIEVAL, MODELS } from './constants';
@@ -19,7 +20,7 @@ const anthropic = new Anthropic();
  */
 export async function hydeExpand(query: string): Promise<number[]> {
   try {
-    const response = await anthropic.messages.create({
+    const response = await createWithRetry(anthropic, {
       model: MODELS.TIER1_PLANNER,
       max_tokens: 200,
       system: 'Generate a short, factual paragraph that would answer this question in a real estate CRM context. Write as if it were a document in the database. Be specific with plausible details.',

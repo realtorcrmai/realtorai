@@ -18,7 +18,6 @@ import {
   Zap,
   Mail,
   Globe,
-  BookOpen,
   LogOut,
   Home,
   ChevronDown,
@@ -40,6 +39,8 @@ import { VoiceStatusIndicator } from "@/components/voice-agent/VoiceStatusIndica
 
 import type { FeatureKey } from "@/lib/features";
 
+// featureKey is REQUIRED — every nav item must declare its plan gate.
+// Items without a featureKey bypass plan gating (TypeScript will catch omissions).
 const mainTabs: { href: string; label: string; icon: typeof Building2; featureKey: FeatureKey }[] = [
   { href: "/listings", label: "Listings", icon: Building2, featureKey: "listings" },
   { href: "/contacts", label: "Contacts", icon: Users, featureKey: "contacts" },
@@ -57,8 +58,7 @@ const moreItems: { href: string; label: string; icon: typeof Building2; featureK
   { href: "/forms", label: "BC Forms", icon: FileText, featureKey: "forms" },
   { href: "/newsletters", label: "Email Marketing", icon: Mail, featureKey: "newsletters" },
   { href: "/websites", label: "Website Marketing", icon: Globe, featureKey: "website" },
-  { href: "/social", label: "Social Media", icon: Globe, featureKey: "social" },
-  { href: "/assistant/knowledge", label: "Knowledge Base", icon: BookOpen, featureKey: "assistant" },
+  { href: "/search", label: "MLS Browse", icon: Search, featureKey: "mls-browse" },
 ];
 
 export function AppHeader() {
@@ -67,13 +67,15 @@ export function AppHeader() {
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
 
-  const enabledFeatures = session?.user?.enabledFeatures ?? [];
+  const enabledFeatures = session?.user?.enabledFeatures;
+  const hasFeatureData = Array.isArray(enabledFeatures) && enabledFeatures.length > 0;
   const isAdmin = session?.user?.role === "admin";
 
-  const filteredMainTabs = enabledFeatures.length > 0
+  // Always filter when feature data is loaded; show all while session is loading
+  const filteredMainTabs = hasFeatureData
     ? mainTabs.filter((tab) => enabledFeatures.includes(tab.featureKey))
     : mainTabs;
-  const filteredMoreItems = enabledFeatures.length > 0
+  const filteredMoreItems = hasFeatureData
     ? moreItems.filter((item) => enabledFeatures.includes(item.featureKey))
     : moreItems;
   const allNav = [
@@ -210,11 +212,22 @@ export function AppHeader() {
           </Link>
         )}
 
-        {/* Voice Agent Status */}
-        <VoiceStatusIndicator />
+        {/* Voice Agent Status — professional+ only */}
+        {hasFeatureData && enabledFeatures.includes("assistant") && (
+          <VoiceStatusIndicator />
+        )}
 
-        {/* Help */}
-        <ContextualHelpButton />
+        {/* Search shortcut hint */}
+        <button
+          onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
+          className="hidden md:flex items-center justify-center size-8 shrink-0 aspect-square rounded-lg border border-border bg-card text-[10px] text-foreground/70 font-mono shadow-[0_1px_3px_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.08)] hover:bg-accent hover:text-foreground hover:shadow-[0_3px_8px_rgba(0,0,0,0.15)] transition-all"
+          aria-label="Search (⌘K)"
+        >⌘K</button>
+
+        {/* Help — professional+ only */}
+        {hasFeatureData && enabledFeatures.includes("assistant") && (
+          <ContextualHelpButton />
+        )}
 
         {/* Quick Add */}
         <QuickAddButton />

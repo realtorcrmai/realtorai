@@ -52,21 +52,21 @@ export const STAGE_LABELS: Record<string, string> = {
 
 export const STAGE_COLORS: Record<string, string> = {
   new_lead: "bg-blue-50 text-blue-700 border-blue-200",
-  qualified: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  qualified: "bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20",
   pre_listing: "bg-slate-50 text-slate-700 border-slate-200",
-  listed: "bg-indigo-50 text-indigo-700 border-indigo-200",
-  showing: "bg-violet-50 text-violet-700 border-violet-200",
+  listed: "bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20",
+  showing: "bg-[#0F7694]/10 text-[#0A6880] border-[#0F7694]/20",
   offer: "bg-amber-50 text-amber-700 border-amber-200",
   offer_received: "bg-amber-50 text-amber-700 border-amber-200",
   conditional: "bg-orange-50 text-orange-700 border-orange-200",
   subject_removal: "bg-rose-50 text-rose-700 border-rose-200",
-  closing: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  closed: "bg-green-50 text-green-700 border-green-200",
+  closing: "bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20",
+  closed: "bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20",
 };
 
 export const DEAL_STATUS_COLORS: Record<string, string> = {
-  active: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  won: "bg-green-50 text-green-700 border-green-200",
+  active: "bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20",
+  won: "bg-[#0F7694]/5 text-[#0A6880] border-[#0F7694]/20",
   lost: "bg-red-50 text-red-700 border-red-200",
 };
 

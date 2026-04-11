@@ -191,7 +191,7 @@ export function CRMCalendar() {
         <Badge className="bg-amber-400 text-amber-900 hover:bg-amber-400">
           Requested
         </Badge>
-        <Badge className="bg-green-500 text-white hover:bg-green-500">
+        <Badge className="bg-success text-white hover:bg-[#007A47]">
           Confirmed
         </Badge>
         <Badge className="bg-red-400 text-white hover:bg-red-400">

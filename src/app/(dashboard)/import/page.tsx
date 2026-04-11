@@ -110,7 +110,7 @@ export default function ImportPage() {
       <Card>
         <CardContent className="p-5 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <FileSpreadsheet className="h-8 w-8 text-emerald-600" />
+            <FileSpreadsheet className="h-8 w-8 text-brand" />
             <div>
               <p className="text-sm font-semibold">Excel Template</p>
               <p className="text-xs text-muted-foreground">
@@ -200,10 +200,10 @@ export default function ImportPage() {
                           variant="outline"
                           className={
                             row.status === "active"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              ? "bg-brand-muted text-brand-dark border-brand/20"
                               : row.status === "pending"
                               ? "bg-amber-50 text-amber-700 border-amber-200"
-                              : "bg-blue-50 text-blue-700 border-blue-200"
+                              : "bg-brand-muted text-brand-dark border-brand/20"
                           }
                         >
                           {row.status ?? "active"}
@@ -223,7 +223,7 @@ export default function ImportPage() {
         <Card>
           <CardContent className="p-5 space-y-2">
             {result.success > 0 && (
-              <div className="flex items-center gap-2 text-emerald-700">
+              <div className="flex items-center gap-2 text-brand-dark">
                 <CheckCircle2 className="h-5 w-5" />
                 <span className="font-semibold">{result.success} listings imported successfully</span>
               </div>

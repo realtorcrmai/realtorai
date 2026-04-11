@@ -12,7 +12,7 @@ export async function OPTIONS(request: NextRequest) {
  * Body: { session_id, pages_visited, duration_seconds, is_converted, contact_id?, device_type, referrer }
  */
 export async function POST(request: NextRequest) {
-  const auth = validateApiKey(request);
+  const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
   const body = await request.json();
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
  * Query params: limit, offset, converted_only
  */
 export async function GET(request: NextRequest) {
-  const auth = validateApiKey(request);
+  const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
   const supabase = createAdminClient();

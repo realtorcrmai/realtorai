@@ -147,7 +147,7 @@ function EditableSection({
               type="button"
               onClick={handleSave}
               disabled={isPending}
-              className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium disabled:opacity-50"
+              className="flex items-center gap-1 text-xs text-brand hover:text-brand-dark font-medium disabled:opacity-50"
             >
               {isPending ? (
                 <Loader2 className="h-3 w-3 animate-spin" />

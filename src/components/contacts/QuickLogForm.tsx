@@ -187,7 +187,7 @@ export function QuickLogForm({
                 className={`px-2 py-1 rounded text-xs border transition-all ${
                   outcome === o.value
                     ? o.value === "interested"
-                      ? "bg-emerald-500 text-white border-emerald-500"
+                      ? "bg-brand/50 text-white border-emerald-500"
                       : o.value === "lost"
                       ? "bg-red-500 text-white border-red-500"
                       : "bg-primary text-white border-primary"

@@ -36,14 +36,17 @@ export default function PipelineSnapshot({
   const totalCount = stages.reduce((sum, s) => sum + s.count, 0);
 
   return (
-    <div className="glass rounded-xl p-5 elevation-2">
+    <div className="relative rounded-2xl overflow-hidden elevation-4 bg-card border border-brand/20 border-t-[#0F7694]">
+      {/* Gold accent top border */}
+      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#0F7694]/60 via-[#0F7694] to-[#0F7694]/60" />
+    <div className="p-5">
       {/* Header row */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">
           Pipeline
         </h2>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
-          GCI {formatGCI(totalGCI)}
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-success/15 px-3 py-1 text-xs font-bold text-emerald-700">
+          💰 GCI {formatGCI(totalGCI)}
         </span>
       </div>
 
@@ -79,7 +82,7 @@ export default function PipelineSnapshot({
           <Link
             key={stage.key}
             href={stageHref(stage.key)}
-            className="flex items-start gap-2 min-w-0 rounded-lg p-1.5 -m-1.5 transition-colors hover:bg-muted/60 cursor-pointer group"
+            className={`flex items-start gap-2 min-w-0 rounded-lg p-1.5 -m-1.5 transition-colors hover:bg-muted/60 cursor-pointer group ${stage.count === 0 ? "opacity-40" : ""}`}
           >
             <span
               className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${stage.color} group-hover:ring-2 group-hover:ring-offset-1 group-hover:ring-current transition-all`}
@@ -92,12 +95,13 @@ export default function PipelineSnapshot({
                 {stage.count} contact{stage.count !== 1 ? "s" : ""}
               </p>
               <p className="text-xs font-semibold text-foreground">
-                {currencyFmt.format(stage.value)}
+                {stage.count > 0 ? currencyFmt.format(stage.value) : "—"}
               </p>
             </div>
           </Link>
         ))}
       </div>
+    </div>
     </div>
   );
 }

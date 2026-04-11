@@ -10,8 +10,8 @@ import type { ContactImportantDate, ContactFamilyMember } from "@/types";
 const DATE_TYPE_CONFIG: Record<string, { label: string; icon: typeof Gift; color: string }> = {
   birthday: { label: "Birthday", icon: Gift, color: "bg-pink-50 text-pink-700" },
   anniversary: { label: "Anniversary", icon: Heart, color: "bg-rose-50 text-rose-700" },
-  closing_anniversary: { label: "Closing Anniversary", icon: Home, color: "bg-emerald-50 text-emerald-700" },
-  move_in: { label: "Move-in Date", icon: Home, color: "bg-blue-50 text-blue-700" },
+  closing_anniversary: { label: "Closing Anniversary", icon: Home, color: "bg-brand-muted text-brand-dark" },
+  move_in: { label: "Move-in Date", icon: Home, color: "bg-brand-muted text-brand-dark" },
   custom: { label: "Custom", icon: Star, color: "bg-slate-50 text-slate-700" },
 };
 

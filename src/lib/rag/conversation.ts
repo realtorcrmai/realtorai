@@ -4,6 +4,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
+import { createWithRetry } from '@/lib/anthropic/retry';
 import { SESSION, MODELS, MAX_TOKENS } from './constants';
 import type { RagSession, RagMessage, UIContext, SourceReference } from './types';
 
@@ -181,7 +182,7 @@ export async function summarizeHistory(db: SupabaseClient, sessionId: string): P
 
   try {
     const anthropic = new Anthropic();
-    const response = await anthropic.messages.create({
+    const response = await createWithRetry(anthropic, {
       model: MODELS.TIER1_PLANNER,
       max_tokens: MAX_TOKENS.TIER1_PLANNER,
       messages: [{
