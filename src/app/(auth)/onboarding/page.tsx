@@ -383,12 +383,12 @@ export default function OnboardingPage() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="Phone number (e.g. 604-555-1234)"
-                      className="w-full h-12 rounded-xl border-2 border-gray-200 bg-white px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors"
+                      className="w-full h-12 rounded-xl border-2 border-white/40 bg-white/30 backdrop-blur-sm px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors"
                     />
                     <select
                       value={timezone}
                       onChange={(e) => setTimezone(e.target.value)}
-                      className="w-full h-12 rounded-xl border-2 border-gray-200 bg-white px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors appearance-none"
+                      className="w-full h-12 rounded-xl border-2 border-white/40 bg-white/30 backdrop-blur-sm px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors appearance-none"
                     >
                       <option value="America/Vancouver">Pacific (Vancouver)</option>
                       <option value="America/Edmonton">Mountain (Edmonton)</option>
@@ -402,12 +402,12 @@ export default function OnboardingPage() {
                       value={spouseName}
                       onChange={(e) => setSpouseName(e.target.value)}
                       placeholder="Spouse / partner name (optional)"
-                      className="w-full h-12 rounded-xl border-2 border-gray-200 bg-white px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors"
+                      className="w-full h-12 rounded-xl border-2 border-white/40 bg-white/30 backdrop-blur-sm px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors"
                     />
                     <select
                       value={kidsCount}
                       onChange={(e) => setKidsCount(e.target.value)}
-                      className="w-full h-12 rounded-xl border-2 border-gray-200 bg-white px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors appearance-none"
+                      className="w-full h-12 rounded-xl border-2 border-white/40 bg-white/30 backdrop-blur-sm px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors appearance-none"
                     >
                       <option value="">Number of kids (optional)</option>
                       <option value="0">No kids</option>
@@ -416,7 +416,7 @@ export default function OnboardingPage() {
                       <option value="3">3 kids</option>
                       <option value="4">4+ kids</option>
                     </select>
-                    <label className="flex items-center gap-3 w-full h-12 rounded-xl border-2 border-dashed border-gray-200 bg-white/60 px-4 cursor-pointer hover:border-[#4f35d2] transition-colors">
+                    <label className="flex items-center gap-3 w-full h-12 rounded-xl border-2 border-dashed border-white/40 bg-white/30 backdrop-blur-sm px-4 cursor-pointer hover:border-[#4f35d2] transition-colors">
                       <Upload className="h-4 w-4 text-gray-400 shrink-0" />
                       <span className="text-sm text-gray-400 flex-1">
                         {familyFile ? <span className="text-foreground font-medium">{familyFile.name}</span> : "Upload family contacts (.csv)"}
@@ -613,7 +613,7 @@ export default function OnboardingPage() {
 
                   <button
                     onClick={() => signIn("google", { callbackUrl: "/onboarding" })}
-                    className="w-full flex items-center gap-4 p-5 rounded-xl border-2 border-gray-200 bg-white hover:border-[#4f35d2] transition-colors text-left mb-4"
+                    className="w-full flex items-center gap-4 p-5 rounded-xl border-2 border-white/40 bg-white/30 backdrop-blur-sm hover:border-[#4f35d2] transition-colors text-left mb-4"
                   >
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 shrink-0">
                       <Calendar className="h-6 w-6 text-blue-600" />
@@ -653,7 +653,7 @@ export default function OnboardingPage() {
                         placeholder="Brokerage name"
                         value={brokerage}
                         onChange={(e) => setBrokerage(e.target.value)}
-                        className="w-full h-12 rounded-xl border-2 border-gray-200 bg-white px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors"
+                        className="w-full h-12 rounded-xl border-2 border-white/40 bg-white/30 backdrop-blur-sm px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors"
                       />
                       {brokerageSuggestions.length > 0 && (
                         <div className="absolute z-10 top-full mt-1 w-full bg-white border rounded-xl shadow-lg py-1 overflow-hidden">
@@ -673,7 +673,7 @@ export default function OnboardingPage() {
                       placeholder="License number (optional)"
                       value={licenseNumber}
                       onChange={(e) => setLicenseNumber(e.target.value)}
-                      className="w-full h-12 rounded-xl border-2 border-gray-200 bg-white px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors"
+                      className="w-full h-12 rounded-xl border-2 border-white/40 bg-white/30 backdrop-blur-sm px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors"
                     />
                     <div>
                       <textarea
@@ -681,7 +681,7 @@ export default function OnboardingPage() {
                         value={bio}
                         onChange={(e) => setBio(e.target.value)}
                         rows={3}
-                        className="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm resize-none focus:outline-none focus:border-[#4f35d2] transition-colors"
+                        className="w-full rounded-xl border-2 border-white/40 bg-white/30 backdrop-blur-sm px-4 py-3 text-sm resize-none focus:outline-none focus:border-[#4f35d2] transition-colors"
                       />
                       <AIBioGenerator bio={bio} onBioChange={setBio} />
                     </div>
