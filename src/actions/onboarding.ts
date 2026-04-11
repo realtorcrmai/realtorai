@@ -329,7 +329,6 @@ export async function seedSampleData() {
       type: "buyer",
       source: "sample",
       is_sample: true,
-      pref_channel: "email",
       notes: "Looking for a 2BR condo in Vancouver. Budget $650K-$800K.",
     },
     {
@@ -340,7 +339,6 @@ export async function seedSampleData() {
       type: "seller",
       source: "sample",
       is_sample: true,
-      pref_channel: "sms",
       notes: "Owns townhouse on Main St. Considering selling in spring.",
     },
     {
@@ -362,7 +360,6 @@ export async function seedSampleData() {
       type: "seller",
       source: "sample",
       is_sample: true,
-      pref_channel: "phone",
       notes: "Investment property owner. Has 3 units in Burnaby.",
     },
     {
