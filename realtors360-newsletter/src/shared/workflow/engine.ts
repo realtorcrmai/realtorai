@@ -281,8 +281,33 @@ async function executeAutoMessage(
     try {
       const emailSubject = subject || step.name;
       const emailTypeVal = step.template_id || step.action_type || 'welcome';
-      const { buildEmailFromType, generatePlainText } = await import('../../lib/email-blocks.js');
-      const htmlBody = buildEmailFromType(emailTypeVal, contact.name, contact.type, emailSubject, body, variables.agent_name ? `Talk to ${variables.agent_name}` : 'View Details');
+      const { assembleEmail, generatePlainText } = await import('../../lib/email-blocks.js');
+      const firstName = contact.name.split(' ')[0] || 'there';
+
+      const htmlBody = assembleEmail(emailTypeVal, {
+        contact: { name: contact.name, firstName, type: contact.type },
+        agent: {
+          name: variables.agent_name || config.AGENT_NAME,
+          brokerage: 'Realtors360',
+          phone: variables.agent_phone || '',
+          email: variables.agent_email || '',
+          initials: (variables.agent_name || config.AGENT_NAME)[0] || 'R',
+        },
+        content: {
+          subject: emailSubject,
+          intro: body,
+          body: '',
+          ctaText: variables.agent_name ? `Talk to ${variables.agent_name}` : 'View Details',
+          ctaUrl: 'https://realtors360.ai',
+        },
+        ...(listing ? {
+          listing: {
+            address: listing.address || '',
+            area: '',
+            price: listing.list_price || 0,
+          },
+        } : {}),
+      });
       const textBody = generatePlainText(htmlBody);
 
       const tracked = await sendWithTracking({
@@ -292,7 +317,7 @@ async function executeAutoMessage(
         html: htmlBody,
         text: textBody,
         contactId: contact.id,
-        realtorId: '',  // Set by sendWithTracking from the contact's realtor_id in the DB
+        realtorId: '',
         emailType: emailTypeVal,
         sendMode: 'workflow_auto',
         aiContext: { source: 'workflow', step_name: step.name, workflow_id: step.workflow_id },

@@ -140,31 +140,53 @@ export async function runPipeline(
     return { ok: false, reason: `draft not ready: ${draft.reason ?? 'unknown'}` };
   }
 
-  // ── Phase 6: Render ──────────────────────────────────────────
-  const Component = getEmailComponent(rule.email_type);
-  if (!Component) {
-    return { ok: false, reason: `no template for email_type=${rule.email_type}` };
-  }
+  // ── Phase 6: Render with luxury template ──────────────────────
+  const { assembleEmail } = await import('../lib/email-blocks.js');
 
   const firstName = (contactRes.data.name ?? '').split(' ')[0] || 'there';
   const realtorName = realtorRes.data.name ?? 'Your agent';
+  const realtorEmail = realtorRes.data.email ?? '';
 
-  let html = await render(
-    React.createElement(Component, {
-      preheader: draft.preheader ?? draft.subject,
-      greeting: draft.greeting ?? `Hi ${firstName},`,
-      bodyParagraphs: draft.body_paragraphs,
-      ctaLabel: draft.cta_label ?? 'Learn more',
-      ctaUrl: draft.cta_url ?? 'https://realtors360.com',
-      signoff: draft.signoff ?? `— ${realtorName}`,
-      realtorName,
-    })
-  );
+  // Load listing data if event references one
+  let listingData: Record<string, unknown> | undefined;
+  const listingId = event.listing_id || (event.event_data?.listing_id as string | undefined);
+  if (listingId) {
+    const { data: listing } = await supabase
+      .from('listings')
+      .select('address, list_price, property_type, mls_number, status')
+      .eq('id', listingId)
+      .maybeSingle();
+    if (listing) {
+      listingData = listing;
+    }
+  }
 
-  // P11: inject real unsubscribe link (CASL + CAN-SPAM requirement).
-  // The {{unsubscribe_url}} placeholder lives in BasicEmail's footer.
-  const unsubUrl = `https://realtors360.com/unsubscribe?cid=${recipientContactId}`;
-  html = html.replace(/\{\{unsubscribe_url\}\}/g, unsubUrl);
+  const bodyText = draft.body_paragraphs?.join('\n\n') || '';
+
+  let html = assembleEmail(rule.email_type, {
+    contact: { name: contactRes.data.name ?? '', firstName, type: 'buyer' },
+    agent: {
+      name: realtorName,
+      brokerage: 'Realtors360',
+      phone: '',
+      email: realtorEmail,
+      initials: realtorName[0] || 'R',
+    },
+    content: {
+      subject: draft.subject,
+      intro: draft.greeting ? `${draft.greeting}\n\n${bodyText}` : bodyText,
+      body: '',
+      ctaText: draft.cta_label ?? 'Learn More',
+      ctaUrl: draft.cta_url ?? 'https://realtors360.ai',
+    },
+    ...(listingData ? {
+      listing: {
+        address: (listingData.address as string) || '',
+        area: '',
+        price: (listingData.list_price as number) || 0,
+      },
+    } : {}),
+  });
 
   const idempotencyKey = makeIdempotencyKey(event.id, recipientContactId, rule.email_type);
 
