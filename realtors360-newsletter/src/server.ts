@@ -3,6 +3,7 @@ import { healthRouter } from './routes/health.js';
 import { eventsRouter } from './routes/events.js';
 import { webhooksRouter } from './routes/webhooks.js';
 import { metricsRouter } from './routes/metrics.js';
+import { webViewRouter } from './routes/web-view.js';
 import { logger } from './lib/logger.js';
 
 export function createApp(): Express {
@@ -30,6 +31,7 @@ export function createApp(): Express {
   app.use(eventsRouter);
   app.use(webhooksRouter);
   app.use(metricsRouter);
+  app.use(webViewRouter);
 
   // 404
   app.use((req, res) => {
