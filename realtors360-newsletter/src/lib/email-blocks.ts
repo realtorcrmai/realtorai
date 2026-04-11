@@ -67,11 +67,11 @@ const SERIF = "Georgia, 'Playfair Display', 'Times New Roman', serif";
 const SANS = "'DM Sans', 'Inter', 'Helvetica Neue', Arial, sans-serif";
 const CLR = {
   text: '#1a1a1a',
-  muted: '#6b6b6b',
-  light: '#999999',
-  border: '#e0e0e0',
+  muted: '#777777',
+  light: '#a0a0a0',
+  border: '#e8e8e8',
   bg: '#ffffff',
-  frame: '#f4f4f4',
+  frame: '#ffffff',      // Pure white — no grey frame. Luxury = space, not borders.
   cream: '#f8f5f0',
   dark: '#1a1a1a',
   accent: '#2c2c2c',
@@ -102,7 +102,7 @@ const blocks: Record<string, BlockFn> = {
       'UPDATE'
     );
     return `
-    <tr><td style="padding:28px 40px 20px;">
+    <tr><td style="padding:40px 48px 24px;">
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align:middle;">
           ${d.logoUrl
@@ -133,9 +133,9 @@ const blocks: Record<string, BlockFn> = {
     const title = d.listing?.address || d.content.subject;
     const subtitle = d.listing?.area || d.content.intro;
     return `
-    <tr><td style="padding:32px 40px 0;text-align:center;">
-      <h1 style="font-family:${SERIF};font-size:28px;font-weight:400;color:${CLR.text};margin:0;line-height:1.3;letter-spacing:-0.3px;">${title}</h1>
-      ${subtitle ? `<p style="font-family:${SANS};font-size:14px;color:${CLR.muted};margin:8px 0 0;line-height:1.5;">${subtitle}</p>` : ''}
+    <tr><td style="padding:44px 48px 0;text-align:center;">
+      <h1 style="font-family:${SERIF};font-size:30px;font-weight:normal;color:${CLR.text};margin:0;line-height:1.35;letter-spacing:0.2px;">${title}</h1>
+      ${subtitle ? `<p style="font-family:${SANS};font-size:14px;font-weight:400;color:${CLR.muted};margin:12px 0 0;line-height:1.6;letter-spacing:0.5px;">${subtitle}</p>` : ''}
     </td></tr>`;
   },
 
@@ -149,8 +149,8 @@ const blocks: Record<string, BlockFn> = {
     if (d.listing.year) parts.push(`YEAR: ${d.listing.year}`);
     if (!parts.length) return '';
     return `
-    <tr><td style="padding:20px 40px 0;text-align:center;">
-      <p style="font-family:${SANS};font-size:11px;font-weight:600;color:${CLR.light};letter-spacing:2.5px;text-transform:uppercase;margin:0;">${parts.join(' &nbsp;|&nbsp; ')}</p>
+    <tr><td style="padding:28px 48px 0;text-align:center;">
+      <p style="font-family:${SANS};font-size:11px;font-weight:400;color:${CLR.light};letter-spacing:3px;text-transform:uppercase;margin:0;">${parts.join(' &nbsp;&nbsp;|&nbsp;&nbsp; ')}</p>
     </td></tr>`;
   },
 
@@ -160,9 +160,9 @@ const blocks: Record<string, BlockFn> = {
     const price = fmtPrice(d.listing.price);
     const prev = d.listing.previousPrice ? fmtPrice(d.listing.previousPrice) : '';
     return `
-    <tr><td style="padding:20px 40px 0;text-align:center;">
-      ${prev ? `<p style="font-family:${SANS};font-size:13px;color:${CLR.light};margin:0 0 4px;text-decoration:line-through;">${prev}</p>` : ''}
-      <p style="font-family:${SERIF};font-size:26px;font-weight:400;color:${CLR.text};margin:0;letter-spacing:-0.3px;">Offered at ${price}</p>
+    <tr><td style="padding:28px 48px 0;text-align:center;">
+      ${prev ? `<p style="font-family:${SANS};font-size:13px;color:${CLR.light};margin:0 0 6px;text-decoration:line-through;">${prev}</p>` : ''}
+      <p style="font-family:${SERIF};font-size:28px;font-weight:normal;color:${CLR.text};margin:0;letter-spacing:0.5px;">Offered at ${price}</p>
     </td></tr>`;
   },
 
@@ -171,8 +171,8 @@ const blocks: Record<string, BlockFn> = {
     const text = d.content.body || d.content.intro;
     if (!text) return '';
     return `
-    <tr><td style="padding:24px 40px 0;">
-      <p style="font-family:${SANS};font-size:15px;color:${CLR.text};line-height:1.75;margin:0;text-align:left;">${text}</p>
+    <tr><td style="padding:32px 48px 0;">
+      <p style="font-family:${SANS};font-size:15px;font-weight:400;color:${CLR.text};line-height:1.85;margin:0;text-align:justify;">${text}</p>
     </td></tr>`;
   },
 
@@ -180,13 +180,13 @@ const blocks: Record<string, BlockFn> = {
   openHouseCard: (d) => {
     if (!d.listing?.openHouseDate) return '';
     return `
-    <tr><td style="padding:24px 40px 0;">
+    <tr><td style="padding:36px 48px 0;">
       <table width="100%" cellpadding="0" cellspacing="0" style="background:${CLR.cream};"><tr>
-        <td style="padding:24px 32px;text-align:center;">
-          <p style="font-family:${SANS};font-size:10px;font-weight:600;color:${CLR.light};letter-spacing:2.5px;text-transform:uppercase;margin:0;">Open House</p>
-          <p style="font-family:${SERIF};font-size:22px;font-weight:400;color:${CLR.text};margin:10px 0 0;">${d.listing.openHouseDate}</p>
-          ${d.listing.openHouseTime ? `<p style="font-family:${SANS};font-size:15px;color:${CLR.muted};margin:4px 0 0;">${d.listing.openHouseTime}</p>` : ''}
-          ${d.listing.address ? `<p style="font-family:${SANS};font-size:13px;color:${CLR.light};margin:8px 0 0;">${d.listing.address}</p>` : ''}
+        <td style="padding:36px 40px;text-align:center;">
+          <p style="font-family:${SANS};font-size:10px;font-weight:500;color:${CLR.light};letter-spacing:3px;text-transform:uppercase;margin:0;">Open House</p>
+          <p style="font-family:${SERIF};font-size:22px;font-weight:normal;color:${CLR.text};margin:14px 0 0;line-height:1.4;">${d.listing.openHouseDate}</p>
+          ${d.listing.openHouseTime ? `<p style="font-family:${SANS};font-size:15px;font-weight:400;color:${CLR.muted};margin:6px 0 0;">${d.listing.openHouseTime}</p>` : ''}
+          ${d.listing.address ? `<p style="font-family:${SANS};font-size:13px;font-weight:400;color:${CLR.light};margin:12px 0 0;">${d.listing.address}</p>` : ''}
         </td>
       </tr></table>
     </td></tr>`;
@@ -227,7 +227,7 @@ const blocks: Record<string, BlockFn> = {
   agentProfile: (d) => {
     const initials = d.agent.initials || d.agent.name.split(' ').map(n => n[0]).join('').slice(0, 2);
     return `
-    <tr><td style="padding:32px 40px 0;">
+    <tr><td style="padding:44px 48px 0;">
       <div style="border-top:1px solid ${CLR.border};padding-top:28px;"></div>
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
         <td width="56" style="vertical-align:top;">
@@ -279,7 +279,7 @@ const blocks: Record<string, BlockFn> = {
 
   // ── 14. Compliance Footer ────────────────────
   complianceFooter: (d) => `
-    <tr><td style="padding:28px 40px 32px;text-align:center;border-top:1px solid ${CLR.border};margin-top:20px;">
+    <tr><td style="padding:36px 48px 44px;text-align:center;border-top:1px solid ${CLR.border};margin-top:24px;">
       <p style="font-family:${SANS};font-size:12px;color:${CLR.muted};margin:0;line-height:1.7;">
         ${d.agent.name} &middot; ${d.agent.brokerage}
         ${d.agent.brokerageAddress ? `<br>${d.agent.brokerageAddress}` : ''}
@@ -554,7 +554,7 @@ export function assembleEmail(emailType: string, data: EmailData): string {
 <div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:${CLR.frame};">${preheader}${'&zwnj;&nbsp;'.repeat(20)}</div>
 <!-- Outer wrapper -->
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CLR.frame};" class="email-outer">
-<tr><td align="center" style="padding:32px 16px;">
+<tr><td align="center" style="padding:0;">
 <!--[if mso]><table role="presentation" width="660" cellpadding="0" cellspacing="0" align="center"><tr><td><![endif]-->
 <table role="presentation" width="660" cellpadding="0" cellspacing="0" style="max-width:660px;width:100%;background:${CLR.bg};" class="email-inner">
 ${renderedBlocks}
