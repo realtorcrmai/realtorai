@@ -19,9 +19,10 @@ interface Props {
   source: "gmail" | "apple";
   onImport: (selected: ImportContact[]) => Promise<void>;
   onBack: () => void;
+  onSkip?: () => void;
 }
 
-export function ContactImportPreview({ contacts, source, onImport, onBack }: Props) {
+export function ContactImportPreview({ contacts, source, onImport, onBack, onSkip }: Props) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "has_email" | "has_phone" | "has_both">("has_email");
   const [selected, setSelected] = useState<Set<number>>(() => {
@@ -252,6 +253,14 @@ export function ContactImportPreview({ contacts, source, onImport, onBack }: Pro
           Import {selectedCount} contact{selectedCount !== 1 ? "s" : ""}
         </Button>
       </div>
+      {onSkip && (
+        <button
+          onClick={onSkip}
+          className="w-full text-xs text-muted-foreground hover:underline text-center mt-2"
+        >
+          Continue without importing
+        </button>
+      )}
     </div>
   );
 }

@@ -2,51 +2,50 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import {
   Home, ListTodo, Building2, Users, Clock, Calendar,
-  Mail, Zap, GitBranch, Search, Upload, FileText,
-  Wand2, ChevronDown, ChevronRight,
-  BarChart3, Settings,
+  Mail, Zap, Search, Upload, FileText,
+  Wand2, Settings, LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 import type { FeatureKey } from "@/lib/features";
 
-// Nav items matching the current AppHeader
-const MAIN_NAV = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/tasks", label: "My Work", icon: ListTodo },
-];
+interface NavItem {
+  href: string;
+  label: string;
+  icon: typeof Home;
+  featureKey?: FeatureKey;
+}
 
-const CRM_NAV: { href: string; label: string; icon: typeof Home; featureKey?: FeatureKey }[] = [
-  { href: "/listings", label: "Listings", icon: Building2 },
+const MAIN_NAV: NavItem[] = [
+  { href: "/", label: "Dashboard", icon: Home },
   { href: "/contacts", label: "Contacts", icon: Users, featureKey: "contacts" },
+  { href: "/listings", label: "Listings", icon: Building2 },
   { href: "/showings", label: "Showings", icon: Clock, featureKey: "showings" },
   { href: "/calendar", label: "Calendar", icon: Calendar, featureKey: "calendar" },
-  { href: "/pipeline", label: "Pipeline", icon: GitBranch },
-  { href: "/tasks", label: "Tasks", icon: ListTodo, featureKey: "tasks" },
 ];
 
-const TOOLS_NAV: { href: string; label: string; icon: typeof Home; featureKey?: FeatureKey }[] = [
+const TOOLS_NAV: NavItem[] = [
+  { href: "/tasks", label: "Tasks", icon: ListTodo, featureKey: "tasks" },
+  { href: "/content", label: "Content Engine", icon: Wand2, featureKey: "content" },
   { href: "/newsletters", label: "Email Marketing", icon: Mail, featureKey: "newsletters" },
   { href: "/automations", label: "Automations", icon: Zap, featureKey: "automations" },
-  { href: "/content", label: "Content Engine", icon: Wand2, featureKey: "content" },
-  { href: "/forms", label: "BC Forms", icon: FileText, featureKey: "forms" },
-  { href: "/import", label: "Import", icon: Upload, featureKey: "import" },
-  { href: "/search", label: "Search", icon: Search, featureKey: "search" },
 ];
 
-const BOTTOM_NAV = [
-  { href: "/reports", label: "Reports", icon: BarChart3 },
+const ADMIN_NAV: NavItem[] = [
+  { href: "/forms", label: "Forms", icon: FileText, featureKey: "forms" },
+  { href: "/search", label: "Property Search", icon: Search, featureKey: "search" },
+  { href: "/import", label: "Import", icon: Upload, featureKey: "import" },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function MondaySidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const [crmOpen, setCrmOpen] = useState(true);
-  const [toolsOpen, setToolsOpen] = useState(true);
+  const userName = session?.user?.name || "User";
+  const userEmail = session?.user?.email || "";
+  const initials = userName.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
 
   const enabledFeatures: string[] = (session?.user as Record<string, unknown>)?.enabledFeatures as string[] || [];
 
@@ -60,107 +59,90 @@ export function MondaySidebar() {
     return pathname.startsWith(href);
   }
 
+  function NavLink({ item }: { item: NavItem }) {
+    const active = isActive(item.href);
+    return (
+      <Link
+        href={item.href}
+        className={cn(
+          "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+          active
+            ? "bg-sidebar-accent text-white border-l-3 border-sidebar-primary"
+            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+        )}
+      >
+        <item.icon className="h-[18px] w-[18px] shrink-0" />
+        {item.label}
+      </Link>
+    );
+  }
+
+  function GroupHeader({ label }: { label: string }) {
+    return (
+      <div className="text-xs uppercase tracking-wider text-sidebar-foreground/40 px-4 pt-4 pb-2 font-semibold">
+        {label}
+      </div>
+    );
+  }
+
   return (
-    <aside className="hidden md:flex flex-col w-[240px] shrink-0 border-r border-[#d0d4e4] bg-white h-full overflow-y-auto">
-      {/* Main nav */}
-      <div className="p-2 space-y-0.5">
-        {MAIN_NAV.map(item => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors",
-              isActive(item.href)
-                ? "bg-primary/10 text-primary font-medium"
-                : "text-[#323338] hover:bg-[rgba(103,104,121,0.1)]"
-            )}
-          >
-            <item.icon className="h-[18px] w-[18px] shrink-0" />
-            {item.label}
-          </Link>
+    <aside className="hidden md:flex flex-col w-60 shrink-0 bg-sidebar h-full overflow-y-auto">
+      {/* Brand */}
+      <div className="flex items-center gap-2.5 h-16 px-4 shrink-0">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
+          </svg>
+        </div>
+        <span className="text-sm font-semibold text-sidebar-foreground">Realtors360</span>
+      </div>
+
+      {/* MAIN group */}
+      <GroupHeader label="Main" />
+      <div className="px-2 space-y-0.5">
+        {MAIN_NAV.filter(item => isVisible(item.featureKey)).map(item => (
+          <NavLink key={item.href} item={item} />
         ))}
       </div>
 
-      {/* CRM section */}
-      <div className="px-2 mt-2">
-        <button
-          onClick={() => setCrmOpen(!crmOpen)}
-          className="flex items-center gap-1 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider w-full hover:text-foreground"
-        >
-          {crmOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-          CRM
-        </button>
-        {crmOpen && (
-          <div className="space-y-0.5 mt-0.5">
-            {CRM_NAV.filter(item => isVisible(item.featureKey)).map(item => (
-              <Link
-                key={item.href + item.label}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors",
-                  isActive(item.href)
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-[#323338] hover:bg-[rgba(103,104,121,0.1)]"
-                )}
-              >
-                <item.icon className="h-[18px] w-[18px] shrink-0" />
-                {item.label}
-              </Link>
-            ))}
-          </div>
-        )}
+      {/* TOOLS group */}
+      <GroupHeader label="Tools" />
+      <div className="px-2 space-y-0.5">
+        {TOOLS_NAV.filter(item => isVisible(item.featureKey)).map(item => (
+          <NavLink key={item.href} item={item} />
+        ))}
       </div>
 
-      {/* Tools section */}
-      <div className="px-2 mt-2">
-        <button
-          onClick={() => setToolsOpen(!toolsOpen)}
-          className="flex items-center gap-1 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider w-full hover:text-foreground"
-        >
-          {toolsOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-          Tools
-        </button>
-        {toolsOpen && (
-          <div className="space-y-0.5 mt-0.5">
-            {TOOLS_NAV.filter(item => isVisible(item.featureKey)).map(item => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors",
-                  isActive(item.href)
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-[#323338] hover:bg-[rgba(103,104,121,0.1)]"
-                )}
-              >
-                <item.icon className="h-[18px] w-[18px] shrink-0" />
-                {item.label}
-              </Link>
-            ))}
-          </div>
-        )}
+      {/* ADMIN group */}
+      <GroupHeader label="Admin" />
+      <div className="px-2 space-y-0.5">
+        {ADMIN_NAV.filter(item => isVisible(item.featureKey)).map(item => (
+          <NavLink key={item.href} item={item} />
+        ))}
       </div>
 
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Bottom nav */}
-      <div className="p-2 border-t border-[#d0d4e4] space-y-0.5">
-        {BOTTOM_NAV.map(item => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors",
-              isActive(item.href)
-                ? "bg-primary/10 text-primary font-medium"
-                : "text-[#323338] hover:bg-[rgba(103,104,121,0.1)]"
-            )}
+      {/* User section */}
+      <div className="p-3 border-t border-sidebar-accent shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 text-sidebar-primary flex items-center justify-center text-xs font-semibold shrink-0">
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-sidebar-foreground truncate">{userName}</p>
+            <p className="text-xs text-sidebar-foreground/50 truncate">{userEmail}</p>
+          </div>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="p-1.5 rounded-md text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors shrink-0"
+            title="Sign out"
           >
-            <item.icon className="h-[18px] w-[18px] shrink-0" />
-            {item.label}
-          </Link>
-        ))}
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </aside>
   );

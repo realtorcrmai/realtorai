@@ -26,10 +26,10 @@ const SCREENS = [
   },
   {
     question: "What's your primary focus?",
-    subtitle: "We'll tailor your workspace to match",
+    subtitle: "Select all that apply — we'll tailor your workspace to match",
     type: "cards" as const,
     field: "onboarding_market" as const,
-    multiSelect: false,
+    multiSelect: true,
     options: [
       { value: "residential", icon: "🏡", label: "Residential", description: "Houses, condos, townhomes" },
       { value: "commercial", icon: "🏗️", label: "Commercial", description: "Office, retail, industrial" },
@@ -115,7 +115,16 @@ export default function PersonalizePage() {
       }
       setScreen(progress.screen);
       if (progress.data) {
-        setSelections(progress.data as Record<string, string | string[] | null>);
+        // Normalize: multi-select fields may be stored as strings (old data) or arrays (new JSONB)
+        const data = progress.data as Record<string, string | string[] | null>;
+        const multiSelectFields = ["onboarding_persona", "onboarding_market"];
+        for (const field of multiSelectFields) {
+          const val = data[field];
+          if (typeof val === "string") {
+            data[field] = [val]; // Convert old string to array
+          }
+        }
+        setSelections(data);
       }
       setLoading(false);
     });

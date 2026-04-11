@@ -7,14 +7,13 @@ import { generateBio } from "@/actions/ai-onboarding";
 interface AIBioGeneratorProps {
   bio: string;
   onBioChange: (bio: string) => void;
-  hasBrokerage: boolean;
 }
 
 /**
  * AI Bio Generator button + typewriter effect (A1).
  * Shows next to bio textarea in onboarding Step 5.
  */
-export function AIBioGenerator({ bio, onBioChange, hasBrokerage }: AIBioGeneratorProps) {
+export function AIBioGenerator({ bio, onBioChange }: AIBioGeneratorProps) {
   const [generating, setGenerating] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [error, setError] = useState("");
@@ -59,9 +58,8 @@ export function AIBioGenerator({ bio, onBioChange, hasBrokerage }: AIBioGenerato
       <button
         type="button"
         onClick={handleGenerate}
-        disabled={generating || !hasBrokerage}
+        disabled={generating}
         className="inline-flex items-center gap-1.5 text-xs font-medium text-[#4f35d2] hover:text-[#3d28a8] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        title={!hasBrokerage ? "Please enter your brokerage first" : undefined}
       >
         {generating ? (
           <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>

@@ -17,15 +17,23 @@ const COLUMN_MAP: Record<string, string> = {
 
 const CRM_FIELDS = ["name", "first_name", "last_name", "email", "phone", "type", "notes", "ignore"];
 
+export type ReferralSuggestion = {
+  contact_id: string;
+  contact_name: string;
+  possible_referrer_id: string;
+  possible_referrer_name: string;
+};
+
 interface CSVImportStepProps {
-  onImported: (count: number) => void;
+  onImported: (count: number, suggestions?: ReferralSuggestion[]) => void;
+  onSkip?: () => void;
 }
 
 /**
  * CSV Import step for onboarding (O5).
  * Drag-drop → parse → column mapping → preview → import.
  */
-export function CSVImportStep({ onImported }: CSVImportStepProps) {
+export function CSVImportStep({ onImported, onSkip }: CSVImportStepProps) {
   const [file, setFile] = useState<File | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<string[][]>([]);
@@ -118,7 +126,7 @@ export function CSVImportStep({ onImported }: CSVImportStepProps) {
       if (!res.ok) {
         setError(data.error || "Import failed");
       } else {
-        onImported(data.imported || contacts.length);
+        onImported(data.imported || contacts.length, data.referral_suggestions);
       }
     } catch {
       setError("Import failed. Please try again.");
@@ -248,6 +256,14 @@ export function CSVImportStep({ onImported }: CSVImportStepProps) {
           <><Check className="h-4 w-4 mr-2" /> Import {rows.length} contacts</>
         )}
       </Button>
+      {onSkip && (
+        <button
+          onClick={onSkip}
+          className="w-full text-xs text-muted-foreground hover:underline text-center mt-2"
+        >
+          Continue without importing
+        </button>
+      )}
     </div>
   );
 }

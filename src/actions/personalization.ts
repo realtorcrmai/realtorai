@@ -73,8 +73,8 @@ export async function getPersonalizationProgress() {
   // Find first unanswered screen (null = unanswered, default values = answered)
   // Screen order: persona(0), market(1), team_size(2), experience(3), focus(4), loading(5)
   const fields = [
-    { key: "onboarding_persona", default: "solo_agent" },
-    { key: "onboarding_market", default: "residential" },
+    { key: "onboarding_persona", default: '["solo_agent"]' },
+    { key: "onboarding_market", default: '["residential"]' },
     { key: "onboarding_team_size", default: "just_me" },
     { key: "onboarding_experience", default: "new" },
     { key: "onboarding_focus", default: "[]" },
