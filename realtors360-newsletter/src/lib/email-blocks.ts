@@ -104,7 +104,7 @@ const blocks: Record<string, BlockFn> = {
       'Update'
     );
     return `
-    <tr><td style="padding:20px 48px;background:${CLR.surfaceGrey};" class="mobile-pad">
+    <tr><td style="padding:20px 48px;background:${CLR.bg};" class="mobile-pad">
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
         <td style="vertical-align:middle;">
           ${d.logoUrl
@@ -199,7 +199,7 @@ const blocks: Record<string, BlockFn> = {
     if (!d.listing?.openHouseDate) return '';
     return `
     <tr><td style="padding:40px 48px 0;" class="mobile-pad">
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:${CLR.surfaceGrey};border-radius:18px;"><tr>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:${CLR.bg};border:1px solid ${CLR.border};border-radius:18px;"><tr>
         <td style="padding:40px 44px;text-align:center;" class="mobile-oh-pad">
           <p style="font-family:${SANS};font-size:12px;font-weight:600;color:${CLR.accent};letter-spacing:0.5px;text-transform:uppercase;margin:0;">Open House</p>
           <p style="font-family:${SERIF};font-size:24px;font-weight:600;color:${CLR.text};margin:16px 0 0;line-height:1.3;letter-spacing:-0.3px;">${d.listing.openHouseDate}</p>
