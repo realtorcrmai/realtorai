@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Command } from "cmdk";
@@ -31,7 +31,10 @@ export function CommandPalette() {
   const { data: session } = useSession();
   const enabledFeatures = session?.user?.enabledFeatures as string[] | undefined;
   const hasHelp = Array.isArray(enabledFeatures) && enabledFeatures.includes("assistant");
-  const features = hasHelp && typeof window !== "undefined" ? (() => { try { return getAllFeatures(); } catch { return []; } })() : [];
+  const features = useMemo(() => {
+    if (!hasHelp || typeof window === "undefined") return [];
+    try { return getAllFeatures(); } catch { return []; }
+  }, [hasHelp]);
 
   // Cmd+K shortcut
   useEffect(() => {

@@ -275,13 +275,23 @@ export async function updateShowingStatus(
           });
         }
 
-        // Log the outbound communication
-        await tc.from("communications").insert({
-          direction: "outbound",
-          channel: "sms",
-          body: `Feedback request sent to ${appointment.buyer_agent_name || "buyer agent"}`,
-          related_id: appointmentId,
-        });
+        // Log the outbound communication under the listing's seller contact
+        // (buyer agents are flat text, not contacts — contact_id is NOT NULL)
+        const { data: feedbackListing } = await tc
+          .from("listings")
+          .select("seller_id")
+          .eq("id", appointment.listing_id)
+          .single();
+
+        if (feedbackListing?.seller_id) {
+          await tc.from("communications").insert({
+            contact_id: feedbackListing.seller_id,
+            direction: "outbound",
+            channel: "sms",
+            body: `Feedback request sent to ${appointment.buyer_agent_name || "buyer agent"} for showing at ${listing?.address || "property"}`,
+            related_id: appointmentId,
+          });
+        }
       }
     } catch {
       // Don't fail the status update if feedback fails

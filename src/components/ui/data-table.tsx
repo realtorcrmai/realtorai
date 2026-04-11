@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
@@ -47,6 +47,14 @@ export function DataTable<T extends Record<string, any>>({
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  // Reset page when data changes (e.g., after filtering)
+  const dataLen = data.length;
+  const prevDataLen = useRef(dataLen);
+  if (dataLen !== prevDataLen.current) {
+    prevDataLen.current = dataLen;
+    if (page !== 1) setPage(1);
+  }
 
   // Sort
   const sorted = useMemo(() => {
@@ -146,7 +154,7 @@ export function DataTable<T extends Record<string, any>>({
                   tabIndex={onRowClick ? 0 : undefined}
                   onKeyDown={onRowClick ? (e) => { if (e.key === "Enter") onRowClick(row); } : undefined}
                   className={cn(
-                    "border-b border-border last:border-b-0 transition-colors",
+                    "group border-b border-border last:border-b-0 transition-colors",
                     onRowClick && "cursor-pointer hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset"
                   )}
                 >

@@ -166,7 +166,8 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 │   │   ├── journeys.ts            # Journey enrollment, phase advancement, cron
 │   │   ├── recommendations.ts     # AI recommendations CRUD + execute
 │   │   ├── templates.ts           # Email template CRUD, preview, duplicate
-│   │   └── segments.ts            # Contact segment builder + bulk enroll
+│   │   ├── segments.ts            # Contact segment builder + bulk enroll
+│   │   └── notifications.ts      # Notification CRUD, mark read, dismiss
 │   ├── emails/                    # React Email templates
 │   │   ├── BaseLayout.tsx         # Shared wrapper (branding, dark mode, unsubscribe)
 │   │   ├── NewListingAlert.tsx    # Property listing cards
@@ -175,19 +176,21 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 │   │   ├── OpenHouseInvite.tsx    # Event invitation
 │   │   ├── NeighbourhoodGuide.tsx # Area lifestyle content
 │   │   └── HomeAnniversary.tsx    # Annual homeowner milestone
+│   ├── stores/                    # Zustand stores (recent-items.ts)
 │   ├── components/
-│   │   ├── contacts/              # ContactCard, ContactForm, CommunicationTimeline, SegmentBuilder
+│   │   ├── contacts/              # ContactCard, ContactForm, CommunicationTimeline, SegmentBuilder, ContactPreviewSheet
 │   │   ├── content/               # ContentStepper, PromptsStep, GenerateStep, GalleryStep
 │   │   ├── listings/              # ListingCard, ListingForm, DocumentStatusTracker, etc.
 │   │   ├── showings/              # ShowingRequestForm, StatusBadge, StatusActions, Communication
 │   │   ├── newsletters/           # ApprovalQueueClient, NewsletterWalkthrough
-│   │   ├── dashboard/             # PipelineSnapshot, AIRecommendations, RemindersWidget
+│   │   ├── dashboard/             # PipelineSnapshot, AIRecommendations, RemindersWidget, ActivityFeed, TodaysPriorities, DashboardPipelineWidget
+│   │   ├── shared/                # TrackRecentView.tsx (recent items bridge)
 │   │   ├── email-builder/         # EmailEditorClient (template editor)
 │   │   ├── workflow-builder/      # WorkflowCanvas, WorkflowEditorClient (React Flow)
 │   │   ├── workflow/              # WorkflowStepper, PhaseCard, Phase1-8 components
 │   │   ├── brand/                 # Logo components (LogoIcon, LogoIconDark, LogoAnimated, LogoMark, LogoSpinner)
-│   │   ├── layout/                # MondaySidebar, MondayHeader, MobileNav, DashboardShellClient
-│   │   └── ui/                    # shadcn primitives
+│   │   ├── layout/                # MondaySidebar, MondayHeader, MobileNav, DashboardShellClient, CommandPalette, NotificationDropdown, PageHeader
+│   │   └── ui/                    # shadcn primitives (includes enhanced data-table.tsx)
 │   ├── hooks/                     # useListings, useContacts, useShowings, useKlingTask
 │   ├── lib/
 │   │   ├── supabase/              # client.ts, server.ts, admin.ts
@@ -203,7 +206,8 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 │   │   ├── email-renderer.ts      # Template-to-HTML renderer
 │   │   ├── google-calendar.ts     # Calendar API wrapper
 │   │   ├── cdm-mapper.ts          # Listing → Common Data Model for forms
-│   │   └── fuzzy-match.ts         # Jaro-Winkler string matching
+│   │   ├── fuzzy-match.ts         # Jaro-Winkler string matching
+│   │   └── notifications.ts      # Notification helper (create, query, speed-to-lead trigger)
 │   └── types/
 │       ├── database.ts            # Supabase table types
 │       └── index.ts               # Exported type aliases
@@ -269,6 +273,56 @@ The UI uses a HubSpot-inspired design language: clean, flat, professional. No gl
 - Sidebar navigation organized in 3 groups: Main, Tools, Admin
 - Lucide icons in sidebar navigation; emoji icons on page content
 - Status colors: green (`--success`) = confirmed/done, amber = pending, red (`--destructive`) = denied/blocked
+
+---
+
+## UX Features (Competitive)
+
+12 competitive UX features built across 4 sprints. Plan doc: `functional-specs/PLAN_UX_Competitive_Features.md`.
+
+### Cmd+K Command Palette
+- `src/components/layout/CommandPalette.tsx` — global search overlay triggered by Cmd+K (Mac) / Ctrl+K (Win)
+- Searches contacts and listings with fuzzy matching, keyboard navigation
+- Integrated into `MondayHeader.tsx`
+
+### DataTable (Enhanced)
+- `src/components/ui/data-table.tsx` — generic table used on all list views
+- Props: `columns`, `data`, `searchKey`, `onRowClick`, `pagination` (original)
+- Added: `rowActions` (per-row action menu), `bulkActions` (multi-select toolbar), `ariaLabel` (accessibility)
+- Bulk actions support: email, delete, tag, export on selected rows
+
+### PageHeader
+- `src/components/layout/PageHeader.tsx` — used on every dashboard page
+- Props: title, subtitle, breadcrumbs, tabs, actions
+
+### Notification Center
+- `src/components/layout/NotificationDropdown.tsx` — bell icon + unread count badge in MondayHeader
+- 30-second polling for new notifications
+- `src/actions/notifications.ts` — server actions (CRUD, mark read, dismiss)
+- `src/lib/notifications.ts` — notification helper (create, query, speed-to-lead auto-alert on new contact within 5 min)
+
+### Recent Items
+- `src/stores/recent-items.ts` — Zustand store tracking recently viewed contacts/listings
+- `src/components/shared/TrackRecentView.tsx` — bridge component placed on detail pages to record views
+- Recent items surfaced in CommandPalette and sidebar
+
+### Contact Preview
+- `src/components/contacts/ContactPreviewSheet.tsx` — slide-over panel with contact details + recent communications
+- Triggered from DataTable rows without full page navigation
+
+### Dashboard Widgets
+- `src/components/dashboard/ActivityFeed.tsx` — recent communications, showing updates, new contacts
+- `src/components/dashboard/TodaysPriorities.tsx` — overdue tasks, today's showings, hot leads
+- `src/components/dashboard/DashboardPipelineWidget.tsx` — mini listing pipeline grouped by status
+- All three rendered on `src/app/(dashboard)/page.tsx`
+
+### Post-Showing Feedback
+- SMS feedback request sent after confirmed showings via Twilio
+- Implemented in `src/actions/showings.ts`
+
+### Lead Score Badges
+- Color-coded lead score display in `ContactsTableClient.tsx`
+- Reads from `contacts.lead_score` column
 
 ---
 

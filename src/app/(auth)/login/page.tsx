@@ -44,7 +44,7 @@ export default function LoginPage() {
 
         <div className="relative z-10 flex flex-col items-center justify-center w-full px-12">
           {/* Animated 3D logo */}
-          <LogoVideo size={300} />
+          <LogoVideo size={380} />
 
           {/* Brand text below logo */}
           <div className="text-center mt-6 space-y-3">

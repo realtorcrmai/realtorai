@@ -153,11 +153,11 @@ export function LogoSpinner({ size = 32, className }: LogoProps) {
  * Live animated logo — embeds the full 3D animated HTML as a scaled iframe
  * Use in: sidebar, nav bar, header — anywhere you want the live revolving logo
  *
- * Uses logo-sidebar.html (120px native) for sizes ≤ 80px → crisp at small sizes
- * Uses logo-animated.html (420px native) for sizes > 80px → full detail at large sizes
+ * Uses logo-sidebar.html (120px native) for sizes ≤ 100px → no shield, just gold icon
+ * Uses logo-animated.html (420px native) for sizes > 100px → full 3D shield with effects
  */
 export function LogoVideo({ size = 40, className }: LogoProps) {
-  const isSmall = size <= 80;
+  const isSmall = size <= 100;
   const nativeSize = isSmall ? 120 : 420;
   const src = isSmall ? "/logo-sidebar.html" : "/logo-animated.html";
   const scale = size / nativeSize;
@@ -168,7 +168,7 @@ export function LogoVideo({ size = 40, className }: LogoProps) {
       style={{
         width: size,
         height: size,
-        borderRadius: size * 0.22,
+        borderRadius: isSmall ? 0 : size * 0.22,
       }}
       aria-label="Realtors360 logo"
     >

@@ -111,10 +111,10 @@ export function MondaySidebar() {
   return (
     <aside className="hidden md:flex flex-col w-60 shrink-0 bg-sidebar h-full overflow-y-auto">
       {/* Brand */}
-      <div className="flex items-center gap-3 h-20 px-4 shrink-0">
-        <LogoVideo size={52} />
-        <div>
-          <span className="text-sm font-semibold text-sidebar-foreground">Realtors360</span>
+      <div className="flex flex-col items-center justify-center h-[140px] px-3 shrink-0">
+        <LogoVideo size={72} />
+        <div className="text-center mt-1">
+          <span className="text-[15px] font-semibold text-sidebar-foreground tracking-tight">Realtors360</span>
           <span className="block text-[9px] text-sidebar-foreground/40 tracking-widest uppercase">AI Platform</span>
         </div>
       </div>

@@ -28,7 +28,7 @@ const STATUS_STYLES: Record<string, { className: string; label: string }> = {
 };
 
 function formatPrice(price: number | null) {
-  if (!price) return "\u2014";
+  if (price == null) return "\u2014";
   return new Intl.NumberFormat("en-CA", {
     style: "currency",
     currency: "CAD",

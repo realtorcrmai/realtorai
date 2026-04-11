@@ -74,6 +74,7 @@ export function PageHeader({
         <div className="flex items-center gap-0 px-6 -mb-px overflow-x-auto">
           {tabs.map((tab) => (
             <button
+              type="button"
               key={tab.value}
               onClick={() => onTabChange?.(tab.value)}
               className={cn(

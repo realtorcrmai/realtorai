@@ -10,7 +10,8 @@ export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
   const status = searchParams.get("status")?.toLowerCase();
   const search = searchParams.get("search");
-  const limit = parseInt(searchParams.get("limit") || "200");
+  const rawLimit = parseInt(searchParams.get("limit") || "200");
+  const limit = Number.isNaN(rawLimit) ? 200 : Math.min(Math.max(rawLimit, 1), 500);
 
   let query = tc
     .from("listings")
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
     .order("created_at", { ascending: false });
 
   if (search) {
-    const safe = search.replace(/[,().*%\\]/g, "");
+    const safe = search.replace(/[,().*%\\'"/]/g, "");
     if (safe.length > 0) {
       query = query.or(`address.ilike.%${safe}%,mls_number.ilike.%${safe}%`);
     }

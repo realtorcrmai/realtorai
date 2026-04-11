@@ -73,16 +73,17 @@ export function ContactPreviewSheet({ contact, open, onOpenChange }: ContactPrev
   const [comms, setComms] = useState<Communication[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const contactId = contact?.id ?? null;
   useEffect(() => {
-    if (open && contact) {
+    if (open && contactId) {
       setLoading(true);
       setComms([]);
-      getContactCommunications(contact.id, 5)
+      getContactCommunications(contactId, 5)
         .then((data) => setComms(data as Communication[]))
         .catch(() => setComms([]))
         .finally(() => setLoading(false));
     }
-  }, [open, contact]);
+  }, [open, contactId]);
 
   if (!contact) return null;
 

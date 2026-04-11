@@ -29,7 +29,7 @@
       left: 35%;
       width: 600px;
       height: 600px;
-      background: radial-gradient(circle, rgba(201,169,110,0.06) 0%, transparent 60%);
+      background: radial-gradient(circle, rgba(228,195,120,0.08) 0%, transparent 60%);
       animation: pulse-glow 5s ease-in-out infinite;
     }
     .ambient::after {
@@ -86,15 +86,17 @@
       75% { transform: translateY(-16px) rotateX(0deg) rotateY(-4deg); }
     }
 
-    /* ── Shield (main card) ── */
+    /* ── Shield (main card) — animated gradient shift ── */
     .shield {
       position: absolute;
       inset: 25px;
       border-radius: 42px;
       background: linear-gradient(155deg, #2e4258 0%, #1c2d40 40%, #162536 100%);
+      background-size: 200% 200%;
+      animation: shield-shift 8s ease-in-out infinite;
       box-shadow:
         0 30px 80px rgba(0,0,0,0.6),
-        0 0 100px rgba(201,169,110,0.04),
+        0 0 120px rgba(228,195,120,0.06),
         inset 0 1px 0 rgba(255,255,255,0.06),
         inset 0 -2px 8px rgba(0,0,0,0.3);
       display: flex;
@@ -104,7 +106,13 @@
       transform: translateZ(0px);
     }
 
-    /* ── Top-left specular highlight (static) ── */
+    @keyframes shield-shift {
+      0%, 100% { background-position: 0% 0%; }
+      33% { background-position: 100% 50%; }
+      66% { background-position: 50% 100%; }
+    }
+
+    /* ── Top-left specular highlight ── */
     .shield::before {
       content: '';
       position: absolute;
@@ -117,7 +125,7 @@
       pointer-events: none;
     }
 
-    /* ── Revolving glare ── */
+    /* ── Revolving glare — brighter gold ── */
     .glare-ring {
       position: absolute;
       inset: -2px;
@@ -136,10 +144,10 @@
       background: conic-gradient(
         from 0deg,
         transparent 0deg,
-        transparent 260deg,
-        rgba(201,169,110,0.35) 290deg,
-        rgba(255,255,255,0.15) 310deg,
-        rgba(201,169,110,0.35) 330deg,
+        transparent 250deg,
+        rgba(228,195,120,0.5) 280deg,
+        rgba(255,235,170,0.25) 305deg,
+        rgba(228,195,120,0.5) 330deg,
         transparent 360deg
       );
       animation: revolve-glare 4s linear infinite;
@@ -150,12 +158,14 @@
       to { transform: rotate(360deg); }
     }
 
-    /* ── Inner border (sits on top of glare to mask inside) ── */
+    /* ── Inner border (masks glare inside) ── */
     .shield-inner-mask {
       position: absolute;
       inset: 2px;
       border-radius: 40px;
       background: linear-gradient(155deg, #2e4258 0%, #1c2d40 40%, #162536 100%);
+      background-size: 200% 200%;
+      animation: shield-shift 8s ease-in-out infinite;
       pointer-events: none;
     }
 
@@ -167,7 +177,7 @@
       height: 230px;
     }
 
-    /* ── Full 360 circle — counter-rotates ── */
+    /* ── Main circle — counter-rotates ── */
     .circle-360-group {
       transform-box: fill-box;
       transform-origin: center;
@@ -178,10 +188,28 @@
       stroke-dasharray: 220 82;
       stroke-dashoffset: 302;
       animation: draw-circle 2.5s ease-out 1s forwards;
-      filter: drop-shadow(0 0 8px rgba(201,169,110,0.5));
+      filter: drop-shadow(0 0 10px rgba(228,195,120,0.6));
+    }
+
+    /* ── Second orbit ring — thinner, faster, clockwise ── */
+    .orbit-outer-group {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: spin-forward 3.5s linear 3s infinite;
+    }
+
+    .orbit-outer {
+      stroke-dasharray: 60 260;
+      stroke-dashoffset: 320;
+      animation: draw-orbit 2s ease-out 2s forwards;
+      filter: drop-shadow(0 0 6px rgba(240,216,144,0.4));
     }
 
     @keyframes draw-circle {
+      to { stroke-dashoffset: 0; }
+    }
+
+    @keyframes draw-orbit {
       to { stroke-dashoffset: 0; }
     }
 
@@ -190,12 +218,23 @@
       to { transform: rotate(-360deg); }
     }
 
-    /* ── Roofline ── */
+    @keyframes spin-forward {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* ── Roofline — breathing glow ── */
     .roof-line {
       stroke-dasharray: 200;
       stroke-dashoffset: 200;
-      animation: draw-stroke 1.5s ease-out 0.6s forwards;
-      filter: drop-shadow(0 0 3px rgba(201,169,110,0.2));
+      animation:
+        draw-stroke 1.5s ease-out 0.6s forwards,
+        roof-glow 3s ease-in-out 2.5s infinite;
+    }
+
+    @keyframes roof-glow {
+      0%, 100% { filter: drop-shadow(0 0 4px rgba(228,195,120,0.3)); }
+      50% { filter: drop-shadow(0 0 12px rgba(240,216,144,0.7)); }
     }
 
     .pillar-left, .pillar-right {
@@ -220,16 +259,16 @@
     }
 
     @keyframes door-fade {
-      to { opacity: 0.2; }
+      to { opacity: 0.25; }
     }
 
-    /* ── Sparkles on shield ── */
+    /* ── Sparkles — brighter ── */
     .sparkle {
       position: absolute;
       z-index: 3;
       width: 5px;
       height: 5px;
-      background: #c9a96e;
+      background: #E8D48C;
       border-radius: 50%;
       opacity: 0;
       filter: blur(0.5px);
@@ -243,8 +282,8 @@
 
     @keyframes sparkle {
       0%, 100% { opacity: 0; transform: scale(0); }
-      40% { opacity: 0.9; transform: scale(1.8); }
-      60% { opacity: 0.5; transform: scale(1); }
+      40% { opacity: 1; transform: scale(2); }
+      60% { opacity: 0.6; transform: scale(1); }
     }
 
     /* ── 3D shadow beneath ── */
@@ -255,7 +294,7 @@
       transform: translateX(-50%);
       width: 280px;
       height: 36px;
-      background: radial-gradient(ellipse, rgba(201,169,110,0.10) 0%, transparent 70%);
+      background: radial-gradient(ellipse, rgba(228,195,120,0.12) 0%, transparent 70%);
       border-radius: 50%;
       animation:
         shadow-entrance 1.8s cubic-bezier(0.16, 1, 0.3, 1) both,
@@ -284,7 +323,7 @@
 
     .particle {
       position: absolute;
-      background: #c9a96e;
+      background: #E4C378;
       border-radius: 50%;
       opacity: 0;
       animation: particle-float 10s ease-in-out infinite;
@@ -303,8 +342,8 @@
 
     @keyframes particle-float {
       0% { opacity: 0; transform: translateY(0) scale(0); }
-      15% { opacity: 0.35; transform: translateY(-15px) scale(1); }
-      70% { opacity: 0.15; transform: translateY(-90px) scale(0.4); }
+      15% { opacity: 0.4; transform: translateY(-15px) scale(1); }
+      70% { opacity: 0.2; transform: translateY(-90px) scale(0.4); }
       100% { opacity: 0; transform: translateY(-130px) scale(0); }
     }
   </style>
@@ -327,59 +366,132 @@
   </div>
 
   <div class="scene">
-    <div class="icon-3d">
+    <div class="icon-3d" id="icon3d">
       <div class="shield">
-        <!-- Revolving glare ring -->
         <div class="glare-ring"></div>
-        <!-- Inner mask to keep glare as border-only -->
         <div class="shield-inner-mask"></div>
 
-        <!-- Sparkles -->
         <div class="sparkle"></div>
         <div class="sparkle"></div>
         <div class="sparkle"></div>
         <div class="sparkle"></div>
 
-        <!-- Icon -->
         <svg class="icon-svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Full 360 circle (group rotates, circle draws) -->
+          <defs>
+            <linearGradient id="goldCircle" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#F0D890"/>
+              <stop offset="50%" stop-color="#E4C378"/>
+              <stop offset="100%" stop-color="#D4B060"/>
+            </linearGradient>
+            <linearGradient id="goldRoof" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#E4C378"/>
+              <stop offset="50%" stop-color="#F0D890"/>
+              <stop offset="100%" stop-color="#E4C378"/>
+            </linearGradient>
+            <linearGradient id="goldOrbit" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#F5E0A0"/>
+              <stop offset="100%" stop-color="#E4C378"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Outer orbit ring — thinner, faster, clockwise -->
+          <g class="orbit-outer-group">
+            <circle class="orbit-outer"
+              cx="60" cy="52" r="52"
+              stroke="url(#goldOrbit)" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.6"/>
+          </g>
+
+          <!-- Main circle — counter-rotates -->
           <g class="circle-360-group">
             <circle class="circle-360"
               cx="60" cy="52" r="46"
-              stroke="#C9A96E" stroke-width="3.5" stroke-linecap="round" fill="none" opacity="0.85"/>
+              stroke="url(#goldCircle)" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.95"/>
           </g>
 
-          <!-- Roofline -->
+          <!-- Roofline with breathing glow -->
           <path class="roof-line"
             d="M30 62L60 30L90 62"
-            stroke="#C9A96E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            stroke="url(#goldRoof)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 
           <!-- Left pillar -->
           <line class="pillar-left"
             x1="42" y1="54" x2="42" y2="72"
-            stroke="#C9A96E" stroke-width="1.8" stroke-linecap="round"/>
+            stroke="#E4C378" stroke-width="2" stroke-linecap="round"/>
 
           <!-- Right pillar -->
           <line class="pillar-right"
             x1="78" y1="54" x2="78" y2="72"
-            stroke="#C9A96E" stroke-width="1.8" stroke-linecap="round"/>
+            stroke="#E4C378" stroke-width="2" stroke-linecap="round"/>
 
           <!-- Base line -->
           <line class="base-line"
             x1="36" y1="72" x2="84" y2="72"
-            stroke="#C9A96E" stroke-width="1.8" stroke-linecap="round"/>
+            stroke="#E4C378" stroke-width="2" stroke-linecap="round"/>
 
           <!-- Door -->
           <rect class="door-rect"
             x="52" y="58" width="16" height="14" rx="2"
-            fill="#C9A96E"/>
+            fill="#E4C378"/>
         </svg>
       </div>
 
-      <!-- Floor shadow -->
       <div class="floor-shadow"></div>
     </div>
   </div>
+
+  <!-- Mouse tilt interaction -->
+  <script>
+    const scene = document.querySelector('.scene');
+    const icon = document.getElementById('icon3d');
+    let tiltX = 0, tiltY = 0, targetX = 0, targetY = 0;
+    let entered = false;
+
+    // Wait for entrance animation
+    setTimeout(() => { entered = true; }, 2000);
+
+    document.addEventListener('mousemove', (e) => {
+      if (!entered) return;
+      const rect = scene.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      targetX = ((e.clientY - cy) / (window.innerHeight / 2)) * -12;
+      targetY = ((e.clientX - cx) / (window.innerWidth / 2)) * 12;
+    });
+
+    document.addEventListener('mouseleave', () => {
+      targetX = 0;
+      targetY = 0;
+    });
+
+    function animate() {
+      tiltX += (targetX - tiltX) * 0.06;
+      tiltY += (targetY - tiltY) * 0.06;
+      if (entered && icon.style) {
+        // Combine with the float animation by applying tilt via a wrapper perspective
+        icon.style.setProperty('--tiltX', tiltX + 'deg');
+        icon.style.setProperty('--tiltY', tiltY + 'deg');
+      }
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // Override float to include tilt
+    const style = document.createElement('style');
+    style.textContent = `
+      .icon-3d {
+        animation:
+          entrance 1.8s cubic-bezier(0.16, 1, 0.3, 1) both,
+          float-tilt 6s ease-in-out 1.8s infinite !important;
+      }
+      @keyframes float-tilt {
+        0%, 100% { transform: translateY(0) rotateX(calc(2deg + var(--tiltX, 0deg))) rotateY(var(--tiltY, 0deg)); }
+        25% { transform: translateY(-14px) rotateX(var(--tiltX, 0deg)) rotateY(calc(4deg + var(--tiltY, 0deg))); }
+        50% { transform: translateY(-8px) rotateX(calc(-2deg + var(--tiltX, 0deg))) rotateY(var(--tiltY, 0deg)); }
+        75% { transform: translateY(-16px) rotateX(var(--tiltX, 0deg)) rotateY(calc(-4deg + var(--tiltY, 0deg))); }
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
 
 </body>
 </html>

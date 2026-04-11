@@ -82,10 +82,10 @@ export function NotificationDropdown() {
     };
   }, []);
 
-  // Fetch notifications when popover opens
+  // Fetch notifications when popover opens (always refresh on open)
   const handleOpenChange = useCallback((nextOpen: boolean) => {
     setOpen(nextOpen);
-    if (nextOpen && !loaded) {
+    if (nextOpen) {
       (async () => {
         try {
           const data = await getNotifications(15);
@@ -96,7 +96,7 @@ export function NotificationDropdown() {
         }
       })();
     }
-  }, [loaded]);
+  }, []);
 
   const handleMarkRead = useCallback(
     (id: string) => {

@@ -680,7 +680,7 @@ async function enrollInJourney(contactId: string, contactType: string, _name: st
     trust_level: 0,
   });
 
-  console.log(`[journey] Enrolled ${name} in ${journeyType} journey (lead phase)`);
+  console.log(`[journey] Enrolled ${_name} in ${journeyType} journey (lead phase)`);
 }
 
 /** @deprecated Use enrollInJourney + trigger engine instead */
