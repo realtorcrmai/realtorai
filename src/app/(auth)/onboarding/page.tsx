@@ -209,7 +209,7 @@ export default function OnboardingPage() {
     }
   };
 
-  // ── Step 2: vCard upload ──
+  // ── Step 2: vCard upload — imports directly (no preview) ──
   const handleVcardUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -231,10 +231,10 @@ export default function OnboardingPage() {
         return;
       }
 
-      setImportedContacts(data.contacts);
-      setImportSource("apple");
+      // vCard API imports directly — show success count
+      setImportCount(data.imported || 0);
     } catch {
-      setError("Failed to parse vCard file");
+      setError("Failed to import vCard file");
     } finally {
       setFetchingContacts(false);
     }

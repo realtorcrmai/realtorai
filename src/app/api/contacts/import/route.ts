@@ -14,7 +14,13 @@ import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
  *                    family_relationship (spouse|child|parent|sibling|other — default "other")
  */
 export async function POST(request: NextRequest) {
-  const tc = await getAuthenticatedTenantClient();
+  let tc;
+  try {
+    tc = await getAuthenticatedTenantClient();
+  } catch (err) {
+    console.error("[contacts/import] Auth error:", err);
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
   const contentType = request.headers.get("content-type") || "";
 
   // ── Path A: JSON body from onboarding CSVImportStep (client-side parsed) ──
