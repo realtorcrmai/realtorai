@@ -9,15 +9,24 @@ export async function GET(req: NextRequest) {
 
   const searchParams = req.nextUrl.searchParams;
   const status = searchParams.get("status")?.toLowerCase();
+  const search = searchParams.get("search");
+  const limit = parseInt(searchParams.get("limit") || "200");
 
   let query = tc
     .from("listings")
     .select("*, contacts!listings_seller_id_fkey(name, phone)")
     .order("created_at", { ascending: false });
 
-  if (status && ["active", "pending", "sold"].includes(status)) {
+  if (search) {
+    const safe = search.replace(/[,().*%\\]/g, "");
+    if (safe.length > 0) {
+      query = query.or(`address.ilike.%${safe}%,mls_number.ilike.%${safe}%`);
+    }
+  }
+  if (status && ["active", "pending", "sold", "expired", "withdrawn", "conditional"].includes(status)) {
     query = query.eq("status", status);
   }
+  query = query.limit(limit);
 
   const { data, error } = await query;
 

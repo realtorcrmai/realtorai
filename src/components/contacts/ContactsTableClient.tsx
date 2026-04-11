@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { DataTable } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Phone, Mail } from "lucide-react";
 
 interface ContactRow {
   id: string;
@@ -17,6 +17,7 @@ interface ContactRow {
   lead_status: string | null;
   last_activity_date: string | null;
   created_at: string;
+  newsletter_intelligence: { engagement_score?: number } | null;
 }
 
 const STAGE_COLORS: Record<string, string> = {
@@ -121,6 +122,18 @@ export function ContactsTableClient({ contacts }: { contacts: ContactRow[] }) {
             render: (r) => <Badge variant="outline" className={`capitalize ${TYPE_COLORS[r.type] || ""}`}>{r.type}</Badge>,
           },
           {
+            key: "newsletter_intelligence",
+            header: "Score",
+            sortable: true,
+            render: (r) => {
+              const score = (r.newsletter_intelligence as Record<string, unknown>)?.engagement_score as number | undefined;
+              if (score == null) return <span className="text-muted-foreground text-xs">{"\u2014"}</span>;
+              const label = score >= 60 ? "Hot" : score >= 30 ? "Warm" : "Cold";
+              const color = score >= 60 ? "bg-destructive/15 text-destructive border-destructive/30" : score >= 30 ? "bg-[#f5c26b]/15 text-[#8a5a1e] border-[#f5c26b]/30" : "bg-muted text-muted-foreground";
+              return <Badge variant="outline" className={`${color} text-[10px]`}>{label} {score}</Badge>;
+            },
+          },
+          {
             key: "stage_bar",
             header: "Stage",
             sortable: true,
@@ -139,6 +152,20 @@ export function ContactsTableClient({ contacts }: { contacts: ContactRow[] }) {
         onRowClick={(row) => router.push(`/contacts/${row.id}`)}
         emptyMessage="No contacts found."
         ariaLabel="Contacts list"
+        rowActions={(row) => (
+          <div className="flex items-center gap-0.5">
+            {row.phone && (
+              <a href={`tel:${row.phone}`} className="p-1.5 hover:bg-muted rounded-md" aria-label={`Call ${row.name}`}>
+                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+              </a>
+            )}
+            {row.email && (
+              <a href={`mailto:${row.email}`} className="p-1.5 hover:bg-muted rounded-md" aria-label={`Email ${row.name}`}>
+                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+              </a>
+            )}
+          </div>
+        )}
       />
     </div>
   );

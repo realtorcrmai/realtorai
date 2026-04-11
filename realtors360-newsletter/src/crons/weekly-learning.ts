@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
 import { config } from '../config.js';
+import { captureException } from '../lib/sentry.js';
 import { runLearningCycle, updateContactIntelligence } from '../shared/learning/engine.js';
 
 /**
@@ -75,6 +76,7 @@ export async function runWeeklyLearning(): Promise<void> {
       );
     } catch (err) {
       logger.error({ err, realtorId }, 'cron/weekly-learning: realtor cycle threw');
+      captureException(err instanceof Error ? err : new Error(String(err)), { cron: 'weekly-learning', realtorId });
     }
   }
 

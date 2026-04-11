@@ -185,7 +185,8 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 │   │   ├── email-builder/         # EmailEditorClient (template editor)
 │   │   ├── workflow-builder/      # WorkflowCanvas, WorkflowEditorClient (React Flow)
 │   │   ├── workflow/              # WorkflowStepper, PhaseCard, Phase1-8 components
-│   │   ├── layout/                # Sidebar, TopBar, MobileNav
+│   │   ├── brand/                 # Logo components (LogoIcon, LogoIconDark, LogoAnimated, LogoMark, LogoSpinner)
+│   │   ├── layout/                # MondaySidebar, MondayHeader, MobileNav, DashboardShellClient
 │   │   └── ui/                    # shadcn primitives
 │   ├── hooks/                     # useListings, useContacts, useShowings, useKlingTask
 │   ├── lib/
@@ -248,6 +249,18 @@ The UI uses a HubSpot-inspired design language: clean, flat, professional. No gl
 - Mobile: bottom navigation bar with coral active states
 - No animated gradient background — flat `bg-background` everywhere
 - No horizontal pill navigation — sidebar handles all navigation
+
+### Logo & Branding
+**Brand name:** Realtors360 (not "RealtorAI" — legacy name fully replaced as of 2026-04-11)
+**Logo assets:** `/logo/` at monorepo root (animated HTML, favicon SVG, static SVGs, concept variants)
+**React components:** `src/components/brand/Logo.tsx` — 5 exports:
+- `LogoIcon` — light bg (navy roofline + gold arc)
+- `LogoIconDark` — dark bg (all gold — sidebar)
+- `LogoMark` — icon + "Realtors360" text
+- `LogoAnimated` — 3D animated (login page — floating shield, revolving glare, counter-rotating circle)
+- `LogoSpinner` — loading indicator (gold spinning arc, replaces Loader2)
+
+**Where used:** Sidebar (MondaySidebar.tsx), Login (login/page.tsx), Favicon (layout.tsx), LoadingSpinner
 
 ### Conventions
 - Every page uses the `PageHeader` component (breadcrumbs, tabs, actions)

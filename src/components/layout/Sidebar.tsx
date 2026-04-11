@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import { LogoIconDark } from "@/components/brand/Logo";
 
 const navSections = [
   {
@@ -73,12 +74,10 @@ export function Sidebar() {
     <aside className="hidden md:flex md:w-64 md:flex-col bg-[var(--sidebar)] text-[var(--sidebar-foreground)]">
       {/* Brand */}
       <div className="flex h-16 items-center gap-3 px-6 border-b border-[var(--sidebar-border)]">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--sidebar-primary)]">
-          <Home className="h-4 w-4 text-[var(--sidebar-primary-foreground)]" />
-        </div>
+        <LogoIconDark size={32} />
         <div>
-          <span className="font-bold text-base tracking-tight">RealtorAI</span>
-          <span className="block text-[9px] text-[var(--sidebar-foreground)]/40 tracking-widest uppercase">BC Edition</span>
+          <span className="font-bold text-base tracking-tight">Realtors360</span>
+          <span className="block text-[9px] text-[var(--sidebar-foreground)]/40 tracking-widest uppercase">AI Platform</span>
         </div>
       </div>
 

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 80" fill="none">
+  <!-- CONCEPT C: "The Monogram" — Luxury R lettermark with integrated roofline -->
+
+  <g transform="translate(6, 6)">
+    <!-- Gold circle background -->
+    <circle cx="34" cy="34" r="32" fill="none" stroke="#C9A96E" stroke-width="1.5"/>
+
+    <!-- Stylized "R" with roofline integrated into the top -->
+    <!-- The R's vertical stroke -->
+    <line x1="20" y1="18" x2="20" y2="52" stroke="#2D3E50" stroke-width="3.5" stroke-linecap="round"/>
+
+    <!-- R's bump (top right curve) — forms the roof shape -->
+    <path d="M20 18L34 10L48 18" stroke="#2D3E50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M48 18L48 30Q48 36 42 36L20 36" stroke="#2D3E50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- R's leg (diagonal kick) -->
+    <line x1="30" y1="36" x2="48" y2="52" stroke="#C9A96E" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Small "360" integrated at bottom right -->
+    <text x="34" y="52" font-family="'Helvetica Neue', sans-serif" font-size="7" font-weight="700" fill="#C9A96E" letter-spacing="0.5" opacity="0.7">360</text>
+  </g>
+
+  <!-- Wordmark — refined spacing -->
+  <g transform="translate(84, 0)">
+    <!-- Brand name with elegant tracking -->
+    <text x="0" y="36" font-family="'Georgia', 'Playfair Display', serif" font-size="26" font-weight="400" fill="#2D3E50" letter-spacing="3">Realtors</text>
+    <text x="170" y="36" font-family="'Georgia', 'Playfair Display', serif" font-size="26" font-weight="700" fill="#C9A96E" letter-spacing="2">360</text>
+
+    <!-- Dot separator -->
+    <circle cx="230" cy="32" r="2" fill="#C9A96E"/>
+
+    <!-- "ai" suffix -->
+    <text x="238" y="36" font-family="'Helvetica Neue', 'Inter', sans-serif" font-size="16" font-weight="300" fill="#2D3E50" letter-spacing="1">ai</text>
+  </g>
+
+  <!-- Bottom accent line with tagline -->
+  <line x1="84" y1="48" x2="120" y2="48" stroke="#C9A96E" stroke-width="1.5"/>
+  <text x="126" y="52" font-family="'Helvetica Neue', 'Inter', sans-serif" font-size="9" font-weight="400" fill="#7C98B6" letter-spacing="3">REAL ESTATE INTELLIGENCE</text>
+</svg>

@@ -1,6 +1,7 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import crypto from 'node:crypto';
 import type { ToolContext } from '../index.js';
+import { logger } from '../../../lib/logger.js';
 
 export const DRAFT_EMAIL_SCHEMA: Anthropic.Tool = {
   name: 'draft_email',
@@ -60,5 +61,6 @@ export async function draftEmail(
     .single();
 
   if (error) return { error: error.message };
+  logger.info({ draftId: draft.id, contactId, emailType }, 'draft_email: created');
   return { draft_id: draft.id, status: 'pending_review', duplicate: false };
 }

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" fill="none">
+  <!-- Icon: Luxury house silhouette with gold accent -->
+  <g transform="translate(0, 8)">
+    <!-- House body -->
+    <rect x="12" y="30" width="40" height="32" rx="2" fill="#2D3E50"/>
+    <!-- Roof -->
+    <path d="M6 32L32 8L58 32" stroke="#C9A96E" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <!-- Door -->
+    <rect x="26" y="42" width="12" height="20" rx="1.5" fill="#C9A96E"/>
+    <!-- Door handle -->
+    <circle cx="35" cy="52" r="1.2" fill="#2D3E50"/>
+    <!-- Left window -->
+    <rect x="16" y="36" width="7" height="7" rx="1" fill="#C9A96E" opacity="0.6"/>
+    <!-- Right window -->
+    <rect x="41" y="36" width="7" height="7" rx="1" fill="#C9A96E" opacity="0.6"/>
+    <!-- Chimney -->
+    <rect x="44" y="14" width="6" height="16" rx="1" fill="#2D3E50"/>
+  </g>
+
+  <!-- Wordmark: Realtors360 -->
+  <text x="72" y="42" font-family="'Playfair Display', 'Georgia', serif" font-size="32" font-weight="700" fill="#2D3E50" letter-spacing="0.5">
+    Realtors<tspan fill="#C9A96E">360</tspan>
+  </text>
+
+  <!-- Tagline: AI -->
+  <text x="72" y="62" font-family="'Inter', 'Helvetica', sans-serif" font-size="13" font-weight="500" fill="#7C98B6" letter-spacing="4">
+    AI POWERED CRM
+  </text>
+</svg>

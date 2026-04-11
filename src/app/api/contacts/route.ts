@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
   const search = searchParams.get("search");
   const type = searchParams.get("type")?.toLowerCase();
+  const limit = parseInt(searchParams.get("limit") || "200");
 
   let query = supabase.from("contacts").select("*").order("created_at", { ascending: false });
 
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
     query = query.eq("type", type);
   }
 
-  const { data, error } = await query;
+  const { data, error } = await query.limit(limit);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -14,6 +14,7 @@
 
 import { supabase } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
+import { captureException } from '../lib/sentry.js';
 import { assembleEmail, type EmailData } from '../lib/email-blocks.js';
 import { sendEmail } from '../lib/resend.js';
 
@@ -222,6 +223,7 @@ export async function runWeeklyDigest(): Promise<void> {
           { err, realtorId: realtor.id },
           'cron: weekly-digest — failed for realtor, continuing'
         );
+        captureException(err instanceof Error ? err : new Error(String(err)), { cron: 'weekly-digest', realtorId: realtor.id });
         failed++;
       }
     }
@@ -232,5 +234,6 @@ export async function runWeeklyDigest(): Promise<void> {
     );
   } catch (err) {
     logger.error({ err, durationMs: Date.now() - start }, 'cron: weekly-digest threw');
+    captureException(err instanceof Error ? err : new Error(String(err)), { cron: 'weekly-digest' });
   }
 }

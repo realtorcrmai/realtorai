@@ -4,6 +4,7 @@ import type { ToolContext } from '../index.js';
 import { createWithRetry } from '../../../shared/anthropic-retry.js';
 import { config } from '../../../config.js';
 import { logger } from '../../../lib/logger.js';
+import { startTimer } from '../../../lib/timer.js';
 import { parseAIJson, unescapeNewlines } from '../../../lib/parse-ai-json.js';
 
 const anthropic = new AnthropicSdk();
@@ -110,12 +111,14 @@ ${dataContext ? `DATA TO REFERENCE (use specifics from this, don't invent):\n${d
 Remember: specific > generic. If you don't have enough data to be specific, keep it SHORT and honest rather than padding with filler.`;
 
   try {
+    const claudeElapsed = startTimer();
     const message = await createWithRetry(anthropic, {
       model: config.AI_SCORING_MODEL,
       max_tokens: 800,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
     });
+    logger.debug({ emailType, durationMs: claudeElapsed() }, 'generate_copy: Claude call completed');
 
     const text = message.content[0]?.type === 'text' ? message.content[0].text : '';
 

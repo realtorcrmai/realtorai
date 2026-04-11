@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
 import { config } from '../config.js';
+import { captureException } from '../lib/sentry.js';
 import { backfillAll } from '../shared/rag/ingestion.js';
 import { logVoyageUsage, voyageUsageStats } from '../lib/voyage.js';
 
@@ -49,5 +50,6 @@ export async function runRagBackfill(): Promise<void> {
     logVoyageUsage();
   } catch (err) {
     logger.error({ err, ms: Date.now() - startedAt }, 'cron/rag-backfill: fatal');
+    captureException(err instanceof Error ? err : new Error(String(err)), { cron: 'rag-backfill' });
   }
 }

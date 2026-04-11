@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- ICON C: R Monogram with roofline -->
+  <circle cx="32" cy="32" r="28" fill="none" stroke="#C9A96E" stroke-width="1.5"/>
+  <line x1="20" y1="16" x2="20" y2="50" stroke="#2D3E50" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M20 16L34 8L48 16" stroke="#2D3E50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M48 16L48 28Q48 34 42 34L20 34" stroke="#2D3E50" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <line x1="30" y1="34" x2="48" y2="50" stroke="#C9A96E" stroke-width="3" stroke-linecap="round"/>
+</svg>

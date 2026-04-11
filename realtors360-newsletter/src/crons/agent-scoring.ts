@@ -2,7 +2,6 @@ import { supabase } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
 import { config } from '../config.js';
 import { captureException } from '../lib/sentry.js';
-import { startTimer } from '../lib/timer.js';
 import { scoreBatch } from '../shared/ai-agent/lead-scorer.js';
 
 /**

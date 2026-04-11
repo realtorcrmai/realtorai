@@ -1,6 +1,7 @@
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
+import { TrackRecentView } from "@/components/shared/TrackRecentView";
 import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, MessageSquare, Edit } from "lucide-react";
 import { ContactForm } from "@/components/contacts/ContactForm";
@@ -746,10 +747,13 @@ export default async function ContactDetailPage({
   );
 
   return (
-    <ContactDetailLayout
-      header={headerJsx}
-      tabs={tabsJsx}
-      rightPanel={rightPanelJsx}
-    />
+    <>
+      <TrackRecentView id={contact.id} type="contact" label={contact.name} href={`/contacts/${contact.id}`} />
+      <ContactDetailLayout
+        header={headerJsx}
+        tabs={tabsJsx}
+        rightPanel={rightPanelJsx}
+      />
+    </>
   );
 }

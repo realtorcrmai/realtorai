@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Command } from "cmdk";
@@ -48,8 +48,32 @@ export function CommandPalette() {
 
   const navigate = useCallback((href: string) => {
     setOpen(false);
+    setSearchQuery("");
     router.push(href);
   }, [router]);
+
+  // Search contacts + listings
+  const [searchResults, setSearchResults] = useState<{ contacts: any[]; listings: any[] }>({ contacts: [], listings: [] });
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!open) { setSearchResults({ contacts: [], listings: [] }); return; }
+    if (searchQuery.length < 2) { setSearchResults({ contacts: [], listings: [] }); return; }
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const [c, l] = await Promise.all([
+          fetch(`/api/contacts?search=${encodeURIComponent(searchQuery)}&limit=5`).then(r => r.ok ? r.json() : []),
+          fetch(`/api/listings?search=${encodeURIComponent(searchQuery)}&limit=5`).then(r => r.ok ? r.json() : []),
+        ]);
+        setSearchResults({
+          contacts: Array.isArray(c) ? c.slice(0, 5) : [],
+          listings: Array.isArray(l) ? l.slice(0, 5) : [],
+        });
+      } catch { setSearchResults({ contacts: [], listings: [] }); }
+    }, 300);
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+  }, [searchQuery, open]);
 
   if (!open) return null;
 
@@ -76,6 +100,52 @@ export function CommandPalette() {
             <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
               No results found.
             </Command.Empty>
+
+            {/* Search Results — Contacts */}
+            {searchResults.contacts.length > 0 && (
+              <Command.Group heading="Contacts" className="mb-2">
+                {searchResults.contacts.map((c: any) => (
+                  <Command.Item
+                    key={c.id}
+                    value={`contact ${c.name} ${c.email || ""} ${c.phone || ""}`}
+                    onSelect={() => navigate(`/contacts/${c.id}`)}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm cursor-pointer data-[selected=true]:bg-accent transition-colors"
+                  >
+                    <span className="text-lg shrink-0">👤</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-foreground font-medium">{c.name}</span>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {c.type} {c.email ? `· ${c.email}` : ""} {c.phone ? `· ${c.phone}` : ""}
+                      </p>
+                    </div>
+                    <ArrowRight className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                  </Command.Item>
+                ))}
+              </Command.Group>
+            )}
+
+            {/* Search Results — Listings */}
+            {searchResults.listings.length > 0 && (
+              <Command.Group heading="Listings" className="mb-2">
+                {searchResults.listings.map((l: any) => (
+                  <Command.Item
+                    key={l.id}
+                    value={`listing ${l.address} ${l.mls_number || ""}`}
+                    onSelect={() => navigate(`/listings/${l.id}`)}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm cursor-pointer data-[selected=true]:bg-accent transition-colors"
+                  >
+                    <span className="text-lg shrink-0">🏠</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-foreground font-medium">{l.address}</span>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {l.status} {l.list_price ? `· $${Number(l.list_price).toLocaleString()}` : ""} {l.mls_number ? `· MLS ${l.mls_number}` : ""}
+                      </p>
+                    </div>
+                    <ArrowRight className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                  </Command.Item>
+                ))}
+              </Command.Group>
+            )}
 
             {/* Help Articles — professional+ only */}
             {features.length > 0 && (

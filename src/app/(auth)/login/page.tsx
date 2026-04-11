@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Home, Loader2, ArrowRight } from "lucide-react";
+import { Loader2, ArrowRight } from "lucide-react";
+import { LogoVideo, LogoIcon } from "@/components/brand/Logo";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -35,29 +36,28 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen">
-      {/* Left panel - branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_oklch(0.60_0.20_260)_0%,_transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_oklch(0.40_0.15_240)_0%,_transparent_60%)]" />
-        <div className="relative z-10 flex flex-col justify-between p-12 text-primary-foreground">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-              <Home className="h-5 w-5" />
-            </div>
-            <span className="text-xl font-bold tracking-tight">RealtorAI</span>
-          </div>
-          <div className="space-y-4">
-            <h1 className="text-4xl font-bold leading-tight">
-              Streamline your
-              <br />
-              real estate workflow
+      {/* Left panel - branding with animated logo */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden" style={{ background: "#0a1628" }}>
+        {/* Ambient glow */}
+        <div className="absolute top-1/4 left-1/3 w-[500px] h-[500px] rounded-full opacity-40" style={{ background: "radial-gradient(circle, rgba(201,169,110,0.08) 0%, transparent 60%)" }} />
+        <div className="absolute bottom-1/4 right-1/4 w-[350px] h-[350px] rounded-full opacity-30" style={{ background: "radial-gradient(circle, rgba(45,62,80,0.15) 0%, transparent 60%)" }} />
+
+        <div className="relative z-10 flex flex-col items-center justify-center w-full px-12">
+          {/* Animated 3D logo */}
+          <LogoVideo size={300} />
+
+          {/* Brand text below logo */}
+          <div className="text-center mt-6 space-y-3">
+            <h1 className="text-3xl font-bold tracking-tight text-white">
+              Realtors360
             </h1>
-            <p className="text-lg text-primary-foreground/80 max-w-md">
-              Manage listings, automate showings, and stay on top of every
-              transaction — all in one place.
+            <p className="text-sm text-white/40 tracking-widest uppercase">
+              AI-Powered Real Estate Platform
             </p>
           </div>
-          <p className="text-sm text-primary-foreground/50">
+
+          {/* Tagline */}
+          <p className="text-center text-white/30 text-xs mt-12 max-w-xs">
             Trusted by real estate professionals across British Columbia
           </p>
         </div>
@@ -68,10 +68,8 @@ export default function LoginPage() {
         <div className="w-full max-w-sm space-y-8">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-              <Home className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold tracking-tight">RealtorAI</span>
+            <LogoIcon size={36} />
+            <span className="text-xl font-bold tracking-tight">Realtors360</span>
           </div>
 
           <div className="text-center lg:text-left">

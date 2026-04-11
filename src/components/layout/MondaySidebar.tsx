@@ -9,7 +9,10 @@ import {
   Wand2, Settings, LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
 import type { FeatureKey } from "@/lib/features";
+import { useRecentItems } from "@/stores/recent-items";
+import { LogoVideo } from "@/components/brand/Logo";
 
 interface NavItem {
   href: string;
@@ -75,6 +78,11 @@ export function MondaySidebar() {
 
   const enabledFeatures: string[] = (session?.user as Record<string, unknown>)?.enabledFeatures as string[] || [];
 
+  // Recent items — hydration guard (Zustand persist rehydrates from localStorage after mount)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const recentItems = useRecentItems((s) => s.items);
+
   function isVisible(featureKey?: FeatureKey) {
     if (!featureKey) return true;
     return enabledFeatures.length === 0 || enabledFeatures.includes(featureKey);
@@ -103,19 +111,34 @@ export function MondaySidebar() {
   return (
     <aside className="hidden md:flex flex-col w-60 shrink-0 bg-sidebar h-full overflow-y-auto">
       {/* Brand */}
-      <div className="flex items-center gap-2.5 h-16 px-4 shrink-0">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-            <polyline points="9 22 9 12 15 12 15 22" />
-          </svg>
+      <div className="flex items-center gap-3 h-20 px-4 shrink-0">
+        <LogoVideo size={52} />
+        <div>
+          <span className="text-sm font-semibold text-sidebar-foreground">Realtors360</span>
+          <span className="block text-[9px] text-sidebar-foreground/40 tracking-widest uppercase">AI Platform</span>
         </div>
-        <span className="text-sm font-semibold text-sidebar-foreground">Realtors360</span>
       </div>
 
       {renderNavGroup("Main", MAIN_NAV)}
       {renderNavGroup("Tools", TOOLS_NAV)}
       {renderNavGroup("Admin", ADMIN_NAV)}
+
+      {/* Recent Items */}
+      {mounted && recentItems.length > 0 && (
+        <div className="px-2 pt-2 border-t border-sidebar-accent mt-2">
+          <div className="text-xs uppercase tracking-wider text-sidebar-foreground/70 px-3 pt-2 pb-1 font-semibold">Recent</div>
+          {recentItems.slice(0, 5).map((item) => (
+            <Link
+              key={item.id}
+              href={item.href}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/60 rounded-md"
+            >
+              <span className="text-xs">{item.type === "contact" ? "👤" : "🏠"}</span>
+              <span className="truncate">{item.label}</span>
+            </Link>
+          ))}
+        </div>
+      )}
 
       {/* Spacer */}
       <div className="flex-1" />

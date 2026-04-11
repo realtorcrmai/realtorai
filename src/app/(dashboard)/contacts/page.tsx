@@ -11,7 +11,7 @@ export default async function ContactsPage() {
 
   const { data: contacts } = await supabase
     .from("contacts")
-    .select("id, name, email, phone, type, stage_bar, lead_status, last_activity_date, created_at")
+    .select("id, name, email, phone, type, stage_bar, lead_status, last_activity_date, created_at, newsletter_intelligence")
     .order("created_at", { ascending: false })
     .limit(200);
 

@@ -1,5 +1,6 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import type { ToolContext } from '../index.js';
+import { logger } from '../../../lib/logger.js';
 
 export const QUEUE_FOR_APPROVAL_SCHEMA: Anthropic.Tool = {
   name: 'queue_for_approval',
@@ -32,5 +33,6 @@ export async function queueForApproval(
     .eq('realtor_id', ctx.realtorId);
 
   if (error) return { error: error.message };
+  logger.info({ draftId, urgency }, 'queue_for_approval: draft queued');
   return { draft_id: draftId, status: 'pending_review', urgency };
 }

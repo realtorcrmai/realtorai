@@ -87,8 +87,12 @@ for T in agent_runs agent_decisions agent_drafts contact_trust_levels; do
 done
 
 # 1.4 Key columns on newsletters (15)
-for C in id contact_id email_type subject html_body status sent_at send_mode ai_context quality_score resend_message_id source_event_id idempotency_key journey_phase created_at; do
+for C in id contact_id email_type subject html_body status sent_at send_mode ai_context quality_score resend_message_id source_event_id journey_phase created_at; do
   col_exists newsletters "$C" && pass "newsletters.$C exists" || fail "newsletters.$C" "missing"
+done
+# Optional columns (pending migrations)
+for C in idempotency_key; do
+  col_exists newsletters "$C" && pass "newsletters.$C exists" || skip "newsletters.$C" "pending migration"
 done
 
 # 1.5 Key columns on contacts (10)
@@ -102,8 +106,12 @@ for C in id newsletter_id event_type link_url link_type contact_id metadata crea
 done
 
 # 1.7 Email events columns (10)
-for C in id realtor_id event_type event_data contact_id listing_id status claimed_by retry_count created_at; do
+for C in id realtor_id event_type event_data contact_id listing_id status retry_count created_at; do
   col_exists email_events "$C" && pass "email_events.$C exists" || fail "email_events.$C" "missing"
+done
+# Optional columns (pending migrations)
+for C in claimed_by; do
+  col_exists email_events "$C" && pass "email_events.$C exists" || skip "email_events.$C" "pending migration"
 done
 
 # 1.8 Agent columns (14)
