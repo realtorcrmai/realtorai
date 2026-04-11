@@ -105,8 +105,7 @@ export default function SignupPage() {
         <div className="w-full max-w-md p-8 bg-white/90 backdrop-blur rounded-2xl shadow-lg text-center animate-float-in">
           <div className="text-5xl mb-4">🎉</div>
           <h1 className="text-2xl font-bold text-foreground mb-2">Welcome, {name.split(" ")[0]}!</h1>
-          <p className="text-sm text-gray-600 mb-2">Your 14-day Professional trial is active.</p>
-          <p className="text-xs text-gray-400 mb-4">All premium features unlocked — no credit card needed.</p>
+          <p className="text-sm text-gray-600 mb-2">Your account is ready.</p>
           <div className="animate-pulse text-primary text-sm">Setting up your workspace...</div>
         </div>
       </div>
@@ -150,11 +149,11 @@ export default function SignupPage() {
           <div className="mt-8 flex items-center gap-6 text-xs text-gray-500">
             <div className="flex items-center gap-1.5">
               <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-              No credit card required
+              Free forever
             </div>
             <div className="flex items-center gap-1.5">
               <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-              14-day free trial
+              Upgrade anytime
             </div>
           </div>
         </div>
@@ -169,7 +168,7 @@ export default function SignupPage() {
               <span className="text-white text-xl font-bold">R</span>
             </div>
             <h1 className="text-2xl font-bold text-foreground">Get started free</h1>
-            <p className="text-sm text-gray-500 mt-1">14-day Professional trial, no credit card</p>
+            <p className="text-sm text-gray-500 mt-1">Free forever — upgrade anytime</p>
           </div>
 
           <form onSubmit={handleSubmit} className="bg-white/90 backdrop-blur rounded-2xl shadow-lg p-6 space-y-4">
@@ -180,8 +179,8 @@ export default function SignupPage() {
 
             {/* Trial badge (S7) */}
             <div className="flex items-center gap-2 p-2.5 bg-gradient-to-r from-[#4f35d2]/5 to-[#ff5c3a]/5 rounded-lg border border-[#4f35d2]/10">
-              <span className="text-xs bg-gradient-to-r from-[#4f35d2] to-[#ff5c3a] text-white px-2 py-0.5 rounded-full font-medium">FREE TRIAL</span>
-              <span className="text-xs text-gray-600">14 days of Professional — all features unlocked</span>
+              <span className="text-xs bg-gradient-to-r from-[#4f35d2] to-[#ff5c3a] text-white px-2 py-0.5 rounded-full font-medium">FREE</span>
+              <span className="text-xs text-gray-600">Contacts, calendar, and tasks — upgrade to unlock more</span>
             </div>
 
             <div>
@@ -260,7 +259,7 @@ export default function SignupPage() {
               disabled={loading}
               className="w-full py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-[#3d28a8] transition-colors disabled:opacity-50"
             >
-              {loading ? "Creating account..." : "Start free trial"}
+              {loading ? "Creating account..." : "Create free account"}
             </button>
 
             {error && (

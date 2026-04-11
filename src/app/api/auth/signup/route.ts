@@ -35,10 +35,7 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await hash(password, 12);
 
-    // All new users get 14-day Professional trial (S7)
-    const trialPlan = "professional";
-    const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
-    const features = getUserFeatures(trialPlan);
+    const features = getUserFeatures("free");
 
     const { data: newUser, error: insertError } = await supabase
       .from("users")
@@ -48,8 +45,6 @@ export async function POST(request: NextRequest) {
         password_hash: passwordHash,
         role: "realtor",
         plan: "free",
-        trial_plan: trialPlan,
-        trial_ends_at: trialEndsAt,
         enabled_features: features,
         signup_source: "email",
         email_verified: false,
@@ -76,10 +71,9 @@ export async function POST(request: NextRequest) {
         id: newUser.id,
         email: newUser.email,
         name: newUser.name,
-        plan: trialPlan,
-        trialEndsAt: newUser.trial_ends_at,
+        plan: "free",
       },
-      message: "Account created with 14-day Professional trial.",
+      message: "Account created successfully.",
     }, { status: 201 });
 
   } catch (err) {
