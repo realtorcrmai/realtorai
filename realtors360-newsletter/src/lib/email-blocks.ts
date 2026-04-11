@@ -266,9 +266,10 @@ const blocks: Record<string, BlockFn> = {
   photoStack: (d) => {
     const photos = d.listing?.photos;
     if (!photos || photos.length < 2) return '';
-    return photos.slice(1, 5).map((photo, i) => `
-    <tr><td style="padding:${i === 0 ? '24px' : '4px'} 0 0;line-height:0;font-size:0;">
-      <img src="${photo}" alt="Property photo ${i + 2}" width="660" style="display:block;width:100%;height:auto;border:0;">
+    // Show ALL photos after the hero (index 1 onwards), no cap
+    return photos.slice(1).map((photo, i) => `
+    <tr><td style="padding:${i === 0 ? '32px' : '6px'} 0 0;line-height:0;font-size:0;">
+      <img src="${photo}" alt="Property photo ${i + 2}" width="660" style="display:block;width:100%;height:auto;border:0;" class="mobile-img">
     </td></tr>`).join('');
   },
 
@@ -490,7 +491,7 @@ const TEMPLATE_BLOCKS: Record<string, string[]> = {
   ],
   listing_alert: [
     'brandHeader', 'luxuryHero', 'serifTitle', 'specsBar', 'priceDisplay',
-    'description', 'luxuryButton', 'agentProfile', 'complianceFooter',
+    'description', 'photoStack', 'luxuryButton', 'agentProfile', 'complianceFooter',
   ],
   market_update: [
     'brandHeader', 'smartHero', 'serifTitle', 'description', 'marketStatsGrid',
@@ -499,7 +500,7 @@ const TEMPLATE_BLOCKS: Record<string, string[]> = {
   ],
   just_sold: [
     'brandHeader', 'smartHero', 'serifTitle', 'specsBar', 'priceDisplay',
-    'description', 'testimonialBlock', 'dividerLine', 'agentProfile', 'complianceFooter',
+    'description', 'photoStack', 'testimonialBlock', 'dividerLine', 'agentProfile', 'complianceFooter',
   ],
   birthday: [
     'brandHeader', 'smartHero', 'birthdayCelebration', 'description', 'dividerLine',
@@ -516,7 +517,7 @@ const TEMPLATE_BLOCKS: Record<string, string[]> = {
   ],
   price_drop: [
     'brandHeader', 'luxuryHero', 'serifTitle', 'specsBar', 'priceDisplay',
-    'description', 'luxuryButton', 'agentProfile', 'complianceFooter',
+    'description', 'photoStack', 'luxuryButton', 'agentProfile', 'complianceFooter',
   ],
   neighbourhood_guide: [
     'brandHeader', 'smartHero', 'serifTitle', 'description', 'neighbourhoodHighlights',
