@@ -115,16 +115,27 @@ export default function PersonalizePage() {
       }
       setScreen(progress.screen);
       if (progress.data) {
-        // Normalize: multi-select fields may be stored as strings (old data) or arrays (new JSONB)
+        // Only load explicitly answered screens — don't load DB defaults for unanswered screens
         const data = progress.data as Record<string, string | string[] | null>;
-        const multiSelectFields = ["onboarding_persona", "onboarding_market"];
-        for (const field of multiSelectFields) {
+        const fieldOrder = ["onboarding_persona", "onboarding_market", "onboarding_team_size", "onboarding_experience", "onboarding_focus"];
+        const defaults: Record<string, string> = {
+          onboarding_persona: "solo_agent",
+          onboarding_market: "residential",
+          onboarding_team_size: "just_me",
+          onboarding_experience: "new",
+        };
+        const cleaned: Record<string, string | string[] | null> = {};
+        for (let i = 0; i < Math.min(progress.screen, fieldOrder.length); i++) {
+          const field = fieldOrder[i];
           const val = data[field];
-          if (typeof val === "string") {
-            data[field] = [val]; // Convert old string to array
+          // Normalize multi-select fields
+          if ((field === "onboarding_persona" || field === "onboarding_market") && typeof val === "string") {
+            cleaned[field] = [val];
+          } else {
+            cleaned[field] = val;
           }
         }
-        setSelections(data);
+        setSelections(cleaned);
       }
       setLoading(false);
     });

@@ -69,8 +69,10 @@ export async function middleware(request: NextRequest) {
   try {
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
     if (token && !pathname.startsWith("/api")) {
+      // Skip gate if user just completed onboarding (JWT hasn't refreshed yet)
+      const justCompleted = request.nextUrl.searchParams.get("welcome") === "1";
       // Skip gates for demo/admin users
-      const isExempt = token.role === "admin" || (token.onboardingCompleted === true && token.personalizationCompleted === true);
+      const isExempt = justCompleted || token.role === "admin" || (token.onboardingCompleted === true && token.personalizationCompleted === true);
       if (!isExempt) {
         if (token.personalizationCompleted === false) {
           return NextResponse.redirect(new URL("/personalize", request.url));
