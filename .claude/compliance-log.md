@@ -243,3 +243,33 @@
 | 2026-04-10 | claude | Fix remaining 11 gaps in v3 gap doc | GAP_ANALYSIS | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
 | 2026-04-10 | claude | unknown | CODING | ✅ | classified | — | Auto-logged by completion-gate |
 | 2026-04-10 | claude | unknown | CODING | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | DEPLOY | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Write comprehensive test document — 312 test cases across all onboarding featu | TESTING | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Commit and push 312-test-case comprehensive test document | TESTING | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING | ✅ | classified | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Comprehensive test suite for onboarding features — 312 test cases | TESTING | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | 170+ test cases: eval-onboarding.mjs, eval-onboarding-ui.mjs, eval-contacts-perf.mjs, test-suite.sh update | TESTING | ✅ | classified → explore → write → commit → PR #152 | — | 3 new eval scripts + test-suite.sh updates |
+| 2026-04-10 | claude | Comprehensive test suite for onboarding features | TESTING | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING | ✅ | classified, pre_flight | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Run all test suites | TESTING | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Apply pending onboarding migrations then re-run tests | DEPLOY | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING | ✅ | classified, pre_flight, executing | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING | ✅ | classified, pre_flight, executing | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Fix portfolio form UX, tab counts, co-owner creation | CODING | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Fix portfolio form UX, tab counts, co-owner creation | CODING | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | CODING | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | unknown | DEPLOY | ✅ | classified, in_progress | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Fix 9 onboarding flow bugs: photo not saving, Gmail integration, contacts import | CODING | ✅ | classified, pre_flight | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Fix 9 onboarding bugs + CSV import + multi-select JSONB migration | CODING | ✅ | classified → scoped → execute → validate → log | PR #154 | JWT refresh for redirect loop, step persistence, CSV JSON pathway, JSONB columns for multi-select persona/market, family details, team invite. Migrations 096+097 applied. |
+| 2026-04-10 | claude | Fix 9 onboarding flow bugs and commit + create PR | CODING | ✅ | classified, pre_flight, executing, validated | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Family member contacts + two-name referral detection in onboarding | CODING | ✅ | classified → scoped → execute → validate → log | PR #154 | Dynamic family member list in Step 1 creates contacts. CSV import detects two-word names and suggests referral links. |
+| 2026-04-10 | claude | Fix multi-select personalization: TEXT columns need JSONB + resume logic fix | CODING | ✅ | classified, pre_flight, scoped, executing, validated, compliance_logged | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Fix 5 onboarding UX issues: family details, redirect loop, apple upload, phone placement | CODING | ✅ | classified → scoped → execute → validate → log | PR #154 | Restored simple family details, window.location.href for redirect, apple spinner, CSV upload option for family contacts. |
+| 2026-04-10 | claude | Smart family member creation + two-name referral detection in onboarding | CODING | ✅ | classified, pre_flight, scoped, executing, validated, compliance_logged | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Redesign onboarding steps for centered layout matching personalization | CODING | ✅ | classified → scoped → execute → validate → log | PR #154 | Rebuilt all steps: 2-col grids, consistent buttons, no inline Back, purple gradient bg, step dots. |
+| 2026-04-10 | claude | Fix 5 onboarding UX issues | CODING | ✅ | classified, pre_flight, scoped, executing, validated, compliance_logged | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Rebuild onboarding from scratch — no card wrapper, fields on gradient | CODING | ✅ | classified → scoped → execute → validate → log | PR #154 | Removed Card/CardContent, all fields render on purple gradient like personalization. Uniform h-12 rounded-xl inputs, centered avatar, no visual sections. |
+| 2026-04-10 | claude | Redesign onboarding steps for centered layout | CODING | ✅ | classified, pre_flight, scoped, executing, validated, compliance_logged | — | Auto-logged by completion-gate |
+| 2026-04-10 | claude | Rebuild onboarding from scratch — fields on gradient, no card wrapper | CODING | ✅ | classified, pre_flight, scoped, executing, validated, compliance_logged | — | Auto-logged by completion-gate |

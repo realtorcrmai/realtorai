@@ -15,7 +15,135 @@ import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
  */
 export async function POST(request: NextRequest) {
   const tc = await getAuthenticatedTenantClient();
+  const contentType = request.headers.get("content-type") || "";
 
+  // ── Path A: JSON body from onboarding CSVImportStep (client-side parsed) ──
+  if (contentType.includes("application/json")) {
+    return handleJSONImport(tc, request);
+  }
+
+  // ── Path B: FormData with raw CSV file (server-side parsed) ──
+  return handleFormDataImport(tc, request);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handleJSONImport(tc: any, request: NextRequest) {
+  const { contacts, source } = await request.json();
+  if (!Array.isArray(contacts) || contacts.length === 0) {
+    return NextResponse.json({ error: "No contacts provided" }, { status: 400 });
+  }
+  if (contacts.length > 5000) {
+    return NextResponse.json({ error: "Maximum 5000 contacts per import" }, { status: 422 });
+  }
+
+  const validTypes = new Set(["buyer", "seller", "customer", "agent", "partner", "lead", "other"]);
+  let imported = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+  const newContacts: Array<{ id: string; name: string }> = [];
+
+  // Batch insert in chunks of 50
+  for (let i = 0; i < contacts.length; i += 50) {
+    const batch = contacts.slice(i, i + 50);
+    const rows = batch
+      .filter((c: Record<string, string>) => c.name || c.email)
+      .map((c: Record<string, string>) => ({
+        name: c.name || "Unknown",
+        email: c.email || null,
+        phone: c.phone ? normalizePhone(c.phone) : null,
+        type: validTypes.has(c.type?.toLowerCase()) ? c.type.toLowerCase() : "lead",
+        notes: c.notes || null,
+        source: source || "csv_import",
+        is_sample: false,
+      }));
+
+    if (rows.length === 0) { skipped += batch.length; continue; }
+
+    const { data, error } = await tc
+      .from("contacts")
+      .insert(rows)
+      .select("id, name");
+
+    if (data) {
+      imported += data.length;
+      newContacts.push(...data.map((d: { id: string; name: string }) => ({ id: d.id, name: d.name })));
+    }
+    if (error) {
+      errors.push(error.message);
+      skipped += rows.length;
+    }
+  }
+
+  // Clean up sample data if user now has real contacts
+  if (imported > 0) {
+    await tc.from("contacts").delete().eq("is_sample", true);
+  }
+
+  // ── Referral detection: two-word names where second word matches an existing contact ──
+  const referralSuggestions: Array<{
+    contact_id: string;
+    contact_name: string;
+    possible_referrer_id: string;
+    possible_referrer_name: string;
+  }> = [];
+
+  if (newContacts.length > 0) {
+    // Get all contacts (including just-imported) for name matching
+    const { data: allContacts } = await tc
+      .from("contacts")
+      .select("id, name")
+      .not("name", "is", null);
+
+    if (allContacts && allContacts.length > 0) {
+      // Build first-name lookup: "anish" → [{ id, fullName: "Anish Kumar" }]
+      const firstNameMap = new Map<string, Array<{ id: string; name: string }>>();
+      for (const c of allContacts) {
+        if (!c.name) continue;
+        const firstName = c.name.split(/\s+/)[0]?.toLowerCase();
+        if (firstName && firstName.length >= 2) {
+          if (!firstNameMap.has(firstName)) firstNameMap.set(firstName, []);
+          firstNameMap.get(firstName)!.push({ id: c.id, name: c.name });
+        }
+      }
+
+      // Check newly imported contacts for two-word name pattern
+      const newContactIds = new Set(newContacts.map((c) => c.id));
+      for (const nc of newContacts) {
+        const parts = nc.name.trim().split(/\s+/);
+        if (parts.length !== 2) continue; // Only exact two-word names
+
+        const secondWord = parts[1].toLowerCase();
+        const matches = firstNameMap.get(secondWord) || [];
+
+        // Filter: don't suggest self, don't suggest other just-imported contacts
+        const validMatches = matches.filter(
+          (m) => m.id !== nc.id && !newContactIds.has(m.id)
+        );
+
+        if (validMatches.length > 0) {
+          // Take the best match (first one)
+          referralSuggestions.push({
+            contact_id: nc.id,
+            contact_name: parts[0],
+            possible_referrer_id: validMatches[0].id,
+            possible_referrer_name: validMatches[0].name,
+          });
+        }
+      }
+    }
+  }
+
+  return NextResponse.json({
+    ok: true,
+    imported,
+    skipped,
+    errors: errors.slice(0, 5),
+    referral_suggestions: referralSuggestions.slice(0, 10),
+  });
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handleFormDataImport(tc: any, request: NextRequest) {
   const formData = await request.formData();
   const file = formData.get("file");
   if (!file || !(file instanceof Blob)) {
@@ -70,8 +198,8 @@ export async function POST(request: NextRequest) {
     name:               string;
     normalizedPhone:    string;
     contact:            Record<string, string>;
-    referredByRaw:      string;   // name or phone string from CSV
-    familyOfRaw:        string;   // name or phone string from CSV
+    referredByRaw:      string;
+    familyOfRaw:        string;
     familyRelationship: string;
   };
 
@@ -114,7 +242,6 @@ export async function POST(request: NextRequest) {
   let imported = 0;
   const errors: string[] = [];
 
-  // name→newId and phone→newId for cross-references within the same batch
   const newNameToId  = new Map<string, string>();
   const newPhoneToId = new Map<string, string>();
 
@@ -143,11 +270,9 @@ export async function POST(request: NextRequest) {
   function resolveContactId(raw: string): string | null {
     if (!raw) return null;
     const lower = raw.toLowerCase().trim();
-    // Try batch-imported contacts first (by name, then by phone)
     if (newNameToId.has(lower))                       return newNameToId.get(lower)!;
     const normPhone = normalizePhone(raw);
     if (newPhoneToId.has(normPhone))                   return newPhoneToId.get(normPhone)!;
-    // Fall back to pre-existing contacts
     if (nameToId.has(lower))                           return nameToId.get(lower)!;
     if (phoneToId.has(normPhone))                      return phoneToId.get(normPhone)!;
     return null;
@@ -155,9 +280,8 @@ export async function POST(request: NextRequest) {
 
   for (const meta of toCreate) {
     const myId = newNameToId.get(meta.name.toLowerCase().trim());
-    if (!myId) continue; // this row failed to create
+    if (!myId) continue;
 
-    // ── referred_by ────────────────────────────────────────
     if (meta.referredByRaw) {
       const referrerId = resolveContactId(meta.referredByRaw);
       if (referrerId && referrerId !== myId) {
@@ -172,7 +296,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── family_of ──────────────────────────────────────────
     if (meta.familyOfRaw) {
       const primaryId = resolveContactId(meta.familyOfRaw);
       const relationship = validRelationships.has(meta.familyRelationship)
@@ -180,7 +303,6 @@ export async function POST(request: NextRequest) {
         : "other";
 
       if (primaryId && primaryId !== myId) {
-        // Add this contact as a family member on the primary contact's record
         const { error } = await tc.from("contact_family_members").insert({
           contact_id:   primaryId,
           name:         meta.name,
