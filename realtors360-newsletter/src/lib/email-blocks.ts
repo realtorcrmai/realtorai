@@ -104,11 +104,10 @@ const blocks: Record<string, BlockFn> = {
       d.anniversary ? 'Home Anniversary' :
       'Update'
     );
-    const webView = d.webViewUrl
-      ? `<tr><td style="padding:12px 48px 0;text-align:center;" class="mobile-pad">
-          <a href="${d.webViewUrl}" style="font-family:${SANS};font-size:11px;font-weight:400;color:${CLR.light};text-decoration:none;">View in browser</a>
-        </td></tr>`
-      : '';
+    const viewUrl = d.webViewUrl || '{{web_view_url}}';
+    const webView = `<tr><td style="padding:12px 48px 0;text-align:center;" class="mobile-pad">
+        <a href="${viewUrl}" style="font-family:${SANS};font-size:11px;font-weight:400;color:${CLR.light};text-decoration:none;">View in browser</a>
+      </td></tr>`;
     return `${webView}
     <tr><td style="padding:20px 48px;background:${CLR.bg};" class="mobile-pad">
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
