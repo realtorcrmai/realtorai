@@ -598,4 +598,22 @@ All sample records have `is_sample = true` so they can be identified and cleaned
 
 ---
 
-*Production Deployment Guide v2.2 — April 12, 2026*
+## 13. Bulk Operations & Print Styles (2026-04-12)
+
+### Bulk Contact Operations
+Three new server actions (NOT API routes) in `src/actions/contacts.ts`:
+- **bulkUpdateContactStage** — validates stage against allowlist + per-contact type validation via `validateStageForType()`. Skips incompatible types.
+- **bulkDeleteContacts** — checks for active/pending/conditional listings before allowing delete. Multi-tenant safe.
+- **bulkExportContacts** — CSV export with formula injection protection (escapes `=`, `+`, `@`, `-` prefixes). Export happens client-side via Blob URL.
+
+**No new API routes, no new migrations, no new env vars required.**
+
+### Print Styles
+`@media print` rules in `globals.css` hide nav/sidebar/fixed elements and reset backgrounds to white. No deployment impact.
+
+### Color Contrast Fix
+`--muted-foreground` changed from `#516f90` to `#476380` (5.2:1 ratio on `#f5f8fa` background). Passes WCAG AA.
+
+---
+
+*Production Deployment Guide v2.3 — April 12, 2026*
