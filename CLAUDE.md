@@ -157,6 +157,7 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 │   │   │   ├── mls-remarks/       # Claude AI MLS remarks
 │   │   │   ├── neighborhood/      # Mock neighbourhood comps
 │   │   │   ├── kling/status/      # Kling AI task polling
+│   │   │   ├── onboarding/nps/    # NPS survey submission endpoint
 │   │   │   └── webhooks/twilio/   # Inbound SMS/WhatsApp handler
 │   │   ├── globals.css            # Design system + Tailwind config
 │   │   └── layout.tsx             # Root layout (fonts, providers)
@@ -181,7 +182,8 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 │   │   ├── JustSold.tsx           # Sale celebration
 │   │   ├── OpenHouseInvite.tsx    # Event invitation
 │   │   ├── NeighbourhoodGuide.tsx # Area lifestyle content
-│   │   └── HomeAnniversary.tsx    # Annual homeowner milestone
+│   │   ├── HomeAnniversary.tsx    # Annual homeowner milestone
+│   │   └── WelcomeDripHTML.ts     # 7-email branded welcome drip sequence
 │   ├── stores/                    # Zustand stores (recent-items.ts)
 │   ├── components/
 │   │   ├── contacts/              # ContactsTableClient, ContactPreviewSheet, ContactCard, ContactForm, CommunicationTimeline, SegmentBuilder
@@ -190,6 +192,7 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 │   │   ├── showings/              # ShowingsTableClient, ShowingRequestForm, StatusBadge, StatusActions, Communication
 │   │   ├── newsletters/           # ApprovalQueueClient, NewsletterWalkthrough
 │   │   ├── dashboard/             # PipelineSnapshot, AIRecommendations, RemindersWidget, ActivityFeed, TodaysPriorities, DashboardPipelineWidget
+│   │   ├── help/                  # OnboardingNPS.tsx (NPS survey after checklist)
 │   │   ├── shared/                # TrackRecentView.tsx (recent items bridge)
 │   │   ├── email-builder/         # EmailEditorClient (template editor)
 │   │   ├── workflow-builder/      # WorkflowCanvas, WorkflowEditorClient (React Flow)
@@ -564,6 +567,7 @@ Key documents in repo root: `Realtors360_Realtor_Workflow_Design_Document.docx` 
 - **Communications:** Gmail for 1:1 (plain text), Resend for newsletters, no threading, showing SMS hardcoded
 - **Workflow:** DocuSign UI exists but API unconfirmed, no Paragon API (Phase 8 manual), Phases 9-12 missing, no offer management
 - **Compliance:** FINTRAC sellers only (not buyers), no Receipt of Funds, no retention policy, CASL consent no expiry tracking
+- **Onboarding:** Full system built -- 5-step wizard (/onboarding), 6-screen personalization (/personalize), sample data seeding (5 contacts + 3 listings + 2 showings + 1 newsletter with `is_sample` flag), post-onboarding confetti + welcome tour + checklist (5 items) + NPS survey, 7-email branded drip sequence, empty states on listings/contacts/showings pages, new agent dashboard guide for `new_agent` persona, `data-tour` attributes on sidebar nav for guided tours. Migration 103 required.
 
 ---
 

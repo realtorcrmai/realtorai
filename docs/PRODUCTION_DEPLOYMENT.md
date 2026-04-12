@@ -557,4 +557,45 @@ Browser → Vercel (Next.js 16) → Supabase (PostgreSQL)
 
 ---
 
-*Production Deployment Guide v2.1 — April 11, 2026*
+## 12. Onboarding System
+
+### Database Migration
+
+**Migration 103** (`supabase/migrations/103_onboarding_sample_data.sql`) must be applied. It adds:
+- `is_sample` boolean column on `contacts`, `listings`, `appointments`, and `newsletters` tables (defaults to `false`)
+- `onboarding_nps` table for storing Net Promoter Score survey responses
+
+Run via SQL Editor or CLI before deploying the onboarding feature:
+```bash
+SUPABASE_ACCESS_TOKEN=<token> npx supabase db query --linked -f supabase/migrations/103_onboarding_sample_data.sql
+```
+
+### Welcome Drip Cron
+
+The 7-email welcome drip sequence is triggered by the `/api/cron/welcome-drip` endpoint. It requires:
+- `RESEND_API_KEY` set in environment (Vercel or Render)
+- `RESEND_FROM_EMAIL` set to verified sender domain
+- `CRON_SECRET` for authorization header
+
+Add to `vercel.json` if not already present:
+```json
+{ "path": "/api/cron/welcome-drip", "schedule": "0 9 * * *" }
+```
+
+### NPS Endpoint
+
+`POST /api/onboarding/nps` accepts NPS survey responses after onboarding checklist completion. No additional env vars required beyond standard Supabase credentials.
+
+### Sample Data Seeding
+
+When a new user completes onboarding, sample data is seeded automatically:
+- 5 contacts (diverse types: buyer, seller, investor, referral, past client)
+- 3 listings (different statuses and property types)
+- 2 showings (upcoming and completed)
+- 1 newsletter (draft with sample content)
+
+All sample records have `is_sample = true` so they can be identified and cleaned up later.
+
+---
+
+*Production Deployment Guide v2.2 — April 12, 2026*
