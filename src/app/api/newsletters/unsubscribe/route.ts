@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyUnsubscribeToken } from "@/lib/unsubscribe-token";
+import { checkApiRateLimit, rateLimitHeaders } from "@/lib/api-rate-limit";
 
 /**
  * GET /api/newsletters/unsubscribe?token=<contactId>.<hmac>
@@ -14,6 +15,16 @@ import { verifyUnsubscribeToken } from "@/lib/unsubscribe-token";
  * Remove the legacy path once all in-flight emails have expired.
  */
 export async function GET(request: NextRequest) {
+  // Rate limit by IP to prevent abuse
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateCheck = checkApiRateLimit(ip, "unsubscribe");
+  if (!rateCheck.allowed) {
+    return new NextResponse("Too many requests. Please try again later.", {
+      status: 429,
+      headers: rateLimitHeaders(rateCheck),
+    });
+  }
+
   const token = request.nextUrl.searchParams.get("token");
   const legacyId = request.nextUrl.searchParams.get("id");
 
