@@ -11,6 +11,7 @@ type Config = {
   frequency_caps: Record<string, any>;
   default_send_hour: number;
   brand_config?: { default_send_mode?: string };
+  ai_quality_tier?: string;
 };
 
 export function SettingsTab({ config }: { config: Config | null }) {
@@ -25,6 +26,9 @@ export function SettingsTab({ config }: { config: Config | null }) {
   const [sendMode, setSendMode] = useState<"review" | "auto">(
     (config?.brand_config?.default_send_mode as "review" | "auto") || "review"
   );
+  const [aiQualityTier, setAiQualityTier] = useState<string>(
+    config?.ai_quality_tier ?? "professional"
+  );
 
   function handleSave() {
     startTransition(async () => {
@@ -38,6 +42,7 @@ export function SettingsTab({ config }: { config: Config | null }) {
           active: { ...config?.frequency_caps?.active, per_week: frequencyCap },
         },
         default_send_mode: sendMode,
+        ai_quality_tier: aiQualityTier,
       });
       if (result.success) {
         setSaved(true);
@@ -136,6 +141,32 @@ export function SettingsTab({ config }: { config: Config | null }) {
               >Auto-Send</button>
             </div>
           </div>
+          {/* AI Content Quality */}
+          <div className="flex items-center justify-between pt-4 border-t border-border">
+            <div>
+              <p className="text-sm font-medium">AI Content Quality</p>
+              <p className="text-xs text-muted-foreground">Controls which AI model generates your emails</p>
+            </div>
+            <select
+              value={aiQualityTier}
+              onChange={(e) => setAiQualityTier(e.target.value)}
+              aria-label="AI Content Quality Tier"
+              className="text-xs border border-border rounded-lg px-3 py-2 bg-background text-foreground"
+            >
+              <option value="standard">Standard (Cost-efficient)</option>
+              <option value="professional">Professional (Recommended)</option>
+              <option value="premium">Premium (Luxury)</option>
+            </select>
+          </div>
+          {aiQualityTier === "standard" && (
+            <p className="text-[11px] text-muted-foreground pl-1">All emails use a fast, cost-efficient model. Best for high-volume senders.</p>
+          )}
+          {aiQualityTier === "professional" && (
+            <p className="text-[11px] text-muted-foreground pl-1">High-value emails (listing alerts, price drops, sold notices) use a premium model. Routine emails use the fast model.</p>
+          )}
+          {aiQualityTier === "premium" && (
+            <p className="text-[11px] text-muted-foreground pl-1">High-value emails use the most capable model. Routine emails use the premium model. Best for luxury markets.</p>
+          )}
         </CardContent>
       </Card>
 

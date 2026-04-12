@@ -482,6 +482,7 @@ export default async function NewsletterDashboard() {
               frequency_caps: realtorConfig.frequency_caps as any,
               default_send_hour: realtorConfig.default_send_hour,
               brand_config: realtorConfig.brand_config as any,
+              ai_quality_tier: realtorConfig.ai_quality_tier as string | undefined,
             } : null} />
           ),
         }}

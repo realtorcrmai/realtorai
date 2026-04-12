@@ -23,6 +23,7 @@ export async function updateRealtorSettings(settings: {
   default_send_day?: string;
   default_send_hour?: number;
   default_send_mode?: string;
+  ai_quality_tier?: string;
 }) {
   const supabase = createAdminClient();
   const config = await getRealtorConfig();
