@@ -5,6 +5,9 @@ import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { fireConfetti } from "@/hooks/useConfetti";
 import confetti from "canvas-confetti";
+import { driver } from "driver.js";
+import "driver.js/dist/driver.css";
+import { WELCOME_TOUR } from "@/components/help/TourDefinitions";
 
 /**
  * Welcome celebration on first dashboard landing after onboarding.
@@ -68,6 +71,31 @@ export function WelcomeConfetti() {
 
     // Auto-dismiss banner
     setTimeout(() => setShowBanner(false), 6000);
+
+    // Auto-launch welcome tour after banner dismisses
+    const tourSeen = localStorage.getItem("lf-welcome-tour-seen");
+    if (!tourSeen) {
+      localStorage.setItem("lf-welcome-tour-seen", "1");
+      setTimeout(() => {
+        const validSteps = WELCOME_TOUR.steps.filter(
+          (s) => document.querySelector(s.element)
+        );
+        if (validSteps.length > 0) {
+          const d = driver({
+            showProgress: true,
+            steps: validSteps.map((s) => ({
+              element: s.element,
+              popover: {
+                title: s.popover.title,
+                description: s.popover.description,
+                side: s.popover.side,
+              },
+            })),
+          });
+          d.drive();
+        }
+      }, 500);
+    }
   }, [searchParams]);
 
   if (!showBanner) return null;

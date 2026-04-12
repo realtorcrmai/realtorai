@@ -1397,3 +1397,377 @@ node scripts/test-workflow-emails.mjs
 **Priority:** P2
 
 **Full test plan with all 50+ cases:** See `docs/TEST_PLAN_UI_UX_Features.md`
+
+---
+
+## CATEGORY 17: ONBOARDING & NEW USER EXPERIENCE (ONBOARD) — See External Plan
+
+Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. This covers:
+- Personalization wizard (6 screens at /personalize)
+- Onboarding wizard (5 steps at /onboarding)
+- Sample data seeding (5 contacts, 3 listings, 2 showings, 1 newsletter)
+- Post-onboarding experience (confetti, welcome tour, checklist, NPS survey)
+- Welcome drip email sequence (7 emails, day 0-12)
+- Empty states on listings, contacts, showings pages
+- New agent dashboard guide
+- data-tour attributes for guided tours
+- Migration 103 validation (is_sample columns, onboarding_nps table)
+
+---
+
+## CATEGORY 18: UI/UX AUDIT SPRINT ENHANCEMENTS (UXAUDIT) — 65 Tests
+
+> Added 2026-04-12 after 6 UI/UX audit sprints covering mobile, filters, accessibility, bulk ops, and print.
+
+### Sprint 1: Mobile & Core UX — 20 Tests
+
+#### UXAUDIT-001: Mobile collapsible sidebar on listing detail
+**Story:** As a realtor on mobile, I want the listing detail sidebar to collapse, so I can focus on the main content.
+**Steps:** Navigate to `/listings/[id]` on viewport < 768px. Observe context sidebar.
+**Expected:** Sidebar is collapsed by default behind a toggle button. Tapping the toggle reveals the sidebar as an overlay or collapsible panel. Main content takes full width when sidebar is collapsed.
+**Priority:** P1
+
+#### UXAUDIT-002: Mobile collapsible sidebar on showing detail
+**Story:** As a realtor on mobile, I want the showing detail sidebar to collapse for better readability.
+**Steps:** Navigate to `/showings/[id]` on viewport < 768px.
+**Expected:** Context sidebar collapsed by default. Toggle button present. Expanding shows showing details panel.
+**Priority:** P1
+
+#### UXAUDIT-003: Mobile collapsible sidebar on contact detail
+**Story:** As a realtor on mobile, I want the contact detail sidebar to collapse.
+**Steps:** Navigate to `/contacts/[id]` on viewport < 768px.
+**Expected:** Contact info sidebar collapsed by default. Toggle button present. Main communication timeline takes full width.
+**Priority:** P1
+
+#### UXAUDIT-004: Responsive form grid — ListingForm
+**Story:** As a realtor on mobile, I want listing form fields to stack vertically.
+**Steps:** Open listing create/edit form on viewport < 640px.
+**Expected:** Form fields use `grid-cols-1` on small screens and `sm:grid-cols-2` on larger screens. No horizontal overflow.
+**Priority:** P1
+
+#### UXAUDIT-005: Responsive form grid — ContactForm
+**Steps:** Open contact create/edit form on viewport < 640px.
+**Expected:** Fields stack to single column. Labels remain visible. Submit button is full width.
+**Priority:** P1
+
+#### UXAUDIT-006: Responsive form grid — ShowingRequestForm
+**Steps:** Open showing request form on viewport < 640px.
+**Expected:** Date, time, and agent fields stack vertically. No truncated labels.
+**Priority:** P1
+
+#### UXAUDIT-007: Responsive form grid — Phase1 Seller Intake
+**Steps:** Open workflow Phase 1 on viewport < 640px.
+**Expected:** FINTRAC fields, property details, and commission fields stack to single column on small screens.
+**Priority:** P1
+
+#### UXAUDIT-008: Loading skeleton on listings list page
+**Story:** As a realtor, I want to see loading skeletons while listings load, so the page doesn't feel broken.
+**Steps:** Navigate to `/listings`. Observe initial load state (throttle network to see skeleton).
+**Expected:** Animated skeleton placeholders (pulsing grey bars) appear in place of listing cards/rows during data fetch. Skeleton matches layout of real content.
+**Priority:** P2
+
+#### UXAUDIT-009: Loading skeleton on showings list page
+**Steps:** Navigate to `/showings`. Observe initial load.
+**Expected:** Skeleton placeholders appear matching showings table layout during fetch.
+**Priority:** P2
+
+#### UXAUDIT-010: Newsletter queue Preview button
+**Story:** As a realtor, I want to preview a newsletter from the approval queue, so I can see the rendered HTML before approving.
+**Steps:** Navigate to `/newsletters/queue`. Find a pending newsletter. Click the Preview button.
+**Expected:** Button navigates to `/api/newsletters/preview/[id]` which renders the newsletter HTML. No broken "edit" link. Preview opens in new tab or inline.
+**Priority:** P1
+
+#### UXAUDIT-011: Dashboard newLeadsToday real data
+**Story:** As a realtor, I want the dashboard "New Leads Today" count to reflect actual data.
+**Steps:** Log in. Observe dashboard "New Leads Today" KPI card.
+**Expected:** Count matches the number of contacts created today (WHERE created_at >= today midnight). Not a hardcoded placeholder value.
+**Priority:** P1
+
+#### UXAUDIT-012: Mobile sidebar toggle preserves scroll position
+**Steps:** Scroll down on listing detail on mobile. Toggle sidebar open then closed.
+**Expected:** Main content scroll position is preserved after toggling.
+**Priority:** P2
+
+#### UXAUDIT-013: Mobile sidebar overlay prevents background interaction
+**Steps:** Open collapsible sidebar on mobile listing detail.
+**Expected:** Background content is not interactive while sidebar is open (overlay or focus trap).
+**Priority:** P2
+
+#### UXAUDIT-014: Loading skeleton disappears after data loads
+**Steps:** Navigate to `/listings`. Wait for data to load.
+**Expected:** Skeleton is replaced by real listing data. No flash of skeleton after data is already rendered.
+**Priority:** P1
+
+#### UXAUDIT-015: Preview button only shown for drafts with content
+**Steps:** Check newsletter queue with a draft that has no HTML body.
+**Expected:** Preview button is disabled or hidden when no preview content exists.
+**Priority:** P2
+
+#### UXAUDIT-016: Responsive form labels remain aligned
+**Steps:** Resize viewport from desktop to mobile on any form page.
+**Expected:** Labels transition smoothly from side-by-side to stacked. No overlapping text.
+**Priority:** P2
+
+#### UXAUDIT-017: Listings skeleton matches card layout
+**Steps:** Navigate to `/listings` with throttled network.
+**Expected:** Skeleton elements match the expected card/row dimensions — height, width, spacing.
+**Priority:** P3
+
+#### UXAUDIT-018: Showings skeleton matches table layout
+**Steps:** Navigate to `/showings` with throttled network.
+**Expected:** Skeleton rows match column count and spacing of the real showings table.
+**Priority:** P3
+
+#### UXAUDIT-019: Mobile detail pages have no horizontal scroll
+**Steps:** Check `/listings/[id]`, `/showings/[id]`, `/contacts/[id]` on 375px viewport.
+**Expected:** No horizontal scroll bar. All content fits within viewport width.
+**Priority:** P1
+
+#### UXAUDIT-020: Dashboard KPI card newLeadsToday zero state
+**Steps:** Log in when no contacts were created today.
+**Expected:** New Leads Today shows "0" (not blank, not "N/A").
+**Priority:** P2
+
+### Sprint 2: Contact Filters & Timeline — 10 Tests
+
+#### UXAUDIT-021: Contact filter bar renders
+**Story:** As a realtor, I want to filter contacts by type, stage, and engagement level.
+**Steps:** Navigate to `/contacts`. Observe filter bar above the table.
+**Expected:** Filter bar shows dropdowns for Type (buyer, seller, agent, etc.), Stage (lead, active, etc.), and Engagement (hot, warm, cold). Filters are visible on both desktop and mobile.
+**Priority:** P1
+
+#### UXAUDIT-022: Filter by contact type
+**Steps:** Select "Buyer" from the Type filter.
+**Expected:** Table shows only contacts with type = "buyer". URL may update with query param. Count updates.
+**Priority:** P1
+
+#### UXAUDIT-023: Filter by contact stage
+**Steps:** Select "Active" from the Stage filter.
+**Expected:** Table shows only contacts in the active stage. Combinable with type filter.
+**Priority:** P1
+
+#### UXAUDIT-024: Filter by engagement level
+**Steps:** Select "Hot" from the Engagement filter.
+**Expected:** Table shows only contacts with engagement score >= threshold for "hot" classification.
+**Priority:** P1
+
+#### UXAUDIT-025: Clear all filters
+**Steps:** Apply type + stage filters. Click "Clear Filters" or reset button.
+**Expected:** All filters reset. Full contact list displayed.
+**Priority:** P2
+
+#### UXAUDIT-026: Filters combine correctly
+**Steps:** Select Type = "Buyer" AND Stage = "Lead".
+**Expected:** Only contacts matching BOTH criteria appear. AND logic, not OR.
+**Priority:** P1
+
+#### UXAUDIT-027: Filter state persists across pagination
+**Steps:** Apply a filter. Navigate to page 2 of results.
+**Expected:** Filter remains applied on page 2. Pagination reflects filtered count.
+**Priority:** P2
+
+#### UXAUDIT-028: Communication timeline Load More button
+**Story:** As a realtor, I want to load older communications without overwhelming the initial view.
+**Steps:** Navigate to `/contacts/[id]` for a contact with 20+ communications. Scroll to bottom of timeline.
+**Expected:** Initial load shows most recent 10 communications. "Load More" button appears at the bottom. Clicking loads the next batch.
+**Priority:** P1
+
+#### UXAUDIT-029: Load More appends without duplicates
+**Steps:** Click Load More on the communication timeline.
+**Expected:** Older messages append below existing ones. No duplicate entries. Loading spinner shown during fetch.
+**Priority:** P2
+
+#### UXAUDIT-030: Empty filter results show message
+**Steps:** Apply a filter combination that matches no contacts.
+**Expected:** Table shows "No contacts match your filters" or similar empty state. Not a blank table.
+**Priority:** P2
+
+### Sprint 3: Accessibility Enhancements — 10 Tests
+
+#### UXAUDIT-031: aria-describedby on workflow phases
+**Story:** As a screen reader user, I want workflow phases to be described for accessibility.
+**Steps:** Navigate to `/listings/[id]/workflow`. Inspect phase cards with screen reader or DOM inspector.
+**Expected:** Each phase card has `aria-describedby` linking to a description element. Phase status (complete, active, pending) is announced.
+**Priority:** P1
+
+#### UXAUDIT-032: aria-labels on workflow action buttons
+**Steps:** Inspect "Advance Phase" and other workflow action buttons.
+**Expected:** Buttons have descriptive `aria-label` (e.g., "Advance to Phase 2: Data Enrichment"). Not just "Next" or an icon.
+**Priority:** P1
+
+#### UXAUDIT-033: Color contrast fix for muted text
+**Steps:** Run Lighthouse accessibility audit on pages with muted text elements.
+**Expected:** All muted text meets WCAG AA 4.5:1 contrast ratio against its background. Previously failing low-contrast grey text has been corrected.
+**Priority:** P0
+
+#### UXAUDIT-034: Document upload limit indicator
+**Story:** As a realtor, I want to know file size limits before uploading documents.
+**Steps:** Navigate to document upload area on listing detail.
+**Expected:** Upload area shows maximum file size (e.g., "Max 10MB") and accepted file types. `aria-describedby` references the limit text.
+**Priority:** P2
+
+#### UXAUDIT-035: Form validation errors have aria-invalid
+**Steps:** Submit a form with invalid data (e.g., empty required field).
+**Expected:** Invalid input has `aria-invalid="true"`. Error message is linked via `aria-describedby`. Screen reader announces the error.
+**Priority:** P1
+
+#### UXAUDIT-036: Workflow phase status communicated via aria
+**Steps:** Inspect completed, active, and pending phase cards.
+**Expected:** Completed phases have visual checkmark AND aria status. Active phase announced as current. Pending phases announced as upcoming.
+**Priority:** P1
+
+#### UXAUDIT-037: Filter dropdowns are keyboard accessible
+**Steps:** Tab to contact filter dropdowns. Use arrow keys and Enter to select.
+**Expected:** Dropdowns open on Enter/Space. Arrow keys navigate options. Enter selects. Escape closes.
+**Priority:** P1
+
+#### UXAUDIT-038: Bulk action confirmation dialogs have focus trap
+**Steps:** Trigger a bulk delete action. Observe the confirmation dialog.
+**Expected:** Focus is trapped within the dialog. Tab cycles through dialog elements only. Escape closes the dialog.
+**Priority:** P1
+
+#### UXAUDIT-039: Loading skeletons have aria-busy
+**Steps:** Inspect skeleton loading states with DOM inspector.
+**Expected:** Container has `aria-busy="true"` during loading. Set to `false` when content loads. Screen readers announce loading state.
+**Priority:** P2
+
+#### UXAUDIT-040: Print stylesheet hides interactive elements
+**Steps:** Open print preview (Cmd+P) on any page.
+**Expected:** Sidebar, header, bottom nav, and action buttons are hidden. Only content area prints. See Sprint 6 for full print tests.
+**Priority:** P2
+
+### Sprint 4: Auto-Expand Workflow Phase — 5 Tests
+
+#### UXAUDIT-041: First pending phase auto-expands on page load
+**Story:** As a realtor, I want the next actionable workflow phase to be open when I visit the workflow page.
+**Steps:** Navigate to `/listings/[id]/workflow` where phases 1-3 are complete and phase 4 is pending.
+**Expected:** Phase 4 is automatically expanded/open. Phases 1-3 are collapsed showing completed status. No manual click needed to see current work.
+**Priority:** P1
+
+#### UXAUDIT-042: All phases complete shows Phase 8 expanded
+**Steps:** Navigate to a listing where all 8 phases are complete.
+**Expected:** Phase 8 (last phase) is expanded. Or a "Workflow Complete" summary is shown.
+**Priority:** P2
+
+#### UXAUDIT-043: No phases complete shows Phase 1 expanded
+**Steps:** Navigate to a newly created listing workflow.
+**Expected:** Phase 1 (Seller Intake) is auto-expanded as the first pending phase.
+**Priority:** P1
+
+#### UXAUDIT-044: Manual collapse/expand still works
+**Steps:** Click to collapse the auto-expanded phase. Click to expand a different phase.
+**Expected:** User can still manually toggle any phase. Auto-expand is only the initial state.
+**Priority:** P1
+
+#### UXAUDIT-045: Auto-expand works after phase advancement
+**Steps:** Complete Phase 3 from the workflow page. Observe the page after advancement.
+**Expected:** Phase 4 auto-expands as the new first pending phase after the page refreshes/re-renders.
+**Priority:** P2
+
+### Sprint 5: Bulk Operations — 15 Tests
+
+#### UXAUDIT-046: Bulk stage change available in contacts
+**Story:** As a realtor, I want to change the stage of multiple contacts at once.
+**Steps:** Select 5 contacts via checkboxes. Click "Change Stage" in the bulk action bar.
+**Expected:** A dropdown or dialog appears with stage options. Selecting a stage updates all 5 contacts. Success toast shows "5 contacts updated".
+**Priority:** P1
+
+#### UXAUDIT-047: Bulk stage change validates contact type
+**Steps:** Select contacts of mixed types (buyers + sellers). Attempt bulk stage change.
+**Expected:** Only stage values valid for the selected contacts' types are offered, OR a warning indicates that some contacts cannot be moved to the selected stage.
+**Priority:** P1
+
+#### UXAUDIT-048: Bulk stage change server action
+**Steps:** Trigger bulk stage change via the UI.
+**Expected:** Server action executes (not an API route). All updates happen in a single transaction. Paths are revalidated after mutation.
+**Priority:** P1
+
+#### UXAUDIT-049: CSV export from contacts
+**Story:** As a realtor, I want to export selected contacts to CSV for external use.
+**Steps:** Select 10 contacts. Click "Export CSV" in the bulk action bar.
+**Expected:** CSV file downloads with columns: name, email, phone, type, stage. File name includes date (e.g., `contacts-2026-04-12.csv`).
+**Priority:** P1
+
+#### UXAUDIT-050: CSV export is injection-safe
+**Steps:** Export contacts where a name contains `=SUM(A1:A10)` or `+cmd|' /C calc'!A0`.
+**Expected:** Values starting with `=`, `+`, `-`, `@`, `\t`, `\r` are prefixed with a single quote to prevent formula injection in Excel/Sheets.
+**Priority:** P0
+
+#### UXAUDIT-051: CSV export includes all selected rows
+**Steps:** Select 25 contacts across multiple pages. Export CSV.
+**Expected:** CSV contains exactly 25 rows (plus header). Not limited to current page.
+**Priority:** P1
+
+#### UXAUDIT-052: Bulk delete contacts
+**Story:** As a realtor, I want to delete multiple contacts at once.
+**Steps:** Select 3 contacts. Click "Delete" in the bulk action bar.
+**Expected:** Confirmation dialog appears ("Delete 3 contacts? This cannot be undone."). Confirming deletes all 3. Table refreshes. Toast confirms deletion.
+**Priority:** P1
+
+#### UXAUDIT-053: Bulk delete confirmation required
+**Steps:** Click bulk delete.
+**Expected:** A confirmation dialog prevents accidental deletion. Cancel button returns to the table without deleting.
+**Priority:** P0
+
+#### UXAUDIT-054: Bulk delete cascades correctly
+**Steps:** Delete contacts that have associated communications and journey enrollments.
+**Expected:** Associated records are cascade-deleted or orphaned gracefully. No foreign key constraint errors.
+**Priority:** P1
+
+#### UXAUDIT-055: Bulk action bar shows selection count
+**Steps:** Select contacts one by one.
+**Expected:** Bar updates count in real time: "1 selected", "2 selected", etc. Deselecting updates count down.
+**Priority:** P2
+
+#### UXAUDIT-056: Select all selects current page only
+**Steps:** Click "Select All" checkbox in table header.
+**Expected:** Only rows on the current page are selected (not all pages). A note may say "All 10 on this page selected".
+**Priority:** P2
+
+#### UXAUDIT-057: Bulk operations disabled with 0 selections
+**Steps:** Load contacts page without selecting any rows.
+**Expected:** Bulk action bar is not visible. Or buttons are disabled/greyed out.
+**Priority:** P2
+
+#### UXAUDIT-058: Bulk stage change error handling
+**Steps:** Simulate a server error during bulk stage change (e.g., network offline).
+**Expected:** Error toast displayed. No partial updates applied (atomic operation). Selection preserved for retry.
+**Priority:** P2
+
+#### UXAUDIT-059: CSV export handles special characters
+**Steps:** Export contacts with names containing commas, quotes, and Unicode characters.
+**Expected:** CSV properly escapes values with double quotes. Unicode preserved. File opens correctly in Excel.
+**Priority:** P2
+
+#### UXAUDIT-060: Bulk delete does not affect unselected contacts
+**Steps:** Select 3 of 20 contacts. Delete.
+**Expected:** Exactly 3 contacts removed. Remaining 17 untouched. Table refreshes to show 17.
+**Priority:** P1
+
+### Sprint 6: Print Styles — 5 Tests
+
+#### UXAUDIT-061: Print hides navigation elements
+**Story:** As a realtor, I want clean printouts of CRM data without UI chrome.
+**Steps:** Open print preview (Cmd+P) on `/contacts`.
+**Expected:** Sidebar, top header, bottom mobile nav, and bulk action bar are hidden via `@media print` rules. Only the data table content prints.
+**Priority:** P1
+
+#### UXAUDIT-062: Print hides interactive controls
+**Steps:** Open print preview on `/listings/[id]`.
+**Expected:** Action buttons, filter dropdowns, search inputs, and toggle switches are hidden. Static data (address, price, status, documents) remains visible.
+**Priority:** P1
+
+#### UXAUDIT-063: Print layout uses full page width
+**Steps:** Print preview any detail page.
+**Expected:** Content expands to full page width (no sidebar gap). Margins are reasonable for paper. Text is black on white.
+**Priority:** P2
+
+#### UXAUDIT-064: Print preserves data tables
+**Steps:** Print preview `/contacts` with data loaded.
+**Expected:** Contact table rows are visible and properly formatted. Column headers present. No truncated text. Pagination controls hidden but all visible-page data prints.
+**Priority:** P1
+
+#### UXAUDIT-065: Print adds page URL in footer
+**Steps:** Print any page.
+**Expected:** Browser default print footer shows the page URL. No custom print footer conflicts with data. Page breaks between major sections if content spans multiple pages.
+**Priority:** P3

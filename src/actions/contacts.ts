@@ -5,7 +5,7 @@ import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 import { contactSchema, type ContactFormData } from "@/lib/schemas";
 import type { Json } from "@/types/database";
-import { enforceConsistency } from "@/lib/contact-consistency";
+import { enforceConsistency, validateStageForType } from "@/lib/contact-consistency";
 import { triggerIngest } from "@/lib/rag/realtime-ingest";
 import { createNotification } from "@/lib/notifications";
 
@@ -927,20 +927,46 @@ export async function setLifecycleStage(
 
 // ── Bulk Operations ──────────────────────────────────────────────────────
 
+const VALID_STAGES = ["new", "qualified", "active_search", "active_listing", "under_contract", "closed", "cold"];
+
 export async function bulkUpdateContactStage(contactIds: string[], stage: string) {
+  if (!VALID_STAGES.includes(stage)) return { error: `Invalid stage: ${stage}` };
+  if (contactIds.length === 0) return { error: "No contacts selected" };
   const tc = await getAuthenticatedTenantClient();
+
+  // Validate stage is compatible with each contact's type
+  const { data: contacts } = await tc.raw
+    .from("contacts")
+    .select("id, type")
+    .eq("realtor_id", tc.realtorId)
+    .in("id", contactIds);
+
+  const validIds: string[] = [];
+  let skipped = 0;
+  for (const c of contacts ?? []) {
+    const validated = validateStageForType(c.type as Parameters<typeof validateStageForType>[0], stage);
+    if (validated === stage) {
+      validIds.push(c.id);
+    } else {
+      skipped++;
+    }
+  }
+
+  if (validIds.length === 0) return { error: `Stage "${stage}" is not valid for the selected contact types.` };
+
   const { error } = await tc.raw
     .from("contacts")
     .update({ stage_bar: stage, updated_at: new Date().toISOString() })
     .eq("realtor_id", tc.realtorId)
-    .in("id", contactIds);
+    .in("id", validIds);
 
   if (error) return { error: error.message };
   revalidatePath("/contacts");
-  return { error: null, updated: contactIds.length };
+  return { error: null, updated: validIds.length, skipped };
 }
 
 export async function bulkDeleteContacts(contactIds: string[]) {
+  if (contactIds.length === 0) return { error: "No contacts selected" };
   const tc = await getAuthenticatedTenantClient();
 
   // Check for active listings linked to any of these contacts
@@ -949,7 +975,7 @@ export async function bulkDeleteContacts(contactIds: string[]) {
     .select("id, seller_id")
     .eq("realtor_id", tc.realtorId)
     .in("seller_id", contactIds)
-    .in("status", ["active", "pending", "conditional"]);
+    .neq("status", "sold").neq("status", "expired").neq("status", "withdrawn");
 
   if (linkedListings && linkedListings.length > 0) {
     return { error: `Cannot delete: ${linkedListings.length} contact(s) have active listings.` };
@@ -967,6 +993,7 @@ export async function bulkDeleteContacts(contactIds: string[]) {
 }
 
 export async function bulkExportContacts(contactIds: string[]) {
+  if (contactIds.length === 0) return { error: "No contacts selected", csv: "" };
   const tc = await getAuthenticatedTenantClient();
   const { data } = await tc.raw
     .from("contacts")

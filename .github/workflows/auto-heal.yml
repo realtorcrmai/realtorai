@@ -1,0 +1,226 @@
+name: Auto-Heal — Diagnose Regression Failures
+
+# Triggers when nightly regression fails (test failures), or manually.
+# Pipeline infrastructure crashes are handled by the nightly workflow itself.
+# This workflow reproduces test failures specifically and opens a detailed issue.
+on:
+  workflow_run:
+    workflows: ["Nightly Regression + Test Plan Sync"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      failure_context:
+        description: "Describe the issue or paste failure output"
+        required: false
+        type: string
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  check-trigger:
+    name: Check if healing needed
+    runs-on: ubuntu-latest
+    outputs:
+      should_heal: ${{ steps.check.outputs.should_heal }}
+    steps:
+      - name: Check trigger
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_heal=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.workflow_run.conclusion }}" = "failure" ]; then
+            echo "should_heal=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_heal=false" >> $GITHUB_OUTPUT
+          fi
+
+  diagnose:
+    name: Reproduce + Diagnose
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should_heal == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Reproduce: run each suite, capture failures ──────
+      - name: Build
+        id: build
+        continue-on-error: true
+        run: |
+          npm run build 2>&1 | tail -20 > /tmp/build.txt
+          echo "exit=$?" >> $GITHUB_OUTPUT
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          DEMO_EMAIL: ${{ secrets.DEMO_EMAIL }}
+          DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+
+      - name: Start server
+        if: steps.build.outcome == 'success'
+        run: |
+          npm run start &
+          sleep 15
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXTAUTH_URL: http://localhost:3000
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          DEMO_EMAIL: ${{ secrets.DEMO_EMAIL }}
+          DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+
+      - name: Run test suites
+        if: steps.build.outcome == 'success'
+        run: |
+          bash scripts/test-suite.sh > /tmp/core.txt 2>&1 || true
+          bash scripts/integration-test-newsletter.sh > /tmp/newsletter.txt 2>&1 || true
+          bash scripts/test-endpoints.sh > /tmp/endpoints.txt 2>&1 || true
+          bash scripts/test-visual-browser.sh > /tmp/visual.txt 2>&1 || true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+      # ── Collect all failures ─────────────────────────────
+      - name: Collect failures
+        id: failures
+        run: |
+          echo "## Failure Report" > /tmp/report.md
+          echo "" >> /tmp/report.md
+          echo "**Date:** $(date -u '+%Y-%m-%d %H:%M UTC')" >> /tmp/report.md
+          echo "**Commit:** ${{ github.sha }}" >> /tmp/report.md
+          echo "**Trigger:** ${{ github.event_name }}" >> /tmp/report.md
+          echo "" >> /tmp/report.md
+
+          # Build failures
+          if [ "${{ steps.build.outcome }}" != "success" ]; then
+            echo "### Build Failed" >> /tmp/report.md
+            echo '```' >> /tmp/report.md
+            cat /tmp/build.txt >> /tmp/report.md
+            echo '```' >> /tmp/report.md
+          fi
+
+          # Test suite failures
+          TOTAL_FAILURES=0
+          for SUITE in core newsletter endpoints visual; do
+            FILE="/tmp/${SUITE}.txt"
+            if [ -f "$FILE" ]; then
+              FAILS=$(grep -c "❌" "$FILE" 2>/dev/null || echo "0")
+              TOTAL=$(grep -oE "[0-9]+ passed" "$FILE" 2>/dev/null | head -1 || echo "? passed")
+              if [ "$FAILS" -gt 0 ]; then
+                TOTAL_FAILURES=$((TOTAL_FAILURES + FAILS))
+                echo "### ${SUITE^} Suite — $FAILS failure(s) ($TOTAL)" >> /tmp/report.md
+                echo '```' >> /tmp/report.md
+                grep "❌" "$FILE" | head -20 >> /tmp/report.md
+                echo '```' >> /tmp/report.md
+                echo "" >> /tmp/report.md
+              else
+                echo "### ${SUITE^} Suite — ✅ ($TOTAL)" >> /tmp/report.md
+              fi
+            fi
+          done
+
+          # Manual context
+          MANUAL="${{ github.event.inputs.failure_context || '' }}"
+          if [ -n "$MANUAL" ]; then
+            echo "### Manual Context" >> /tmp/report.md
+            echo "$MANUAL" >> /tmp/report.md
+          fi
+
+          echo "total=$TOTAL_FAILURES" >> $GITHUB_OUTPUT
+
+          # Diagnosis section
+          echo "" >> /tmp/report.md
+          echo "---" >> /tmp/report.md
+          echo "" >> /tmp/report.md
+          echo "## How to Fix" >> /tmp/report.md
+          echo "" >> /tmp/report.md
+          echo "Open Claude Code in the repo and run:" >> /tmp/report.md
+          echo '```' >> /tmp/report.md
+          echo "# Paste the failures above and ask Claude to fix them:" >> /tmp/report.md
+          echo "# \"Fix these regression test failures. Read each failure," >> /tmp/report.md
+          echo "#  diagnose root cause, apply minimal fix, verify with tsc.\"" >> /tmp/report.md
+          echo '```' >> /tmp/report.md
+          echo "" >> /tmp/report.md
+          echo "Or run the regression locally to reproduce:" >> /tmp/report.md
+          echo '```bash' >> /tmp/report.md
+          echo "bash scripts/run-all-tests.sh --no-build" >> /tmp/report.md
+          echo '```' >> /tmp/report.md
+
+      # ── Create GitHub issue ──────────────────────────────
+      - name: Create issue
+        if: steps.failures.outputs.total != '0' || steps.build.outcome != 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('/tmp/report.md', 'utf8');
+            const total = '${{ steps.failures.outputs.total }}';
+            const date = new Date().toISOString().slice(0, 10);
+
+            // Check for existing open issue to avoid duplicates
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'regression-failure',
+              state: 'open',
+            });
+
+            if (existing.data.length > 0) {
+              // Update existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body: `## Update — ${date}\n\n${report}`,
+              });
+              console.log(`Updated existing issue #${existing.data[0].number}`);
+            } else {
+              // Create new issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `[Regression] ${total} test failure(s) — ${date}`,
+                body: report,
+                labels: ['regression-failure', 'bug', 'automated'],
+              });
+              console.log('Created new regression failure issue');
+            }
+
+      # ── Summary ──────────────────────────────────────────
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Auto-Heal Diagnosis" >> $GITHUB_STEP_SUMMARY
+          cat /tmp/report.md >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "No report generated" >> $GITHUB_STEP_SUMMARY
