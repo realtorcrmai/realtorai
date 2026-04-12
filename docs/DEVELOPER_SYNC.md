@@ -1,3 +1,4 @@
+<!-- docs-audit: CONTRIBUTING.md, .env.local.example -->
 # Developer Sync — Post-Consolidation (2026-04-09)
 
 > If you're a developer whose local setup pre-dates **2026-04-09**, you need to sync. This doc gives you two options: drop a prompt into your own Claude Code session, or run a bash script directly.

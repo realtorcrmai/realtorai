@@ -1,3 +1,4 @@
+<!-- docs-audit: realtors360-social/**, src/components/social/* -->
 # PRD: Realtors360 Social — AI Content Studio for Realtors
 
 > **Version:** 1.0

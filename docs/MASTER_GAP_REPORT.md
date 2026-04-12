@@ -1,3 +1,4 @@
+<!-- docs-audit: src/** -->
 # Master Gap Report — All Analyses Consolidated
 
 > **Date:** March 30, 2026

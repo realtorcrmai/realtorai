@@ -1,3 +1,4 @@
+<!-- docs-audit: src/components/** -->
 # Realtors360 UI/UX Audit — Full Application Review
 
 **Date:** 2026-04-12

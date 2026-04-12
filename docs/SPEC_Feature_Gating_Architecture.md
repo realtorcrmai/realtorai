@@ -1,3 +1,4 @@
+<!-- docs-audit: src/lib/features.ts, src/lib/plans.ts -->
 # Feature Gating Architecture — Simplified
 
 > **Date:** April 2, 2026

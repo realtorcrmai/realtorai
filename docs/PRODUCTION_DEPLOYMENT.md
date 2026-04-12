@@ -1,3 +1,4 @@
+<!-- docs-audit: vercel.json, .github/workflows/*, docs/ENVIRONMENTS.md -->
 # Realtors360 — Production Deployment Guide
 
 > **Last Updated:** April 11, 2026

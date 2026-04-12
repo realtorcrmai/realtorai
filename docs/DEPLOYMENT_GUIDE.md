@@ -1,3 +1,4 @@
+<!-- docs-audit: vercel.json, .github/workflows/*, render.yaml -->
 # Deployment Guide — Realtors360
 
 > Centralized reference for deploying every component of the Realtors360 platform.

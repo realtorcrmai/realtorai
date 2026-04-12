@@ -1,3 +1,4 @@
+<!-- docs-audit: realtors360-rag/** -->
 # Competitive Intelligence Report: Real Estate CRM & Technology Landscape
 
 **Date:** March 27, 2026

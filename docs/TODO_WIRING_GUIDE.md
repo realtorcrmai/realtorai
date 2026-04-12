@@ -1,3 +1,4 @@
+<!-- docs-audit: src/** -->
 # TODO: Wire Everything Together — Detailed Implementation Guide
 
 ## Status: 42 files built but NOT connected to the app

@@ -1,3 +1,4 @@
+<!-- docs-audit: src/lib/rag/*, src/components/rag/* -->
 # PRD: ListingFlow Assistant — Universal RAG Chat Widget & Cmd+K Search
 
 > **Version:** 1.0

@@ -1,3 +1,4 @@
+<!-- docs-audit: src/app/(auth)/*, src/app/(dashboard)/onboarding/* -->
 # SPEC: Realtor Signup & Onboarding v2
 
 **Status:** Draft | **Author:** Claude + Rahul | **Date:** 2026-04-10

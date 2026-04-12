@@ -1,3 +1,4 @@
+<!-- docs-audit: src/lib/rag/*, src/app/(dashboard)/assistant/* -->
 # PRD: Unified Agentic RAG — Single AI Agent for Realtors360
 
 > **Version:** 1.0 | **Date:** 2026-04-01

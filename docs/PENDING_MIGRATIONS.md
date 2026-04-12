@@ -1,3 +1,4 @@
+<!-- docs-audit: supabase/migrations/* -->
 # Pending Migrations — Apply to Supabase
 
 > **Database:** `qcohfohjihazivkforsj` (realtyaicontent)
