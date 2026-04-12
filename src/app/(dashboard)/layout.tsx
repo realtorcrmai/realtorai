@@ -9,7 +9,6 @@ import { FeatureDiscovery } from "@/components/help/FeatureDiscovery";
 import { VoiceAgentWidget } from "@/components/voice-agent/VoiceAgentWidget";
 import { LayoutProvider } from "@/components/layout/LayoutProvider";
 import { DashboardShellClient } from "@/components/layout/DashboardShellClient";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function DashboardLayout({
   children,
@@ -21,22 +20,14 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  // ── Onboarding gate (PO8) — check DB directly for reliable state ──
+  // ── Onboarding gate — use JWT token (populated in auth.ts callbacks) ──
   if (session.user.role !== "admin") {
-    const supabase = createAdminClient();
-    const { data: user } = await supabase
-      .from("users")
-      .select("onboarding_completed, personalization_completed")
-      .eq("id", session.user.id)
-      .single();
-
-    if (user) {
-      if (user.personalization_completed === false && user.onboarding_completed === false) {
-        redirect("/personalize");
-      }
-      if (user.onboarding_completed === false) {
-        redirect("/onboarding");
-      }
+    const user = session.user as Record<string, unknown>;
+    if (user.personalizationCompleted === false && user.onboardingCompleted === false) {
+      redirect("/personalize");
+    }
+    if (user.onboardingCompleted === false) {
+      redirect("/onboarding");
     }
   }
   return (

@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Home, Smartphone, Loader2, AlertCircle } from "lucide-react";
+import { Home, Smartphone, AlertCircle } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 
 export default function VerifyPhonePage() {
   const router = useRouter();
@@ -225,7 +226,7 @@ export default function VerifyPhonePage() {
                     onClick={handleSendCode}
                   >
                     {loading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <LogoSpinner size={16} />
                     ) : (
                       "Send code"
                     )}
@@ -257,7 +258,7 @@ export default function VerifyPhonePage() {
 
                   {loading && (
                     <div className="flex justify-center">
-                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                      <LogoSpinner size={20} />
                     </div>
                   )}
 

@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Plus, Upload } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -197,7 +198,7 @@ export function TemplateUploadDialog() {
             {extractedFields.length === 0 && (
               <Button onClick={handleUpload} disabled={uploading || !file}>
                 {uploading ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                  <LogoSpinner size={16} className="mr-1.5" />
                 ) : (
                   <Upload className="h-4 w-4 mr-1.5" />
                 )}

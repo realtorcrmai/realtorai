@@ -6,7 +6,6 @@ import {
   type DateRange,
 } from "@/components/voice-agent/VoiceAnalytics";
 
-export const dynamic = "force-dynamic";
 
 const DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 

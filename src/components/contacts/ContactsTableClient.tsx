@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, Phone, Mail, Eye } from "lucide-react";
 import { ContactPreviewSheet } from "@/components/contacts/ContactPreviewSheet";
+import { bulkUpdateContactStage, bulkDeleteContacts, bulkExportContacts } from "@/actions/contacts";
+import { toast } from "sonner";
 
 interface ContactRow {
   id: string;
@@ -72,43 +74,181 @@ function hashColor(name: string) {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
+type FilterState = {
+  type: string;
+  stage: string;
+  engagement: string;
+};
+
+const TYPE_OPTIONS = [
+  { value: "", label: "All Types" },
+  { value: "buyer", label: "Buyer" },
+  { value: "seller", label: "Seller" },
+  { value: "dual", label: "Dual" },
+  { value: "customer", label: "Customer" },
+  { value: "partner", label: "Partner" },
+  { value: "other", label: "Other" },
+];
+
+const STAGE_OPTIONS = [
+  { value: "", label: "All Stages" },
+  { value: "new", label: "New" },
+  { value: "qualified", label: "Qualified" },
+  { value: "active_search", label: "Active Search" },
+  { value: "active_listing", label: "Active Listing" },
+  { value: "under_contract", label: "Under Contract" },
+  { value: "closed", label: "Closed" },
+  { value: "cold", label: "Cold" },
+];
+
+const ENGAGEMENT_OPTIONS = [
+  { value: "", label: "All Scores" },
+  { value: "hot", label: "Hot (60+)" },
+  { value: "warm", label: "Warm (30-59)" },
+  { value: "cold", label: "Cold (<30)" },
+  { value: "none", label: "No Score" },
+];
+
 export function ContactsTableClient({ contacts }: { contacts: ContactRow[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<FilterState>({ type: "", stage: "", engagement: "" });
   const [previewContact, setPreviewContact] = useState<ContactRow | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  const activeFilterCount = [filters.type, filters.stage, filters.engagement].filter(Boolean).length;
+
   const filtered = contacts.filter((c) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      c.name.toLowerCase().includes(q) ||
-      (c.email?.toLowerCase().includes(q)) ||
-      (c.phone?.includes(q)) ||
-      c.type.toLowerCase().includes(q)
-    );
+    // Text search
+    if (search) {
+      const q = search.toLowerCase();
+      const matchesSearch =
+        c.name.toLowerCase().includes(q) ||
+        (c.email?.toLowerCase().includes(q)) ||
+        (c.phone?.includes(q)) ||
+        c.type.toLowerCase().includes(q);
+      if (!matchesSearch) return false;
+    }
+    // Type filter
+    if (filters.type && c.type !== filters.type) return false;
+    // Stage filter
+    if (filters.stage && (c.stage_bar || "new") !== filters.stage) return false;
+    // Engagement filter
+    if (filters.engagement) {
+      const score = (c.newsletter_intelligence as Record<string, unknown>)?.engagement_score as number | undefined;
+      if (filters.engagement === "hot" && (score == null || score < 60)) return false;
+      if (filters.engagement === "warm" && (score == null || score < 30 || score >= 60)) return false;
+      if (filters.engagement === "cold" && (score == null || score >= 30)) return false;
+      if (filters.engagement === "none" && score != null) return false;
+    }
+    return true;
   });
 
   return (
     <div className="space-y-3">
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search contacts..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-          aria-label="Search contacts"
-        />
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search contacts..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+            aria-label="Search contacts"
+          />
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <select
+            value={filters.type}
+            onChange={(e) => setFilters((f) => ({ ...f, type: e.target.value }))}
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+            aria-label="Filter by type"
+          >
+            {TYPE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <select
+            value={filters.stage}
+            onChange={(e) => setFilters((f) => ({ ...f, stage: e.target.value }))}
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+            aria-label="Filter by stage"
+          >
+            {STAGE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <select
+            value={filters.engagement}
+            onChange={(e) => setFilters((f) => ({ ...f, engagement: e.target.value }))}
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+            aria-label="Filter by engagement"
+          >
+            {ENGAGEMENT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          {activeFilterCount > 0 && (
+            <button
+              onClick={() => setFilters({ type: "", stage: "", engagement: "" })}
+              className="h-9 px-3 text-xs font-medium rounded-md border border-border bg-background text-muted-foreground hover:bg-muted transition-colors"
+            >
+              Clear ({activeFilterCount})
+            </button>
+          )}
+        </div>
       </div>
       <DataTable
         selectable={true}
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
         bulkActions={(ids) => (
-          <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 text-xs font-medium rounded-md border border-border bg-background hover:bg-muted" onClick={() => { /* placeholder */ }}>Add Tag</button>
-            <button className="px-3 py-1.5 text-xs font-medium rounded-md border border-border bg-background hover:bg-muted" onClick={() => { /* placeholder */ }}>Change Stage</button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              onChange={async (e) => {
+                const stage = e.target.value;
+                if (!stage) return;
+                const result = await bulkUpdateContactStage(Array.from(ids), stage);
+                if (result.error) { toast.error(result.error); } else { toast.success(`Updated ${result.updated} contacts`); setSelectedIds(new Set()); }
+                e.target.value = "";
+              }}
+              className="h-8 rounded-md border border-border bg-background px-2 text-xs font-medium"
+              defaultValue=""
+            >
+              <option value="" disabled>Change Stage...</option>
+              <option value="new">New</option>
+              <option value="qualified">Qualified</option>
+              <option value="active_search">Active Search</option>
+              <option value="active_listing">Active Listing</option>
+              <option value="under_contract">Under Contract</option>
+              <option value="closed">Closed</option>
+              <option value="cold">Cold</option>
+            </select>
+            <button
+              onClick={async () => {
+                const result = await bulkExportContacts(Array.from(ids));
+                if (result.error) { toast.error(result.error); return; }
+                const blob = new Blob([result.csv], { type: "text/csv" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url; a.download = `contacts-export-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                URL.revokeObjectURL(url);
+                toast.success(`Exported ${ids.size} contacts`);
+              }}
+              className="px-3 py-1.5 text-xs font-medium rounded-md border border-border bg-background hover:bg-muted transition-colors"
+            >
+              Export CSV
+            </button>
+            <button
+              onClick={async () => {
+                if (!confirm(`Delete ${ids.size} contacts? This cannot be undone.`)) return;
+                const result = await bulkDeleteContacts(Array.from(ids));
+                if (result.error) { toast.error(result.error); } else { toast.success(`Deleted ${result.deleted} contacts`); setSelectedIds(new Set()); }
+              }}
+              className="px-3 py-1.5 text-xs font-medium rounded-md border border-destructive/30 bg-destructive/5 text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              Delete
+            </button>
           </div>
         )}
         columns={[

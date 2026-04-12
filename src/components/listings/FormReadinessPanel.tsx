@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Check, X, Upload, Loader2, FileText, FileCheck, Pencil, Download, ExternalLink } from "lucide-react";
+import { Check, X, Upload, FileText, FileCheck, Pencil, Download, ExternalLink } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -162,7 +163,7 @@ export function FormReadinessPanel({
                   disabled={isUploading}
                 >
                   {isUploading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <LogoSpinner size={14} />
                   ) : (
                     <>
                       <Upload className="h-3.5 w-3.5 mr-1.5" />

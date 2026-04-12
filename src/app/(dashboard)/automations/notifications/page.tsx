@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { NotificationList } from "@/components/automations/NotificationList";
 
-export const dynamic = "force-dynamic";
 
 export default async function NotificationsPage() {
   const supabase = await getAuthenticatedTenantClient();

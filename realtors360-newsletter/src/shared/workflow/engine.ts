@@ -490,9 +490,11 @@ async function executeStep(
 
   switch (step.action_type) {
     case 'auto_sms':
-      return executeAutoMessage(db, step, contact as Contact, variables, 'sms', listing);
+      // SMS disabled — Twilio trial has 50/day cap, causes cascading failures
+      return { success: true, result: { channel: 'sms', skipped: true, reason: 'SMS disabled — use email instead' } };
     case 'auto_whatsapp':
-      return executeAutoMessage(db, step, contact as Contact, variables, 'whatsapp', listing);
+      // WhatsApp disabled — same Twilio limitation
+      return { success: true, result: { channel: 'whatsapp', skipped: true, reason: 'WhatsApp disabled — use email instead' } };
     case 'auto_email':
       return executeAutoMessage(db, step, contact as Contact, variables, 'email', listing);
     case 'manual_task':

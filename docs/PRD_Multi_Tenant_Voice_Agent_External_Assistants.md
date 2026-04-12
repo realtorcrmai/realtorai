@@ -1,3 +1,4 @@
+<!-- docs-audit: voice_agent/**, src/app/api/voice-agent/* -->
 # PRD: Multi-Tenant Voice Agent + External Assistant Integration — Tenant Isolation, Siri, Google/Gemini, Alexa & Cortana
 
 > **Version:** 1.3 (5-pass iterative analysis)

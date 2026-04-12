@@ -1,3 +1,4 @@
+<!-- docs-audit: src/lib/ai-agent/*, src/lib/voice-learning.ts -->
 # Design: Self-Learning Agent Playbook
 
 **Date:** 2026-04-01 | **Type:** DESIGN_SPEC:architecture | **Status:** Analysis (pre-PRD)

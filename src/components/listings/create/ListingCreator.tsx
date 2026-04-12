@@ -173,7 +173,7 @@ export function ListingCreator() {
             {/* Section 4: Key Details */}
             <div className="space-y-4">
               <SectionLabel number={4} label="Key details" required />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm font-medium mb-1.5 block">Lockbox code <span className="text-red-400">*</span></label>
                   <Input
@@ -224,7 +224,7 @@ export function ListingCreator() {
                   <div className="p-4 rounded-xl bg-[#FAF8F4] dark:bg-foreground/10 border border-border/30 space-y-3">
                     <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Showing Window</p>
                     <p className="text-xs text-muted-foreground/60">When are showings allowed for this property?</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="text-sm text-muted-foreground mb-1 block">Start time</label>
                         <Input

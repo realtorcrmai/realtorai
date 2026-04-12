@@ -23,7 +23,6 @@ import {
   ChevronRight,
   Download,
   CheckCircle2,
-  Loader2,
   AlertCircle,
   BedDouble,
   Bath,
@@ -31,6 +30,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import Link from "next/link";
+import { LogoSpinner } from "@/components/brand/Logo";
 
 type RepliersAddress = {
   streetNumber?: string;
@@ -248,7 +248,7 @@ export default function MLSBrowsePage() {
           </Button>
           <Button onClick={handleSearch} disabled={loading}>
             {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <LogoSpinner size={16} />
             ) : (
               "Search"
             )}
@@ -358,7 +358,7 @@ export default function MLSBrowsePage() {
         {/* Results grid */}
         {loading ? (
           <div className="text-center py-12">
-            <Loader2 className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2 animate-spin" />
+            <LogoSpinner size={32} />
             <p className="text-sm text-muted-foreground">
               Searching MLS listings...
             </p>
@@ -485,7 +485,7 @@ export default function MLSBrowsePage() {
                       )}
                       {state === "importing" && (
                         <Button variant="outline" size="sm" className="w-full text-xs" disabled>
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          <LogoSpinner size={12} />
                           Importing...
                         </Button>
                       )}

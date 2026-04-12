@@ -2,7 +2,8 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { X, Loader2, ChevronDown } from "lucide-react";
+import { X, ChevronDown } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { updateContact } from "@/actions/contacts";
 import { CONTACT_TAG_GROUPS } from "@/lib/constants/contacts";
 import type { Json } from "@/types/database";
@@ -170,7 +171,7 @@ export function TagEditor({
           <ChevronDown className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
         </button>
       )}
-      {isPending && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+      {isPending && <LogoSpinner size={12} />}
 
       {/* Dropdown */}
       {isOpen && (

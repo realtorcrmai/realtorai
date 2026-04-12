@@ -28,6 +28,12 @@ interface DataTableProps<T> {
   bulkActions?: (selectedIds: Set<string>) => React.ReactNode;
 }
 
+function SortIcon({ col, sortKey, sortDir }: { col: { key: string; sortable?: boolean }; sortKey: string | null; sortDir: "asc" | "desc" }) {
+  if (!col.sortable) return null;
+  if (sortKey !== col.key) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
+  return sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function DataTable<T extends Record<string, any>>({
   columns,
@@ -92,12 +98,6 @@ export function DataTable<T extends Record<string, any>>({
     setPage(1);
   }
 
-  function SortIcon({ col }: { col: Column<T> }) {
-    if (!col.sortable) return null;
-    if (sortKey !== col.key) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
-    return sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
-  }
-
   return (
     <div className={cn("border border-border rounded-lg overflow-hidden bg-card", className)}>
       <div className="overflow-x-auto">
@@ -132,7 +132,7 @@ export function DataTable<T extends Record<string, any>>({
                 >
                   <span className="inline-flex items-center gap-1">
                     {col.header}
-                    <SortIcon col={col} />
+                    <SortIcon col={col} sortKey={sortKey} sortDir={sortDir} />
                   </span>
                 </th>
               ))}

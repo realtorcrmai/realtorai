@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, X, Check, Loader2, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Users } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { updateContact } from "@/actions/contacts";
 import type { FamilyMember } from "@/types";
 
@@ -198,7 +199,7 @@ export function FamilyMembersPanel({
               className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
               {isPending ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <LogoSpinner size={12} />
               ) : (
                 <Check className="h-3 w-3" />
               )}

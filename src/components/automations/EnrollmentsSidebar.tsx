@@ -19,7 +19,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Loader2, Play, Pause, Trash2, Users } from "lucide-react";
+import { Plus, Play, Pause, Trash2, Users } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { ENROLLMENT_STATUS_COLORS } from "@/lib/constants";
 import type { WorkflowEnrollment } from "@/types";
 
@@ -111,7 +112,7 @@ export function EnrollmentsSidebar({
                   disabled={!selectedContactId || isPending}
                 >
                   {isPending ? (
-                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    <LogoSpinner size={16} />
                   ) : (
                     <Plus className="w-4 h-4 mr-1" />
                   )}

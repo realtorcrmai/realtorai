@@ -14,8 +14,8 @@ import {
   FileText,
   Trash2,
   ExternalLink,
-  Loader2,
 } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -401,7 +401,7 @@ export function StepDataPanel({
           data-upload-step={stepId}
         >
           {uploading ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
+            <LogoSpinner size={12} />
           ) : (
             <Upload className="h-3 w-3" />
           )}
@@ -452,7 +452,7 @@ export function StepDataPanel({
               disabled={saving}
             >
               {saving ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <LogoSpinner size={14} />
               ) : (
                 <Save className="h-3.5 w-3.5" />
               )}

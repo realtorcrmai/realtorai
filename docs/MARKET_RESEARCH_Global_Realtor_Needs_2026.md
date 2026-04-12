@@ -1,3 +1,4 @@
+<!-- docs-audit: docs/* -->
 # Global Realtor Market Research — Consolidated Findings
 
 > **Date:** March 27, 2026

@@ -15,6 +15,7 @@ import {
   Zap,
   Sparkles,
 } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import type { Prompt, MediaAsset } from "@/types";
 
 interface GenerateStepProps {
@@ -176,7 +177,7 @@ export function GenerateStep({
             )}
           >
             {generatingType === "all" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <LogoSpinner size={16} />
             ) : (
               <Zap className="h-4 w-4" />
             )}
@@ -253,7 +254,7 @@ export function GenerateStep({
             )}
           >
             {generatingType === "video" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <LogoSpinner size={16} />
             ) : (
               <Zap className="h-4 w-4" />
             )}
@@ -265,7 +266,7 @@ export function GenerateStep({
         {generatingType === "video" && activeTaskId && (
           <div className="mt-4 p-3 bg-brand-muted border border-brand/20 rounded-lg">
             <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin text-brand" />
+              <LogoSpinner size={16} />
               <span className="text-sm text-brand-dark font-medium">
                 Processing video... This may take a few minutes.
               </span>
@@ -337,7 +338,7 @@ export function GenerateStep({
             )}
           >
             {generatingType === "image" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <LogoSpinner size={16} />
             ) : (
               <Zap className="h-4 w-4" />
             )}
@@ -349,7 +350,7 @@ export function GenerateStep({
         {generatingType === "image" && activeTaskId && (
           <div className="mt-4 p-3 bg-brand-muted border border-brand/20 rounded-lg">
             <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin text-brand" />
+              <LogoSpinner size={16} />
               <span className="text-sm text-brand-dark font-medium">
                 Processing image... This may take a few minutes.
               </span>

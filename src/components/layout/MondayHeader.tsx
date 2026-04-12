@@ -20,7 +20,13 @@ export function MondayHeader() {
 
       {/* Right: Search + Notifications + User avatar */}
       <div className="flex items-center gap-2">
-        <button className="p-2 rounded-lg hover:bg-muted transition-colors" aria-label="Search">
+        <button
+          className="p-2 rounded-lg hover:bg-muted transition-colors"
+          aria-label="Search"
+          onClick={() => {
+            window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true }));
+          }}
+        >
           <Search className="h-4 w-4 text-muted-foreground" />
         </button>
         <NotificationDropdown />

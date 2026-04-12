@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Mail, MessageSquare, ArrowUpRight, ArrowDownLeft, Loader2 } from "lucide-react";
+import { Phone, Mail, MessageSquare, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import Link from "next/link";
 import { getContactCommunications } from "@/actions/contacts";
 
@@ -136,7 +137,7 @@ export function ContactPreviewSheet({ contact, open, onOpenChange }: ContactPrev
             </h4>
             {loading ? (
               <div className="flex items-center justify-center py-6">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                <LogoSpinner size={20} className="text-muted-foreground" />
               </div>
             ) : comms.length === 0 ? (
               <p className="text-sm text-muted-foreground py-3">No recent communications.</p>

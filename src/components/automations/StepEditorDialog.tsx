@@ -16,7 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Check, Loader2 } from "lucide-react";
+import { Plus, Check } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import {
   ACTION_TYPE_LABELS,
   ACTION_TYPE_ICONS,
@@ -341,7 +342,7 @@ export function StepEditorDialog({
               disabled={!stepForm.name || isPending}
             >
               {isPending ? (
-                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                <LogoSpinner size={16} />
               ) : editingStep ? (
                 <Check className="w-4 h-4 mr-1" />
               ) : (

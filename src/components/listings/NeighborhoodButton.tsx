@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TrendingUp, Loader2 } from "lucide-react";
+import { TrendingUp } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 
 interface SoldProperty {
   address: string;
@@ -76,7 +77,7 @@ export function NeighborhoodButton({ address }: { address: string }) {
           </div>
           <Button onClick={handleSearch} className="self-end" disabled={loading}>
             {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <LogoSpinner size={16} />
             ) : (
               "Search"
             )}

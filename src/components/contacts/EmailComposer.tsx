@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Send, Loader2, RefreshCw, Check, X } from "lucide-react";
+import { Mail, Send, RefreshCw, Check, X } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 
 interface EmailComposerProps {
   contactId: string;
@@ -153,7 +154,7 @@ export default function EmailComposer({
               disabled={isSyncing || isSending}
             >
               {isSyncing ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                <LogoSpinner size={16} />
               ) : (
                 <RefreshCw className="h-4 w-4 mr-1.5" />
               )}
@@ -166,7 +167,7 @@ export default function EmailComposer({
               size="sm"
             >
               {isSending ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                <LogoSpinner size={16} />
               ) : (
                 <Send className="h-4 w-4 mr-1.5" />
               )}

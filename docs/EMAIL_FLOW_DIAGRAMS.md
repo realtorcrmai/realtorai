@@ -1,3 +1,4 @@
+<!-- docs-audit: src/emails/*, src/actions/newsletters.ts, src/lib/resend.ts -->
 # Realtors360 CRM — Email Flow Diagrams
 
 > To render these diagrams, open in GitHub (renders natively) or paste into [mermaid.live](https://mermaid.live)

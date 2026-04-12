@@ -6,7 +6,6 @@ import { FeedbackControls } from "@/components/help/FeedbackControls";
 import { TourLauncher } from "@/components/help/TourLauncher";
 import { getToursForFeature } from "@/components/help/TourDefinitions";
 
-export const dynamic = "force-dynamic";
 
 export async function generateStaticParams() {
   return getAllFeatures().map((f) => ({ slug: f.slug }));

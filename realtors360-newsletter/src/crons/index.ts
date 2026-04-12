@@ -38,7 +38,7 @@ function tracked(name: string, fn: () => Promise<void>): () => void {
  * M2: check-birthdays daily at 8 AM Vancouver time.
  * M3-B: rag-backfill weekly Sunday 03:00 Vancouver (gated on FLAG_RAG_BACKFILL).
  * M3-C: weekly-learning Monday 06:00 Vancouver (gated on FLAG_WEEKLY_LEARNING).
- * M3-D: agent-scoring every 15 min Vancouver (gated on FLAG_AGENT_SCORING).
+ * M3-D: agent-scoring daily 07:00 Vancouver (gated on FLAG_AGENT_SCORING).
  * M3-E: process-workflows every 2 min Vancouver (gated on FLAG_PROCESS_WORKFLOWS).
  *   The critical port — the whole reason this service exists (Vercel 10s timeout).
  *   Each is gated on its own feature flag for safe rollout.
@@ -79,13 +79,13 @@ export function startCrons(): void {
   );
 
   cron.schedule(
-    '*/15 * * * *',
+    '0 7 * * *',
     tracked('agent-scoring', runAgentScoring),
     { timezone: 'America/Vancouver' }
   );
   logger.info(
     { flag: config.FLAG_AGENT_SCORING },
-    'cron: registered agent-scoring (*/15 * * * * America/Vancouver)'
+    'cron: registered agent-scoring (0 7 * * * America/Vancouver)'
   );
 
   cron.schedule(
@@ -106,13 +106,13 @@ export function startCrons(): void {
   logger.info('cron: registered process-scheduled-sends (*/5 * * * * America/Vancouver)');
 
   cron.schedule(
-    '0 * * * *',
+    '0 8 * * *',
     tracked('agent-triage', runAgentTriage),
     { timezone: 'America/Vancouver' }
   );
   logger.info(
     { flag: config.FLAG_AGENT_TRIAGE },
-    'cron: registered agent-triage (0 * * * * America/Vancouver)'
+    'cron: registered agent-triage (0 8 * * * America/Vancouver)'
   );
 
   cron.schedule(

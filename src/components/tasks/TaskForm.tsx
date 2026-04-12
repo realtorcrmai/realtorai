@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { toast } from "sonner";
 
 type Contact = { id: string; name: string; type: string };
@@ -196,7 +196,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
           Cancel
         </Button>
         <Button type="submit" disabled={saving}>
-          {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          {saving && <LogoSpinner size={16} />}
           Create Task
         </Button>
       </div>

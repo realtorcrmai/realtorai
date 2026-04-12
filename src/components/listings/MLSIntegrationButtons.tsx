@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Globe, Zap, Loader2, ExternalLink } from "lucide-react";
+import { Globe, Zap, ExternalLink } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { createExtensionTask } from "@/actions/extension";
 import { toast } from "sonner";
 
@@ -81,7 +82,7 @@ export function MLSIntegrationButtons({
           disabled={loading}
         >
           {loading ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
+            <LogoSpinner size={12} />
           ) : (
             <Globe className="h-3 w-3" />
           )}
@@ -111,7 +112,7 @@ export function MLSIntegrationButtons({
           }
         >
           {loading ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
+            <LogoSpinner size={12} />
           ) : (
             <Zap className="h-3 w-3" />
           )}

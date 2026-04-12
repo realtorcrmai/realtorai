@@ -1,3 +1,4 @@
+<!-- docs-audit: realtors360-newsletter/src/agent/** -->
 # SPEC: Newsletter Agent — M5
 
 > **Status:** DRAFT, needs user sign-off on §3 (Open Decisions) before implementation.

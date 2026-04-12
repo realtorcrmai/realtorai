@@ -443,17 +443,36 @@ export default async function ContactDetailPage({
   const filledDemoFields = demographics ? Object.values(demographics).filter(v => v !== undefined && v !== null && v !== "" && !(Array.isArray(v) && v.length === 0)).length : 0;
   const dataScore = Math.round(((filledDemoFields / totalDemoFields) * 50) + (relationships.length > 0 ? 25 : 0) + ((contactDates?.length ?? 0) > 0 ? 25 : 0));
 
+  // Compute engagement score + last contacted for header
+  const engagementScore = (intel as Record<string, unknown> | null)?.engagement_score as number | undefined;
+  const scoreLabel = engagementScore != null ? (engagementScore >= 60 ? "Hot" : engagementScore >= 30 ? "Warm" : "Cold") : null;
+  const scoreColor = engagementScore != null ? (engagementScore >= 60 ? "bg-destructive/15 text-destructive border-destructive/30" : engagementScore >= 30 ? "bg-[#f5c26b]/15 text-[#8a5a1e] border-[#f5c26b]/30" : "bg-muted text-muted-foreground") : "";
+
+  const lastComm = typedCommunications.length > 0 ? typedCommunications[0] : null;
+  const lastContactedText = lastComm
+    ? `Last contact: ${new Date(lastComm.created_at).toLocaleDateString("en-CA", { month: "short", day: "numeric" })} via ${lastComm.channel}`
+    : "No contact history";
+
+  const avatarColor = contact.type === "seller" ? "bg-brand" : contact.type === "buyer" ? "bg-primary" : "bg-[#516f90]";
+
   // Build header JSX (measured by useAutoLayout in ContactDetailLayout)
   const headerJsx = (
     <>
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1" aria-label="Breadcrumb">
+        <a href="/contacts" className="hover:text-foreground transition-colors">Contacts</a>
+        <span>/</span>
+        <span className="text-foreground">{contact.name}</span>
+      </nav>
+
       {/* Contact Card Header */}
-      <div id="section-contact-info" className="animate-float-in relative z-20">
+      <div id="section-contact-info" className="relative z-20">
             <Card className="border border-border overflow-visible">
               <CardContent className="p-4">
-                {/* Row 1: Avatar + Name + Badges + Actions */}
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white font-bold text-lg shrink-0">
-                    {contact.name.split(/\s+/).map((w: string) => w[0]).join("").substring(0, 2).toUpperCase()}
+                {/* Row 1: Avatar + Name + Badges + Meta */}
+                <div className="flex items-start gap-4">
+                  <div className={`w-12 h-12 rounded-full ${avatarColor} flex items-center justify-center text-white font-bold text-lg shrink-0`}>
+                    {contact.name.split(/\s+/).map((w: string) => w[0]).filter(Boolean).join("").substring(0, 2).toUpperCase() || "?"}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -464,30 +483,52 @@ export default async function ContactDetailPage({
                       <Badge variant="secondary" className={CONTACT_TYPE_COLORS[contact.type as ContactType]}>
                         {contact.type}
                       </Badge>
+                      {scoreLabel && (
+                        <Badge variant="outline" className={`${scoreColor} text-[10px]`}>{scoreLabel} {engagementScore}</Badge>
+                      )}
                       <TagEditor contactId={id} tags={contactTags} />
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                      <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{contact.phone}</span>
-                      {contact.email && <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{contact.email}</span>}
-                      <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" />{contact.pref_channel}</span>
+
+                    {/* Contact info — labeled */}
+                    <div className="flex items-center gap-4 text-sm mt-1.5 flex-wrap">
+                      <a href={`tel:${contact.phone}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+                        <Phone className="h-3.5 w-3.5" />
+                        <span>{contact.phone}</span>
+                      </a>
+                      {contact.email && (
+                        <a href={`mailto:${contact.email}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+                          <Mail className="h-3.5 w-3.5" />
+                          <span>{contact.email}</span>
+                        </a>
+                      )}
+                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        <span className="capitalize">Prefers {contact.pref_channel}</span>
+                      </span>
                     </div>
-                    {/* Social profiles */}
-                    {contact.social_profiles && typeof contact.social_profiles === "object" && Object.keys(contact.social_profiles as Record<string, string>).length > 0 && (
-                      <div className="flex items-center gap-2 mt-1.5">
-                        {Object.entries(contact.social_profiles as Record<string, string>).map(([platform, handle]) => {
-                          const icons: Record<string, string> = { instagram: "📸", facebook: "📘", linkedin: "💼", twitter: "𝕏", tiktok: "🎵", youtube: "▶️" };
-                          const urls: Record<string, string> = { instagram: "instagram.com/", facebook: "facebook.com/", linkedin: "linkedin.com/in/", twitter: "x.com/", tiktok: "tiktok.com/@", youtube: "youtube.com/@" };
-                          return (
-                            <a key={platform} href={`https://${urls[platform] || ""}${handle}`} target="_blank" rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/50 border border-border/30 text-xs text-brand hover:bg-muted hover:underline transition-colors">
-                              <span>{icons[platform] || "🔗"}</span>@{handle}
-                            </a>
-                          );
-                        })}
-                      </div>
-                    )}
+
+                    {/* Last contacted + social */}
+                    <div className="flex items-center gap-4 mt-1 flex-wrap">
+                      <span className="text-xs text-muted-foreground">{lastContactedText}</span>
+                      {contact.social_profiles && typeof contact.social_profiles === "object" && Object.keys(contact.social_profiles as Record<string, string>).length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          {Object.entries(contact.social_profiles as Record<string, string>).map(([platform, handle]) => {
+                            const icons: Record<string, string> = { instagram: "📸", facebook: "📘", linkedin: "💼", twitter: "𝕏", tiktok: "🎵", youtube: "▶️" };
+                            const urls: Record<string, string> = { instagram: "instagram.com/", facebook: "facebook.com/", linkedin: "linkedin.com/in/", twitter: "x.com/", tiktok: "tiktok.com/@", youtube: "youtube.com/@" };
+                            return (
+                              <a key={platform} href={`https://${urls[platform] || ""}${handle}`} target="_blank" rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-muted-foreground hover:text-brand transition-colors" title={`@${handle} on ${platform}`}>
+                                <span>{icons[platform] || "🔗"}</span>
+                              </a>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+
+                  {/* Actions — Edit prominent, Delete in secondary position */}
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <ContactForm
                       contact={contact}
                       allContacts={(allContacts ?? []) as { id: string; name: string }[]}
@@ -498,10 +539,10 @@ export default async function ContactDetailPage({
                 </div>
 
                 {/* Row 2: Pipeline bar or Convert button */}
-                <div className="mt-3 pt-2 border-t border-brand/10 dark:border-foreground/20">
+                <div className="mt-3 pt-2 border-t border-border">
                   {contact.type === "customer" ? (
                     <div className="flex items-center gap-2 p-3 bg-brand-muted border border-brand/20 rounded-lg">
-                      <span className="text-sm text-brand-dark font-medium flex-1">This is an unqualified lead. Convert when ready:</span>
+                      <span className="text-sm text-brand-dark font-medium flex-1">Unqualified lead — convert when ready:</span>
                       <form action={async () => {
                         "use server";
                         const { convertContactType } = await import("@/actions/contacts");
@@ -527,7 +568,7 @@ export default async function ContactDetailPage({
                   )}
                 </div>
                 {contact.notes && (
-                  <p className="text-sm text-muted-foreground mt-2">{contact.notes}</p>
+                  <p className="text-sm text-muted-foreground mt-2 italic">{contact.notes}</p>
                 )}
               </CardContent>
             </Card>
@@ -559,17 +600,19 @@ export default async function ContactDetailPage({
             </div>
           </MobileDetailSheet>
 
-          {/* Quick Action Bar — colored icon buttons */}
-          <div className="flex items-center gap-2">
-            <QuickActionBar
-              contactId={id}
-              contactPhone={contact.phone}
-              contactChannel={contact.pref_channel}
-            />
-            <EmailComposer
-              contactId={id}
-              contactEmail={contact.email}
-            />
+          {/* Quick Action Bar — grouped: primary communication + secondary tools */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1.5 bg-card border border-border rounded-lg p-1">
+              <QuickActionBar
+                contactId={id}
+                contactPhone={contact.phone}
+                contactChannel={contact.pref_channel}
+              />
+              <EmailComposer
+                contactId={id}
+                contactEmail={contact.email}
+              />
+            </div>
           </div>
 
           {/* Journey Progress Bar */}
@@ -637,113 +680,135 @@ export default async function ContactDetailPage({
           />
   );
 
-  // Build right panel JSX
-  const rightPanelJsx = (
-      <aside className="hidden lg:block w-[320px] shrink-0 border-l border-border p-4 bg-card overflow-y-auto space-y-4">
-        {/* Engagement — 1st section */}
-        {intel && (
-          <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
-            <IntelligencePanel
-              intelligence={intel}
-              totalEmails={newslettersWithEvents.length}
-            />
-          </div>
-        )}
-
-        {/* Prospect Controls — journey pause/resume, trust, frequency */}
-        {(contactJourney || contact.type === "buyer" || contact.type === "seller") && (
-          <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-brand pl-4 rounded-sm shrink-0">
-            <ProspectControls
-              contactId={id}
-              contactName={contact.name}
-              journey={contactJourney as { id: string; journey_type: string; current_phase: string; is_paused: boolean; send_mode: string; next_email_at: string | null; trust_level: number } | null}
-              aiContextNotes={(contact as Record<string, unknown>).ai_context_notes as string | null}
-            />
-          </div>
-        )}
-
-        {/* Quick Log — log calls, texts, meetings */}
+  // Right panel inner content — shared between mobile collapsible and desktop aside
+  const rightPanelContentJsx = (
+    <>
+      {/* Engagement — 1st section */}
+      {intel && (
         <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
-          <QuickLogForm
+          <IntelligencePanel
+            intelligence={intel}
+            totalEmails={newslettersWithEvents.length}
+          />
+        </div>
+      )}
+
+      {/* Prospect Controls — journey pause/resume, trust, frequency */}
+      {(contactJourney || contact.type === "buyer" || contact.type === "seller") && (
+        <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-brand pl-4 rounded-sm shrink-0">
+          <ProspectControls
             contactId={id}
             contactName={contact.name}
-            recentEmails={(newslettersWithEvents ?? [])
-              .filter((nl: Record<string, unknown>) => nl.status === "sent")
-              .slice(0, 5)
-              .map((nl: Record<string, unknown>) => ({
-                id: nl.id as string,
-                subject: nl.subject as string,
-                sent_at: nl.sent_at as string | null,
-              }))}
+            journey={contactJourney as { id: string; journey_type: string; current_phase: string; is_paused: boolean; send_mode: string; next_email_at: string | null; trust_level: number } | null}
+            aiContextNotes={(contact as Record<string, unknown>).ai_context_notes as string | null}
           />
         </div>
+      )}
 
-        {/* Network Stats — 2nd section */}
-        <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
-          <NetworkStatsCard
-            connectionCount={relationships.length}
-            referralCount={allReferrals.length}
-            networkValue={networkValue}
-            dataScore={dataScore}
-            demographics={demographics}
-            dateCount={(contactDates ?? []).length}
-            hasPreferences={!!(buyerPreferences || sellerPreferences)}
-          />
-        </div>
+      {/* Quick Log — log calls, texts, meetings */}
+      <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
+        <QuickLogForm
+          contactId={id}
+          contactName={contact.name}
+          recentEmails={(newslettersWithEvents ?? [])
+            .filter((nl: Record<string, unknown>) => nl.status === "sent")
+            .slice(0, 5)
+            .map((nl: Record<string, unknown>) => ({
+              id: nl.id as string,
+              subject: nl.subject as string,
+              sent_at: nl.sent_at as string | null,
+            }))}
+        />
+      </div>
 
-        {/* Referrals */}
-        <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-brand pl-4 rounded-sm shrink-0">
-          <ReferralsPanel
-            contact={contact}
-            referredByName={referredByName}
-            referralsAsReferrer={(referralsAsReferrer ?? []) as ReferralRow[]}
-            referralsAsReferred={(referralsAsReferred ?? []) as ReferralRow[]}
-            allContacts={(allContacts ?? []) as { id: string; name: string }[]}
-          />
-        </div>
+      {/* Network Stats — 2nd section */}
+      <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
+        <NetworkStatsCard
+          connectionCount={relationships.length}
+          referralCount={allReferrals.length}
+          networkValue={networkValue}
+          dataScore={dataScore}
+          demographics={demographics}
+          dateCount={(contactDates ?? []).length}
+          hasPreferences={!!(buyerPreferences || sellerPreferences)}
+        />
+      </div>
 
-        {/* Relationships — grows to fill remaining space */}
-        <div className="pt-3 border-l-4 border-l-brand pl-4 rounded-sm">
-          <RelationshipManager
-            contactId={contact.id}
-            relationships={relationships}
-            allContacts={allContacts?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })) ?? []}
-          />
+      {/* Referrals */}
+      <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-brand pl-4 rounded-sm shrink-0">
+        <ReferralsPanel
+          contact={contact}
+          referredByName={referredByName}
+          referralsAsReferrer={(referralsAsReferrer ?? []) as ReferralRow[]}
+          referralsAsReferred={(referralsAsReferred ?? []) as ReferralRow[]}
+          allContacts={(allContacts ?? []) as { id: string; name: string }[]}
+        />
+      </div>
 
-          {/* Contextual Tips — fills remaining space when sections are empty */}
-          {(!intel || Object.keys(intel).length === 0) && relationships.length === 0 && allReferrals.length === 0 && (
-            <div className="mt-4 pt-4 border-t border-border/30">
-              <div className="rounded-xl bg-muted/50 dark:bg-muted/20 border border-border p-4">
-                <div className="flex items-start gap-2.5">
-                  <span className="text-lg">💡</span>
-                  <div>
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Build this profile</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-                      The more you add here, the smarter the AI gets. Relationships help
-                      personalize emails. Referrals track your network value. Engagement
-                      data appears after sending the first email.
-                    </p>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">1</span>
-                        <span className="text-muted-foreground">Add a <strong className="text-foreground">relationship</strong></span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">2</span>
-                        <span className="text-muted-foreground">Set <strong className="text-foreground">preferences</strong></span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">3</span>
-                        <span className="text-muted-foreground">Send first <strong className="text-foreground">email</strong></span>
-                      </div>
+      {/* Relationships — grows to fill remaining space */}
+      <div className="pt-3 border-l-4 border-l-brand pl-4 rounded-sm">
+        <RelationshipManager
+          contactId={contact.id}
+          relationships={relationships}
+          allContacts={allContacts?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })) ?? []}
+        />
+
+        {/* Contextual Tips — fills remaining space when sections are empty */}
+        {(!intel || Object.keys(intel).length === 0) && relationships.length === 0 && allReferrals.length === 0 && (
+          <div className="mt-4 pt-4 border-t border-border/30">
+            <div className="rounded-xl bg-muted/50 dark:bg-muted/20 border border-border p-4">
+              <div className="flex items-start gap-2.5">
+                <span className="text-lg">💡</span>
+                <div>
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Build this profile</h4>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                    The more you add here, the smarter the AI gets. Relationships help
+                    personalize emails. Referrals track your network value. Engagement
+                    data appears after sending the first email.
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">1</span>
+                      <span className="text-muted-foreground">Add a <strong className="text-foreground">relationship</strong></span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">2</span>
+                      <span className="text-muted-foreground">Set <strong className="text-foreground">preferences</strong></span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">3</span>
+                      <span className="text-muted-foreground">Send first <strong className="text-foreground">email</strong></span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          )}
+          </div>
+        )}
+      </div>
+    </>
+  );
+
+  // Mobile: collapsible sidebar panels (rendered inside center column by ContactDetailLayout)
+  const mobileRightPanelJsx = (
+    <div className="lg:hidden border-t border-border mt-4">
+      <details className="group">
+        <summary className="flex items-center justify-between p-4 cursor-pointer text-sm font-semibold text-foreground hover:bg-muted/50 transition-colors">
+          <span>👤 Profile & Intelligence</span>
+          <span className="text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
+        </summary>
+        <div className="p-4 bg-card space-y-4 border-t border-border overflow-y-auto max-h-[60vh]">
+          {rightPanelContentJsx}
         </div>
-      </aside>
+      </details>
+    </div>
+  );
+
+  // Desktop: fixed right panel
+  const rightPanelJsx = (
+    <aside className="hidden lg:block w-[320px] shrink-0 border-l border-border p-4 bg-card overflow-y-auto space-y-4">
+      {rightPanelContentJsx}
+    </aside>
   );
 
   return (
@@ -753,6 +818,7 @@ export default async function ContactDetailPage({
         header={headerJsx}
         tabs={tabsJsx}
         rightPanel={rightPanelJsx}
+        mobileRightPanel={mobileRightPanelJsx}
       />
     </>
   );

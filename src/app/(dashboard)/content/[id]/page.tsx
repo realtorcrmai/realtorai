@@ -2,7 +2,6 @@ import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { notFound } from "next/navigation";
 import { ContentDetail } from "./content-detail";
 
-export const dynamic = "force-dynamic";
 
 interface ContentDetailPageProps {
   params: Promise<{ id: string }>;

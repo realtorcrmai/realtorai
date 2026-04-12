@@ -13,6 +13,7 @@ import {
   Loader2,
   Film,
 } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import type { MediaAsset } from "@/types";
 
 interface GalleryStepProps {
@@ -167,7 +168,7 @@ export function GalleryStep({ assets, className }: GalleryStepProps) {
       {processingAssets.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Loader2 className="h-4 w-4 text-amber-600 animate-spin" />
+            <LogoSpinner size={16} />
             Processing ({processingAssets.length})
           </h3>
           <div className="grid gap-3">

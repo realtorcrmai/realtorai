@@ -2,7 +2,6 @@ import { getWebsiteConfig, getWebsiteAnalytics, getWebsiteLeads } from "@/action
 import { getWebsiteSessions } from "@/actions/website-sessions";
 import { WebsiteDashboardClient } from "@/components/websites/WebsiteDashboardClient";
 
-export const dynamic = "force-dynamic";
 
 export default async function WebsitesPage() {
   const [config, analytics, leads, sessions] = await Promise.all([

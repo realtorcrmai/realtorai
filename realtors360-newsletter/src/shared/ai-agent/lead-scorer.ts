@@ -1,7 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { anthropic, CLAUDE_MODEL } from '../../lib/anthropic.js';
-import { config } from '../../config.js';
 import { createWithRetry } from '../anthropic-retry.js';
 import { retrieveContext } from '../rag/retriever.js';
 import { logger } from '../../lib/logger.js';
@@ -38,8 +37,8 @@ import { logger } from '../../lib/logger.js';
  *
  *   5. Pino structured logging instead of `console.error`.
  *
- * Used by: `crons/agent-scoring.ts` (every 15 minutes, gated on
- * FLAG_AGENT_SCORING).
+ * Used by: `crons/agent-scoring.ts` (daily at 07:00 Vancouver, delta-only,
+ * gated on FLAG_AGENT_SCORING). Uses Haiku for cost efficiency.
  */
 
 // ---------------------------------------------------------------------------
@@ -61,7 +60,7 @@ const PersonalizationHintsSchema = z
   .object({
     tone: z.string().optional(),
     interests: z.array(z.string()).optional(),
-    price_anchor: z.string().optional(),
+    price_anchor: z.string().nullable().optional(),
     hot_topic: z.string().optional(),
     avoid: z.string().optional(),
     relationship_stage: z.string().optional(),
@@ -73,7 +72,7 @@ export const LeadScoreSchema = z.object({
   buying_readiness: z.number().min(0).max(100),
   timeline_urgency: z.number().min(0).max(100),
   budget_fit: z.number().min(0).max(100),
-  intent: z.enum(VALID_INTENTS),
+  intent: z.string(),  // Was z.enum — Claude returns values outside strict enum, accept any string
   reasoning: z.string(),
   stage_recommendation: z.enum(['advance', 'maintain', 'downgrade']).optional(),
   new_stage: z.string().optional(),
@@ -145,7 +144,11 @@ export interface ScoreBatchResult {
 // Constants
 // ---------------------------------------------------------------------------
 
-const SCORING_MODEL = config.AI_SCORING_MODEL;
+// Override the global AI_SCORING_MODEL for scoring specifically. Lead scoring
+// is high-volume, structured-JSON output that Haiku handles well at ~10x lower
+// cost than Sonnet. The global config default (Sonnet) remains unchanged for
+// other AI tasks (triage, content generation) that benefit from deeper reasoning.
+const SCORING_MODEL = 'claude-haiku-4-5-20251001';
 
 const SCORING_SYSTEM_PROMPT = `You are a real estate lead scoring AI for a BC REALTOR CRM.
 

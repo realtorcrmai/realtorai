@@ -1,3 +1,4 @@
+<!-- docs-audit: src/lib/rag/** -->
 # Deep Gap Analysis: Universal RAG Chat Widget PRD
 
 > **Date:** March 30, 2026

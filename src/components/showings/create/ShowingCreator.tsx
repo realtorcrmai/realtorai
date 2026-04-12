@@ -193,7 +193,7 @@ export function ShowingCreator() {
                     className="h-11 text-sm"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-sm text-muted-foreground mb-1 block">Start time <span className="text-red-400">*</span></label>
                     <Input
@@ -229,7 +229,7 @@ export function ShowingCreator() {
                     className="h-11 text-sm"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">Phone <span className="text-red-400">*</span></label>
                     <Input

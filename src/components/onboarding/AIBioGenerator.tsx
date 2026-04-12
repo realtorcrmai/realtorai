@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Loader2, RefreshCw } from "lucide-react";
+import { Sparkles, RefreshCw } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { generateBio } from "@/actions/ai-onboarding";
 
 interface AIBioGeneratorProps {
@@ -62,7 +63,7 @@ export function AIBioGenerator({ bio, onBioChange }: AIBioGeneratorProps) {
         className="inline-flex items-center gap-1.5 text-xs font-medium text-[#4f35d2] hover:text-[#3d28a8] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {generating ? (
-          <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
+          <><LogoSpinner size={14} /> Generating...</>
         ) : attempts > 0 ? (
           <><RefreshCw className="w-3.5 h-3.5" /> Regenerate with AI</>
         ) : (

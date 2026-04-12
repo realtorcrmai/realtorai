@@ -84,7 +84,7 @@
   --secondary-foreground: #33475b;
 
   --muted: #eaf0f6;
-  --muted-foreground: #516f90;
+  --muted-foreground: #476380;
 
   --accent: #eaf0f6;
   --accent-foreground: #33475b;
@@ -207,6 +207,22 @@
   }
   html {
     @apply font-sans;
+  }
+  /* All interactive elements show pointer cursor */
+  a[href],
+  button:not(:disabled),
+  [role="button"],
+  [role="tab"],
+  [role="link"],
+  [role="menuitem"],
+  [role="option"],
+  input[type="checkbox"],
+  input[type="radio"],
+  select,
+  summary,
+  [onclick],
+  [tabindex="0"] {
+    cursor: pointer;
   }
 }
 
@@ -339,3 +355,60 @@
 .stagger-children > *:nth-child(7) { animation-delay: 300ms; }
 .stagger-children > *:nth-child(8) { animation-delay: 350ms; }
 .stagger-children > *:nth-child(9) { animation-delay: 400ms; }
+
+/* ── Print styles ────────────────────────────────────────────────── */
+@media print {
+  /* Hide navigation, sidebar, mobile nav, floating widgets */
+  nav,
+  aside,
+  [data-sidebar],
+  [data-mobile-nav],
+  .fixed,
+  .sticky,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Reset backgrounds for ink savings */
+  body,
+  main,
+  .bg-background,
+  .bg-card,
+  .bg-muted {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Full width content */
+  main {
+    margin: 0 !important;
+    padding: 0.5in !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Remove shadows and borders */
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg,
+  [class*="elevation-"] {
+    box-shadow: none !important;
+  }
+
+  /* Ensure text is readable */
+  .text-muted-foreground {
+    color: #333 !important;
+  }
+
+  /* Page break control */
+  .page-break-before { page-break-before: always; }
+  .page-break-after { page-break-after: always; }
+  .no-page-break { page-break-inside: avoid; }
+
+  /* Cards print cleanly */
+  .rounded-lg,
+  .rounded-xl {
+    border: 1px solid #ddd !important;
+    border-radius: 4px !important;
+  }
+}

@@ -6,10 +6,10 @@ import {
   MapPin,
   Plus,
   X,
-  Loader2,
   ExternalLink,
   Trash2,
 } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
 import { updateContact } from "@/actions/contacts";
 import type { BuyerPreferences, PropertyOfInterest, Listing } from "@/types";
@@ -202,7 +202,7 @@ export function PropertiesOfInterestPanel({
               }
             >
               {isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                <LogoSpinner size={16} />
               ) : (
                 <Plus className="h-4 w-4 mr-1.5" />
               )}

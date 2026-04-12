@@ -1,3 +1,4 @@
+<!-- docs-audit: src/lib/email-blocks.ts, src/lib/text-pipeline.ts, src/lib/quality-pipeline.ts -->
 # Email Content Intelligence — Complete Specification
 
 ## Overview

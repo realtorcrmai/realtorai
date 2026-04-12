@@ -11,6 +11,11 @@ export async function POST(request: NextRequest) {
   const supabase = createAdminClient();
 
   try {
+    if (!process.env.RESEND_WEBHOOK_SECRET) {
+      console.warn("RESEND_WEBHOOK_SECRET not configured — rejecting webhook");
+      return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
+    }
+
     const rawBody = await request.text();
 
     // Verify webhook signature

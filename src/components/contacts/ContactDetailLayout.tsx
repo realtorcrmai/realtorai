@@ -9,10 +9,12 @@ export function ContactDetailLayout({
   header,
   tabs,
   rightPanel,
+  mobileRightPanel,
 }: {
   header: React.ReactNode;
   tabs: React.ReactNode;
   rightPanel: React.ReactNode;
+  mobileRightPanel?: React.ReactNode;
 }) {
   return (
     <div className="flex text-sm h-full">
@@ -22,6 +24,8 @@ export function ContactDetailLayout({
           {header}
           {tabs}
         </div>
+        {/* Mobile right panel content — rendered inside scrollable center column */}
+        {mobileRightPanel}
       </div>
 
       {/* RIGHT PANEL — passed through, scrolls as one unit */}

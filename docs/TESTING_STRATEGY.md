@@ -1,3 +1,4 @@
+<!-- docs-audit: tests/**, scripts/test-*, vitest.config.ts -->
 # Testing Strategy — Realtors360 CRM
 
 > **Status:** Reference doc. Approved direction for the test-infra refactor.

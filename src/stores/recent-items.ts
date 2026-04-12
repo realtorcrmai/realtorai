@@ -12,6 +12,7 @@ interface RecentItem {
 interface RecentStore {
   items: RecentItem[];
   addItem: (item: Omit<RecentItem, "viewedAt">) => void;
+  clearItems: () => void;
 }
 
 export const useRecentItems = create<RecentStore>()(
@@ -25,6 +26,7 @@ export const useRecentItems = create<RecentStore>()(
             ...state.items.filter((i) => i.id !== item.id),
           ].slice(0, 10),
         })),
+      clearItems: () => set({ items: [] }),
     }),
     { name: "r360-recent-items" }
   )

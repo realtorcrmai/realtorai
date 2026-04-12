@@ -9,9 +9,9 @@ import {
   ListTodo,
   Send,
   X,
-  Loader2,
   Mic,
 } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
 import { sendContactMessage, addCommunicationNote } from "@/actions/contacts";
 import { ClickToVoiceButton } from "@/components/voice-agent/ClickToVoiceButton";
@@ -108,7 +108,7 @@ export function QuickActionBar({
           className="shrink-0"
         >
           {isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <LogoSpinner size={16} />
           ) : (
             <Send className="h-4 w-4" />
           )}

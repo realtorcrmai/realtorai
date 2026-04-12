@@ -15,11 +15,11 @@ import {
   Save,
   Download,
   Printer,
-  Loader2,
   RotateCcw,
   FileCheck,
   Clock,
 } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import type { FormTemplate, FormSubmission } from "@/types";
 import { formatDistanceToNow } from "date-fns";
 
@@ -317,7 +317,7 @@ export function PDFFormEditor({
             disabled={saving}
           >
             {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              <LogoSpinner size={16} className="mr-1" />
             ) : (
               <Save className="h-4 w-4 mr-1" />
             )}
@@ -334,7 +334,7 @@ export function PDFFormEditor({
             className="bg-primary text-primary-foreground"
           >
             {completing ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              <LogoSpinner size={16} className="mr-1" />
             ) : (
               <Download className="h-4 w-4 mr-1" />
             )}
@@ -372,7 +372,7 @@ export function PDFFormEditor({
         <div className="max-w-[850px] mx-auto">
           {loading && (
             <div className="flex flex-col items-center justify-center h-96 gap-3">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <LogoSpinner size={32} className="text-primary" />
               <p className="text-sm text-muted-foreground">
                 Loading form...
               </p>
@@ -419,7 +419,7 @@ export function PDFFormEditor({
               }}
               loading={
                 <div className="flex items-center justify-center h-96">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <LogoSpinner size={32} className="text-primary" />
                 </div>
               }
             >

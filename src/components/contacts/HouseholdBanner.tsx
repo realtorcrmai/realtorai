@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import {
   createHousehold,
   addContactToHousehold,
@@ -126,7 +126,7 @@ export function HouseholdBanner({
             className="px-2.5 py-1 text-[11px] font-medium text-white/80 border border-white/30 rounded-md hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50"
           >
             {isPending ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
+              <LogoSpinner size={12} />
             ) : (
               "Remove"
             )}
@@ -237,7 +237,7 @@ export function HouseholdBanner({
               disabled={isPending || !name.trim()}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
-              {isPending && <Loader2 className="h-3 w-3 animate-spin" />}
+              {isPending && <LogoSpinner size={12} />}
               Create & Assign
             </button>
             <button
@@ -284,7 +284,7 @@ export function HouseholdBanner({
               disabled={isPending || !selectedHouseholdId}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
-              {isPending && <Loader2 className="h-3 w-3 animate-spin" />}
+              {isPending && <LogoSpinner size={12} />}
               Join Household
             </button>
             <button

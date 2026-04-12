@@ -1,3 +1,4 @@
+<!-- docs-audit: realtors360-rag/**, src/lib/rag/* -->
 # Competitive RAG Intelligence Agent — Implementation Plan
 
 ## Overview

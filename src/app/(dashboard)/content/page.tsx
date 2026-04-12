@@ -13,7 +13,6 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { cn } from "@/lib/utils";
 import { MEDIA_STATUS_COLORS } from "@/lib/constants";
 
-export const dynamic = "force-dynamic";
 
 export default async function ContentPage() {
   const supabase = await getAuthenticatedTenantClient();

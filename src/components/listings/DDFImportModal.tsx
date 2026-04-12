@@ -13,7 +13,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Search, Loader2, Download, Check, AlertCircle, MapPin, Bed, Bath, Image } from "lucide-react";
+import { Globe, Search, Download, Check, AlertCircle, MapPin, Bed, Bath, Image } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 
 type SearchResult = {
   listingKey: string;
@@ -145,7 +146,7 @@ export function DDFImportModal() {
             className="h-9 px-3"
           >
             {searching ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <LogoSpinner size={16} />
             ) : (
               <Search className="h-4 w-4" />
             )}
@@ -254,7 +255,7 @@ export function DDFImportModal() {
                     )}
                     {state === "importing" && (
                       <Button size="sm" variant="outline" className="h-7 text-xs" disabled>
-                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <LogoSpinner size={12} />
                       </Button>
                     )}
                     {state === "success" && (

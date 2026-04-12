@@ -9,7 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Save } from "lucide-react";
+import { Save } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { toast } from "sonner";
 import { CRM_FIELD_OPTIONS } from "@/lib/forms/constants";
 
@@ -79,7 +80,7 @@ export function FieldMappingEditor({
         </p>
         <Button size="sm" onClick={handleSave} disabled={saving}>
           {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-1" />
+            <LogoSpinner size={16} />
           ) : (
             <Save className="h-4 w-4 mr-1" />
           )}

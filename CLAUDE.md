@@ -23,6 +23,12 @@ Read the playbook before every task. It covers: pre-flight, task classification,
 
 ---
 
+## New Developer? Start Here
+
+**`CONTRIBUTING.md`** — complete local setup guide (prerequisites, install, env vars, start server, project structure, git workflow, testing, common tasks). Also configures VS Code via `.vscode/` (launch configs, extensions, settings).
+
+---
+
 ## Environments — READ BEFORE TOUCHING THE DATABASE
 
 **Full reference:** `docs/ENVIRONMENTS.md` — always read this before running migrations, changing env vars, or deploying.
@@ -178,10 +184,10 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 │   │   └── HomeAnniversary.tsx    # Annual homeowner milestone
 │   ├── stores/                    # Zustand stores (recent-items.ts)
 │   ├── components/
-│   │   ├── contacts/              # ContactCard, ContactForm, CommunicationTimeline, SegmentBuilder, ContactPreviewSheet
+│   │   ├── contacts/              # ContactsTableClient, ContactPreviewSheet, ContactCard, ContactForm, CommunicationTimeline, SegmentBuilder
 │   │   ├── content/               # ContentStepper, PromptsStep, GenerateStep, GalleryStep
-│   │   ├── listings/              # ListingCard, ListingForm, DocumentStatusTracker, etc.
-│   │   ├── showings/              # ShowingRequestForm, StatusBadge, StatusActions, Communication
+│   │   ├── listings/              # ListingsTableClient, ListingCard, ListingForm, DocumentStatusTracker, etc.
+│   │   ├── showings/              # ShowingsTableClient, ShowingRequestForm, StatusBadge, StatusActions, Communication
 │   │   ├── newsletters/           # ApprovalQueueClient, NewsletterWalkthrough
 │   │   ├── dashboard/             # PipelineSnapshot, AIRecommendations, RemindersWidget, ActivityFeed, TodaysPriorities, DashboardPipelineWidget
 │   │   ├── shared/                # TrackRecentView.tsx (recent items bridge)
@@ -256,15 +262,28 @@ The UI uses a HubSpot-inspired design language: clean, flat, professional. No gl
 
 ### Logo & Branding
 **Brand name:** Realtors360 (not "RealtorAI" — legacy name fully replaced as of 2026-04-11)
-**Logo assets:** `/logo/` at monorepo root (animated HTML, favicon SVG, static SVGs, concept variants)
-**React components:** `src/components/brand/Logo.tsx` — 5 exports:
+**Brand colors:** Gold gradients `#F0D890` → `#E4C378` → `#D4B060` (logo), Navy `#2D3E50`, Coral `#FF7A59` (CTAs)
+**Logo assets:** `/logo/` at monorepo root — two animated HTML files + static SVGs:
+- `logo-animated.html` — Full 3D logo (420px native): floating navy shield with gradient shift, revolving glare ring, dual orbit rings (outer CW 5s / inner CCW 8s with comet trails), roofline breathing glow, peak sparkle, door light flicker, 60-star field, parallax particles, mouse tilt 3D, reflection + floor glow
+- `logo-sidebar.html` — Lightweight sidebar logo (120px native): no shield, transparent bg, dual orbit rings (GPU-accelerated, linear timing), roofline glow, peak sparkle, door light flicker. 60fps optimized (pure transform/opacity, no filter animations)
+- `favicon.svg` — Minimal: navy circle + gold roofline only
+- `logo-icon.svg`, `logo-realtors360.svg`, `logo-realtors360-dark.svg` — Static SVGs
+- `logo-v2-concept-a/b/c.svg`, `logo-concepts-full.png` — Concept variants
+
+**React components:** `src/components/brand/Logo.tsx` — 6 exports:
 - `LogoIcon` — light bg (navy roofline + gold arc)
 - `LogoIconDark` — dark bg (all gold — sidebar)
 - `LogoMark` — icon + "Realtors360" text
-- `LogoAnimated` — 3D animated (login page — floating shield, revolving glare, counter-rotating circle)
+- `LogoVideo` — live animated logo via iframe; auto-picks source: ≤100px → `logo-sidebar.html`, >100px → `logo-animated.html`
+- `LogoAnimated` — pure CSS 3D animated logo (React component, not iframe)
 - `LogoSpinner` — loading indicator (gold spinning arc, replaces Loader2)
 
-**Where used:** Sidebar (MondaySidebar.tsx), Login (login/page.tsx), Favicon (layout.tsx), LoadingSpinner
+**Where used:**
+- Sidebar: `LogoVideo size={72}` in 140px brand section (MondaySidebar.tsx). Section-specific drop-shadow color changes per active page (`SECTION_COLORS` map). Notification pulse via `logo-pulse` keyframe (globals.css) when unread notifications exist (polls `/api/notifications`).
+- Login: `LogoVideo size={380}` on dark `#0a1628` background (login/page.tsx)
+- Mobile login: `LogoIcon size={36}` + "Realtors360" text
+- Favicon: `/public/favicon.svg` (layout.tsx metadata)
+- Loading spinner: `LogoSpinner` (LoadingSpinner.tsx)
 
 ### Conventions
 - Every page uses the `PageHeader` component (breadcrumbs, tabs, actions)
@@ -278,11 +297,12 @@ The UI uses a HubSpot-inspired design language: clean, flat, professional. No gl
 
 ## UX Features (Competitive)
 
-12 competitive UX features built across 4 sprints. Plan doc: `functional-specs/PLAN_UX_Competitive_Features.md`.
+12 competitive UX features built across 4 sprints + 3 rounds of code review fixes (19 bugs). Plan doc: `functional-specs/PLAN_UX_Competitive_Features.md`. Test plan: `docs/TEST_PLAN_UI_UX_Features.md` (122 test cases, 22 categories). 26/26 Playwright integration tests passing. WCAG AA compliant (18/18 color contrast pairs).
 
 ### Cmd+K Command Palette
 - `src/components/layout/CommandPalette.tsx` — global search overlay triggered by Cmd+K (Mac) / Ctrl+K (Win)
-- Searches contacts and listings with fuzzy matching, keyboard navigation
+- Debounced search with memoized results, contacts + listings API search support (`?search=`, `?limit=` with parseInt NaN guard and quote sanitization)
+- Keyboard navigation (arrow keys + Enter), fuzzy matching
 - Integrated into `MondayHeader.tsx`
 
 ### DataTable (Enhanced)
@@ -316,13 +336,26 @@ The UI uses a HubSpot-inspired design language: clean, flat, professional. No gl
 - `src/components/dashboard/DashboardPipelineWidget.tsx` — mini listing pipeline grouped by status
 - All three rendered on `src/app/(dashboard)/page.tsx`
 
-### Post-Showing Feedback
-- SMS feedback request sent after confirmed showings via Twilio
-- Implemented in `src/actions/showings.ts`
-
 ### Lead Score Badges
 - Color-coded lead score display in `ContactsTableClient.tsx`
-- Reads from `contacts.lead_score` column
+- Reads from `contacts.newsletter_intelligence.engagement_score`
+- Green (80+), amber (50-79), red (<50)
+
+### Post-Showing Feedback
+- SMS feedback request sent after "completed" status transition via Twilio
+- Implemented in `src/actions/showings.ts`, logged to communications table
+
+### Speed-to-Lead Alerts
+- Auto-notification on new contact creation in `src/actions/contacts.ts`
+- Triggers within 5 minutes via `src/lib/notifications.ts`
+
+### Accessibility (WCAG AA)
+- 18/18 color contrast pairs pass WCAG AA
+- Skip-to-content link in `DashboardShellClient.tsx`
+- aria-labels on all search inputs, tables, buttons, file uploads
+- Focus rings (`ring-brand`) on DataTable rows
+- Keyboard navigation: Tab + Enter on table rows, arrow keys in CommandPalette
+- ARIA tab roles on PageHeader tab buttons (role="tab", aria-selected)
 
 ---
 
@@ -342,6 +375,7 @@ The UI uses a HubSpot-inspired design language: clean, flat, professional. No gl
 | `prompts` | AI-generated content prompts | listing_id, video_prompt, image_prompt |
 | `media_assets` | Generated content files | listing_id, asset_type, status, output_url |
 | `google_tokens` | Google Calendar tokens | user_email, access_token, refresh_token |
+| `notifications` | In-app notifications | realtor_id, type, title, body, related_type, related_id, is_read |
 
 ### Multi-Tenancy & RLS
 
@@ -467,6 +501,9 @@ npm run lint
 
 # Start Realtors360 form server (separate terminal)
 # python server at localhost:8767
+
+# Run 102 notification migration
+# Paste SQL from supabase/migrations/102_notifications.sql into Supabase SQL editor
 ```
 
 ### MANDATORY: Test Before Build & Deploy

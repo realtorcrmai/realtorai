@@ -1,4 +1,3 @@
-export const dynamic = "force-dynamic";
 
 import { getTemplate } from "@/actions/templates";
 import { EmailEditorClient } from "@/components/email-builder/EmailEditorClient";

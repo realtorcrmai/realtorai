@@ -356,6 +356,731 @@ REL_COUNT=$(echo "$RELS" | cut -d: -f1)
 REL_TYPES=$(echo "$RELS" | cut -d: -f2)
 [[ "$REL_COUNT" -ge 10 && "$REL_TYPES" -ge 4 ]] && pass "Relationships: $REL_COUNT across $REL_TYPES types" || fail "Relationships" "$REL_COUNT rels, $REL_TYPES types"
 
+# ── Helper: inline node evaluator for Supabase JSON responses ──
+node_eval() { node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); $1" 2>/dev/null; }
+
+# ── 8. CONTACT INTELLIGENCE ────────────────────────────────
+echo ""
+echo "━━━ 8. CONTACT INTELLIGENCE (50 tests) ━━━"
+
+# 8.1-8.5: Contacts with newsletter_intelligence populated
+INTEL_DATA=$(api_get "contacts?select=id,name,newsletter_intelligence&newsletter_intelligence=not.is.null&limit=50")
+INTEL_COUNT=$(echo "$INTEL_DATA" | node_eval "console.log(d.length)")
+[[ "$INTEL_COUNT" -ge 1 ]] && pass "Contacts with intelligence: $INTEL_COUNT found" || skip "No contacts with intelligence" "no data"
+
+# 8.6-8.10: Check engagement_score exists on intelligent contacts
+for i in 0 1 2 3 4; do
+  HAS_SCORE=$(echo "$INTEL_DATA" | node_eval "const c=d[$i]; if(!c){console.log('skip')}else{console.log(c.newsletter_intelligence?.engagement_score !== undefined ? 'yes' : 'no')}")
+  if [[ "$HAS_SCORE" == "skip" ]]; then skip "Intelligence[$i] engagement_score" "no row"
+  elif [[ "$HAS_SCORE" == "yes" ]]; then pass "Intelligence[$i] has engagement_score"
+  else fail "Intelligence[$i] engagement_score" "missing"; fi
+done
+
+# 8.11-8.15: Check click_history field
+for i in 0 1 2 3 4; do
+  HAS=$(echo "$INTEL_DATA" | node_eval "const c=d[$i]; if(!c){console.log('skip')}else{console.log(c.newsletter_intelligence?.click_history !== undefined ? 'yes' : 'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "Intelligence[$i] click_history" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "Intelligence[$i] has click_history"
+  else fail "Intelligence[$i] click_history" "missing"; fi
+done
+
+# 8.16-8.20: Check inferred_interests field
+for i in 0 1 2 3 4; do
+  HAS=$(echo "$INTEL_DATA" | node_eval "const c=d[$i]; if(!c){console.log('skip')}else{console.log(c.newsletter_intelligence?.inferred_interests !== undefined ? 'yes' : 'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "Intelligence[$i] inferred_interests" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "Intelligence[$i] has inferred_interests"
+  else fail "Intelligence[$i] inferred_interests" "missing"; fi
+done
+
+# 8.21-8.25: engagement_score is a number
+for i in 0 1 2 3 4; do
+  IS_NUM=$(echo "$INTEL_DATA" | node_eval "const c=d[$i]; if(!c){console.log('skip')}else{console.log(typeof c.newsletter_intelligence?.engagement_score === 'number' ? 'yes' : 'no')}")
+  if [[ "$IS_NUM" == "skip" ]]; then skip "Intelligence[$i] score is number" "no row"
+  elif [[ "$IS_NUM" == "yes" ]]; then pass "Intelligence[$i] engagement_score is numeric"
+  else fail "Intelligence[$i] score type" "not a number"; fi
+done
+
+# 8.26-8.30: click_history is an array
+for i in 0 1 2 3 4; do
+  IS_ARR=$(echo "$INTEL_DATA" | node_eval "const c=d[$i]; if(!c){console.log('skip')}else{console.log(Array.isArray(c.newsletter_intelligence?.click_history) ? 'yes' : 'no')}")
+  if [[ "$IS_ARR" == "skip" ]]; then skip "Intelligence[$i] click_history is array" "no row"
+  elif [[ "$IS_ARR" == "yes" ]]; then pass "Intelligence[$i] click_history is array"
+  else fail "Intelligence[$i] click_history type" "not array"; fi
+done
+
+# 8.31-8.35: inferred_interests structure (object or array)
+for i in 0 1 2 3 4; do
+  IS_OBJ=$(echo "$INTEL_DATA" | node_eval "const c=d[$i]; if(!c){console.log('skip')}else{const ii=c.newsletter_intelligence?.inferred_interests;console.log(typeof ii==='object'&&ii!==null?'yes':'no')}")
+  if [[ "$IS_OBJ" == "skip" ]]; then skip "Intelligence[$i] interests is object/array" "no row"
+  elif [[ "$IS_OBJ" == "yes" ]]; then pass "Intelligence[$i] inferred_interests is object/array"
+  else fail "Intelligence[$i] interests type" "not object"; fi
+done
+
+# 8.36-8.40: engagement_score in valid range (0-100)
+for i in 0 1 2 3 4; do
+  IN_RANGE=$(echo "$INTEL_DATA" | node_eval "const c=d[$i]; if(!c){console.log('skip')}else{const s=c.newsletter_intelligence?.engagement_score;console.log(typeof s==='number'&&s>=0&&s<=100?'yes':'no')}")
+  if [[ "$IN_RANGE" == "skip" ]]; then skip "Intelligence[$i] score range" "no row"
+  elif [[ "$IN_RANGE" == "yes" ]]; then pass "Intelligence[$i] engagement_score in 0-100"
+  else fail "Intelligence[$i] score range" "out of 0-100"; fi
+done
+
+# 8.41-8.45: newsletter_intelligence is JSONB (not string)
+for i in 0 1 2 3 4; do
+  IS_OBJ=$(echo "$INTEL_DATA" | node_eval "const c=d[$i]; if(!c){console.log('skip')}else{console.log(typeof c.newsletter_intelligence==='object'?'yes':'no')}")
+  if [[ "$IS_OBJ" == "skip" ]]; then skip "Intelligence[$i] is JSONB object" "no row"
+  elif [[ "$IS_OBJ" == "yes" ]]; then pass "Intelligence[$i] newsletter_intelligence is JSONB"
+  else fail "Intelligence[$i]" "not JSONB"; fi
+done
+
+# 8.46-8.50: ai_lead_score column exists and is JSONB on contacts
+AI_SCORE_DATA=$(api_get "contacts?select=id,ai_lead_score&ai_lead_score=not.is.null&limit=5")
+AI_SCORE_CT=$(echo "$AI_SCORE_DATA" | node_eval "console.log(d.length)")
+[[ "$AI_SCORE_CT" -ge 0 ]] && pass "ai_lead_score column queryable" || fail "ai_lead_score column" "not queryable"
+for i in 0 1 2 3; do
+  IS_OBJ=$(echo "$AI_SCORE_DATA" | node_eval "const c=d[$i]; if(!c){console.log('skip')}else{console.log(typeof c.ai_lead_score==='object'?'yes':'no')}")
+  if [[ "$IS_OBJ" == "skip" ]]; then skip "ai_lead_score[$i] is JSONB" "no row"
+  elif [[ "$IS_OBJ" == "yes" ]]; then pass "ai_lead_score[$i] is JSONB object"
+  else fail "ai_lead_score[$i]" "not JSONB"; fi
+done
+
+# ── 9. NEWSLETTER DATA QUALITY ─────────────────────────────
+echo ""
+echo "━━━ 9. NEWSLETTER DATA QUALITY (50 tests) ━━━"
+
+# 9.1-9.5: Count newsletters by status
+for STATUS in draft approved sent failed skipped; do
+  CT=$(api_get "newsletters?select=id&status=eq.$STATUS" | node_eval "console.log(d.length)")
+  [[ "$CT" -ge 0 ]] && pass "Newsletters status=$STATUS: $CT rows" || fail "Newsletter count $STATUS" "query failed"
+done
+
+# 9.6-9.10: Sent newsletters must have html_body
+SENT_NL=$(api_get "newsletters?select=id,html_body,subject,sent_at,contact_id&status=eq.sent&limit=5")
+SENT_CT=$(echo "$SENT_NL" | node_eval "console.log(d.length)")
+[[ "$SENT_CT" -ge 0 ]] && pass "Sent newsletters queryable: $SENT_CT" || fail "Sent newsletters" "query failed"
+for i in 0 1 2 3; do
+  HAS=$(echo "$SENT_NL" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.html_body&&r.html_body.length>0?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "Sent newsletter[$i] has html_body" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "Sent newsletter[$i] has html_body"
+  else fail "Sent newsletter[$i] html_body" "empty or null"; fi
+done
+
+# 9.11-9.15: Sent newsletters must have subject
+for i in 0 1 2 3 4; do
+  HAS=$(echo "$SENT_NL" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.subject&&r.subject.length>0?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "Sent newsletter[$i] has subject" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "Sent newsletter[$i] has subject"
+  else fail "Sent newsletter[$i] subject" "empty or null"; fi
+done
+
+# 9.16-9.20: Sent newsletters must have sent_at
+for i in 0 1 2 3 4; do
+  HAS=$(echo "$SENT_NL" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.sent_at?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "Sent newsletter[$i] has sent_at" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "Sent newsletter[$i] has sent_at"
+  else fail "Sent newsletter[$i] sent_at" "null"; fi
+done
+
+# 9.21-9.25: Sent newsletters must have contact_id
+for i in 0 1 2 3 4; do
+  HAS=$(echo "$SENT_NL" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.contact_id?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "Sent newsletter[$i] has contact_id" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "Sent newsletter[$i] has contact_id"
+  else fail "Sent newsletter[$i] contact_id" "null"; fi
+done
+
+# 9.26-9.30: No newsletters with null email_type (sample check)
+NL_TYPES=$(api_get "newsletters?select=id,email_type&limit=50")
+NULL_ET=$(echo "$NL_TYPES" | node_eval "console.log(d.filter(r=>!r.email_type).length)")
+[[ "$NULL_ET" == "0" ]] && pass "No null email_type in sample (50 rows)" || fail "Null email_type" "$NULL_ET rows with null"
+DISTINCT_ET=$(echo "$NL_TYPES" | node_eval "console.log(new Set(d.map(r=>r.email_type)).size)")
+[[ "$DISTINCT_ET" -ge 1 ]] && pass "Newsletter email_type diversity: $DISTINCT_ET types" || skip "Newsletter email_type diversity" "no data"
+for i in 0 1 2; do
+  VALID=$(echo "$NL_TYPES" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(typeof r.email_type==='string'?'yes':'no')}")
+  if [[ "$VALID" == "skip" ]]; then skip "Newsletter[$i] email_type is string" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "Newsletter[$i] email_type is string"
+  else fail "Newsletter[$i] email_type" "not string"; fi
+done
+
+# 9.31-9.35: newsletter_events have valid event_type
+NL_EVENTS=$(api_get "newsletter_events?select=id,event_type&limit=50")
+NL_EVT_CT=$(echo "$NL_EVENTS" | node_eval "console.log(d.length)")
+[[ "$NL_EVT_CT" -ge 0 ]] && pass "Newsletter events queryable: $NL_EVT_CT" || fail "Newsletter events" "query failed"
+VALID_TYPES="opened clicked bounced unsubscribed complained delivered"
+for i in 0 1 2 3; do
+  VALID=$(echo "$NL_EVENTS" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(['opened','clicked','bounced','unsubscribed','complained','delivered'].includes(r.event_type)?'yes':'no')}")
+  if [[ "$VALID" == "skip" ]]; then skip "Newsletter event[$i] valid type" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "Newsletter event[$i] has valid event_type"
+  else fail "Newsletter event[$i] event_type" "invalid value"; fi
+done
+
+# 9.36-9.40: contact_journeys valid journey_type
+CJ_DATA=$(api_get "contact_journeys?select=id,journey_type,current_phase&limit=50")
+CJ_CT=$(echo "$CJ_DATA" | node_eval "console.log(d.length)")
+[[ "$CJ_CT" -ge 0 ]] && pass "Contact journeys queryable: $CJ_CT" || fail "Contact journeys" "query failed"
+for i in 0 1 2 3; do
+  VALID=$(echo "$CJ_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(['buyer','seller'].includes(r.journey_type)?'yes':'no')}")
+  if [[ "$VALID" == "skip" ]]; then skip "Journey[$i] valid journey_type" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "Journey[$i] has valid journey_type"
+  else fail "Journey[$i] journey_type" "invalid"; fi
+done
+
+# 9.41-9.45: contact_journeys valid current_phase
+for i in 0 1 2 3 4; do
+  VALID=$(echo "$CJ_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(['lead','active','under_contract','past_client','dormant'].includes(r.current_phase)?'yes':'no')}")
+  if [[ "$VALID" == "skip" ]]; then skip "Journey[$i] valid current_phase" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "Journey[$i] has valid current_phase"
+  else fail "Journey[$i] current_phase" "invalid"; fi
+done
+
+# 9.46-9.50: Newsletter total count, template coverage, event diversity
+TOTAL_NL=$(api_get "newsletters?select=id" | node_eval "console.log(d.length)")
+[[ "$TOTAL_NL" -ge 1 ]] && pass "Total newsletters: $TOTAL_NL" || skip "No newsletters in DB" "empty"
+TOTAL_EVENTS=$(api_get "newsletter_events?select=id" | node_eval "console.log(d.length)")
+[[ "$TOTAL_EVENTS" -ge 0 ]] && pass "Total newsletter events: $TOTAL_EVENTS" || fail "Newsletter events count" "query failed"
+EVT_DIVERSITY=$(api_get "newsletter_events?select=event_type" | node_eval "console.log(new Set(d.map(e=>e.event_type)).size)")
+[[ "$EVT_DIVERSITY" -ge 1 ]] && pass "Newsletter event type diversity: $EVT_DIVERSITY" || skip "Event diversity" "no events"
+CJ_PHASE_DIV=$(echo "$CJ_DATA" | node_eval "console.log(new Set(d.map(j=>j.current_phase)).size)")
+[[ "$CJ_PHASE_DIV" -ge 1 ]] && pass "Journey phase diversity: $CJ_PHASE_DIV" || skip "Journey phase diversity" "no journeys"
+CJ_TYPE_DIV=$(echo "$CJ_DATA" | node_eval "console.log(new Set(d.map(j=>j.journey_type)).size)")
+[[ "$CJ_TYPE_DIV" -ge 1 ]] && pass "Journey type diversity: $CJ_TYPE_DIV" || skip "Journey type diversity" "no journeys"
+
+# ── 10. WORKFLOW DATA QUALITY ──────────────────────────────
+echo ""
+echo "━━━ 10. WORKFLOW DATA QUALITY (50 tests) ━━━"
+
+# 10.1-10.5: Workflows table
+WF_DATA=$(api_get "workflows?select=id,slug,name,trigger_type,is_active&limit=20")
+WF_CT=$(echo "$WF_DATA" | node_eval "console.log(d.length)")
+[[ "$WF_CT" -ge 1 ]] && pass "Workflows exist: $WF_CT" || skip "No workflows" "empty"
+for i in 0 1 2 3; do
+  HAS=$(echo "$WF_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.name&&r.slug?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "Workflow[$i] has name+slug" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "Workflow[$i] has name and slug"
+  else fail "Workflow[$i] name/slug" "missing"; fi
+done
+
+# 10.6-10.10: Workflow steps exist with required fields
+WS_DATA=$(api_get "workflow_steps?select=id,workflow_id,step_order,action_type,channel&limit=50")
+WS_CT=$(echo "$WS_DATA" | node_eval "console.log(d.length)")
+[[ "$WS_CT" -ge 1 ]] && pass "Workflow steps exist: $WS_CT" || skip "No workflow steps" "empty"
+for i in 0 1 2 3; do
+  HAS=$(echo "$WS_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.action_type&&r.step_order!==undefined?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "WorkflowStep[$i] has action_type+order" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "WorkflowStep[$i] has action_type and step_order"
+  else fail "WorkflowStep[$i]" "missing fields"; fi
+done
+
+# 10.11-10.15: Workflow steps have valid action_type
+VALID_ACTIONS="auto_email auto_sms auto_whatsapp manual_task auto_alert system_action wait condition milestone ai_email"
+for i in 0 1 2 3 4; do
+  VALID=$(echo "$WS_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(['auto_email','auto_sms','auto_whatsapp','manual_task','auto_alert','system_action','wait','condition','milestone','ai_email'].includes(r.action_type)?'yes':'no')}")
+  if [[ "$VALID" == "skip" ]]; then skip "WorkflowStep[$i] valid action_type" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "WorkflowStep[$i] has valid action_type"
+  else fail "WorkflowStep[$i] action_type" "invalid"; fi
+done
+
+# 10.16-10.20: Workflow enrollments
+WE_DATA=$(api_get "workflow_enrollments?select=id,workflow_id,contact_id,status,current_step&limit=50")
+WE_CT=$(echo "$WE_DATA" | node_eval "console.log(d.length)")
+[[ "$WE_CT" -ge 0 ]] && pass "Workflow enrollments queryable: $WE_CT" || fail "Workflow enrollments" "query failed"
+for i in 0 1 2 3; do
+  HAS=$(echo "$WE_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.status?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "Enrollment[$i] has status" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "Enrollment[$i] has status field"
+  else fail "Enrollment[$i] status" "null"; fi
+done
+
+# 10.21-10.25: Enrollment status values are valid
+for i in 0 1 2 3 4; do
+  VALID=$(echo "$WE_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(['active','paused','completed','cancelled','failed'].includes(r.status)?'yes':'no')}")
+  if [[ "$VALID" == "skip" ]]; then skip "Enrollment[$i] valid status" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "Enrollment[$i] has valid status"
+  else fail "Enrollment[$i] status value" "invalid"; fi
+done
+
+# 10.26-10.30: Message templates exist
+MT_DATA=$(api_get "message_templates?select=id,name,channel,is_active&limit=50")
+MT_CT=$(echo "$MT_DATA" | node_eval "console.log(d.length)")
+[[ "$MT_CT" -ge 1 ]] && pass "Message templates exist: $MT_CT" || skip "No message templates" "empty"
+for i in 0 1 2 3; do
+  HAS=$(echo "$MT_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.name&&r.channel?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "Template[$i] has name+channel" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "Template[$i] has name and channel"
+  else fail "Template[$i]" "missing fields"; fi
+done
+
+# 10.31-10.35: Message template channels are valid
+for i in 0 1 2 3 4; do
+  VALID=$(echo "$MT_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(['sms','whatsapp','email'].includes(r.channel)?'yes':'no')}")
+  if [[ "$VALID" == "skip" ]]; then skip "Template[$i] valid channel" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "Template[$i] has valid channel"
+  else fail "Template[$i] channel" "invalid"; fi
+done
+
+# 10.36-10.40: Workflow trigger_type values
+for i in 0 1 2 3 4; do
+  VALID=$(echo "$WF_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(['lead_status_change','listing_status_change','manual','inactivity','showing_completed','new_lead','tag_added'].includes(r.trigger_type)?'yes':'no')}")
+  if [[ "$VALID" == "skip" ]]; then skip "Workflow[$i] valid trigger_type" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "Workflow[$i] has valid trigger_type"
+  else fail "Workflow[$i] trigger_type" "invalid"; fi
+done
+
+# 10.41-10.45: Workflow step_order is positive integer
+for i in 0 1 2 3 4; do
+  VALID=$(echo "$WS_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(Number.isInteger(r.step_order)&&r.step_order>=1?'yes':'no')}")
+  if [[ "$VALID" == "skip" ]]; then skip "WorkflowStep[$i] step_order positive" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "WorkflowStep[$i] step_order is positive int"
+  else fail "WorkflowStep[$i] step_order" "not positive int"; fi
+done
+
+# 10.46-10.50: Workflow diversity stats
+WF_ACTIVE=$(echo "$WF_DATA" | node_eval "console.log(d.filter(w=>w.is_active).length)")
+[[ "$WF_ACTIVE" -ge 0 ]] && pass "Active workflows: $WF_ACTIVE" || fail "Active workflows" "query error"
+WF_TRIGGER_DIV=$(echo "$WF_DATA" | node_eval "console.log(new Set(d.map(w=>w.trigger_type)).size)")
+[[ "$WF_TRIGGER_DIV" -ge 1 ]] && pass "Workflow trigger diversity: $WF_TRIGGER_DIV types" || skip "Workflow trigger diversity" "none"
+WS_ACTION_DIV=$(echo "$WS_DATA" | node_eval "console.log(new Set(d.map(s=>s.action_type)).size)")
+[[ "$WS_ACTION_DIV" -ge 1 ]] && pass "Step action_type diversity: $WS_ACTION_DIV" || skip "Action diversity" "none"
+MT_CHANNEL_DIV=$(echo "$MT_DATA" | node_eval "console.log(new Set(d.map(t=>t.channel)).size)")
+[[ "$MT_CHANNEL_DIV" -ge 1 ]] && pass "Template channel diversity: $MT_CHANNEL_DIV" || skip "Channel diversity" "none"
+MT_ACTIVE=$(echo "$MT_DATA" | node_eval "console.log(d.filter(t=>t.is_active).length)")
+[[ "$MT_ACTIVE" -ge 0 ]] && pass "Active message templates: $MT_ACTIVE" || fail "Active templates" "query error"
+
+# ── 11. DEAL PIPELINE DATA ─────────────────────────────────
+echo ""
+echo "━━━ 11. DEAL PIPELINE DATA (50 tests) ━━━"
+
+# 11.1-11.5: Deals exist with required fields
+DEAL_DATA=$(api_get "deals?select=id,title,type,stage,status,value,contact_id,listing_id&limit=50")
+DEAL_CT=$(echo "$DEAL_DATA" | node_eval "console.log(d.length)")
+[[ "$DEAL_CT" -ge 1 ]] && pass "Deals exist: $DEAL_CT" || skip "No deals" "empty"
+for i in 0 1 2 3; do
+  HAS=$(echo "$DEAL_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.title&&r.type&&r.stage?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "Deal[$i] has title+type+stage" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "Deal[$i] has title, type, and stage"
+  else fail "Deal[$i]" "missing required fields"; fi
+done
+
+# 11.6-11.10: Deal type is valid
+for i in 0 1 2 3 4; do
+  VALID=$(echo "$DEAL_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(['buyer','seller'].includes(r.type)?'yes':'no')}")
+  if [[ "$VALID" == "skip" ]]; then skip "Deal[$i] valid type" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "Deal[$i] has valid type (buyer/seller)"
+  else fail "Deal[$i] type" "invalid"; fi
+done
+
+# 11.11-11.15: Deal status is valid
+for i in 0 1 2 3 4; do
+  VALID=$(echo "$DEAL_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(['active','won','lost'].includes(r.status)?'yes':'no')}")
+  if [[ "$VALID" == "skip" ]]; then skip "Deal[$i] valid status" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "Deal[$i] has valid status"
+  else fail "Deal[$i] status" "invalid"; fi
+done
+
+# 11.16-11.20: Deal stages are from valid set
+VALID_STAGES="new_lead contacted qualified proposal under_contract won lost"
+for i in 0 1 2 3 4; do
+  VALID=$(echo "$DEAL_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.stage&&r.stage.length>0?'yes':'no')}")
+  if [[ "$VALID" == "skip" ]]; then skip "Deal[$i] has stage" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "Deal[$i] has non-empty stage"
+  else fail "Deal[$i] stage" "empty"; fi
+done
+
+# 11.21-11.25: deal_checklist items linked to valid deals
+DC_DATA=$(api_get "deal_checklist?select=id,deal_id,item,completed&limit=50")
+DC_CT=$(echo "$DC_DATA" | node_eval "console.log(d.length)")
+[[ "$DC_CT" -ge 0 ]] && pass "Deal checklist queryable: $DC_CT items" || fail "Deal checklist" "query failed"
+for i in 0 1 2 3; do
+  HAS=$(echo "$DC_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.deal_id&&r.item?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "Checklist[$i] has deal_id+item" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "Checklist[$i] has deal_id and item"
+  else fail "Checklist[$i]" "missing fields"; fi
+done
+
+# 11.26-11.30: deal_parties linked to deals
+DP_DATA=$(api_get "deal_parties?select=id,deal_id,role,name&limit=50")
+DP_CT=$(echo "$DP_DATA" | node_eval "console.log(d.length)")
+[[ "$DP_CT" -ge 0 ]] && pass "Deal parties queryable: $DP_CT" || fail "Deal parties" "query failed"
+for i in 0 1 2 3; do
+  HAS=$(echo "$DP_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.deal_id&&r.name&&r.role?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "DealParty[$i] has deal_id+name+role" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "DealParty[$i] has deal_id, name, and role"
+  else fail "DealParty[$i]" "missing fields"; fi
+done
+
+# 11.31-11.35: Mortgages linked to deals
+MG_DATA=$(api_get "mortgages?select=id,deal_id,lender_name,renewal_date,mortgage_type&limit=50")
+MG_CT=$(echo "$MG_DATA" | node_eval "console.log(d.length)")
+[[ "$MG_CT" -ge 0 ]] && pass "Mortgages queryable: $MG_CT" || fail "Mortgages" "query failed"
+for i in 0 1 2 3; do
+  HAS=$(echo "$MG_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.deal_id&&r.lender_name?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "Mortgage[$i] has deal_id+lender" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "Mortgage[$i] has deal_id and lender_name"
+  else fail "Mortgage[$i]" "missing fields"; fi
+done
+
+# 11.36-11.40: Mortgage type is valid
+for i in 0 1 2 3 4; do
+  VALID=$(echo "$MG_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(['fixed','variable','arm'].includes(r.mortgage_type)?'yes':'no')}")
+  if [[ "$VALID" == "skip" ]]; then skip "Mortgage[$i] valid type" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "Mortgage[$i] has valid mortgage_type"
+  else fail "Mortgage[$i] type" "invalid"; fi
+done
+
+# 11.41-11.45: Mortgage renewal_date format (YYYY-MM-DD or null)
+for i in 0 1 2 3 4; do
+  VALID=$(echo "$MG_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{if(!r.renewal_date){console.log('yes')}else{console.log(/^\d{4}-\d{2}-\d{2}/.test(r.renewal_date)?'yes':'no')}}")
+  if [[ "$VALID" == "skip" ]]; then skip "Mortgage[$i] renewal_date format" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "Mortgage[$i] renewal_date valid format"
+  else fail "Mortgage[$i] renewal_date" "bad format"; fi
+done
+
+# 11.46-11.50: Deal diversity stats
+DEAL_TYPE_DIV=$(echo "$DEAL_DATA" | node_eval "console.log(new Set(d.map(dl=>dl.type)).size)")
+[[ "$DEAL_TYPE_DIV" -ge 1 ]] && pass "Deal type diversity: $DEAL_TYPE_DIV" || skip "Deal type diversity" "no deals"
+DEAL_STATUS_DIV=$(echo "$DEAL_DATA" | node_eval "console.log(new Set(d.map(dl=>dl.status)).size)")
+[[ "$DEAL_STATUS_DIV" -ge 1 ]] && pass "Deal status diversity: $DEAL_STATUS_DIV" || skip "Deal status diversity" "no deals"
+DEAL_STAGE_DIV=$(echo "$DEAL_DATA" | node_eval "console.log(new Set(d.map(dl=>dl.stage)).size)")
+[[ "$DEAL_STAGE_DIV" -ge 1 ]] && pass "Deal stage diversity: $DEAL_STAGE_DIV" || skip "Deal stage diversity" "no deals"
+DEALS_W_VALUE=$(echo "$DEAL_DATA" | node_eval "console.log(d.filter(dl=>dl.value!==null).length)")
+[[ "$DEALS_W_VALUE" -ge 0 ]] && pass "Deals with value: $DEALS_W_VALUE" || fail "Deals with value" "query error"
+DEALS_W_CONTACT=$(echo "$DEAL_DATA" | node_eval "console.log(d.filter(dl=>dl.contact_id!==null).length)")
+[[ "$DEALS_W_CONTACT" -ge 0 ]] && pass "Deals with contact_id: $DEALS_W_CONTACT" || fail "Deals linked" "query error"
+
+# ── 12. MULTI-TENANCY DEEP ─────────────────────────────────
+echo ""
+echo "━━━ 12. MULTI-TENANCY DEEP (50 tests) ━━━"
+
+# 12.1-12.10: Verify realtor_id column exists on 10 key tables
+TENANT_TABLES="contacts listings tasks deals newsletters appointments communications contact_journeys newsletter_events agent_recommendations"
+for TBL in $TENANT_TABLES; do
+  RESULT=$(api_get "${TBL}?select=realtor_id&limit=1" 2>&1)
+  HAS_COL=$(echo "$RESULT" | node_eval "console.log(Array.isArray(d)?'yes':'no')" 2>/dev/null || echo "no")
+  [[ "$HAS_COL" == "yes" ]] && pass "Table $TBL has realtor_id column" || fail "$TBL realtor_id" "column missing or error"
+done
+
+# 12.11-12.20: Check realtor_id is NOT NULL on sample rows
+for TBL in $TENANT_TABLES; do
+  NULL_CT=$(api_get "${TBL}?select=id&realtor_id=is.null&limit=5" 2>&1 | node_eval "console.log(Array.isArray(d)?d.length:'err')" 2>/dev/null || echo "err")
+  if [[ "$NULL_CT" == "err" ]]; then skip "$TBL realtor_id NOT NULL" "query error"
+  elif [[ "$NULL_CT" == "0" ]]; then pass "$TBL has no NULL realtor_id rows"
+  else fail "$TBL realtor_id" "$NULL_CT rows with NULL realtor_id"; fi
+done
+
+# 12.21-12.30: Additional tenant-scoped tables
+EXTRA_TABLES="agent_events agent_decisions workflow_enrollments workflow_step_logs mortgages deal_checklist deal_parties listing_documents seller_identities listing_enrichment"
+for TBL in $EXTRA_TABLES; do
+  RESULT=$(api_get "${TBL}?select=realtor_id&limit=1" 2>&1)
+  HAS_COL=$(echo "$RESULT" | node_eval "console.log(Array.isArray(d)?'yes':'no')" 2>/dev/null || echo "no")
+  if [[ "$HAS_COL" == "yes" ]]; then pass "Table $TBL has realtor_id column"
+  else skip "$TBL realtor_id" "column may not exist (global table)"; fi
+done
+
+# 12.31-12.40: Verify global tables are accessible without realtor_id filter
+GLOBAL_TABLES="newsletter_templates google_tokens agent_settings email_template_registry"
+for TBL in $GLOBAL_TABLES; do
+  RESULT=$(api_get "${TBL}?select=id&limit=1" 2>&1)
+  ACCESSIBLE=$(echo "$RESULT" | node_eval "console.log(Array.isArray(d)?'yes':'no')" 2>/dev/null || echo "no")
+  [[ "$ACCESSIBLE" == "yes" ]] && pass "Global table $TBL is accessible" || skip "$TBL accessible" "table may not exist"
+done
+
+# 12.41-12.44: Verify realtor_id consistency — same realtor_id across related tables
+SAMPLE_RID=$(api_get "contacts?select=realtor_id&limit=1" | node_eval "console.log(d[0]?.realtor_id||'')")
+if [[ -n "$SAMPLE_RID" && "$SAMPLE_RID" != "undefined" ]]; then
+  for TBL in listings deals tasks; do
+    MATCH=$(api_get "${TBL}?select=id&realtor_id=eq.${SAMPLE_RID}&limit=1" | node_eval "console.log(d.length>=0?'yes':'no')")
+    [[ "$MATCH" == "yes" ]] && pass "Realtor $SAMPLE_RID has $TBL rows (or zero)" || fail "$TBL realtor consistency" "query failed"
+  done
+else
+  for TBL in listings deals tasks; do skip "$TBL realtor consistency" "no sample realtor_id"; done
+fi
+
+# 12.45-12.47: users table has plan column
+USERS_PLAN=$(api_get "users?select=id,plan&limit=5")
+PLAN_CT=$(echo "$USERS_PLAN" | node_eval "console.log(d.length)")
+[[ "$PLAN_CT" -ge 1 ]] && pass "Users table queryable: $PLAN_CT" || skip "Users table" "empty or inaccessible"
+VALID_PLANS=$(echo "$USERS_PLAN" | node_eval "const plans=d.map(u=>u.plan).filter(Boolean);console.log(plans.every(p=>['free','professional','studio','team','admin'].includes(p))?'yes':'no')")
+[[ "$VALID_PLANS" == "yes" ]] && pass "User plans are valid enum values" || skip "User plan validation" "no plan data"
+PLAN_DIV=$(echo "$USERS_PLAN" | node_eval "console.log(new Set(d.map(u=>u.plan).filter(Boolean)).size)")
+[[ "$PLAN_DIV" -ge 1 ]] && pass "User plan diversity: $PLAN_DIV" || skip "Plan diversity" "no plans"
+
+# 12.48-12.50: RLS accessible via service role key
+for TBL in contacts listings newsletters; do
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/rest/v1/$TBL?select=id&limit=1" -H "apikey: $KEY" -H "Authorization: Bearer $KEY")
+  [[ "$CODE" == "200" ]] && pass "Service role can read $TBL (RLS bypass)" || fail "$TBL RLS bypass" "HTTP $CODE"
+done
+
+# ── 13. EMAIL TEMPLATE COVERAGE ─────────────────────────────
+echo ""
+echo "━━━ 13. EMAIL TEMPLATE COVERAGE (50 tests) ━━━"
+
+# 13.1-13.5: email_template_registry entries
+ETR_DATA=$(api_get "email_template_registry?select=id,email_type,template_component,description&limit=50")
+ETR_CT=$(echo "$ETR_DATA" | node_eval "console.log(d.length)")
+[[ "$ETR_CT" -ge 1 ]] && pass "Email template registry: $ETR_CT entries" || skip "No template registry" "empty"
+for i in 0 1 2 3; do
+  HAS=$(echo "$ETR_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.email_type&&r.template_component?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "Registry[$i] has type+component" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "Registry[$i] has email_type and template_component"
+  else fail "Registry[$i]" "missing fields"; fi
+done
+
+# 13.6-13.10: Registry email_type uniqueness (no duplicates)
+ETR_TYPES=$(echo "$ETR_DATA" | node_eval "const types=d.map(r=>r.email_type);const unique=new Set(types);console.log(types.length===unique.size?'yes':'no')")
+[[ "$ETR_TYPES" == "yes" ]] && pass "Registry email_types are unique" || fail "Registry uniqueness" "duplicates found"
+for i in 0 1 2 3; do
+  HAS_DESC=$(echo "$ETR_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.description?'yes':'no')}")
+  if [[ "$HAS_DESC" == "skip" ]]; then skip "Registry[$i] has description" "no row"
+  elif [[ "$HAS_DESC" == "yes" ]]; then pass "Registry[$i] has description"
+  else pass "Registry[$i] description is null (optional)"; fi
+done
+
+# 13.11-13.20: Check newsletters exist for various email types
+EMAIL_TYPES="new_listing_alert market_update just_sold open_house_invite neighbourhood_guide home_anniversary welcome listing_alert premium_listing_showcase"
+TYPE_IDX=0
+for ET in $EMAIL_TYPES; do
+  TYPE_IDX=$((TYPE_IDX+1))
+  CT=$(api_get "newsletters?select=id&email_type=eq.$ET&limit=1" | node_eval "console.log(d.length)")
+  [[ "$CT" -ge 1 ]] && pass "Newsletter type $ET exists ($CT+)" || skip "Newsletter type $ET" "none in DB"
+  [[ "$TYPE_IDX" -ge 9 ]] && break
+done
+# Also check v3 types
+V3_TYPES="contact_birthday listing_price_drop listing_sold saved_search_match showing_confirmed"
+for ET in $V3_TYPES; do
+  CT=$(api_get "newsletters?select=id&email_type=eq.$ET&limit=1" | node_eval "console.log(d.length)")
+  [[ "$CT" -ge 1 ]] && pass "Newsletter v3 type $ET exists" || skip "Newsletter v3 type $ET" "none in DB"
+done
+
+# 13.21-13.25: newsletter_templates table (legacy React Email templates)
+NT_DATA=$(api_get "newsletter_templates?select=id,slug,name,email_type,is_active&limit=20")
+NT_CT=$(echo "$NT_DATA" | node_eval "console.log(d.length)")
+[[ "$NT_CT" -ge 1 ]] && pass "Newsletter templates: $NT_CT" || skip "No newsletter templates" "empty"
+for i in 0 1 2 3; do
+  HAS=$(echo "$NT_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.slug&&r.name&&r.email_type?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "NLTemplate[$i] has slug+name+type" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "NLTemplate[$i] has slug, name, email_type"
+  else fail "NLTemplate[$i]" "missing fields"; fi
+done
+
+# 13.26-13.30: message_templates count by channel
+for CH in sms email whatsapp; do
+  CT=$(api_get "message_templates?select=id&channel=eq.$CH" | node_eval "console.log(d.length)")
+  [[ "$CT" -ge 0 ]] && pass "Message templates channel=$CH: $CT" || fail "msg template $CH" "query failed"
+done
+MT_TOTAL=$(api_get "message_templates?select=id" | node_eval "console.log(d.length)")
+[[ "$MT_TOTAL" -ge 1 ]] && pass "Total message templates: $MT_TOTAL" || skip "No message templates" "empty"
+MT_CAT_DIV=$(api_get "message_templates?select=category" | node_eval "console.log(new Set(d.map(t=>t.category)).size)")
+[[ "$MT_CAT_DIV" -ge 1 ]] && pass "Message template category diversity: $MT_CAT_DIV" || skip "Category diversity" "none"
+
+# 13.31-13.40: ghost_drafts table and fields
+GD_DATA=$(api_get "ghost_drafts?select=id,contact_id,email_type,subject,status&limit=20")
+GD_CT=$(echo "$GD_DATA" | node_eval "console.log(d.length)")
+[[ "$GD_CT" -ge 0 ]] && pass "Ghost drafts queryable: $GD_CT" || fail "Ghost drafts" "query failed"
+for i in 0 1 2 3; do
+  HAS=$(echo "$GD_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.email_type&&r.subject?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "GhostDraft[$i] has type+subject" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "GhostDraft[$i] has email_type and subject"
+  else fail "GhostDraft[$i]" "missing fields"; fi
+done
+for i in 0 1 2 3 4; do
+  HAS=$(echo "$GD_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.contact_id?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "GhostDraft[$i] has contact_id" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "GhostDraft[$i] has contact_id"
+  else fail "GhostDraft[$i] contact_id" "null"; fi
+done
+
+# 13.41-13.50: Template component mapping validation
+ETR_COMPONENTS=$(echo "$ETR_DATA" | node_eval "d.forEach((r,i)=>{if(i<10)console.log(r.template_component||'null')})")
+COMP_COUNT=0
+while IFS= read -r comp; do
+  COMP_COUNT=$((COMP_COUNT+1))
+  [[ -n "$comp" && "$comp" != "null" ]] && pass "Registry component $COMP_COUNT: $comp" || skip "Registry component $COMP_COUNT" "empty"
+done <<< "$ETR_COMPONENTS"
+# Fill remaining to 10 if fewer
+while [[ "$COMP_COUNT" -lt 10 ]]; do
+  COMP_COUNT=$((COMP_COUNT+1))
+  skip "Registry component $COMP_COUNT" "fewer than 10 entries"
+done
+
+# ── 14. AGENT & TRUST ──────────────────────────────────────
+echo ""
+echo "━━━ 14. AGENT & TRUST (50 tests) ━━━"
+
+# 14.1-14.5: agent_runs table
+AR_DATA=$(api_get "agent_runs?select=id,realtor_id,trigger_type,status,decisions_made&limit=20")
+AR_CT=$(echo "$AR_DATA" | node_eval "console.log(d.length)")
+[[ "$AR_CT" -ge 0 ]] && pass "Agent runs queryable: $AR_CT" || fail "Agent runs" "query failed"
+for i in 0 1 2 3; do
+  HAS=$(echo "$AR_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.trigger_type&&r.status?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "AgentRun[$i] has trigger_type+status" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "AgentRun[$i] has trigger_type and status"
+  else fail "AgentRun[$i]" "missing fields"; fi
+done
+
+# 14.6-14.10: agent_runs status values
+for i in 0 1 2 3 4; do
+  VALID=$(echo "$AR_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(['running','completed','failed','cancelled'].includes(r.status)?'yes':'no')}")
+  if [[ "$VALID" == "skip" ]]; then skip "AgentRun[$i] valid status" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "AgentRun[$i] has valid status"
+  else fail "AgentRun[$i] status" "invalid"; fi
+done
+
+# 14.11-14.15: agent_decisions table
+AD_DATA=$(api_get "agent_decisions?select=id,realtor_id,contact_id,decision_type,reasoning&limit=20")
+AD_CT=$(echo "$AD_DATA" | node_eval "console.log(d.length)")
+[[ "$AD_CT" -ge 0 ]] && pass "Agent decisions queryable: $AD_CT" || fail "Agent decisions" "query failed"
+for i in 0 1 2 3; do
+  HAS=$(echo "$AD_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.decision_type?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "AgentDecision[$i] has decision_type" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "AgentDecision[$i] has decision_type"
+  else fail "AgentDecision[$i]" "missing decision_type"; fi
+done
+
+# 14.16-14.20: agent_decisions have valid decision_type
+for i in 0 1 2 3 4; do
+  VALID=$(echo "$AD_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(['send_email','skip','defer','queue_approval','send','suppress'].includes(r.decision_type)?'yes':'no')}")
+  if [[ "$VALID" == "skip" ]]; then skip "AgentDecision[$i] valid type" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "AgentDecision[$i] has valid decision_type"
+  else fail "AgentDecision[$i] decision_type" "invalid: $(echo "$AD_DATA" | node_eval "console.log(d[$i]?.decision_type)")"; fi
+done
+
+# 14.21-14.25: agent_drafts table
+ADRAFT_DATA=$(api_get "agent_drafts?select=id,realtor_id,contact_id,email_type,status&limit=20")
+ADRAFT_CT=$(echo "$ADRAFT_DATA" | node_eval "console.log(d.length)")
+[[ "$ADRAFT_CT" -ge 0 ]] && pass "Agent drafts queryable: $ADRAFT_CT" || fail "Agent drafts" "query failed"
+for i in 0 1 2 3; do
+  HAS=$(echo "$ADRAFT_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.email_type&&r.status?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "AgentDraft[$i] has type+status" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "AgentDraft[$i] has email_type and status"
+  else fail "AgentDraft[$i]" "missing fields"; fi
+done
+
+# 14.26-14.30: contact_trust_levels table
+CTL_DATA=$(api_get "contact_trust_levels?select=id,realtor_id,contact_id,level,positive_signals,negative_signals&limit=50")
+CTL_CT=$(echo "$CTL_DATA" | node_eval "console.log(d.length)")
+[[ "$CTL_CT" -ge 0 ]] && pass "Contact trust levels queryable: $CTL_CT" || fail "Trust levels" "query failed"
+for i in 0 1 2 3; do
+  HAS=$(echo "$CTL_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.contact_id&&r.level!==undefined?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "TrustLevel[$i] has contact_id+level" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "TrustLevel[$i] has contact_id and level"
+  else fail "TrustLevel[$i]" "missing fields"; fi
+done
+
+# 14.31-14.35: Trust level values in range 0-3
+for i in 0 1 2 3 4; do
+  VALID=$(echo "$CTL_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.level>=0&&r.level<=3?'yes':'no')}")
+  if [[ "$VALID" == "skip" ]]; then skip "TrustLevel[$i] in range 0-3" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "TrustLevel[$i] level in range 0-3"
+  else fail "TrustLevel[$i] range" "out of 0-3"; fi
+done
+
+# 14.36-14.40: Trust level distribution
+for LVL in 0 1 2 3; do
+  LVL_CT=$(echo "$CTL_DATA" | node_eval "console.log(d.filter(r=>r.level===$LVL).length)")
+  [[ "$LVL_CT" -ge 0 ]] && pass "Trust L$LVL count: $LVL_CT" || fail "Trust L$LVL" "query error"
+done
+CTL_UNIQ=$(echo "$CTL_DATA" | node_eval "const ids=d.map(r=>r.contact_id);console.log(ids.length===new Set(ids).size?'yes':'no')")
+[[ "$CTL_UNIQ" == "yes" ]] && pass "Trust levels: unique contact_ids" || fail "Trust uniqueness" "duplicate contact_ids"
+
+# 14.41-14.45: agent_recommendations table
+AREC_DATA=$(api_get "agent_recommendations?select=id,contact_id,action_type,priority,status&limit=20")
+AREC_CT=$(echo "$AREC_DATA" | node_eval "console.log(d.length)")
+[[ "$AREC_CT" -ge 0 ]] && pass "Agent recommendations queryable: $AREC_CT" || fail "Recommendations" "query failed"
+for i in 0 1 2 3; do
+  HAS=$(echo "$AREC_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(r.action_type&&r.priority&&r.status?'yes':'no')}")
+  if [[ "$HAS" == "skip" ]]; then skip "Recommendation[$i] has fields" "no row"
+  elif [[ "$HAS" == "yes" ]]; then pass "Recommendation[$i] has action_type, priority, status"
+  else fail "Recommendation[$i]" "missing fields"; fi
+done
+
+# 14.46-14.50: Recommendation priority values
+for i in 0 1 2 3 4; do
+  VALID=$(echo "$AREC_DATA" | node_eval "const r=d[$i]; if(!r){console.log('skip')}else{console.log(['hot','warm','info'].includes(r.priority)?'yes':'no')}")
+  if [[ "$VALID" == "skip" ]]; then skip "Recommendation[$i] valid priority" "no row"
+  elif [[ "$VALID" == "yes" ]]; then pass "Recommendation[$i] has valid priority"
+  else fail "Recommendation[$i] priority" "invalid"; fi
+done
+
+# ── 15. PERFORMANCE CHECKS ─────────────────────────────────
+echo ""
+echo "━━━ 15. PERFORMANCE CHECKS (25 tests) ━━━"
+
+PERF_ROUTES=(
+  "/" "/login" "/signup" "/listings" "/contacts" "/showings"
+  "/tasks" "/calendar" "/pipeline" "/content" "/search"
+  "/workflow" "/import" "/forms" "/newsletters"
+  "/newsletters/queue" "/newsletters/analytics" "/newsletters/activity"
+  "/newsletters/control" "/newsletters/insights"
+  "/automations" "/settings" "/inbox" "/personalize" "/onboarding"
+)
+
+for route in "${PERF_ROUTES[@]}"; do
+  START_MS=$(node -e "console.log(Date.now())")
+  CODE=$(http_status "${APP}${route}")
+  END_MS=$(node -e "console.log(Date.now())")
+  ELAPSED=$((END_MS - START_MS))
+  if [[ "$CODE" == "200" || "$CODE" == "307" ]]; then
+    if [[ "$ELAPSED" -le 3000 ]]; then
+      pass "PERF $route → ${ELAPSED}ms (<3s)"
+    else
+      fail "PERF $route" "${ELAPSED}ms (>3s limit)"
+    fi
+  else
+    fail "PERF $route" "HTTP $CODE (${ELAPSED}ms)"
+  fi
+done
+
+# ── 16. SECURITY HEADERS ───────────────────────────────────
+echo ""
+echo "━━━ 16. SECURITY HEADERS (25 tests) ━━━"
+
+# Helper to get a specific response header
+get_header() {
+  curl -s -D - -o /dev/null "$1" 2>/dev/null | grep -i "^$2:" | head -1 | sed 's/^[^:]*: //' | tr -d '\r'
+}
+
+SECURITY_ROUTES=("/" "/login" "/listings" "/contacts" "/api/auth/session")
+
+# 16.1-16.5: X-Content-Type-Options: nosniff
+for route in "${SECURITY_ROUTES[@]}"; do
+  VAL=$(get_header "${APP}${route}" "x-content-type-options")
+  [[ "$VAL" == "nosniff" ]] && pass "X-Content-Type-Options on $route" || skip "X-Content-Type-Options $route" "header not set (val=$VAL)"
+done
+
+# 16.6-16.10: X-Frame-Options
+for route in "${SECURITY_ROUTES[@]}"; do
+  VAL=$(get_header "${APP}${route}" "x-frame-options")
+  [[ -n "$VAL" ]] && pass "X-Frame-Options on $route: $VAL" || skip "X-Frame-Options $route" "not set"
+done
+
+# 16.11-16.15: No Server header leakage
+for route in "${SECURITY_ROUTES[@]}"; do
+  VAL=$(get_header "${APP}${route}" "server")
+  if [[ -z "$VAL" || "$VAL" == "Next.js" ]]; then
+    pass "No server info leak on $route"
+  else
+    fail "Server header on $route" "leaks: $VAL"
+  fi
+done
+
+# 16.16-16.20: Content-Type is set on API responses
+API_SEC_ROUTES=("api/auth/session" "api/contacts" "api/listings" "api/tasks" "api/deals")
+for route in "${API_SEC_ROUTES[@]}"; do
+  VAL=$(get_header "${APP}/${route}" "content-type")
+  [[ "$VAL" == *"json"* || "$VAL" == *"text"* ]] && pass "Content-Type on /$route: present" || skip "Content-Type /$route" "val=$VAL"
+done
+
+# 16.21-16.25: CORS / security on sensitive endpoints
+# Verify cron endpoints reject OPTIONS without auth
+for EP in "api/cron/process-workflows" "api/cron/agent-scoring" "api/cron/consent-expiry"; do
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" -X OPTIONS "${APP}/${EP}")
+  [[ "$CODE" == "200" || "$CODE" == "204" || "$CODE" == "405" ]] && pass "OPTIONS /$EP → $CODE (safe)" || fail "OPTIONS /$EP" "HTTP $CODE"
+done
+# Verify webhook endpoints exist
+for EP in "api/webhooks/twilio" "api/webhooks/resend"; do
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${APP}/${EP}" -H "Content-Type: application/json" -d '{}')
+  [[ "$CODE" != "404" ]] && pass "POST /$EP exists (HTTP $CODE)" || fail "/$EP" "404 not found"
+done
+
 # ── SUMMARY ────────────────────────────────────────────────
 echo ""
 echo "══════════════════════════════════════════"

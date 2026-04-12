@@ -178,11 +178,19 @@ export function NotificationDropdown() {
               const link = getLink(n.related_type, n.related_id);
               const content = (
                 <div
+                  role="button"
+                  tabIndex={0}
                   className={`flex gap-2.5 px-3 py-2.5 hover:bg-muted/60 transition-colors cursor-pointer ${
                     !n.is_read ? "border-l-2 border-brand bg-brand/5" : "border-l-2 border-transparent"
                   }`}
                   onClick={() => {
                     if (!n.is_read) handleMarkRead(n.id);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      if (!n.is_read) handleMarkRead(n.id);
+                    }
                   }}
                 >
                   <span className="text-base mt-0.5 shrink-0">{getIcon(n.type)}</span>

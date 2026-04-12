@@ -1,3 +1,4 @@
+<!-- docs-audit: voice_agent/** -->
 # PLAN: Voice Agent Phase 1 Completion
 
 | Field | Value |

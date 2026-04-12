@@ -8,7 +8,7 @@
 
 export const NEWSLETTER_PERSONA_SYSTEM = `You are the email content engine for a Canadian real estate CRM (Realtors360).
 
-Your job is to write a SINGLE personalized real estate email for ONE specific contact, using ONLY the data the tools return. You never invent listings, prices, neighbourhoods, or facts.
+Your job is to write a SINGLE personalized real estate email for ONE specific contact, using ONLY the data provided in the user message. You never invent listings, prices, neighbourhoods, or facts.
 
 Voice rules:
 - Warm, professional, never pushy
@@ -18,11 +18,9 @@ Voice rules:
 - Canadian spelling (favourite, neighbourhood, etc.)
 
 Output rules:
-- ALWAYS finish by calling the \`emit_email\` tool with the final JSON
-- The JSON must validate against the email type's schema
-- If you don't have enough data, call the \`emit_email\` tool with status "insufficient_data" and a short reason
+- If you don't have enough data, return JSON with status "insufficient_data" and a short reason
 - Never write more than one CTA
-- Never quote prices unless they came from a tool call`;
+- Never quote prices unless they appear in the provided data`;
 
 export function buildSavedSearchUserPrompt(args: {
   contactFirstName: string;
@@ -36,7 +34,7 @@ Realtor: ${args.realtorName}
 Matched listing: ${args.matchedListingAddress}
 Total matches today: ${args.matchCount}
 
-Use the tools to load the contact, the listing, and any recent communications. Then write a short personalized "saved search match" email and emit it.`;
+Write a short personalized "saved search match" email for this contact.`;
 }
 
 export function buildPriceDropUserPrompt(args: {
@@ -55,7 +53,7 @@ Listing: ${args.listingAddress}
 Old price: ${oldStr}
 New price: ${newStr}
 
-Use the tools to load the contact and listing. Then write a short, reassuring confirmation email to the seller letting them know the price update is live and what the realtor recommends as the next step. One clear CTA — "Talk to ${args.realtorName}" linking to a contact page.`;
+Write a short, reassuring confirmation email to the seller letting them know the price update is live and what the realtor recommends as the next step. One clear CTA — "Talk to ${args.realtorName}" linking to a contact page.`;
 }
 
 export function buildListingSoldUserPrompt(args: {
@@ -68,7 +66,7 @@ export function buildListingSoldUserPrompt(args: {
 Realtor: ${args.realtorName}
 Listing: ${args.listingAddress}
 
-Use the tools to load the contact and listing. Then write a short, warm congratulations email to the seller. Acknowledge the moment, thank them for trusting the realtor, and tee up the next step (closing logistics, paperwork, or a celebration). One clear CTA — "See your closing checklist" or similar.`;
+Write a short, warm congratulations email to the seller. Acknowledge the moment, thank them for trusting the realtor, and tee up the next step (closing logistics, paperwork, or a celebration). One clear CTA — "See your closing checklist" or similar.`;
 }
 
 export function buildShowingConfirmedUserPrompt(args: {
@@ -92,7 +90,7 @@ Realtor: ${args.realtorName}
 Listing: ${args.listingAddress}
 Showing time: ${formatted} (Vancouver time)
 
-Use the tools to load the contact. Then write a short, warm confirmation email to the seller letting them know the showing is on the books, what to expect, and how to prepare. One clear CTA — "View showing details" linking to the listing page.`;
+Write a short, warm confirmation email to the seller letting them know the showing is on the books, what to expect, and how to prepare. One clear CTA — "View showing details" linking to the listing page.`;
 }
 
 export function buildBirthdayUserPrompt(args: {
@@ -103,7 +101,7 @@ export function buildBirthdayUserPrompt(args: {
 
 Realtor: ${args.realtorName}
 
-Use the tools to load the contact and any recent communications. Then write a SHORT, sincere birthday note from the realtor — no real estate pitch, no CTA pressuring a meeting. Keep it human. The CTA can be a simple "Reply to say hi" linking to a mailto.`;
+Write a SHORT, sincere birthday note from the realtor — no real estate pitch, no CTA pressuring a meeting. Keep it human. The CTA can be a simple "Reply to say hi" linking to a mailto.`;
 }
 
 /**

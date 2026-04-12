@@ -1,4 +1,3 @@
-export const dynamic = "force-dynamic";
 
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { notFound } from "next/navigation";

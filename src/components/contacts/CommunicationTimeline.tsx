@@ -54,6 +54,9 @@ const FILTERS: { key: FilterType; label: string }[] = [
   { key: "voice", label: "Voice" },
 ];
 
+const INITIAL_VISIBLE = 10;
+const LOAD_MORE_INCREMENT = 10;
+
 export function CommunicationTimeline({
   contactId,
   communications,
@@ -64,6 +67,7 @@ export function CommunicationTimeline({
   const [noteBody, setNoteBody] = useState("");
   const [sending, setSending] = useState(false);
   const [filter, setFilter] = useState<FilterType>("all");
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: communications.length };
@@ -73,13 +77,16 @@ export function CommunicationTimeline({
     return c;
   }, [communications]);
 
-  const filtered = useMemo(
+  const allFiltered = useMemo(
     () =>
       filter === "all"
         ? communications
         : communications.filter((c) => c.channel === filter),
     [communications, filter]
   );
+
+  const filtered = allFiltered.slice(0, visibleCount);
+  const hasMore = allFiltered.length > visibleCount;
 
   async function handleAddNote() {
     if (!noteBody.trim()) return;
@@ -102,7 +109,7 @@ export function CommunicationTimeline({
               <button
                 key={f.key}
                 type="button"
-                onClick={() => setFilter(f.key)}
+                onClick={() => { setFilter(f.key); setVisibleCount(INITIAL_VISIBLE); }}
                 className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
                   isActive
                     ? "bg-brand text-white"
@@ -196,6 +203,16 @@ export function CommunicationTimeline({
             );
           })}
         </div>
+
+        {hasMore && (
+          <button
+            type="button"
+            onClick={() => setVisibleCount((v) => v + LOAD_MORE_INCREMENT)}
+            className="w-full py-2 text-xs font-medium text-brand hover:text-brand-dark transition-colors border border-border rounded-md hover:bg-muted/50"
+          >
+            Load more ({allFiltered.length - visibleCount} remaining)
+          </button>
+        )}
 
         <div className="border-t pt-4">
           <p className="text-sm font-medium mb-2">Add Note</p>

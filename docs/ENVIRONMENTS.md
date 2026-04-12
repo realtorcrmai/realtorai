@@ -1,3 +1,4 @@
+<!-- docs-audit: vercel.json, .env.local.example, supabase/migrations/* -->
 # Environments — Realtors360 CRM
 
 > **Source of truth** for which Supabase projects, Vercel environments, and branches map to dev vs production. If you're a developer or AI agent starting work on this repo, **read this first**.
@@ -235,6 +236,22 @@ The encrypted `.env.vault` was last re-encrypted on **2026-04-01** — before th
 | Realtors360 Python form server | BCREA form rendering | Local only (`localhost:8767`) | Not deployed to cloud |
 
 **When you add a new external service**, decide up-front whether it needs separate dev vs prod credentials (e.g., Stripe test mode vs live mode) and set both env scopes accordingly.
+
+---
+
+## Logo Static Assets
+
+The logo animation system uses pure HTML/CSS/JS files in `public/` — no npm dependencies or env vars needed.
+
+| File | Served at | Notes |
+|------|-----------|-------|
+| `public/logo-animated.html` | `/logo-animated.html` | Full 3D animated login logo (420px native) |
+| `public/logo-sidebar.html` | `/logo-sidebar.html` | Lightweight sidebar logo (120px native, GPU-optimized) |
+| `public/favicon.svg` | `/favicon.svg` | Browser tab favicon |
+
+These files are loaded via `<iframe>` by the `LogoVideo` React component (`src/components/brand/Logo.tsx`). They deploy automatically with the Next.js build.
+
+**Middleware whitelist:** `src/middleware.ts` has `pathname.startsWith("/logo-")` in the public routes list, preventing auth redirects when iframes fetch these files. The `config.matcher` also excludes them entirely from middleware processing. No changes needed on new deploys.
 
 ---
 

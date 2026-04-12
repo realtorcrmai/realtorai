@@ -8,10 +8,10 @@ import {
   Trash2,
   X,
   Check,
-  Loader2,
   CalendarDays,
   RefreshCw,
 } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { addContactDate, updateContactDate, deleteContactDate } from "@/actions/contacts";
 import { formatDistanceToNow, differenceInDays, isBefore, addYears } from "date-fns";
 import type { ContactDate } from "@/types";
@@ -293,7 +293,7 @@ export function ImportantDatesPanel({
               className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
               {isPending ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <LogoSpinner size={12} />
               ) : (
                 <Check className="h-3 w-3" />
               )}

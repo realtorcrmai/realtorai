@@ -2,7 +2,6 @@ import { IntegrationSettings } from "@/components/settings/IntegrationSettings";
 import { FeatureFlagsPanel } from "@/components/settings/FeatureFlagsPanel";
 import { ThemeSwitcher } from "@/components/settings/ThemeSwitcher";
 
-export const dynamic = "force-dynamic";
 
 export default function SettingsPage() {
   return (

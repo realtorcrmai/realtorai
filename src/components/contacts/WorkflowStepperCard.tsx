@@ -10,8 +10,8 @@ import {
   Play,
   X,
   Clock,
-  Loader2,
 } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { updateEnrollment } from "@/actions/workflows";
@@ -259,7 +259,7 @@ export function WorkflowStepperCard({
               title="Pause"
             >
               {isPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <LogoSpinner size={14} />
               ) : (
                 <Pause className="h-3.5 w-3.5" />
               )}
@@ -275,7 +275,7 @@ export function WorkflowStepperCard({
               title="Resume"
             >
               {isPending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <LogoSpinner size={14} />
               ) : (
                 <Play className="h-3.5 w-3.5" />
               )}

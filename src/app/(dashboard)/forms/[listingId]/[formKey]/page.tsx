@@ -3,7 +3,6 @@ import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { notFound } from "next/navigation";
 import { PDFFormEditor } from "@/components/forms/PDFFormEditor";
 
-export const dynamic = "force-dynamic";
 
 export default async function FormEditorPage({
   params,

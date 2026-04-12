@@ -1,3 +1,4 @@
+<!-- docs-audit: src/lib/rag/** -->
 # RAG System — Technical Design Specification
 
 **Version:** 1.0

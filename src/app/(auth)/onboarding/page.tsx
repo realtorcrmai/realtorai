@@ -14,7 +14,6 @@ import {
   Building2,
   ArrowRight,
   ArrowLeft,
-  Loader2,
   Check,
   LayoutDashboard,
   Mail,
@@ -36,6 +35,7 @@ import {
   sendTeamInvite,
   linkReferral,
 } from "@/actions/onboarding";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { MLSConnectionStep } from "@/components/onboarding/MLSConnectionStep";
 import { CSVImportStep, type ReferralSuggestion } from "@/components/onboarding/CSVImportStep";
 import { CelebrationScreen } from "@/components/onboarding/CelebrationScreen";
@@ -61,7 +61,7 @@ function StepAutoComplete({ completeOnboarding }: { completeOnboarding: (dest: s
 
   return (
     <div className="text-center space-y-4 py-8">
-      <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+      <LogoSpinner size={32} />
       <h2 className="text-xl font-bold">Setting up your dashboard...</h2>
       <p className="text-sm text-muted-foreground">Just a moment</p>
     </div>
@@ -328,7 +328,7 @@ export default function OnboardingPage() {
   if (initialLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f4f2ff] to-[#e8e4ff]">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <LogoSpinner size={24} />
       </div>
     );
   }
@@ -387,7 +387,7 @@ export default function OnboardingPage() {
                       )}
                       {loading && (
                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                          <Loader2 className="h-6 w-6 animate-spin text-white" />
+                          <LogoSpinner size={24} />
                         </div>
                       )}
                     </button>
@@ -493,7 +493,7 @@ export default function OnboardingPage() {
                             <p className="text-sm font-semibold">Import from Google</p>
                             <p className="text-xs text-gray-500">Upload .csv from contacts.google.com</p>
                           </div>
-                          {fetchingContacts && <Loader2 className="h-4 w-4 animate-spin text-[#4f35d2] shrink-0" />}
+                          {fetchingContacts && <LogoSpinner size={16} />}
                           <input type="file" accept=".csv" onChange={handleGoogleCsvUpload} className="hidden" />
                         </label>
 
@@ -508,7 +508,7 @@ export default function OnboardingPage() {
                             <p className="text-sm font-semibold">Import from Apple</p>
                             <p className="text-xs text-gray-500">Upload .vcf from iCloud or iPhone</p>
                           </div>
-                          {fetchingContacts && <Loader2 className="h-4 w-4 animate-spin text-[#4f35d2] shrink-0" />}
+                          {fetchingContacts && <LogoSpinner size={16} />}
                           <input type="file" accept=".vcf" onChange={handleVcardUpload} className="hidden" />
                         </label>
                       </div>

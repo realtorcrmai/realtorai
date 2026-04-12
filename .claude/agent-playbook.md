@@ -68,6 +68,7 @@ These apply to EVERY task. Violation = automatic revert.
 | HC-15 | **Think before acting.** Read the full request twice. Consider 2+ approaches. Re-read output before presenting. Speed is never more important than correctness. |
 | HC-16 | **No MD file >550 lines.** Split into focused modules. Never delete functionality — restructure into smaller files. |
 | HC-17 | **Multi-task prompts: create task list first, verify at end.** Decompose → map dependencies → reorder → numbered task list → work in order → verify all complete at end. |
+| HC-18 | **Update docs before committing.** If you added/changed a script, env var, directory, service, or page — update `CONTRIBUTING.md` and/or `docs/ENVIRONMENTS.md`. Run `node scripts/audit-docs.mjs` before every PR. CI blocks merge if docs are stale. |
 
 ### 1.2 Feature Evaluation & Market Fit
 

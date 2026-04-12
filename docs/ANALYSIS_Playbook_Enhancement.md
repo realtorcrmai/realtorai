@@ -1,3 +1,4 @@
+<!-- docs-audit: .claude/agent-playbook.md -->
 # Agent Playbook Enhancement Analysis
 
 > **Date:** March 30, 2026
