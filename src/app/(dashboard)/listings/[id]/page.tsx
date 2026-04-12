@@ -282,14 +282,33 @@ export default async function ListingDetailPage({
             </CardContent>
           </Card>
         </div>
+
+        {/* Mobile: collapsible panels (hidden on desktop) */}
+        <div className="lg:hidden border-t border-border mt-4">
+          <details className="group">
+            <summary className="flex items-center justify-between p-4 cursor-pointer text-sm font-semibold text-foreground hover:bg-muted/50 transition-colors">
+              <span>📋 Documents & Compliance</span>
+              <span className="text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <div className="p-4 space-y-4 border-t border-border">
+              <SellerIdentitiesPanel
+                listingId={id}
+                initialIdentities={(sellerIdentities ?? []) as never}
+              />
+              <FormReadinessPanel
+                listingId={id}
+                documents={(documents ?? []) as ListingDocument[]}
+                listing={listing}
+                seller={seller}
+                formStatuses={formStatuses}
+              />
+            </div>
+          </details>
+        </div>
       </div>
 
-      {/* RIGHT PANEL — fixed, own scroll */}
+      {/* Desktop: fixed right panel */}
       <aside className="hidden lg:block w-[340px] shrink-0 border-l overflow-y-auto p-6 bg-card/30 space-y-4">
-        {/* FINTRAC seller identity panel — rendered first so missing
-            compliance data is the first thing a realtor sees on an
-            unverified listing. See src/components/listings/
-            SellerIdentitiesPanel.tsx for the form. */}
         <SellerIdentitiesPanel
           listingId={id}
           initialIdentities={(sellerIdentities ?? []) as never}

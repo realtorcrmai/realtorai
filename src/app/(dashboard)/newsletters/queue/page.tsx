@@ -117,11 +117,13 @@ export default async function ApprovalQueuePage() {
                     </button>
                   </form>
                   <a
-                    href={`/newsletters/queue/${draft.id}/edit`}
+                    href={`/api/newsletters/preview/${draft.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
-                    aria-label={`Edit email to ${contactName}`}
+                    aria-label={`Preview email to ${contactName}`}
                   >
-                    ✏️ Edit
+                    👁 Preview
                   </a>
                 </div>
               </div>

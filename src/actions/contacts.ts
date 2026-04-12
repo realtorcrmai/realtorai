@@ -9,7 +9,7 @@ import { enforceConsistency } from "@/lib/contact-consistency";
 import { triggerIngest } from "@/lib/rag/realtime-ingest";
 import { createNotification } from "@/lib/notifications";
 
-export async function getContactCommunications(contactId: string, limit = 5) {
+export async function getContactCommunications(contactId: string, limit = 50) {
   const tc = await getAuthenticatedTenantClient();
   const { data } = await tc
     .from("communications")
@@ -923,4 +923,71 @@ export async function setLifecycleStage(
   } catch (err) {
     return { error: String(err) };
   }
+}
+
+// ── Bulk Operations ──────────────────────────────────────────────────────
+
+export async function bulkUpdateContactStage(contactIds: string[], stage: string) {
+  const tc = await getAuthenticatedTenantClient();
+  const { error } = await tc.raw
+    .from("contacts")
+    .update({ stage_bar: stage, updated_at: new Date().toISOString() })
+    .eq("realtor_id", tc.realtorId)
+    .in("id", contactIds);
+
+  if (error) return { error: error.message };
+  revalidatePath("/contacts");
+  return { error: null, updated: contactIds.length };
+}
+
+export async function bulkDeleteContacts(contactIds: string[]) {
+  const tc = await getAuthenticatedTenantClient();
+
+  // Check for active listings linked to any of these contacts
+  const { data: linkedListings } = await tc.raw
+    .from("listings")
+    .select("id, seller_id")
+    .eq("realtor_id", tc.realtorId)
+    .in("seller_id", contactIds)
+    .in("status", ["active", "pending", "conditional"]);
+
+  if (linkedListings && linkedListings.length > 0) {
+    return { error: `Cannot delete: ${linkedListings.length} contact(s) have active listings.` };
+  }
+
+  const { error } = await tc.raw
+    .from("contacts")
+    .delete()
+    .eq("realtor_id", tc.realtorId)
+    .in("id", contactIds);
+
+  if (error) return { error: error.message };
+  revalidatePath("/contacts");
+  return { error: null, deleted: contactIds.length };
+}
+
+export async function bulkExportContacts(contactIds: string[]) {
+  const tc = await getAuthenticatedTenantClient();
+  const { data } = await tc.raw
+    .from("contacts")
+    .select("name, email, phone, type, stage_bar, lead_status, created_at")
+    .eq("realtor_id", tc.realtorId)
+    .in("id", contactIds);
+
+  if (!data) return { error: "Failed to fetch contacts", csv: "" };
+
+  const headers = ["Name", "Email", "Phone", "Type", "Stage", "Lead Status", "Created"];
+  const escapeField = (val: unknown) => {
+    const str = String(val ?? "");
+    // Prevent CSV formula injection and handle special characters
+    if (/[,"\n\r]/.test(str) || /^[=+@\-]/.test(str)) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+  const rows = data.map((c: Record<string, unknown>) =>
+    [c.name, c.email, c.phone, c.type, c.stage_bar, c.lead_status, c.created_at].map(escapeField).join(",")
+  );
+  const csv = [headers.join(","), ...rows].join("\n");
+  return { error: null, csv };
 }

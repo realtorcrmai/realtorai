@@ -680,113 +680,135 @@ export default async function ContactDetailPage({
           />
   );
 
-  // Build right panel JSX
-  const rightPanelJsx = (
-      <aside className="hidden lg:block w-[320px] shrink-0 border-l border-border p-4 bg-card overflow-y-auto space-y-4">
-        {/* Engagement — 1st section */}
-        {intel && (
-          <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
-            <IntelligencePanel
-              intelligence={intel}
-              totalEmails={newslettersWithEvents.length}
-            />
-          </div>
-        )}
-
-        {/* Prospect Controls — journey pause/resume, trust, frequency */}
-        {(contactJourney || contact.type === "buyer" || contact.type === "seller") && (
-          <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-brand pl-4 rounded-sm shrink-0">
-            <ProspectControls
-              contactId={id}
-              contactName={contact.name}
-              journey={contactJourney as { id: string; journey_type: string; current_phase: string; is_paused: boolean; send_mode: string; next_email_at: string | null; trust_level: number } | null}
-              aiContextNotes={(contact as Record<string, unknown>).ai_context_notes as string | null}
-            />
-          </div>
-        )}
-
-        {/* Quick Log — log calls, texts, meetings */}
+  // Right panel inner content — shared between mobile collapsible and desktop aside
+  const rightPanelContentJsx = (
+    <>
+      {/* Engagement — 1st section */}
+      {intel && (
         <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
-          <QuickLogForm
+          <IntelligencePanel
+            intelligence={intel}
+            totalEmails={newslettersWithEvents.length}
+          />
+        </div>
+      )}
+
+      {/* Prospect Controls — journey pause/resume, trust, frequency */}
+      {(contactJourney || contact.type === "buyer" || contact.type === "seller") && (
+        <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-brand pl-4 rounded-sm shrink-0">
+          <ProspectControls
             contactId={id}
             contactName={contact.name}
-            recentEmails={(newslettersWithEvents ?? [])
-              .filter((nl: Record<string, unknown>) => nl.status === "sent")
-              .slice(0, 5)
-              .map((nl: Record<string, unknown>) => ({
-                id: nl.id as string,
-                subject: nl.subject as string,
-                sent_at: nl.sent_at as string | null,
-              }))}
+            journey={contactJourney as { id: string; journey_type: string; current_phase: string; is_paused: boolean; send_mode: string; next_email_at: string | null; trust_level: number } | null}
+            aiContextNotes={(contact as Record<string, unknown>).ai_context_notes as string | null}
           />
         </div>
+      )}
 
-        {/* Network Stats — 2nd section */}
-        <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
-          <NetworkStatsCard
-            connectionCount={relationships.length}
-            referralCount={allReferrals.length}
-            networkValue={networkValue}
-            dataScore={dataScore}
-            demographics={demographics}
-            dateCount={(contactDates ?? []).length}
-            hasPreferences={!!(buyerPreferences || sellerPreferences)}
-          />
-        </div>
+      {/* Quick Log — log calls, texts, meetings */}
+      <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
+        <QuickLogForm
+          contactId={id}
+          contactName={contact.name}
+          recentEmails={(newslettersWithEvents ?? [])
+            .filter((nl: Record<string, unknown>) => nl.status === "sent")
+            .slice(0, 5)
+            .map((nl: Record<string, unknown>) => ({
+              id: nl.id as string,
+              subject: nl.subject as string,
+              sent_at: nl.sent_at as string | null,
+            }))}
+        />
+      </div>
 
-        {/* Referrals */}
-        <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-brand pl-4 rounded-sm shrink-0">
-          <ReferralsPanel
-            contact={contact}
-            referredByName={referredByName}
-            referralsAsReferrer={(referralsAsReferrer ?? []) as ReferralRow[]}
-            referralsAsReferred={(referralsAsReferred ?? []) as ReferralRow[]}
-            allContacts={(allContacts ?? []) as { id: string; name: string }[]}
-          />
-        </div>
+      {/* Network Stats — 2nd section */}
+      <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
+        <NetworkStatsCard
+          connectionCount={relationships.length}
+          referralCount={allReferrals.length}
+          networkValue={networkValue}
+          dataScore={dataScore}
+          demographics={demographics}
+          dateCount={(contactDates ?? []).length}
+          hasPreferences={!!(buyerPreferences || sellerPreferences)}
+        />
+      </div>
 
-        {/* Relationships — grows to fill remaining space */}
-        <div className="pt-3 border-l-4 border-l-brand pl-4 rounded-sm">
-          <RelationshipManager
-            contactId={contact.id}
-            relationships={relationships}
-            allContacts={allContacts?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })) ?? []}
-          />
+      {/* Referrals */}
+      <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-brand pl-4 rounded-sm shrink-0">
+        <ReferralsPanel
+          contact={contact}
+          referredByName={referredByName}
+          referralsAsReferrer={(referralsAsReferrer ?? []) as ReferralRow[]}
+          referralsAsReferred={(referralsAsReferred ?? []) as ReferralRow[]}
+          allContacts={(allContacts ?? []) as { id: string; name: string }[]}
+        />
+      </div>
 
-          {/* Contextual Tips — fills remaining space when sections are empty */}
-          {(!intel || Object.keys(intel).length === 0) && relationships.length === 0 && allReferrals.length === 0 && (
-            <div className="mt-4 pt-4 border-t border-border/30">
-              <div className="rounded-xl bg-muted/50 dark:bg-muted/20 border border-border p-4">
-                <div className="flex items-start gap-2.5">
-                  <span className="text-lg">💡</span>
-                  <div>
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Build this profile</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-                      The more you add here, the smarter the AI gets. Relationships help
-                      personalize emails. Referrals track your network value. Engagement
-                      data appears after sending the first email.
-                    </p>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">1</span>
-                        <span className="text-muted-foreground">Add a <strong className="text-foreground">relationship</strong></span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">2</span>
-                        <span className="text-muted-foreground">Set <strong className="text-foreground">preferences</strong></span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">3</span>
-                        <span className="text-muted-foreground">Send first <strong className="text-foreground">email</strong></span>
-                      </div>
+      {/* Relationships — grows to fill remaining space */}
+      <div className="pt-3 border-l-4 border-l-brand pl-4 rounded-sm">
+        <RelationshipManager
+          contactId={contact.id}
+          relationships={relationships}
+          allContacts={allContacts?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })) ?? []}
+        />
+
+        {/* Contextual Tips — fills remaining space when sections are empty */}
+        {(!intel || Object.keys(intel).length === 0) && relationships.length === 0 && allReferrals.length === 0 && (
+          <div className="mt-4 pt-4 border-t border-border/30">
+            <div className="rounded-xl bg-muted/50 dark:bg-muted/20 border border-border p-4">
+              <div className="flex items-start gap-2.5">
+                <span className="text-lg">💡</span>
+                <div>
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Build this profile</h4>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                    The more you add here, the smarter the AI gets. Relationships help
+                    personalize emails. Referrals track your network value. Engagement
+                    data appears after sending the first email.
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">1</span>
+                      <span className="text-muted-foreground">Add a <strong className="text-foreground">relationship</strong></span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">2</span>
+                      <span className="text-muted-foreground">Set <strong className="text-foreground">preferences</strong></span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">3</span>
+                      <span className="text-muted-foreground">Send first <strong className="text-foreground">email</strong></span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          )}
+          </div>
+        )}
+      </div>
+    </>
+  );
+
+  // Mobile: collapsible sidebar panels (rendered inside center column by ContactDetailLayout)
+  const mobileRightPanelJsx = (
+    <div className="lg:hidden border-t border-border mt-4">
+      <details className="group">
+        <summary className="flex items-center justify-between p-4 cursor-pointer text-sm font-semibold text-foreground hover:bg-muted/50 transition-colors">
+          <span>👤 Profile & Intelligence</span>
+          <span className="text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
+        </summary>
+        <div className="p-4 bg-card space-y-4 border-t border-border overflow-y-auto max-h-[60vh]">
+          {rightPanelContentJsx}
         </div>
-      </aside>
+      </details>
+    </div>
+  );
+
+  // Desktop: fixed right panel
+  const rightPanelJsx = (
+    <aside className="hidden lg:block w-[320px] shrink-0 border-l border-border p-4 bg-card overflow-y-auto space-y-4">
+      {rightPanelContentJsx}
+    </aside>
   );
 
   return (
@@ -796,6 +818,7 @@ export default async function ContactDetailPage({
         header={headerJsx}
         tabs={tabsJsx}
         rightPanel={rightPanelJsx}
+        mobileRightPanel={mobileRightPanelJsx}
       />
     </>
   );

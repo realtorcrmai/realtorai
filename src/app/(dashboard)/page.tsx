@@ -41,6 +41,8 @@ export default async function DashboardPage() {
     { data: recentComms },
     { data: recentEvents },
     { data: pipelineDealsRaw },
+    { count: newLeadsCount },
+    { data: userProfile },
   ] = await Promise.all([
     tc.raw.from("listings").select("*", { count: "exact", head: true }).eq("realtor_id", tc.realtorId).eq("status", "active"),
     tc.raw.from("appointments").select("*", { count: "exact", head: true }).eq("realtor_id", tc.realtorId).eq("status", "requested"),
@@ -48,10 +50,12 @@ export default async function DashboardPage() {
     tc.from("tasks").select("id, title, status, priority, category, due_date").neq("status", "completed").order("created_at", { ascending: false }).limit(20),
     tc.from("contacts").select("id, stage_bar, type, newsletter_intelligence"),
     tc.from("listings").select("id, seller_id, buyer_id, list_price, sold_price, commission_rate, commission_amount, status"),
-    tc.from("listing_documents").select("listing_id, doc_type").limit(500),
+    tc.from("listing_documents").select("listing_id, doc_type"),
     tc.from("communications").select("id, direction, channel, body, created_at, contact_id, contacts(name)").order("created_at", { ascending: false }).limit(6),
     tc.from("newsletter_events").select("id, event_type, created_at, newsletters(subject, contact_id, contacts(name))").order("created_at", { ascending: false }).limit(6),
     tc.from("property_deals").select("id, name, stage, value, contact_id, contacts(name)").in("status", ["active"]).order("updated_at", { ascending: false }).limit(12),
+    tc.raw.from("contacts").select("*", { count: "exact", head: true }).eq("realtor_id", tc.realtorId).gte("created_at", new Date(new Date().setHours(0,0,0,0)).toISOString()),
+    tc.raw.from("users").select("onboarding_persona, onboarding_experience").eq("id", tc.realtorId).single(),
   ]);
 
   const activeListingIds = (pipelineListings ?? []).filter((l: any) => l.status === "active");
@@ -125,7 +129,7 @@ export default async function DashboardPage() {
     pendingShowings: pendingShowings ?? 0,
     missingDocs: listingsWithMissing.length,
     totalContacts: contacts.length,
-    newLeadsToday: 0,
+    newLeadsToday: newLeadsCount ?? 0,
   };
 
   const clientTasks = (tasks ?? []).map((t: any) => ({
@@ -251,6 +255,30 @@ export default async function DashboardPage() {
 
         <WelcomeConfetti />
         <OnboardingBanner />
+
+        {/* New agent guidance — shows for new_agent persona or < 1 year experience */}
+        {(userProfile?.onboarding_persona === "new_agent" || userProfile?.onboarding_experience === "new") && (activeListings ?? 0) === 0 && (
+          <Card className="border-l-4 border-l-brand bg-brand/5">
+            <CardContent className="p-5">
+              <p className="text-sm font-semibold text-foreground mb-1">New to real estate? Here&apos;s your roadmap</p>
+              <p className="text-xs text-muted-foreground mb-3">Follow these steps to get your first listing live:</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <Link href="/contacts/new" className="flex items-center gap-2 p-2.5 rounded-lg bg-card border hover:border-brand transition-colors">
+                  <span className="text-lg">1️⃣</span>
+                  <span className="text-xs font-medium">Add your first client</span>
+                </Link>
+                <Link href="/listings/new" className="flex items-center gap-2 p-2.5 rounded-lg bg-card border hover:border-brand transition-colors">
+                  <span className="text-lg">2️⃣</span>
+                  <span className="text-xs font-medium">Create a listing</span>
+                </Link>
+                <Link href="/newsletters" className="flex items-center gap-2 p-2.5 rounded-lg bg-card border hover:border-brand transition-colors">
+                  <span className="text-lg">3️⃣</span>
+                  <span className="text-xs font-medium">Set up email marketing</span>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Pipeline */}
         <PipelineSnapshot stages={pipelineStages} totalGCI={totalGCI} />

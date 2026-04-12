@@ -195,9 +195,9 @@ export function ContactFormContent({
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
         <Label htmlFor="name">Name</Label>
-        <Input {...register("name")} placeholder="John Doe" />
+        <Input {...register("name")} id="name" placeholder="John Doe" aria-describedby={errors.name ? "name-error" : undefined} aria-invalid={!!errors.name} />
         {errors.name && (
-          <p className="text-sm text-red-600 mt-1">
+          <p id="name-error" className="text-sm text-red-600 mt-1" role="alert">
             {errors.name.message}
           </p>
         )}
@@ -205,9 +205,9 @@ export function ContactFormContent({
 
       <div>
         <Label htmlFor="phone">Phone</Label>
-        <Input {...register("phone")} placeholder="604-555-0123" />
+        <Input {...register("phone")} id="phone" placeholder="604-555-0123" aria-describedby={errors.phone ? "phone-error" : undefined} aria-invalid={!!errors.phone} />
         {errors.phone && (
-          <p className="text-sm text-red-600 mt-1">
+          <p id="phone-error" className="text-sm text-red-600 mt-1" role="alert">
             {errors.phone.message}
           </p>
         )}
@@ -222,7 +222,7 @@ export function ContactFormContent({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label>Type</Label>
           <Select
@@ -267,7 +267,7 @@ export function ContactFormContent({
         <div className="space-y-4 rounded-lg border border-brand/20 bg-brand-muted p-4">
           <p className="text-sm font-semibold text-brand-dark">Partner Details</p>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Partner Type</Label>
               <Select
@@ -340,7 +340,7 @@ export function ContactFormContent({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label>Lead Status</Label>
           <Select

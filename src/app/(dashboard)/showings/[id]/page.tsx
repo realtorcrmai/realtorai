@@ -116,9 +116,22 @@ export default async function ShowingDetailPage({
             </CardContent>
           </Card>
         </div>
+
+        {/* Mobile: collapsible context (hidden on desktop) */}
+        <div className="lg:hidden border-t border-border mt-4">
+          <details className="group" open>
+            <summary className="flex items-center justify-between p-4 cursor-pointer text-sm font-semibold text-foreground hover:bg-muted/50 transition-colors">
+              <span>📍 Showing Details</span>
+              <span className="text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <div className="p-4 border-t border-border">
+              <ShowingContextPanel showing={showing as any} />
+            </div>
+          </details>
+        </div>
       </div>
 
-      {/* RIGHT PANEL -- fixed, own scroll */}
+      {/* Desktop: fixed right panel */}
       <aside className="hidden lg:block w-[340px] shrink-0 border-l overflow-y-auto p-6 bg-card/30">
         <ShowingContextPanel showing={showing as any} />
       </aside>

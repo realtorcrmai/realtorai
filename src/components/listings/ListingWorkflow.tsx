@@ -876,12 +876,16 @@ export function ListingWorkflow({
     [seller, listing, documents, formStatuses, showingsCount]
   );
 
-  // Completed and in-progress steps start expanded to show activity messages
+  // Completed and in-progress steps start expanded; also auto-expand the first pending step
   const initialExpanded = useMemo(() => {
     const expanded = new Set<string>();
+    let foundFirstPending = false;
     for (const step of WORKFLOW_STEPS) {
       if (statuses[step.id] !== "pending") {
         expanded.add(step.id);
+      } else if (!foundFirstPending) {
+        expanded.add(step.id);
+        foundFirstPending = true;
       }
     }
     return expanded;
@@ -953,6 +957,7 @@ export function ListingWorkflow({
                   <button
                     type="button"
                     onClick={() => hasSubsteps && toggleStep(step.id)}
+                    aria-label={`Phase ${stepNumber}: ${step.name} — Complete. ${isExpanded ? "Collapse" : "Expand"} details.`}
                     className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-transform hover:scale-110 ${styles.circle}`}
                   >
                     <Check className="h-5 w-5 text-white" />
@@ -961,6 +966,7 @@ export function ListingWorkflow({
                   <button
                     type="button"
                     onClick={() => hasSubsteps && toggleStep(step.id)}
+                    aria-label={`Phase ${stepNumber}: ${step.name} — In progress. ${isExpanded ? "Collapse" : "Expand"} details.`}
                     className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-transform hover:scale-110 ${styles.circle}`}
                   >
                     <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
@@ -973,13 +979,15 @@ export function ListingWorkflow({
                     onClick={() => hasSubsteps && toggleStep(step.id)}
                     className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 cursor-pointer ${styles.circle}`}
                     title="Complete previous steps first"
+                    aria-label={`Phase ${stepNumber}: ${step.name} — Locked. Complete previous steps first.`}
                   >
-                    <span className="text-sm">🔒</span>
+                    <span className="text-sm" role="img" aria-hidden="true">🔒</span>
                   </button>
                 ) : (
                   <button
                     type="button"
                     onClick={() => hasSubsteps && toggleStep(step.id)}
+                    aria-label={`Phase ${stepNumber}: ${step.name} — Pending. ${isExpanded ? "Collapse" : "Expand"} details.`}
                     className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 cursor-pointer transition-transform hover:scale-110 ${styles.circle}`}
                   >
                     <span className="text-sm font-medium text-muted-foreground/50">
