@@ -1,0 +1,102 @@
+{
+  "_comment": "Maps file change patterns to docs that MUST be updated. Used by audit-docs-deep.mjs and the pre-PR gate hook.",
+  "rules": [
+    {
+      "pattern": "package.json",
+      "field": "scripts",
+      "docs": ["CONTRIBUTING.md"],
+      "section": "Testing / npm scripts",
+      "reason": "New npm script must be documented for developers"
+    },
+    {
+      "pattern": ".env.local.example",
+      "docs": ["CONTRIBUTING.md", "docs/ENVIRONMENTS.md"],
+      "section": "Environment variables",
+      "reason": "New env var must be documented so devs know to set it"
+    },
+    {
+      "pattern": "src/app/(dashboard)/*/page.tsx",
+      "docs": ["CONTRIBUTING.md"],
+      "section": "Project structure",
+      "reason": "New page route must appear in the project structure tree"
+    },
+    {
+      "pattern": "src/app/api/*/route.ts",
+      "docs": ["CLAUDE.md"],
+      "section": "API routes / Project Structure",
+      "reason": "New API endpoint must be documented for agents and developers"
+    },
+    {
+      "pattern": "src/actions/*.ts",
+      "docs": ["CLAUDE.md"],
+      "section": "Server actions",
+      "reason": "New server action file should be referenced in project structure"
+    },
+    {
+      "pattern": "src/components/*/",
+      "docs": ["CONTRIBUTING.md"],
+      "section": "Project structure → components",
+      "reason": "New component directory should appear in structure tree"
+    },
+    {
+      "pattern": "src/lib/*/",
+      "docs": ["CONTRIBUTING.md"],
+      "section": "Project structure → lib",
+      "reason": "New lib directory should appear in structure tree"
+    },
+    {
+      "pattern": "src/emails/*.tsx",
+      "docs": ["CLAUDE.md"],
+      "section": "Email templates",
+      "reason": "New email template must be registered and documented"
+    },
+    {
+      "pattern": "supabase/migrations/*.sql",
+      "docs": ["docs/ENVIRONMENTS.md"],
+      "section": "Migrations / Database",
+      "reason": "New migration must be applied to BOTH dev and prod DBs"
+    },
+    {
+      "pattern": "realtors360-newsletter/**",
+      "docs": ["docs/MASTER_NEWSLETTER_PLAN.md", "CLAUDE.md"],
+      "section": "Newsletter service",
+      "reason": "Newsletter service changes must be reflected in the master plan"
+    },
+    {
+      "pattern": "voice_agent/**",
+      "docs": ["docs/PRD_Voice_Agent_Complete.md"],
+      "section": "Voice agent",
+      "reason": "Voice agent changes must be reflected in the PRD"
+    },
+    {
+      "pattern": "listingflow-sites/**",
+      "docs": ["docs/SPEC_Website_Feature_Blueprint.md"],
+      "section": "Website builder",
+      "reason": "Website builder changes must be reflected in the spec"
+    },
+    {
+      "pattern": ".github/workflows/*.yml",
+      "docs": ["CONTRIBUTING.md"],
+      "section": "CI checks",
+      "reason": "New CI workflow must be documented in the CI checks table"
+    },
+    {
+      "pattern": ".vscode/*",
+      "docs": ["CONTRIBUTING.md"],
+      "section": "VS Code workspace config",
+      "reason": "VS Code config changes should be mentioned for developer setup"
+    },
+    {
+      "pattern": "next.config.ts",
+      "docs": ["docs/ENVIRONMENTS.md"],
+      "section": "Security / Config",
+      "reason": "Config changes (headers, redirects, rewrites) affect deployment"
+    },
+    {
+      "pattern": "src/lib/compliance/*.ts",
+      "docs": ["CONTRIBUTING.md", "CLAUDE.md"],
+      "section": "Compliance (CASL/FINTRAC)",
+      "reason": "Compliance rule changes affect every developer's send-path code"
+    }
+  ]
+}
