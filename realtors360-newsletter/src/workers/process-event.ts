@@ -35,8 +35,9 @@ export async function processEvent(eventId: string): Promise<void> {
 
   const event = data as EventRow;
 
-  if (event.status !== 'pending') {
-    logger.debug({ eventId, status: event.status }, 'process: not pending, skipping');
+  // Accept both 'pending' (legacy poll) and 'processing' (claim-based worker)
+  if (event.status !== 'pending' && event.status !== 'processing') {
+    logger.debug({ eventId, status: event.status }, 'process: not pending/processing, skipping');
     return;
   }
 
