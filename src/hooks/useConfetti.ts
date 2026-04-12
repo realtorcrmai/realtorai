@@ -1,11 +1,11 @@
-import confetti from "canvas-confetti";
-
 /**
  * Reusable confetti hook (C1).
  * Fires fireworks from both sides with brand colors.
  * Respects prefers-reduced-motion.
+ * canvas-confetti loaded dynamically to keep it off the main bundle.
  */
-export function fireConfetti() {
+export async function fireConfetti() {
+  const { default: confetti } = await import("canvas-confetti");
   // Respect reduced motion preference
   if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     return;

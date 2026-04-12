@@ -17,15 +17,12 @@
   "files.exclude": {
     "node_modules": true,
     ".next": true,
-    "app-backup": true,
     "app-duplicate-*": true,
-    "agent-pipeline": true,
-    "content-generator": true
+    "agent-pipeline": true
   },
   "search.exclude": {
     "node_modules": true,
     ".next": true,
-    "app-backup": true,
     "app-duplicate-*": true,
     "**/dist": true
   },

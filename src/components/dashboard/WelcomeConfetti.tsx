@@ -4,9 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { fireConfetti } from "@/hooks/useConfetti";
-import confetti from "canvas-confetti";
-import { driver } from "driver.js";
-import "driver.js/dist/driver.css";
 import { WELCOME_TOUR } from "@/components/help/TourDefinitions";
 
 /**
@@ -34,7 +31,8 @@ export function WelcomeConfetti() {
     setTimeout(() => fireConfetti(), 300);
 
     // Wave 2: Center explosion
-    setTimeout(() => {
+    setTimeout(async () => {
+      const { default: confetti } = await import("canvas-confetti");
       confetti({
         particleCount: 120,
         spread: 100,
@@ -50,7 +48,8 @@ export function WelcomeConfetti() {
     setTimeout(() => fireConfetti(), 2200);
 
     // Wave 4: Gentle rain from top
-    setTimeout(() => {
+    setTimeout(async () => {
+      const { default: confetti } = await import("canvas-confetti");
       confetti({
         particleCount: 60,
         angle: 270,
@@ -76,7 +75,8 @@ export function WelcomeConfetti() {
     const tourSeen = localStorage.getItem("lf-welcome-tour-seen");
     if (!tourSeen) {
       localStorage.setItem("lf-welcome-tour-seen", "1");
-      setTimeout(() => {
+      setTimeout(async () => {
+        const { driver } = await import("driver.js");
         const validSteps = WELCOME_TOUR.steps.filter(
           (s) => document.querySelector(s.element)
         );

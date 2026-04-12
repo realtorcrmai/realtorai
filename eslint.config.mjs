@@ -26,10 +26,8 @@ const eslintConfig = defineConfig([
     "tests/**",
     "scripts/**",
     "voice_agent/**",
-    "app-backup/**",
     "app-duplicate-*/**",
     "agent-pipeline/**",
-    "content-generator/**",
     "listingflow-agent/**",
     "listingflow-sites/**",
     // The nested realtors360-newsletter service has its own tsconfig +

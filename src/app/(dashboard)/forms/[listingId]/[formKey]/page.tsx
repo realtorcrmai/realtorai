@@ -1,7 +1,12 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { notFound } from "next/navigation";
-import { PDFFormEditor } from "@/components/forms/PDFFormEditor";
+import dynamic from "next/dynamic";
+
+const PDFFormEditor = dynamic(
+  () => import("@/components/forms/PDFFormEditor").then((m) => m.PDFFormEditor),
+  { ssr: false }
+);
 
 
 export default async function FormEditorPage({
