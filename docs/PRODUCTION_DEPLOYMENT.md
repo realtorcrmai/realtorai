@@ -1,8 +1,8 @@
 # Realtors360 — Production Deployment Guide
 
-> **Last Updated:** April 1, 2026
+> **Last Updated:** April 11, 2026
 > **Current Release:** R1 (CRM + Email Marketing)
-> **Deploy Target:** Netlify (frontend) + Supabase (database)
+> **Deploy Target:** Vercel (CRM) + Render (Newsletter Agent) + Supabase (database)
 > **Read by:** Any Claude client or developer deploying this app
 
 ---
@@ -11,8 +11,9 @@
 
 | Service | Dev | Production | Shared? |
 |---------|-----|-----------|---------|
-| **Supabase DB** | `qcohfohjihazivkforsj` (dev) | NEW — separate project | NO — isolated |
-| **Netlify** | localhost:3000 | Netlify auto-deploy from `main` | NO — isolated |
+| **Supabase DB** | `qcohfohjihazivkforsj` (current) | NEW — separate project | NO — isolated |
+| **Vercel (CRM)** | localhost:3000 / Preview auto-deploy from `dev` | Production auto-deploy from `main` | NO — isolated |
+| **Render (Newsletter)** | Local / Preview auto-deploy from `dev` | Production from `main` | NO — isolated |
 | **Resend (email)** | Same API key | Same API key | YES |
 | **Twilio (SMS)** | Same account | Same account | YES |
 | **Anthropic (Claude)** | Same API key | Same API key | YES |
@@ -77,8 +78,8 @@ WHERE table_schema = 'public' AND column_name = 'realtor_id';
 SELECT COUNT(*) FROM contacts;
 ```
 
-### Step 5: Update Netlify Environment Variables
-In Netlify dashboard → Site settings → Environment variables:
+### Step 5: Update Vercel Environment Variables
+In Vercel dashboard → Settings → Environment Variables:
 
 Set these to the **PRODUCTION** Supabase values:
 ```
@@ -98,20 +99,20 @@ TWILIO_AUTH_TOKEN=<same as dev>
 
 ### Step 6: Add Production Google OAuth Redirect
 1. Go to https://console.cloud.google.com → Credentials → your OAuth client
-2. Add redirect URI: `https://your-netlify-site.netlify.app/api/auth/callback/google`
+2. Add redirect URI: `https://your-app.vercel.app/api/auth/callback/google`
 3. Save
 
-### Step 7: Redeploy on Netlify
-Trigger a redeploy in Netlify dashboard (or push to `main`) so it picks up the new env vars.
+### Step 7: Redeploy on Vercel
+Trigger a redeploy in Vercel dashboard (or push to `main`) so it picks up the new env vars.
 
 ### Step 8: Verify Production
 ```bash
 # Login page loads
-curl -s -o /dev/null -w "%{http_code}" https://your-site.netlify.app/login
+curl -s -o /dev/null -w "%{http_code}" https://your-app.vercel.app/login
 # Should return 200
 
 # API requires auth
-curl -s -o /dev/null -w "%{http_code}" https://your-site.netlify.app/api/contacts
+curl -s -o /dev/null -w "%{http_code}" https://your-app.vercel.app/api/contacts
 # Should return 401
 ```
 
@@ -122,13 +123,12 @@ curl -s -o /dev/null -w "%{http_code}" https://your-site.netlify.app/api/contact
 ```bash
 # Build and verify locally (uses DEV Supabase via .env.local)
 npm run build                    # must pass with 0 errors
-node scripts/test-multi-tenancy.mjs  # 61 tests must pass
-node scripts/test-social-media.mjs   # 194 tests must pass
+bash scripts/test-suite.sh       # 73+ tests must pass
 
-# Deploy to production (uses PROD Supabase via Netlify env vars)
-git push origin dev              # CI runs on dev
+# Deploy to production (uses PROD Supabase via Vercel env vars)
+git push origin dev              # CI runs on dev → Vercel Preview deploy
 # Create PR: dev → main
-# Merge → Netlify auto-deploys from main
+# Merge → Vercel auto-deploys from main
 ```
 
 ---
@@ -182,7 +182,37 @@ WHERE email = 'realtor@example.com';
 
 ---
 
-## 2. Environment Variables
+## 2. Static Assets — Logo System
+
+The logo system uses **pure HTML/CSS/JS files** served from `public/`. They are loaded at runtime via `<iframe>` by the `LogoVideo` React component. These files **must be present** in the deployed `public/` directory.
+
+### Required files
+
+| File | Path | Loaded by |
+|------|------|-----------|
+| `logo-animated.html` | `public/logo-animated.html` | Login page logo (size > 100px) |
+| `logo-sidebar.html` | `public/logo-sidebar.html` | Sidebar logo (size ≤ 100px) |
+| `favicon.svg` | `public/favicon.svg` | Browser tab favicon |
+
+These files are committed to git under `public/` and deploy automatically with every Vercel build. No additional deployment steps are required.
+
+### No extra dependencies
+
+The logo system is **pure HTML/CSS/JS** with no npm packages. No new environment variables are needed. No build step is required.
+
+### Middleware whitelist
+
+`src/middleware.ts` already whitelists all `/logo-*` paths to prevent auth redirects when iframes request these files:
+
+```typescript
+pathname.startsWith("/logo-") ||     // catches /logo-animated.html, /logo-sidebar.html, etc.
+```
+
+The `config.matcher` in `middleware.ts` also excludes `logo-*.html`, `logo-*.mp4`, and `logo-*.svg` patterns from the middleware entirely. No changes to middleware are needed.
+
+---
+
+## 3. Environment Variables
 
 ### Required for R1 (App Breaks Without These)
 
@@ -242,7 +272,7 @@ KLING_IMAGE_API_BASE_URL=<kling image endpoint>
 # Run: bash scripts/vault.sh decrypt
 ```
 
-### Setting Env Vars in Netlify
+### Setting Env Vars in Vercel
 
 1. Go to https://vercel.com → your project → Settings → Environment Variables
 2. Add each variable above
@@ -251,7 +281,7 @@ KLING_IMAGE_API_BASE_URL=<kling image endpoint>
 
 ---
 
-## 3. Database Migrations
+## 4. Database Migrations
 
 ### Supabase Access
 
@@ -284,9 +314,9 @@ WHERE table_schema = 'public' AND column_name = 'realtor_id';
 
 ---
 
-## 4. Cron Jobs
+## 5. Cron Jobs
 
-Configured in `vercel.json`. On Netlify, cron jobs must be set up separately using Netlify Scheduled Functions or an external cron service (e.g., cron-job.org, Upstash QStash).
+Configured in `vercel.json`. Vercel runs them automatically on the configured schedule.
 
 ### R1 Crons (Active)
 
@@ -310,11 +340,13 @@ Configured in `vercel.json`. On Netlify, cron jobs must be set up separately usi
 { "path": "/api/cron/rag-backfill", "schedule": "0 2 * * *" }
 ```
 
-All crons require `Authorization: Bearer $CRON_SECRET` header. Netlify sends this automatically.
+All crons require `Authorization: Bearer $CRON_SECRET` header. Vercel sends this automatically.
+
+> **Note:** `FLAG_PROCESS_WORKFLOWS` must be ON on the Newsletter Agent (Render) for workflow step processing. When that flag is ON, disable the `/api/cron/process-workflows` Vercel cron in `vercel.json` to avoid double-processing. See `docs/DEPLOYMENT_GUIDE.md` §2 for the full rollout sequence.
 
 ---
 
-## 5. Pre-Deployment Checklist
+## 6. Pre-Deployment Checklist
 
 ### Before Every Deploy
 
@@ -326,7 +358,7 @@ All crons require `Authorization: Bearer $CRON_SECRET` header. Netlify sends thi
 
 ### First-Time Production Deploy
 
-- [ ] All env vars set in Netlify dashboard
+- [ ] All env vars set in Vercel dashboard
 - [ ] `NEXT_PUBLIC_APP_URL` set to production domain (NOT localhost)
 - [ ] `CRON_SECRET` set (strong random string)
 - [ ] Supabase migrations applied (through 065)
@@ -344,11 +376,13 @@ All crons require `Authorization: Bearer $CRON_SECRET` header. Netlify sends thi
 - [ ] Can create a contact
 - [ ] Can create a listing
 - [ ] Newsletter page loads
-- [ ] Cron jobs running (check Netlify dashboard → Cron Jobs tab)
+- [ ] Cron jobs running (check Vercel dashboard → Cron Jobs tab)
+- [ ] Logo animation loads on login page (iframe at `/logo-animated.html`)
+- [ ] Sidebar logo loads (iframe at `/logo-sidebar.html`)
 
 ---
 
-## 6. Deploy Steps
+## 7. Deploy Steps
 
 ### Standard Deploy (dev → main)
 
@@ -367,7 +401,7 @@ git push origin dev
 # 4. Create PR: dev → main
 gh pr create --base main --title "Release: <description>" --body "..."
 
-# 5. Merge PR (triggers Netlify auto-deploy)
+# 5. Merge PR (triggers Vercel auto-deploy)
 gh pr merge <number> --merge
 
 # 6. Verify production
@@ -396,7 +430,7 @@ git checkout dev && git merge main && git push origin dev
 
 ---
 
-## 7. Rolling Out Features to Production
+## 8. Rolling Out Features to Production
 
 ### Enabling a Module for All New Users
 
@@ -422,22 +456,22 @@ WHERE email = 'beta-tester@example.com';
 
 1. Add cron entry to `vercel.json`
 2. Commit and deploy
-3. Verify in Netlify dashboard → Cron Jobs
+3. Verify in Vercel dashboard → Cron Jobs
 
 ### Adding New Env Vars for a Module
 
-1. Add to Netlify dashboard → Settings → Environment Variables
-2. Redeploy (Netlify requires redeploy to pick up new env vars)
+1. Add to Vercel dashboard → Settings → Environment Variables
+2. Redeploy (Vercel requires redeploy to pick up new env vars)
 
 ---
 
-## 8. Monitoring & Troubleshooting
+## 9. Monitoring & Troubleshooting
 
 ### Key URLs
 
 | Service | URL |
 |---------|-----|
-| Netlify Dashboard | https://vercel.com/dashboard |
+| Vercel Dashboard | https://vercel.com/dashboard |
 | Supabase Dashboard | https://supabase.com/dashboard/project/qcohfohjihazivkforsj |
 | Resend Dashboard | https://resend.com/dashboard |
 | Supabase SQL Editor | https://supabase.com/dashboard/project/qcohfohjihazivkforsj/sql/new |
@@ -449,13 +483,18 @@ WHERE email = 'beta-tester@example.com';
 - Most common: implicit `any` types from tenant client — add `: any` annotation
 
 **Cron jobs not running:**
-- Check Netlify dashboard → Cron Jobs tab
+- Check Vercel dashboard → Cron Jobs tab
 - Verify `CRON_SECRET` env var is set
 - Test manually: `curl -H "Authorization: Bearer $CRON_SECRET" https://your-app.vercel.app/api/cron/process-workflows`
 
 **Email links point to localhost:**
-- Set `NEXT_PUBLIC_APP_URL` in Netlify env vars
+- Set `NEXT_PUBLIC_APP_URL` in Vercel env vars
 - Redeploy
+
+**Logo animation blank or broken:**
+- Verify `public/logo-animated.html` and `public/logo-sidebar.html` are committed to git
+- Check browser console for iframe load errors — the files must be served at `/logo-animated.html` and `/logo-sidebar.html`
+- Confirm `src/middleware.ts` has `pathname.startsWith("/logo-")` in the public routes list (it does by default)
 
 **User can't see a feature:**
 - Check their `enabled_features` in users table
@@ -467,13 +506,13 @@ WHERE email = 'beta-tester@example.com';
 
 ### Rollback
 
-1. Netlify: Redeploy previous deployment from Netlify dashboard → Deployments → click "..." → "Redeploy"
+1. Vercel: Redeploy previous deployment from Vercel dashboard → Deployments → click "..." → "Redeploy"
 2. Database: Migrations are additive — no rollback needed for column additions
 3. Code: `git revert HEAD && git push origin main`
 
 ---
 
-## 9. Security Checklist
+## 10. Security Checklist
 
 - [x] Multi-tenancy: `realtor_id` on all tables, tenant client auto-filters
 - [x] No hardcoded secrets in source code
@@ -487,10 +526,10 @@ WHERE email = 'beta-tester@example.com';
 
 ---
 
-## 10. Architecture Overview
+## 11. Architecture Overview
 
 ```
-Browser → Netlify (Next.js 16) → Supabase (PostgreSQL)
+Browser → Vercel (Next.js 16) → Supabase (PostgreSQL)
                 ↓                       ↓
            Server Actions          RLS Policies
            (tenant-scoped)        (defense-in-depth)
@@ -517,4 +556,4 @@ Browser → Netlify (Next.js 16) → Supabase (PostgreSQL)
 
 ---
 
-*Production Deployment Guide v2.0 — April 1, 2026*
+*Production Deployment Guide v2.1 — April 11, 2026*

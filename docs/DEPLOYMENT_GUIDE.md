@@ -234,11 +234,38 @@ SUPABASE_PROJECT_REF=qcohfohjihazivkforsj \
 
 The following notes apply to the UI/UX competitive features (Cmd+K search, notification center, activity feed, bulk actions, etc.):
 
-- **New migration required:** `supabase/migrations/102_notifications.sql` must be applied before the notification center works. Creates the `notifications` table with RLS policies and an index on `(realtor_id, is_read, created_at DESC)`.
-- **New Supabase table:** `notifications` — columns: `id`, `realtor_id`, `type`, `title`, `body`, `related_type`, `related_id`, `is_read`, `created_at`. RLS enabled.
-- **Zustand persist (localStorage):** Recent items tracking uses Zustand with `persist` middleware, storing data in `localStorage` under key `r360-recent-items`. No server configuration needed — this is entirely client-side.
-- **No new environment variables required** for any of the UI/UX features.
-- **Cmd+K search prerequisite:** The global command bar search requires the contacts API (`GET /api/contacts?search=&limit=`) and listings API (`GET /api/listings?search=&limit=`) routes to be accessible. Verify these endpoints return data after deployment.
+#### New Database Migration
+
+```
+Migration 102: supabase/migrations/102_notifications.sql
+- Creates `notifications` table (id, realtor_id, type, title, body, related_type, related_id, is_read, created_at)
+- Composite index on (realtor_id, is_read, created_at DESC)
+- RLS enabled with permissive policy
+- MUST be applied before notification features work
+- Apply via: Supabase SQL Editor → paste contents of 102_notifications.sql
+```
+
+#### No New Environment Variables
+
+- All UI/UX features use existing env vars
+- Notifications use admin client (SUPABASE_SERVICE_ROLE_KEY — already configured)
+- Zustand persist uses browser localStorage — no server config
+- Cmd+K search uses existing contacts/listings API routes
+
+#### New Client Dependencies
+
+- Zustand persist middleware — already in package.json, no install needed
+- cmdk — already installed, enhanced with search
+- date-fns formatDistanceToNow — already installed
+
+#### Post-Deployment Verification
+
+1. Run migration 102
+2. Verify `/api/contacts?search=test&limit=5` returns results
+3. Verify `/api/listings?search=royal&limit=5` returns results
+4. Verify Cmd+K (Cmd+K on Mac / Ctrl+K on Windows) opens command palette and searches
+5. Verify notification bell appears in header
+6. Verify contacts table shows Score column
 
 ### Rollbacks
 Located at `supabase/rollbacks/`. Each destructive migration has a matching rollback file.
@@ -384,6 +411,19 @@ cd realtors360-newsletter && npx vitest run  # 116 tests
 - [ ] First merge `dev → main` to trigger production deploy
 - [ ] Delete orphaned Supabase projects (`ybgiljuclpsuhbmdhust`, `rsfjescdjuubxadfjyxb`)
 - [ ] Re-encrypt `.env.vault` with production values
+- [ ] Verify logo static files are accessible: `curl https://your-domain/logo-animated.html` and `curl https://your-domain/logo-sidebar.html` — both must return 200 (not a redirect to `/login`)
+
+### Logo Static Asset Notes
+
+The logo animation system uses iframe-embedded HTML files served from `public/`. No extra build steps or env vars are needed — the files deploy automatically with the Next.js build.
+
+| File | URL path | Purpose |
+|------|----------|---------|
+| `public/logo-animated.html` | `/logo-animated.html` | Full 3D login logo (loaded by `LogoVideo` when `size > 100`) |
+| `public/logo-sidebar.html` | `/logo-sidebar.html` | Lightweight sidebar logo (loaded by `LogoVideo` when `size ≤ 100`) |
+| `public/favicon.svg` | `/favicon.svg` | Browser tab favicon |
+
+**Middleware:** `src/middleware.ts` whitelists `pathname.startsWith("/logo-")` so auth does not redirect iframe requests for these files. The `config.matcher` additionally excludes `logo-*.html`, `logo-*.mp4`, and `logo-*.svg` from the middleware entirely. No changes needed.
 
 ---
 

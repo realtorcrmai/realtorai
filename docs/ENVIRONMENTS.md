@@ -238,6 +238,22 @@ The encrypted `.env.vault` was last re-encrypted on **2026-04-01** — before th
 
 ---
 
+## Logo Static Assets
+
+The logo animation system uses pure HTML/CSS/JS files in `public/` — no npm dependencies or env vars needed.
+
+| File | Served at | Notes |
+|------|-----------|-------|
+| `public/logo-animated.html` | `/logo-animated.html` | Full 3D animated login logo (420px native) |
+| `public/logo-sidebar.html` | `/logo-sidebar.html` | Lightweight sidebar logo (120px native, GPU-optimized) |
+| `public/favicon.svg` | `/favicon.svg` | Browser tab favicon |
+
+These files are loaded via `<iframe>` by the `LogoVideo` React component (`src/components/brand/Logo.tsx`). They deploy automatically with the Next.js build.
+
+**Middleware whitelist:** `src/middleware.ts` has `pathname.startsWith("/logo-")` in the public routes list, preventing auth redirects when iframes fetch these files. The `config.matcher` also excludes them entirely from middleware processing. No changes needed on new deploys.
+
+---
+
 ## Quick reference for AI agents
 
 If you're Claude Code or another agent working in this repo, here's what you need to know in one glance:
