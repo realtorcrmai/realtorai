@@ -26,27 +26,28 @@ export function AnnouncementBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase
-      .from("platform_config")
-      .select("value")
-      .eq("key", "announcement")
-      .single()
-      .then(({ data }) => {
+    async function fetchAnnouncement() {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("platform_config")
+          .select("value")
+          .eq("key", "announcement")
+          .single();
         if (data?.value && data.value !== "null" && data.value !== null) {
           const parsed = typeof data.value === "string" ? JSON.parse(data.value) : data.value;
           if (parsed && parsed.message) {
-            // Check localStorage for dismiss
             const dismissKey = `announcement-dismissed-${btoa(parsed.message).slice(0, 16)}`;
             if (!localStorage.getItem(dismissKey)) {
               setAnnouncement(parsed);
             }
           }
         }
-      })
-      .catch(() => {
+      } catch {
         // Silently fail — banner is non-critical
-      });
+      }
+    }
+    fetchAnnouncement();
   }, []);
 
   if (!announcement || dismissed) return null;
