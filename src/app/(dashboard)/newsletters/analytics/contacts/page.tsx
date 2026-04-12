@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 
 export default async function ContactEngagementPage() {
   const tc = await getAuthenticatedTenantClient();
+  const now = Date.now();
+  const ninetyDaysAgoISO = new Date(now - 90 * 86400000).toISOString();
 
   // Fetch all contacts with email intelligence, plus recent event counts
   const [{ data: contacts }, { data: recentEvents }] = await Promise.all([
@@ -17,12 +19,12 @@ export default async function ContactEngagementPage() {
     // Events in last 90 days for trend calculation
     tc.from("newsletter_events")
       .select("contact_id, event_type, created_at")
-      .gte("created_at", new Date(Date.now() - 90 * 86400000).toISOString()),
+      .gte("created_at", ninetyDaysAgoISO),
   ]);
 
   // Build event counts per contact for last 30 / 60-90 days (for trend)
-  const thirtyDaysAgo = Date.now() - 30 * 86400000;
-  const sixtyDaysAgo = Date.now() - 60 * 86400000;
+  const thirtyDaysAgo = now - 30 * 86400000;
+  const sixtyDaysAgo = now - 60 * 86400000;
 
   const recent30: Record<string, number> = {};
   const prev30to60: Record<string, number> = {};

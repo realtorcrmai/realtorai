@@ -40,8 +40,8 @@ const CLICK_TYPE_LABELS: Record<string, { label: string; icon: string }> = {
 
 export default async function NewsletterAnalyticsPage() {
   const tc = await getAuthenticatedTenantClient();
-
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+  const now = Date.now();
+  const thirtyDaysAgo = new Date(now - 30 * 86400000).toISOString();
 
   const [
     { data: sentNewsletters },

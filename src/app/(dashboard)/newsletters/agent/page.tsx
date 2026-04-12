@@ -9,6 +9,7 @@ export default async function AgentDashboardPage() {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const todayISO = todayStart.toISOString();
+  const sevenDaysAgoISO = new Date(Date.now() - 7 * 86400000).toISOString();
 
   const [
     { data: runsToday },
@@ -28,7 +29,7 @@ export default async function AgentDashboardPage() {
     // Recent runs (last 7 days)
     tc.from("agent_runs")
       .select("id, trigger_type, contact_ids_evaluated, decisions_made, status, estimated_cost_usd, started_at, completed_at, error_message")
-      .gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString())
+      .gte("created_at", sevenDaysAgoISO)
       .order("created_at", { ascending: false })
       .limit(50),
 

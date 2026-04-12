@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
@@ -48,13 +48,15 @@ export function DataTable<T extends Record<string, any>>({
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
-  // Reset page when data changes (e.g., after filtering)
+  // Reset page when data length changes (e.g., after filtering)
   const dataLen = data.length;
   const prevDataLen = useRef(dataLen);
-  if (dataLen !== prevDataLen.current) {
-    prevDataLen.current = dataLen;
-    if (page !== 1) setPage(1);
-  }
+  useEffect(() => {
+    if (dataLen !== prevDataLen.current) {
+      prevDataLen.current = dataLen;
+      setPage(1);
+    }
+  }, [dataLen]);
 
   // Sort
   const sorted = useMemo(() => {
