@@ -1,6 +1,5 @@
 import { supabase } from '../lib/supabase.js';
 import { config } from '../config.js';
-import { buildSavedSearchUserPrompt } from '../orchestrator/prompts.js';
 import { runPipeline, type EventRow, type PipelineResult } from './_runner.js';
 
 /**
@@ -25,22 +24,34 @@ export async function runSavedSearchMatch(event: EventRow): Promise<PipelineResu
       const matchCount = (e.event_data.match_count as number | undefined) ?? 1;
 
       let listingAddress = 'a new property';
+      let listingDetails = '';
       if (listingId) {
         const { data } = await supabase
           .from('listings')
-          .select('address')
+          .select('address, list_price, property_type, status, mls_number')
           .eq('id', listingId)
           .maybeSingle();
         if (data?.address) listingAddress = data.address;
+        if (data) {
+          const parts: string[] = [];
+          if (data.list_price) parts.push(`Price: $${Number(data.list_price).toLocaleString('en-CA')}`);
+          if (data.property_type) parts.push(`Type: ${data.property_type}`);
+          if (data.status) parts.push(`Status: ${data.status}`);
+          if (data.mls_number) parts.push(`MLS#: ${data.mls_number}`);
+          listingDetails = parts.join(' | ');
+        }
       }
 
       const firstName = (contact.name ?? '').split(' ')[0] || 'there';
-      return buildSavedSearchUserPrompt({
-        contactFirstName: firstName,
-        realtorName: realtor.name ?? 'Your agent',
-        matchedListingAddress: listingAddress,
-        matchCount,
-      });
+      const contactEmail = contact.email ?? '';
+
+      return `A new active listing matches a saved search for ${firstName} (${contactEmail}).
+
+Realtor: ${realtor.name ?? 'Your agent'} (${realtor.email ?? ''})
+Matched listing: ${listingAddress}
+${listingDetails ? `Listing details: ${listingDetails}\n` : ''}Total matches today: ${matchCount}
+
+Write a short personalized "saved search match" email for this contact.`;
     },
   });
 }
