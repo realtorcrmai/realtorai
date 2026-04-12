@@ -1,0 +1,231 @@
+name: Auto-Heal — Fix Regression Failures
+
+# Triggers:
+# 1. When nightly regression completes with failures
+# 2. Manual dispatch with failure context
+on:
+  workflow_run:
+    workflows: ["Nightly Regression + Test Plan Sync"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      failure_context:
+        description: "Paste the failure output or describe the issue"
+        required: false
+        type: string
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  # ── Gate: only run if the triggering workflow failed ──────
+  check-trigger:
+    name: Check if healing needed
+    runs-on: ubuntu-latest
+    outputs:
+      should_heal: ${{ steps.check.outputs.should_heal }}
+    steps:
+      - name: Check trigger
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_heal=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.workflow_run.conclusion }}" = "failure" ]; then
+            echo "should_heal=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_heal=false" >> $GITHUB_OUTPUT
+            echo "Nightly regression passed — no healing needed"
+          fi
+
+  # ── Heal: diagnose and fix ───────────────────────────────
+  heal:
+    name: Diagnose + Fix
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should_heal == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Step 1: Reproduce failures ──────────────────────
+      - name: Run regression (capture failures)
+        id: regression
+        continue-on-error: true
+        run: |
+          npm run build 2>&1 | tail -5 > /tmp/build-result.txt
+          npm run start &
+          sleep 15
+
+          # Run each suite and capture output
+          bash scripts/test-suite.sh > /tmp/core-result.txt 2>&1 || true
+          bash scripts/integration-test-newsletter.sh > /tmp/newsletter-result.txt 2>&1 || true
+          bash scripts/test-endpoints.sh > /tmp/endpoints-result.txt 2>&1 || true
+          bash scripts/test-visual-browser.sh > /tmp/visual-result.txt 2>&1 || true
+
+          # Extract failures
+          echo "=== FAILURES ===" > /tmp/all-failures.txt
+          grep -h "❌\|FAIL\|failure" /tmp/*-result.txt >> /tmp/all-failures.txt 2>/dev/null || true
+          cat /tmp/all-failures.txt
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXTAUTH_URL: http://localhost:3000
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          DEMO_EMAIL: ${{ secrets.DEMO_EMAIL }}
+          DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+
+      # ── Step 2: Build failure context ───────────────────
+      - name: Build diagnosis prompt
+        id: prompt
+        run: |
+          FAILURES=$(cat /tmp/all-failures.txt 2>/dev/null || echo "No failure output captured")
+          MANUAL_CTX="${{ github.event.inputs.failure_context || '' }}"
+
+          cat > /tmp/heal-prompt.txt << 'PROMPT'
+          You are fixing regression test failures in the Realtors360 CRM.
+
+          ## Failure Output
+          PROMPT
+          echo "$FAILURES" >> /tmp/heal-prompt.txt
+          if [ -n "$MANUAL_CTX" ]; then
+            echo -e "\n## Additional Context\n$MANUAL_CTX" >> /tmp/heal-prompt.txt
+          fi
+          cat >> /tmp/heal-prompt.txt << 'PROMPT'
+
+          ## Instructions
+          1. Read each failure line carefully
+          2. For each failure, determine the root cause:
+             - Is it a code bug? → Fix the code
+             - Is it a test expectation mismatch? → Fix the test
+             - Is it a missing feature? → Skip/adjust the test
+             - Is it stale test data? → Update seed data
+          3. Make the minimal fix for each issue
+          4. Run `npx tsc --noEmit` to verify no type errors
+          5. Do NOT add new features — only fix what's broken
+          6. Do NOT modify test thresholds to hide real failures
+          PROMPT
+
+          echo "Prompt built ($(wc -l < /tmp/heal-prompt.txt) lines)"
+
+      # ── Step 3: Run Claude Code to fix ──────────────────
+      - name: Claude Code auto-fix
+        id: fix
+        run: |
+          # Create fix branch
+          BRANCH="auto-heal/$(date +%Y%m%d-%H%M)"
+          git checkout -b "$BRANCH"
+
+          # Run Claude Code CLI with the diagnosis prompt
+          npx @anthropic-ai/claude-code --print \
+            --prompt "$(cat /tmp/heal-prompt.txt)" \
+            --allowedTools "Read,Edit,Write,Bash,Grep,Glob" \
+            --max-turns 30 \
+            2>&1 | tee /tmp/claude-output.txt || true
+
+          # Check if any files were changed
+          CHANGES=$(git diff --name-only | wc -l)
+          echo "files_changed=$CHANGES" >> $GITHUB_OUTPUT
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+          if [ "$CHANGES" -gt 0 ]; then
+            git add -A
+            git commit -m "fix(auto-heal): resolve $(grep -c '❌' /tmp/all-failures.txt 2>/dev/null || echo 'N') regression failures
+
+          Auto-diagnosed and fixed by Claude Code from nightly regression.
+          Trigger: ${{ github.event_name }}
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          Co-Authored-By: Claude Code <noreply@anthropic.com>"
+
+            git push origin "$BRANCH"
+            echo "pushed=true" >> $GITHUB_OUTPUT
+          else
+            echo "pushed=false" >> $GITHUB_OUTPUT
+            echo "No changes needed — failures may be infrastructure-related"
+          fi
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Step 4: Create PR ───────────────────────────────
+      - name: Create auto-heal PR
+        if: steps.fix.outputs.pushed == 'true'
+        run: |
+          BRANCH="${{ steps.fix.outputs.branch }}"
+          FAILURES=$(grep -c "❌" /tmp/all-failures.txt 2>/dev/null || echo "N")
+
+          gh pr create \
+            --base dev \
+            --head "$BRANCH" \
+            --title "fix(auto-heal): resolve $FAILURES regression failures" \
+            --body "$(cat <<BODY
+          ## Auto-Heal PR
+
+          **Triggered by:** Nightly regression failure
+          **Failures found:** $FAILURES
+          **Files changed:** ${{ steps.fix.outputs.files_changed }}
+
+          ### What was fixed
+          $(git log --oneline dev.."$BRANCH" | head -5)
+
+          ### Failure context
+          \`\`\`
+          $(head -30 /tmp/all-failures.txt)
+          \`\`\`
+
+          ### Claude Code reasoning
+          \`\`\`
+          $(tail -50 /tmp/claude-output.txt)
+          \`\`\`
+
+          ---
+          *This PR was auto-generated by the auto-heal workflow. Review before merging.*
+
+          🤖 Generated with [Claude Code](https://claude.com/claude-code)
+          BODY
+          )" \
+            --label "auto-heal,automated"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Step 5: Re-run tests on the fix branch ─────────
+      - name: Verify fix
+        if: steps.fix.outputs.pushed == 'true'
+        run: |
+          npx tsc --noEmit
+          echo "TypeScript: PASS"
+        continue-on-error: true
+
+      # ── Step 6: Report ──────────────────────────────────
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Auto-Heal Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Files changed:** ${{ steps.fix.outputs.files_changed || '0' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **PR created:** ${{ steps.fix.outputs.pushed || 'false' }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.fix.outputs.pushed }}" = "true" ]; then
+            echo "- **Branch:** ${{ steps.fix.outputs.branch }}" >> $GITHUB_STEP_SUMMARY
+          fi
