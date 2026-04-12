@@ -62,18 +62,19 @@ export async function checkSavedSearches(): Promise<void> {
     // N6: snapshot the timestamp BEFORE querying listings.
     const checkedAt = new Date().toISOString();
 
+    // Query only columns that exist on the listings table.
+    // The table does NOT have beds/baths/area columns — those were assumed
+    // from the saved_searches criteria but never added to listings schema.
+    // Filter by: list_price, status, property_type, prop_type only.
     let q = supabase
       .from('listings')
-      .select('id, address, list_price, beds, baths, area, prop_type')
+      .select('id, address, list_price, property_type, prop_type')
       .eq('status', 'active')
       .gte('created_at', since);
 
     if (criteria.min_price != null) q = q.gte('list_price', criteria.min_price);
     if (criteria.max_price != null) q = q.lte('list_price', criteria.max_price);
-    if (criteria.beds_min != null) q = q.gte('beds', criteria.beds_min);
-    if (criteria.baths_min != null) q = q.gte('baths', criteria.baths_min);
-    if (criteria.areas?.length) q = q.in('area', criteria.areas);
-    if (criteria.prop_types?.length) q = q.in('prop_type', criteria.prop_types);
+    if (criteria.prop_types?.length) q = q.in('property_type', criteria.prop_types);
 
     const { data: matches, error: matchErr } = await q.limit(10);
     if (matchErr) {

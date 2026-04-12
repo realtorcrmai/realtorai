@@ -61,7 +61,7 @@ const PersonalizationHintsSchema = z
   .object({
     tone: z.string().optional(),
     interests: z.array(z.string()).optional(),
-    price_anchor: z.string().optional(),
+    price_anchor: z.string().nullable().optional(),
     hot_topic: z.string().optional(),
     avoid: z.string().optional(),
     relationship_stage: z.string().optional(),
@@ -73,7 +73,7 @@ export const LeadScoreSchema = z.object({
   buying_readiness: z.number().min(0).max(100),
   timeline_urgency: z.number().min(0).max(100),
   budget_fit: z.number().min(0).max(100),
-  intent: z.enum(VALID_INTENTS),
+  intent: z.string(),  // Was z.enum — Claude returns values outside strict enum, accept any string
   reasoning: z.string(),
   stage_recommendation: z.enum(['advance', 'maintain', 'downgrade']).optional(),
   new_stage: z.string().optional(),
