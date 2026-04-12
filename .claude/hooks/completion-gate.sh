@@ -91,6 +91,17 @@ EOF
                 DELIVERABLE_WARNINGS="$DELIVERABLE_WARNINGS\n  ⚠ No test files created/updated (CODING tasks should include tests)"
             fi
         fi
+        # Docs freshness check — warn if docs are stale after code changes
+        if [[ "$TYPE" == CODING:* || "$TYPE" == DOCS* ]]; then
+            cd "$PROJECT_DIR" 2>/dev/null
+            DOCS_OUTPUT=$(node scripts/audit-docs.mjs 2>&1)
+            DOCS_EXIT=$?
+            if [[ $DOCS_EXIT -ne 0 ]]; then
+                STALE_COUNT=$(echo "$DOCS_OUTPUT" | grep -c "⚠")
+                DELIVERABLE_WARNINGS="$DELIVERABLE_WARNINGS\n  ⚠ Docs audit found $STALE_COUNT stale item(s) — run: node scripts/audit-docs.mjs"
+            fi
+        fi
+
         if [[ -n "$DELIVERABLE_WARNINGS" ]]; then
             echo "[Deliverable Check]$DELIVERABLE_WARNINGS"
         fi
