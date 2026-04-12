@@ -1,0 +1,39 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "eslint.workingDirectories": [
+    ".",
+    "realtors360-newsletter"
+  ],
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "tailwindCSS.experimental.classRegex": [
+    ["className\\s*=\\s*\"([^\"]*)\"", "([^\"]*)"],
+    ["cn\\(([^)]*)\\)", "\"([^\"]*)\""]
+  ],
+  "files.exclude": {
+    "node_modules": true,
+    ".next": true,
+    "app-backup": true,
+    "app-duplicate-*": true,
+    "agent-pipeline": true,
+    "content-generator": true
+  },
+  "search.exclude": {
+    "node_modules": true,
+    ".next": true,
+    "app-backup": true,
+    "app-duplicate-*": true,
+    "**/dist": true
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "python.defaultInterpreterPath": "python3"
+}

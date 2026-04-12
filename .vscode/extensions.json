@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "prisma.prisma",
+    "ms-python.python",
+    "ms-playwright.playwright",
+    "mikestead.dotenv",
+    "antfu.vite",
+    "vitest.explorer",
+    "anthropics.claude-code"
+  ]
+}

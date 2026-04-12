@@ -1,0 +1,57 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "CRM (Next.js Dev)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000,
+      "cwd": "${workspaceFolder}",
+      "env": { "NODE_OPTIONS": "--inspect" },
+      "console": "integratedTerminal",
+      "serverReadyAction": {
+        "pattern": "Ready on",
+        "uriFormat": "http://localhost:3000",
+        "action": "openExternally"
+      }
+    },
+    {
+      "name": "Newsletter Service (Express)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "${workspaceFolder}/realtors360-newsletter",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Voice Agent (Python)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/voice_agent/server/main.py",
+      "cwd": "${workspaceFolder}/voice_agent",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Vitest (Unit Tests)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vitest", "run"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack (CRM + Newsletter + Voice)",
+      "configurations": [
+        "CRM (Next.js Dev)",
+        "Newsletter Service (Express)",
+        "Voice Agent (Python)"
+      ]
+    }
+  ]
+}
