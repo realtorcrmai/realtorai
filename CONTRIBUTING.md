@@ -49,7 +49,7 @@ vercel login
 vercel env pull .env.local --environment=preview
 ```
 
-This gives you working credentials for the dev Supabase project, Anthropic, Resend, Twilio, Google OAuth, and everything else — in one command.
+This gives you working credentials for the dev Supabase project, NextAuth secret, Anthropic, Resend, Twilio, Google OAuth, and everything else — in one command.
 
 **Alternative method** (if you don't have Vercel access):
 
@@ -137,7 +137,8 @@ realestate-crm/                  ← You are here (repo root)
 │   │   ├── compliance/          # CASL consent + FINTRAC gates
 │   │   └── ai-agent/            # AI agent tools
 │   ├── emails/                  # React Email templates
-│   └── hooks/                   # React hooks
+│   ├── hooks/                   # React hooks
+│   └── stores/                  # Zustand state stores
 ├── realtors360-newsletter/      # Newsletter engine (separate Express service)
 ├── voice_agent/                 # Voice AI agent (Python)
 ├── listingflow-sites/           # Website builder (standalone)
@@ -249,17 +250,29 @@ Never use `createAdminClient()` for user-initiated operations — it bypasses te
 # Quick unit tests (vitest, ~300ms)
 npm run test:quick
 
+# Unit tests only (src/__tests__/)
+npm run test:unit
+
 # Full test suite (API + CRUD + auth + cascade)
 npm run test
 
+# All tests (unit + integration + eval scripts)
+npm run test:all
+
 # Integration tests (needs TEST_SUPABASE_* env vars)
 npm run test:integration
+
+# RLS canary (cross-tenant isolation check)
+npm run test:rls
 
 # Watch mode (TDD)
 npm run test:watch
 
 # Browser tests (Playwright)
 npx playwright test
+
+# Docs freshness audit
+node scripts/audit-docs.mjs
 
 # Before every PR
 npm run preflight   # typecheck → lint → audit
