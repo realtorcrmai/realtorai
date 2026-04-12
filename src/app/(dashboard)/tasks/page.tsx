@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { TaskForm } from "@/components/tasks/TaskForm";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { TaskPipeline } from "@/components/tasks/TaskPipeline";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 type Task = {
   id: string;
@@ -137,18 +138,17 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="space-y-6 animate-float-in">
-      {/* Pipeline overview */}
-      <TaskPipeline tasks={tasks} />
-
-      {/* Add Task button */}
-      <div className="flex justify-end">
+    <>
+    <PageHeader
+      title="Tasks"
+      subtitle={`${tasks.length} tasks`}
+      actions={
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger
             render={
-              <Button size="sm">
+              <Button className="bg-brand text-white hover:bg-brand-dark">
                 <Plus className="h-4 w-4 mr-2" />
-                Add Task
+                Create Task
               </Button>
             }
           />
@@ -165,9 +165,11 @@ export default function TasksPage() {
             />
           </DialogContent>
         </Dialog>
-      </div>
-
-      {/* Task list */}
+      }
+    />
+    <div className="p-6 space-y-6">
+      {/* Pipeline overview */}
+      <TaskPipeline tasks={tasks} />
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -177,7 +179,7 @@ export default function TasksPage() {
                 type="checkbox"
                 checked={allSelected}
                 onChange={toggleSelectAll}
-                className="h-4 w-4 cursor-pointer accent-[#0F7694]"
+                className="h-4 w-4 cursor-pointer accent-brand"
                 aria-label="Select all incomplete tasks"
                 title={allSelected ? "Deselect all" : "Select all incomplete tasks"}
               />
@@ -221,7 +223,7 @@ export default function TasksPage() {
 
       {/* Floating bulk action bar */}
       {someSelected && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-4 py-2 rounded-xl shadow-xl bg-white dark:bg-zinc-900 border border-border">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-4 py-2 rounded-xl shadow-xl bg-card border border-border">
           <span className="text-sm font-medium text-muted-foreground">
             {selectedIds.size} selected
           </span>
@@ -245,5 +247,6 @@ export default function TasksPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

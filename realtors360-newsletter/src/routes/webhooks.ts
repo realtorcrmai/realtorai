@@ -3,7 +3,9 @@ import { Router, type Request, type Response } from 'express';
 import { supabase } from '../lib/supabase.js';
 import { config } from '../config.js';
 import { logger } from '../lib/logger.js';
+import { captureException } from '../lib/sentry.js';
 import { recordPositiveSignal, recordNegativeSignal } from '../agent/trust/trust-level.js';
+import { suppressContact } from '../lib/suppression.js';
 
 export const webhooksRouter: Router = Router();
 
@@ -119,7 +121,8 @@ async function updateContactIntelligence(
     )
   );
 
-  await supabase.from('contacts').update({ newsletter_intelligence: intel }).eq('id', contactId);
+  const { error: updateErr } = await supabase.from('contacts').update({ newsletter_intelligence: intel }).eq('id', contactId);
+  if (updateErr) logger.warn({ err: updateErr, contactId }, 'webhook: intel update failed');
 }
 
 // ── Svix signature verification ────────────────────────────────
@@ -296,12 +299,42 @@ webhooksRouter.post('/webhooks/resend', async (req: Request, res: Response) => {
         .from('contact_journeys')
         .update({ is_paused: true, pause_reason: eventType })
         .eq('contact_id', contactId);
+
+      // Auto-suppress after 3 bounces for the same contact
+      if (eventType === 'bounced' && contactRow?.realtor_id) {
+        try {
+          const { count: bounceCount } = await supabase
+            .from('newsletter_events')
+            .select('id', { count: 'exact', head: true })
+            .eq('contact_id', contactId)
+            .eq('event_type', 'bounced');
+
+          if (bounceCount !== null && bounceCount >= 3) {
+            await suppressContact(
+              supabase,
+              contactId,
+              contactRow.realtor_id as string,
+              `Auto-suppressed after ${bounceCount} bounces`
+            );
+            log.info(
+              { contactId, bounceCount },
+              'webhook: contact auto-suppressed after 3+ bounces'
+            );
+          }
+        } catch (suppressErr) {
+          log.warn(
+            { err: suppressErr, contactId },
+            'webhook: auto-suppress check failed (non-fatal)'
+          );
+        }
+      }
     }
 
     log.info({ eventType, contactId, newsletterId }, 'webhook: processed');
     return res.json({ ok: true });
   } catch (err) {
     log.error({ err }, 'webhook: handler error');
+    captureException(err instanceof Error ? err : new Error(String(err)), { path: '/webhooks/resend' });
     return res.status(500).json({ error: 'Internal error' });
   }
 });

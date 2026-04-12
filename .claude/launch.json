@@ -2,11 +2,11 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "nextjs",
+      "name": "dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
-      "cwd": "/Users/apple/Library/CloudStorage/OneDrive-Personal/CoWork/realtorai"
+      "cwd": "/Users/bigbear/reality crm/realestate-crm"
     }
   ]
 }

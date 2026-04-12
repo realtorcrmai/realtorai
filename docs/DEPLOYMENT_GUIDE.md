@@ -219,7 +219,7 @@ SUPABASE_PROJECT_REF=qcohfohjihazivkforsj \
 2. Paste migration SQL
 3. Run (wrap destructive operations in `BEGIN; ... ROLLBACK;` first)
 
-### Current migrations (87 files)
+### Current migrations (87+ files)
 - 001-073: Core CRM + contact system
 - 074: Newsletter Engine v3 schema (email_events, email_event_rules, saved_searches, market_stats_cache, neighbourhood_data, email_template_registry)
 - 075: Newsletter Engine v3 M2 seeds
@@ -228,6 +228,17 @@ SUPABASE_PROJECT_REF=qcohfohjihazivkforsj \
 - 078-085: Various feature migrations
 - 086: Newsletter reliability (claim functions, retry columns, dedup indexes)
 - 087: Newsletter Agent M5 (agent_runs, agent_decisions, agent_drafts, contact_trust_levels)
+- 102: Notifications table (`notifications`) with RLS — required for notification center, speed-to-lead alerts, and showing confirmations
+
+### UI/UX Feature Dependencies (April 2026)
+
+The following notes apply to the UI/UX competitive features (Cmd+K search, notification center, activity feed, bulk actions, etc.):
+
+- **New migration required:** `supabase/migrations/102_notifications.sql` must be applied before the notification center works. Creates the `notifications` table with RLS policies and an index on `(realtor_id, is_read, created_at DESC)`.
+- **New Supabase table:** `notifications` — columns: `id`, `realtor_id`, `type`, `title`, `body`, `related_type`, `related_id`, `is_read`, `created_at`. RLS enabled.
+- **Zustand persist (localStorage):** Recent items tracking uses Zustand with `persist` middleware, storing data in `localStorage` under key `r360-recent-items`. No server configuration needed — this is entirely client-side.
+- **No new environment variables required** for any of the UI/UX features.
+- **Cmd+K search prerequisite:** The global command bar search requires the contacts API (`GET /api/contacts?search=&limit=`) and listings API (`GET /api/listings?search=&limit=`) routes to be accessible. Verify these endpoints return data after deployment.
 
 ### Rollbacks
 Located at `supabase/rollbacks/`. Each destructive migration has a matching rollback file.

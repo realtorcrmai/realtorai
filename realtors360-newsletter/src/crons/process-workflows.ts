@@ -21,6 +21,7 @@
 import { config } from '../config.js';
 import { supabase } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
+import { captureException } from '../lib/sentry.js';
 import { processWorkflowQueue } from '../shared/workflow/engine.js';
 
 export async function runProcessWorkflows(): Promise<void> {
@@ -52,5 +53,6 @@ export async function runProcessWorkflows(): Promise<void> {
     }
   } catch (err) {
     logger.error({ err, durationMs: Date.now() - start }, 'cron: process-workflows threw');
+    captureException(err instanceof Error ? err : new Error(String(err)), { cron: 'process-workflows' });
   }
 }

@@ -23,7 +23,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import { config } from '../../config.js';
 import { logger } from '../../lib/logger.js';
-import { sendEmail } from '../../lib/resend.js';
+import { captureException } from '../../lib/sentry.js';
+import { parseAIJson, unescapeNewlines } from '../../lib/parse-ai-json.js';
+import { sendWithTracking } from '../../lib/send-with-tracking.js';
 import { sendGenericMessage } from '../../lib/twilio.js';
 import { canSendToContact } from '../../lib/compliance.js';
 import { createWithRetry } from '../anthropic-retry.js';
@@ -127,7 +129,7 @@ async function generateAIContent(
         { contact_id: contact.id, content_type: ['message', 'activity', 'email'] }, 5
       );
       if (retrieved.formatted) ragContext = `\nINTERACTION HISTORY:\n${retrieved.formatted}\n`;
-    } catch { /* RAG unavailable */ }
+    } catch (err) { logger.debug({ err }, 'workflow: RAG unavailable, continuing without'); }
   }
 
   const listingInfo = listing
@@ -152,11 +154,13 @@ ${channel === 'email'
   });
 
   const text = message.content[0]?.type === 'text' ? message.content[0].text : '';
-  try {
-    return JSON.parse(text) as { subject?: string; body: string };
-  } catch {
-    return { body: text };
+  const parsed = parseAIJson<{ subject?: string; body: string }>(text);
+  if (parsed) {
+    if (typeof parsed.body === 'string') parsed.body = unescapeNewlines(parsed.body);
+    if (typeof parsed.subject === 'string') parsed.subject = unescapeNewlines(parsed.subject);
+    return parsed;
   }
+  return { body: unescapeNewlines(text) };
 }
 
 /* ───────────────────────── Frequency Check ───────────────────────── */
@@ -277,36 +281,52 @@ async function executeAutoMessage(
 
     try {
       const emailSubject = subject || step.name;
-      // Simple branded HTML wrapper (newsletter service doesn't port CRM's email-blocks)
-      const htmlBody = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1a1535;">
-<p>${body.replace(/\n/g, '<br>')}</p>
-<hr style="border:none;border-top:1px solid #e5e5e5;margin:24px 0;">
-<p style="font-size:12px;color:#888;">Sent by ${variables.agent_name || 'Your Agent'}</p>
-</body></html>`;
+      const emailTypeVal = step.template_id || step.action_type || 'welcome';
+      const { assembleEmail, generatePlainText } = await import('../../lib/email-blocks.js');
+      const firstName = contact.name.split(' ')[0] || 'there';
 
-      const result = await sendEmail({
+      const htmlBody = assembleEmail(emailTypeVal, {
+        contact: { name: contact.name, firstName, type: contact.type },
+        agent: {
+          name: variables.agent_name || config.AGENT_NAME,
+          brokerage: 'Realtors360',
+          phone: variables.agent_phone || '',
+          email: variables.agent_email || '',
+          initials: (variables.agent_name || config.AGENT_NAME)[0] || 'R',
+        },
+        content: {
+          subject: emailSubject,
+          intro: body,
+          body: '',
+          ctaText: variables.agent_name ? `Talk to ${variables.agent_name}` : 'View Details',
+          ctaUrl: 'https://realtors360.ai',
+        },
+        ...(listing ? {
+          listing: {
+            address: listing.address || '',
+            area: '',
+            price: listing.list_price || 0,
+          },
+        } : {}),
+      });
+      const textBody = generatePlainText(htmlBody);
+
+      const tracked = await sendWithTracking({
+        db,
         to: contact.email,
         subject: emailSubject,
         html: htmlBody,
-        text: body,
-        tags: [
-          { name: 'contact_id', value: contact.id },
-          { name: 'email_type', value: step.template_id || 'workflow' },
-        ],
+        text: textBody,
+        contactId: contact.id,
+        realtorId: '',
+        emailType: emailTypeVal,
+        sendMode: 'workflow_auto',
+        aiContext: { source: 'workflow', step_name: step.name, workflow_id: step.workflow_id },
       });
 
-      // Track in newsletters table
-      await db.from('newsletters').insert({
-        contact_id: contact.id,
-        subject: emailSubject,
-        email_type: step.template_id || step.action_type,
-        status: 'sent',
-        html_body: htmlBody,
-        sent_at: new Date().toISOString(),
-        resend_message_id: result.id || null,
-        send_mode: 'auto',
-        ai_context: { source: 'workflow', step_name: step.name, workflow_id: step.workflow_id },
-      });
+      if (!tracked.ok) {
+        return { success: true, result: { channel: 'email', logged: true, sendError: tracked.error } };
+      }
 
       // Log to communications
       await db.from('communications').insert({
@@ -316,7 +336,7 @@ async function executeAutoMessage(
         body: `Subject: ${emailSubject}\n\n${body}`,
       });
 
-      return { success: true, result: { channel: 'email', messageId: result.id } };
+      return { success: true, result: { channel: 'email', messageId: tracked.resendId } };
     } catch (emailErr) {
       await db.from('communications').insert({
         contact_id: contact.id,
@@ -618,6 +638,7 @@ export async function processWorkflowQueue(
     } catch (err) {
       errors.push(`Enrollment ${enrollment.id}: ${String(err)}`);
       enrollmentLog.error({ err }, 'workflow: enrollment processing threw');
+      captureException(err instanceof Error ? err : new Error(String(err)), { enrollmentId: enrollment.id, contactId: enrollment.contact_id });
     }
   }
 

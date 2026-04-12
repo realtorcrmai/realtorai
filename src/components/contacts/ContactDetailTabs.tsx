@@ -540,6 +540,17 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
               </CardContent>
             </Card>
           )}
+
+          {/* Co-owned Properties / Business Partners */}
+          <Card className="border-l-4 border-l-amber-400 bg-amber-50/15 dark:bg-amber-950/10">
+            <CardContent className="p-4">
+              <PropertyDealsTab
+                contactId={contactId}
+                contactName={contactName}
+                allContacts={allContacts}
+              />
+            </CardContent>
+          </Card>
         </div>
       </TabsContent>
 

@@ -531,4 +531,41 @@ flowchart TD
 
 ---
 
-*Generated 2026-03-23 — Realtors360 CRM*
+## 6. Quick Contact Lookup
+
+1. Press Cmd+K from any page
+2. Type contact name — results appear in 300ms (debounced search against `/api/contacts?search=`)
+3. Click result — navigate to contact detail page (`/contacts/{id}`)
+4. Recent item saved automatically in sidebar via Zustand persist store
+
+---
+
+## 7. Triage Dashboard
+
+1. Land on dashboard — see Today's Priorities card at the top (overdue tasks, hot leads, pending showings)
+2. Scroll to Activity Feed — see what happened recently (communications, email events, showing changes, completed tasks)
+3. Check Deal Pipeline widget — see active deals grouped by stage with values
+4. Click KPI card — navigate to filtered list (e.g., click "Active Listings" to go to `/listings?status=active`)
+
+---
+
+## 8. Contact Management
+
+1. Open `/contacts` — see paginated DataTable with avatars, lead scores, stages
+2. Search by name — table filters instantly via search input
+3. Hover row — call/email/preview icons appear (inline quick actions)
+4. Click eye icon — preview sheet slides open showing contact info + recent communications
+5. Select checkboxes on multiple rows — bulk action bar appears at bottom of screen
+6. Click "Change Stage" in bulk bar — update multiple contacts' stage in one action
+
+---
+
+## 9. Showing Workflow
+
+1. Schedule showing — notification fires to realtor (notification center bell shows unread count)
+2. Confirm showing — notification fires to buyer agent, calendar event updated
+3. Complete showing — feedback SMS sent to buyer agent via Twilio asking for 1-5 rating and comments
+
+---
+
+*Generated 2026-03-23, updated 2026-04-10 — Realtors360 CRM*

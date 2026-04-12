@@ -7,6 +7,18 @@ import { contactSchema, type ContactFormData } from "@/lib/schemas";
 import type { Json } from "@/types/database";
 import { enforceConsistency } from "@/lib/contact-consistency";
 import { triggerIngest } from "@/lib/rag/realtime-ingest";
+import { createNotification } from "@/lib/notifications";
+
+export async function getContactCommunications(contactId: string, limit = 5) {
+  const tc = await getAuthenticatedTenantClient();
+  const { data } = await tc
+    .from("communications")
+    .select("id, direction, channel, body, created_at")
+    .eq("contact_id", contactId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return data ?? [];
+}
 
 export async function createContact(formData: ContactFormData, force = false) {
   const parsed = contactSchema.safeParse(formData);
@@ -81,6 +93,19 @@ export async function createContact(formData: ContactFormData, force = false) {
     return { error: "Failed to create contact" };
   }
 
+  // Notification: new lead added
+  try {
+    await createNotification(tc.realtorId, {
+      type: "new_lead",
+      title: `New lead: ${parsed.data.name}`,
+      body: `${parsed.data.type} contact added`,
+      related_type: "contact",
+      related_id: data.id,
+    });
+  } catch {
+    // Don't fail contact creation if notification fails
+  }
+
   revalidatePath("/contacts");
 
   // Fire-and-forget: enroll in journey + trigger matching workflows
@@ -100,6 +125,19 @@ export async function createContact(formData: ContactFormData, force = false) {
 
   // Real-time RAG ingestion
   triggerIngest("contacts", data.id);
+
+  // Auto-cleanup: remove sample contacts once user has 5+ real contacts
+  (async () => {
+    try {
+      const { count } = await tc
+        .from("contacts")
+        .select("id", { count: "exact", head: true })
+        .eq("is_sample", false);
+      if ((count ?? 0) >= 5) {
+        await tc.from("contacts").delete().eq("is_sample", true);
+      }
+    } catch { /* non-critical */ }
+  })();
 
   return { success: true, contact: data };
 }
@@ -642,7 +680,7 @@ async function enrollInJourney(contactId: string, contactType: string, _name: st
     trust_level: 0,
   });
 
-  console.log(`[journey] Enrolled ${name} in ${journeyType} journey (lead phase)`);
+  console.log(`[journey] Enrolled ${_name} in ${journeyType} journey (lead phase)`);
 }
 
 /** @deprecated Use enrollInJourney + trigger engine instead */

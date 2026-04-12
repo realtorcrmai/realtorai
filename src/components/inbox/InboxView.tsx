@@ -232,6 +232,7 @@ export function InboxView({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 h-9 text-sm"
+              aria-label="Search inbox"
             />
           </div>
         </div>

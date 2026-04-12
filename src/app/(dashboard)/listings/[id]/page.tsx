@@ -2,6 +2,7 @@ import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, DollarSign, Key, Clock, User } from "lucide-react";
+import { TrackRecentView } from "@/components/shared/TrackRecentView";
 import { ManualStatusOverride } from "@/components/listings/ManualStatusOverride";
 import { ListingWorkflow } from "@/components/listings/ListingWorkflow";
 import { FormReadinessPanel } from "@/components/listings/FormReadinessPanel";
@@ -97,6 +98,8 @@ export default async function ListingDetailPage({
   const hasMissingDocs = requiredTypes.some((t) => !docTypes.includes(t));
 
   return (
+    <>
+    <TrackRecentView id={listing.id} type="listing" label={listing.address} href={`/listings/${listing.id}`} />
     <div className="flex h-full">
       {/* CENTER — scrollable */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
@@ -134,7 +137,7 @@ export default async function ListingDetailPage({
 
           {/* Listing Header — compact */}
           <Card className="animate-float-in overflow-hidden border-0 shadow-md">
-            <div className="h-1.5 bg-gradient-to-r from-teal-500 via-blue-500 to-indigo-500" />
+            <div className="h-1.5 bg-brand" />
             <CardContent className="p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1.5 min-w-0">
@@ -300,5 +303,6 @@ export default async function ListingDetailPage({
         />
       </aside>
     </div>
+    </>
   );
 }

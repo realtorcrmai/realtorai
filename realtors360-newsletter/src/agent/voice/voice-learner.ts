@@ -101,8 +101,9 @@ What writing style rules can you extract from how the realtor changed this draft
 
     const text = message.content[0]?.type === 'text' ? message.content[0].text : '';
 
-    // Parse the JSON array response
-    const parsed: unknown = JSON.parse(text);
+    // Parse the JSON array response (strip markdown fences if present)
+    const { parseAIJson } = await import('../../lib/parse-ai-json.js');
+    const parsed: unknown = parseAIJson(text);
 
     if (!Array.isArray(parsed)) {
       logger.warn({ realtorId, response: text }, 'voice-learner: Claude returned non-array');

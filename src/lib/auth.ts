@@ -168,7 +168,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               token.emailVerified = existingUser.email_verified ?? true;
               token.phoneVerified = existingUser.phone_verified ?? false;
               token.onboardingCompleted = existingUser.onboarding_completed ?? true;
-              token.personalizationCompleted = existingUser.personalization_completed ?? false;
+              // Default to true for pre-existing users (column didn't exist before migration 095)
+              token.personalizationCompleted = existingUser.personalization_completed ?? (existingUser.onboarding_completed ? true : false);
               token.trialEndsAt = existingUser.trial_ends_at ?? null;
               // Resolve effective plan: trial plan if active, otherwise base plan
               const { getEffectivePlan } = await import("@/lib/plans");
@@ -185,9 +186,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             } else if (trigger === "signIn" || account) {
               const isAdmin = ADMIN_EMAIL && token.email === ADMIN_EMAIL;
               const defaultPlan = isAdmin ? "admin" : "free";
-              // New users get 14-day Professional trial (S7)
-              const trialEndsAt = isAdmin ? null : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
-              const trialPlan = isAdmin ? null : "professional";
               const { data: newUser, error: insertError } = await supabase
                 .from("users")
                 .insert({
@@ -195,8 +193,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                   name: token.name as string | undefined,
                   role: isAdmin ? "admin" : "realtor",
                   plan: defaultPlan,
-                  trial_ends_at: trialEndsAt,
-                  trial_plan: trialPlan,
                   personalization_completed: false,
                   onboarding_completed: false,
                 })
@@ -218,7 +214,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               token.userId = newUser?.id;
               token.personalizationCompleted = false;
               token.onboardingCompleted = false;
-              token.trialEndsAt = trialEndsAt;
+              token.trialEndsAt = null;
               token.enabledFeatures = getUserFeatures(
                 effectivePlan,
                 newUser?.enabled_features

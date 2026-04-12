@@ -11,12 +11,14 @@ export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
   const search = searchParams.get("search");
   const type = searchParams.get("type")?.toLowerCase();
+  const rawLimit = parseInt(searchParams.get("limit") || "200");
+  const limit = Number.isNaN(rawLimit) ? 200 : Math.min(Math.max(rawLimit, 1), 500);
 
   let query = supabase.from("contacts").select("*").order("created_at", { ascending: false });
 
   if (search) {
     // Sanitize: strip characters that could break PostgREST filter syntax
-    const sanitized = search.replace(/[,().*%\\]/g, "");
+    const sanitized = search.replace(/[,().*%\\'"/]/g, "");
     if (sanitized.length > 0) {
       query = query.or(`name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%,email.ilike.%${sanitized}%`);
     }
@@ -25,7 +27,7 @@ export async function GET(req: NextRequest) {
     query = query.eq("type", type);
   }
 
-  const { data, error } = await query;
+  const { data, error } = await query.limit(limit);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

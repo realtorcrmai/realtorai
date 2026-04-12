@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
 import { config } from '../config.js';
+import { captureException } from '../lib/sentry.js';
 
 // TODO: Replace with actual REBGV/FVREB API when available.
 // The BC real-estate boards (REBGV, FVREB, BCNREB, OMREB) do not expose
@@ -191,6 +192,7 @@ export async function scrapeMarketStats(): Promise<void> {
         { err: error, batch: batch.map((b) => `${b.area}/${b.stat_type}`) },
         'cron/scrape-market-stats: upsert batch failed'
       );
+      captureException(new Error(error.message), { cron: 'scrape-market-stats' });
     } else {
       upserted += batch.length;
     }

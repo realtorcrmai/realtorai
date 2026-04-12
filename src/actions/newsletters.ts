@@ -876,3 +876,43 @@ export async function sendListingBlast(listingId: string, _template: string) {
     return { error: e instanceof Error ? e.message : "Blast failed" };
   }
 }
+
+/**
+ * Approve an agent draft — sets status to 'approved'.
+ * Called from the /newsletters/queue page for agent_drafts with pending_review status.
+ */
+export async function approveDraft(draftId: string) {
+  const tc = await getAuthenticatedTenantClient();
+
+  const { error } = await tc
+    .from("agent_drafts")
+    .update({ status: "approved", updated_at: new Date().toISOString() })
+    .eq("id", draftId)
+    .eq("status", "pending_review");
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/newsletters/queue");
+  revalidatePath("/newsletters/agent");
+  return { success: true };
+}
+
+/**
+ * Reject an agent draft — sets status to 'rejected'.
+ * Called from the /newsletters/queue page for agent_drafts with pending_review status.
+ */
+export async function rejectDraft(draftId: string) {
+  const tc = await getAuthenticatedTenantClient();
+
+  const { error } = await tc
+    .from("agent_drafts")
+    .update({ status: "rejected", updated_at: new Date().toISOString() })
+    .eq("id", draftId)
+    .eq("status", "pending_review");
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/newsletters/queue");
+  revalidatePath("/newsletters/agent");
+  return { success: true };
+}

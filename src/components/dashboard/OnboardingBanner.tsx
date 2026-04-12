@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { X } from "lucide-react";
 import type { ChecklistItem } from "@/actions/checklist";
@@ -12,10 +11,10 @@ import type { ChecklistItem } from "@/actions/checklist";
  * "Welcome back, {name}! X of Y setup steps complete — {next action}"
  */
 export function OnboardingBanner() {
-  const { data: session } = useSession();
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [dismissed, setDismissed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [firstName, setFirstName] = useState("");
 
   useEffect(() => {
     // Check localStorage dismiss
@@ -34,6 +33,7 @@ export function OnboardingBanner() {
       .then((data) => {
         if (data.dismissedAll) setDismissed(true);
         else setItems(data.items || []);
+        if (data.name) setFirstName(data.name.split(" ")[0]);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -46,7 +46,6 @@ export function OnboardingBanner() {
   if (total === 0 || completed === total) return null;
 
   const nextItem = items.find((i) => !i.completed);
-  const firstName = session?.user?.name?.split(" ")[0] || "";
   const progress = Math.round((completed / total) * 100);
 
   const handleDismiss = () => {

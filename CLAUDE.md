@@ -166,7 +166,8 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 │   │   ├── journeys.ts            # Journey enrollment, phase advancement, cron
 │   │   ├── recommendations.ts     # AI recommendations CRUD + execute
 │   │   ├── templates.ts           # Email template CRUD, preview, duplicate
-│   │   └── segments.ts            # Contact segment builder + bulk enroll
+│   │   ├── segments.ts            # Contact segment builder + bulk enroll
+│   │   └── notifications.ts      # Notification CRUD, mark read, dismiss
 │   ├── emails/                    # React Email templates
 │   │   ├── BaseLayout.tsx         # Shared wrapper (branding, dark mode, unsubscribe)
 │   │   ├── NewListingAlert.tsx    # Property listing cards
@@ -175,18 +176,21 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 │   │   ├── OpenHouseInvite.tsx    # Event invitation
 │   │   ├── NeighbourhoodGuide.tsx # Area lifestyle content
 │   │   └── HomeAnniversary.tsx    # Annual homeowner milestone
+│   ├── stores/                    # Zustand stores (recent-items.ts)
 │   ├── components/
-│   │   ├── contacts/              # ContactCard, ContactForm, CommunicationTimeline, SegmentBuilder
+│   │   ├── contacts/              # ContactCard, ContactForm, CommunicationTimeline, SegmentBuilder, ContactPreviewSheet
 │   │   ├── content/               # ContentStepper, PromptsStep, GenerateStep, GalleryStep
 │   │   ├── listings/              # ListingCard, ListingForm, DocumentStatusTracker, etc.
 │   │   ├── showings/              # ShowingRequestForm, StatusBadge, StatusActions, Communication
 │   │   ├── newsletters/           # ApprovalQueueClient, NewsletterWalkthrough
-│   │   ├── dashboard/             # PipelineSnapshot, AIRecommendations, RemindersWidget
+│   │   ├── dashboard/             # PipelineSnapshot, AIRecommendations, RemindersWidget, ActivityFeed, TodaysPriorities, DashboardPipelineWidget
+│   │   ├── shared/                # TrackRecentView.tsx (recent items bridge)
 │   │   ├── email-builder/         # EmailEditorClient (template editor)
 │   │   ├── workflow-builder/      # WorkflowCanvas, WorkflowEditorClient (React Flow)
 │   │   ├── workflow/              # WorkflowStepper, PhaseCard, Phase1-8 components
-│   │   ├── layout/                # Sidebar, TopBar, MobileNav
-│   │   └── ui/                    # shadcn primitives
+│   │   ├── brand/                 # Logo components (LogoIcon, LogoIconDark, LogoAnimated, LogoMark, LogoSpinner)
+│   │   ├── layout/                # MondaySidebar, MondayHeader, MobileNav, DashboardShellClient, CommandPalette, NotificationDropdown, PageHeader
+│   │   └── ui/                    # shadcn primitives (includes enhanced data-table.tsx)
 │   ├── hooks/                     # useListings, useContacts, useShowings, useKlingTask
 │   ├── lib/
 │   │   ├── supabase/              # client.ts, server.ts, admin.ts
@@ -202,7 +206,8 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 │   │   ├── email-renderer.ts      # Template-to-HTML renderer
 │   │   ├── google-calendar.ts     # Calendar API wrapper
 │   │   ├── cdm-mapper.ts          # Listing → Common Data Model for forms
-│   │   └── fuzzy-match.ts         # Jaro-Winkler string matching
+│   │   ├── fuzzy-match.ts         # Jaro-Winkler string matching
+│   │   └── notifications.ts      # Notification helper (create, query, speed-to-lead trigger)
 │   └── types/
 │       ├── database.ts            # Supabase table types
 │       └── index.ts               # Exported type aliases
@@ -217,46 +222,107 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 
 ## Design System — Realtors360
 
-The UI uses a custom glassmorphism design language. All custom styles are defined as CSS custom properties in `globals.css`.
+The UI uses a HubSpot-inspired design language: clean, flat, professional. No glassmorphism or gradients. Custom styles are defined as CSS custom properties in `globals.css`. Legacy `lf-*` variables remain in the CSS but are deprecated — use the new palette.
 
 ### Key Variables
 ```css
---lf-bg: #f4f2ff           /* Light purple background */
---lf-indigo: #4f35d2        /* Primary brand color */
---lf-coral: #ff5c3a         /* Accent / CTA color */
---lf-teal: #00bfa5          /* Success accent */
---lf-emerald: #059669       /* Positive states */
---lf-text: #1a1535          /* Primary text */
---lf-r: 13px                /* Border radius */
---lf-sh: 0 2px 12px rgba(79,53,210,.08)  /* Card shadow */
---lf-font-heading: 'Bricolage Grotesque'
---lf-font-body: 'Bricolage Grotesque'
+--primary: #2D3E50          /* Navy — sidebar, headings */
+--brand: #FF7A59            /* Coral — CTAs, active indicators */
+--background: #F5F8FA       /* Light grey page background */
+--sidebar: #2D3E50          /* Navy sidebar background */
+--sidebar-primary: #FF7A59  /* Coral active indicator in sidebar */
+--success: #00BDA5          /* Teal — success states */
+--destructive: #D94F57      /* Red — errors, delete actions */
+--card: #FFFFFF             /* White card background */
+--border: #E5E7EB           /* Light grey borders */
 ```
 
 ### Component Classes
-- `.lf-card` — Glass card with backdrop-blur, white 85% opacity
-- `.lf-glass` — Glass panel for header/nav
-- `.lf-btn` — Primary indigo button
-- `.lf-btn-ghost` — Outlined button variant
-- `.lf-btn-sm` — Small button
-- `.lf-btn-success` / `.lf-btn-danger` — Semantic variants
-- `.lf-badge` — Status badge (variants: `-done`, `-active`, `-pending`, `-blocked`, `-info`)
-- `.lf-input` / `.lf-select` / `.lf-textarea` — Form elements
-- `.lf-phase-num` — Workflow phase indicator (circle with number)
-- `.lf-enrich-row` — Data enrichment row with hover effect
+- `PageHeader` component — used on every page for breadcrumbs, tabs, and action buttons
+- `DataTable` component — used for all list views (contacts, listings, showings, etc.)
+- `bg-card border-border rounded-lg` — standard card styling (no glass, no blur)
+- `bg-brand text-white` — primary CTA buttons
+- Button variant `brand` — coral CTA buttons via shadcn Button
+- Badge variants: `success`, `warning`, `info` — semantic status indicators
+- Legacy `.lf-card`, `.lf-glass`, `.lf-btn` classes are **deprecated** — do not use in new code
 
 ### Layout
-- Fixed glass header: 60px height
-- Horizontal pill navigation: 40px height
-- Content area: `margin-top: 100px` (header + nav), `padding: 18px`
-- Animated gradient background canvas (`.wf-canvas`)
-- Sidebar components exist (`Sidebar.tsx`, `SidebarLayout.tsx`, `MobileSidebarSheet.tsx`) but the default layout uses `AppHeader` with horizontal nav + `MobileNav` bottom bar
+- Navy sidebar: 240px wide (`w-60`), `bg-sidebar`, fixed left
+- Top header: 56px (`h-14`), `bg-card border-b border-border`
+- Content area: `flex-1 overflow-y-auto bg-background`
+- Mobile: bottom navigation bar with coral active states
+- No animated gradient background — flat `bg-background` everywhere
+- No horizontal pill navigation — sidebar handles all navigation
+
+### Logo & Branding
+**Brand name:** Realtors360 (not "RealtorAI" — legacy name fully replaced as of 2026-04-11)
+**Logo assets:** `/logo/` at monorepo root (animated HTML, favicon SVG, static SVGs, concept variants)
+**React components:** `src/components/brand/Logo.tsx` — 5 exports:
+- `LogoIcon` — light bg (navy roofline + gold arc)
+- `LogoIconDark` — dark bg (all gold — sidebar)
+- `LogoMark` — icon + "Realtors360" text
+- `LogoAnimated` — 3D animated (login page — floating shield, revolving glare, counter-rotating circle)
+- `LogoSpinner` — loading indicator (gold spinning arc, replaces Loader2)
+
+**Where used:** Sidebar (MondaySidebar.tsx), Login (login/page.tsx), Favicon (layout.tsx), LoadingSpinner
 
 ### Conventions
-- Emoji icons throughout UI (no Lucide icons on pages, only in some components)
-- Gradient avatars: seller = indigo→coral, buyer = indigo→purple
-- Status colors: green = confirmed/done, amber = pending, red = denied/blocked
-- All pages use `lf-glass` header bar with gradient title text
+- Every page uses the `PageHeader` component (breadcrumbs, tabs, actions)
+- List views use the `DataTable` component with sorting, filtering, pagination
+- No gradients, no glass effects, no backdrop-blur in new code
+- Sidebar navigation organized in 3 groups: Main, Tools, Admin
+- Lucide icons in sidebar navigation; emoji icons on page content
+- Status colors: green (`--success`) = confirmed/done, amber = pending, red (`--destructive`) = denied/blocked
+
+---
+
+## UX Features (Competitive)
+
+12 competitive UX features built across 4 sprints. Plan doc: `functional-specs/PLAN_UX_Competitive_Features.md`.
+
+### Cmd+K Command Palette
+- `src/components/layout/CommandPalette.tsx` — global search overlay triggered by Cmd+K (Mac) / Ctrl+K (Win)
+- Searches contacts and listings with fuzzy matching, keyboard navigation
+- Integrated into `MondayHeader.tsx`
+
+### DataTable (Enhanced)
+- `src/components/ui/data-table.tsx` — generic table used on all list views
+- Props: `columns`, `data`, `searchKey`, `onRowClick`, `pagination` (original)
+- Added: `rowActions` (per-row action menu), `bulkActions` (multi-select toolbar), `ariaLabel` (accessibility)
+- Bulk actions support: email, delete, tag, export on selected rows
+
+### PageHeader
+- `src/components/layout/PageHeader.tsx` — used on every dashboard page
+- Props: title, subtitle, breadcrumbs, tabs, actions
+
+### Notification Center
+- `src/components/layout/NotificationDropdown.tsx` — bell icon + unread count badge in MondayHeader
+- 30-second polling for new notifications
+- `src/actions/notifications.ts` — server actions (CRUD, mark read, dismiss)
+- `src/lib/notifications.ts` — notification helper (create, query, speed-to-lead auto-alert on new contact within 5 min)
+
+### Recent Items
+- `src/stores/recent-items.ts` — Zustand store tracking recently viewed contacts/listings
+- `src/components/shared/TrackRecentView.tsx` — bridge component placed on detail pages to record views
+- Recent items surfaced in CommandPalette and sidebar
+
+### Contact Preview
+- `src/components/contacts/ContactPreviewSheet.tsx` — slide-over panel with contact details + recent communications
+- Triggered from DataTable rows without full page navigation
+
+### Dashboard Widgets
+- `src/components/dashboard/ActivityFeed.tsx` — recent communications, showing updates, new contacts
+- `src/components/dashboard/TodaysPriorities.tsx` — overdue tasks, today's showings, hot leads
+- `src/components/dashboard/DashboardPipelineWidget.tsx` — mini listing pipeline grouped by status
+- All three rendered on `src/app/(dashboard)/page.tsx`
+
+### Post-Showing Feedback
+- SMS feedback request sent after confirmed showings via Twilio
+- Implemented in `src/actions/showings.ts`
+
+### Lead Score Badges
+- Color-coded lead score display in `ContactsTableClient.tsx`
+- Reads from `contacts.lead_score` column
 
 ---
 

@@ -7,6 +7,7 @@ import { fetchBusyBlocks, isSlotAvailable } from "@/lib/google-calendar";
 import { revalidatePath } from "next/cache";
 import { showingSchema, type ShowingFormData } from "@/lib/schemas";
 import { emitNewsletterEvent } from "@/lib/newsletter-events";
+import { createNotification } from "@/lib/notifications";
 
 export async function createShowingRequest(
   formData: ShowingFormData
@@ -136,6 +137,19 @@ export async function createShowingRequest(
       .eq("id", appointment.id);
   }
 
+  // Notification: new showing requested
+  try {
+    await createNotification(tc.realtorId, {
+      type: "showing_requested",
+      title: "New showing request",
+      body: `${buyerAgentName} requested a showing at ${listing.address}`,
+      related_type: "appointment",
+      related_id: appointment.id,
+    });
+  } catch {
+    // Don't fail showing creation if notification fails
+  }
+
   revalidatePath("/showings");
   revalidatePath(`/listings/${listingId}`);
 
@@ -148,7 +162,7 @@ export async function createShowingRequest(
 
 export async function updateShowingStatus(
   appointmentId: string,
-  status: "confirmed" | "denied" | "cancelled"
+  status: "confirmed" | "denied" | "cancelled" | "completed"
 ) {
   const tc = await getAuthenticatedTenantClient();
 
@@ -159,6 +173,36 @@ export async function updateShowingStatus(
 
   if (error) {
     return { error: "Failed to update appointment status" };
+  }
+
+  // Notification for status changes
+  try {
+    const notifTypeMap: Record<string, { type: string; title: string }> = {
+      confirmed: { type: "showing_confirmed", title: "Showing confirmed" },
+      denied: { type: "showing_cancelled", title: "Showing denied" },
+      cancelled: { type: "showing_cancelled", title: "Showing cancelled" },
+      completed: { type: "showing_confirmed", title: "Showing completed" },
+    };
+    const notifMeta = notifTypeMap[status];
+    if (notifMeta) {
+      // Fetch minimal appointment info for notification body
+      const { data: notifAppt } = await tc
+        .from("appointments")
+        .select("buyer_agent_name, listing_id, listings(address)")
+        .eq("id", appointmentId)
+        .single();
+      const notifListing = (notifAppt as Record<string, unknown>)?.listings as { address?: string } | null;
+      const agentName = (notifAppt as Record<string, unknown>)?.buyer_agent_name as string | null;
+      await createNotification(tc.realtorId, {
+        type: notifMeta.type,
+        title: notifMeta.title,
+        body: `${agentName || "Agent"} — ${notifListing?.address || "property"}`,
+        related_type: "appointment",
+        related_id: appointmentId,
+      });
+    }
+  } catch {
+    // Don't fail status update if notification fails
   }
 
   // Fire showing_completed trigger for buyer contacts when showing is confirmed
@@ -205,6 +249,52 @@ export async function updateShowingStatus(
       }
     } catch {
       // Don't fail status update if triggers fail
+    }
+  }
+
+  // Post-showing feedback request when marking as completed
+  if (status === "completed") {
+    try {
+      const { data: appointment } = await tc
+        .from("appointments")
+        .select("buyer_agent_name, buyer_agent_phone, listing_id, listings(address)")
+        .eq("id", appointmentId)
+        .single();
+
+      if (appointment?.buyer_agent_phone) {
+        const listing = appointment.listings as { address?: string } | null;
+        const feedbackMsg = `Hi ${appointment.buyer_agent_name || "there"}, how did the showing at ${listing?.address || "the property"} go? Reply with your feedback. Thanks!`;
+
+        // Only send if Twilio is configured
+        if (process.env.TWILIO_ACCOUNT_SID) {
+          const { sendGenericMessage } = await import("@/lib/twilio");
+          await sendGenericMessage({
+            to: appointment.buyer_agent_phone,
+            channel: "sms",
+            body: feedbackMsg,
+          });
+
+          // Log the outbound communication under the listing's seller contact
+          // (buyer agents are flat text, not contacts — contact_id is NOT NULL)
+          const { data: feedbackListing } = await tc
+            .from("listings")
+            .select("seller_id")
+            .eq("id", appointment.listing_id)
+            .single();
+
+          if (feedbackListing?.seller_id) {
+            await tc.from("communications").insert({
+              contact_id: feedbackListing.seller_id,
+              direction: "outbound",
+              channel: "sms",
+              body: `Feedback request sent to ${appointment.buyer_agent_name || "buyer agent"} for showing at ${listing?.address || "property"}`,
+              related_id: appointmentId,
+            });
+          }
+        }
+      }
+    } catch {
+      // Don't fail the status update if feedback fails
     }
   }
 

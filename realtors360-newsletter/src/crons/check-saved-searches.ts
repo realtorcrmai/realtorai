@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
+import { captureException } from '../lib/sentry.js';
+import { startTimer } from '../lib/timer.js';
 
 /**
  * Cron: check-saved-searches
@@ -39,6 +41,7 @@ export async function checkSavedSearches(): Promise<void> {
 
   if (error) {
     logger.error({ err: error }, 'cron/saved-searches: query failed');
+    captureException(new Error(error.message), { cron: 'check-saved-searches' });
     return;
   }
   if (!searches || searches.length === 0) {
@@ -52,6 +55,7 @@ export async function checkSavedSearches(): Promise<void> {
   let duplicatesSkipped = 0;
 
   for (const search of searches) {
+    const searchElapsed = startTimer();
     const criteria = (search.criteria as Criteria) ?? {};
     const since = search.last_match_check ?? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
@@ -122,6 +126,8 @@ export async function checkSavedSearches(): Promise<void> {
       .from('saved_searches')
       .update({ last_match_check: checkedAt, last_match_count: matches.length })
       .eq('id', search.id);
+
+    logger.debug({ searchId: search.id, matches: matches.length, durationMs: searchElapsed() }, 'cron/saved-searches: search processed');
   }
 
   logger.info(

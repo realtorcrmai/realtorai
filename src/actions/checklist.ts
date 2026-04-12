@@ -12,12 +12,15 @@ export interface ChecklistItem {
   dismissed: boolean;
 }
 
-const CHECKLIST_ITEMS = [
-  { key: "first_contact", label: "Add your first contact", description: "Import or create a contact", href: "/contacts/new" },
-  { key: "first_listing", label: "Create a listing", description: "Add a property to manage", href: "/listings" },
-  { key: "calendar_connected", label: "Connect your calendar", description: "Sync with Google Calendar", href: "/calendar" },
-  { key: "first_email", label: "Send your first email", description: "Create a newsletter campaign", href: "/newsletters" },
-  { key: "first_showing", label: "Schedule a showing", description: "Book a property viewing", href: "/showings" },
+import type { FeatureKey } from "@/lib/features";
+
+// Each checklist item is gated to a feature — only shown if the user's plan includes it
+const CHECKLIST_ITEMS: { key: string; label: string; description: string; href: string; featureKey: FeatureKey }[] = [
+  { key: "first_contact", label: "Add your first contact", description: "Import or create a contact", href: "/contacts/new", featureKey: "contacts" },
+  { key: "first_listing", label: "Create a listing", description: "Add a property to manage", href: "/listings", featureKey: "listings" },
+  { key: "calendar_connected", label: "Connect your calendar", description: "Sync with Google Calendar", href: "/calendar", featureKey: "calendar" },
+  { key: "first_email", label: "Send your first email", description: "Create a newsletter campaign", href: "/newsletters", featureKey: "newsletters" },
+  { key: "first_showing", label: "Schedule a showing", description: "Book a property viewing", href: "/showings", featureKey: "showings" },
 ];
 
 /**
@@ -57,11 +60,21 @@ export async function getChecklistItems(userId?: string): Promise<{ items: Check
   // Check if all items dismissed
   const dismissedAll = overrides.data?.some((r) => r.item_key === "__all__" && r.dismissed) ?? false;
 
-  // Read user's onboarding_focus for ordering
-  const { data: user } = await supabase.from("users").select("onboarding_focus").eq("id", uid).single();
+  // Read user's plan features and onboarding focus for filtering/ordering
+  const { data: user } = await supabase.from("users").select("onboarding_focus, plan, enabled_features, trial_ends_at, trial_plan").eq("id", uid).single();
   const focus = (user?.onboarding_focus as string[]) ?? [];
 
-  const items: ChecklistItem[] = CHECKLIST_ITEMS.map((item) => ({
+  // Filter checklist to only features the user's plan includes
+  const { getUserFeatures } = await import("@/lib/features");
+  const { getEffectivePlan } = await import("@/lib/plans");
+  const effectivePlan = getEffectivePlan(user?.plan || "free", user?.trial_ends_at, user?.trial_plan);
+  const enabledFeatures = getUserFeatures(
+    effectivePlan,
+    user?.enabled_features as string[] | null,
+  );
+  const planItems = CHECKLIST_ITEMS.filter((item) => enabledFeatures.includes(item.featureKey));
+
+  const items: ChecklistItem[] = planItems.map((item) => ({
     ...item,
     completed: autoCompleted[item.key] || overrideMap[item.key]?.completed || false,
     dismissed: overrideMap[item.key]?.dismissed || false,

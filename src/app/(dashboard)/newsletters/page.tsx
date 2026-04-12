@@ -5,6 +5,7 @@ import { getApprovalQueue } from "@/actions/newsletters";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Send, MailOpen, MousePointerClick } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { DailyDigestCard } from "@/components/dashboard/DailyDigestCard";
 import { EmailMarketingTabs } from "@/components/newsletters/EmailMarketingTabs";
 import { CampaignsTab } from "@/components/newsletters/CampaignsTab";
@@ -189,28 +190,28 @@ export default async function NewsletterDashboard() {
   const upcomingSends = Object.values(upcomingSendsMap).slice(0, 5);
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Email Marketing</h1>
-          <p className="text-sm text-muted-foreground mt-1">AI-powered email marketing — one page, full control</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <a
-            href="/newsletters/learning"
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-          >
-            🧠 Learning
-          </a>
-          <a
-            href="/newsletters/engine"
-            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-          >
-            ⚙️ Engine
-          </a>
-        </div>
-      </div>
-
+    <>
+      <PageHeader
+        title="Email Marketing"
+        subtitle="AI-powered email marketing — one page, full control"
+        actions={
+          <div className="flex items-center gap-2">
+            <a
+              href="/newsletters/learning"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              🧠 Learning
+            </a>
+            <a
+              href="/newsletters/engine"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              ⚙️ Engine
+            </a>
+          </div>
+        }
+      />
+      <div className="p-6 space-y-6">
       <EmailMarketingTabs queueCount={queue.length}>
         {{
           /* ═══ OVERVIEW ═══ */
@@ -485,7 +486,8 @@ export default async function NewsletterDashboard() {
           ),
         }}
       </EmailMarketingTabs>
-    </div>
+      </div>
+    </>
   );
 }
 

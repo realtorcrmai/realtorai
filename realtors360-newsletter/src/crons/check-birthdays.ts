@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
+import { captureException } from '../lib/sentry.js';
 
 /**
  * Cron: check-birthdays
@@ -36,6 +37,7 @@ export async function checkBirthdays(): Promise<void> {
 
   if (error) {
     logger.error({ err: error }, 'cron/birthdays: query failed');
+    captureException(new Error(error.message), { cron: 'check-birthdays' });
     return;
   }
   if (!rows || rows.length === 0) {

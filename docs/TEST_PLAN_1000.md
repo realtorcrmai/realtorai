@@ -1350,3 +1350,49 @@ node scripts/test-workflow-emails.mjs
 **Covers:** SDK widget mounting (chat, listings, newsletter, booking), session recording, FullStory integration, contact detail website activity section, CORS edge cases, rate limiting, input sanitization, mobile responsive widgets, error states, offline handling.
 **Total:** 38 additional test cases
 **Automated:** Mix of `scripts/test-website-api.mjs` and manual
+
+---
+
+## CATEGORY 17: UI/UX COMPETITIVE FEATURES (UIUX) — 50 Tests
+
+> **Comprehensive test plan:** `docs/TEST_PLAN_UI_UX_Features.md`
+
+50+ test cases covering Cmd+K search, DataTable features (inline actions, bulk actions, pagination, sorting), notification center (polling, mark read, mark all read, speed-to-lead alerts), contact preview sheet, recent items tracking (Zustand persist, sidebar display, hydration guard), activity feed, Today's Priorities card, Deal Pipeline widget, post-showing feedback SMS, lead score badges, and accessibility compliance (keyboard navigation, ARIA labels, screen reader support).
+
+### UIUX-001: Cmd+K Opens Command Palette
+**Story:** As a realtor, I want to press Cmd+K from any page, so I can quickly search contacts and listings.
+**Steps:** Press Cmd+K (or Ctrl+K on Windows) from dashboard
+**Expected:** Command palette overlay opens with search input focused
+**Priority:** P1
+
+### UIUX-010: Notification Center Unread Count
+**Story:** As a realtor, I want to see an unread notification count on the bell icon, so I know when something needs attention.
+**Steps:** Create a new contact (triggers speed-to-lead notification) → Check bell icon in header
+**Expected:** Bell icon shows numeric badge with unread count > 0
+**Priority:** P1
+
+### UIUX-020: Bulk Actions Bar Appears on Selection
+**Story:** As a realtor, I want to select multiple contacts and perform bulk actions, so I can manage contacts efficiently.
+**Steps:** Navigate to /contacts → Select 3 checkboxes → Observe bottom bar
+**Expected:** Fixed bulk action bar appears with "Change Stage", "Add Tag", "Delete" options and selected count
+**Priority:** P2
+
+### UIUX-030: Contact Preview Sheet
+**Story:** As a realtor, I want to preview a contact without leaving the list, so I can quickly check details.
+**Steps:** Navigate to /contacts → Hover row → Click eye icon
+**Expected:** Slide-over sheet opens showing contact info, score, stage, and last 5 communications
+**Priority:** P2
+
+### UIUX-040: Recent Items in Sidebar
+**Story:** As a realtor, I want to see recently viewed contacts and listings in the sidebar, so I can quickly return to them.
+**Steps:** Visit /contacts/abc → Visit /listings/xyz → Check sidebar
+**Expected:** "Recent" section in sidebar shows both items with correct icons and labels
+**Priority:** P3
+
+### UIUX-050: Activity Feed on Dashboard
+**Story:** As a realtor, I want to see recent activity on my dashboard, so I know what happened while I was away.
+**Steps:** Navigate to dashboard → Scroll to Activity Feed section
+**Expected:** Feed shows recent communications, email events, showing changes, and completed tasks with timestamps
+**Priority:** P2
+
+**Full test plan with all 50+ cases:** See `docs/TEST_PLAN_UI_UX_Features.md`

@@ -27,14 +27,18 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "RealtorAI — Real Estate Transaction & Showing Automation",
+  title: "Realtors360 — AI-Powered Real Estate Platform",
   description:
     "AI-powered Real Estate Transaction & Showing Automation CRM for British Columbia",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "RealtorAI",
+    title: "Realtors360",
   },
 };
 

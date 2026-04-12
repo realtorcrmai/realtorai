@@ -11,6 +11,8 @@
 
 import { supabase } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
+import { captureException } from '../lib/sentry.js';
+import { startTimer } from '../lib/timer.js';
 import { processEvent } from '../workers/process-event.js';
 
 const MAX_RETRIES = 3;
@@ -66,6 +68,7 @@ export async function runRetryFailedEvents(): Promise<void> {
     let deadLettered = 0;
 
     for (const row of rows) {
+      const eventElapsed = startTimer();
       const currentRetry = row.retry_count ?? 0;
 
       // Set to 'pending' for processEvent (already claimed via 'retrying')
@@ -125,10 +128,11 @@ export async function runRetryFailedEvents(): Promise<void> {
             .update({ retry_count: currentRetry + 1, next_retry_at: null })
             .eq('id', row.id);
           retried++;
-          log.info({ eventId: row.id }, 'retry: event processed successfully');
+          log.info({ eventId: row.id, durationMs: eventElapsed() }, 'retry: event processed successfully');
         }
       } catch (err) {
         // processEvent threw — treat as failure
+        captureException(err instanceof Error ? err : new Error(String(err)), { cron: 'retry-failed-events', eventId: row.id });
         const nextRetryCount = currentRetry + 1;
 
         if (nextRetryCount >= MAX_RETRIES) {
@@ -167,5 +171,6 @@ export async function runRetryFailedEvents(): Promise<void> {
     );
   } catch (err) {
     log.error({ err, durationMs: Date.now() - start }, 'retry: cron threw');
+    captureException(err instanceof Error ? err : new Error(String(err)), { cron: 'retry-failed-events' });
   }
 }

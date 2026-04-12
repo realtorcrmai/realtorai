@@ -9,7 +9,10 @@ import {
   Wand2, Settings, LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
 import type { FeatureKey } from "@/lib/features";
+import { useRecentItems } from "@/stores/recent-items";
+import { LogoVideo } from "@/components/brand/Logo";
 
 interface NavItem {
   href: string;
@@ -40,14 +43,89 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+function SidebarNavLink({ item, active }: { item: NavItem; active: boolean }) {
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      className={cn(
+        "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+        active
+          ? "bg-sidebar-primary/15 text-white border-l-[3px] border-sidebar-primary font-medium"
+          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+      )}
+    >
+      <Icon className="h-[18px] w-[18px] shrink-0" />
+      {item.label}
+    </Link>
+  );
+}
+
+function SidebarGroupHeader({ label }: { label: string }) {
+  return (
+    <div className="text-xs uppercase tracking-wider text-sidebar-foreground/70 px-4 pt-4 pb-2 font-semibold">
+      {label}
+    </div>
+  );
+}
+
+// Map page sections to accent colors for logo glow
+const SECTION_COLORS: Record<string, string> = {
+  "/": "#FF7A59",           // coral — dashboard
+  "/contacts": "#00BDA5",   // teal
+  "/listings": "#E4C378",   // gold
+  "/showings": "#7C98B6",   // slate
+  "/calendar": "#9B59B6",   // purple
+  "/tasks": "#F39C12",      // amber
+  "/content": "#E74C3C",    // red
+  "/newsletters": "#3498DB",// blue
+  "/automations": "#1ABC9C",// green
+  "/forms": "#95A5A6",      // gray
+  "/search": "#D4B060",     // dark gold
+  "/import": "#8E44AD",     // violet
+  "/settings": "#7F8C8D",   // muted
+};
+
+function getSectionColor(pathname: string): string {
+  if (pathname === "/") return SECTION_COLORS["/"];
+  const section = "/" + pathname.split("/")[1];
+  return SECTION_COLORS[section] || "#FF7A59";
+}
+
 export function MondaySidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const userName = session?.user?.name || "User";
   const userEmail = session?.user?.email || "";
-  const initials = userName.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
+  const initials = userName.split(" ").map((w: string) => w[0]).filter(Boolean).join("").toUpperCase().slice(0, 2) || "U";
 
   const enabledFeatures: string[] = (session?.user as Record<string, unknown>)?.enabledFeatures as string[] || [];
+
+  // Recent items — hydration guard (Zustand persist rehydrates from localStorage after mount)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const recentItems = useRecentItems((s) => s.items);
+
+  // Active section glow color
+  const glowColor = getSectionColor(pathname);
+
+  // Notification pulse — poll for unread count
+  const [hasUnread, setHasUnread] = useState(false);
+  useEffect(() => {
+    let active = true;
+    const check = async () => {
+      try {
+        const res = await fetch("/api/notifications?limit=1&unread=true");
+        if (res.ok) {
+          const data = await res.json();
+          if (active) setHasUnread((data.notifications?.length ?? 0) > 0);
+        }
+      } catch { /* ignore */ }
+    };
+    check();
+    const interval = setInterval(check, 30000);
+    return () => { active = false; clearInterval(interval); };
+  }, []);
 
   function isVisible(featureKey?: FeatureKey) {
     if (!featureKey) return true;
@@ -59,68 +137,58 @@ export function MondaySidebar() {
     return pathname.startsWith(href);
   }
 
-  function NavLink({ item }: { item: NavItem }) {
-    const active = isActive(item.href);
+  function renderNavGroup(label: string, items: NavItem[]) {
+    const visible = items.filter(item => isVisible(item.featureKey));
+    if (visible.length === 0) return null;
     return (
-      <Link
-        href={item.href}
-        className={cn(
-          "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-          active
-            ? "bg-sidebar-accent text-white border-l-3 border-sidebar-primary"
-            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-        )}
-      >
-        <item.icon className="h-[18px] w-[18px] shrink-0" />
-        {item.label}
-      </Link>
-    );
-  }
-
-  function GroupHeader({ label }: { label: string }) {
-    return (
-      <div className="text-xs uppercase tracking-wider text-sidebar-foreground/40 px-4 pt-4 pb-2 font-semibold">
-        {label}
-      </div>
+      <>
+        <SidebarGroupHeader label={label} />
+        <div className="px-2 space-y-0.5">
+          {visible.map(item => (
+            <SidebarNavLink key={item.href} item={item} active={isActive(item.href)} />
+          ))}
+        </div>
+      </>
     );
   }
 
   return (
     <aside className="hidden md:flex flex-col w-60 shrink-0 bg-sidebar h-full overflow-y-auto">
-      {/* Brand */}
-      <div className="flex items-center gap-2.5 h-16 px-4 shrink-0">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-            <polyline points="9 22 9 12 15 12 15 22" />
-          </svg>
+      {/* Brand — logo glow changes per active section, pulses on notifications */}
+      <div
+        className={cn(
+          "flex flex-col items-center justify-center h-[140px] px-3 shrink-0 transition-all duration-700",
+          hasUnread && "animate-[logo-pulse_2s_ease-in-out_infinite]"
+        )}
+        style={{ filter: `drop-shadow(0 0 18px ${glowColor}30)` }}
+      >
+        <LogoVideo size={72} />
+        <div className="text-center mt-1">
+          <span className="text-[15px] font-semibold text-sidebar-foreground tracking-tight">Realtors360</span>
+          <span className="block text-[9px] text-sidebar-foreground/40 tracking-widest uppercase">AI Platform</span>
         </div>
-        <span className="text-sm font-semibold text-sidebar-foreground">Realtors360</span>
       </div>
 
-      {/* MAIN group */}
-      <GroupHeader label="Main" />
-      <div className="px-2 space-y-0.5">
-        {MAIN_NAV.filter(item => isVisible(item.featureKey)).map(item => (
-          <NavLink key={item.href} item={item} />
-        ))}
-      </div>
+      {renderNavGroup("Main", MAIN_NAV)}
+      {renderNavGroup("Tools", TOOLS_NAV)}
+      {renderNavGroup("Admin", ADMIN_NAV)}
 
-      {/* TOOLS group */}
-      <GroupHeader label="Tools" />
-      <div className="px-2 space-y-0.5">
-        {TOOLS_NAV.filter(item => isVisible(item.featureKey)).map(item => (
-          <NavLink key={item.href} item={item} />
-        ))}
-      </div>
-
-      {/* ADMIN group */}
-      <GroupHeader label="Admin" />
-      <div className="px-2 space-y-0.5">
-        {ADMIN_NAV.filter(item => isVisible(item.featureKey)).map(item => (
-          <NavLink key={item.href} item={item} />
-        ))}
-      </div>
+      {/* Recent Items */}
+      {mounted && recentItems.length > 0 && (
+        <div className="px-2 pt-2 border-t border-sidebar-accent mt-2">
+          <div className="text-xs uppercase tracking-wider text-sidebar-foreground/70 px-3 pt-2 pb-1 font-semibold">Recent</div>
+          {recentItems.slice(0, 5).map((item) => (
+            <Link
+              key={item.id}
+              href={item.href}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/60 rounded-md"
+            >
+              <span className="text-xs">{item.type === "contact" ? "👤" : "🏠"}</span>
+              <span className="truncate">{item.label}</span>
+            </Link>
+          ))}
+        </div>
+      )}
 
       {/* Spacer */}
       <div className="flex-1" />

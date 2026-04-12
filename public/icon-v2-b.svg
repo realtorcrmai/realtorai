@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- ICON B: Keystone Shield -->
+  <rect x="6" y="6" width="52" height="52" rx="10" fill="#2D3E50"/>
+  <path d="M20 46L32 18L44 46" stroke="#C9A96E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <line x1="26" y1="38" x2="26" y2="46" stroke="#C9A96E" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="38" y1="38" x2="38" y2="46" stroke="#C9A96E" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="20" y1="46" x2="44" y2="46" stroke="#C9A96E" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

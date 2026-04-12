@@ -1,8 +1,12 @@
 /**
- * Email Block System — Apple-quality modular email builder
+ * Email Block System — Luxury Real Estate Email Builder
  *
- * Each block is a function that returns an HTML string.
- * Templates are assembled by picking blocks based on email type + available data.
+ * Design language: Engel & Volkers / Sotheby's inspired.
+ * Photo-first, serif + sans-serif pairing, generous whitespace,
+ * white backgrounds, minimal CTAs, pipe-separated specs.
+ *
+ * Each block is a function returning an HTML table-row string.
+ * Templates are assembled by selecting blocks based on email type + available data.
  *
  * Usage:
  *   const html = assembleEmail("listing_alert", { listing, contact, agent, content });
@@ -17,14 +21,26 @@ import { config } from '../config.js';
 
 export type EmailData = {
   contact: { name: string; firstName: string; type: string };
-  agent: { name: string; brokerage: string; phone: string; initials?: string };
+  agent: {
+    name: string; brokerage: string; phone: string; email?: string;
+    title?: string; photoUrl?: string; initials?: string;
+    instagram?: string; linkedin?: string; facebook?: string;
+    brokerageAddress?: string;
+  };
   content: { subject: string; intro: string; body: string; ctaText: string; ctaUrl?: string };
   unsubscribeUrl?: string;
+  privacyUrl?: string;
+  logoUrl?: string;
+  tagLine?: string;
+  webViewUrl?: string;
+  heroImageUrl?: string;  // Neighbourhood/area photo for non-listing emails
+  photos?: string[];      // Generic photo array for non-listing emails (area, lifestyle, etc.)
   listing?: {
     address: string; area: string; price: string | number;
     beds?: number; baths?: number; sqft?: string; year?: number;
     photos?: string[]; features?: { icon: string; title: string; desc: string }[];
     openHouseDate?: string; openHouseTime?: string;
+    previousPrice?: string | number;
   };
   listings?: { address: string; price: string | number; beds?: number; baths?: number; sqft?: string; photo?: string }[];
   market?: {
@@ -47,10 +63,53 @@ export type EmailData = {
 type BlockFn = (data: EmailData) => string;
 
 // ═══════════════════════════════════════════════
-// SHARED STYLES
+// DESIGN TOKENS
 // ═══════════════════════════════════════════════
 
-const FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Inter','Helvetica Neue',sans-serif";
+// Apple design language: SF Pro, extreme whitespace, dark-on-light, blue accents
+const SERIF = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif";
+const SANS = "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif";
+const CLR = {
+  text: '#1d1d1f',       // Apple primary text
+  muted: '#6e6e73',      // Apple secondary text
+  light: '#86868b',      // Apple tertiary text
+  border: '#d2d2d7',     // Apple separator
+  bg: '#ffffff',          // White
+  frame: '#ffffff',       // No frame — pure white like apple.com
+  cream: '#fbfbfd',       // Apple off-white for cards
+  dark: '#000000',        // Pure black for hero overlays
+  accent: '#0071e3',      // Apple blue
+  surfaceGrey: '#f5f5f7', // Apple light grey surface
+};
+
+// ═══════════════════════════════════════════════
+// HELPER — format price
+// ═══════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════
+// HELPER — append UTM params to CTA URLs
+// ═══════════════════════════════════════════════
+
+export function addUtm(url: string, emailType: string): string {
+  if (!url || url === '#') return url;
+  try {
+    const u = new URL(url);
+    u.searchParams.set('utm_source', 'realtors360');
+    u.searchParams.set('utm_medium', 'email');
+    u.searchParams.set('utm_campaign', emailType);
+    return u.toString();
+  } catch {
+    // Relative URL or malformed — append as query string
+    const sep = url.includes('?') ? '&' : '?';
+    return `${url}${sep}utm_source=realtors360&utm_medium=email&utm_campaign=${encodeURIComponent(emailType)}`;
+  }
+}
+
+function fmtPrice(p: string | number | undefined): string {
+  if (!p) return '';
+  if (typeof p === 'number') return `$${p.toLocaleString('en-US')}`;
+  return p.startsWith('$') ? p : `$${p}`;
+}
 
 // ═══════════════════════════════════════════════
 // BLOCKS
@@ -58,338 +117,415 @@ const FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','I
 
 const blocks: Record<string, BlockFn> = {
 
-  header: (d) => `
-    <tr><td style="padding:20px 32px 16px;">
-      <table width="100%"><tr>
-        <td><span style="font-size:15px;font-weight:700;color:#1d1d1f;letter-spacing:-0.3px;">${d.agent.name}</span></td>
-        <td align="right"><span style="font-size:11px;color:#86868b;letter-spacing:0.5px;text-transform:uppercase;">${d.content.subject.includes("Welcome") ? "Welcome" : d.listing ? "New Listing" : "Update"}</span></td>
+  // ── 1. Brand Header — minimal Apple nav style ──────────────────
+  brandHeader: (d) => {
+    const tag = d.tagLine || (
+      d.listing ? 'New Listing' :
+      d.market ? 'Market Update' :
+      d.anniversary ? 'Home Anniversary' :
+      'Update'
+    );
+    const viewUrl = d.webViewUrl || '{{web_view_url}}';
+    const webView = `<tr><td style="padding:12px 48px 0;text-align:center;" class="mobile-pad">
+        <a href="${viewUrl}" style="font-family:${SANS};font-size:11px;font-weight:400;color:${CLR.light};text-decoration:none;">View in browser</a>
+      </td></tr>`;
+    return `${webView}
+    <tr><td style="padding:20px 48px;background:${CLR.bg};" class="mobile-pad">
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td style="vertical-align:middle;">
+          ${d.logoUrl
+            ? `<img src="${d.logoUrl}" alt="${d.agent.name}" height="20" style="display:block;height:20px;width:auto;opacity:0.8;">`
+            : `<span style="font-family:${SANS};font-size:14px;font-weight:600;color:${CLR.text};letter-spacing:-0.2px;">${d.agent.name}</span>`
+          }
+        </td>
+        <td align="right" style="vertical-align:middle;">
+          <span style="font-family:${SANS};font-size:12px;font-weight:400;color:${CLR.accent};">${tag}</span>
+        </td>
       </tr></table>
-    </td></tr>`,
+    </td></tr>`;
+  },
 
-  heroImage: (d) => {
+  // ── 2. Hero — full-bleed with dark gradient overlay + text (Apple iPhone style) ──
+  luxuryHero: (d) => {
     const photo = d.listing?.photos?.[0];
-    if (!photo) return "";
+    if (!photo) return '';
+    const title = d.listing?.address || d.content.subject;
+    const area = d.listing?.area || '';
     return `
-    <tr><td style="padding:0 16px;">
-      <div style="border-radius:16px;overflow:hidden;position:relative;">
-        <img src="${photo}" alt="${d.listing?.address}" width="568" style="display:block;width:100%;height:auto;">
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:32px 28px 24px;background:linear-gradient(0deg,rgba(0,0,0,0.65),transparent);">
-          <div style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:500;letter-spacing:1.5px;text-transform:uppercase;">Just Listed</div>
-          <div style="font-size:32px;font-weight:700;color:#fff;margin-top:4px;letter-spacing:-0.5px;">${d.listing?.address}</div>
-          <div style="font-size:15px;color:rgba(255,255,255,0.8);margin-top:4px;">${d.listing?.area || ""}</div>
+    <tr><td style="padding:0;line-height:0;font-size:0;position:relative;">
+      <div style="position:relative;background:#000;">
+        <img src="${photo}" alt="${title}" width="660" style="display:block;width:100%;height:auto;border:0;opacity:0.85;" class="mobile-img">
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:48px 48px 44px;background:linear-gradient(0deg,rgba(0,0,0,0.7) 0%,transparent 100%);">
+          <p style="font-family:${SANS};font-size:12px;font-weight:500;color:rgba(255,255,255,0.7);letter-spacing:1px;text-transform:uppercase;margin:0;">${area}</p>
+          <h1 style="font-family:${SERIF};font-size:36px;font-weight:600;color:#ffffff;margin:8px 0 0;line-height:1.15;letter-spacing:-0.5px;">${title}</h1>
         </div>
       </div>
     </td></tr>`;
   },
 
-  heroGradient: (d) => {
-    const isAnniversary = !!d.anniversary;
-    const bg = isAnniversary
-      ? "linear-gradient(135deg,#5856d6 0%,#af52de 50%,#ff6b6b 100%)"
-      : "linear-gradient(135deg,#1d1d1f 0%,#2c2c2e 100%)";
-    const emoji = isAnniversary ? '<div style="font-size:48px;margin-bottom:8px;">🎉</div>' : "";
+  // ── 2b. Area Hero — neighbourhood photo for non-listing emails ──
+  areaHero: (d) => {
+    const photo = d.heroImageUrl;
+    if (!photo) return '';
     return `
-    <tr><td style="padding:0 16px;">
-      <div style="background:${bg};border-radius:16px;padding:40px 28px;text-align:center;">
-        ${emoji}
-        <div style="font-size:32px;font-weight:800;color:#fff;letter-spacing:-0.5px;">${d.content.subject}</div>
-        <div style="font-size:15px;color:rgba(255,255,255,0.7);margin-top:8px;">${d.listing?.area || d.contact.firstName + "'s update"}</div>
+    <tr><td style="padding:0;line-height:0;font-size:0;">
+      <img src="${photo}" alt="${d.content.subject}" width="660" style="display:block;width:100%;height:auto;border:0;" class="mobile-img">
+    </td></tr>`;
+  },
+
+  // ── 2c. Gradient Hero — dark gradient with title text (fallback when no photo) ──
+  gradientHero: (d) => {
+    const title = d.content.subject;
+    const subtitle = d.listing?.area || '';
+    return `
+    <tr><td style="padding:0;">
+      <div style="background:linear-gradient(135deg, #1d1d1f 0%, #2c2c2e 40%, #3a3a3c 100%);padding:72px 48px;text-align:center;" class="mobile-pad">
+        <p style="font-family:${SANS};font-size:12px;font-weight:500;color:rgba(255,255,255,0.5);letter-spacing:2px;text-transform:uppercase;margin:0;">${d.tagLine || 'Market Update'}</p>
+        <h1 style="font-family:${SERIF};font-size:36px;font-weight:600;color:#ffffff;margin:16px 0 0;line-height:1.2;letter-spacing:-0.5px;" class="mobile-title">${title}</h1>
+        ${subtitle ? `<p style="font-family:${SANS};font-size:16px;font-weight:400;color:rgba(255,255,255,0.6);margin:12px 0 0;">${subtitle}</p>` : ''}
       </div>
     </td></tr>`;
   },
 
-  priceBar: (d) => {
-    if (!d.listing) return "";
-    const price = typeof d.listing.price === "number" ? `$${d.listing.price.toLocaleString()}` : d.listing.price;
-    return `
-    <tr><td style="padding:20px 32px 0;">
-      <table width="100%" cellpadding="0" cellspacing="0"><tr>
-        <td style="text-align:center;padding:16px;background:#f5f5f7;border-radius:12px;">
-          <div style="font-size:28px;font-weight:800;color:#1d1d1f;letter-spacing:-1px;">${price}</div>
-          <div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">List Price</div>
-        </td>
-        <td width="12"></td>
-        <td style="text-align:center;padding:16px;background:#f5f5f7;border-radius:12px;">
-          <div style="font-size:22px;font-weight:700;color:#1d1d1f;">${d.listing.beds || "—"}<span style="font-size:13px;color:#86868b;font-weight:500;"> bd</span> · ${d.listing.baths || "—"}<span style="font-size:13px;color:#86868b;font-weight:500;"> ba</span></div>
-          <div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">${d.listing.sqft || "—"} sqft${d.listing.year ? " · " + d.listing.year : ""}</div>
-        </td>
-      </tr></table>
-    </td></tr>`;
-  },
-
-  personalNote: (d) => `
-    <tr><td style="padding:24px 32px 0;">
-      <p style="font-size:15px;color:#1d1d1f;line-height:1.65;margin:0;">Hi ${d.contact.firstName}, ${d.content.intro}</p>
-      ${d.content.body ? `<p style="font-size:15px;color:#1d1d1f;line-height:1.65;margin:16px 0 0;">${d.content.body}</p>` : ""}
-    </td></tr>`,
-
-  featureList: (d) => {
-    const features = d.listing?.features;
-    if (!features?.length) return "";
-    return `
-    <tr><td style="padding:24px 32px 0;">
-      ${features.map(f => `
-      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
-        <tr>
-          <td width="44" style="vertical-align:top;padding-top:2px;"><div style="width:36px;height:36px;background:#f5f5f7;border-radius:10px;text-align:center;line-height:36px;font-size:16px;">${f.icon}</div></td>
-          <td style="padding-left:12px;"><div style="font-size:14px;font-weight:600;color:#1d1d1f;">${f.title}</div><div style="font-size:13px;color:#86868b;margin-top:1px;">${f.desc}</div></td>
-        </tr>
-      </table>`).join("")}
-    </td></tr>`;
-  },
-
-  photoGallery: (d) => {
-    const photos = d.listing?.photos;
-    if (!photos || photos.length < 2) return "";
-    const grid = photos.slice(0, 4);
-    return `
-    <tr><td style="padding:24px 16px 0;">
-      <table width="100%" cellpadding="0" cellspacing="0"><tr>
-        <td width="49%" style="padding:4px;"><img src="${grid[0]}" width="100%" style="display:block;border-radius:12px;"></td>
-        <td width="2%"></td>
-        <td width="49%" style="padding:4px;"><img src="${grid[1]}" width="100%" style="display:block;border-radius:12px;"></td>
-      </tr>${grid.length > 2 ? `<tr>
-        <td width="49%" style="padding:4px;"><img src="${grid[2]}" width="100%" style="display:block;border-radius:12px;"></td>
-        <td width="2%"></td>
-        <td width="49%" style="padding:4px;"><img src="${grid[3] || grid[2]}" width="100%" style="display:block;border-radius:12px;"></td>
-      </tr>` : ""}</table>
-    </td></tr>`;
-  },
-
-  statsRow: (d) => {
-    if (!d.market) return "";
-    return `
-    <tr><td style="padding:20px 32px 0;">
-      <table width="100%" cellpadding="0" cellspacing="0"><tr>
-        <td style="text-align:center;padding:16px;background:#f5f5f7;border-radius:12px;">
-          <div style="font-size:24px;font-weight:800;color:#1d1d1f;">${d.market.avgPrice || "—"}</div>
-          <div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Avg Price</div>
-        </td>
-        <td width="8"></td>
-        <td style="text-align:center;padding:16px;background:#f5f5f7;border-radius:12px;">
-          <div style="font-size:24px;font-weight:800;color:#1d1d1f;">${d.market.avgDom || "—"}</div>
-          <div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Avg DOM</div>
-        </td>
-        <td width="8"></td>
-        <td style="text-align:center;padding:16px;background:#f5f5f7;border-radius:12px;">
-          <div style="font-size:24px;font-weight:800;color:#1d1d1f;">${d.market.inventoryChange || "—"}</div>
-          <div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Inventory</div>
-        </td>
-      </tr></table>
-    </td></tr>`;
-  },
-
-  recentSales: (d) => {
-    const sales = d.market?.recentSales;
-    if (!sales?.length) return "";
-    return `
-    <tr><td style="padding:24px 32px 0;">
-      <div style="font-size:12px;font-weight:700;color:#1d1d1f;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Recent Sales</div>
-      <table width="100%" cellpadding="0" cellspacing="0">
-        ${sales.map(s => `<tr style="border-bottom:1px solid #f0f0f0;">
-          <td style="padding:10px 0;font-size:14px;font-weight:500;color:#1d1d1f;">${s.address}</td>
-          <td style="padding:10px 0;font-size:14px;font-weight:600;color:#1d1d1f;text-align:right;">${s.price}</td>
-          <td style="padding:10px 0;font-size:12px;color:#86868b;text-align:right;width:60px;">${s.dom}d</td>
-        </tr>`).join("")}
-      </table>
-    </td></tr>`;
-  },
-
-  priceComparison: (d) => {
-    const pc = d.market?.priceComparison;
-    if (!pc) return "";
-    return `
-    <tr><td style="padding:24px 32px 0;">
-      <div style="background:#f0fdf4;border-radius:14px;padding:16px 20px;">
-        <table width="100%"><tr>
-          <td style="text-align:center;"><div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;">This Listing</div><div style="font-size:22px;font-weight:700;color:#15803d;">${pc.listing}</div></td>
-          <td width="1" style="background:#d1fae5;"></td>
-          <td style="text-align:center;"><div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;">Area Average</div><div style="font-size:22px;font-weight:700;color:#1d1d1f;">${pc.average}</div></td>
-          <td width="1" style="background:#d1fae5;"></td>
-          <td style="text-align:center;"><div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;">Difference</div><div style="font-size:22px;font-weight:700;color:#15803d;">${pc.diff}</div></td>
-        </tr></table>
-      </div>
-    </td></tr>`;
-  },
-
-  openHouse: (d) => {
-    if (!d.listing?.openHouseDate) return "";
-    return `
-    <tr><td style="padding:24px 32px 0;">
-      <div style="background:linear-gradient(135deg,#f5f0ff,#fef3f2);border-radius:14px;padding:20px;text-align:center;border:1px solid rgba(128,90,213,0.1);">
-        <div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:2px;font-weight:600;">Open House</div>
-        <div style="font-size:20px;font-weight:700;color:#1d1d1f;margin-top:6px;">${d.listing.openHouseDate}</div>
-        ${d.listing.openHouseTime ? `<div style="font-size:16px;color:#6e6e73;margin-top:2px;">${d.listing.openHouseTime}</div>` : ""}
-      </div>
-    </td></tr>`;
-  },
-
-  anniversaryComparison: (d) => {
-    if (!d.anniversary) return "";
-    return `
-    <tr><td style="padding:24px 32px 0;">
-      <div style="background:#f0fdf4;border-radius:14px;padding:20px;">
-        <table width="100%"><tr>
-          <td style="text-align:center;"><div style="font-size:11px;color:#86868b;text-transform:uppercase;">You Paid</div><div style="font-size:22px;font-weight:700;color:#1d1d1f;">${d.anniversary.purchasePrice || "—"}</div></td>
-          <td style="text-align:center;font-size:24px;color:#15803d;">→</td>
-          <td style="text-align:center;"><div style="font-size:11px;color:#86868b;text-transform:uppercase;">Estimated Now</div><div style="font-size:22px;font-weight:700;color:#15803d;">${d.anniversary.currentEstimate || "—"}</div><div style="font-size:11px;color:#15803d;font-weight:600;">${d.anniversary.equityGained ? "+" + d.anniversary.equityGained : ""} (${d.anniversary.appreciation || ""})</div></td>
-        </tr></table>
-      </div>
-    </td></tr>`;
-  },
-
-  areaHighlights: (d) => {
-    const highlights = d.anniversary?.areaHighlights;
-    if (!highlights?.length) return "";
-    return `
-    <tr><td style="padding:24px 32px 0;">
-      <div style="font-size:12px;font-weight:700;color:#1d1d1f;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">What's New in the Area</div>
-      ${highlights.map(h => `
-      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
-        <tr><td width="36"><div style="width:28px;height:28px;background:#f5f5f7;border-radius:8px;text-align:center;line-height:28px;font-size:14px;">${h.icon}</div></td><td style="padding-left:10px;font-size:13px;color:#1d1d1f;line-height:1.5;">${h.text}</td></tr>
-      </table>`).join("")}
-    </td></tr>`;
-  },
-
-  propertyGrid: (d) => {
-    const listings = d.listings;
-    if (!listings?.length) return "";
-    return `
-    <tr><td style="padding:24px 16px 0;">
-      <div style="font-size:12px;font-weight:700;color:#1d1d1f;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;padding:0 16px;">Matching Properties</div>
-      <table width="100%" cellpadding="0" cellspacing="0"><tr>
-        ${listings.slice(0, 3).map(l => `
-        <td width="${Math.floor(100 / Math.min(listings.length, 3))}%" style="padding:4px;vertical-align:top;">
-          <div style="background:#f5f5f7;border-radius:14px;overflow:hidden;">
-            ${l.photo ? `<img src="${l.photo}" width="100%" style="display:block;">` : `<div style="height:120px;background:linear-gradient(135deg,#e5e5ea,#f5f5f7);"></div>`}
-            <div style="padding:12px;">
-              <div style="font-size:16px;font-weight:700;color:#1d1d1f;">${typeof l.price === "number" ? "$" + l.price.toLocaleString() : l.price}</div>
-              <div style="font-size:12px;color:#86868b;margin-top:2px;">${l.address}</div>
-              <div style="font-size:11px;color:#86868b;">${l.beds || "—"} bd · ${l.baths || "—"} ba${l.sqft ? " · " + l.sqft + " sqft" : ""}</div>
-            </div>
+  // ── 2d. Smart Hero — uses photo if available, gradient if not ──
+  smartHero: (d) => {
+    const photo = d.heroImageUrl || d.listing?.photos?.[0];
+    if (photo) {
+      // Photo with dark overlay + text
+      const title = d.listing?.address || d.content.subject;
+      const area = d.listing?.area || '';
+      return `
+      <tr><td style="padding:0;line-height:0;font-size:0;">
+        <div style="position:relative;background:#000;">
+          <img src="${photo}" alt="${title}" width="660" style="display:block;width:100%;height:auto;border:0;opacity:0.8;" class="mobile-img">
+          <div style="position:absolute;bottom:0;left:0;right:0;padding:56px 48px 48px;background:linear-gradient(0deg,rgba(0,0,0,0.75) 0%,transparent 100%);">
+            ${area ? `<p style="font-family:${SANS};font-size:12px;font-weight:500;color:rgba(255,255,255,0.6);letter-spacing:1.5px;text-transform:uppercase;margin:0;">${area}</p>` : ''}
+            <h1 style="font-family:${SERIF};font-size:34px;font-weight:600;color:#ffffff;margin:${area ? '8' : '0'}px 0 0;line-height:1.15;letter-spacing:-0.5px;" class="mobile-title">${title}</h1>
           </div>
-        </td>`).join('<td width="2%"></td>')}
+        </div>
+      </td></tr>`;
+    }
+    // Fallback: gradient hero
+    return blocks.gradientHero(d);
+  },
+
+  // ── 3. Title — huge centered Apple-style ──────────────────
+  serifTitle: (d) => {
+    const title = d.listing?.address || d.content.subject;
+    const subtitle = d.listing?.area || d.content.intro;
+    return `
+    <tr><td style="padding:56px 48px 0;text-align:center;" class="mobile-pad">
+      <h1 style="font-family:${SERIF};font-size:40px;font-weight:600;color:${CLR.text};margin:0;line-height:1.15;letter-spacing:-0.8px;" class="mobile-title">${title}</h1>
+      ${subtitle ? `<p style="font-family:${SANS};font-size:17px;font-weight:400;color:${CLR.muted};margin:16px 0 0;line-height:1.5;">${subtitle}</p>` : ''}
+    </td></tr>`;
+  },
+
+  // ── 4. Specs — Apple's clean metric style ─────────────────
+  specsBar: (d) => {
+    if (!d.listing) return '';
+    const items: Array<{ val: string; label: string }> = [];
+    if (d.listing.beds != null) items.push({ val: String(d.listing.beds), label: 'Bedrooms' });
+    if (d.listing.baths != null) items.push({ val: String(d.listing.baths), label: 'Bathrooms' });
+    if (d.listing.sqft) items.push({ val: d.listing.sqft, label: 'Sq. Ft.' });
+    if (d.listing.year) items.push({ val: String(d.listing.year), label: 'Year Built' });
+    if (!items.length) return '';
+    return `
+    <tr><td style="padding:40px 48px 0;" class="mobile-pad">
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+        ${items.map((item, i) => `
+          ${i > 0 ? `<td width="1" style="background:${CLR.border};"></td>` : ''}
+          <td style="text-align:center;padding:0 16px;">
+            <p style="font-family:${SERIF};font-size:28px;font-weight:600;color:${CLR.text};margin:0;letter-spacing:-0.5px;" class="mobile-price">${item.val}</p>
+            <p style="font-family:${SANS};font-size:11px;font-weight:400;color:${CLR.light};margin:6px 0 0;letter-spacing:0.5px;">${item.label}</p>
+          </td>
+        `).join('')}
       </tr></table>
     </td></tr>`;
   },
 
-  testimonial: (d) => {
-    const t = d.testimonial;
-    if (!t) return "";
+  // ── 5. Price — large centered with Apple blue accent ──────
+  priceDisplay: (d) => {
+    if (!d.listing?.price) return '';
+    const price = fmtPrice(d.listing.price);
+    const prev = d.listing.previousPrice ? fmtPrice(d.listing.previousPrice) : '';
     return `
-    <tr><td style="padding:24px 32px 0;">
-      <div style="background:#f5f5f7;border-radius:14px;padding:24px;position:relative;">
-        <div style="font-size:36px;color:#d1d1d6;line-height:1;margin-bottom:8px;">"</div>
-        <p style="font-size:15px;color:#1d1d1f;line-height:1.65;margin:0;font-style:italic;">${t.quote}</p>
-        <div style="margin-top:12px;font-size:13px;font-weight:600;color:#1d1d1f;">${t.name}</div>
-        <div style="font-size:12px;color:#86868b;">${t.role || "Client"}</div>
+    <tr><td style="padding:36px 48px 0;text-align:center;" class="mobile-pad">
+      ${prev ? `<p style="font-family:${SANS};font-size:14px;color:${CLR.light};margin:0 0 8px;text-decoration:line-through;">${prev}</p>` : ''}
+      <p style="font-family:${SERIF};font-size:32px;font-weight:600;color:${CLR.text};margin:0;letter-spacing:-0.5px;" class="mobile-price">${price}</p>
+      <p style="font-family:${SANS};font-size:12px;color:${CLR.muted};margin:8px 0 0;letter-spacing:0.3px;">List Price</p>
+    </td></tr>`;
+  },
+
+  // ── 6. Description — Apple body copy style ────────────────
+  description: (d) => {
+    const text = d.content.body || d.content.intro;
+    if (!text) return '';
+    return `
+    <tr><td style="padding:36px 56px 0;" class="mobile-pad">
+      <p style="font-family:${SANS};font-size:17px;font-weight:400;color:${CLR.text};line-height:1.65;margin:0;text-align:center;letter-spacing:-0.1px;">${text}</p>
+    </td></tr>`;
+  },
+
+  // ── 7. Open House Card — Apple surface grey ──────────────
+  openHouseCard: (d) => {
+    if (!d.listing?.openHouseDate) return '';
+    return `
+    <tr><td style="padding:40px 48px 0;" class="mobile-pad">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:${CLR.bg};border:1px solid ${CLR.border};border-radius:18px;"><tr>
+        <td style="padding:40px 44px;text-align:center;" class="mobile-oh-pad">
+          <p style="font-family:${SANS};font-size:12px;font-weight:600;color:${CLR.accent};letter-spacing:0.5px;text-transform:uppercase;margin:0;">Open House</p>
+          <p style="font-family:${SERIF};font-size:24px;font-weight:600;color:${CLR.text};margin:16px 0 0;line-height:1.3;letter-spacing:-0.3px;">${d.listing.openHouseDate}</p>
+          ${d.listing.openHouseTime ? `<p style="font-family:${SANS};font-size:17px;font-weight:400;color:${CLR.muted};margin:8px 0 0;">${d.listing.openHouseTime}</p>` : ''}
+          ${d.listing.address ? `<p style="font-family:${SANS};font-size:14px;font-weight:400;color:${CLR.light};margin:14px 0 0;">${d.listing.address}</p>` : ''}
+        </td>
+      </tr></table>
+    </td></tr>`;
+  },
+
+  // ── 8. Photo Stack ───────────────────────────
+  photoStack: (d) => {
+    const photos = d.listing?.photos;
+    if (!photos || photos.length < 2) return '';
+    // Show ALL photos after the hero (index 1 onwards), no cap
+    return photos.slice(1).map((photo, i) => `
+    <tr><td style="padding:${i === 0 ? '32px' : '6px'} 0 0;line-height:0;font-size:0;">
+      <img src="${photo}" alt="Property photo ${i + 2}" width="660" style="display:block;width:100%;height:auto;border:0;" class="mobile-img">
+    </td></tr>`).join('');
+  },
+
+  // ── 9. Two Column Photos ─────────────────────
+  twoColumnPhotos: (d) => {
+    const photos = d.listing?.photos;
+    if (!photos || photos.length < 2) return '';
+    const p1 = photos[photos.length >= 3 ? 1 : 0];
+    const p2 = photos[photos.length >= 3 ? 2 : 1];
+    return `
+    <tr><td style="padding:24px 0 0;line-height:0;font-size:0;">
+      <!--[if mso]><table width="660" cellpadding="0" cellspacing="0"><tr><td width="328" valign="top"><![endif]-->
+      <div style="display:inline-block;width:49.7%;vertical-align:top;">
+        <img src="${p1}" alt="Photo" width="328" style="display:block;width:100%;height:auto;border:0;">
       </div>
-    </td></tr>`;
-  },
-
-  mortgageCalc: (d) => {
-    const mc = d.mortgageCalc;
-    if (!mc) return "";
-    return `
-    <tr><td style="padding:24px 32px 0;">
-      <div style="background:linear-gradient(135deg,#f5f0ff,#f0f9ff);border-radius:14px;padding:20px;border:1px solid rgba(88,86,214,0.1);">
-        <div style="font-size:12px;font-weight:700;color:#86868b;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Estimated Monthly Payment</div>
-        <div style="font-size:32px;font-weight:800;color:#5856d6;letter-spacing:-1px;">${mc.monthly}</div>
-        <div style="font-size:12px;color:#86868b;margin-top:4px;">${mc.details || "Based on 20% down, 5-year fixed rate"}</div>
-        <table width="100%" style="margin-top:12px;" cellpadding="0" cellspacing="0"><tr>
-          <td style="font-size:12px;color:#86868b;">Down payment: <strong style="color:#1d1d1f;">${mc.downPayment || "20%"}</strong></td>
-          <td style="font-size:12px;color:#86868b;text-align:right;">Rate: <strong style="color:#1d1d1f;">${mc.rate || "4.89%"}</strong></td>
-        </tr></table>
+      <!--[if mso]></td><td width="4"></td><td width="328" valign="top"><![endif]-->
+      <div style="display:inline-block;width:0.6%;"></div>
+      <div style="display:inline-block;width:49.7%;vertical-align:top;">
+        <img src="${p2}" alt="Photo" width="328" style="display:block;width:100%;height:auto;border:0;">
       </div>
+      <!--[if mso]></td></tr></table><![endif]-->
     </td></tr>`;
   },
 
-  countdown: (d) => {
-    const cd = d.countdown;
-    if (!cd) return "";
+  // ── 9b. General Photo Stack — for non-listing emails (uses d.photos) ──
+  generalPhotoStack: (d) => {
+    const photos = d.photos;
+    if (!photos || photos.length === 0) return '';
+    return photos.map((photo, i) => `
+    <tr><td style="padding:${i === 0 ? '32px' : '6px'} 0 0;line-height:0;font-size:0;">
+      <img src="${photo}" alt="Photo ${i + 1}" width="660" style="display:block;width:100%;height:auto;border:0;" class="mobile-img">
+    </td></tr>`).join('');
+  },
+
+  // ── 9c. General Two Column — for non-listing emails ──
+  generalTwoColumn: (d) => {
+    const photos = d.photos;
+    if (!photos || photos.length < 2) return '';
     return `
-    <tr><td style="padding:24px 32px 0;">
-      <div style="background:linear-gradient(135deg,#fef2f2,#fff7ed);border:1px solid #fecaca;border-radius:14px;padding:20px;text-align:center;">
-        <div style="font-size:11px;color:#dc2626;text-transform:uppercase;letter-spacing:2px;font-weight:600;">${cd.label || "Time Remaining"}</div>
-        <div style="font-size:48px;font-weight:800;color:#dc2626;margin-top:4px;letter-spacing:-2px;">${cd.value}</div>
-        <div style="font-size:13px;color:#92400e;margin-top:4px;">${cd.subtext || ""}</div>
+    <tr><td style="padding:32px 0 0;line-height:0;font-size:0;">
+      <!--[if mso]><table width="660" cellpadding="0" cellspacing="0"><tr><td width="328" valign="top"><![endif]-->
+      <div style="display:inline-block;width:49.7%;vertical-align:top;">
+        <img src="${photos[0]}" alt="Photo" width="328" style="display:block;width:100%;height:auto;border:0;" class="mobile-stack">
       </div>
-    </td></tr>`;
-  },
-
-  mapPreview: (d) => {
-    const mp = d.mapPreview;
-    if (!mp?.imageUrl) return "";
-    return `
-    <tr><td style="padding:24px 16px 0;">
-      <div style="border-radius:16px;overflow:hidden;">
-        <img src="${mp.imageUrl}" alt="Location map" width="568" style="display:block;width:100%;height:auto;">
+      <!--[if mso]></td><td width="4"></td><td width="328" valign="top"><![endif]-->
+      <div style="display:inline-block;width:0.6%;"></div>
+      <div style="display:inline-block;width:49.7%;vertical-align:top;">
+        <img src="${photos[1]}" alt="Photo" width="328" style="display:block;width:100%;height:auto;border:0;" class="mobile-stack">
       </div>
-      ${mp.caption ? `<div style="text-align:center;padding:8px 32px 0;font-size:12px;color:#86868b;">${mp.caption}</div>` : ""}
+      <!--[if mso]></td></tr></table><![endif]-->
     </td></tr>`;
   },
 
-  videoThumbnail: (d) => {
-    const vt = d.videoThumbnail;
-    if (!vt?.thumbnailUrl) return "";
+  // ── 10. Agent Profile ────────────────────────
+  agentProfile: (d) => {
+    const initials = d.agent.initials || d.agent.name.split(' ').map(n => n[0]).join('').slice(0, 2);
     return `
-    <tr><td style="padding:24px 16px 0;">
-      <a href="${vt.videoUrl || "#"}" style="display:block;position:relative;border-radius:16px;overflow:hidden;">
-        <img src="${vt.thumbnailUrl}" alt="Property video" width="568" style="display:block;width:100%;height:auto;">
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:64px;height:64px;background:rgba(0,0,0,0.7);border-radius:50%;display:flex;align-items:center;justify-content:center;">
-          <div style="width:0;height:0;border-top:12px solid transparent;border-bottom:12px solid transparent;border-left:20px solid #fff;margin-left:4px;"></div>
-        </div>
-        <div style="position:absolute;bottom:12px;left:12px;background:rgba(0,0,0,0.6);border-radius:6px;padding:4px 10px;font-size:11px;color:#fff;font-weight:500;">▶ Watch Property Tour</div>
-      </a>
+    <tr><td style="padding:48px 48px 0;text-align:center;" class="mobile-pad mobile-agent-pad">
+      <div style="border-top:1px solid ${CLR.border};padding-top:36px;"></div>
+      ${d.agent.photoUrl
+        ? `<img src="${d.agent.photoUrl}" alt="${d.agent.name}" width="64" height="64" style="display:inline-block;width:64px;height:64px;border-radius:50%;object-fit:cover;">`
+        : `<div style="display:inline-block;width:64px;height:64px;border-radius:50%;background:${CLR.surfaceGrey};text-align:center;line-height:64px;color:${CLR.text};font-family:${SANS};font-size:22px;font-weight:600;">${initials}</div>`
+      }
+      <p style="font-family:${SANS};font-size:17px;font-weight:600;color:${CLR.text};margin:14px 0 0;">${d.agent.name}</p>
+      ${d.agent.title ? `<p style="font-family:${SANS};font-size:14px;font-weight:400;color:${CLR.muted};margin:4px 0 0;">${d.agent.title} · ${d.agent.brokerage}</p>` : `<p style="font-family:${SANS};font-size:14px;font-weight:400;color:${CLR.muted};margin:4px 0 0;">${d.agent.brokerage}</p>`}
+      <p style="font-family:${SANS};font-size:14px;margin:12px 0 0;">
+        <a href="tel:${d.agent.phone}" style="color:${CLR.accent};text-decoration:none;">${d.agent.phone}</a>
+        ${d.agent.email ? ` &nbsp;&middot;&nbsp; <a href="mailto:${d.agent.email}" style="color:${CLR.accent};text-decoration:none;">${d.agent.email}</a>` : ''}
+      </p>
     </td></tr>`;
   },
 
-  socialProof: (d) => {
-    const sp = d.socialProof;
-    if (!sp) return "";
-    return `
-    <tr><td style="padding:24px 32px 0;">
-      <div style="background:#f5f5f7;border-radius:14px;padding:20px;">
-        <table width="100%" cellpadding="0" cellspacing="0"><tr>
-          <td width="48" style="vertical-align:top;">
-            <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#5856d6,#ff6b6b);text-align:center;line-height:44px;color:#fff;font-weight:700;font-size:17px;">${d.agent.initials || d.agent.name[0]}</div>
-          </td>
-          <td style="padding-left:14px;">
-            <div style="font-size:14px;font-weight:600;color:#1d1d1f;">${sp.headline || d.agent.name + "'s Track Record"}</div>
-            <div style="font-size:13px;color:#86868b;margin-top:2px;line-height:1.5;">${sp.text}</div>
-            ${sp.stats ? `<div style="margin-top:8px;display:flex;gap:16px;">${sp.stats.map((s: {value:string;label:string}) => `<span style="font-size:12px;"><strong style="color:#5856d6;">${s.value}</strong> <span style="color:#86868b;">${s.label}</span></span>`).join(" · ")}</div>` : ""}
-          </td>
-        </tr></table>
-      </div>
-    </td></tr>`;
-  },
-
-  cta: (d) => `
-    <tr><td style="padding:28px 32px 0;text-align:center;">
-      <a href="${d.content.ctaUrl || "#"}" style="display:inline-block;background:#1d1d1f;color:#fff;padding:16px 48px;border-radius:980px;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:-0.2px;">${d.content.ctaText}</a>
+  // ── 11. View Listing CTA — Apple text link style ──────────
+  viewListingCta: (d) => `
+    <tr><td style="padding:36px 48px 0;text-align:center;" class="mobile-pad">
+      <a href="${d.content.ctaUrl || '#'}" style="font-family:${SANS};font-size:17px;font-weight:400;color:${CLR.accent};text-decoration:none;">View listing &rsaquo;</a>
     </td></tr>`,
 
-  agentCard: (d) => `
-    <tr><td style="padding:32px 32px 0;">
-      <table width="100%" style="border-top:1px solid #e5e5ea;padding-top:20px;">
-        <tr>
-          <td width="48"><div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#5856d6,#ff6b6b);text-align:center;line-height:44px;color:#fff;font-weight:700;font-size:17px;">${d.agent.initials || d.agent.name[0]}</div></td>
-          <td style="padding-left:14px;">
-            <div style="font-size:15px;font-weight:600;color:#1d1d1f;">${d.agent.name}</div>
-            <div style="font-size:13px;color:#86868b;">${d.agent.brokerage}</div>
-            <div style="font-size:13px;"><a href="tel:${d.agent.phone}" style="color:#5856d6;text-decoration:none;font-weight:500;">${d.agent.phone}</a></div>
-          </td>
-        </tr>
-      </table>
+  // ── 12. Button — Apple pill shape ────────────────────
+  luxuryButton: (d) => `
+    <tr><td style="padding:40px 48px 0;text-align:center;" class="mobile-pad">
+      <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${d.content.ctaUrl || '#'}" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="50%" fill="true" stroke="false"><v:fill type="tile" color="${CLR.accent}" /><v:textbox inset="0,0,0,0"><center style="color:#ffffff;font-family:${SANS};font-size:15px;font-weight:500;">${d.content.ctaText}</center></v:textbox></v:roundrect><![endif]-->
+      <!--[if !mso]><!-->
+      <a href="${d.content.ctaUrl || '#'}" style="display:inline-block;background:${CLR.accent};color:#ffffff;padding:14px 44px;border-radius:980px;font-family:${SANS};font-size:15px;font-weight:500;text-decoration:none;letter-spacing:-0.1px;mso-hide:all;">${d.content.ctaText}</a>
+      <!--<![endif]-->
     </td></tr>`,
 
-  footer: (d) => `
-    <tr><td style="padding:24px 32px 20px;text-align:center;">
-      <p style="font-size:11px;color:#86868b;margin:0;line-height:1.6;">
-        ${d.agent.name} · ${d.agent.brokerage}<br>
-        <a href="${d.unsubscribeUrl || '{{unsubscribe_url}}'}" style="color:#86868b;text-decoration:underline;">Unsubscribe</a> · <a href="#" style="color:#86868b;text-decoration:underline;">Privacy</a>
+  // ── 13. Social Links ─────────────────────────
+  socialLinks: (d) => {
+    const links: string[] = [];
+    if (d.agent.instagram) links.push(`<a href="${d.agent.instagram}" style="color:${CLR.light};text-decoration:none;font-size:13px;font-weight:500;">Instagram</a>`);
+    if (d.agent.linkedin) links.push(`<a href="${d.agent.linkedin}" style="color:${CLR.light};text-decoration:none;font-size:13px;font-weight:500;">LinkedIn</a>`);
+    if (d.agent.facebook) links.push(`<a href="${d.agent.facebook}" style="color:${CLR.light};text-decoration:none;font-size:13px;font-weight:500;">Facebook</a>`);
+    if (!links.length) return '';
+    return `
+    <tr><td style="padding:20px 40px 0;text-align:center;" class="mobile-pad">
+      <p style="font-family:${SANS};margin:0;">${links.join(' &nbsp;&middot;&nbsp; ')}</p>
+    </td></tr>`;
+  },
+
+  // ── 14. Compliance Footer ────────────────────
+  complianceFooter: (d) => `
+    <tr><td style="padding:36px 48px 44px;text-align:center;border-top:1px solid" class="mobile-footer ${CLR.border};margin-top:24px;">
+      <p style="font-family:${SANS};font-size:12px;color:${CLR.muted};margin:0;line-height:1.7;">
+        ${d.agent.name} &middot; ${d.agent.brokerage}
+        ${d.agent.brokerageAddress ? `<br>${d.agent.brokerageAddress}` : ''}
+      </p>
+      <p style="font-family:${SANS};font-size:11px;color:${CLR.light};margin:12px 0 0;line-height:1.7;">
+        <a href="${d.unsubscribeUrl || '{{unsubscribe_url}}'}" style="color:${CLR.light};text-decoration:underline;">Unsubscribe</a>
+        &nbsp;&middot;&nbsp;
+        <a href="${d.privacyUrl || '#'}" style="color:${CLR.light};text-decoration:underline;">Privacy Policy</a>
+      </p>
+      <p style="font-family:${SANS};font-size:10px;color:#b0b0b0;margin:12px 0 0;line-height:1.6;">
+        Not intended to solicit properties currently listed for sale or buyers under contract.
+        If you have an existing relationship with another real estate professional, this is not intended as a solicitation.
       </p>
     </td></tr>`,
+
+  // ── 15. Market Stats Grid ────────────────────
+  marketStatsGrid: (d) => {
+    if (!d.market) return '';
+    const stats = [
+      { value: d.market.avgPrice || '--', label: 'Avg. Price' },
+      { value: d.market.avgDom != null ? `${d.market.avgDom}` : '--', label: 'Days on Market' },
+      { value: d.market.inventoryChange || '--', label: 'Inventory' },
+    ];
+    return `
+    <tr><td style="padding:24px 40px 0;" class="mobile-pad">
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+        ${stats.map((s, i) => `
+          ${i > 0 ? '<td width="1" style="background:' + CLR.border + ';"></td>' : ''}
+          <td style="text-align:center;padding:16px 8px;">
+            <p style="font-family:${SERIF};font-size:28px;font-weight:400;color:${CLR.text};margin:0;letter-spacing:-0.5px;">${s.value}</p>
+            <p style="font-family:${SANS};font-size:10px;font-weight:600;color:${CLR.light};letter-spacing:2px;text-transform:uppercase;margin:6px 0 0;">${s.label}</p>
+          </td>
+        `).join('')}
+      </tr></table>
+    </td></tr>`;
+  },
+
+  // ── 16. Recent Sales Table ───────────────────
+  recentSalesTable: (d) => {
+    const sales = d.market?.recentSales;
+    if (!sales?.length) return '';
+    return `
+    <tr><td style="padding:24px 40px 0;" class="mobile-pad">
+      <p style="font-family:${SANS};font-size:10px;font-weight:600;color:${CLR.light};letter-spacing:2px;text-transform:uppercase;margin:0 0 12px;">Recent Sales</p>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr style="border-bottom:1px solid ${CLR.border};">
+          <td style="padding:8px 0;font-family:${SANS};font-size:10px;font-weight:600;color:${CLR.light};letter-spacing:1.5px;text-transform:uppercase;">Address</td>
+          <td style="padding:8px 0;font-family:${SANS};font-size:10px;font-weight:600;color:${CLR.light};letter-spacing:1.5px;text-transform:uppercase;text-align:right;">Price</td>
+          <td style="padding:8px 0;font-family:${SANS};font-size:10px;font-weight:600;color:${CLR.light};letter-spacing:1.5px;text-transform:uppercase;text-align:right;width:60px;">DOM</td>
+        </tr>
+        ${sales.map(s => `
+        <tr style="border-bottom:1px solid ${CLR.frame};">
+          <td style="padding:10px 0;font-family:${SANS};font-size:14px;color:${CLR.text};">${s.address}</td>
+          <td style="padding:10px 0;font-family:${SANS};font-size:14px;font-weight:600;color:${CLR.text};text-align:right;">${s.price}</td>
+          <td style="padding:10px 0;font-family:${SANS};font-size:13px;color:${CLR.muted};text-align:right;">${s.dom}d</td>
+        </tr>`).join('')}
+      </table>
+    </td></tr>`;
+  },
+
+  // ── 17. Testimonial Block ────────────────────
+  testimonialBlock: (d) => {
+    const t = d.testimonial;
+    if (!t) return '';
+    return `
+    <tr><td style="padding:28px 40px 0;text-align:center;" class="mobile-pad">
+      <p style="font-family:${SERIF};font-size:20px;font-style:italic;font-weight:400;color:${CLR.text};line-height:1.6;margin:0;">&ldquo;${t.quote}&rdquo;</p>
+      <p style="font-family:${SANS};font-size:13px;font-weight:600;color:${CLR.text};margin:16px 0 0;">${t.name}</p>
+      ${t.role ? `<p style="font-family:${SANS};font-size:12px;color:${CLR.muted};margin:2px 0 0;">${t.role}</p>` : ''}
+    </td></tr>`;
+  },
+
+  // ── 18. Anniversary Value ────────────────────
+  anniversaryValue: (d) => {
+    if (!d.anniversary) return '';
+    return `
+    <tr><td style="padding:24px 40px 0;" class="mobile-pad">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:${CLR.frame};"><tr>
+        <td style="padding:24px;text-align:center;">
+          <table width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td style="text-align:center;width:40%;">
+              <p style="font-family:${SANS};font-size:10px;font-weight:600;color:${CLR.light};letter-spacing:2px;text-transform:uppercase;margin:0;">You Paid</p>
+              <p style="font-family:${SERIF};font-size:24px;font-weight:400;color:${CLR.text};margin:6px 0 0;">${d.anniversary.purchasePrice || '--'}</p>
+            </td>
+            <td style="text-align:center;width:20%;">
+              <p style="font-family:${SERIF};font-size:28px;color:${CLR.light};margin:0;">&rarr;</p>
+            </td>
+            <td style="text-align:center;width:40%;">
+              <p style="font-family:${SANS};font-size:10px;font-weight:600;color:${CLR.light};letter-spacing:2px;text-transform:uppercase;margin:0;">Now Worth</p>
+              <p style="font-family:${SERIF};font-size:24px;font-weight:400;color:${CLR.text};margin:6px 0 0;">${d.anniversary.currentEstimate || '--'}</p>
+              ${d.anniversary.appreciation ? `<p style="font-family:${SANS};font-size:13px;font-weight:600;color:#2d8a4e;margin:4px 0 0;">+${d.anniversary.appreciation}</p>` : ''}
+            </td>
+          </tr></table>
+        </td>
+      </tr></table>
+    </td></tr>`;
+  },
+
+  // ── 19. Neighbourhood Highlights ─────────────
+  neighbourhoodHighlights: (d) => {
+    const highlights = d.anniversary?.areaHighlights || d.listing?.features;
+    if (!highlights?.length) return '';
+    return `
+    <tr><td style="padding:24px 40px 0;" class="mobile-pad">
+      <p style="font-family:${SANS};font-size:10px;font-weight:600;color:${CLR.light};letter-spacing:2px;text-transform:uppercase;margin:0 0 16px;">Neighbourhood Highlights</p>
+      ${highlights.map(h => `
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:10px;"><tr>
+        <td width="32" style="vertical-align:top;padding-top:2px;">
+          <span style="font-size:16px;">${'icon' in h ? h.icon : ''}</span>
+        </td>
+        <td style="padding-left:8px;">
+          <p style="font-family:${SANS};font-size:14px;color:${CLR.text};line-height:1.5;margin:0;">${'text' in h ? h.text : ('title' in h ? h.title : '')}</p>
+          ${'desc' in h && h.desc ? `<p style="font-family:${SANS};font-size:13px;color:${CLR.muted};margin:2px 0 0;">${h.desc}</p>` : ''}
+        </td>
+      </tr></table>`).join('')}
+    </td></tr>`;
+  },
+
+  // ── 20. Birthday Celebration ─────────────────
+  birthdayCelebration: (d) => `
+    <tr><td style="padding:40px 40px 0;text-align:center;" class="mobile-pad">
+      <p style="font-family:${SERIF};font-size:32px;font-weight:400;color:${CLR.text};margin:0;line-height:1.3;">Happy Birthday,<br>${d.contact.firstName}!</p>
+    </td></tr>`,
+
+  // ── 21. Divider Line ─────────────────────────
+  dividerLine: () => `
+    <tr><td style="padding:24px 40px 0;" class="mobile-pad">
+      <div style="border-bottom:1px solid ${CLR.border};"></div>
+    </td></tr>`,
+
+  // ── 22. Spacer ───────────────────────────────
+  spacer: () => `
+    <tr><td style="padding:12px 0;font-size:0;line-height:0;">&nbsp;</td></tr>`,
 };
 
 // ═══════════════════════════════════════════════
@@ -397,20 +533,73 @@ const blocks: Record<string, BlockFn> = {
 // ═══════════════════════════════════════════════
 
 const TEMPLATE_BLOCKS: Record<string, string[]> = {
-  listing_alert: ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "priceComparison", "mortgageCalc", "openHouse", "cta", "agentCard", "footer"],
-  welcome: ["header", "heroGradient", "personalNote", "propertyGrid", "socialProof", "cta", "agentCard", "footer"],
-  market_update: ["header", "heroGradient", "statsRow", "personalNote", "recentSales", "propertyGrid", "cta", "agentCard", "footer"],
-  neighbourhood_guide: ["header", "heroGradient", "personalNote", "areaHighlights", "mapPreview", "cta", "agentCard", "footer"],
-  home_anniversary: ["header", "heroGradient", "personalNote", "anniversaryComparison", "areaHighlights", "cta", "agentCard", "footer"],
-  just_sold: ["header", "heroImage", "priceBar", "personalNote", "testimonial", "socialProof", "cta", "agentCard", "footer"],
-  open_house: ["header", "heroGradient", "heroImage", "priceBar", "personalNote", "featureList", "mapPreview", "openHouse", "cta", "agentCard", "footer"],
-  seller_report: ["header", "heroGradient", "statsRow", "personalNote", "recentSales", "countdown", "cta", "agentCard", "footer"],
-  cma_preview: ["header", "heroGradient", "personalNote", "priceComparison", "recentSales", "socialProof", "cta", "agentCard", "footer"],
-  re_engagement: ["header", "heroGradient", "personalNote", "statsRow", "propertyGrid", "cta", "agentCard", "footer"],
-  luxury_showcase: ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "videoThumbnail", "cta", "agentCard", "footer"],
-  birthday: ["header", "heroGradient", "personalNote", "cta", "agentCard", "footer"],
-  price_drop: ["header", "heroImage", "priceBar", "personalNote", "priceComparison", "cta", "agentCard", "footer"],
-  showing_confirmed: ["header", "heroGradient", "personalNote", "openHouse", "mapPreview", "cta", "agentCard", "footer"],
+  luxury_listing: [
+    'brandHeader', 'luxuryHero', 'serifTitle', 'specsBar', 'priceDisplay',
+    'description', 'openHouseCard', 'dividerLine', 'photoStack',
+    'viewListingCta', 'dividerLine', 'agentProfile', 'socialLinks', 'complianceFooter',
+  ],
+  listing_alert: [
+    'brandHeader', 'luxuryHero', 'serifTitle', 'specsBar', 'priceDisplay',
+    'description', 'photoStack', 'luxuryButton', 'agentProfile', 'complianceFooter',
+  ],
+  market_update: [
+    'brandHeader', 'smartHero', 'serifTitle', 'description', 'marketStatsGrid',
+    'recentSalesTable', 'dividerLine', 'generalTwoColumn', 'luxuryButton',
+    'agentProfile', 'complianceFooter',
+  ],
+  just_sold: [
+    'brandHeader', 'smartHero', 'serifTitle', 'specsBar', 'priceDisplay',
+    'description', 'photoStack', 'dividerLine', 'testimonialBlock',
+    'agentProfile', 'complianceFooter',
+  ],
+  birthday: [
+    'brandHeader', 'smartHero', 'birthdayCelebration', 'description',
+    'generalPhotoStack', 'dividerLine', 'agentProfile', 'complianceFooter',
+  ],
+  home_anniversary: [
+    'brandHeader', 'smartHero', 'serifTitle', 'description', 'anniversaryValue',
+    'generalTwoColumn', 'neighbourhoodHighlights', 'luxuryButton',
+    'agentProfile', 'complianceFooter',
+  ],
+  open_house: [
+    'brandHeader', 'luxuryHero', 'serifTitle', 'specsBar', 'priceDisplay',
+    'openHouseCard', 'description', 'photoStack', 'viewListingCta',
+    'agentProfile', 'complianceFooter',
+  ],
+  price_drop: [
+    'brandHeader', 'luxuryHero', 'serifTitle', 'specsBar', 'priceDisplay',
+    'description', 'photoStack', 'luxuryButton', 'agentProfile', 'complianceFooter',
+  ],
+  neighbourhood_guide: [
+    'brandHeader', 'smartHero', 'serifTitle', 'description', 'generalPhotoStack',
+    'neighbourhoodHighlights', 'generalTwoColumn', 'luxuryButton',
+    'agentProfile', 'complianceFooter',
+  ],
+  showing_confirmed: [
+    'brandHeader', 'smartHero', 'serifTitle', 'openHouseCard', 'description',
+    'photoStack', 'luxuryButton', 'agentProfile', 'complianceFooter',
+  ],
+  welcome: [
+    'brandHeader', 'smartHero', 'serifTitle', 'description', 'generalTwoColumn',
+    'marketStatsGrid', 'luxuryButton', 'socialLinks', 'agentProfile', 'complianceFooter',
+  ],
+  re_engagement: [
+    'brandHeader', 'smartHero', 'serifTitle', 'description', 'generalPhotoStack',
+    'marketStatsGrid', 'luxuryButton', 'agentProfile', 'complianceFooter',
+  ],
+  seller_report: [
+    'brandHeader', 'smartHero', 'serifTitle', 'marketStatsGrid', 'generalTwoColumn',
+    'recentSalesTable', 'description', 'luxuryButton', 'agentProfile', 'complianceFooter',
+  ],
+  cma_preview: [
+    'brandHeader', 'smartHero', 'serifTitle', 'description', 'generalPhotoStack',
+    'marketStatsGrid', 'recentSalesTable', 'testimonialBlock', 'luxuryButton',
+    'agentProfile', 'complianceFooter',
+  ],
+  realtor_digest: [
+    'brandHeader', 'serifTitle', 'description', 'marketStatsGrid',
+    'dividerLine', 'agentProfile', 'complianceFooter',
+  ],
 };
 
 // ═══════════════════════════════════════════════
@@ -418,65 +607,137 @@ const TEMPLATE_BLOCKS: Record<string, string[]> = {
 // ═══════════════════════════════════════════════
 
 export function assembleEmail(emailType: string, data: EmailData): string {
+  // Apply UTM tags to all CTA URLs before rendering blocks
+  if (data.content.ctaUrl) {
+    data.content.ctaUrl = addUtm(data.content.ctaUrl, emailType);
+  }
+
   const blockList = TEMPLATE_BLOCKS[emailType] || TEMPLATE_BLOCKS.welcome;
 
   const renderedBlocks = blockList
     .map(blockName => {
       const fn = blocks[blockName];
-      return fn ? fn(data) : "";
+      return fn ? fn(data) : '';
     })
     .filter(Boolean)
-    .join("\n");
+    .join('\n');
 
-  return `<!DOCTYPE html><html><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  const preheader = `${data.content.subject} — ${data.content.intro.slice(0, 80)}`;
+
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="x-apple-disable-message-reformatting">
 <meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>${data.content.subject}</title>
+<!--[if mso]>
+<noscript><xml>
+<o:OfficeDocumentSettings>
+<o:AllowPNG/>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml></noscript>
+<![endif]-->
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  /* Reset */
+  body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
+  table,td{mso-table-lspace:0pt;mso-table-rspace:0pt}
+  img{-ms-interpolation-mode:bicubic;border:0;height:auto;line-height:100%;outline:none;text-decoration:none}
+  body{margin:0;padding:0;width:100%!important;-webkit-font-smoothing:antialiased}
+
+  /* Dark mode */
   @media(prefers-color-scheme:dark){
-    .email-body{background:#111!important}
-    .email-card{background:#1c1c1e!important}
+    .email-outer{background:#1a1a1a!important}
+    .email-inner{background:#222222!important}
+    .dm-text{color:#e0e0e0!important}
+    .dm-muted{color:#999999!important}
+    .dm-border{border-color:#333333!important}
+    .dm-bg{background:#2a2a2a!important}
   }
-  @media(max-width:600px){
-    .photo-grid td{display:block!important;width:100%!important;padding:2px 0!important}
+  :root[data-ogsc] .email-outer{background:#1a1a1a!important}
+  :root[data-ogsc] .email-inner{background:#222222!important}
+
+  /* Mobile — responsive overrides */
+  @media only screen and (max-width:680px){
+    .email-inner{width:100%!important;min-width:100%!important}
+    .mobile-pad{padding-left:20px!important;padding-right:20px!important}
+    .mobile-pad-sm{padding-left:16px!important;padding-right:16px!important}
+    .mobile-full{padding-left:0!important;padding-right:0!important}
+    .mobile-stack{display:block!important;width:100%!important}
+    .mobile-hide{display:none!important}
+    .mobile-title{font-size:22px!important}
+    .mobile-price{font-size:20px!important}
+    .mobile-specs{font-size:9px!important;letter-spacing:2px!important}
+    .mobile-desc{font-size:14px!important;line-height:1.7!important}
+    .mobile-img{width:100%!important;height:auto!important}
+    .mobile-agent-pad{padding-left:20px!important;padding-right:20px!important}
+    .mobile-oh-pad{padding:24px 20px!important}
+    .mobile-footer{padding:24px 20px 32px!important}
   }
 </style>
 </head>
-<body style="margin:0;padding:0;background:#f5f5f7;font-family:${FONT};-webkit-font-smoothing:antialiased;" class="email-body">
-<div style="display:none;max-height:0;overflow:hidden;font-size:1px;color:#f5f5f7;">${data.content.subject} — ${data.content.intro.slice(0, 80)}</div>
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f7;" class="email-body">
-<tr><td align="center" style="padding:24px 16px;">
-<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);" class="email-card">
+<body style="margin:0;padding:0;background:${CLR.frame};font-family:${SANS};" class="email-outer">
+<!-- Preheader (hidden) -->
+<div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:${CLR.frame};">${preheader}${'&zwnj;&nbsp;'.repeat(20)}</div>
+<!-- Outer wrapper -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CLR.frame};" class="email-outer">
+<tr><td align="center" style="padding:0;">
+<!--[if mso]><table role="presentation" width="660" cellpadding="0" cellspacing="0" align="center"><tr><td><![endif]-->
+<table role="presentation" width="660" cellpadding="0" cellspacing="0" style="max-width:660px;width:100%;background:${CLR.bg};" class="email-inner">
 ${renderedBlocks}
 </table>
+<!--[if mso]></td></tr></table><![endif]-->
 </td></tr>
 </table>
-</body></html>`;
+</body>
+</html>`;
 }
 
-// Default brand config — used when DB config not available
-const DEFAULT_BRAND = { name: config.AGENT_NAME || "Your Agent", brokerage: "RE/MAX City Realty", phone: "604-555-0123", initials: (config.AGENT_NAME || "Y")[0] };
+// ═══════════════════════════════════════════════
+// BRAND CONFIG
+// ═══════════════════════════════════════════════
+
+const DEFAULT_BRAND: EmailData['agent'] = {
+  name: config.AGENT_NAME || 'Your Agent',
+  brokerage: 'RE/MAX City Realty',
+  phone: config.AGENT_PHONE || '604-555-0123',
+  email: config.AGENT_EMAIL || '',
+  initials: (config.AGENT_NAME || 'Y')[0],
+};
 
 /**
  * Get brand config from DB or use defaults.
  * Caches for 5 minutes to avoid repeated DB calls.
  */
-let brandCache: { data: typeof DEFAULT_BRAND; expires: number } | null = null;
+let brandCache: { data: EmailData['agent']; expires: number } | null = null;
 
-export async function getBrandConfig(): Promise<typeof DEFAULT_BRAND> {
+export async function getBrandConfig(): Promise<EmailData['agent']> {
   if (brandCache && Date.now() < brandCache.expires) return brandCache.data;
   try {
     const { data } = await supabase
-      .from("realtor_agent_config")
-      .select("brand_config")
-      .eq("realtor_id", config.DEMO_REALTOR_ID)
+      .from('realtor_agent_config')
+      .select('brand_config')
+      .eq('realtor_id', config.DEMO_REALTOR_ID)
       .single();
     if (data?.brand_config) {
       const bc = data.brand_config as Record<string, string>;
-      const brand = {
+      const brand: EmailData['agent'] = {
         name: bc.name || DEFAULT_BRAND.name,
         brokerage: bc.brokerage || DEFAULT_BRAND.brokerage,
         phone: bc.phone || DEFAULT_BRAND.phone,
-        initials: (bc.name || DEFAULT_BRAND.name)[0],
+        email: bc.email || DEFAULT_BRAND.email,
+        title: bc.title || '',
+        photoUrl: bc.photoUrl || '',
+        initials: (bc.name || DEFAULT_BRAND.name).split(' ').map((n: string) => n[0]).join('').slice(0, 2),
+        instagram: bc.instagram || '',
+        linkedin: bc.linkedin || '',
+        facebook: bc.facebook || '',
+        brokerageAddress: bc.brokerageAddress || '',
       };
       brandCache = { data: brand, expires: Date.now() + 300000 };
       return brand;
@@ -495,12 +756,12 @@ export function buildEmailFromType(
   contactType: string,
   subject: string,
   bodyText: string,
-  ctaText: string = "View Details",
+  ctaText: string = 'View Details',
 ): string {
   return assembleEmail(emailType, {
-    contact: { name: contactName, firstName: contactName.split(" ")[0], type: contactType },
+    contact: { name: contactName, firstName: contactName.split(' ')[0], type: contactType },
     agent: DEFAULT_BRAND,
-    content: { subject, intro: bodyText, body: "", ctaText },
+    content: { subject, intro: bodyText, body: '', ctaText },
   });
 }
 
@@ -509,19 +770,24 @@ export function buildEmailFromType(
  */
 export function generatePlainText(html: string): string {
   return html
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n\n")
-    .replace(/<\/div>/gi, "\n")
-    .replace(/<\/tr>/gi, "\n")
-    .replace(/<\/td>/gi, " | ")
-    .replace(/<a[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/gi, "$2 ($1)")
-    .replace(/<[^>]*>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&#\d+;/g, "")
-    .replace(/\n{3,}/g, "\n\n")
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/tr>/gi, '\n')
+    .replace(/<\/td>/gi, ' | ')
+    .replace(/<a[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/gi, '$2 ($1)')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&middot;/g, '.')
+    .replace(/&rarr;/g, '->')
+    .replace(/&ldquo;/g, '"')
+    .replace(/&rdquo;/g, '"')
+    .replace(/&zwnj;/g, '')
+    .replace(/&#\d+;/g, '')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 }

@@ -1,5 +1,6 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import type { ToolContext } from '../index.js';
+import { logger } from '../../../lib/logger.js';
 
 export const LOG_DECISION_SCHEMA: Anthropic.Tool = {
   name: 'log_decision',
@@ -40,5 +41,6 @@ export async function logDecision(
     .single();
 
   if (error) return { error: error.message };
+  logger.info({ decisionId: decision.id, contactId: String(input.contact_id), type: String(input.decision_type) }, 'log_decision: recorded');
   return { decision_id: decision.id, logged: true };
 }

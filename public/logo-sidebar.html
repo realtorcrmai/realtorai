@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Realtors360</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 120px;
+      height: 120px;
+      background: transparent;
+      overflow: hidden;
+    }
+
+    .scene {
+      width: 120px;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      will-change: transform;
+    }
+
+    .icon-wrap {
+      width: 100%;
+      height: 100%;
+      will-change: transform, opacity;
+      animation: entrance 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    @keyframes entrance {
+      from { opacity: 0; transform: scale(0.6); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .icon-svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Main circle — smooth linear counter-rotation ── */
+    .circle-group {
+      transform-box: fill-box;
+      transform-origin: center;
+      will-change: transform;
+      animation: spin-ccw 8s linear infinite;
+    }
+
+    /* ── Outer orbit — smooth linear clockwise ── */
+    .orbit-group {
+      transform-box: fill-box;
+      transform-origin: center;
+      will-change: transform;
+      animation: spin-cw 5s linear infinite;
+    }
+
+    @keyframes spin-ccw {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(-360deg); }
+    }
+
+    @keyframes spin-cw {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    /* ── Roofline glow — opacity only (cheap) ── */
+    .roof {
+      animation: glow 3s ease-in-out infinite;
+    }
+
+    @keyframes glow {
+      0%, 100% { opacity: 0.85; }
+      50% { opacity: 1; }
+    }
+
+    /* ── Door light — opacity flicker ── */
+    .door-light {
+      animation: flicker 4s ease-in-out infinite;
+    }
+
+    @keyframes flicker {
+      0%, 100% { opacity: 0.15; }
+      30% { opacity: 0.3; }
+      50% { opacity: 0.12; }
+      70% { opacity: 0.35; }
+    }
+
+    /* ── Peak sparkle — opacity only ── */
+    .peak-sparkle {
+      animation: peak 6s ease-in-out infinite;
+    }
+
+    @keyframes peak {
+      0%, 88%, 100% { opacity: 0; }
+      93% { opacity: 0.8; }
+      96% { opacity: 0.2; }
+    }
+  </style>
+</head>
+<body>
+  <div class="scene">
+    <div class="icon-wrap">
+      <svg class="icon-svg" viewBox="0 0 120 120" fill="none">
+        <defs>
+          <linearGradient id="gC" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#F0D890"/>
+            <stop offset="50%" stop-color="#E4C378"/>
+            <stop offset="100%" stop-color="#D4B060"/>
+          </linearGradient>
+          <linearGradient id="gR" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#E4C378"/>
+            <stop offset="50%" stop-color="#F0D890"/>
+            <stop offset="100%" stop-color="#E4C378"/>
+          </linearGradient>
+          <linearGradient id="gO" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#F5E0A0"/>
+            <stop offset="100%" stop-color="#E4C378"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Outer orbit — thin, clockwise -->
+        <g class="orbit-group">
+          <circle cx="60" cy="58" r="52"
+            stroke="url(#gO)" stroke-width="1.5" stroke-linecap="round" fill="none"
+            stroke-dasharray="55 225" opacity="0.45"/>
+        </g>
+
+        <!-- Main circle — thick, counter-clockwise -->
+        <g class="circle-group">
+          <circle cx="60" cy="58" r="44"
+            stroke="url(#gC)" stroke-width="4.5" stroke-linecap="round" fill="none"
+            stroke-dasharray="200 76" opacity="0.9"/>
+        </g>
+
+        <!-- Roofline -->
+        <path class="roof" d="M32 68L60 34L88 68"
+          stroke="url(#gR)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+        <!-- Peak sparkle -->
+        <circle class="peak-sparkle" cx="60" cy="34" r="3" fill="#F5E0A0" opacity="0"/>
+
+        <!-- Pillars -->
+        <line x1="44" y1="60" x2="44" y2="80" stroke="#E4C378" stroke-width="3" stroke-linecap="round" opacity="0.85"/>
+        <line x1="76" y1="60" x2="76" y2="80" stroke="#E4C378" stroke-width="3" stroke-linecap="round" opacity="0.85"/>
+
+        <!-- Base -->
+        <line x1="38" y1="80" x2="82" y2="80" stroke="#E4C378" stroke-width="3" stroke-linecap="round" opacity="0.85"/>
+
+        <!-- Door -->
+        <rect x="52" y="64" width="16" height="16" rx="2" fill="#E4C378" opacity="0.12"/>
+
+        <!-- Door light -->
+        <rect class="door-light" x="54" y="66" width="12" height="12" rx="1.5" fill="#F5E0A0"/>
+      </svg>
+    </div>
+  </div>
+</body>
+</html>

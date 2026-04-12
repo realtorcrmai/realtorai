@@ -63,7 +63,7 @@ async function pollOnce(): Promise<void> {
 
     for (const event of events) {
       // P12: skip events that have failed too many times.
-      if ((event as EventRow & { retry_count?: number }).retry_count ?? 0 >= MAX_RETRIES) {
+      if (((event as EventRow & { retry_count?: number }).retry_count ?? 0) >= MAX_RETRIES) {
         eventLog.warn(
           { eventId: event.id, retries: (event as EventRow & { retry_count?: number }).retry_count },
           'worker: max retries exceeded, marking failed permanently'
