@@ -208,6 +208,22 @@
   html {
     @apply font-sans;
   }
+  /* All interactive elements show pointer cursor */
+  a[href],
+  button:not(:disabled),
+  [role="button"],
+  [role="tab"],
+  [role="link"],
+  [role="menuitem"],
+  [role="option"],
+  input[type="checkbox"],
+  input[type="radio"],
+  select,
+  summary,
+  [onclick],
+  [tabindex="0"] {
+    cursor: pointer;
+  }
 }
 
 /* ─── Utility Classes ─── */
