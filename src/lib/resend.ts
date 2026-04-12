@@ -1,6 +1,7 @@
 "use server";
 
 import { Resend } from "resend";
+import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 
 let resendClient: Resend | null = null;
 
@@ -101,7 +102,9 @@ export async function sendEmail(params: SendEmailParams) {
       replyTo: params.replyTo,
       tags: params.tags?.filter(t => t.value != null && t.value !== ""),
       headers: {
-        "List-Unsubscribe": `<${appUrl}/api/newsletters/unsubscribe>, <mailto:unsubscribe@listingflow.com>`,
+        "List-Unsubscribe": params.metadata?.contactId
+          ? `<${buildUnsubscribeUrl(params.metadata.contactId)}>`
+          : `<${appUrl}/api/newsletters/unsubscribe>`,
         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         ...params.headers,
       },

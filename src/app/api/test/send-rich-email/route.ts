@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/resend";
 import { render } from "@react-email/components";
+import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 import { NewListingAlert } from "@/emails/NewListingAlert";
 import { MarketUpdate } from "@/emails/MarketUpdate";
 import { JustSold } from "@/emails/JustSold";
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
     .order("created_at", { ascending: false })
     .limit(4);
 
-  const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/newsletters/unsubscribe?id=${contactId}`;
+  const unsubscribeUrl = buildUnsubscribeUrl(contactId);
   const firstName = contact.name.split(" ")[0];
 
   const typesToSend: EmailType[] =
