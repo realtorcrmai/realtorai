@@ -443,17 +443,36 @@ export default async function ContactDetailPage({
   const filledDemoFields = demographics ? Object.values(demographics).filter(v => v !== undefined && v !== null && v !== "" && !(Array.isArray(v) && v.length === 0)).length : 0;
   const dataScore = Math.round(((filledDemoFields / totalDemoFields) * 50) + (relationships.length > 0 ? 25 : 0) + ((contactDates?.length ?? 0) > 0 ? 25 : 0));
 
+  // Compute engagement score + last contacted for header
+  const engagementScore = (intel as Record<string, unknown> | null)?.engagement_score as number | undefined;
+  const scoreLabel = engagementScore != null ? (engagementScore >= 60 ? "Hot" : engagementScore >= 30 ? "Warm" : "Cold") : null;
+  const scoreColor = engagementScore != null ? (engagementScore >= 60 ? "bg-destructive/15 text-destructive border-destructive/30" : engagementScore >= 30 ? "bg-[#f5c26b]/15 text-[#8a5a1e] border-[#f5c26b]/30" : "bg-muted text-muted-foreground") : "";
+
+  const lastComm = typedCommunications.length > 0 ? typedCommunications[0] : null;
+  const lastContactedText = lastComm
+    ? `Last contact: ${new Date(lastComm.created_at).toLocaleDateString("en-CA", { month: "short", day: "numeric" })} via ${lastComm.channel}`
+    : "No contact history";
+
+  const avatarColor = contact.type === "seller" ? "bg-brand" : contact.type === "buyer" ? "bg-primary" : "bg-[#516f90]";
+
   // Build header JSX (measured by useAutoLayout in ContactDetailLayout)
   const headerJsx = (
     <>
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1" aria-label="Breadcrumb">
+        <a href="/contacts" className="hover:text-foreground transition-colors">Contacts</a>
+        <span>/</span>
+        <span className="text-foreground">{contact.name}</span>
+      </nav>
+
       {/* Contact Card Header */}
-      <div id="section-contact-info" className="animate-float-in relative z-20">
+      <div id="section-contact-info" className="relative z-20">
             <Card className="border border-border overflow-visible">
               <CardContent className="p-4">
-                {/* Row 1: Avatar + Name + Badges + Actions */}
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white font-bold text-lg shrink-0">
-                    {contact.name.split(/\s+/).map((w: string) => w[0]).join("").substring(0, 2).toUpperCase()}
+                {/* Row 1: Avatar + Name + Badges + Meta */}
+                <div className="flex items-start gap-4">
+                  <div className={`w-12 h-12 rounded-full ${avatarColor} flex items-center justify-center text-white font-bold text-lg shrink-0`}>
+                    {contact.name.split(/\s+/).map((w: string) => w[0]).filter(Boolean).join("").substring(0, 2).toUpperCase() || "?"}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -464,30 +483,52 @@ export default async function ContactDetailPage({
                       <Badge variant="secondary" className={CONTACT_TYPE_COLORS[contact.type as ContactType]}>
                         {contact.type}
                       </Badge>
+                      {scoreLabel && (
+                        <Badge variant="outline" className={`${scoreColor} text-[10px]`}>{scoreLabel} {engagementScore}</Badge>
+                      )}
                       <TagEditor contactId={id} tags={contactTags} />
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                      <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{contact.phone}</span>
-                      {contact.email && <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" />{contact.email}</span>}
-                      <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" />{contact.pref_channel}</span>
+
+                    {/* Contact info — labeled */}
+                    <div className="flex items-center gap-4 text-sm mt-1.5 flex-wrap">
+                      <a href={`tel:${contact.phone}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+                        <Phone className="h-3.5 w-3.5" />
+                        <span>{contact.phone}</span>
+                      </a>
+                      {contact.email && (
+                        <a href={`mailto:${contact.email}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+                          <Mail className="h-3.5 w-3.5" />
+                          <span>{contact.email}</span>
+                        </a>
+                      )}
+                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        <span className="capitalize">Prefers {contact.pref_channel}</span>
+                      </span>
                     </div>
-                    {/* Social profiles */}
-                    {contact.social_profiles && typeof contact.social_profiles === "object" && Object.keys(contact.social_profiles as Record<string, string>).length > 0 && (
-                      <div className="flex items-center gap-2 mt-1.5">
-                        {Object.entries(contact.social_profiles as Record<string, string>).map(([platform, handle]) => {
-                          const icons: Record<string, string> = { instagram: "📸", facebook: "📘", linkedin: "💼", twitter: "𝕏", tiktok: "🎵", youtube: "▶️" };
-                          const urls: Record<string, string> = { instagram: "instagram.com/", facebook: "facebook.com/", linkedin: "linkedin.com/in/", twitter: "x.com/", tiktok: "tiktok.com/@", youtube: "youtube.com/@" };
-                          return (
-                            <a key={platform} href={`https://${urls[platform] || ""}${handle}`} target="_blank" rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/50 border border-border/30 text-xs text-brand hover:bg-muted hover:underline transition-colors">
-                              <span>{icons[platform] || "🔗"}</span>@{handle}
-                            </a>
-                          );
-                        })}
-                      </div>
-                    )}
+
+                    {/* Last contacted + social */}
+                    <div className="flex items-center gap-4 mt-1 flex-wrap">
+                      <span className="text-xs text-muted-foreground">{lastContactedText}</span>
+                      {contact.social_profiles && typeof contact.social_profiles === "object" && Object.keys(contact.social_profiles as Record<string, string>).length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          {Object.entries(contact.social_profiles as Record<string, string>).map(([platform, handle]) => {
+                            const icons: Record<string, string> = { instagram: "📸", facebook: "📘", linkedin: "💼", twitter: "𝕏", tiktok: "🎵", youtube: "▶️" };
+                            const urls: Record<string, string> = { instagram: "instagram.com/", facebook: "facebook.com/", linkedin: "linkedin.com/in/", twitter: "x.com/", tiktok: "tiktok.com/@", youtube: "youtube.com/@" };
+                            return (
+                              <a key={platform} href={`https://${urls[platform] || ""}${handle}`} target="_blank" rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-muted-foreground hover:text-brand transition-colors" title={`@${handle} on ${platform}`}>
+                                <span>{icons[platform] || "🔗"}</span>
+                              </a>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+
+                  {/* Actions — Edit prominent, Delete in secondary position */}
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <ContactForm
                       contact={contact}
                       allContacts={(allContacts ?? []) as { id: string; name: string }[]}
@@ -498,10 +539,10 @@ export default async function ContactDetailPage({
                 </div>
 
                 {/* Row 2: Pipeline bar or Convert button */}
-                <div className="mt-3 pt-2 border-t border-brand/10 dark:border-foreground/20">
+                <div className="mt-3 pt-2 border-t border-border">
                   {contact.type === "customer" ? (
                     <div className="flex items-center gap-2 p-3 bg-brand-muted border border-brand/20 rounded-lg">
-                      <span className="text-sm text-brand-dark font-medium flex-1">This is an unqualified lead. Convert when ready:</span>
+                      <span className="text-sm text-brand-dark font-medium flex-1">Unqualified lead — convert when ready:</span>
                       <form action={async () => {
                         "use server";
                         const { convertContactType } = await import("@/actions/contacts");
@@ -527,7 +568,7 @@ export default async function ContactDetailPage({
                   )}
                 </div>
                 {contact.notes && (
-                  <p className="text-sm text-muted-foreground mt-2">{contact.notes}</p>
+                  <p className="text-sm text-muted-foreground mt-2 italic">{contact.notes}</p>
                 )}
               </CardContent>
             </Card>
@@ -559,17 +600,19 @@ export default async function ContactDetailPage({
             </div>
           </MobileDetailSheet>
 
-          {/* Quick Action Bar — colored icon buttons */}
-          <div className="flex items-center gap-2">
-            <QuickActionBar
-              contactId={id}
-              contactPhone={contact.phone}
-              contactChannel={contact.pref_channel}
-            />
-            <EmailComposer
-              contactId={id}
-              contactEmail={contact.email}
-            />
+          {/* Quick Action Bar — grouped: primary communication + secondary tools */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1.5 bg-card border border-border rounded-lg p-1">
+              <QuickActionBar
+                contactId={id}
+                contactPhone={contact.phone}
+                contactChannel={contact.pref_channel}
+              />
+              <EmailComposer
+                contactId={id}
+                contactEmail={contact.email}
+              />
+            </div>
           </div>
 
           {/* Journey Progress Bar */}
