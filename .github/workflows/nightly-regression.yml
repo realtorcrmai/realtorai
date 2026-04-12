@@ -163,6 +163,94 @@ jobs:
               labels: ['testing', 'automated'],
             });
 
+      # ── Pipeline crash detection ─────────────────────────
+      # Catches infrastructure failures: npm install, build, server start,
+      # script errors, timeouts — anything that prevents tests from running.
+      - name: Pipeline health check
+        id: health
+        if: always()
+        run: |
+          FAILED_STEPS=""
+
+          # Check each critical step
+          for STEP_NAME in "TypeScript check" "Production build" "Start server" \
+            "Core CRM suite" "Newsletter integration" "API endpoint coverage" \
+            "Visual & browser tests"; do
+            echo "Checking: $STEP_NAME"
+          done
+
+          # The real check: did we get test result files?
+          RESULTS_EXIST=false
+          if [ -f test-results/newsletter-integration-results.json ]; then
+            RESULTS_EXIST=true
+          fi
+
+          echo "results_exist=$RESULTS_EXIST" >> $GITHUB_OUTPUT
+
+      # ── Open issue on pipeline crash ─────────────────────
+      - name: Report pipeline crash
+        if: always() && failure() && steps.health.outputs.results_exist != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toISOString().slice(0, 10);
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            // Check for existing open pipeline issue
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'pipeline-failure',
+              state: 'open',
+            });
+
+            const body = [
+              `## Nightly Regression Pipeline Failed`,
+              ``,
+              `The regression pipeline itself crashed before tests could complete.`,
+              `This is an **infrastructure failure**, not a test failure.`,
+              ``,
+              `**Date:** ${date}`,
+              `**Commit:** ${context.sha}`,
+              `**Run:** ${runUrl}`,
+              ``,
+              `### Common Causes`,
+              ``,
+              `| Cause | Fix |`,
+              `|-------|-----|`,
+              `| npm install failed | Check package-lock.json, clear cache |`,
+              `| Build failed | Check TypeScript errors, missing env vars |`,
+              `| Server won't start | Check port conflicts, missing .env vars |`,
+              `| Script syntax error | Run \`bash -n scripts/test-suite.sh\` locally |`,
+              `| Timeout (>30 min) | Check for infinite loops or hanging API calls |`,
+              `| Supabase unreachable | Check Supabase status, verify secrets |`,
+              ``,
+              `### How to Debug`,
+              ``,
+              `1. Check the [workflow run logs](${runUrl}) — find the first red step`,
+              `2. Reproduce locally: \`bash scripts/run-all-tests.sh --no-build\``,
+              `3. If build failed: \`npm run build\` and check errors`,
+              `4. If server failed: \`npm run start\` and check console`,
+              `5. Open Claude Code: "The nightly regression pipeline crashed. Check the logs at ${runUrl} and fix the infrastructure issue."`,
+            ].join('\n');
+
+            if (existing.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body: `## Pipeline crashed again — ${date}\n\n[Run logs](${runUrl})\n\nSame or new infrastructure issue. Check the latest run.`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `[Pipeline] Nightly regression infrastructure failure — ${date}`,
+                body,
+                labels: ['pipeline-failure', 'bug', 'automated', 'P0'],
+              });
+            }
+
       # ── Summary ──────────────────────────────────────────
       - name: Summary
         if: always()
@@ -174,9 +262,15 @@ jobs:
           echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Test Results" >> $GITHUB_STEP_SUMMARY
-          for f in test-results/*.json; do
-            echo "\`$(basename $f)\`:" >> $GITHUB_STEP_SUMMARY
-            echo '```json' >> $GITHUB_STEP_SUMMARY
-            cat "$f" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          done
+          if ls test-results/*.json 1>/dev/null 2>&1; then
+            for f in test-results/*.json; do
+              echo "\`$(basename $f)\`:" >> $GITHUB_STEP_SUMMARY
+              echo '```json' >> $GITHUB_STEP_SUMMARY
+              cat "$f" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            done
+          else
+            echo "**No test results found — pipeline may have crashed before tests ran.**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Check the [workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})." >> $GITHUB_STEP_SUMMARY
+          fi

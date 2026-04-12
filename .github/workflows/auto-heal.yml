@@ -1,7 +1,8 @@
 name: Auto-Heal — Diagnose Regression Failures
 
-# Triggers when nightly regression fails, or manually.
-# Creates a detailed GitHub issue with diagnosis — no API costs.
+# Triggers when nightly regression fails (test failures), or manually.
+# Pipeline infrastructure crashes are handled by the nightly workflow itself.
+# This workflow reproduces test failures specifically and opens a detailed issue.
 on:
   workflow_run:
     workflows: ["Nightly Regression + Test Plan Sync"]
