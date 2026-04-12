@@ -157,3 +157,5 @@ jobs:
         run: node scripts/audit-docs.mjs
       - name: Deep audit (changed files → required doc updates)
         run: node scripts/audit-docs-deep.mjs --ci
+      - name: Test plan audit (code coverage in test plans)
+        run: node scripts/audit-test-plans.mjs
