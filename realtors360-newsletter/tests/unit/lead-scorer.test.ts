@@ -229,8 +229,8 @@ describe('LeadScoreSchema', () => {
     expect(() => LeadScoreSchema.parse(bad)).toThrow();
   });
 
-  it('rejects unknown intent enum values', () => {
-    const bad = { ...valid, intent: 'super_hot_buyer' };
-    expect(() => LeadScoreSchema.parse(bad)).toThrow();
+  it('accepts any string intent (relaxed for Claude flexibility)', () => {
+    const ok = { ...valid, intent: 'super_hot_buyer' };
+    expect(() => LeadScoreSchema.parse(ok)).not.toThrow();
   });
 });

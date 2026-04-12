@@ -7,7 +7,7 @@ import { scoreBatch } from '../shared/ai-agent/lead-scorer.js';
 /**
  * Cron: agent-scoring
  *
- * Schedule: every 15 minutes (registered in `crons/index.ts`).
+ * Schedule: daily at 07:00 Vancouver (registered in `crons/index.ts`).
  *
  * Ported from `realestate-crm/src/app/api/cron/agent-scoring/route.ts`
  * (M3-D). Behaviour preserved with intentional improvements (see
@@ -30,37 +30,67 @@ export async function runAgentScoring(): Promise<void> {
   const startedAt = Date.now();
   logger.info('cron/agent-scoring: starting');
 
-  const oneDayAgo = new Date(Date.now() - 86_400_000).toISOString();
+  // Delta-only scoring: only fetch contacts whose updated_at is newer than
+  // their last scored_at timestamp (or who have never been scored). This
+  // avoids burning Claude API tokens re-scoring contacts with no new activity.
+  //
+  // PostgREST doesn't support cross-column comparisons or JSONB casts in
+  // filters, so we use an RPC-style raw query via `.rpc()` — but to keep
+  // things simple and avoid a new DB function, we fetch the two populations
+  // separately and merge (never-scored + updated-since-last-score).
 
-  // Find candidates: contacts with email, opted-in to newsletters, ordered
-  // by most recently updated. We then filter in-app to only score those
-  // whose `ai_lead_score.scored_at` is missing or stale (>24h).
-  const { data: recentlyActive, error: fetchErr } = await supabase
+  // Population 1: never scored (ai_lead_score IS NULL)
+  const { data: neverScored, error: fetchErr1 } = await supabase
     .from('contacts')
-    .select('id, ai_lead_score')
+    .select('id')
     .not('email', 'is', null)
     .eq('newsletter_unsubscribed', false)
+    .is('ai_lead_score', null)
     .order('updated_at', { ascending: false })
     .limit(50);
 
-  if (fetchErr) {
-    logger.error({ err: fetchErr }, 'cron/agent-scoring: contact fetch failed');
-    captureException(new Error(fetchErr.message), { cron: 'agent-scoring' });
+  if (fetchErr1) {
+    logger.error({ err: fetchErr1 }, 'cron/agent-scoring: never-scored fetch failed');
+    captureException(new Error(fetchErr1.message), { cron: 'agent-scoring' });
     return;
   }
 
-  const candidates = recentlyActive ?? [];
-  const contactsToScore: string[] = [];
-  for (const c of candidates) {
-    const score = c.ai_lead_score as { scored_at?: string } | null;
-    if (!score || !score.scored_at) {
-      contactsToScore.push(c.id as string);
-      continue;
+  // Population 2: scored before, but updated_at > scored_at (new activity).
+  // We fetch contacts that have a score and filter in-app since PostgREST
+  // can't compare updated_at against a JSONB-extracted timestamp.
+  const remaining = 50 - (neverScored?.length ?? 0);
+  let deltaIds: string[] = [];
+
+  if (remaining > 0) {
+    const { data: scoredContacts, error: fetchErr2 } = await supabase
+      .from('contacts')
+      .select('id, updated_at, ai_lead_score')
+      .not('email', 'is', null)
+      .eq('newsletter_unsubscribed', false)
+      .not('ai_lead_score', 'is', null)
+      .order('updated_at', { ascending: false })
+      .limit(remaining * 2); // fetch extra to account for filtering
+
+    if (fetchErr2) {
+      logger.error({ err: fetchErr2 }, 'cron/agent-scoring: delta fetch failed');
+      captureException(new Error(fetchErr2.message), { cron: 'agent-scoring' });
+      return;
     }
-    if (new Date(score.scored_at) < new Date(oneDayAgo)) {
-      contactsToScore.push(c.id as string);
+
+    for (const c of scoredContacts ?? []) {
+      if (deltaIds.length >= remaining) break;
+      const score = c.ai_lead_score as { scored_at?: string } | null;
+      const scoredAt = score?.scored_at;
+      if (!scoredAt || new Date(c.updated_at as string) > new Date(scoredAt)) {
+        deltaIds.push(c.id as string);
+      }
     }
   }
+
+  const contactsToScore = [
+    ...(neverScored ?? []).map((c) => c.id as string),
+    ...deltaIds,
+  ].slice(0, 50);
 
   if (contactsToScore.length === 0) {
     logger.info(

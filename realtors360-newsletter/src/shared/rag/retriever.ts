@@ -76,6 +76,10 @@ function getAnthropic(): Anthropic {
 const HYDE_SYSTEM_PROMPT =
   'Generate a short, factual paragraph that would answer this question in a real estate CRM context. Write as if it were a document in the database. Be specific with plausible details.';
 
+/** In-memory cache for HyDE embeddings to avoid repeated Claude + Voyage calls for identical queries. */
+const hydeCache = new Map<string, { embedding: number[]; expiresAt: number }>();
+const HYDE_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
 /**
  * Hypothetical Document Embedding.
  *
@@ -87,8 +91,26 @@ const HYDE_SYSTEM_PROMPT =
  * Strictly best-effort: any failure (no API key, rate limit, generation
  * error) falls back to a plain query embedding so the caller still gets
  * one of the three RRF legs.
+ *
+ * COST-OPT: Results are cached in memory by normalized query string for
+ * 1 hour. Identical or near-identical queries (trimmed, lowercased) reuse
+ * the cached embedding, avoiding both a Claude call and a Voyage embed call.
  */
 export async function hydeExpand(query: string): Promise<number[]> {
+  const cacheKey = query.trim().toLowerCase();
+
+  // Check cache — return early if hit and not expired
+  const cached = hydeCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    logger.debug({ query: cacheKey.slice(0, 60) }, 'rag retriever: HyDE cache hit');
+    return cached.embedding;
+  }
+
+  // Evict expired entry if present
+  if (cached) {
+    hydeCache.delete(cacheKey);
+  }
+
   try {
     const response = await getAnthropic().messages.create({
       model: HYDE_MODEL,
@@ -101,7 +123,12 @@ export async function hydeExpand(query: string): Promise<number[]> {
     const hypothetical = first?.type === 'text' ? first.text : '';
     if (!hypothetical) return embedQuery(query);
 
-    return await embedText(hypothetical);
+    const embedding = await embedText(hypothetical);
+
+    // Cache the result
+    hydeCache.set(cacheKey, { embedding, expiresAt: Date.now() + HYDE_CACHE_TTL });
+
+    return embedding;
   } catch (err) {
     logger.debug({ err }, 'rag retriever: HyDE generation failed, falling back to query embedding');
     return embedQuery(query);
