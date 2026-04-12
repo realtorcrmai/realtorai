@@ -1,0 +1,98 @@
+name: Auto-Apply Migrations
+
+# Runs when migration files are merged to dev or main.
+# dev merges → apply to dev Supabase (qcohfohjihazivkforsj)
+# main merges → apply to prod Supabase (opbrqlmhhqvfomevvkon)
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'listingflow-sites/supabase/migrations/**'
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  apply-migrations:
+    name: Apply new migrations
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout (full history for diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need HEAD~1 for diff
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Determine target project
+        id: target
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "project_ref=opbrqlmhhqvfomevvkon" >> $GITHUB_OUTPUT
+            echo "env_name=production" >> $GITHUB_OUTPUT
+          else
+            echo "project_ref=qcohfohjihazivkforsj" >> $GITHUB_OUTPUT
+            echo "env_name=dev" >> $GITHUB_OUTPUT
+          fi
+          echo "Deploying to: ${{ github.ref_name }} → $(cat $GITHUB_OUTPUT | grep project_ref | cut -d= -f2)"
+
+      - name: Apply new migrations
+        id: apply
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ steps.target.outputs.project_ref }}
+        run: |
+          node scripts/apply-migrations.mjs --new-only 2>&1 | tee /tmp/migration-output.txt
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+
+      - name: Report failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('/tmp/migration-output.txt', 'utf8');
+            const env = '${{ steps.target.outputs.env_name }}';
+            const ref = '${{ steps.target.outputs.project_ref }}';
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `⚠ Migration failed on ${env} (${context.sha.slice(0, 7)})`,
+              labels: ['migration-failure', 'bug'],
+              body: [
+                `### Migration auto-apply failed`,
+                '',
+                `**Branch:** ${context.ref}`,
+                `**Commit:** ${context.sha}`,
+                `**Target:** ${env} (${ref})`,
+                '',
+                '```',
+                output,
+                '```',
+                '',
+                '### How to fix',
+                '',
+                '1. Check the migration SQL for syntax errors',
+                '2. Apply manually: `SUPABASE_ACCESS_TOKEN=<token> SUPABASE_PROJECT_REF=' + ref + ' node scripts/apply-migrations.mjs --new-only`',
+                '3. Or apply via dashboard: https://supabase.com/dashboard/project/' + ref + '/sql/new',
+                '',
+                `[Workflow run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              ].join('\n'),
+            });
+
+      - name: Report success
+        if: success()
+        run: |
+          ENV="${{ steps.target.outputs.env_name }}"
+          REF="${{ steps.target.outputs.project_ref }}"
+          echo "✅ Migrations applied to $ENV ($REF)"
