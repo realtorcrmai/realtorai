@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Poppins } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { validateEnv } from "@/lib/env-check";
 import "./globals.css";
 
@@ -61,6 +63,8 @@ export default function RootLayout({
         <SessionProvider refetchOnWindowFocus={false} refetchInterval={300}>
           <TooltipProvider>{children}</TooltipProvider>
         </SessionProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

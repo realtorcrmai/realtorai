@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import { showingSchema, type ShowingFormData } from "@/lib/schemas";
 import { emitNewsletterEvent } from "@/lib/newsletter-events";
 import { createNotification } from "@/lib/notifications";
+import { trackEvent } from "@/lib/analytics";
 
 export async function createShowingRequest(
   formData: ShowingFormData
@@ -103,6 +104,8 @@ export async function createShowingRequest(
   if (apptError) {
     return { error: "Failed to create appointment" };
   }
+
+  trackEvent('feature_used', tc.realtorId, { feature: 'showings', action: 'create' });
 
   // Send Twilio notification to seller
   try {

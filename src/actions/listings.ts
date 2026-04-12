@@ -7,6 +7,7 @@ import { listingSchema, type ListingFormData } from "@/lib/schemas";
 import { validateStageForType } from "@/lib/contact-consistency";
 import { triggerIngest } from "@/lib/rag/realtime-ingest";
 import { emitNewsletterEvent } from "@/lib/newsletter-events";
+import { trackEvent } from "@/lib/analytics";
 
 export async function createListing(formData: ListingFormData) {
   const parsed = listingSchema.safeParse(formData);
@@ -31,6 +32,8 @@ export async function createListing(formData: ListingFormData) {
   if (error) {
     return { error: "Failed to create listing" };
   }
+
+  trackEvent('feature_used', tc.realtorId, { feature: 'listings', action: 'create' });
 
   revalidatePath("/listings");
 

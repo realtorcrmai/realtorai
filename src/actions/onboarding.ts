@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { auth } from "@/lib/auth";
+import { trackEvent } from "@/lib/analytics";
 
 // ── Onboarding Progress Resume ──
 
@@ -72,6 +73,7 @@ export async function advanceOnboardingStep(step: number) {
 
   const supabase = createAdminClient();
   await supabase.from("users").update({ onboarding_step: step }).eq("id", session.user.id);
+  trackEvent("onboarding_step", session.user.id, { step, action: "completed" });
 
   if (step >= 6) {
     await supabase.from("users").update({ onboarding_completed: true }).eq("id", session.user.id);

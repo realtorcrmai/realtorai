@@ -3,6 +3,7 @@
 import { MondayHeader } from "@/components/layout/MondayHeader";
 import { MondaySidebar } from "@/components/layout/MondaySidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 
 export function DashboardShellClient({ children }: { children: React.ReactNode }) {
   return (
@@ -18,6 +19,7 @@ export function DashboardShellClient({ children }: { children: React.ReactNode }
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0">
         <MondayHeader />
+        <AnnouncementBanner />
         <main id="main-content" className="flex-1 overflow-y-auto bg-background">
           <div className="pb-24 animate-fade-in">
             {children}

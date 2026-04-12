@@ -9,6 +9,7 @@ import { render } from "@react-email/components";
 import { revalidatePath } from "next/cache";
 import { triggerIngest } from "@/lib/rag/realtime-ingest";
 import { canSendToContact, filterSendable } from "@/lib/compliance/can-send";
+import { trackEvent } from "@/lib/analytics";
 
 // React Email template imports
 import { NewListingAlert } from "@/emails/NewListingAlert";
@@ -621,6 +622,8 @@ export async function sendNewsletter(newsletterId: string) {
     // We only need to handle the communications log and rollback for non-sent outcomes.
 
     if (result.sent) {
+      trackEvent('feature_used', tc.realtorId, { feature: 'newsletters', action: 'send' });
+
       // Log to communications
       await tc.from("communications").insert({
         contact_id: newsletter.contact_id,

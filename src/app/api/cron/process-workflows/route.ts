@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processWorkflowQueue } from "@/lib/workflow-engine";
+import { trackEvent } from "@/lib/analytics";
 
 /**
  * GET /api/cron/process-workflows
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const cronStart = Date.now();
   try {
     const result = await processWorkflowQueue();
 
@@ -28,6 +30,12 @@ export async function GET(request: NextRequest) {
       dormantCount = await checkInactivity(60);
     } catch {}
 
+    await trackEvent('cron_run', null, {
+      cron: 'process-workflows',
+      status: 'success',
+      duration_ms: Date.now() - cronStart,
+    });
+
     return NextResponse.json({
       ok: true,
       ...result,
@@ -35,6 +43,12 @@ export async function GET(request: NextRequest) {
       processedAt: new Date().toISOString(),
     });
   } catch (e) {
+    await trackEvent('cron_run', null, {
+      cron: 'process-workflows',
+      status: 'error',
+      duration_ms: Date.now() - cronStart,
+      error: e instanceof Error ? e.message : 'Unknown error',
+    });
     console.error("Workflow cron error:", e);
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Processing failed" },

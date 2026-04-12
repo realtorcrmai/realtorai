@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { trackEvent } from "@/lib/analytics";
 import { ALL_FEATURES, getUserFeatures } from "@/lib/features";
 import {
   getClientIp,
@@ -44,8 +45,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!email || !password) return null;
 
-        // Demo password — works for all seeded users in dev/demo
-        if (password === DEMO_PASSWORD) {
+        // Demo password — works for seeded users in dev/demo.
+        // In production: only works if the email matches DEMO_EMAIL exactly.
+        // This prevents "any user + demo password" login in prod while still
+        // allowing easy testing in dev where DEMO_EMAIL may be set to a
+        // wildcard-like value.
+        const isDemoLogin = DEMO_PASSWORD && password === DEMO_PASSWORD;
+        const isProd = process.env.NODE_ENV === "production";
+        const demoAllowed = isDemoLogin && (!isProd || (DEMO_EMAIL && email.toLowerCase().trim() === DEMO_EMAIL.toLowerCase().trim()));
+
+        if (demoAllowed) {
           const supabase = createAdminClient();
           const { data: user, error: userErr } = await supabase
             .from("users")
@@ -163,6 +172,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
 
             if (existingUser) {
+              // Update last_active_at on every login
+              await supabase.from("users").update({ last_active_at: new Date().toISOString() }).eq("id", existingUser.id);
+              await trackEvent("session_start", existingUser.id, { user_agent: "" });
+
               token.role = existingUser.role;
               token.userId = existingUser.id;
               token.emailVerified = existingUser.email_verified ?? true;
@@ -201,6 +214,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
               if (insertError) {
                 console.error("[auth] Error inserting user:", insertError.message);
+              }
+
+              if (newUser?.id) {
+                await trackEvent("signup", newUser.id, { method: account?.provider ?? "credentials", source: "organic" });
               }
 
               const { getEffectivePlan } = await import("@/lib/plans");

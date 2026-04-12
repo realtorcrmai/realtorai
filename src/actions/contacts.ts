@@ -8,6 +8,7 @@ import type { Json } from "@/types/database";
 import { enforceConsistency, validateStageForType } from "@/lib/contact-consistency";
 import { triggerIngest } from "@/lib/rag/realtime-ingest";
 import { createNotification } from "@/lib/notifications";
+import { trackEvent } from "@/lib/analytics";
 
 export async function getContactCommunications(contactId: string, limit = 50) {
   const tc = await getAuthenticatedTenantClient();
@@ -92,6 +93,8 @@ export async function createContact(formData: ContactFormData, force = false) {
   if (error) {
     return { error: "Failed to create contact" };
   }
+
+  trackEvent('feature_used', tc.realtorId, { feature: 'contacts', action: 'create' });
 
   // Notification: new lead added
   try {
