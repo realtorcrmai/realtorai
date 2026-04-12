@@ -1,14 +1,19 @@
 import crypto from 'node:crypto';
 import { render } from '@react-email/render';
 import React from 'react';
+import AnthropicSdk from '@anthropic-ai/sdk';
 import { supabase } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
 import { generateTraceId } from '../lib/trace.js';
-import { generateEmail } from '../orchestrator/index.js';
 import { resolveRuleForEvent } from '../orchestrator/rules.js';
 import { sendEmail } from '../lib/resend.js';
 import { getEmailComponent } from '../emails/index.js';
 import { canSendToContact } from '../lib/compliance.js';
+import { createWithRetry } from '../shared/anthropic-retry.js';
+import { parseAIJson, unescapeNewlines } from '../lib/parse-ai-json.js';
+import { NEWSLETTER_PERSONA_SYSTEM, buildVoiceProfileBlock } from '../orchestrator/prompts.js';
+import { validateDraft, type EmailDraft } from '../orchestrator/validators.js';
+import { config as appConfig } from '../config.js';
 
 /**
  * Generic pipeline runner.
@@ -32,7 +37,17 @@ import { canSendToContact } from '../lib/compliance.js';
  *
  *   P11: unsubscribe URL injection — replaces the `{{unsubscribe_url}}`
  *       placeholder in rendered HTML with a real unsubscribe link.
+ *
+ *   COST-OPT: Phase 5 now calls Claude ONCE directly (single-shot) instead
+ *       of the multi-turn orchestrator loop (up to 8 turns). Routine email
+ *       types use Haiku; high-value types use Sonnet. This reduces 3-8 API
+ *       calls per event down to 1.
  */
+
+const _anthropic = new AnthropicSdk();
+
+/** Email types that are low-complexity and can use the cheaper Haiku model. */
+const HAIKU_TYPES = ['birthday', 'market_update', 'neighbourhood_guide', 'welcome', 're_engagement'];
 
 export type EventRow = {
   id: string;
@@ -130,14 +145,91 @@ export async function runPipeline(
     realtor: realtorRes.data,
   });
 
-  // ── Phase 5: Orchestrator ────────────────────────────────────
-  const result = await generateEmail({ userPrompt, realtorId: event.realtor_id });
-  if (!result.ok) {
-    log.warn({ reason: result.reason }, 'pipeline: orchestrator failed');
-    return { ok: false, reason: `orchestrator:${result.reason}` };
+  // ── Phase 5: Single-shot Claude generation (cost-optimized) ──
+  //
+  // Previous: multi-turn orchestrator loop (3-8 API calls).
+  // Now: one Claude call with the same prompt structure as generate-copy.
+  // Haiku for routine types, Sonnet for high-value.
+
+  let systemPrompt = NEWSLETTER_PERSONA_SYSTEM;
+  if (event.realtor_id) {
+    const { data: agentConfig } = await supabase
+      .from('realtor_agent_config')
+      .select('tone, content_rankings, writing_style_rules, brand_name')
+      .eq('realtor_id', event.realtor_id)
+      .maybeSingle();
+
+    if (agentConfig) {
+      const voiceBlock = buildVoiceProfileBlock(agentConfig);
+      if (voiceBlock) {
+        systemPrompt += '\n\n' + voiceBlock;
+      }
+    }
   }
 
-  const draft = result.draft;
+  // Append output format instructions to the system prompt so the model
+  // returns structured JSON without needing a tool_use loop.
+  const outputInstructions = `\n\nReturn ONLY valid JSON (no markdown fences):
+{
+  "status": "ready",
+  "subject": "Subject line, under 50 chars",
+  "preheader": "Inbox preview text, under 90 chars",
+  "greeting": "Short personalized greeting",
+  "body_paragraphs": ["1-3 short paragraphs, 120 words max total"],
+  "cta_label": "Specific action text",
+  "cta_url": "URL or placeholder",
+  "signoff": "Casual sign-off with realtor name"
+}
+If you don't have enough data, return: { "status": "insufficient_data", "reason": "..." }`;
+
+  const model = HAIKU_TYPES.includes(rule.email_type)
+    ? 'claude-haiku-4-5-20251001'
+    : appConfig.AI_SCORING_MODEL;
+
+  let draft: EmailDraft;
+  try {
+    const message = await createWithRetry(_anthropic, {
+      model,
+      max_tokens: 800,
+      system: systemPrompt + outputInstructions,
+      messages: [{ role: 'user', content: userPrompt }],
+    });
+
+    const text = message.content[0]?.type === 'text' ? message.content[0].text : '';
+    const parsed = parseAIJson<EmailDraft>(text);
+
+    if (!parsed) {
+      log.warn({ text: text.slice(0, 200) }, 'pipeline: failed to parse AI JSON');
+      return { ok: false, reason: 'orchestrator:json_parse_failed' };
+    }
+
+    // Unescape literal \n in body paragraphs
+    if (Array.isArray(parsed.body_paragraphs)) {
+      parsed.body_paragraphs = parsed.body_paragraphs.map(unescapeNewlines);
+    }
+
+    draft = parsed;
+
+    log.info(
+      {
+        model,
+        input_tokens: message.usage?.input_tokens ?? 0,
+        output_tokens: message.usage?.output_tokens ?? 0,
+        email_type: rule.email_type,
+      },
+      'pipeline: single-shot generation complete'
+    );
+  } catch (err) {
+    log.warn({ err }, 'pipeline: Claude generation failed');
+    return { ok: false, reason: `orchestrator:${(err as Error).message}` };
+  }
+
+  const validation = validateDraft(draft);
+  if (!validation.ok) {
+    log.warn({ reason: (validation as { reason: string }).reason }, 'pipeline: draft validation failed');
+    return { ok: false, reason: `orchestrator:validation:${(validation as { reason: string }).reason}` };
+  }
+
   if (draft.status !== 'ready' || !draft.subject || !draft.body_paragraphs) {
     return { ok: false, reason: `draft not ready: ${draft.reason ?? 'unknown'}` };
   }
@@ -247,7 +339,6 @@ export async function runPipeline(
 
   // Now send — the row already exists so the cap is enforced even if we
   // crash right here. Replace web view URL placeholder before sending.
-  const { config: appConfig } = await import('../config.js');
   const webViewUrl = `${appConfig.NEWSLETTER_SERVICE_URL}/emails/${nl.id}`;
   const finalHtml = html.replace(/\{\{web_view_url\}\}/g, webViewUrl);
 
