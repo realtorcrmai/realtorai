@@ -204,7 +204,10 @@ export function MondaySidebar() {
             <p className="text-xs text-sidebar-foreground/50 truncate">{userEmail}</p>
           </div>
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => {
+              useRecentItems.getState().clearItems();
+              signOut({ callbackUrl: "/login" });
+            }}
             className="p-1.5 rounded-md text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors shrink-0"
             title="Sign out"
           >

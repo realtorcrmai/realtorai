@@ -107,8 +107,8 @@ export function ContactsTableClient({ contacts }: { contacts: ContactRow[] }) {
         onSelectionChange={setSelectedIds}
         bulkActions={(ids) => (
           <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 text-xs font-medium rounded-md border border-border bg-background hover:bg-muted" onClick={() => { /* placeholder */ }}>Add Tag</button>
-            <button className="px-3 py-1.5 text-xs font-medium rounded-md border border-border bg-background hover:bg-muted" onClick={() => { /* placeholder */ }}>Change Stage</button>
+            <button className="px-3 py-1.5 text-xs font-medium rounded-md border border-border bg-background opacity-50 cursor-not-allowed" disabled title="Coming soon — bulk tag management">Add Tag</button>
+            <button className="px-3 py-1.5 text-xs font-medium rounded-md border border-border bg-background opacity-50 cursor-not-allowed" disabled title="Coming soon — bulk stage management">Change Stage</button>
           </div>
         )}
         columns={[
