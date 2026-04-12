@@ -209,7 +209,7 @@ export function ContactsTableClient({ contacts }: { contacts: ContactRow[] }) {
                 const stage = e.target.value;
                 if (!stage) return;
                 const result = await bulkUpdateContactStage(Array.from(ids), stage);
-                if (result.error) { toast.error(result.error); } else { toast.success(`Updated ${result.updated} contacts`); setSelectedIds(new Set()); }
+                if (result.error) { toast.error(result.error); } else { toast.success(`Updated ${result.updated} contacts${result.skipped ? ` (${result.skipped} skipped — incompatible type)` : ""}`); setSelectedIds(new Set()); }
                 e.target.value = "";
               }}
               className="h-8 rounded-md border border-border bg-background px-2 text-xs font-medium"
