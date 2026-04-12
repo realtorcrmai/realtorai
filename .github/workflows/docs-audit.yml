@@ -1,0 +1,98 @@
+name: Docs Freshness Audit
+
+# Runs weekly on Monday 9am UTC + on-demand via workflow_dispatch.
+# Checks CONTRIBUTING.md, ENVIRONMENTS.md, and .env.local.example
+# against the actual codebase. If anything is stale, opens an issue.
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'   # Every Monday 9:00 UTC
+  workflow_dispatch: {}     # Manual trigger from Actions tab
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  audit:
+    name: Audit docs freshness
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Run docs audit
+        id: audit
+        continue-on-error: true
+        run: node scripts/audit-docs.mjs 2>&1 | tee /tmp/audit-output.txt
+
+      - name: Open issue if stale
+        if: steps.audit.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('/tmp/audit-output.txt', 'utf8');
+
+            // Check if there's already an open docs-audit issue
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'docs-audit',
+              state: 'open',
+            });
+
+            if (existing.data.length > 0) {
+              // Update existing issue with fresh output
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body: [
+                  `### Weekly audit — ${new Date().toISOString().slice(0, 10)}`,
+                  '',
+                  '```',
+                  output,
+                  '```',
+                  '',
+                  `Run: [${context.runId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+                ].join('\n'),
+              });
+              console.log(`Updated existing issue #${existing.data[0].number}`);
+            } else {
+              // Create new issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: 'Docs out of sync with codebase',
+                labels: ['docs-audit', 'documentation'],
+                body: [
+                  'The weekly docs audit found stale documentation.',
+                  '',
+                  '```',
+                  output,
+                  '```',
+                  '',
+                  '### How to fix',
+                  '',
+                  '1. Run `node scripts/audit-docs.mjs` locally to see the full report',
+                  '2. Update the referenced docs (`CONTRIBUTING.md`, `docs/ENVIRONMENTS.md`, `.env.local.example`)',
+                  '3. Open a PR to `dev`',
+                  '',
+                  `Triggered by: [workflow run ${context.runId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+                ].join('\n'),
+              });
+              console.log('Created new docs-audit issue');
+            }
+
+      - name: Report success
+        if: steps.audit.outcome == 'success'
+        run: echo "✅ All docs are in sync — no action needed."
