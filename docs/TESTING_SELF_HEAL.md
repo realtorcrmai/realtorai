@@ -48,28 +48,22 @@
                 │  Auto-Heal (on fail) │  .github/workflows/auto-heal.yml
                 │  ├── Reproduce       │
                 │  ├── Capture output  │
-                │  ├── Claude Code CLI │
-                │  │   ├── Read fails  │
-                │  │   ├── Diagnose    │
-                │  │   ├── Fix code    │
-                │  │   └── Fix tests   │
-                │  ├── Commit fix      │
-                │  ├── Create PR       │
-                │  └── Verify fix      │
+                │  ├── Diagnose        │
+                │  └── Open GH issue   │  ◄── no API cost
                 └──────────────────────┘
                          │
                          ▼
                 ┌──────────────────────┐
-                │  CI runs on fix PR   │
-                │  ├── TypeScript ✓    │
-                │  ├── Lint ✓          │
-                │  ├── Build ✓         │
-                │  └── Docs audit ✓    │
+                │  GitHub Issue opened │
+                │  ├── Failure report  │
+                │  ├── Per-suite diff  │
+                │  └── Fix instructions│
                 └──────────────────────┘
                          │
                          ▼
-                Human reviews & merges
-                (or auto-merge if all green)
+                Developer or Claude Code
+                session picks up issue
+                and fixes the code
 ```
 
 ---
@@ -99,14 +93,12 @@ Developer changes:  src/actions/contacts.ts (renames a field)
                     ↓
 Nightly regression: "❌ Contact update: expected 'phone' got 'phone_number'"
                     ↓
-Auto-Heal triggers: Claude Code reads failure, finds the rename,
-                    updates test assertion to match new field name
+Auto-Heal triggers: Reproduces failure, captures exact error
                     ↓
-Creates PR:         "fix(auto-heal): update contact field name in tests"
+GitHub Issue:       "[Regression] 1 test failure — 2026-04-12"
+                    with failure output, affected suite, fix instructions
                     ↓
-CI passes:          TypeScript ✓, Lint ✓, Build ✓
-                    ↓
-Human reviews and merges
+Developer or Claude Code session picks up the issue and fixes it
 ```
 
 ### Scenario 3: Test plan drift detection
@@ -146,8 +138,9 @@ Next nightly run:   Includes generated stubs (660 additional tests)
 
 ## Required GitHub Secrets
 
-The auto-heal workflow needs `ANTHROPIC_API_KEY` for Claude Code CLI.
-All other workflows use the existing secrets (Supabase, NextAuth, etc.).
+No additional secrets needed. The auto-heal workflow uses only the
+existing Supabase/NextAuth/Resend secrets to reproduce failures.
+No Claude API calls — diagnosis is reported via GitHub Issues.
 
 ## Manual Triggers
 
