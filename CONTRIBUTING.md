@@ -1,192 +1,329 @@
-# Contributing to Realtors360 CRM
+# Contributing to Realtors360
 
-## Git Workflow
+## Local Development Setup
 
-Both `dev` and `main` are **protected branches**. No direct pushes allowed. All changes go through pull requests.
+### Prerequisites
 
-```
-feature branch  ──PR──→  dev (integration)  ──PR──→  main (production)
-hotfix branch   ──PR──→  main (urgent fix)  ──merge──→  dev (sync back)
-```
+| Tool | Version | Install |
+|------|---------|---------|
+| **Node.js** | 20+ (22+ recommended) | `brew install node` or [nvm](https://github.com/nvm-sh/nvm) |
+| **npm** | 10+ (comes with Node) | — |
+| **Python** | 3.12+ | `brew install python@3.14` (for voice agent only) |
+| **Git** | 2.40+ | `brew install git` |
+| **Vercel CLI** | Latest | `npm i -g vercel` |
+| **GitHub CLI** | Latest | `brew install gh` |
+
+Optional:
+- **Supabase CLI** — only if you need to create new migration files: `brew install supabase/tap/supabase`
+- **Playwright** — only if you run browser tests: `npx playwright install chromium`
 
 ---
 
-## Branch Types
-
-### 1. Feature Branches (new work)
-
-**Branch from:** `dev`
-**PR to:** `dev`
-**When:** New features, enhancements, non-urgent bug fixes
+### Step 1 — Clone and install
 
 ```bash
-# 1. Start from latest dev
-git checkout dev && git pull origin dev
+git clone https://github.com/realtorcrmai/realtorai.git
+cd realtorai
 
-# 2. Create feature branch
-git checkout -b <your-name>/<short-description>
-# Examples: rahul/voice-agent-tts, claude/playbook-fix
-
-# 3. Work, commit, push
-git add <files>
-git commit -m "feat: description of change"
-git push origin <your-name>/<short-description>
-
-# 4. Create PR to dev
-gh pr create --base dev
-
-# 5. Merge (no approval needed for dev), then clean up
-git checkout dev && git pull origin dev
-git branch -d <your-name>/<short-description>
-```
-
-### 2. Hotfix Branches (production bugs)
-
-**Branch from:** `main`
-**PR to:** `main`
-**When:** Bugs found on production that need immediate fixing
-
-```bash
-# 1. Start from latest main
-git checkout main && git pull origin main
-
-# 2. Create hotfix branch
-git checkout -b hotfix/<short-description>
-# Examples: hotfix/bcryptjs-missing, hotfix/auth-redirect-loop
-
-# 3. Fix the issue, commit, push
-git add <files>
-git commit -m "fix: description of fix"
-git push origin hotfix/<short-description>
-
-# 4. Create PR to main
-gh pr create --base main
-
-# 5. After merge — SYNC BACK TO DEV (critical!)
-git checkout dev && git pull origin dev
-git merge main
-git push origin dev
-```
-
-### 3. Release Branches (dev → main)
-
-**When:** Dev is stable and ready for production
-
-```bash
-# Create PR from dev to main
-gh pr create --base main --head dev --title "Release: dev → main sync"
-
-# After merge — pull main locally
-git checkout main && git pull origin main
-```
-
----
-
-## Decision Flowchart: Where Do I Fix This?
-
-```
-Found a bug?
-│
-├─ Is it broken on production (main)?
-│  │
-│  ├─ YES, urgent → Hotfix branch from main
-│  │                 PR → main
-│  │                 Then merge main → dev
-│  │
-│  └─ YES, not urgent → Feature branch from dev
-│                        PR → dev
-│                        Fix ships with next release
-│
-├─ Is it only on dev (not yet in main)?
-│  │
-│  └─ Feature branch from dev → PR → dev
-│
-└─ Is it only on a feature branch?
-   │
-   └─ Fix it on that feature branch
-```
-
-## Why This Matters
-
-| Scenario | Wrong approach | Problem | Right approach |
-|----------|---------------|---------|----------------|
-| Bug on main | Fix on dev, merge dev→main | Drags unreleased features into production | Hotfix from main, sync back to dev |
-| Bug on main | Fix directly on main | Branch is protected, push rejected | Hotfix branch, PR to main |
-| New feature | Branch from main | Missing dev-only changes, merge conflicts | Branch from dev |
-| After hotfix | Forget to sync dev | Dev diverges, future merges break | Always merge main→dev after hotfix |
-
----
-
-## CI Enforcement
-
-The CI pipeline (`ci.yml`) automatically enforces branch policy on every PR:
-
-- **PRs to main** — only allowed from `dev` or `hotfix/*` branches
-- **PRs to dev** — blocked from `hotfix/*` branches (those must go to main)
-- **Feature branches to main** — CI fails with clear error message
-
-If CI blocks your PR, check the branch policy rules above.
-
----
-
-## Branch Naming
-
-| Type | Pattern | Examples |
-|------|---------|----------|
-| Feature | `<name>/<description>` | `rahul/voice-agent-tts`, `claude/playbook-fix` |
-| Hotfix | `hotfix/<description>` | `hotfix/bcryptjs-missing`, `hotfix/auth-loop` |
-| Release | PR from `dev` to `main` | No branch needed — use PR |
-
-## Branch Protection Rules
-
-| Branch | PR Required | Approvals Needed | Who Can Merge |
-|--------|-------------|-----------------|---------------|
-| `dev` | Yes | 0 (self-merge) | Any contributor |
-| `main` | Yes | 1 approval | After review |
-
----
-
-## Pre-Merge Checklist
-
-Before merging ANY PR:
-
-- [ ] `npm run build` passes (no TypeScript errors)
-- [ ] `bash scripts/test-suite.sh` passes (73+ tests)
-- [ ] No missing dependencies (`npm install` runs clean)
-- [ ] No hardcoded secrets or API keys
-- [ ] CLAUDE.md updated if new files/tables added
-
----
-
-## Development Setup
-
-```bash
-# Install dependencies
+# Install CRM dependencies
 npm install
 
-# Start CRM dev server
-npm run dev                          # → localhost:3000
+# Install newsletter service dependencies (separate package)
+cd realtors360-newsletter && npm install && cd ..
 
-# Start voice agent (separate terminal)
-python3 voice_agent/server/main.py   # → localhost:8768
-
-# Run tests
-bash scripts/test-suite.sh           # 73+ functional tests
-bash scripts/health-check.sh         # Environment check
+# Install voice agent dependencies (Python)
+cd voice_agent && pip3 install -r requirements.txt && cd ..
 ```
 
-## Code Standards
+---
 
-- **TypeScript** for all frontend/API code
-- Use `lf-*` CSS classes (Realtors360 design system)
-- Server Actions for mutations (`src/actions/`)
-- API routes for GETs and webhooks (`src/app/api/`)
-- Zod v4 for all validation
+### Step 2 — Get environment variables
 
-## Agent Playbook
+**Fastest method** (recommended):
 
-If you're an AI developer (Claude, etc.), follow `.claude/agent-playbook.md` for every task. It covers task classification, execution checklists, and compliance logging.
+```bash
+# Login to Vercel (one-time)
+vercel login
 
-## Questions?
+# Pull dev environment variables directly from Vercel
+vercel env pull .env.local --environment=preview
+```
 
-Check `CLAUDE.md` for full project documentation, or ask in the team channel.
+This gives you working credentials for the dev Supabase project, Anthropic, Resend, Twilio, Google OAuth, and everything else — in one command.
+
+**Alternative method** (if you don't have Vercel access):
+
+1. Copy the template: `cp .env.local.example .env.local`
+2. Ask a team member for the values
+3. Fill in each variable
+
+**Important:**
+- `.env.local` is gitignored — never commit it
+- The old `.env.vault` mechanism is deprecated — use `vercel env pull` instead
+- See `docs/ENVIRONMENTS.md` for the full env var reference
+
+---
+
+### Step 3 — Start the dev server
+
+```bash
+# Just the CRM (most common)
+npm run dev
+# → http://localhost:3000
+
+# Or use VS Code: press F5 and select "CRM (Next.js Dev)"
+# Or use the compound launch: "Full Stack (CRM + Newsletter + Voice)"
+```
+
+**Login credentials:**
+- Email: `demo@realestatecrm.com`
+- Password: `demo1234`
+
+---
+
+### All services
+
+| Service | Port | Start command | Required? |
+|---------|------|---------------|-----------|
+| **CRM** (Next.js) | 3000 | `npm run dev` | Yes — core app |
+| **Newsletter service** (Express) | 8080 | `cd realtors360-newsletter && npm run dev` | Only for newsletter event processing |
+| **Voice agent** (Python) | 8768 | `cd voice_agent && python3 server/main.py` | Only for voice features |
+| **Form server** (Python) | 8767 | `cd forms && python3 server.py` | Only for BCREA form generation |
+
+Most development only needs the CRM running. The other services are independent and only needed when working on their specific features.
+
+---
+
+### Step 4 — Verify your setup
+
+```bash
+# TypeScript check (should be clean)
+npm run typecheck
+
+# Lint (should be 0 errors)
+npm run lint
+
+# Unit tests (83+ tests, ~300ms)
+npm run test:quick
+
+# Full preflight (typecheck + lint + audit)
+npm run preflight
+
+# Health check script
+npm run health
+```
+
+---
+
+## Project structure
+
+```
+realestate-crm/                  ← You are here (repo root)
+├── src/
+│   ├── app/                     # Next.js App Router pages + API routes
+│   │   ├── (auth)/login/        # Login page
+│   │   ├── (dashboard)/         # All authenticated pages
+│   │   └── api/                 # API routes (webhooks, crons, REST)
+│   ├── actions/                 # Server actions (mutations)
+│   ├── components/              # React components
+│   │   ├── brand/               # Logo components (LogoIcon, LogoAnimated, etc.)
+│   │   ├── layout/              # MondaySidebar, MondayHeader, MobileNav
+│   │   ├── contacts/            # Contact features
+│   │   ├── listings/            # Listing features
+│   │   ├── newsletters/         # Newsletter features
+│   │   └── ui/                  # shadcn primitives
+│   ├── lib/                     # Shared utilities
+│   │   ├── supabase/            # DB clients (admin, tenant, server)
+│   │   ├── compliance/          # CASL consent + FINTRAC gates
+│   │   └── ai-agent/            # AI agent tools
+│   ├── emails/                  # React Email templates
+│   └── hooks/                   # React hooks
+├── realtors360-newsletter/      # Newsletter engine (separate Express service)
+├── voice_agent/                 # Voice AI agent (Python)
+├── listingflow-sites/           # Website builder (standalone)
+├── supabase/migrations/         # Database migrations (SQL)
+├── scripts/                     # Utility scripts (test, seed, eval)
+├── tests/                       # Integration tests
+├── docs/                        # Documentation
+└── .vscode/                     # VS Code workspace settings
+```
+
+---
+
+## Environments
+
+| | Dev | Production |
+|---|---|---|
+| **URL** | Preview deploys from `dev` branch | https://realtors360.ai |
+| **Supabase** | `qcohfohjihazivkforsj` | `opbrqlmhhqvfomevvkon` |
+| **Vercel project** | `realestate-crm` | `realtors360` |
+| **Git branch** | `dev` | `main` |
+| **Newsletter (Render)** | — | https://realtors360-newsletter.onrender.com |
+
+Full details: `docs/ENVIRONMENTS.md`
+
+---
+
+## Git workflow
+
+```
+feature branch → PR → dev → PR → main (production)
+```
+
+### Rules
+
+1. **Never push directly to `dev` or `main`** — always via PR
+2. **Branch naming:** `<developer>/<description>` (e.g. `rahul/voice-tts`, `claude/fix-login`)
+3. **PRs to `dev`:** 0 approvals required — merge your own
+4. **PRs to `main`:** 1 approval required, all CI must pass (TypeScript, Lint, Build)
+5. **PRs to `main` must come from `dev` or `hotfix/*`** — feature branches cannot PR to main directly
+6. **Hotfixes:** branch from `main`, name `hotfix/<description>`, PR to `main`, then merge main back to dev
+
+### CI checks (required on `main`)
+
+| Check | What | Must pass? |
+|-------|------|------------|
+| Branch Policy | Validates source branch | ✅ |
+| TypeScript | `npx tsc --noEmit` | ✅ |
+| Lint | `npx eslint .` | ✅ |
+| Build | `npm run build` | ✅ |
+| Python Syntax | Compiles voice agent files | ✅ |
+
+---
+
+## Database
+
+### Running migrations
+
+Migrations are SQL files in `supabase/migrations/`. To apply a new migration to the dev database:
+
+```bash
+# Set your Supabase Management API token
+export SUPABASE_ACCESS_TOKEN=<your-token>
+
+# Apply a specific migration file
+node scripts/apply-newsletter-migrations.mjs
+
+# Or paste SQL directly into the dashboard:
+# Dev: https://supabase.com/dashboard/project/qcohfohjihazivkforsj/sql/new
+# Prod: https://supabase.com/dashboard/project/opbrqlmhhqvfomevvkon/sql/new
+```
+
+Generate a token at https://supabase.com/dashboard/account/tokens
+
+### Creating a new migration
+
+```bash
+# Check the latest migration number
+ls supabase/migrations/ | sort | tail -5
+
+# Create your file (increment the number)
+touch supabase/migrations/088_your_feature.sql
+```
+
+Rules:
+- Use `CREATE TABLE IF NOT EXISTS` / `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` for idempotency
+- Include RLS: `ALTER TABLE x ENABLE ROW LEVEL SECURITY`
+- Include indexes on every FK column and every column used in WHERE clauses
+- Never modify an already-applied migration — always create a new one
+- For destructive migrations, write a rollback at `supabase/rollbacks/<same_number>_rollback.sql`
+- **Apply to BOTH dev and prod** after merging — use the sync SQL on Desktop if needed
+
+### Multi-tenancy
+
+Every user-data table has a `realtor_id` column. Always use the tenant client:
+
+```typescript
+const tc = await getAuthenticatedTenantClient();
+const { data } = await tc.from("contacts").select("*");
+// Automatically adds .eq("realtor_id", currentUser.id)
+```
+
+Never use `createAdminClient()` for user-initiated operations — it bypasses tenant isolation.
+
+---
+
+## Testing
+
+```bash
+# Quick unit tests (vitest, ~300ms)
+npm run test:quick
+
+# Full test suite (API + CRUD + auth + cascade)
+npm run test
+
+# Integration tests (needs TEST_SUPABASE_* env vars)
+npm run test:integration
+
+# Watch mode (TDD)
+npm run test:watch
+
+# Browser tests (Playwright)
+npx playwright test
+
+# Before every PR
+npm run preflight   # typecheck → lint → audit
+```
+
+---
+
+## Common tasks
+
+### Add a new page
+
+1. Create `src/app/(dashboard)/your-page/page.tsx`
+2. Add `export const dynamic = 'force-dynamic'` if it needs real-time data
+3. Use `lf-glass` header, `lf-card` for sections
+4. Link from sidebar (`src/components/layout/MondaySidebar.tsx`)
+
+### Add a server action
+
+1. Create or extend `src/actions/your-domain.ts`
+2. Use `getAuthenticatedTenantClient()` for DB operations
+3. Validate inputs with Zod
+4. Call `revalidatePath('/affected-route')` after mutations
+5. Return `{ error: string }` on failure — never throw
+
+### Send an email
+
+Always use the CASL compliance gate before sending:
+
+```typescript
+import { canSendToContact } from "@/lib/compliance/can-send";
+
+const check = canSendToContact(contact);
+if (!check.allowed) return { error: check.reason };
+// Now safe to send via Resend
+```
+
+---
+
+## Design system
+
+### Brand
+
+- **Name:** Realtors360 (not "RealtorAI")
+- **Primary:** Navy #2D3E50
+- **Accent:** Gold #C9A96E
+- **CTA:** Coral #FF7A59
+- **Logo components:** `src/components/brand/Logo.tsx` (`<LogoIcon>`, `<LogoAnimated>`, `<LogoSpinner>`)
+
+### Key CSS classes
+
+| Class | Purpose |
+|-------|---------|
+| `lf-card` | Glass card with backdrop-blur |
+| `lf-btn` / `lf-btn-ghost` / `lf-btn-sm` | Buttons |
+| `lf-badge` | Status badge (variants: `-done`, `-active`, `-pending`, `-blocked`) |
+| `lf-input` / `lf-select` / `lf-textarea` | Form elements |
+
+---
+
+## Getting help
+
+- `docs/ENVIRONMENTS.md` — environment setup reference
+- `docs/DEVELOPER_SYNC.md` — syncing a pre-existing local to current state
+- `docs/TESTING_STRATEGY.md` — test architecture
+- `CLAUDE.md` — AI agent instructions (read by Claude Code automatically)
+- `.claude/agent-playbook.md` — mandatory task execution protocol
+- Issues: https://github.com/realtorcrmai/realtorai/issues

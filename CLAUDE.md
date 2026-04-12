@@ -23,6 +23,12 @@ Read the playbook before every task. It covers: pre-flight, task classification,
 
 ---
 
+## New Developer? Start Here
+
+**`CONTRIBUTING.md`** — complete local setup guide (prerequisites, install, env vars, start server, project structure, git workflow, testing, common tasks). Also configures VS Code via `.vscode/` (launch configs, extensions, settings).
+
+---
+
 ## Environments — READ BEFORE TOUCHING THE DATABASE
 
 **Full reference:** `docs/ENVIRONMENTS.md` — always read this before running migrations, changing env vars, or deploying.
