@@ -1,3 +1,4 @@
+<!-- docs-audit: src/lib/supabase/tenant.ts, supabase/migrations/06* -->
 # Multi-Tenancy Migration Plan — Realtors360
 
 > **Date:** March 31, 2026

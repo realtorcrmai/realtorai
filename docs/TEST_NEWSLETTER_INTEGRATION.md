@@ -1,3 +1,4 @@
+<!-- docs-audit: realtors360-newsletter/**, scripts/qa-test-email* -->
 # Newsletter Engine Integration Test Suite
 
 **Last run:** 2026-04-11 | **Result:** 2000/2015 passed, 0 failures, 15 skipped

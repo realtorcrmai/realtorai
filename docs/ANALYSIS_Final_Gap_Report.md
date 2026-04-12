@@ -1,3 +1,4 @@
+<!-- docs-audit: src/** -->
 # Final Gap Report: Agent Infrastructure + Testing + Implementation
 
 > **Date:** March 30, 2026

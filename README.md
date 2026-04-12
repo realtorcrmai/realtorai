@@ -1,3 +1,4 @@
+<!-- docs-audit: package.json, src/**, docs/* -->
 # RealtorAI
 
 **A BC AI Agent for Real Estate Transaction & Showing Automation**

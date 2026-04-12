@@ -1,3 +1,4 @@
+<!-- docs-audit: docs/* -->
 # Go-To-Market Strategy — Realtors360
 
 > **Date:** March 30, 2026

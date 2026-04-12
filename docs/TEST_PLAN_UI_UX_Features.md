@@ -1,3 +1,4 @@
+<!-- docs-audit: src/components/**, tests/e2e/* -->
 # Test Plan: UI Redesign & Competitive UX Features
 
 **Version:** 1.0

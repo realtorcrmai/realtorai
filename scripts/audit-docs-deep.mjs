@@ -81,14 +81,63 @@ function matchesPattern(filePath, pattern) {
   return filePath === pattern || filePath.startsWith(pattern);
 }
 
-console.log(`=== Deep Docs Audit (${changedFiles.length} changed files) ===\n`);
+// ── Self-declared doc headers ────────────────────────────────────
+// Scan all .md files in docs/ and root for <!-- docs-audit: patterns --> tags.
+// These are "self-declared" rules: each doc says what code it tracks.
+// If a code change matches a doc's declared patterns, and the doc
+// wasn't updated, the audit flags it. This makes the system
+// self-maintaining — new docs just need the header tag.
+import { readdirSync } from "node:fs";
+
+function loadSelfDeclaredRules() {
+  const rules = [];
+  const scanDirs = [
+    { dir: resolve(ROOT, "docs"), prefix: "docs/" },
+    { dir: ROOT, prefix: "" },
+  ];
+
+  for (const { dir, prefix } of scanDirs) {
+    if (!existsSync(dir)) continue;
+    const files = readdirSync(dir).filter((f) => f.endsWith(".md"));
+    for (const file of files) {
+      const fullPath = resolve(dir, file);
+      const content = readFileSync(fullPath, "utf8");
+      const match = content.match(/<!--\s*docs-audit:\s*(.+?)\s*-->/);
+      if (!match) continue;
+
+      const patterns = match[1].split(",").map((p) => p.trim()).filter(Boolean);
+      const docPath = prefix + file;
+
+      for (const pattern of patterns) {
+        rules.push({
+          pattern,
+          docs: [docPath],
+          section: "self-declared",
+          reason: `${docPath} declares it tracks changes in ${pattern}`,
+        });
+      }
+    }
+  }
+  return rules;
+}
+
+const selfDeclaredRules = loadSelfDeclaredRules();
+const allRules = [...changeMap.rules, ...selfDeclaredRules];
+
+console.log(`=== Deep Docs Audit (${changedFiles.length} changed files, ${allRules.length} rules [${changeMap.rules.length} map + ${selfDeclaredRules.length} self-declared]) ===\n`);
 
 const requiredUpdates = [];
 const docsTouched = new Set(
   changedFiles.filter((f) => f.endsWith(".md"))
 );
 
-for (const rule of changeMap.rules) {
+// Limit to high-value docs only — skip overly broad "src/**" self-declared
+// rules that would trigger on every PR. Only flag specific-enough patterns.
+const TOO_BROAD = new Set(["src/**", "docs/*"]);
+
+for (const rule of allRules) {
+  if (TOO_BROAD.has(rule.pattern)) continue;
+
   const matchingFiles = changedFiles.filter((f) => matchesPattern(f, rule.pattern));
 
   if (matchingFiles.length === 0) continue;
@@ -100,8 +149,8 @@ for (const rule of changeMap.rules) {
         trigger: matchingFiles[0] + (matchingFiles.length > 1 ? ` (+${matchingFiles.length - 1} more)` : ""),
         pattern: rule.pattern,
         doc,
-        section: rule.section,
-        reason: rule.reason,
+        section: rule.section || "self-declared",
+        reason: rule.reason || `${doc} tracks this code path`,
       });
     }
   }
@@ -133,5 +182,23 @@ for (const [doc, updates] of byDoc) {
 
 console.log("Fix: update the docs listed above to reflect your changes, then commit them in the same PR.");
 console.log("Run this check locally: node scripts/audit-docs-deep.mjs\n");
+
+// ── Check for new docs without self-declaration headers ──────────
+const untaggedDocs = [];
+const docsDir = resolve(ROOT, "docs");
+if (existsSync(docsDir)) {
+  for (const file of readdirSync(docsDir).filter((f) => f.endsWith(".md"))) {
+    const content = readFileSync(resolve(docsDir, file), "utf8");
+    if (!content.includes("<!-- docs-audit:")) {
+      untaggedDocs.push(`docs/${file}`);
+    }
+  }
+}
+if (untaggedDocs.length > 0) {
+  console.log(`\n⚠ ${untaggedDocs.length} doc(s) missing self-declaration header:`);
+  for (const d of untaggedDocs) {
+    console.log(`  ${d} — add: <!-- docs-audit: <code-patterns-this-doc-tracks> -->`);
+  }
+}
 
 process.exit(1);

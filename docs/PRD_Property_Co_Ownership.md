@@ -1,3 +1,4 @@
+<!-- docs-audit: src/actions/contacts.ts, src/components/contacts/PropertyDeals* -->
 # PRD: Property Co-Ownership & Partner Network
 
 **Status:** Approved for development  

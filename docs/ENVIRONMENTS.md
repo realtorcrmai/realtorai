@@ -1,3 +1,4 @@
+<!-- docs-audit: vercel.json, .env.local.example, supabase/migrations/* -->
 # Environments — Realtors360 CRM
 
 > **Source of truth** for which Supabase projects, Vercel environments, and branches map to dev vs production. If you're a developer or AI agent starting work on this repo, **read this first**.

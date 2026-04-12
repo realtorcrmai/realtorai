@@ -1,3 +1,4 @@
+<!-- docs-audit: src/actions/*, src/app/api/* -->
 # Function Requirements — Detailed Specifications
 
 Every function that needs to be wired or built. Includes: purpose, inputs, outputs, error handling, edge cases, and database interactions.

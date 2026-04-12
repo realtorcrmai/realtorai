@@ -1,3 +1,4 @@
+<!-- docs-audit: src/lib/validators/* -->
 # Validation Pipeline & Production Testing — Specification
 
 ## Overview

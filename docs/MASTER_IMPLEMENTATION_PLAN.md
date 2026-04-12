@@ -1,3 +1,4 @@
+<!-- docs-audit: src/**, supabase/migrations/* -->
 # Realtors360 AI Email Marketing — Master Implementation Plan
 
 ## Document Purpose
