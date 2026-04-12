@@ -53,10 +53,12 @@ async function renderEmailTemplate(
   content: any,
   branding: RealtorBranding,
   contactName: string,
-  contactId: string
+  contactId: string,
+  preferredArea?: string
 ): Promise<string> {
   const unsubscribeUrl = getUnsubscribeUrl(contactId);
   const firstName = contactName.split(" ")[0];
+  const areaFallback = preferredArea || "your neighbourhood";
 
   const templateProps: Record<string, any> = {
     branding,
@@ -70,7 +72,7 @@ async function renderEmailTemplate(
     case "new_listing_alert":
       element = NewListingAlert({
         ...templateProps,
-        area: content.area || "your area",
+        area: content.area || areaFallback,
         intro: content.intro,
         listings: content.listings || [],
         ctaText: content.ctaText,
@@ -80,7 +82,7 @@ async function renderEmailTemplate(
     case "market_update":
       element = MarketUpdate({
         ...templateProps,
-        area: content.area || "your area",
+        area: content.area || areaFallback,
         month: content.month || new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
         intro: content.intro,
         stats: content.stats || [],
@@ -118,7 +120,7 @@ async function renderEmailTemplate(
     case "neighbourhood_guide":
       element = NeighbourhoodGuide({
         ...templateProps,
-        area: content.area || "your area",
+        area: content.area || areaFallback,
         intro: content.intro,
         highlights: content.highlights?.map((h: string) => ({
           category: "Highlights",
@@ -403,13 +405,17 @@ export async function generateAndQueueNewsletter(
   // Generate AI content
   const content = await generateNewsletterContent(aiContext);
 
-  // Render HTML
+  // Render HTML — pass contact's preferred area for template fallback
+  const preferredArea = intelligence.preferred_areas?.[0]
+    || intelligence.inferred_interests?.areas?.[0]
+    || undefined;
   const html = await renderEmailTemplate(
     emailType,
     content,
     branding,
     contact.name,
-    contactId
+    contactId,
+    preferredArea
   );
 
   // Save newsletter record
@@ -918,4 +924,73 @@ export async function rejectDraft(draftId: string) {
   revalidatePath("/newsletters/queue");
   revalidatePath("/newsletters/agent");
   return { success: true };
+}
+
+/**
+ * Fetch email history for a specific contact — all newsletters with their events.
+ * Used on the contact detail "Emails" tab.
+ */
+export async function getContactEmailHistory(contactId: string) {
+  const tc = await getAuthenticatedTenantClient();
+
+  const { data: newsletters, error } = await tc
+    .from("newsletters")
+    .select("id, subject, email_type, status, html_body, sent_at, created_at, quality_score, ai_context")
+    .eq("contact_id", contactId)
+    .order("created_at", { ascending: false });
+
+  if (error) return { newsletters: [], stats: { total: 0, sent: 0, opened: 0, clicked: 0, bounced: 0, openRate: 0, clickRate: 0 } };
+
+  if (!newsletters || newsletters.length === 0) {
+    return { newsletters: [], stats: { total: 0, sent: 0, opened: 0, clicked: 0, bounced: 0, openRate: 0, clickRate: 0 } };
+  }
+
+  // Fetch events for all these newsletters in one query
+  type EvtRow = { id: string; newsletter_id: string; event_type: string; metadata: Record<string, unknown> | null; created_at: string };
+  const newsletterIds = (newsletters as { id: string }[]).map((n) => n.id);
+  const { data: events } = await tc
+    .from("newsletter_events")
+    .select("id, newsletter_id, event_type, metadata, created_at")
+    .in("newsletter_id", newsletterIds)
+    .order("created_at", { ascending: false });
+
+  // Group events by newsletter_id
+  const eventsByNewsletter: Record<string, EvtRow[]> = {};
+  for (const event of (events ?? []) as EvtRow[]) {
+    if (!eventsByNewsletter[event.newsletter_id]) {
+      eventsByNewsletter[event.newsletter_id] = [];
+    }
+    eventsByNewsletter[event.newsletter_id]!.push(event);
+  }
+
+  // Merge events into newsletters
+  const enriched = (newsletters as Array<{ id: string; status: string; [k: string]: unknown }>).map((nl) => ({
+    ...nl,
+    events: eventsByNewsletter[nl.id] ?? ([] as EvtRow[]),
+  }));
+
+  // Compute summary stats
+  const totalSent = enriched.filter((n) => n.status === "sent").length;
+  const totalOpened = enriched.filter((n) =>
+    n.events.some((e: EvtRow) => e.event_type === "opened")
+  ).length;
+  const totalClicked = enriched.filter((n) =>
+    n.events.some((e: EvtRow) => e.event_type === "clicked")
+  ).length;
+  const totalBounced = enriched.filter((n) =>
+    n.events.some((e: EvtRow) => e.event_type === "bounced")
+  ).length;
+
+  return {
+    newsletters: enriched,
+    stats: {
+      total: enriched.length,
+      sent: totalSent,
+      opened: totalOpened,
+      clicked: totalClicked,
+      bounced: totalBounced,
+      openRate: totalSent > 0 ? Math.round((totalOpened / totalSent) * 100) : 0,
+      clickRate: totalSent > 0 ? Math.round((totalClicked / totalSent) * 100) : 0,
+    },
+  };
 }

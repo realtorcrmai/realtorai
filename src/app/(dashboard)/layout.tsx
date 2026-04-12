@@ -21,12 +21,15 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  // ── Admin redirect — admins go to /admin, not the realtor dashboard ──
+  if (session.user.role === "admin") {
+    redirect("/admin");
+  }
+
   // ── Onboarding gate — use JWT token (populated in auth.ts callbacks) ──
-  if (session.user.role !== "admin") {
-    const user = session.user as Record<string, unknown>;
-    if (user.onboardingCompleted === false) {
-      redirect("/onboarding");
-    }
+  const user = session.user as Record<string, unknown>;
+  if (user.onboardingCompleted === false) {
+    redirect("/onboarding");
   }
   return (
     <LayoutProvider>

@@ -5,12 +5,12 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
-  BarChart3,
   DollarSign,
   Activity,
   Mail,
-  Settings,
+  LogOut,
 } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
 const MOBILE_NAV = [
@@ -19,8 +19,6 @@ const MOBILE_NAV = [
   { label: "Revenue", icon: DollarSign, href: "/admin/revenue" },
   { label: "System", icon: Activity, href: "/admin/system" },
   { label: "Emails", icon: Mail, href: "/admin/emails" },
-  { label: "Analytics", icon: BarChart3, href: "/admin/analytics" },
-  { label: "Settings", icon: Settings, href: "/admin/settings" },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -56,6 +54,14 @@ export function AdminMobileNav() {
             </Link>
           );
         })}
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs whitespace-nowrap text-red-500 hover:bg-red-50 transition-colors"
+          aria-label="Sign out"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          Sign out
+        </button>
       </nav>
     </div>
   );

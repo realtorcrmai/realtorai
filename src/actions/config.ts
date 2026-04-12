@@ -24,19 +24,36 @@ export async function updateRealtorSettings(settings: {
   default_send_hour?: number;
   default_send_mode?: string;
   ai_quality_tier?: string;
+  brand_name?: string;
+  tone?: string;
+  writing_style_rules?: string[];
+  content_rankings?: Array<{ type: string; effectiveness: number }>;
+  listing_blast_enabled?: boolean;
 }) {
   const supabase = createAdminClient();
   const config = await getRealtorConfig();
   if (!config) return { error: "Config not found" };
 
-  // If default_send_mode provided, merge into brand_config
+  // Merge brand_config-scoped settings
   const updates: Record<string, unknown> = { ...settings, updated_at: new Date().toISOString() };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const brandConfig = (config.brand_config as any) || {};
+  let brandConfigChanged = false;
+
   if (settings.default_send_mode) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const brandConfig = (config.brand_config as any) || {};
     brandConfig.default_send_mode = settings.default_send_mode;
-    updates.brand_config = brandConfig;
     delete updates.default_send_mode;
+    brandConfigChanged = true;
+  }
+
+  if (typeof settings.listing_blast_enabled === "boolean") {
+    brandConfig.listing_blast_enabled = settings.listing_blast_enabled;
+    delete updates.listing_blast_enabled;
+    brandConfigChanged = true;
+  }
+
+  if (brandConfigChanged) {
+    updates.brand_config = brandConfig;
   }
 
   const { error } = await supabase

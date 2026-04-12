@@ -816,7 +816,41 @@ export async function triggerCron(cronName: string) {
 }
 
 // ---------------------------------------------------------------------------
-// 14. Email ops KPIs
+// 14. Audit log (admin_action events only)
+// ---------------------------------------------------------------------------
+export async function getAuditLog(limit = 20) {
+  try {
+    await requireAdmin();
+    const supabase = createAdminClient();
+
+    const { data, error } = await supabase
+      .from("platform_analytics")
+      .select("*, users!platform_analytics_user_id_fkey(name, email)")
+      .eq("event_name", "admin_action")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      // Fallback without join if FK doesn't exist
+      const { data: fallback, error: fbErr } = await supabase
+        .from("platform_analytics")
+        .select("*")
+        .eq("event_name", "admin_action")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+      if (fbErr) return { error: "Failed to fetch audit log" };
+      return { data: fallback };
+    }
+
+    return { data };
+  } catch {
+    return { error: "Failed to fetch audit log" };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 15. Email ops KPIs
 // ---------------------------------------------------------------------------
 export async function getEmailOpsKPIs(range: "7d" | "30d" | "90d") {
   try {
@@ -979,7 +1013,85 @@ export async function getPerUserEmailStats(range: "7d" | "30d" | "90d") {
 }
 
 // ---------------------------------------------------------------------------
-// 16. Bounce log
+// 16. Per-user email detail (individual emails sent by a user)
+// ---------------------------------------------------------------------------
+export async function getUserEmailDetail(userId: string) {
+  try {
+    await requireAdmin();
+    const supabase = createAdminClient();
+
+    // Get newsletters sent by this user with engagement counts
+    const { data: newsletters, error: nlErr } = await supabase
+      .from("newsletters")
+      .select("id, subject, template_type, status, created_at, sent_at")
+      .eq("realtor_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (nlErr || !newsletters) return { data: [] };
+    if (newsletters.length === 0) return { data: [] };
+
+    const newsletterIds = newsletters.map((n) => n.id);
+
+    // Get all events for these newsletters
+    const { data: events } = await supabase
+      .from("newsletter_events")
+      .select("newsletter_id, event_type")
+      .in("newsletter_id", newsletterIds);
+
+    // Aggregate events per newsletter
+    const eventMap = new Map<
+      string,
+      { delivered: number; opened: number; clicked: number; bounced: number; recipients: number }
+    >();
+
+    for (const evt of events ?? []) {
+      if (!evt.newsletter_id) continue;
+      const entry = eventMap.get(evt.newsletter_id) ?? {
+        delivered: 0,
+        opened: 0,
+        clicked: 0,
+        bounced: 0,
+        recipients: 0,
+      };
+      if (evt.event_type === "delivered") {
+        entry.delivered++;
+        entry.recipients++;
+      } else if (evt.event_type === "opened") {
+        entry.opened++;
+      } else if (evt.event_type === "clicked") {
+        entry.clicked++;
+      } else if (evt.event_type === "bounced" || evt.event_type === "complained") {
+        entry.bounced++;
+        entry.recipients++;
+      }
+      eventMap.set(evt.newsletter_id, entry);
+    }
+
+    const result = newsletters.map((nl) => {
+      const stats = eventMap.get(nl.id);
+      return {
+        id: nl.id,
+        subject: nl.subject ?? "(No subject)",
+        templateType: nl.template_type ?? "custom",
+        status: nl.status,
+        sentAt: nl.sent_at ?? nl.created_at,
+        recipients: stats?.recipients ?? 0,
+        delivered: stats?.delivered ?? 0,
+        opened: stats?.opened ?? 0,
+        clicked: stats?.clicked ?? 0,
+        bounced: stats?.bounced ?? 0,
+      };
+    });
+
+    return { data: result };
+  } catch {
+    return { error: "Failed to fetch user email detail" };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 17. Bounce log
 // ---------------------------------------------------------------------------
 export async function getBounceLog(range: "7d" | "30d" | "90d") {
   try {

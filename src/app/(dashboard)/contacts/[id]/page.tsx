@@ -677,6 +677,7 @@ export default async function ContactDetailPage({
             buyerJourneys={(buyerJourneysData ?? []) as BuyerJourney[]}
             recentJourneyProperties={(journeyPropertiesData ?? []) as BuyerJourneyProperty[]}
             portfolioItems={(portfolioData ?? []) as PortfolioItem[]}
+            newslettersWithEvents={(newslettersWithEvents ?? []) as any}
           />
   );
 

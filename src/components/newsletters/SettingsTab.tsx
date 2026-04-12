@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { updateRealtorSettings } from "@/actions/config";
+import { VoiceProfileEditor, type VoiceProfileData } from "./VoiceProfileEditor";
 
 type Config = {
   sending_enabled: boolean;
@@ -12,9 +13,19 @@ type Config = {
   default_send_hour: number;
   brand_config?: { default_send_mode?: string };
   ai_quality_tier?: string;
+  brand_name?: string;
+  tone?: string;
+  writing_style_rules?: string[];
+  content_rankings?: Array<{ type: string; effectiveness: number }>;
 };
 
-export function SettingsTab({ config }: { config: Config | null }) {
+type SettingsTabProps = {
+  config: Config | null;
+  unsubscribeCount?: number;
+  complaintCount?: number;
+};
+
+export function SettingsTab({ config, unsubscribeCount = 0, complaintCount = 0 }: SettingsTabProps) {
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
 
@@ -30,6 +41,24 @@ export function SettingsTab({ config }: { config: Config | null }) {
     config?.ai_quality_tier ?? "professional"
   );
 
+  const DEFAULT_CONTENT_RANKINGS = [
+    { type: "listing_alert", effectiveness: 0.85 },
+    { type: "market_update", effectiveness: 0.7 },
+    { type: "neighbourhood_guide", effectiveness: 0.6 },
+    { type: "birthday", effectiveness: 0.5 },
+    { type: "just_sold", effectiveness: 0.45 },
+    { type: "open_house", effectiveness: 0.4 },
+  ];
+
+  const [voiceProfile, setVoiceProfile] = useState<VoiceProfileData>({
+    brand_name: config?.brand_name ?? "",
+    tone: config?.tone ?? "Warm & Professional",
+    writing_style_rules: Array.isArray(config?.writing_style_rules) ? config.writing_style_rules : [],
+    content_rankings: Array.isArray(config?.content_rankings) && config.content_rankings.length > 0
+      ? config.content_rankings
+      : DEFAULT_CONTENT_RANKINGS,
+  });
+
   function handleSave() {
     startTransition(async () => {
       const result = await updateRealtorSettings({
@@ -43,6 +72,10 @@ export function SettingsTab({ config }: { config: Config | null }) {
         },
         default_send_mode: sendMode,
         ai_quality_tier: aiQualityTier,
+        brand_name: voiceProfile.brand_name,
+        tone: voiceProfile.tone,
+        writing_style_rules: voiceProfile.writing_style_rules,
+        content_rankings: voiceProfile.content_rankings,
       });
       if (result.success) {
         setSaved(true);
@@ -170,6 +203,12 @@ export function SettingsTab({ config }: { config: Config | null }) {
         </CardContent>
       </Card>
 
+      {/* Voice Profile */}
+      <VoiceProfileEditor
+        initialData={voiceProfile}
+        onChange={setVoiceProfile}
+      />
+
       {/* Compliance */}
       <Card>
         <CardContent className="p-5">
@@ -186,13 +225,13 @@ export function SettingsTab({ config }: { config: Config | null }) {
               <div className="text-xs text-brand font-medium mt-1">Compliant</div>
             </div>
             <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="text-lg font-bold text-foreground">0</div>
+              <div className="text-lg font-bold text-foreground">{unsubscribeCount}</div>
               <div className="text-[10px] text-muted-foreground">Unsubscribes</div>
               <div className="text-xs text-brand font-medium mt-1">This month</div>
             </div>
             <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="text-lg font-bold text-foreground">0</div>
-              <div className="text-[10px] text-muted-foreground">Complaints</div>
+              <div className="text-lg font-bold text-foreground">{complaintCount}</div>
+              <div className="text-[10px] text-muted-foreground">Bounces</div>
               <div className="text-xs text-brand font-medium mt-1">This month</div>
             </div>
           </div>

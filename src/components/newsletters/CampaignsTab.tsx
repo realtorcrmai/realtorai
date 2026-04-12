@@ -61,13 +61,7 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
 
   // ═══ HOME VIEW ═══
   if (view === "home") {
-    // Demo blast history — use static dates to avoid impure Date.now() in render
-    const demoNow = 1743400000000; // fixed reference timestamp for demo data
-    const history: BlastRun[] = blastHistory.length > 0 ? blastHistory : [
-      { id: "1", listing_address: "3456 W 4th Ave, Kitsilano", listing_price: 1290000, template: "New Listing Alert", recipients: 5, sent_at: new Date(demoNow - 2 * 86400000).toISOString(), opens: 4, clicks: 2, replies: 1 },
-      { id: "2", listing_address: "2845 Vine St, Kitsilano", listing_price: 1195000, template: "Luxury Showcase", recipients: 5, sent_at: new Date(demoNow - 5 * 86400000).toISOString(), opens: 3, clicks: 1, replies: 0 },
-      { id: "3", listing_address: "1503-1365 Davie St, West End", listing_price: 2199000, template: "New Listing Alert", recipients: 5, sent_at: new Date(demoNow - 10 * 86400000).toISOString(), opens: 5, clicks: 3, replies: 2 },
-    ];
+    const history: BlastRun[] = blastHistory;
 
     return (
       <div className="space-y-5">
@@ -111,7 +105,7 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
             </div>
 
             {history.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">No blasts sent yet.</p>
+              <p className="text-xs text-muted-foreground text-center py-4">No campaigns sent yet. Use the buttons above to send your first blast or campaign.</p>
             ) : history.map(run => {
               const isExpanded = expandedRun === run.id;
               const openRate = run.recipients > 0 ? Math.round((run.opens / run.recipients) * 100) : 0;

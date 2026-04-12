@@ -30,7 +30,17 @@ export default function LoginPage() {
       setError("Invalid email or password");
       setLoading(false);
     } else {
-      window.location.href = "/";
+      // Check session to determine redirect target
+      try {
+        const sess = await fetch("/api/auth/session").then(r => r.json());
+        if (sess?.user?.role === "admin") {
+          window.location.href = "/admin";
+        } else {
+          window.location.href = "/";
+        }
+      } catch {
+        window.location.href = "/";
+      }
     }
   }
 
@@ -134,11 +144,11 @@ export default function LoginPage() {
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { label: "Kunal (Pro)", email: "demo@realestatecrm.com", color: "bg-brand-muted text-brand-dark hover:bg-brand/20" },
-                    { label: "Sarah (Studio)", email: "sarah@realtors360.com", color: "bg-brand-muted text-brand-dark hover:bg-brand-muted-strong" },
-                    { label: "Mike (Pro)", email: "mike@realtors360.com", color: "bg-amber-100 text-amber-700 hover:bg-amber-200" },
-                    { label: "Priya (Free)", email: "priya@realtors360.com", color: "bg-pink-100 text-pink-700 hover:bg-pink-200" },
-                    { label: "Admin", email: "admin@realtors360.com", color: "bg-gray-100 text-gray-700 hover:bg-gray-200 col-span-2" },
+                    { label: "Kunal (Pro)", email: "demo@realestatecrm.com", pw: "demo1234", color: "bg-brand-muted text-brand-dark hover:bg-brand/20" },
+                    { label: "Sarah (Studio)", email: "sarah@realtors360.com", pw: "demo1234", color: "bg-brand-muted text-brand-dark hover:bg-brand-muted-strong" },
+                    { label: "Mike (Pro)", email: "mike@realtors360.com", pw: "demo1234", color: "bg-amber-100 text-amber-700 hover:bg-amber-200" },
+                    { label: "Priya (Free)", email: "priya@realtors360.com", pw: "demo1234", color: "bg-pink-100 text-pink-700 hover:bg-pink-200" },
+                    { label: "Admin", email: "admin@realtors360.ai", pw: "Admin360!secure", color: "bg-gray-100 text-gray-700 hover:bg-gray-200 col-span-2" },
                   ].map((user) => (
                     <button
                       key={user.email}
@@ -150,14 +160,19 @@ export default function LoginPage() {
                         setError("");
                         const result = await signIn("credentials", {
                           email: user.email,
-                          password: "demo1234",
+                          password: user.pw,
                           redirect: false,
                         });
                         if (result?.error) {
                           setError("Login failed");
                           setLoading(false);
                         } else {
-                          window.location.href = "/";
+                          try {
+                            const sess = await fetch("/api/auth/session").then(r => r.json());
+                            window.location.href = sess?.user?.role === "admin" ? "/admin" : "/";
+                          } catch {
+                            window.location.href = "/";
+                          }
                         }
                       }}
                     >

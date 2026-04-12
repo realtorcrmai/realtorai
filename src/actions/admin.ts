@@ -575,7 +575,28 @@ export async function bulkToggleActive(userIds: string[], isActive: boolean) {
 }
 
 // ---------------------------------------------------------------------------
-// 12. Update admin user fields (inline edit)
+// 12. Find user by email
+// ---------------------------------------------------------------------------
+export async function findUserByEmail(email: string) {
+  try {
+    await requireAdmin();
+    const supabase = createAdminClient();
+
+    const { data, error } = await supabase
+      .from("users")
+      .select("id, name, email, trial_ends_at, trial_plan, plan, is_active")
+      .eq("email", email.toLowerCase().trim())
+      .single();
+
+    if (error || !data) return { error: "User not found" };
+    return { data };
+  } catch {
+    return { error: "Failed to find user" };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 13. Update admin user fields (inline edit)
 // ---------------------------------------------------------------------------
 export async function updateAdminUserFields(
   userId: string,

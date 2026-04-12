@@ -10,7 +10,9 @@ import {
   Activity,
   Mail,
   Settings,
+  LogOut,
 } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -39,6 +41,15 @@ function isActive(pathname: string, href: string): boolean {
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const adminName = session?.user?.name || "Admin";
+  const adminEmail = session?.user?.email || "";
+  const initials = adminName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <aside className="hidden md:flex flex-col w-52 shrink-0 bg-sidebar h-full">
@@ -71,14 +82,35 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      {/* System status widget */}
-      <div className="p-3 border-t border-sidebar-accent shrink-0">
+      {/* System status */}
+      <div className="px-3 py-2 border-t border-sidebar-accent shrink-0">
         <div className="flex items-center gap-2 px-2">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
           </span>
           <span className="text-xs text-sidebar-foreground/50">All systems OK</span>
+        </div>
+      </div>
+
+      {/* User + Logout */}
+      <div className="p-3 border-t border-sidebar-accent shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 text-sidebar-primary flex items-center justify-center text-xs font-semibold shrink-0">
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-sidebar-foreground truncate">{adminName}</p>
+            <p className="text-xs text-sidebar-foreground/50 truncate">{adminEmail}</p>
+          </div>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="p-1.5 rounded-md text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors shrink-0"
+            aria-label="Sign out"
+            title="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </aside>

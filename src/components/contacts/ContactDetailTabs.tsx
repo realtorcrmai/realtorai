@@ -26,6 +26,7 @@ import ActivityTimeline from "@/components/contacts/ActivityTimeline";
 import { ContextLog } from "@/components/contacts/ContextLog";
 import { FamilyTabPanel } from "@/components/contacts/FamilyWizard";
 import { PropertyDealsTab } from "@/components/contacts/PropertyDealsTab";
+import { ContactEmailHistory } from "@/components/contacts/ContactEmailHistory";
 import type { ContactFamilyMember } from "@/types";
 import type {
   Contact,
@@ -149,6 +150,25 @@ export type ContactDetailTabsProps = {
 
   // Family tab
   familyMembers: ContactFamilyMember[];
+
+  // Emails tab
+  newslettersWithEvents: Array<{
+    id: string;
+    subject: string;
+    email_type: string;
+    status: string;
+    html_body: string | null;
+    sent_at: string | null;
+    created_at: string;
+    quality_score: number | null;
+    ai_context: Record<string, unknown> | null;
+    events: Array<{
+      id: string;
+      event_type: string;
+      metadata: Record<string, unknown> | null;
+      created_at: string;
+    }>;
+  }>;
 };
 
 // Check if preferences object has any meaningful data set
@@ -205,6 +225,8 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
     contextEntries,
     // Family
     familyMembers,
+    // Emails
+    newslettersWithEvents,
   } = props;
 
   const [currentTab, setCurrentTab] = useState("overview");
@@ -263,6 +285,14 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
           {portfolioItems.length > 0 && (
             <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-bold px-1">
               {portfolioItems.length}
+            </span>
+          )}
+        </TabsTrigger>
+        <TabsTrigger value="emails" className="rounded-lg">
+          📧 Emails
+          {newslettersWithEvents.length > 0 && (
+            <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-bold px-1">
+              {newslettersWithEvents.length}
             </span>
           )}
         </TabsTrigger>
@@ -571,6 +601,40 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
           <Card className="border-l-4 border-l-indigo-400 bg-indigo-50/15 dark:bg-indigo-950/10">
             <CardContent className="p-4">
               <ContactPortfolioTab contactId={contactId} items={portfolioItems} />
+            </CardContent>
+          </Card>
+        </div>
+      </TabsContent>
+
+      {/* ── EMAILS TAB ───────────────────────────────────── */}
+      <TabsContent value="emails" className="">
+        <div className="space-y-3">
+          <Card className="border-l-4 border-l-sky-400 bg-sky-50/15 dark:bg-sky-950/10">
+            <CardContent className="p-4">
+              <ContactEmailHistory
+                newsletters={newslettersWithEvents}
+                stats={(() => {
+                  const sent = newslettersWithEvents.filter((n) => n.status === "sent").length;
+                  const opened = newslettersWithEvents.filter((n) =>
+                    n.events.some((e) => e.event_type === "opened")
+                  ).length;
+                  const clicked = newslettersWithEvents.filter((n) =>
+                    n.events.some((e) => e.event_type === "clicked")
+                  ).length;
+                  const bounced = newslettersWithEvents.filter((n) =>
+                    n.events.some((e) => e.event_type === "bounced")
+                  ).length;
+                  return {
+                    total: newslettersWithEvents.length,
+                    sent,
+                    opened,
+                    clicked,
+                    bounced,
+                    openRate: sent > 0 ? Math.round((opened / sent) * 100) : 0,
+                    clickRate: sent > 0 ? Math.round((clicked / sent) * 100) : 0,
+                  };
+                })()}
+              />
             </CardContent>
           </Card>
         </div>
