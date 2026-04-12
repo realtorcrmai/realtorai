@@ -97,7 +97,7 @@ export const ALL_TOURS: Tour[] = [
     feature: "email-marketing-engine",
     steps: [
       {
-        element: "[data-tour='nav-newsletters']",
+        element: "[data-tour='nav-email-marketing']",
         popover: { title: "Open Email Marketing", description: "Click here to access the AI email marketing dashboard.", side: "bottom" },
         navigateTo: "/",
       },

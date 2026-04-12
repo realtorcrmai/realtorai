@@ -48,6 +48,7 @@ function SidebarNavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
+      data-tour={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
       className={cn(
         "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
         active

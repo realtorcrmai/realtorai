@@ -175,7 +175,7 @@ export default function OnboardingPage() {
       formData.append("file", familyFile);
       await fetch("/api/contacts/import", { method: "POST", body: formData }).catch(() => {});
     }
-    goNext();
+    await goNext();
   };
 
   // ── Step 2: Google CSV upload (exported from contacts.google.com) ──

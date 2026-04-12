@@ -17,7 +17,7 @@ export async function getOnboardingProgress(): Promise<{ step: number; avatarUrl
     .single();
 
   return {
-    step: Math.max(1, Math.min(user?.onboarding_step || 1, 7)),
+    step: Math.max(1, Math.min(user?.onboarding_step || 1, 6)),
     avatarUrl: user?.avatar_url || null,
   };
 }
