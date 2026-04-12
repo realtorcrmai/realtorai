@@ -30,6 +30,10 @@ const RATE_LIMITS: Record<string, RateLimitConfig> = {
   "voice-agent": { maxRequests: 100, windowMs: 60 * 1000 }, // 100 req/min
   "rag-chat": { maxRequests: 30, windowMs: 60 * 1000 }, // 30 req/min
   "rag-search": { maxRequests: 60, windowMs: 60 * 1000 }, // 60 req/min
+  unsubscribe: { maxRequests: 10, windowMs: 60 * 1000 }, // 10 req/min — abuse prevention
+  "lead-capture": { maxRequests: 20, windowMs: 60 * 1000 }, // 20 req/min — spam prevention
+  "user-data-delete": { maxRequests: 3, windowMs: 60 * 60 * 1000 }, // 3 req/hour — destructive
+  "contact-api": { maxRequests: 60, windowMs: 60 * 1000 }, // 60 req/min
   default: { maxRequests: 120, windowMs: 60 * 1000 }, // 120 req/min
 };
 

@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { validateEnv } from "@/lib/env-check";
+import { CookieConsent } from "@/components/layout/CookieConsent";
 import "./globals.css";
 
 // Validate required env vars on first server-side import.
@@ -63,6 +64,7 @@ export default function RootLayout({
         <SessionProvider refetchOnWindowFocus={false} refetchInterval={300}>
           <TooltipProvider>{children}</TooltipProvider>
         </SessionProvider>
+        <CookieConsent />
         <Analytics />
         <SpeedInsights />
       </body>

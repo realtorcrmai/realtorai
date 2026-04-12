@@ -40,6 +40,9 @@ export async function middleware(request: NextRequest) {
     // Unsubscribe (HMAC-signed token, not session)
     pathname.startsWith("/api/newsletters/unsubscribe") ||
 
+    // Consent re-confirmation (link from email, rate-limited)
+    pathname.startsWith("/api/consent/reconfirm") ||
+
     // Website SDK endpoints (API-key authenticated, not session)
     pathname.startsWith("/api/websites/") ||
 

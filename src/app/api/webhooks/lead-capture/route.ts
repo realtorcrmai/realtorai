@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { checkApiRateLimit, rateLimitHeaders } from "@/lib/api-rate-limit";
 
 const leadCaptureSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -15,6 +16,16 @@ const leadCaptureSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  // Rate limit by IP
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateCheck = checkApiRateLimit(ip, "lead-capture");
+  if (!rateCheck.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: rateLimitHeaders(rateCheck) }
+    );
+  }
+
   // Verify webhook secret
   const secret = req.headers.get("X-Webhook-Secret");
   const expectedSecret = process.env.WEBHOOK_SECRET;

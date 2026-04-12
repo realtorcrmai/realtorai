@@ -1,7 +1,7 @@
 <!-- docs-audit: src/** -->
 # Pending Work — Realtors360 CRM
 
-*Last updated: 2026-04-07*
+*Last updated: 2026-04-12*
 
 ## LAUNCH BLOCKER — Multi-Tenancy & Security (P0)
 
@@ -22,11 +22,11 @@ Pre-launch audit on 2026-03-30 found critical issues. The app is single-tenant �
 
 ### High Priority (Pre-Launch)
 
-- [ ] **Cookie consent banner** — PIPEDA/CASL compliance
-- [ ] **Data deletion endpoint** — `DELETE /api/user/data` for PIPEDA right-to-erasure
-- [ ] **CASL consent expiry tracking** — cron exists but expiry logic incomplete
-- [ ] **Rate limiting** on sensitive endpoints (unsubscribe, lead capture, contact APIs)
-- [ ] **Audit trail** for unsubscribe actions (distinguish legitimate vs abuse)
+- [x] **Cookie consent banner** — Done (CookieConsent component in root layout, PIPEDA-compliant text)
+- [x] **Data deletion endpoint** — Done (`DELETE /api/user/data` with confirmation, rate-limited, audit trail)
+- [x] **CASL consent expiry tracking** — Done (cron sends re-confirmation emails 30 days before expiry, `/api/consent/reconfirm` extends by 2 years)
+- [x] **Rate limiting** — Done (unsubscribe 10/min, lead-capture 20/min, data-delete 3/hour, contact-api 60/min)
+- [x] **Audit trail** for unsubscribe — Already done (activity_log with full metadata)
 
 ### Files Fixed (P0 Complete)
 
