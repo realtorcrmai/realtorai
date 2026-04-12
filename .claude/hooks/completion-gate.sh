@@ -100,6 +100,13 @@ EOF
                 STALE_COUNT=$(echo "$DOCS_OUTPUT" | grep -c "⚠")
                 DELIVERABLE_WARNINGS="$DELIVERABLE_WARNINGS\n  ⚠ Docs audit found $STALE_COUNT stale item(s) — run: node scripts/audit-docs.mjs"
             fi
+            # Test plan freshness check
+            TEST_OUTPUT=$(node scripts/audit-test-plans.mjs 2>&1)
+            TEST_EXIT=$?
+            if [[ $TEST_EXIT -ne 0 ]]; then
+                STALE_TESTS=$(echo "$TEST_OUTPUT" | grep -c "⚠")
+                DELIVERABLE_WARNINGS="$DELIVERABLE_WARNINGS\n  ⚠ Test plan audit found $STALE_TESTS stale item(s) — run: node scripts/audit-test-plans.mjs"
+            fi
         fi
 
         if [[ -n "$DELIVERABLE_WARNINGS" ]]; then

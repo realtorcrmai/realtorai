@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Icon-only: Luxury house silhouette -->
+  <g transform="translate(0, 2)">
+    <!-- House body -->
+    <rect x="10" y="30" width="44" height="30" rx="2" fill="#2D3E50"/>
+    <!-- Roof -->
+    <path d="M4 32L32 6L60 32" stroke="#C9A96E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <!-- Door -->
+    <rect x="24" y="40" width="16" height="20" rx="2" fill="#C9A96E"/>
+    <!-- Door handle -->
+    <circle cx="36" cy="50" r="1.5" fill="#2D3E50"/>
+    <!-- Left window -->
+    <rect x="14" y="35" width="8" height="8" rx="1" fill="#C9A96E" opacity="0.6"/>
+    <!-- Right window -->
+    <rect x="42" y="35" width="8" height="8" rx="1" fill="#C9A96E" opacity="0.6"/>
+    <!-- Chimney -->
+    <rect x="46" y="14" width="7" height="16" rx="1" fill="#2D3E50"/>
+  </g>
+</svg>

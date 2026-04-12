@@ -66,3 +66,7 @@ voice_agent/server/data/*.db
 voice_agent/venv/
 voice_agent/server/__pycache__/
 .github/workflows/newsletter-ci.yml
+
+# Large binary assets (source copies — serving copies are in public/)
+logo/mikemarfori-full.png
+logo/*.mp4

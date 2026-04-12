@@ -103,7 +103,7 @@ export async function sendDripEmail(
   // Build email content (simple text for now — React Email templates in Phase 2)
   const firstName = name?.split(" ")[0] || "there";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.realtors360.com";
-  const unsubscribeUrl = `${appUrl}/api/newsletters/unsubscribe?user=${userId}&type=drip`;
+  const unsubscribeUrl = `${appUrl}/api/newsletters/unsubscribe?user=${encodeURIComponent(userId)}&type=drip`;
 
   const bodyMap: Record<number, string> = {
     0: `Hi ${firstName},\n\nWelcome to Realtors360! Your 14-day Professional trial is active — all features unlocked.\n\nHere are 3 quick wins to get started:\n1. Import your contacts → ${appUrl}/contacts/new\n2. Add a listing → ${appUrl}/listings\n3. Connect your calendar → ${appUrl}/calendar\n\nLet me know if you need anything!\n\nRahul`,

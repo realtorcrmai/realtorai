@@ -23,10 +23,16 @@ import { resolve } from "node:path";
 const ROOT = resolve(import.meta.dirname, "..");
 const isCI = process.argv.includes("--ci");
 
-// Load the change map
+// Load the change maps (docs + test plans)
 const changeMap = JSON.parse(
   readFileSync(resolve(ROOT, "scripts/docs-change-map.json"), "utf8")
 );
+// Merge test-change-map rules if the file exists
+const testMapPath = resolve(ROOT, "scripts/test-change-map.json");
+if (existsSync(testMapPath)) {
+  const testMap = JSON.parse(readFileSync(testMapPath, "utf8"));
+  changeMap.rules.push(...testMap.rules);
+}
 
 // Get changed files
 let changedFiles;
