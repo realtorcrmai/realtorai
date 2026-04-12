@@ -10,6 +10,7 @@ import { revalidatePath } from "next/cache";
 import { triggerIngest } from "@/lib/rag/realtime-ingest";
 import { canSendToContact, filterSendable } from "@/lib/compliance/can-send";
 import { trackEvent } from "@/lib/analytics";
+import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 
 // React Email template imports
 import { NewListingAlert } from "@/emails/NewListingAlert";
@@ -44,8 +45,7 @@ async function getRealtorBranding(): Promise<RealtorBranding> {
 }
 
 function getUnsubscribeUrl(contactId: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  return `${baseUrl}/api/newsletters/unsubscribe?id=${contactId}`;
+  return buildUnsubscribeUrl(contactId);
 }
 
 async function renderEmailTemplate(

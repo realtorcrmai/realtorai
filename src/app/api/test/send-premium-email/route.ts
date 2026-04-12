@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/resend";
 import { render } from "@react-email/components";
+import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 import { PremiumListingShowcase } from "@/emails/PremiumListingShowcase";
 import type { RealtorBranding } from "@/emails/BaseLayout";
 import React from "react";
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
 
   const listing = listings?.[0];
   const firstName = contact.name.split(" ")[0];
-  const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/newsletters/unsubscribe?id=${contactId}`;
+  const unsubscribeUrl = buildUnsubscribeUrl(contactId);
 
   // Real estate stock photos from Unsplash (architecture/interiors)
   const heroPhoto = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&h=700&fit=crop";

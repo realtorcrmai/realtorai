@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/resend";
 import { buildWelcomeDripHTML } from "@/emails/WelcomeDripHTML";
+import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 
 // Drip schedule: day → subject + skip check
 const DRIP_SCHEDULE = [
@@ -103,7 +104,8 @@ export async function sendDripEmail(
 
   const firstName = name?.split(" ")[0] || "there";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.realtors360.com";
-  const unsubscribeUrl = `${appUrl}/api/newsletters/unsubscribe?user=${encodeURIComponent(userId)}&type=drip`;
+  // HMAC-signed unsubscribe URL — userId is used as the identifier
+  const unsubscribeUrl = buildUnsubscribeUrl(userId);
 
   const html = buildWelcomeDripHTML({ firstName, day, appUrl, unsubscribeUrl });
 
