@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { ToggleLeft, RotateCcw, Loader2 } from "lucide-react";
+import { ToggleLeft, RotateCcw } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { toast } from "sonner";
 
 type FeatureRow = {
@@ -93,7 +94,7 @@ export function FeatureFlagsPanel() {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <LogoSpinner size={20} />
         </CardContent>
       </Card>
     );
@@ -149,7 +150,7 @@ export function FeatureFlagsPanel() {
                     </Button>
                   )}
                   {isUpdating ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <LogoSpinner size={16} />
                   ) : (
                     <Switch
                       checked={feature.effectiveEnabled}

@@ -6,13 +6,13 @@ import { generatePrompts, updatePrompt } from "@/actions/content";
 import {
   Sparkles,
   Save,
-  Loader2,
   Video,
   ImageIcon,
   MessageSquare,
   FileText,
   Instagram,
 } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import type { Prompt } from "@/types";
 
 interface PromptsStepProps {
@@ -144,7 +144,7 @@ export function PromptsStep({
             )}
           >
             {isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <LogoSpinner size={16} />
             ) : (
               <Sparkles className="h-4 w-4" />
             )}
@@ -208,7 +208,7 @@ export function PromptsStep({
                         className="flex items-center gap-1 text-xs bg-primary text-primary-foreground px-3 py-1 rounded-lg font-medium hover:opacity-90 transition-opacity"
                       >
                         {isSaving ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <LogoSpinner size={12} />
                         ) : (
                           <Save className="h-3 w-3" />
                         )}

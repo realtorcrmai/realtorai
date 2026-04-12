@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { History, Loader2 } from "lucide-react";
+import { History } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { toast } from "sonner";
 
 export function FetchPreviousListingButton({
@@ -53,7 +54,7 @@ export function FetchPreviousListingButton({
       disabled={loading}
     >
       {loading ? (
-        <Loader2 className="h-3 w-3 animate-spin" />
+        <LogoSpinner size={12} />
       ) : (
         <History className="h-3 w-3" />
       )}

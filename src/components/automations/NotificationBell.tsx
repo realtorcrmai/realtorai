@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Check, ExternalLink, Loader2 } from "lucide-react";
+import { Bell, Check, ExternalLink } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
 import {
   getNotifications,
@@ -137,7 +138,7 @@ export function NotificationBell() {
             <div className="overflow-y-auto max-h-[400px]">
               {loading && notifications.length === 0 ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  <LogoSpinner size={20} />
                 </div>
               ) : notifications.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">

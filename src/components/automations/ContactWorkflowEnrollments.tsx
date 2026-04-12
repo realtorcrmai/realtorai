@@ -8,7 +8,6 @@ import {
   Pause,
   Play,
   X,
-  Loader2,
   ChevronDown,
   ChevronRight,
   Clock,
@@ -16,6 +15,7 @@ import {
   XCircle,
   AlertCircle,
 } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -182,7 +182,7 @@ export function ContactWorkflowEnrollments({
                   disabled={isPending || !selectedWorkflow}
                 >
                   {isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                    <LogoSpinner size={16} />
                   ) : (
                     <Zap className="h-4 w-4 mr-1.5" />
                   )}

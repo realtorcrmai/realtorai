@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, ArrowRight } from "lucide-react";
-import { LogoVideo, LogoIcon } from "@/components/brand/Logo";
+import { ArrowRight } from "lucide-react";
+import { LogoSpinner, LogoVideo, LogoIcon } from "@/components/brand/Logo";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -117,7 +117,7 @@ export default function LoginPage() {
                   disabled={loading}
                 >
                   {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <LogoSpinner size={16} />
                   ) : (
                     <>
                       Sign In

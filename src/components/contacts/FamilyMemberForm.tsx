@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Loader2, X, Heart, Baby, User, Users } from "lucide-react";
+import { ArrowLeft, Check, X, Heart, Baby, User, Users } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -223,7 +224,7 @@ export function FamilyMemberForm({ contactId, contactName, editMember }: FamilyM
             className="min-w-[120px]"
           >
             {isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <LogoSpinner size={16} />
             ) : (
               <Check className="h-4 w-4 mr-2" />
             )}

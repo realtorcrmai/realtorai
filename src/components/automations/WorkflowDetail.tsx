@@ -54,12 +54,12 @@ import {
   Edit,
   Play,
   Pause,
-  Loader2,
   Check,
   Clock,
   Users,
   Zap,
 } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 
 type WorkflowWithSteps = Workflow & { workflow_steps: WorkflowStep[] };
 type EnrollmentWithContact = WorkflowEnrollment & {
@@ -410,7 +410,7 @@ export default function WorkflowDetail({
                     </Button>
                     <Button onClick={handleSeed} disabled={isPending}>
                       {isPending ? (
-                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                        <LogoSpinner size={16} className="mr-1" />
                       ) : (
                         <Zap className="w-4 h-4 mr-1" />
                       )}
@@ -433,7 +433,7 @@ export default function WorkflowDetail({
               }
             >
               {isPending ? (
-                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                <LogoSpinner size={16} className="mr-1" />
               ) : workflow.is_active ? (
                 <Pause className="w-4 h-4 mr-1" />
               ) : (
@@ -742,7 +742,7 @@ export default function WorkflowDetail({
                       disabled={!selectedContactId || isPending}
                     >
                       {isPending ? (
-                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                        <LogoSpinner size={16} className="mr-1" />
                       ) : (
                         <Plus className="w-4 h-4 mr-1" />
                       )}
@@ -1118,7 +1118,7 @@ export default function WorkflowDetail({
                 disabled={!stepForm.name || isPending}
               >
                 {isPending ? (
-                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  <LogoSpinner size={16} className="mr-1" />
                 ) : editingStep ? (
                   <Check className="w-4 h-4 mr-1" />
                 ) : (

@@ -6,10 +6,10 @@ import {
   FileText,
   Upload,
   Trash2,
-  Loader2,
   ExternalLink,
   Plus,
 } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
 import { deleteContactDocument } from "@/actions/contacts";
 import { CONTACT_DOC_TYPES } from "@/lib/constants";
@@ -137,7 +137,7 @@ export function ContactDocumentsPanel({
             <div className="mt-1">
               <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed border-border hover:border-primary/50 cursor-pointer transition-colors">
                 {uploading ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  <LogoSpinner size={20} />
                 ) : (
                   <Upload className="h-5 w-5 text-muted-foreground" />
                 )}

@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Code2, Eye, Copy, Save, Loader2 } from "lucide-react";
+import { Code2, Eye, Copy, Save } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { toast } from "sonner";
 import type { StepFieldConfig } from "@/lib/constants/workflow-fields";
 
@@ -226,7 +227,7 @@ export function FormPreviewDialog({
               disabled={saving}
             >
               {saving ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <LogoSpinner size={14} />
               ) : (
                 <Save className="h-3.5 w-3.5" />
               )}

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Send, Users, Plus, X, Check, Loader2 } from "lucide-react";
+import { Send, Users, Plus, X, Check } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 
 type Listing = {
   id: string;
@@ -196,7 +197,7 @@ export function ListingBlastDialog({ listing, onClose, onSent }: Props) {
           className="w-full gap-2"
         >
           {sending ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</>
+            <><LogoSpinner size={16} /> Sending...</>
           ) : (
             <><Send className="w-4 h-4" /> Send Listing Blast</>
           )}

@@ -7,7 +7,6 @@ import {
   MicOff,
   X,
   Send,
-  Loader2,
   Bot,
   Sparkles,
   Volume2,
@@ -16,6 +15,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { ConsentModal } from "./ConsentModal";
 import { checkConsent } from "@/actions/consent";
 import { logVoiceCall } from "@/actions/voice-calls";
@@ -915,7 +915,7 @@ export function VoiceAgentWidget() {
                 disabled={sending || !input.trim()}
                 className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-all hover:bg-primary/90 disabled:opacity-40 shadow-sm"
               >
-                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {sending ? <LogoSpinner size={16} /> : <Send className="h-4 w-4" />}
               </button>
             </div>
           </div>

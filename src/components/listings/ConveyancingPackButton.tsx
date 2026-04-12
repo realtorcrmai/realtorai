@@ -4,7 +4,8 @@ import { useState } from "react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { Button } from "@/components/ui/button";
-import { Package, Loader2 } from "lucide-react";
+import { Package } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { toast } from "sonner";
 import type { ListingDocument } from "@/types";
 
@@ -61,7 +62,7 @@ export function ConveyancingPackButton({
       disabled={generating || disabled}
     >
       {generating ? (
-        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+        <LogoSpinner size={16} />
       ) : (
         <Package className="h-4 w-4 mr-2" />
       )}

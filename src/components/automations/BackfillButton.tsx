@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
+import { RefreshCw, CheckCircle2, AlertTriangle } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { backfillWorkflowEnrollments } from "@/actions/workflows";
 
 export function BackfillButton() {
@@ -42,7 +43,7 @@ export function BackfillButton() {
         disabled={isPending}
       >
         {isPending ? (
-          <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+          <LogoSpinner size={16} />
         ) : (
           <RefreshCw className="h-4 w-4 mr-1.5" />
         )}

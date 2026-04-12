@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Upload, FileText, Loader2, Check, AlertCircle } from "lucide-react";
+import { Upload, FileText, Check, AlertCircle } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
 
 // Known column name mappings for fuzzy matching
@@ -251,7 +252,7 @@ export function CSVImportStep({ onImported, onSkip }: CSVImportStepProps) {
 
       <Button onClick={handleImport} disabled={importing} className="w-full">
         {importing ? (
-          <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Importing...</>
+          <><LogoSpinner size={16} className="mr-2" /> Importing...</>
         ) : (
           <><Check className="h-4 w-4 mr-2" /> Import {rows.length} contacts</>
         )}

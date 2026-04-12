@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, X, Upload, Loader2 } from "lucide-react";
+import { Check, X, Upload } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -127,7 +128,7 @@ export function DocumentStatusTracker({
                   disabled={isUploading}
                 >
                   {isUploading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <LogoSpinner size={16} />
                   ) : (
                     <>
                       <Upload className="h-4 w-4 mr-1" />

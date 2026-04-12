@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell, Cake, Heart, Home, Calendar, Loader2 } from "lucide-react";
+import { Bell, Cake, Heart, Home, Calendar } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import Link from "next/link";
 
 type Reminder = {
@@ -56,7 +57,7 @@ export function RemindersWidget() {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <LogoSpinner size={16} />
         </CardContent>
       </Card>
     );

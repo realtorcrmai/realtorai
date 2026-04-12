@@ -10,7 +10,6 @@ import {
   MessageCircle,
   CheckCircle2,
   XCircle,
-  Loader2,
   Eye,
   EyeOff,
   Trash2,
@@ -18,6 +17,7 @@ import {
   Save,
   ExternalLink,
 } from "lucide-react";
+import { LogoSpinner } from "@/components/brand/Logo";
 import {
   PROVIDER_META,
   INTEGRATION_PROVIDERS,
@@ -68,7 +68,7 @@ export function IntegrationSettings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <LogoSpinner size={24} className="text-muted-foreground" />
       </div>
     );
   }
@@ -335,7 +335,7 @@ function IntegrationForm({
       <div className="flex items-center gap-2 pt-2">
         <Button onClick={handleSave} disabled={saving} className="gap-2">
           {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <LogoSpinner size={16} />
           ) : (
             <Save className="h-4 w-4" />
           )}
@@ -350,7 +350,7 @@ function IntegrationForm({
             className="gap-2"
           >
             {testing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <LogoSpinner size={16} />
             ) : (
               <Zap className="h-4 w-4" />
             )}
@@ -366,7 +366,7 @@ function IntegrationForm({
             className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
           >
             {deleting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <LogoSpinner size={16} />
             ) : (
               <Trash2 className="h-4 w-4" />
             )}
