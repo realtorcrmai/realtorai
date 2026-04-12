@@ -1,7 +1,6 @@
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { SocialDashboardClient } from "@/components/social/SocialDashboardClient";
 
-export const dynamic = "force-dynamic";
 
 export default async function SocialPage() {
   const tc = await getAuthenticatedTenantClient();

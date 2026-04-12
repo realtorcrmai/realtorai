@@ -1,7 +1,6 @@
 import { findDuplicates } from "@/actions/contact-merge";
 import { MergeClient } from "@/components/contacts/MergeClient";
 
-export const dynamic = "force-dynamic";
 
 export default async function MergePage() {
   const duplicates = await findDuplicates();

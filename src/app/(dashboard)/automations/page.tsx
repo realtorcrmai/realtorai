@@ -22,7 +22,6 @@ import { BackfillButton } from "@/components/automations/BackfillButton";
 import { AnimatedCounter } from "@/components/shared/AnimatedCounter";
 import { PageHeader } from "@/components/layout/PageHeader";
 
-export const dynamic = "force-dynamic";
 
 export default async function AutomationsPage() {
   // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is safe

@@ -3,7 +3,6 @@ import { MessageSquare, ArrowDownLeft } from "lucide-react";
 import { InboxView } from "@/components/inbox/InboxView";
 import { PageHeader } from "@/components/layout/PageHeader";
 
-export const dynamic = "force-dynamic";
 
 export default async function InboxPage() {
   const supabase = await getAuthenticatedTenantClient();

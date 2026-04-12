@@ -2,7 +2,6 @@ import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { TaskSidebar } from "@/components/tasks/TaskSidebar";
 import { MobileSidebarSheet } from "@/components/layout/MobileSidebarSheet";
 
-export const dynamic = "force-dynamic";
 
 export default async function TasksLayout({
   children,

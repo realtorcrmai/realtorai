@@ -1,4 +1,3 @@
-export const dynamic = "force-dynamic";
 
 import { getSegments } from "@/actions/segments";
 import { SegmentBuilderClient } from "@/components/contacts/SegmentBuilderClient";

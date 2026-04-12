@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { Building2, CheckCircle2, Circle, ArrowRight, GitBranch } from "lucide-react";
 import Link from "next/link";
 
-export const dynamic = "force-dynamic";
 
 const MLS_PHASES = [
   { phase: 1, name: "Pre-Listing",     desc: "Assessment, photos, staging, pricing strategy" },

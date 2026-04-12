@@ -1,7 +1,6 @@
 import { ContactCreator } from "@/components/contacts/create/ContactCreator";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 
-export const dynamic = "force-dynamic";
 
 export default async function NewContactPage() {
   const supabase = await getAuthenticatedTenantClient();

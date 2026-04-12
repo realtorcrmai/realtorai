@@ -2,7 +2,6 @@ import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import TemplateList from "@/components/automations/TemplateList";
 import type { MessageTemplate } from "@/types";
 
-export const dynamic = "force-dynamic";
 
 export default async function TemplatesPage() {
   const supabase = await getAuthenticatedTenantClient();

@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import WorkflowDetail from "@/components/automations/WorkflowDetail";
 import type { MessageTemplate, WorkflowStep, WorkflowEnrollment } from "@/types";
 
-export const dynamic = "force-dynamic";
 
 export default async function WorkflowDetailPage({
   params,
