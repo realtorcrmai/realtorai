@@ -1,14 +1,20 @@
-"use no memo";
-
 export const dynamic = "force-dynamic";
 
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { PageHeader } from "@/components/layout/PageHeader";
 
+function getDateRanges() {
+  const now = Date.now();
+  return {
+    ninetyDaysAgoISO: new Date(now - 90 * 86400000).toISOString(),
+    thirtyDaysAgo: now - 30 * 86400000,
+    sixtyDaysAgo: now - 60 * 86400000,
+  };
+}
+
 export default async function ContactEngagementPage() {
   const tc = await getAuthenticatedTenantClient();
-  const now = Date.now();
-  const ninetyDaysAgoISO = new Date(now - 90 * 86400000).toISOString();
+  const { ninetyDaysAgoISO, thirtyDaysAgo, sixtyDaysAgo } = getDateRanges();
 
   // Fetch all contacts with email intelligence, plus recent event counts
   const [{ data: contacts }, { data: recentEvents }] = await Promise.all([
@@ -25,8 +31,6 @@ export default async function ContactEngagementPage() {
   ]);
 
   // Build event counts per contact for last 30 / 60-90 days (for trend)
-  const thirtyDaysAgo = now - 30 * 86400000;
-  const sixtyDaysAgo = now - 60 * 86400000;
 
   const recent30: Record<string, number> = {};
   const prev30to60: Record<string, number> = {};

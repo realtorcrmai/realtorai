@@ -1,5 +1,3 @@
-"use no memo";
-
 export const dynamic = "force-dynamic";
 
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
@@ -40,10 +38,13 @@ const CLICK_TYPE_LABELS: Record<string, { label: string; icon: string }> = {
   other: { label: "Other Links", icon: "🔗" },
 };
 
+function getThirtyDaysAgo() {
+  return new Date(Date.now() - 30 * 86400000).toISOString();
+}
+
 export default async function NewsletterAnalyticsPage() {
   const tc = await getAuthenticatedTenantClient();
-  const now = Date.now();
-  const thirtyDaysAgo = new Date(now - 30 * 86400000).toISOString();
+  const thirtyDaysAgo = getThirtyDaysAgo();
 
   const [
     { data: sentNewsletters },

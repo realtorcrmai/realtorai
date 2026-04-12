@@ -1,17 +1,20 @@
-"use no memo";
-
 export const dynamic = "force-dynamic";
 
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { PageHeader } from "@/components/layout/PageHeader";
 
-export default async function AgentDashboardPage() {
-  const tc = await getAuthenticatedTenantClient();
-
+function getDateRanges() {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
-  const todayISO = todayStart.toISOString();
-  const sevenDaysAgoISO = new Date(Date.now() - 7 * 86400000).toISOString();
+  return {
+    todayISO: todayStart.toISOString(),
+    sevenDaysAgoISO: new Date(Date.now() - 7 * 86400000).toISOString(),
+  };
+}
+
+export default async function AgentDashboardPage() {
+  const tc = await getAuthenticatedTenantClient();
+  const { todayISO, sevenDaysAgoISO } = getDateRanges();
 
   const [
     { data: runsToday },
