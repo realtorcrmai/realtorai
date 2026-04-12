@@ -148,8 +148,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: Check docs are in sync with codebase
+      - name: Basic audit (structural consistency)
         run: node scripts/audit-docs.mjs
+      - name: Deep audit (changed files → required doc updates)
+        run: node scripts/audit-docs-deep.mjs --ci
