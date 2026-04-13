@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export async function getReferrals(contactId: string) {
@@ -44,6 +45,10 @@ export async function createReferral(data: {
   status?: "open" | "accepted" | "closed" | "lost";
   notes?: string;
 }) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated" };
+  const realtorId = (session.user as Record<string, string>).realtorId || session.user.id;
+
   const supabase = createAdminClient();
 
   const { error } = await supabase.from("referrals").insert({
@@ -54,6 +59,7 @@ export async function createReferral(data: {
     referral_fee_percent: data.referral_fee_percent ?? null,
     status: data.status ?? "open",
     notes: data.notes ?? null,
+    realtor_id: realtorId,
   });
 
   if (error) {

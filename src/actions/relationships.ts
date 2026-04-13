@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export async function getContactRelationships(contactId: string) {
@@ -28,6 +29,10 @@ export async function createRelationship(data: {
   relationship_label?: string;
   notes?: string;
 }) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Not authenticated" };
+  const realtorId = (session.user as Record<string, string>).realtorId || session.user.id;
+
   const supabase = createAdminClient();
 
   // Validate both contacts exist before inserting the relationship
@@ -46,6 +51,7 @@ export async function createRelationship(data: {
     relationship_type: data.relationship_type,
     relationship_label: data.relationship_label ?? null,
     notes: data.notes ?? null,
+    realtor_id: realtorId,
   });
 
   if (error) {
