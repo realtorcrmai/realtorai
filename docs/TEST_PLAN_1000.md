@@ -1771,3 +1771,34 @@ Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. Thi
 **Steps:** Print any page.
 **Expected:** Browser default print footer shows the page URL. No custom print footer conflicts with data. Page breaks between major sections if content spans multiple pages.
 **Priority:** P3
+
+---
+
+## CATEGORY 19: SETTINGS & UTILITY API ENDPOINTS — 5 Tests
+
+> Added 2026-04-13 to cover settings integrations, bulk task operations, and calendar availability.
+
+#### API-SETTINGS-001: GET /api/settings/integrations returns integration list
+**Steps:** `GET /api/settings/integrations` with valid session.
+**Expected:** 200 with array of integration configs (Google Calendar, Twilio, etc.) and connection status.
+**Priority:** P2
+
+#### API-SETTINGS-002: POST /api/settings/integrations/:provider/test validates connection
+**Steps:** `POST /api/settings/integrations/google_calendar/test` with valid session.
+**Expected:** 200 with `{ connected: true/false }`. Returns 401 without session. Returns 404 for unknown provider.
+**Priority:** P2
+
+#### API-SETTINGS-003: PUT /api/settings/integrations/:provider saves config
+**Steps:** `PUT /api/settings/integrations/twilio` with `{ account_sid, auth_token }`.
+**Expected:** 200 on valid config. 422 on missing required fields. Credentials stored securely (not in response).
+**Priority:** P2
+
+#### API-TASKS-001: POST /api/tasks/bulk-complete marks multiple tasks done
+**Steps:** `POST /api/tasks/bulk-complete` with `{ task_ids: ["id1", "id2"] }`.
+**Expected:** 200 with `{ updated: 2 }`. Tasks status set to "completed". Returns 400 for empty array. Respects tenant isolation.
+**Priority:** P1
+
+#### API-CALENDAR-001: GET /api/calendar/busy returns busy slots
+**Steps:** `GET /api/calendar/busy?start=2026-04-13&end=2026-04-14` with valid session.
+**Expected:** 200 with array of `{ start, end }` busy time slots from connected calendar. Returns empty array if no calendar connected.
+**Priority:** P2

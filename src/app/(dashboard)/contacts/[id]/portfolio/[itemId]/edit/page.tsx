@@ -23,18 +23,18 @@ export default async function PortfolioEditPage({
   if (!contact || !item) notFound();
 
   return (
-    <div className="min-h-full bg-muted/50 dark:bg-background p-3 md:p-4 space-y-4">
+    <div className="p-3 md:p-6 max-w-3xl mx-auto space-y-4">
       {/* Back + title */}
       <div className="flex items-center gap-3">
         <Link
           href={`/contacts/${id}?tab=portfolio`}
-          className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+          className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <h1 className="text-base font-semibold flex items-center gap-2">
-            ✏️ Edit Property
+          <h1 className="text-lg font-semibold text-foreground">
+            Edit Property — {contact.name}
           </h1>
           <p className="text-xs text-muted-foreground truncate">
             {(item as PortfolioItem).address}
@@ -42,12 +42,14 @@ export default async function PortfolioEditPage({
         </div>
       </div>
 
-      {/* Form */}
-      <PortfolioForm
-        contactId={id}
-        contactName={contact.name}
-        existing={item as PortfolioItem}
-      />
+      {/* Form in card */}
+      <div className="rounded-xl border bg-card p-4 md:p-6 shadow-sm">
+        <PortfolioForm
+          contactId={id}
+          contactName={contact.name}
+          existing={item as PortfolioItem}
+        />
+      </div>
     </div>
   );
 }

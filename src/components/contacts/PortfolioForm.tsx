@@ -281,7 +281,7 @@ function SectionLabel({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#0F7694] to-[#0F7694] flex items-center justify-center text-white text-xs font-bold shadow-sm shrink-0">
+      <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold shadow-sm shrink-0">
         {number}
       </div>
       <h2 className="text-sm font-semibold">{label}</h2>
@@ -484,7 +484,7 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-6">
 
       {/* ── 1. Property Type ─────────────────────────────────── */}
       <div className="space-y-4">
