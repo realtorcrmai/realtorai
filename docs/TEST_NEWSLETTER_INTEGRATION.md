@@ -1,4 +1,5 @@
 <!-- docs-audit: realtors360-newsletter/**, scripts/qa-test-email* -->
+<!-- last-verified: 2026-04-13 -->
 # Newsletter Engine Integration Test Suite
 
 **Last run:** 2026-04-11 | **Result:** 2000/2015 passed, 0 failures, 15 skipped
@@ -115,3 +116,124 @@ Tests skipped due to pending migrations or no data:
 | `scripts/qa-test-email-engine.mjs` | 27 | Email engine QA with real Resend sends |
 | `scripts/test-email-marketing-ui.mjs` | 1833 | Playwright UI tests for newsletter pages |
 | `scripts/test-workflow-emails.mjs` | 46 | Workflow email delivery tests |
+
+---
+
+## Email Template Rendering Tests
+
+Each template in `src/emails/` must render valid HTML with correct props. Tests import the React component, call `render()`, and assert output.
+
+### CTAButton.tsx
+**Steps:** Render `<CTAButton href="https://example.com" label="View Listing" />`.
+**Expected:** Output contains `<a>` tag with correct href and label text. Styled as button.
+**Priority:** P1
+
+### PhotoGallery.tsx
+**Steps:** Render `<PhotoGallery images={[{url, alt}]} />` with 1 and 4 images.
+**Expected:** Renders `<img>` tags with alt text. Layout adapts to image count.
+**Priority:** P2
+
+### PropertyCard.tsx
+**Steps:** Render `<PropertyCard listing={mockListing} />` with full and minimal data.
+**Expected:** Shows address, price, beds/baths. Missing fields gracefully hidden.
+**Priority:** P1
+
+### StatBox.tsx
+**Steps:** Render `<StatBox label="Avg Price" value="$850K" change="+5%" />`.
+**Expected:** Label, value, and change indicator visible. Positive change styled green.
+**Priority:** P2
+
+### UnsubscribeFooter.tsx
+**Steps:** Render `<UnsubscribeFooter unsubscribeUrl="https://..." />`.
+**Expected:** Contains unsubscribe link with correct URL. CASL-compliant text present.
+**Priority:** P0
+
+### HeroImage.tsx
+**Steps:** Render `<HeroImage src="https://..." alt="Property" />`.
+**Expected:** Full-width image with alt text. Renders valid `<img>` tag.
+**Priority:** P2
+
+### InspectionReminder.tsx
+**Steps:** Render with `{ contactName, inspectionDate, address }` props.
+**Expected:** Personalized greeting, formatted date, property address visible.
+**Priority:** P2
+
+### PriceDropAlert.tsx
+**Steps:** Render with `{ listing, oldPrice, newPrice }` props.
+**Expected:** Shows both prices with strikethrough on old. Percentage drop calculated.
+**Priority:** P1
+
+### CommunityEvent.tsx
+**Steps:** Render with `{ eventName, date, location, description }` props.
+**Expected:** Event details rendered. Date formatted. Location displayed.
+**Priority:** P2
+
+### MortgageRenewalAlert.tsx
+**Steps:** Render with `{ contactName, renewalDate, currentRate }` props.
+**Expected:** Personalized alert with renewal date and rate. CTA to schedule consultation.
+**Priority:** P2
+
+### OpenHouseInvite.tsx
+**Steps:** Render with `{ listing, date, startTime, endTime }` props.
+**Expected:** Property details, formatted date/time range, RSVP CTA visible.
+**Priority:** P1
+
+### ReferralThankYou.tsx
+**Steps:** Render with `{ referrerName, referredName }` props.
+**Expected:** Thank-you message with both names. Branded styling applied.
+**Priority:** P2
+
+### NeighbourhoodGuide.tsx
+**Steps:** Render with `{ neighbourhood, highlights, stats }` props.
+**Expected:** Area name, highlight sections, and stat boxes rendered correctly.
+**Priority:** P2
+
+### YearInReview.tsx
+**Steps:** Render with `{ year, stats: { sold, volume, avgDays } }` props.
+**Expected:** Year header, stat cards with values, branded layout.
+**Priority:** P2
+
+### NewListingAlert.tsx
+**Steps:** Render with `{ listing, agentName }` props.
+**Expected:** Property card with image, price, details. Agent attribution visible.
+**Priority:** P1
+
+### WelcomeDrip.tsx
+**Steps:** Render with `{ contactName, stepNumber }` props for steps 1-7.
+**Expected:** Step-appropriate content rendered. Personalized greeting on each.
+**Priority:** P1
+
+### HomeValueUpdate.tsx
+**Steps:** Render with `{ address, currentValue, changePercent }` props.
+**Expected:** Address, value, and trend indicator rendered. Positive/negative styling differs.
+**Priority:** P2
+
+### ClientTestimonial.tsx
+**Steps:** Render with `{ clientName, quote, rating }` props.
+**Expected:** Quote text, client name, star rating displayed. Proper quoting marks.
+**Priority:** P2
+
+### ClosingReminder.tsx
+**Steps:** Render with `{ contactName, closingDate, address }` props.
+**Expected:** Personalized reminder with formatted closing date and property address.
+**Priority:** P1
+
+### BuyerGuide.tsx
+**Steps:** Render with `{ contactName, marketArea }` props.
+**Expected:** Buyer guide content with area-specific info. Step-by-step sections visible.
+**Priority:** P2
+
+### JustSold.tsx
+**Steps:** Render with `{ listing, soldPrice, daysOnMarket }` props.
+**Expected:** Celebration layout with sold price, DOM stat, property image.
+**Priority:** P1
+
+### PremiumListingShowcase.tsx
+**Steps:** Render with `{ listings: [mockListing1, mockListing2] }` props.
+**Expected:** Multiple listings rendered in showcase layout. Premium styling applied.
+**Priority:** P2
+
+### HomeAnniversary.tsx
+**Steps:** Render with `{ contactName, address, purchaseDate, years }` props.
+**Expected:** Anniversary message with years count. Home value estimate CTA.
+**Priority:** P2

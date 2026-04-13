@@ -1,4 +1,5 @@
 <!-- docs-audit: src/lib/workflow-engine.ts, src/actions/workflows.ts -->
+<!-- last-verified: 2026-04-13 -->
 # Test Plan: Workflow Trigger Engine + Email Journey System
 
 **Total User Stories:** 1000+
