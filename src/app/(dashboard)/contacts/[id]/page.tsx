@@ -7,10 +7,9 @@ import { Phone, Mail, MessageSquare, Edit } from "lucide-react";
 import { ContactForm } from "@/components/contacts/ContactForm";
 import { ContactContextPanel } from "@/components/contacts/ContactContextPanel";
 import { MobileDetailSheet } from "@/components/layout/MobileDetailSheet";
-import { ReferralsPanel, type ReferralRow } from "@/components/contacts/ReferralsPanel";
+import { type ReferralRow } from "@/components/contacts/ReferralsPanel";
 import { NetworkStatsCard } from "@/components/contacts/NetworkStatsCard";
 import { HouseholdBanner } from "@/components/contacts/HouseholdBanner";
-import { RelationshipManager } from "@/components/contacts/RelationshipManager";
 import { QuickActionBar } from "@/components/contacts/QuickActionBar";
 import { TagEditor } from "@/components/contacts/TagEditor";
 import { StageBar, type StageData } from "@/components/contacts/StageBar";
@@ -592,13 +591,6 @@ export default async function ContactDetailPage({
               communications={typedCommunications}
               contactDates={(contactDates ?? []) as ContactDate[]}
             />
-            <div className="border-t pt-5">
-              <RelationshipManager
-                contactId={contact.id}
-                relationships={relationships}
-                allContacts={allContacts?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })) ?? []}
-              />
-            </div>
           </MobileDetailSheet>
 
           {/* Quick Action Bar — grouped: primary communication + secondary tools */}
@@ -674,6 +666,7 @@ export default async function ContactDetailPage({
             documents={typedDocuments}
             contextEntries={(contactContextEntries ?? []) as Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>}
             familyMembers={(familyMembersData ?? []) as import("@/types").ContactFamilyMember[]}
+            relationships={relationships}
             isBuyer={isBuyer}
             buyerJourneys={(buyerJourneysData ?? []) as BuyerJourney[]}
             recentJourneyProperties={(journeyPropertiesData ?? []) as BuyerJourneyProperty[]}
@@ -736,58 +729,7 @@ export default async function ContactDetailPage({
         />
       </div>
 
-      {/* Referrals */}
-      <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-brand pl-4 rounded-sm shrink-0">
-        <ReferralsPanel
-          contact={contact}
-          referredByName={referredByName}
-          referralsAsReferrer={(referralsAsReferrer ?? []) as ReferralRow[]}
-          referralsAsReferred={(referralsAsReferred ?? []) as ReferralRow[]}
-          allContacts={(allContacts ?? []) as { id: string; name: string }[]}
-        />
-      </div>
-
-      {/* Relationships — grows to fill remaining space */}
-      <div className="pt-3 border-l-4 border-l-brand pl-4 rounded-sm">
-        <RelationshipManager
-          contactId={contact.id}
-          relationships={relationships}
-          allContacts={allContacts?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })) ?? []}
-        />
-
-        {/* Contextual Tips — fills remaining space when sections are empty */}
-        {(!intel || Object.keys(intel).length === 0) && relationships.length === 0 && allReferrals.length === 0 && (
-          <div className="mt-4 pt-4 border-t border-border/30">
-            <div className="rounded-xl bg-muted/50 dark:bg-muted/20 border border-border p-4">
-              <div className="flex items-start gap-2.5">
-                <span className="text-lg">💡</span>
-                <div>
-                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Build this profile</h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-                    The more you add here, the smarter the AI gets. Relationships help
-                    personalize emails. Referrals track your network value. Engagement
-                    data appears after sending the first email.
-                  </p>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">1</span>
-                      <span className="text-muted-foreground">Add a <strong className="text-foreground">relationship</strong></span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">2</span>
-                      <span className="text-muted-foreground">Set <strong className="text-foreground">preferences</strong></span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">3</span>
-                      <span className="text-muted-foreground">Send first <strong className="text-foreground">email</strong></span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Referrals + Relationships moved to Overview tab (ContactDetailTabs) */}
     </>
   );
 

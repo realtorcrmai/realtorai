@@ -8,6 +8,7 @@ import { PropertyHistoryPanel } from "@/components/contacts/PropertyHistoryPanel
 import { ReferralsPanel, type ReferralRow } from "@/components/contacts/ReferralsPanel";
 import { DemographicsPanel } from "@/components/contacts/DemographicsPanel";
 import RelationshipGraph from "@/components/contacts/RelationshipGraph";
+import { RelationshipManager } from "@/components/contacts/RelationshipManager";
 import { NetworkStatsCard } from "@/components/contacts/NetworkStatsCard";
 import { UpcomingEventsCard } from "@/components/contacts/UpcomingEventsCard";
 import { SellerEarningsSummary } from "@/components/contacts/SellerEarningsSummary";
@@ -148,6 +149,18 @@ export type ContactDetailTabsProps = {
   documents: ContactDocument[];
   contextEntries: Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>;
 
+  // Relationships (moved from sidebar to Overview tab)
+  relationships: Array<{
+    id: string;
+    contact_a_id: string;
+    contact_b_id: string;
+    relationship_type: string;
+    relationship_label: string | null;
+    notes: string | null;
+    contact_a: { id: string; name: string; type: string };
+    contact_b: { id: string; name: string; type: string };
+  }>;
+
   // Family tab
   familyMembers: ContactFamilyMember[];
 
@@ -223,6 +236,8 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
     allContacts,
     documents,
     contextEntries,
+    // Relationships (moved from sidebar)
+    relationships,
     // Family
     familyMembers,
     // Emails
@@ -447,6 +462,30 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
               <>
                 {/* Panels with data — float to top */}
                 {filledPanels}
+
+                {/* Referrals + Relationships — side by side (moved from sidebar) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Card className="border-l-4 border-l-brand">
+                    <CardContent className="p-4">
+                      <ReferralsPanel
+                        contact={contact}
+                        referredByName={referredByName}
+                        referralsAsReferrer={referralsAsReferrer}
+                        referralsAsReferred={referralsAsReferred}
+                        allContacts={allContacts}
+                      />
+                    </CardContent>
+                  </Card>
+                  <Card className="border-l-4 border-l-brand">
+                    <CardContent className="p-4">
+                      <RelationshipManager
+                        contactId={contactId}
+                        relationships={relationships}
+                        allContacts={allContacts}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
 
                 {/* Quick Setup — animated tiles */}
                 {emptyActions.length > 1 && (
