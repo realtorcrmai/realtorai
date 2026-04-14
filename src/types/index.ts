@@ -60,6 +60,7 @@ export type BuyerPreferences = {
   property_types?: string[];
   preferred_areas?: string[];
   move_in_timeline?: string;
+  timeline?: string;
   notes?: string;
   pre_approval_amount?: number;
   properties_of_interest?: PropertyOfInterest[];
