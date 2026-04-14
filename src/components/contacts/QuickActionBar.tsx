@@ -58,18 +58,22 @@ export function QuickActionBar({
   }
 
   function scrollToTimeline() {
-    const el = document.getElementById("comm-timeline");
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
-    }
-    setMode("note");
+    // Dispatch event so ContactDetailTabs switches to Activity tab
+    window.dispatchEvent(new CustomEvent("contact:switch-tab", { detail: { tab: "activity", openNote: true } }));
+    // Fallback: scroll to timeline if already visible
+    setTimeout(() => {
+      const el = document.getElementById("comm-timeline");
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    }, 300);
   }
 
   function scrollToTasks() {
-    const el = document.getElementById("tasks-panel");
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
-    }
+    // Switch to Activity tab (tasks live there) then scroll
+    window.dispatchEvent(new CustomEvent("contact:switch-tab", { detail: { tab: "activity" } }));
+    setTimeout(() => {
+      const el = document.getElementById("tasks-panel");
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    }, 300);
   }
 
   if (mode !== "idle") {
@@ -144,40 +148,8 @@ export function QuickActionBar({
         <Phone className="h-3.5 w-3.5 mr-1.5" />
         Call
       </Button>
-      <ClickToVoiceButton
-        agentEmail=""
-        focusType="contact"
-        focusId={contactId}
-        label="Voice"
-        size="sm"
-      />
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setMode("text")}
-        className="text-xs bg-brand-muted border-brand/20 text-brand-dark hover:bg-brand-muted hover:text-brand-dark dark:bg-blue-950/20 dark:border-blue-800/30 dark:text-brand-light dark:hover:bg-blue-950/40"
-      >
-        <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-        Text
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={scrollToTimeline}
-        className="text-xs bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:text-amber-800 dark:bg-amber-950/20 dark:border-amber-800/30 dark:text-amber-400 dark:hover:bg-amber-950/40"
-      >
-        <StickyNote className="h-3.5 w-3.5 mr-1.5" />
-        Log Note
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={scrollToTasks}
-        className="text-xs bg-brand-muted border-brand/20 text-brand-dark hover:bg-brand-muted hover:text-brand-dark dark:bg-foreground/20 dark:border-brand/15 dark:text-brand-light dark:hover:bg-foreground/40"
-      >
-        <ListTodo className="h-3.5 w-3.5 mr-1.5" />
-        Add Task
-      </Button>
+      {/* Voice + Text hidden — SMS/Voice/WhatsApp integrations not active yet */}
+      {/* Log Note + Add Task are now separate dialog components rendered in page.tsx */}
     </div>
   );
 }

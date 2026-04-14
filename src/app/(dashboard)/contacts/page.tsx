@@ -4,7 +4,9 @@ import { ContactsTableClient } from "@/components/contacts/ContactsTableClient";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { SmartListBanner } from "@/components/smart-lists/SmartListBanner";
 import { executeSmartList } from "@/actions/smart-lists";
-import { Users } from "lucide-react";
+import PipelineSnapshot from "@/components/dashboard/PipelineSnapshot";
+import { Card, CardContent } from "@/components/ui/card";
+import { Users, TrendingUp, Flame, BarChart3, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -47,7 +49,98 @@ export default async function ContactsPage({
           </Link>
         }
       />
-      <div className="p-6">
+      <div className="p-6 space-y-6">
+        {/* KPI Stat Cards — Dashboard style */}
+        {!isEmpty && !activeSmartList && (() => {
+          const allContacts = contacts ?? [];
+          const now = new Date();
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+          const newThisWeek = allContacts.filter((c: any) => new Date(c.created_at) >= weekAgo).length;
+          const hotLeads = allContacts.filter((c: any) => {
+            const intel = c.newsletter_intelligence;
+            return intel && typeof intel === "object" && (intel as any).engagement_score >= 60;
+          }).length;
+          const inPipeline = allContacts.filter((c: any) =>
+            c.stage_bar && !["closed", "cold"].includes(c.stage_bar)
+          ).length;
+          const closedThisMonth = allContacts.filter((c: any) =>
+            c.stage_bar === "closed" && c.last_activity_date && new Date(c.last_activity_date) >= monthStart
+          ).length;
+
+          // Pipeline stages for bar
+          const PIPELINE_STAGES = [
+            { key: "new", label: "New Leads", color: "bg-[#C8F5F0]" },
+            { key: "qualified", label: "Qualified", color: "bg-brand-light" },
+            { key: "active", label: "Active", color: "bg-brand" },
+            { key: "under_contract", label: "Under Contract", color: "bg-[#FDAB3D]" },
+            { key: "closed", label: "Closed", color: "bg-success" },
+          ];
+          const stageCounts: Record<string, number> = {};
+          for (const s of PIPELINE_STAGES) stageCounts[s.key] = 0;
+          for (const c of allContacts) {
+            const bar = (c as any).stage_bar;
+            if (!bar || bar === "cold") { stageCounts["new"]++; continue; }
+            if (bar === "active_search" || bar === "active_listing") { stageCounts["active"]++; continue; }
+            if (stageCounts[bar] !== undefined) stageCounts[bar]++;
+            else stageCounts["new"]++;
+          }
+          const pipelineStages = PIPELINE_STAGES.map(s => ({ ...s, count: stageCounts[s.key], value: 0 }));
+
+          return (
+            <>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <Card className="border-l-4 border-l-brand">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+                      <TrendingUp className="h-4 w-4 text-brand" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">New This Week</p>
+                      <p className="text-xl font-semibold text-foreground">{newThisWeek}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-destructive">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+                      <Flame className="h-4 w-4 text-destructive" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Hot Leads</p>
+                      <p className="text-xl font-semibold text-foreground">{hotLeads}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-[#f5c26b]">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-lg bg-[#f5c26b]/10 flex items-center justify-center shrink-0">
+                      <BarChart3 className="h-4 w-4 text-[#8a5a1e]" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">In Pipeline</p>
+                      <p className="text-xl font-semibold text-foreground">{inPipeline}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-success">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="h-4 w-4 text-success" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Closed This Mo</p>
+                      <p className="text-xl font-semibold text-foreground">{closedThisMonth}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              <PipelineSnapshot stages={pipelineStages} totalGCI={0} />
+            </>
+          );
+        })()}
+
         {activeSmartList && (
           <SmartListBanner smartList={activeSmartList} count={contacts?.length ?? 0} />
         )}
