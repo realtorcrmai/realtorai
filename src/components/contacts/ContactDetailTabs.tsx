@@ -487,18 +487,40 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
                   </Card>
                 </div>
 
-                {/* Quick Setup — animated tiles */}
+                {/* Quick Setup — collapsed when ≤2 remaining, expanded when 3+ */}
                 {emptyActions.length > 1 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-1 h-5 rounded-full bg-gradient-to-b from-indigo-400 to-teal-400" />
-                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Quick Setup</h3>
-                      <span className="text-sm text-muted-foreground ml-auto">{emptyActions.length - 1} remaining</span>
+                  emptyActions.length <= 3 ? (
+                    /* Collapsed: progress bar that expands on click */
+                    <details className="group">
+                      <summary className="flex items-center gap-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                        <div className="w-1 h-5 rounded-full bg-gradient-to-b from-indigo-400 to-teal-400 shrink-0" />
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Quick Setup</h3>
+                        <div className="flex-1 mx-2 h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-teal-400 transition-all duration-500"
+                            style={{ width: `${Math.round(((5 - (emptyActions.length - 1)) / 5) * 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-muted-foreground">{emptyActions.length - 1} remaining</span>
+                        <span className="text-xs text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
+                      </summary>
+                      <div className="grid grid-cols-2 gap-3 mt-3">
+                        {emptyActions}
+                      </div>
+                    </details>
+                  ) : (
+                    /* Expanded: full tiles visible (new contacts need guidance) */
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1 h-5 rounded-full bg-gradient-to-b from-indigo-400 to-teal-400" />
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Quick Setup</h3>
+                        <span className="text-sm text-muted-foreground ml-auto">{emptyActions.length - 1} remaining</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {emptyActions}
+                      </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      {emptyActions}
-                    </div>
-                  </div>
+                  )
                 )}
               </>
             );

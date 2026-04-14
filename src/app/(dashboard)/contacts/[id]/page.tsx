@@ -26,7 +26,7 @@ import { EmailHistoryTimeline } from "@/components/contacts/EmailHistoryTimeline
 import { IntelligencePanel } from "@/components/contacts/IntelligencePanel";
 import { ContextLog } from "@/components/contacts/ContextLog";
 import { ProspectControls } from "@/components/contacts/ProspectControls";
-import { QuickLogForm } from "@/components/contacts/QuickLogForm";
+import { LogInteractionDialog } from "@/components/contacts/LogInteractionDialog";
 import { WebsiteActivityLoader } from "@/components/contacts/WebsiteActivityLoader";
 import { DeleteContactButton } from "@/components/contacts/DeleteContactButton";
 import { ContactDetailLayout } from "@/components/contacts/ContactDetailLayout";
@@ -763,9 +763,9 @@ export default async function ContactDetailPage({
         </div>
       )}
 
-      {/* Quick Log — log calls, texts, meetings */}
+      {/* Quick Log — compact trigger that opens full form in dialog */}
       <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
-        <QuickLogForm
+        <LogInteractionDialog
           contactId={id}
           contactName={contact.name}
           recentEmails={(newslettersWithEvents ?? [])
