@@ -481,7 +481,7 @@ export default async function ContactDetailPage({
               <CardContent className="p-4">
                 {/* Row 1: Avatar + Name + Badges + Meta */}
                 <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-full ${avatarColor} flex items-center justify-center text-white font-bold text-lg shrink-0`}>
+                  <div className={`w-12 h-12 rounded-full ${avatarColor} flex items-center justify-center text-white font-bold text-lg shrink-0 ring-2 ring-offset-2 ${engagementScore != null ? (engagementScore >= 60 ? "ring-success" : engagementScore >= 30 ? "ring-[#f5c26b]" : "ring-muted-foreground/30") : "ring-muted-foreground/20"}`}>
                     {contact.name.split(/\s+/).map((w: string) => w[0]).filter(Boolean).join("").substring(0, 2).toUpperCase() || "?"}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -668,15 +668,20 @@ export default async function ContactDetailPage({
             </div>
           </div>
 
-          {/* Journey Progress Bar */}
+          {/* Journey Phase — compact inline subtitle (replaces separate JourneyProgressBar) */}
           {contactJourney && (
-            <JourneyProgressBar
-              contactType={contact.type}
-              currentPhase={contactJourney.current_phase}
-              engagementScore={(intel as Record<string, unknown> | null)?.engagement_score as number ?? 0}
-              phaseEnteredAt={contactJourney.phase_entered_at}
-              enrolledAt={contactJourney.created_at}
-            />
+            <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+              <span className="w-2 h-2 rounded-full bg-success shrink-0" />
+              <span>
+                Journey: <strong className="text-foreground capitalize">{contactJourney.current_phase?.replace(/_/g, " ") ?? "enrolled"}</strong>
+                {contactJourney.created_at && (
+                  <> &middot; since {new Date(contactJourney.created_at).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })}</>
+                )}
+                {engagementScore != null && (
+                  <> &middot; Score: {engagementScore}</>
+                )}
+              </span>
+            </div>
           )}
 
           {/* Prospect 360 — Email History + Quick Log */}
