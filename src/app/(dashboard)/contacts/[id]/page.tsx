@@ -22,6 +22,7 @@ import { ActivitySparkline } from "@/components/contacts/ActivitySparkline";
 import { ContextLog } from "@/components/contacts/ContextLog";
 import { ProspectControls } from "@/components/contacts/ProspectControls";
 import { LogInteractionDialog } from "@/components/contacts/LogInteractionDialog";
+import { NotesDialog } from "@/components/contacts/NotesDialog";
 import { WebsiteActivityLoader } from "@/components/contacts/WebsiteActivityLoader";
 import { DeleteContactButton } from "@/components/contacts/DeleteContactButton";
 import { ContactDetailLayout } from "@/components/contacts/ContactDetailLayout";
@@ -650,13 +651,18 @@ export default async function ContactDetailPage({
             />
           </MobileDetailSheet>
 
-          {/* Quick Action Bar — grouped: primary communication + secondary tools */}
+          {/* Quick Action Bar — each action opens focused dialog with history */}
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-1.5 bg-card border border-border rounded-lg p-1">
               <QuickActionBar
                 contactId={id}
                 contactPhone={contact.phone}
                 contactChannel={contact.pref_channel}
+              />
+              <NotesDialog
+                contactId={id}
+                contactName={contact.name}
+                communications={typedCommunications}
               />
               <EmailComposer
                 contactId={id}

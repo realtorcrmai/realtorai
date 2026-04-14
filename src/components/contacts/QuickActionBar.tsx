@@ -149,26 +149,7 @@ export function QuickActionBar({
         Call
       </Button>
       {/* Voice + Text hidden — SMS/Voice/WhatsApp integrations not active yet */}
-      {/* <ClickToVoiceButton agentEmail="" focusType="contact" focusId={contactId} label="Voice" size="sm" /> */}
-      {/* <Button variant="outline" size="sm" onClick={() => setMode("text")}><MessageSquare className="h-3.5 w-3.5 mr-1.5" />Text</Button> */}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={scrollToTimeline}
-        className="text-xs bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:text-amber-800 dark:bg-amber-950/20 dark:border-amber-800/30 dark:text-amber-400 dark:hover:bg-amber-950/40"
-      >
-        <StickyNote className="h-3.5 w-3.5 mr-1.5" />
-        Log Note
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={scrollToTasks}
-        className="text-xs bg-brand-muted border-brand/20 text-brand-dark hover:bg-brand-muted hover:text-brand-dark dark:bg-foreground/20 dark:border-brand/15 dark:text-brand-light dark:hover:bg-foreground/40"
-      >
-        <ListTodo className="h-3.5 w-3.5 mr-1.5" />
-        Add Task
-      </Button>
+      {/* Log Note + Add Task are now separate dialog components rendered in page.tsx */}
     </div>
   );
 }
