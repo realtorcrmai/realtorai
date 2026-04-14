@@ -3,7 +3,13 @@ import { notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrackRecentView } from "@/components/shared/TrackRecentView";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Mail, MessageSquare, Edit } from "lucide-react";
+import { Phone, Mail, MessageSquare, Edit, MoreHorizontal, Building2, Clock, TrendingUp, Users } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ContactForm } from "@/components/contacts/ContactForm";
 import { ContactContextPanel } from "@/components/contacts/ContactContextPanel";
 import { MobileDetailSheet } from "@/components/layout/MobileDetailSheet";
@@ -527,14 +533,23 @@ export default async function ContactDetailPage({
                     </div>
                   </div>
 
-                  {/* Actions — Edit prominent, Delete in secondary position */}
+                  {/* Actions — Edit prominent, destructive actions in More menu */}
                   <div className="flex items-center gap-1.5 shrink-0">
                     <ContactForm
                       contact={contact}
                       allContacts={(allContacts ?? []) as { id: string; name: string }[]}
                       trigger={<Button variant="outline" size="sm"><Edit className="h-3.5 w-3.5 mr-1" />Edit</Button>}
                     />
-                    <DeleteContactButton contactId={id} contactName={contact.name} />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm"><MoreHorizontal className="h-3.5 w-3.5" /></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" asChild>
+                          <div><DeleteContactButton contactId={id} contactName={contact.name} variant="menuItem" /></div>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
 
@@ -570,6 +585,54 @@ export default async function ContactDetailPage({
                 {contact.notes && (
                   <p className="text-sm text-muted-foreground mt-2 italic">{contact.notes}</p>
                 )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* KPI Stat Cards — Dashboard style */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <Card className="border-l-4 border-l-brand">
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+                  <TrendingUp className="h-4 w-4 text-brand" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Lead Score</p>
+                  <p className="text-xl font-semibold text-foreground">{engagementScore ?? "—"}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-[#f5c26b]">
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-[#f5c26b]/10 flex items-center justify-center shrink-0">
+                  <Users className="h-4 w-4 text-[#8a5a1e]" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Network</p>
+                  <p className="text-xl font-semibold text-foreground">{relationships.length + allReferrals.length}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-success">
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+                  <Building2 className="h-4 w-4 text-success" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Portfolio</p>
+                  <p className="text-xl font-semibold text-foreground">{(portfolioData ?? []).length}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-primary">
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <Clock className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Last Contact</p>
+                  <p className="text-sm font-semibold text-foreground">{lastContactedText}</p>
+                </div>
               </CardContent>
             </Card>
           </div>

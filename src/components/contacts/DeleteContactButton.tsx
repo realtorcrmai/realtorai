@@ -19,9 +19,11 @@ import { deleteContact } from "@/actions/contacts";
 export function DeleteContactButton({
   contactId,
   contactName,
+  variant = "button",
 }: {
   contactId: string;
   contactName: string;
+  variant?: "button" | "menuItem";
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -43,15 +45,26 @@ export function DeleteContactButton({
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
-        className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
-        onClick={() => setOpen(true)}
-      >
-        <Trash2 className="h-3.5 w-3.5 mr-1" />
-        Delete
-      </Button>
+      {variant === "menuItem" ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-2 w-full text-sm text-destructive"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          Delete contact
+        </button>
+      ) : (
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+          onClick={() => setOpen(true)}
+        >
+          <Trash2 className="h-3.5 w-3.5 mr-1" />
+          Delete
+        </Button>
+      )}
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
