@@ -311,6 +311,7 @@ export default async function ContactDetailPage({
             { label: "Budget", value: buyerPreferences?.price_range_max ? `Up to ${fmt(buyerPreferences.price_range_max)}` : null, filled: !!buyerPreferences?.price_range_max },
             { label: "Areas", value: buyerPreferences?.preferred_areas?.join(", ") || null, filled: (buyerPreferences?.preferred_areas?.length ?? 0) > 0 },
             { label: "Property Type", value: buyerPreferences?.property_types?.join(", ") || null, filled: !!buyerPreferences?.property_types?.join(", ") },
+            { label: "Timeline", value: buyerPreferences?.timeline || buyerPreferences?.move_in_timeline || null, filled: !!(buyerPreferences?.timeline || buyerPreferences?.move_in_timeline) },
             { label: "Financing", value: buyerPreferences?.financing_status || null, filled: !!buyerPreferences?.financing_status },
             { label: "Pre-Approval", value: fmt(buyerPreferences?.pre_approval_amount as number), filled: !!buyerPreferences?.pre_approval_amount },
             { label: "Must-Haves", value: buyerPreferences?.must_haves?.join(", ") || null, filled: (buyerPreferences?.must_haves?.length ?? 0) > 0 },

@@ -210,13 +210,13 @@ export function BuyerPreferencesPanel({
               </p>
             </div>
           )}
-          {preferences?.move_in_timeline && (
+          {(preferences?.move_in_timeline || preferences?.timeline) && (
             <div className="p-3 rounded-lg bg-muted/30">
               <p className="text-xs text-muted-foreground uppercase font-medium">
                 Timeline
               </p>
               <p className="text-sm font-medium mt-1">
-                {preferences.move_in_timeline}
+                {preferences.move_in_timeline || preferences.timeline}
               </p>
             </div>
           )}
