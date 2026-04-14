@@ -3,13 +3,7 @@ import { notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrackRecentView } from "@/components/shared/TrackRecentView";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Mail, MessageSquare, Edit, MoreHorizontal, Building2, Clock, TrendingUp, Users } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Phone, Mail, MessageSquare, Edit, Building2, Clock, TrendingUp, Users } from "lucide-react";
 import { ContactForm } from "@/components/contacts/ContactForm";
 import { ContactContextPanel } from "@/components/contacts/ContactContextPanel";
 import { MobileDetailSheet } from "@/components/layout/MobileDetailSheet";
@@ -552,16 +546,7 @@ export default async function ContactDetailPage({
                       allContacts={(allContacts ?? []) as { id: string; name: string }[]}
                       trigger={<Button variant="outline" size="sm"><Edit className="h-3.5 w-3.5 mr-1" />Edit</Button>}
                     />
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm"><MoreHorizontal className="h-3.5 w-3.5" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem className="text-destructive focus:text-destructive" asChild>
-                          <div><DeleteContactButton contactId={id} contactName={contact.name} variant="menuItem" /></div>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <DeleteContactButton contactId={id} contactName={contact.name} variant="moreMenu" />
                   </div>
                 </div>
 
