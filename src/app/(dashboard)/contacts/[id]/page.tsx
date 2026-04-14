@@ -24,6 +24,7 @@ import { ContactDetailTabs } from "@/components/contacts/ContactDetailTabs";
 import { JourneyProgressBar } from "@/components/contacts/JourneyProgressBar";
 import { EmailHistoryTimeline } from "@/components/contacts/EmailHistoryTimeline";
 import { IntelligencePanel } from "@/components/contacts/IntelligencePanel";
+import { ActivitySparkline } from "@/components/contacts/ActivitySparkline";
 import { ContextLog } from "@/components/contacts/ContextLog";
 import { ProspectControls } from "@/components/contacts/ProspectControls";
 import { LogInteractionDialog } from "@/components/contacts/LogInteractionDialog";
@@ -455,9 +456,18 @@ export default async function ContactDetailPage({
   const scoreColor = engagementScore != null ? (engagementScore >= 60 ? "bg-destructive/15 text-destructive border-destructive/30" : engagementScore >= 30 ? "bg-[#f5c26b]/15 text-[#8a5a1e] border-[#f5c26b]/30" : "bg-muted text-muted-foreground") : "";
 
   const lastComm = typedCommunications.length > 0 ? typedCommunications[0] : null;
+  const lastContactedDaysAgo = lastComm
+    ? Math.floor((Date.now() - new Date(lastComm.created_at).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
   const lastContactedText = lastComm
-    ? `Last contact: ${new Date(lastComm.created_at).toLocaleDateString("en-CA", { month: "short", day: "numeric" })} via ${lastComm.channel}`
-    : "No contact history";
+    ? lastContactedDaysAgo === 0 ? "Today"
+      : lastContactedDaysAgo === 1 ? "Yesterday"
+      : `${lastContactedDaysAgo}d ago`
+    : "Never";
+  const lastContactUrgency = lastContactedDaysAgo === null ? "text-destructive"
+    : lastContactedDaysAgo <= 7 ? "text-success"
+    : lastContactedDaysAgo <= 30 ? "text-[#8a5a1e]"
+    : "text-destructive";
 
   const avatarColor = contact.type === "seller" ? "bg-brand" : contact.type === "buyer" ? "bg-primary" : "bg-[#516f90]";
 
@@ -515,7 +525,9 @@ export default async function ContactDetailPage({
 
                     {/* Last contacted + social */}
                     <div className="flex items-center gap-4 mt-1 flex-wrap">
-                      <span className="text-xs text-muted-foreground">{lastContactedText}</span>
+                      <span className={`text-xs ${lastContactUrgency}`}>
+                        {lastComm ? `${lastContactedText} via ${lastComm.channel}` : lastContactedText}
+                      </span>
                       {contact.social_profiles && typeof contact.social_profiles === "object" && Object.keys(contact.social_profiles as Record<string, string>).length > 0 && (
                         <div className="flex items-center gap-1.5">
                           {Object.entries(contact.social_profiles as Record<string, string>).map(([platform, handle]) => {
@@ -631,7 +643,7 @@ export default async function ContactDetailPage({
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Last Contact</p>
-                  <p className="text-sm font-semibold text-foreground">{lastContactedText}</p>
+                  <p className={`text-sm font-semibold ${lastContactUrgency}`}>{lastContactedText}</p>
                 </div>
               </CardContent>
             </Card>
@@ -747,6 +759,15 @@ export default async function ContactDetailPage({
           <IntelligencePanel
             intelligence={intel}
             totalEmails={newslettersWithEvents.length}
+          />
+        </div>
+      )}
+
+      {/* Activity Sparkline — 30-day communication pattern */}
+      {typedCommunications.length > 0 && (
+        <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-[#f5c26b] pl-4 rounded-sm shrink-0">
+          <ActivitySparkline
+            communicationDates={typedCommunications.map((c: { created_at: string }) => c.created_at)}
           />
         </div>
       )}
