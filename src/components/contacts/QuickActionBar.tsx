@@ -58,18 +58,22 @@ export function QuickActionBar({
   }
 
   function scrollToTimeline() {
-    const el = document.getElementById("comm-timeline");
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
-    }
-    setMode("note");
+    // Dispatch event so ContactDetailTabs switches to Activity tab
+    window.dispatchEvent(new CustomEvent("contact:switch-tab", { detail: { tab: "activity", openNote: true } }));
+    // Fallback: scroll to timeline if already visible
+    setTimeout(() => {
+      const el = document.getElementById("comm-timeline");
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    }, 300);
   }
 
   function scrollToTasks() {
-    const el = document.getElementById("tasks-panel");
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
-    }
+    // Switch to Activity tab (tasks live there) then scroll
+    window.dispatchEvent(new CustomEvent("contact:switch-tab", { detail: { tab: "activity" } }));
+    setTimeout(() => {
+      const el = document.getElementById("tasks-panel");
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    }, 300);
   }
 
   if (mode !== "idle") {

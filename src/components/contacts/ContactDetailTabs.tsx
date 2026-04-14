@@ -252,6 +252,16 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
   const [triggerProperties, setTriggerProperties] = useState(false);
   const [triggerDocs, setTriggerDocs] = useState(false);
 
+  // ── Listen for tab switch events from action bar ──
+  useEffect(() => {
+    function handleTabSwitch(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.tab) setCurrentTab(detail.tab);
+    }
+    window.addEventListener("contact:switch-tab", handleTabSwitch);
+    return () => window.removeEventListener("contact:switch-tab", handleTabSwitch);
+  }, []);
+
   // ── Lazy-load activity log when Activity tab is selected ──
   const [lazyActivities, setLazyActivities] = useState<ActivityRow[] | null>(activities);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
