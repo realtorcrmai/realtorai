@@ -96,8 +96,8 @@ export function PropertyDealsTab({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-semibold text-[var(--lf-text)]">Co-Owned Properties</h3>
-          <p className="text-xs text-[var(--lf-text)]/50">Properties {contactName} owns with others</p>
+          <h3 className="font-semibold text-[var(--lf-text)]">Property Deals</h3>
+          <p className="text-xs text-[var(--lf-text)]/50">Properties and deals involving {contactName}</p>
         </div>
         <button onClick={() => setShowWizard(true)} className="lf-btn text-xs px-4 py-1.5">
           + Add Property

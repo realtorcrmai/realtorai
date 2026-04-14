@@ -629,12 +629,12 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
             <div className="flex items-center gap-1.5">
               <Input
                 type="number"
-                min={1}
+                min={0}
                 max={100}
                 className="h-9 w-20 text-right"
                 value={ownershipPct}
                 onChange={(e) => {
-                  const val = Math.max(1, Math.min(100 - coOwnerTotal, Number(e.target.value) || 1));
+                  const val = Math.max(0, Math.min(100 - coOwnerTotal, Number(e.target.value) || 0));
                   setOwnershipPct(String(val));
                 }}
                 disabled={saving || coOwners.length > 0}
@@ -747,7 +747,7 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
                 <label className="text-sm font-medium">Ownership %</label>
                 <Input
                   type="number"
-                  min={1}
+                  min={0}
                   max={maxNewCoOwnerPct}
                   className="h-10 w-24"
                   value={newCoOwner.ownership_pct}

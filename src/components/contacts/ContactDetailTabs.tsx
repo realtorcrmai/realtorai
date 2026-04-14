@@ -632,7 +632,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             </Card>
           )}
 
-          {/* Co-owned Properties / Business Partners */}
+          {/* Property Deals — owned, co-owned, and business partnerships */}
           <Card className="border-l-4 border-l-amber-400 bg-amber-50/15 dark:bg-amber-950/10">
             <CardContent className="p-4">
               <PropertyDealsTab
