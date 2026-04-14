@@ -144,22 +144,9 @@ export function QuickActionBar({
         <Phone className="h-3.5 w-3.5 mr-1.5" />
         Call
       </Button>
-      <ClickToVoiceButton
-        agentEmail=""
-        focusType="contact"
-        focusId={contactId}
-        label="Voice"
-        size="sm"
-      />
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setMode("text")}
-        className="text-xs bg-brand-muted border-brand/20 text-brand-dark hover:bg-brand-muted hover:text-brand-dark dark:bg-blue-950/20 dark:border-blue-800/30 dark:text-brand-light dark:hover:bg-blue-950/40"
-      >
-        <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-        Text
-      </Button>
+      {/* Voice + Text hidden — SMS/Voice/WhatsApp integrations not active yet */}
+      {/* <ClickToVoiceButton agentEmail="" focusType="contact" focusId={contactId} label="Voice" size="sm" /> */}
+      {/* <Button variant="outline" size="sm" onClick={() => setMode("text")}><MessageSquare className="h-3.5 w-3.5 mr-1.5" />Text</Button> */}
       <Button
         variant="outline"
         size="sm"

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrackRecentView } from "@/components/shared/TrackRecentView";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Mail, MessageSquare, Edit, Building2, Clock, TrendingUp, Users } from "lucide-react";
+import { Phone, Mail, Edit, Building2, Clock, TrendingUp, Users } from "lucide-react";
 import { ContactForm } from "@/components/contacts/ContactForm";
 import { ContactContextPanel } from "@/components/contacts/ContactContextPanel";
 import { MobileDetailSheet } from "@/components/layout/MobileDetailSheet";
@@ -511,10 +511,7 @@ export default async function ContactDetailPage({
                           <span>{contact.email}</span>
                         </a>
                       )}
-                      <span className="flex items-center gap-1.5 text-muted-foreground">
-                        <MessageSquare className="h-3.5 w-3.5" />
-                        <span className="capitalize">Prefers {contact.pref_channel}</span>
-                      </span>
+                      {/* Pref channel hidden — SMS/WhatsApp integrations not active yet */}
                     </div>
 
                     {/* Last contacted + social */}
