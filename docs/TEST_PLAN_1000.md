@@ -2156,7 +2156,22 @@ Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. Thi
 **Expected:** 200 on success. Returns 404 for invalid member_id.
 **Priority:** P3
 
-#### API-CTEXT-027: GET /api/contacts/:id/activities returns contact activity log
+#### API-CTEXT-027: GET /api/contacts/:id/portfolio returns portfolio properties
+**Steps:** `GET /api/contacts/{id}/portfolio` with valid session.
+**Expected:** 200 with array of portfolio items (address, city, property_type, status). Returns 401 without session.
+**Priority:** P2
+
+#### API-CTEXT-028: POST /api/contacts/:id/portfolio adds a portfolio property
+**Steps:** `POST /api/contacts/{id}/portfolio` with `{ address: "123 Main St", city: "Vancouver", property_type: "detached", status: "owned" }`.
+**Expected:** 201 with created portfolio record. Returns 400 for missing address. Respects tenant isolation.
+**Priority:** P2
+
+#### API-CTEXT-029: DELETE /api/contacts/:id/portfolio removes a portfolio property
+**Steps:** `DELETE /api/contacts/{id}/portfolio?item_id={pid}`.
+**Expected:** 200 on success. Returns 400 for missing item_id. Returns 404 for invalid item_id.
+**Priority:** P3
+
+#### API-CTEXT-030: GET /api/contacts/:id/activities returns contact activity log
 **Steps:** `GET /api/contacts/{id}/activities` with valid session.
 **Expected:** 200 with array of activity records sorted by date desc. Returns 404 for invalid id.
 **Priority:** P2
