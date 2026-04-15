@@ -4,15 +4,40 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
 
-function verifyResendSignature(payload: string, signature: string): boolean {
+/**
+ * Verify a Svix webhook signature.
+ * Resend uses Svix, which signs: "{svix-id}.{svix-timestamp}.{rawBody}"
+ * The secret has a "whsec_" prefix and is base64-encoded.
+ * The svix-signature header is a space-separated list of "v1,<base64sig>" entries.
+ */
+function verifyResendSignature(
+  rawBody: string,
+  svixId: string,
+  svixTimestamp: string,
+  svixSignature: string,
+): boolean {
   const secret = process.env.RESEND_WEBHOOK_SECRET ?? '';
-  if (!secret || !signature) return false;
+  if (!secret || !svixId || !svixTimestamp || !svixSignature) return false;
   try {
-    const expected = createHmac('sha256', secret).update(payload).digest('hex');
-    const sigBuf = Buffer.from(signature);
-    const expBuf = Buffer.from(expected);
-    if (sigBuf.length !== expBuf.length) return false;
-    return timingSafeEqual(sigBuf, expBuf);
+    // Svix signs: "{id}.{timestamp}.{body}"
+    const signPayload = `${svixId}.${svixTimestamp}.${rawBody}`;
+    // Secret may have whsec_ prefix — strip it and decode base64
+    const secretBytes = Buffer.from(secret.replace(/^whsec_/, ''), 'base64');
+    const expectedSig = createHmac('sha256', secretBytes)
+      .update(signPayload)
+      .digest('base64');
+    // svix-signature is space-separated list of "v1,<base64sig>" entries
+    const sigs = svixSignature.split(' ');
+    return sigs.some(sig => {
+      const [, hash] = sig.split(',');
+      if (!hash) return false;
+      try {
+        const hashBuf = Buffer.from(hash, 'base64');
+        const expectedBuf = Buffer.from(expectedSig, 'base64');
+        if (hashBuf.length !== expectedBuf.length) return false;
+        return timingSafeEqual(hashBuf, expectedBuf);
+      } catch { return false; }
+    });
   } catch {
     return false;
   }
@@ -20,12 +45,21 @@ function verifyResendSignature(payload: string, signature: string): boolean {
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
-  const signature =
-    req.headers.get('svix-signature') ?? req.headers.get('resend-signature') ?? '';
 
-  // Verify signature — skip in dev when secret is not configured
   const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
-  if (webhookSecret && !verifyResendSignature(rawBody, signature)) {
+
+  // In production, require RESEND_WEBHOOK_SECRET — fail safe if not configured
+  if (!webhookSecret && process.env.NODE_ENV === 'production') {
+    console.error('[resend-webhook] RESEND_WEBHOOK_SECRET not set in production');
+    return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 });
+  }
+
+  const svixId = req.headers.get('svix-id') ?? '';
+  const svixTimestamp = req.headers.get('svix-timestamp') ?? '';
+  const svixSignature = req.headers.get('svix-signature') ?? '';
+
+  // Verify Svix signature — skip in dev when secret is not configured
+  if (webhookSecret && !verifyResendSignature(rawBody, svixId, svixTimestamp, svixSignature)) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 

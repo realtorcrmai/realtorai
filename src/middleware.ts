@@ -40,6 +40,12 @@ export async function middleware(request: NextRequest) {
     // Editorial generation worker (CRON_SECRET auth, not session)
     pathname === "/api/editorial/generate" ||
 
+    // Editorial unsubscribe (HMAC-signed token + expiry, not session)
+    pathname.startsWith("/api/editorial/unsubscribe") ||
+
+    // Editorial Resend webhook (Svix-signed, not session)
+    pathname.startsWith("/api/editorial/webhooks/resend") ||
+
     // Unsubscribe (HMAC-signed token, not session)
     pathname.startsWith("/api/newsletters/unsubscribe") ||
 

@@ -1,13 +1,14 @@
-import { createHmac } from 'crypto'
+import { createHmac, timingSafeEqual } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
-function generateToken(email: string, editionId: string): string {
+/** Generate HMAC token including a timestamp for expiry support */
+function generateToken(email: string, editionId: string, ts: number): string {
   const secret = process.env.NEXTAUTH_SECRET ?? ''
   return createHmac('sha256', secret)
-    .update(`${email}:${editionId}`)
+    .update(`${email}:${editionId}:${ts}`)
     .digest('hex')
 }
 
@@ -16,14 +17,34 @@ export async function GET(req: NextRequest) {
   const email = searchParams.get('email')
   const editionId = searchParams.get('edition_id')
   const token = searchParams.get('token')
+  const tsParam = searchParams.get('ts')
 
-  if (!email || !editionId || !token) {
+  if (!email || !editionId || !token || !tsParam) {
     return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
   }
 
-  // Validate HMAC token
-  const expectedToken = generateToken(email, editionId)
-  if (token !== expectedToken) {
+  const ts = parseInt(tsParam, 10)
+  if (isNaN(ts)) {
+    return NextResponse.json({ error: 'Invalid token parameters' }, { status: 400 })
+  }
+
+  // Validate 30-day expiry
+  const ageSeconds = Math.floor(Date.now() / 1000) - ts
+  if (ageSeconds < 0 || ageSeconds > 30 * 86400) {
+    return NextResponse.json({ error: 'Unsubscribe link has expired' }, { status: 403 })
+  }
+
+  // Constant-time HMAC comparison (prevents timing attacks)
+  const expectedToken = generateToken(email, editionId, ts)
+  let tokenMatch = false
+  try {
+    const tokenBuf = Buffer.from(token, 'hex')
+    const expectedBuf = Buffer.from(expectedToken, 'hex')
+    if (tokenBuf.length === expectedBuf.length) {
+      tokenMatch = timingSafeEqual(tokenBuf, expectedBuf)
+    }
+  } catch { tokenMatch = false }
+  if (!tokenMatch) {
     return NextResponse.json({ error: 'Invalid unsubscribe token' }, { status: 403 })
   }
 

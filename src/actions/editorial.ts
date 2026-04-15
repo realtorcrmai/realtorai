@@ -1,6 +1,6 @@
 'use server';
 
-import { createHmac } from 'crypto';
+import { createHmac, randomInt } from 'crypto';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { getAuthenticatedTenantClient } from '@/lib/supabase/tenant';
@@ -14,11 +14,12 @@ const UNSUBSCRIBE_PLACEHOLDER = '__UNSUBSCRIBE_URL__';
 
 function buildUnsubscribeUrl(email: string, editionId: string): string {
   const secret = process.env.NEXTAUTH_SECRET ?? '';
+  const ts = Math.floor(Date.now() / 1000);
   const token = createHmac('sha256', secret)
-    .update(`${email}:${editionId}`)
+    .update(`${email}:${editionId}:${ts}`)
     .digest('hex');
   const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-  return `${base}/api/editorial/unsubscribe?email=${encodeURIComponent(email)}&edition_id=${encodeURIComponent(editionId)}&token=${token}`;
+  return `${base}/api/editorial/unsubscribe?email=${encodeURIComponent(email)}&edition_id=${encodeURIComponent(editionId)}&token=${token}&ts=${ts}`;
 }
 import type {
   EditorialEdition,
@@ -525,6 +526,14 @@ export async function sendEdition(
       return { data: null, error: 'Edition not found' };
     }
 
+    // Prevent accidental re-send of already-sent editions
+    if (edition.status === 'sent' && !options?.test_email) {
+      return {
+        data: null,
+        error: `Edition has already been sent on ${edition.sent_at ? new Date(edition.sent_at).toLocaleDateString() : 'a previous date'}. Duplicate sends are blocked to protect your subscriber list.`,
+      };
+    }
+
     if (edition.status !== 'ready') {
       return {
         data: null,
@@ -708,7 +717,7 @@ export async function sendEdition(
         );
 
         // A/B split: randomly assign each recipient to variant 'a' or 'b'
-        const abVariant: 'a' | 'b' = hasABTest && Math.random() < 0.5 ? 'b' : 'a';
+        const abVariant: 'a' | 'b' = hasABTest && randomInt(0, 2) === 0 ? 'b' : 'a';
         const resolvedSubject = hasABTest
           ? (abVariant === 'b' ? edition.subject_b! : edition.subject_a!)
           : subject;
@@ -777,11 +786,13 @@ export async function sendEdition(
     revalidatePath('/newsletters/editorial');
 
     // Fire-and-forget voice learning — never fails the send
-    void extractVoiceSignalFromEdition(
+    extractVoiceSignalFromEdition(
       editionId,
       tc.realtorId,
       (edition.blocks as unknown[]) ?? [],
-    );
+    ).catch(err => {
+      console.warn('[sendEdition] Voice learning failed (non-fatal):', err instanceof Error ? err.message : err)
+    });
 
     return {
       data: { sent, skipped, failed, edition_id: editionId },
