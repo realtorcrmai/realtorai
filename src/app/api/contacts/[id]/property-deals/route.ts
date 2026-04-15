@@ -171,9 +171,20 @@ export async function PATCH(
   if (!dealId) return NextResponse.json({ error: "deal_id required" }, { status: 400 });
 
   const body = await req.json();
+
+  // Allowlist of fields that can be updated on property_deals
+  const ALLOWED_FIELDS = [
+    "address", "property_type", "listing_id", "notes",
+  ];
+  const safeUpdate: Record<string, unknown> = {};
+  for (const key of ALLOWED_FIELDS) {
+    if (key in body) safeUpdate[key] = body[key];
+  }
+  safeUpdate.updated_at = new Date().toISOString();
+
   const { data, error } = await tc
     .from("property_deals")
-    .update({ ...body, updated_at: new Date().toISOString() })
+    .update(safeUpdate)
     .eq("id", dealId)
     .select()
     .single();

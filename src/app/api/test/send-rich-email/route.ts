@@ -40,6 +40,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not available in production" }, { status: 403 });
   }
 
+  // Require cron secret even in dev to prevent unauthorized email sending
+  const authHeader = req.headers.get("authorization");
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await req.json();
   const { contactId, emailType, realtorId } = body;
 

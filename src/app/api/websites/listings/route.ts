@@ -15,6 +15,13 @@ export async function GET(request: NextRequest) {
   const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
+  if (!auth.realtorId) {
+    return NextResponse.json(
+      { error: "Tenant context required", code: "MISSING_TENANT" },
+      { status: 401, headers: corsHeaders(request) }
+    );
+  }
+
   const supabase = createAdminClient();
   const url = new URL(request.url);
   const type = url.searchParams.get("type");
@@ -27,6 +34,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("listings")
     .select("id, address, list_price, status, mls_number, prop_type, hero_image_url, mls_remarks, created_at")
+    .eq("realtor_id", auth.realtorId)
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);

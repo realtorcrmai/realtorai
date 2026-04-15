@@ -15,6 +15,13 @@ export async function POST(request: NextRequest) {
   const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
+  if (!auth.realtorId) {
+    return NextResponse.json(
+      { error: "Tenant context required", code: "MISSING_TENANT" },
+      { status: 401, headers: corsHeaders(request) }
+    );
+  }
+
   const body = await request.json();
 
   // Accept single event or batch
@@ -38,6 +45,7 @@ export async function POST(request: NextRequest) {
   const supabase = createAdminClient();
 
   const rows = events.map((e: Record<string, unknown>) => ({
+    realtor_id: auth.realtorId,
     session_id: (e.session_id as string) || "unknown",
     event_type: (e.event_type as string) || "page_view",
     page_path: (e.page_url as string) || (e.page_path as string) || null,

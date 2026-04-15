@@ -14,6 +14,13 @@ export async function POST(request: NextRequest) {
   const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
+  if (!auth.realtorId) {
+    return NextResponse.json(
+      { error: "Tenant context required", code: "MISSING_TENANT" },
+      { status: 401, headers: corsHeaders(request) }
+    );
+  }
+
   const body = await request.json();
   const { name, phone, email, address, property_type, beds, baths, sqft } = body;
 
@@ -41,6 +48,7 @@ export async function POST(request: NextRequest) {
   const { data: existing } = await supabase
     .from("contacts")
     .select("id")
+    .eq("realtor_id", auth.realtorId)
     .eq("phone", normalizedPhone)
     .limit(1)
     .maybeSingle();
@@ -59,6 +67,7 @@ export async function POST(request: NextRequest) {
     const { data: contact, error } = await supabase
       .from("contacts")
       .insert({
+        realtor_id: auth.realtorId,
         name,
         phone: normalizedPhone,
         email: email || null,
@@ -87,6 +96,7 @@ export async function POST(request: NextRequest) {
 
   // Create high-priority task
   await supabase.from("tasks").insert({
+    realtor_id: auth.realtorId,
     title: `Home Valuation Request — ${name}`,
     description: propertyDetails,
     contact_id: contactId,
@@ -97,6 +107,7 @@ export async function POST(request: NextRequest) {
 
   // Create urgent notification
   await supabase.from("agent_notifications").insert({
+    realtor_id: auth.realtorId,
     title: "Home Valuation Request",
     body: `${name} wants a valuation for ${address}. Call them!`,
     type: "urgent",
