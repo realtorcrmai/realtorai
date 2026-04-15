@@ -34,6 +34,7 @@ export function useVoiceNotifications(agentEmail: string | null): UseVoiceNotifi
     if (!agentEmail) return;
 
     let aborted = false;
+    const abortController = new AbortController();
 
     const email = agentEmail;
 
@@ -51,7 +52,7 @@ export function useVoiceNotifications(agentEmail: string | null): UseVoiceNotifi
         url += `&last_event_id=${encodeURIComponent(lastEventIdRef.current)}`;
       }
 
-      fetch(url, { signal: AbortSignal.timeout(300_000) })
+      fetch(url, { signal: abortController.signal })
         .then(async (res) => {
           if (!res.ok || !res.body) {
             throw new Error("SSE connection failed");
@@ -109,6 +110,7 @@ export function useVoiceNotifications(agentEmail: string | null): UseVoiceNotifi
 
     return () => {
       aborted = true;
+      abortController.abort();
       setConnected(false);
     };
   }, [agentEmail]);

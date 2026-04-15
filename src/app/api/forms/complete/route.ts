@@ -16,7 +16,7 @@ import { getDocType } from "@/lib/forms/constants";
  * 5. Returns the PDF URL for download
  */
 export async function POST(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
+  const { unauthorized, session } = await requireAuth();
   if (unauthorized) return unauthorized;
 
   try {
@@ -29,7 +29,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!/^[a-zA-Z0-9_-]+$/.test(formKey)) {
+      return NextResponse.json(
+        { error: "Invalid form key format" },
+        { status: 400 }
+      );
+    }
+
     const supabase = createAdminClient();
+
+    // Verify listing belongs to the authenticated user
+    const { data: listing, error: listingErr } = await supabase
+      .from("listings")
+      .select("id")
+      .eq("id", listingId)
+      .eq("realtor_id", session!.user.id)
+      .single();
+
+    if (listingErr || !listing) {
+      return NextResponse.json(
+        { error: "Listing not found or access denied" },
+        { status: 403 }
+      );
+    }
 
     // Fetch template
     const { data: template, error: tplErr } = await supabase

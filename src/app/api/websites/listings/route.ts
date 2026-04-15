@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateApiKey, corsHeaders, handleCORS, createAdminClient } from "@/lib/website-api";
+import { escapeIlike } from "@/lib/escape-ilike";
 
 export async function OPTIONS(request: NextRequest) {
   return handleCORS(request);
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
     .range(offset, offset + limit - 1);
 
   if (type) query = query.eq("prop_type", type);
-  if (area) query = query.ilike("address", `%${area}%`);
+  if (area) query = query.ilike("address", `%${escapeIlike(area)}%`);
   if (minPrice) query = query.gte("list_price", parseInt(minPrice));
   if (maxPrice) query = query.lte("list_price", parseInt(maxPrice));
 

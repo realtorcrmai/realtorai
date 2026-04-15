@@ -15,6 +15,10 @@ export async function createListing(formData: ListingFormData) {
     return { error: "Invalid form data", issues: parsed.error.issues };
   }
 
+  if (parsed.data.list_price != null && !Number.isFinite(parsed.data.list_price)) {
+    return { error: "list_price must be a finite number" };
+  }
+
   const tc = await getAuthenticatedTenantClient();
   const { data, error } = await tc
     .from("listings")
@@ -74,6 +78,15 @@ export async function updateListing(
   }
 ) {
   const tc = await getAuthenticatedTenantClient();
+
+  // Validate numeric fields are finite
+  const numericFields = ["list_price", "sold_price", "commission_rate", "commission_amount"] as const;
+  for (const field of numericFields) {
+    const val = formData[field as keyof typeof formData];
+    if (val != null && typeof val === "number" && !Number.isFinite(val)) {
+      return { error: `${field} must be a finite number` };
+    }
+  }
 
   // Auto-calculate commission if sold_price and commission_rate are provided
   const updateData = { ...formData };

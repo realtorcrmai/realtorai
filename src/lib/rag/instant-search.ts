@@ -4,6 +4,7 @@
 // ============================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { escapeIlike } from '@/lib/escape-ilike';
 
 export interface InstantResult {
   id: string;
@@ -22,7 +23,7 @@ export interface InstantResult {
 export async function instantSearch(db: SupabaseClient, query: string): Promise<InstantResult[]> {
   if (!query || query.trim().length < 2) return [];
 
-  const q = query.trim();
+  const q = escapeIlike(query.trim());
 
   // Run all three queries in parallel
   const [contactsRes, listingsRes, appointmentsRes] = await Promise.all([

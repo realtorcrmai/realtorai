@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createWithRetry } from "@/lib/anthropic/retry";
 import { validateApiKey, corsHeaders, handleCORS, normalizePhone, createAdminClient } from "@/lib/website-api";
+import { escapeIlike } from "@/lib/escape-ilike";
 
 export async function OPTIONS(request: NextRequest) {
   return handleCORS(request);
@@ -92,7 +93,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         .order("created_at", { ascending: false })
         .limit((input.limit as number) || 5);
 
-      if (input.area) query = query.ilike("address", `%${input.area}%`);
+      if (input.area) query = query.ilike("address", `%${escapeIlike(String(input.area))}%`);
       if (input.max_price) query = query.lte("list_price", input.max_price);
       if (input.min_price) query = query.gte("list_price", input.min_price);
       if (input.property_type) query = query.eq("prop_type", input.property_type);
@@ -221,7 +222,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         .from("listings")
         .select("list_price, sold_price, address, created_at")
         .eq("status", "sold")
-        .ilike("address", `%${area}%`)
+        .ilike("address", `%${escapeIlike(area)}%`)
         .order("created_at", { ascending: false })
         .limit(20);
 
@@ -229,7 +230,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         .from("listings")
         .select("id", { count: "exact", head: true })
         .eq("status", "active")
-        .ilike("address", `%${area}%`);
+        .ilike("address", `%${escapeIlike(area)}%`);
 
       const prices = (sold || []).map(s => s.sold_price || s.list_price).filter(Boolean) as number[];
       const avgPrice = prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : null;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { requireVoiceAgentAuth } from "@/lib/voice-agent-auth";
+import { tenantClient } from "@/lib/supabase/tenant";
+import { escapeIlike } from "@/lib/escape-ilike";
 
 /**
  * GET /api/voice-agent/listings
@@ -11,10 +12,10 @@ export async function GET(req: NextRequest) {
   const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
-  const supabase = createAdminClient();
+  const tc = tenantClient(auth.tenantId);
   const params = req.nextUrl.searchParams;
 
-  let query = supabase
+  let query = tc
     .from("listings")
     .select("*, contacts!listings_seller_id_fkey(name, phone, email)")
     .order("created_at", { ascending: false });
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
   // Filter by address (partial match)
   const address = params.get("address");
   if (address) {
-    query = query.ilike("address", `%${address}%`);
+    query = query.ilike("address", `%${escapeIlike(address)}%`);
   }
 
   // Filter by MLS number
@@ -40,11 +41,13 @@ export async function GET(req: NextRequest) {
   // Filter by price range
   const minPrice = params.get("min_price");
   if (minPrice) {
-    query = query.gte("list_price", Number(minPrice));
+    const min = Number(minPrice);
+    if (Number.isFinite(min)) query = query.gte("list_price", min);
   }
   const maxPrice = params.get("max_price");
   if (maxPrice) {
-    query = query.lte("list_price", Number(maxPrice));
+    const max = Number(maxPrice);
+    if (Number.isFinite(max)) query = query.lte("list_price", max);
   }
 
   // Limit results

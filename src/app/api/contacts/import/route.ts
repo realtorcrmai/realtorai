@@ -157,11 +157,6 @@ async function handleJSONImport(_tc: any, request: NextRequest) {
     }
   }
 
-  // Auto-cleanup sample contacts if user now has 5+ real contacts
-  if (imported >= 5) {
-    supabase.from("contacts").delete().eq("realtor_id", session.user.id).eq("is_sample", true).then(() => {});
-  }
-
   return NextResponse.json({
     ok: true,
     imported,
@@ -183,6 +178,9 @@ async function handleFormDataImport(tc: any, request: NextRequest) {
   const lines = text.split(/\r?\n/).filter((l) => l.trim());
   if (lines.length < 2) {
     return NextResponse.json({ error: "CSV must have header + at least 1 row" }, { status: 400 });
+  }
+  if (lines.length > 10001) {
+    return NextResponse.json({ error: "CSV too large (max 10,000 rows)" }, { status: 422 });
   }
 
   // ── Header parsing ─────────────────────────────────────────

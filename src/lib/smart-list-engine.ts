@@ -1,4 +1,5 @@
 import type { SmartList, SmartListRule, EntityType } from "@/types/smart-lists";
+import { escapeIlike } from "@/lib/escape-ilike";
 
 const TABLE_MAP: Record<EntityType, string> = {
   contacts: "contacts",
@@ -115,7 +116,7 @@ function applyRule(query: any, rule: SmartListRule): any {
       if (Array.isArray(value)) {
         return query.contains(filterField, value);
       }
-      return query.ilike(filterField, `%${value}%`);
+      return query.ilike(filterField, `%${escapeIlike(String(value))}%`);
     case "older_than":
       return query.lt(filterField, parseRelativeDate(value as string));
     case "newer_than":

@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { auth } from "@/lib/auth";
 import { trackEvent } from "@/lib/analytics";
+import { escapeIlike } from "@/lib/escape-ilike";
 
 // ── Onboarding Progress Resume ──
 
@@ -284,7 +285,7 @@ export async function searchBrokerages(query: string): Promise<string[]> {
   const { data } = await supabase
     .from("users")
     .select("brokerage")
-    .ilike("brokerage", `${query.trim()}%`)
+    .ilike("brokerage", `${escapeIlike(query.trim())}%`)
     .not("brokerage", "is", null)
     .limit(20);
 

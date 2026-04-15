@@ -22,6 +22,11 @@ export async function GET(request: NextRequest) {
     return new NextResponse("Missing consent ID", { status: 400 });
   }
 
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_RE.test(consentId)) {
+    return new NextResponse("Invalid consent ID", { status: 400 });
+  }
+
   const supabase = createAdminClient();
 
   // Find the consent record
