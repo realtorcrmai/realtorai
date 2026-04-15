@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -342,6 +342,8 @@ export function EditionEditorClient({ edition, voiceProfile: _voiceProfile, hasV
   const [sendError, setSendError] = React.useState<string | null>(null)
   const [selectedSegmentId, setSelectedSegmentId] = React.useState<string | undefined>(undefined)
   const [segments, setSegments] = React.useState<SegmentOption[]>([])
+  // Upgrade modal — shown when starter tier limit is reached
+  const [upgradeOpen, setUpgradeOpen] = React.useState(false)
 
   // Debounce timer ref for auto-save
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -476,8 +478,22 @@ export function EditionEditorClient({ edition, voiceProfile: _voiceProfile, hasV
     if (isGenerating || edition.status === 'sent') return
     setIsGenerating(true)
     try {
-      await triggerGeneration(edition.id)
+      const result = await triggerGeneration(edition.id)
+      // Check for tier limit error — show upgrade modal instead of generic error
+      if (result && 'error' in result && result.error) {
+        setIsGenerating(false)
+        const errMsg = result.error as string
+        const isLimitError =
+          errMsg.toLowerCase().includes('limit') ||
+          errMsg.toLowerCase().includes('upgrade') ||
+          errMsg.toLowerCase().includes('edition limit')
+        if (isLimitError) {
+          setUpgradeOpen(true)
+        }
+        // Non-limit errors surface via GenerationProgress polling
+      }
     } catch {
+      setIsGenerating(false)
       // GenerationProgress surfaces errors via polling
     }
   }
@@ -658,6 +674,55 @@ export function EditionEditorClient({ edition, voiceProfile: _voiceProfile, hasV
         selectedSegmentId={selectedSegmentId}
         onSegmentChange={setSelectedSegmentId}
       />
+
+      {/* Upgrade modal — shown when starter tier monthly limit is reached */}
+      <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Monthly Limit Reached</DialogTitle>
+            <DialogDescription>
+              The Free Starter plan includes 2 editions per month. Upgrade to Pro for unlimited
+              editions, A/B testing, and voice learning AI.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Mini pricing comparison */}
+          <div className="grid grid-cols-2 gap-3 py-2">
+            {/* Starter */}
+            <div className="rounded-lg border border-border bg-muted/20 p-3">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">FREE STARTER</p>
+              <ul className="space-y-1.5 text-xs text-muted-foreground">
+                <li>2 editions / month</li>
+                <li>Basic templates</li>
+                <li className="line-through opacity-50">A/B testing</li>
+                <li className="line-through opacity-50">Voice learning</li>
+              </ul>
+            </div>
+            {/* Pro */}
+            <div className="rounded-lg border-2 border-brand bg-brand/5 p-3">
+              <p className="text-xs font-semibold text-brand mb-2">PRO — $79/mo</p>
+              <ul className="space-y-1.5 text-xs text-foreground">
+                <li className="font-medium">Unlimited editions</li>
+                <li>All templates</li>
+                <li>A/B testing</li>
+                <li>Voice learning AI</li>
+              </ul>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" size="sm" onClick={() => setUpgradeOpen(false)}>
+              Maybe later
+            </Button>
+            <a
+              href="/newsletters/editorial/upgrade"
+              className={buttonVariants({ variant: 'brand', size: 'sm' })}
+            >
+              Upgrade to Pro →
+            </a>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

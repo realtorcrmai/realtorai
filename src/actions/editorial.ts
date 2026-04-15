@@ -7,6 +7,7 @@ import { getAuthenticatedTenantClient } from '@/lib/supabase/tenant';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { renderEdition } from '@/lib/editorial-renderer';
 import { extractVoiceRules } from '@/lib/editorial-ai';
+import { checkEditorialTierLimit } from '@/lib/editorial-billing';
 
 // ── Unsubscribe URL helper ────────────────────────────────────────────────────
 
@@ -446,6 +447,20 @@ export async function triggerGeneration(
         data: null,
         error: `Cannot trigger generation for an edition with status "${edition.status}". Only draft or failed editions can be regenerated.`,
       };
+    }
+
+    // ── Tier limit check ─────────────────────────────────────────────────────
+    // Only enforce on new generation requests (status = 'draft'), not on
+    // re-runs of failed editions (we already counted those when created).
+    if (edition.status === 'draft') {
+      const adminClient = createAdminClient();
+      const tierCheck = await checkEditorialTierLimit(tc.realtorId, adminClient);
+      if (!tierCheck.allowed) {
+        return {
+          data: null,
+          error: tierCheck.reason ?? 'Edition limit reached. Upgrade to Pro for unlimited editions.',
+        };
+      }
     }
 
     // Guard: too many blocks will cause generation to timeout (Vercel 30s limit)
@@ -1107,7 +1122,206 @@ export async function getGenerationStatus(
   }
 }
 
-// ── 13. getSegmentsForPicker ──────────────────────────────────────────────────
+// ── 13. updateEditorialSettings ───────────────────────────────────────────────
+
+const editorialSettingsSchema = z.object({
+  editorial_auto_draft: z.boolean(),
+  default_city: z.string().max(100).optional(),
+});
+
+/**
+ * Save editorial agent settings:
+ *  - `editorial_auto_draft` — opt in/out of Monday auto-draft cron
+ *  - `default_city`         — preferred city for market data (stored in preferred_areas[0])
+ *
+ * Upserts into `realtor_agent_config` using the authenticated user's ID.
+ */
+export async function updateEditorialSettings(data: {
+  editorial_auto_draft: boolean;
+  default_city?: string;
+}): Promise<ActionResult<void>> {
+  try {
+    const parsed = editorialSettingsSchema.safeParse(data);
+    if (!parsed.success) {
+      return { data: null, error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+    }
+
+    const tc = await getAuthenticatedTenantClient();
+    const admin = createAdminClient();
+
+    // Fetch existing preferred_areas so we only overwrite index 0
+    const { data: existing } = await admin
+      .from('realtor_agent_config')
+      .select('preferred_areas')
+      .eq('realtor_id', tc.realtorId)
+      .maybeSingle();
+
+    const existingAreas: string[] = Array.isArray(existing?.preferred_areas)
+      ? (existing.preferred_areas as string[])
+      : [];
+
+    let preferredAreas = existingAreas;
+    if (parsed.data.default_city) {
+      // Replace or set the first element; keep the rest intact
+      preferredAreas = [parsed.data.default_city, ...existingAreas.slice(1)];
+    }
+
+    const upsertPayload: Record<string, unknown> = {
+      realtor_id: tc.realtorId,
+      editorial_auto_draft: parsed.data.editorial_auto_draft,
+      preferred_areas: preferredAreas,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: upsertError } = await admin
+      .from('realtor_agent_config')
+      .upsert(upsertPayload, { onConflict: 'realtor_id' });
+
+    if (upsertError) {
+      return { data: null, error: upsertError.message };
+    }
+
+    revalidatePath('/newsletters/settings/sources');
+    revalidatePath('/newsletters/editorial');
+
+    return { data: undefined, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : 'Failed to save editorial settings',
+    };
+  }
+}
+
+// ── 14. getEditorialSettings ──────────────────────────────────────────────────
+
+export interface EditorialSettings {
+  editorial_auto_draft: boolean;
+  default_city: string;
+}
+
+export async function getEditorialSettings(): Promise<ActionResult<EditorialSettings>> {
+  try {
+    const tc = await getAuthenticatedTenantClient();
+
+    const { data, error } = await tc
+      .from('realtor_agent_config')
+      .select('editorial_auto_draft, preferred_areas')
+      .eq('realtor_id', tc.realtorId)
+      .maybeSingle();
+
+    if (error) {
+      return { data: null, error: error.message };
+    }
+
+    const preferredAreas: string[] = Array.isArray(data?.preferred_areas)
+      ? (data.preferred_areas as string[])
+      : [];
+
+    return {
+      data: {
+        editorial_auto_draft: (data?.editorial_auto_draft as boolean | null | undefined) ?? false,
+        default_city: preferredAreas[0] ?? 'Vancouver, BC',
+      },
+      error: null,
+    };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : 'Failed to fetch editorial settings',
+    };
+  }
+}
+
+// ── 15. getDataSourceHealth ───────────────────────────────────────────────────
+
+export interface DataSourceHealth {
+  name: string;
+  cache_key_prefix: string;
+  last_fetched: string | null;
+  status: 'ok' | 'error' | 'stale';
+  error?: string;
+}
+
+export async function getDataSourceHealth(): Promise<ActionResult<DataSourceHealth[]>> {
+  try {
+    const tc = await getAuthenticatedTenantClient();
+
+    // Fetch all cache rows for this realtor
+    const { data: cacheRows, error } = await tc
+      .from('external_data_cache')
+      .select('cache_key, fetched_at, expires_at, fetch_status, fetch_error')
+      .order('fetched_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      return { data: null, error: error.message };
+    }
+
+    // Group by logical source (prefix before the city+date suffix)
+    const SOURCE_LABELS: Record<string, string> = {
+      market_update:           'Market Update Data',
+      just_sold:               'Just Sold Feed',
+      rate_watch:              'Mortgage Rate Watch',
+      neighbourhood_spotlight: 'Neighbourhood Data',
+      open_house:              'Open House Feed',
+      seasonal:                'Seasonal Data',
+    };
+
+    type CacheRow = {
+      cache_key: string;
+      fetched_at: string | null;
+      expires_at: string | null;
+      fetch_status: string | null;
+      fetch_error: string | null;
+    };
+
+    const seen = new Map<string, DataSourceHealth>();
+
+    for (const row of (cacheRows ?? []) as CacheRow[]) {
+      // cache_key format: "{edition_type}_{city}_{yyyy-mm}"
+      const prefix = row.cache_key.split('_')[0] ?? row.cache_key;
+
+      if (seen.has(prefix)) continue; // already have the most-recent for this source
+
+      const status: DataSourceHealth['status'] =
+        row.fetch_status === 'error'
+          ? 'error'
+          : row.expires_at && new Date(row.expires_at) < new Date()
+          ? 'stale'
+          : 'ok';
+
+      seen.set(prefix, {
+        name: SOURCE_LABELS[prefix] ?? prefix,
+        cache_key_prefix: prefix,
+        last_fetched: row.fetched_at,
+        status,
+        ...(row.fetch_error ? { error: row.fetch_error } : {}),
+      });
+    }
+
+    // Ensure all source types appear even if never fetched
+    const result: DataSourceHealth[] = Object.entries(SOURCE_LABELS).map(([prefix, name]) => {
+      return (
+        seen.get(prefix) ?? {
+          name,
+          cache_key_prefix: prefix,
+          last_fetched: null,
+          status: 'stale' as const,
+        }
+      );
+    });
+
+    return { data: result, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : 'Failed to fetch data source health',
+    };
+  }
+}
+
+// ── 16. getSegmentsForPicker ──────────────────────────────────────────────────
 /** Lightweight segment list for the send-dialog picker. */
 export async function getSegmentsForPicker(): Promise<
   Array<{ id: string; name: string; contact_count?: number }>
@@ -1130,5 +1344,222 @@ export async function getSegmentsForPicker(): Promise<
     }));
   } catch {
     return [];
+  }
+}
+
+// ── Supporting types (exported for UI components) ─────────────────────────────
+
+export type ContentLibraryTip = {
+  id: string;
+  realtor_id: string | null;
+  block_type: string;
+  content: {
+    headline?: string;
+    tip_text?: string;
+    tip_category?: string;
+  };
+  context_tags: string[];
+  country: string;
+  season: string;
+  use_count: number;
+  created_at: string;
+};
+
+// ── 17. upsertVoiceProfile ────────────────────────────────────────────────────
+/** Create or update the agent's default voice profile. */
+export async function upsertVoiceProfile(data: {
+  name: string;
+  tone: string;
+  style_description: string;
+  voice_rules: string[];
+  bio_snippet?: string;
+  default_sign_off?: string;
+  focus_neighbourhoods?: string[];
+  market?: string;
+  specialties?: string[];
+  licence_number?: string;
+  brokerage?: string;
+  writing_sample?: string;
+  is_default: boolean;
+}): Promise<ActionResult<EditorialVoiceProfile>> {
+  try {
+    const tc = await getAuthenticatedTenantClient();
+
+    // Build style_description with optional market/specialties prefix
+    let styleDescription = data.style_description;
+    if (data.market) {
+      const specialtiesStr = data.specialties?.length
+        ? ` | Specialties: ${data.specialties.join(', ')}`
+        : '';
+      styleDescription = `Market: ${data.market}${specialtiesStr}${data.style_description ? `\n${data.style_description}` : ''}`;
+    }
+
+    const payload: Record<string, unknown> = {
+      realtor_id: tc.realtorId,
+      name: data.name,
+      tone: data.tone,
+      writing_style: data.style_description || 'clear-and-direct',
+      style_description: styleDescription,
+      voice_rules: data.voice_rules,
+      preferred_phrases: data.voice_rules,
+      bio_snippet: data.bio_snippet ?? null,
+      default_sign_off: data.default_sign_off ?? null,
+      focus_neighbourhoods: data.focus_neighbourhoods ?? [],
+      is_default: data.is_default,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (data.writing_sample) {
+      payload.sample_email = data.writing_sample;
+      payload.writing_examples = [data.writing_sample];
+    }
+
+    if (data.licence_number || data.brokerage) {
+      // Append to signature_phrase field as metadata (no dedicated column)
+      const meta = [
+        data.licence_number ? `Licence: ${data.licence_number}` : null,
+        data.brokerage ? `Brokerage: ${data.brokerage}` : null,
+      ]
+        .filter(Boolean)
+        .join(' | ');
+      payload.signature_phrase = meta;
+    }
+
+    const admin = createAdminClient();
+    const { data: profile, error } = await admin
+      .from('editorial_voice_profiles')
+      .upsert(payload, { onConflict: 'realtor_id' })
+      .select()
+      .single();
+
+    if (error) {
+      return { data: null, error: error.message };
+    }
+
+    revalidatePath('/newsletters/editorial');
+    revalidatePath('/newsletters/editorial/setup');
+
+    return { data: profile as EditorialVoiceProfile, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : 'Failed to save voice profile',
+    };
+  }
+}
+
+// ── 18. getContentLibraryTips ─────────────────────────────────────────────────
+/** Fetch platform tips (realtor_id IS NULL) + this agent's custom tips. */
+export async function getContentLibraryTips(filters?: {
+  category?: string;
+  season?: string;
+  country?: string;
+  mine_only?: boolean;
+}): Promise<ActionResult<ContentLibraryTip[]>> {
+  try {
+    const tc = await getAuthenticatedTenantClient();
+    const admin = createAdminClient();
+
+    // Platform tips — use admin client since realtor_id IS NULL bypasses tenant RLS
+    type Tip = ContentLibraryTip;
+
+    let platformData: Tip[] = [];
+    if (!filters?.mine_only) {
+      let platformQuery = admin
+        .from('editorial_content_library')
+        .select('*')
+        .is('realtor_id', null)
+        .eq('block_type', 'quick_tip')
+        .order('use_count', { ascending: false })
+        .limit(100);
+
+      if (filters?.season && filters.season !== 'all') {
+        platformQuery = platformQuery.in('season', [filters.season, 'all']);
+      }
+      if (filters?.country && filters.country !== 'BOTH') {
+        platformQuery = platformQuery.in('country', [filters.country, 'BOTH']);
+      }
+      if (filters?.category) {
+        platformQuery = platformQuery.contains('content', { tip_category: filters.category });
+      }
+
+      const { data: pd, error: pe } = await platformQuery;
+      if (pe) return { data: null, error: pe.message };
+      platformData = (pd ?? []) as Tip[];
+    }
+
+    // Agent's own tips
+    let myQuery = admin
+      .from('editorial_content_library')
+      .select('*')
+      .eq('realtor_id', tc.realtorId)
+      .eq('block_type', 'quick_tip')
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (filters?.category) {
+      myQuery = myQuery.contains('content', { tip_category: filters.category });
+    }
+
+    const { data: myData, error: myError } = await myQuery;
+    if (myError) return { data: null, error: myError.message };
+
+    return {
+      data: [...platformData, ...((myData ?? []) as Tip[])],
+      error: null,
+    };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : 'Failed to fetch content library tips',
+    };
+  }
+}
+
+// ── 20. createLibraryTip ──────────────────────────────────────────────────────
+/** Create a custom tip in the agent's content library. */
+export async function createLibraryTip(data: {
+  headline: string;
+  tip_text: string;
+  tip_category: string;
+  season: string;
+  country: string;
+}): Promise<ActionResult<{ id: string }>> {
+  try {
+    const tc = await getAuthenticatedTenantClient();
+    const admin = createAdminClient();
+
+    const content = {
+      headline: data.headline.trim(),
+      tip_text: data.tip_text.trim(),
+      tip_category: data.tip_category,
+    };
+
+    const { data: row, error } = await admin
+      .from('editorial_content_library')
+      .insert({
+        realtor_id: tc.realtorId,
+        block_type: 'quick_tip',
+        content,
+        context_tags: [],
+        season: data.season,
+        country: data.country,
+        use_count: 0,
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      return { data: null, error: error.message };
+    }
+
+    revalidatePath('/newsletters/library');
+
+    return { data: { id: (row as { id: string }).id }, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : 'Failed to create tip',
+    };
   }
 }
