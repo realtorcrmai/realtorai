@@ -24,14 +24,18 @@ async function getOAuth2Client(userEmail: string) {
 
   oauth2Client.on("tokens", async (tokens) => {
     if (tokens.access_token) {
-      await supabase
-        .from("google_tokens")
-        .update({
-          access_token: tokens.access_token,
-          expiry_date: tokens.expiry_date ?? null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_email", userEmail);
+      try {
+        await supabase
+          .from("google_tokens")
+          .update({
+            access_token: tokens.access_token,
+            expiry_date: tokens.expiry_date ?? null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_email", userEmail);
+      } catch (err) {
+        console.error("[google-calendar] Token refresh DB update failed:", err instanceof Error ? err.message : err);
+      }
     }
   });
 

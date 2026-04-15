@@ -1,7 +1,16 @@
 "use server";
 
+import { z } from "zod";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
+
+const createTemplateSchema = z.object({
+  name: z.string().min(1, "Name is required").max(200),
+  subject: z.string().min(1, "Subject is required").max(500),
+  body: z.string().min(1, "Body is required"),
+  category: z.string().optional(),
+  builder_json: z.record(z.string(), z.unknown()).optional(),
+});
 
 export async function getTemplates(category?: string) {
   const tc = await getAuthenticatedTenantClient();
@@ -37,6 +46,11 @@ export async function createTemplate(input: {
   category?: string;
   builder_json?: Record<string, unknown>;
 }) {
+  const parsed = createTemplateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message || "Invalid input" };
+  }
+
   const tc = await getAuthenticatedTenantClient();
   const variables = extractVariables(input.body + " " + (input.subject || ""));
 
@@ -149,9 +163,15 @@ export async function previewTemplate(id: string, sampleData?: Record<string, st
   let html = template.body;
   let subject = template.subject || "";
   for (const [key, value] of Object.entries(defaults)) {
+    // HTML-escape user-provided sampleData values to prevent XSS
+    const safeValue = value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
     const regex = new RegExp(`\\{\\{${key}\\}\\}`, "g");
-    html = html.replace(regex, value);
-    subject = subject.replace(regex, value);
+    html = html.replace(regex, safeValue);
+    subject = subject.replace(regex, value); // subject is plain text, no HTML escaping
   }
 
   return { html, subject };

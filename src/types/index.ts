@@ -158,6 +158,10 @@ declare module "next-auth" {
       accessToken?: string;
       role?: "admin" | "realtor";
       enabledFeatures?: string[];
+      realtorId?: string;
+      emailVerified?: boolean;
+      plan?: string;
+      isActive?: boolean;
     };
   }
 }

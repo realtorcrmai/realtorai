@@ -37,12 +37,8 @@ export async function GET(request: NextRequest) {
       return new NextResponse("Invalid or expired unsubscribe link", { status: 400 });
     }
   } else if (legacyId) {
-    // Legacy plain ID format — accept but log warning
-    contactId = legacyId;
-    console.warn(
-      `[unsubscribe] Legacy plain-ID unsubscribe used for contact ${legacyId}. ` +
-        `Migrate to HMAC tokens. See src/lib/unsubscribe-token.ts.`
-    );
+    // Legacy plain ID format removed — security risk (contact enumeration)
+    return new NextResponse("Invalid or expired unsubscribe link. Please use the latest email.", { status: 400 });
   } else {
     return new NextResponse("Invalid unsubscribe link", { status: 400 });
   }

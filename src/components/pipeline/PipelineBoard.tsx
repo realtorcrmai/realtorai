@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   DragDropContext,
   Droppable,
@@ -95,7 +95,7 @@ export function PipelineBoard({ contacts, listings }: PipelineBoardProps) {
   }, [viewMode, closedDeals.length, fetchClosedDeals]);
 
   // Determine which stages to show
-  const stages =
+  const stages = useMemo(() =>
     viewType === "buyer"
       ? [...BUYER_STAGES]
       : viewType === "seller"
@@ -112,16 +112,21 @@ export function PipelineBoard({ contacts, listings }: PipelineBoardProps) {
             "subject_removal",
             "closing",
             "closed",
-          ];
+          ],
+    [viewType]
+  );
 
   // Group deals by stage
-  const columns: Record<string, DealWithRelations[]> = {};
-  for (const stage of stages) {
-    columns[stage] = deals.filter((d) => {
-      if (viewType !== "all" && d.type !== viewType) return false;
-      return d.stage === stage;
-    });
-  }
+  const columns = useMemo(() => {
+    const cols: Record<string, DealWithRelations[]> = {};
+    for (const stage of stages) {
+      cols[stage] = deals.filter((d) => {
+        if (viewType !== "all" && d.type !== viewType) return false;
+        return d.stage === stage;
+      });
+    }
+    return cols;
+  }, [stages, deals, viewType]);
 
   async function handleDragEnd(result: DropResult) {
     if (!result.destination) return;
@@ -148,26 +153,32 @@ export function PipelineBoard({ contacts, listings }: PipelineBoardProps) {
   }
 
   // Calculate totals for active board
-  const filteredActiveDeals = deals.filter((d) =>
-    viewType === "all" ? true : d.type === viewType
-  );
-  const totalValue = filteredActiveDeals.reduce(
-    (sum, d) => sum + (Number(d.value) || 0),
-    0
-  );
-  const totalCommission = filteredActiveDeals.reduce(
-    (sum, d) => sum + (Number(d.commission_amount) || 0),
-    0
-  );
+  const { filteredActiveDeals, totalValue, totalCommission } = useMemo(() => {
+    const filtered = deals.filter((d) =>
+      viewType === "all" ? true : d.type === viewType
+    );
+    return {
+      filteredActiveDeals: filtered,
+      totalValue: filtered.reduce((sum, d) => sum + (Number(d.value) || 0), 0),
+      totalCommission: filtered.reduce((sum, d) => sum + (Number(d.commission_amount) || 0), 0),
+    };
+  }, [deals, viewType]);
 
   // Calculate totals for closed deals
-  const filteredClosedDeals = closedDeals.filter((d) =>
-    viewType === "all" ? true : d.type === viewType
-  );
-  const wonDeals = filteredClosedDeals.filter((d) => d.status === "won");
-  const lostDeals = filteredClosedDeals.filter((d) => d.status === "lost");
-  const wonTotalValue = wonDeals.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
-  const wonTotalGCI = wonDeals.reduce((sum, d) => sum + (Number(d.commission_amount) || 0), 0);
+  const { filteredClosedDeals, wonDeals, lostDeals, wonTotalValue, wonTotalGCI } = useMemo(() => {
+    const filtered = closedDeals.filter((d) =>
+      viewType === "all" ? true : d.type === viewType
+    );
+    const won = filtered.filter((d) => d.status === "won");
+    const lost = filtered.filter((d) => d.status === "lost");
+    return {
+      filteredClosedDeals: filtered,
+      wonDeals: won,
+      lostDeals: lost,
+      wonTotalValue: won.reduce((sum, d) => sum + (Number(d.value) || 0), 0),
+      wonTotalGCI: won.reduce((sum, d) => sum + (Number(d.commission_amount) || 0), 0),
+    };
+  }, [closedDeals, viewType]);
 
   return (
     <div className="flex flex-col h-full">

@@ -115,47 +115,66 @@ export async function mergeContacts(primaryId: string, secondaryId: string) {
     await tc.from("contacts").update(updates).eq("id", primaryId);
   }
 
-  // Move all related records from secondary to primary
-  const tables = [
-    "communications",
-    "newsletters",
-    "newsletter_events",
-    "contact_journeys",
-    "workflow_enrollments",
-    "tasks",
-    "agent_recommendations",
-    "agent_decisions",
-    "contact_dates",
-    "contact_documents",
-  ];
+  // Move all related records from secondary to primary.
+  // NOTE: Supabase JS doesn't support transactions, so we wrap in try-catch
+  // and log which tables succeeded for manual recovery if a step fails.
+  const movedTables: string[] = [];
+  try {
+    const tables = [
+      "communications",
+      "newsletters",
+      "newsletter_events",
+      "contact_journeys",
+      "workflow_enrollments",
+      "tasks",
+      "agent_recommendations",
+      "agent_decisions",
+      "contact_dates",
+      "contact_documents",
+    ];
 
-  for (const table of tables) {
+    for (const table of tables) {
+      const { error } = await tc
+        .from(table)
+        .update({ contact_id: primaryId })
+        .eq("contact_id", secondaryId);
+      if (error) {
+        console.error(`[contact-merge] Failed to move ${table}:`, error.message);
+        // Continue — some tables may not have rows for this contact
+      }
+      movedTables.push(table);
+    }
+
+    // Move appointments (buyer_contact_id)
     await tc
-      .from(table)
-      .update({ contact_id: primaryId })
-      .eq("contact_id", secondaryId);
+      .from("appointments")
+      .update({ buyer_contact_id: primaryId })
+      .eq("buyer_contact_id", secondaryId);
+    movedTables.push("appointments");
+
+    // Move listings (seller_id)
+    await tc
+      .from("listings")
+      .update({ seller_id: primaryId })
+      .eq("seller_id", secondaryId);
+    movedTables.push("listings");
+
+    // Move referrals (prevent circular reference by excluding primaryId)
+    await tc
+      .from("contacts")
+      .update({ referred_by_id: primaryId })
+      .eq("referred_by_id", secondaryId)
+      .neq("id", primaryId);
+    movedTables.push("referrals");
+
+    // Delete secondary
+    await tc.from("contacts").delete().eq("id", secondaryId);
+  } catch (err) {
+    console.error("[contact-merge] Partial merge — succeeded tables:", movedTables, "Error:", err);
+    return {
+      error: `Merge partially failed after moving: ${movedTables.join(", ")}. Secondary contact may still exist. Please check manually.`,
+    };
   }
-
-  // Move appointments (buyer_contact_id)
-  await tc
-    .from("appointments")
-    .update({ buyer_contact_id: primaryId })
-    .eq("buyer_contact_id", secondaryId);
-
-  // Move listings (seller_id)
-  await tc
-    .from("listings")
-    .update({ seller_id: primaryId })
-    .eq("seller_id", secondaryId);
-
-  // Move referrals
-  await tc
-    .from("contacts")
-    .update({ referred_by_id: primaryId })
-    .eq("referred_by_id", secondaryId);
-
-  // Delete secondary
-  await tc.from("contacts").delete().eq("id", secondaryId);
 
   revalidatePath("/contacts");
   revalidatePath(`/contacts/${primaryId}`);

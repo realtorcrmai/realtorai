@@ -100,13 +100,9 @@ export async function sendEmail(payload: EmailPayload): Promise<{ success: boole
   const config = await getEmailConfig();
 
   if (!config || !config.apiKey) {
-    // Fallback: log to console (useful for development)
-    console.log("[Email Fallback]", {
-      to: payload.to,
-      subject: payload.subject,
-      preview: payload.html.slice(0, 200),
-    });
-    return { success: true };
+    // No email provider configured — fail explicitly instead of silently succeeding
+    console.warn("[Email] No email provider configured. Email NOT sent to:", payload.to, "Subject:", payload.subject);
+    return { success: false, error: "Email provider not configured. Configure in Settings > Integrations." };
   }
 
   try {

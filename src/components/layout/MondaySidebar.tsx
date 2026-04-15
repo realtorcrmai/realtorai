@@ -107,7 +107,9 @@ export function MondaySidebar() {
   // Recent items — hydration guard (Zustand persist rehydrates from localStorage after mount)
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const recentItems = useRecentItems((s) => s.items);
+  const storeItems = useRecentItems((s) => s.items);
+  // Only read Zustand-derived values after mount to prevent SSR/client mismatch
+  const recentItems = mounted ? storeItems : [];
 
   // Active section glow color
   const glowColor = getSectionColor(pathname);

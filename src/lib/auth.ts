@@ -255,12 +255,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.enabledFeatures = token.enabledFeatures as string[] | undefined;
       // Multi-tenancy: userId = realtorId (the tenant identifier)
       session.user.id = (token.userId as string) || (token.sub as string) || "";
-      (session.user as unknown as Record<string, unknown>).realtorId = (token.userId as string) || (token.sub as string) || "";
-      (session.user as unknown as Record<string, unknown>).emailVerified = token.emailVerified ?? true;
-      (session.user as unknown as Record<string, unknown>).phoneVerified = token.phoneVerified ?? false;
-      (session.user as unknown as Record<string, unknown>).onboardingCompleted = token.onboardingCompleted ?? true;
-      (session.user as unknown as Record<string, unknown>).personalizationCompleted = token.personalizationCompleted ?? false;
-      (session.user as unknown as Record<string, unknown>).trialEndsAt = token.trialEndsAt ?? null;
+      session.user.realtorId = (token.userId as string) || (token.sub as string) || "";
+      (session.user as unknown as Record<string, unknown>).emailVerified = (token.emailVerified as boolean) ?? true;
       return session;
     },
   },

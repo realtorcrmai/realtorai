@@ -1,11 +1,11 @@
 "use server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
-import { auth } from "@/lib/auth";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 
 export async function getContactRelationships(contactId: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
+  const supabase = tc.raw;
 
   const { data, error } = await supabase
     .from("contact_relationships")
@@ -29,11 +29,8 @@ export async function createRelationship(data: {
   relationship_label?: string;
   notes?: string;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "Not authenticated" };
-  const realtorId = (session.user as Record<string, string>).realtorId || session.user.id;
-
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
+  const supabase = tc.raw;
 
   // Validate both contacts exist before inserting the relationship
   const { data: foundContacts, error: contactsError } = await supabase
@@ -51,7 +48,7 @@ export async function createRelationship(data: {
     relationship_type: data.relationship_type,
     relationship_label: data.relationship_label ?? null,
     notes: data.notes ?? null,
-    realtor_id: realtorId,
+    realtor_id: tc.realtorId,
   });
 
   if (error) {
@@ -73,7 +70,8 @@ export async function updateRelationship(
     notes: string | null;
   }>
 ) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
+  const supabase = tc.raw;
 
   const updatePayload: Record<string, unknown> = {};
   if (data.relationship_type !== undefined) updatePayload.relationship_type = data.relationship_type;
@@ -96,7 +94,8 @@ export async function updateRelationship(
 }
 
 export async function deleteRelationship(id: string, contactId: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
+  const supabase = tc.raw;
 
   const { error } = await supabase
     .from("contact_relationships")

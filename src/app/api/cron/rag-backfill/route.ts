@@ -10,11 +10,12 @@ export async function POST(req: NextRequest) {
     const authHeader = req.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
 
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const batchSize = Number(req.nextUrl.searchParams.get('batch_size')) || 50;
+    const rawBatchSize = Number(req.nextUrl.searchParams.get('batch_size')) || 50;
+    const batchSize = Math.max(1, Math.min(1000, rawBatchSize));
     const db = createAdminClient();
 
     const result = await backfillAll(db, batchSize);

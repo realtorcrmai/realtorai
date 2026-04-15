@@ -36,20 +36,22 @@ interface SendEmailParams {
   };
 }
 
-async function sendWithRetry(
-  fn: () => Promise<any>,
+async function sendWithRetry<T>(
+  fn: () => Promise<T>,
   maxRetries: number = 3
-): Promise<any> {
+): Promise<T> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
-    } catch (e: any) {
-      const isRetryable = e?.statusCode === 429 || e?.statusCode === 503 || e?.statusCode >= 500;
+    } catch (e: unknown) {
+      const err = e as { statusCode?: number };
+      const isRetryable = err?.statusCode === 429 || err?.statusCode === 503 || (err?.statusCode ?? 0) >= 500;
       if (!isRetryable || attempt === maxRetries) throw e;
       const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
       await new Promise((r) => setTimeout(r, delay));
     }
   }
+  throw new Error("sendWithRetry: unreachable");
 }
 
 export async function sendEmail(params: SendEmailParams) {
@@ -59,7 +61,7 @@ export async function sendEmail(params: SendEmailParams) {
   }
 
   const resend = getResend();
-  const fromEmail = params.from || process.env.RESEND_FROM_EMAIL || "newsletters@listingflow.com";
+  const fromEmail = params.from || process.env.RESEND_FROM_EMAIL || "newsletters@realtors360.ai";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const monitorEmail = process.env.EMAIL_MONITOR_BCC || "";
 

@@ -19,6 +19,9 @@ const MAX_ATTEMPTS = 5;
 const TIME_WINDOW = 15 * 60 * 1000; // 15 minutes in ms
 const BLOCK_DURATION = 15 * 60 * 1000; // 15 minutes in ms
 
+// Maximum entries before aggressive cleanup (prevents memory leak in long-running processes)
+const MAX_STORE_SIZE = 10_000;
+
 // Start periodic cleanup
 setInterval(() => {
   const now = Date.now();
@@ -32,8 +35,15 @@ setInterval(() => {
     }
   }
 
-  if (cleaned > 0) {
-    console.log(`[rate-limit] Cleaned up ${cleaned} expired entries`);
+  // Emergency cleanup if store is still too large after normal cleanup
+  if (rateLimitStore.size > MAX_STORE_SIZE) {
+    const entries = [...rateLimitStore.entries()]
+      .sort((a, b) => a[1].firstAttemptTime - b[1].firstAttemptTime);
+    const toRemove = entries.slice(0, entries.length - MAX_STORE_SIZE / 2);
+    for (const [ip] of toRemove) {
+      rateLimitStore.delete(ip);
+      cleaned++;
+    }
   }
 }, CLEANUP_INTERVAL);
 

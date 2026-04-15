@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
           // Permissions Policy — disable features we don't use
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(self), geolocation=(), interest-cohort=()",
+            value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
           },
           // HSTS — force HTTPS for 1 year + subdomains.
           // Only sent in production (Vercel handles TLS termination).
