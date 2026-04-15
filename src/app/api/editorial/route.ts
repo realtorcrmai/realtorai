@@ -18,6 +18,42 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
+  // ── Rate limit: max 10 editions per user per calendar day ────────────────
+  // Prevents Claude API credit drain from unlimited edition creation.
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+
+  const { createAdminClient: createAdminClientForRateLimit } = await import('@/lib/supabase/admin')
+  const adminForRateLimit = createAdminClientForRateLimit()
+
+  const { count: todayCount } = await adminForRateLimit
+    .from('editorial_editions')
+    .select('id', { count: 'exact', head: true })
+    .eq('realtor_id', session.user.id)
+    .gte('created_at', todayStart.toISOString())
+
+  if ((todayCount ?? 0) >= 10) {
+    return NextResponse.json(
+      { error: 'Daily edition limit reached (10 per day). Please try again tomorrow.' },
+      { status: 429 },
+    )
+  }
+
+  // ── Prevent concurrent generations ───────────────────────────────────────
+  // Only one edition may be in 'generating' status at a time per user.
+  const { count: generatingCount } = await adminForRateLimit
+    .from('editorial_editions')
+    .select('id', { count: 'exact', head: true })
+    .eq('realtor_id', session.user.id)
+    .eq('status', 'generating')
+
+  if ((generatingCount ?? 0) > 0) {
+    return NextResponse.json(
+      { error: 'Another edition is currently generating. Please wait for it to complete.' },
+      { status: 429 },
+    )
+  }
+
   const { edition_type, title } = (body ?? {}) as Record<string, unknown>;
 
   const VALID_EDITION_TYPES = ['market_update', 'just_sold', 'open_house', 'neighbourhood_spotlight', 'rate_watch', 'seasonal'] as const;

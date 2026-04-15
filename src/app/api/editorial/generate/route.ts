@@ -160,8 +160,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ── 5b. Resolve agent's market city from realtor_agent_config ───────────
+    let agentCity = 'Vancouver, BC' // fallback
+    const { data: agentConfig } = await supabase
+      .from('realtor_agent_config')
+      .select('preferred_areas')
+      .eq('realtor_id', edition.realtor_id)
+      .single()
+
+    if (
+      agentConfig?.preferred_areas &&
+      Array.isArray(agentConfig.preferred_areas) &&
+      agentConfig.preferred_areas.length > 0
+    ) {
+      agentCity = agentConfig.preferred_areas[0]
+    }
+
     // ── 6. Resolve market data (cache → fallback) ──────────────────────────
-    const cacheKey = `${edition.edition_type}_${new Date().toISOString().slice(0, 7)}` // e.g. "market_update_2026-04"
+    const cacheKey = `${edition.edition_type}_${agentCity.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().toISOString().slice(0, 7)}` // e.g. "market_update_vancouver_bc_2026-04"
 
     const { data: cacheRow } = await supabase
       .from('external_data_cache')
@@ -186,7 +202,7 @@ export async function POST(request: NextRequest) {
       // Generate fresh market data and cache it for 7 days
       marketData = await getMarketDataFallback(
         edition.edition_type,
-        'Vancouver, BC',
+        agentCity,
       )
 
       const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -212,7 +228,7 @@ export async function POST(request: NextRequest) {
     const editionContext: EditionContext = {
       edition_type: edition.edition_type,
       title: edition.title,
-      city: 'Vancouver, BC',
+      city: agentCity,
       voice_profile: voiceProfile,
       market_data: marketData,
     }
