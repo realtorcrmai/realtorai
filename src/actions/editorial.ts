@@ -23,6 +23,7 @@ function buildUnsubscribeUrl(email: string, editionId: string): string {
 import type {
   EditorialEdition,
   EditorialVoiceProfile,
+  EditorialTransaction,
   EditorBlock,
   ActionResult,
   SendEditionResult,
@@ -687,7 +688,14 @@ export async function sendEdition(
 
     const skipped = allContacts.length - sendableContacts.length;
 
-    // 6. Send to each contact
+    // 6. Determine A/B split mode
+    const hasABTest =
+      !options?.test_email &&
+      edition.subject_a &&
+      edition.subject_b &&
+      edition.subject_a !== edition.subject_b;
+
+    // 7. Send to each contact
     let sent = 0;
     let failed = 0;
 
@@ -699,6 +707,20 @@ export async function sendEdition(
           buildUnsubscribeUrl(contact.email!, editionId),
         );
 
+        // A/B split: randomly assign each recipient to variant 'a' or 'b'
+        const abVariant: 'a' | 'b' = hasABTest && Math.random() < 0.5 ? 'b' : 'a';
+        const resolvedSubject = hasABTest
+          ? (abVariant === 'b' ? edition.subject_b! : edition.subject_a!)
+          : subject;
+
+        const tags: Array<{ name: string; value: string }> = [
+          { name: 'edition_id', value: editionId },
+          { name: 'contact_id', value: contact.id },
+        ];
+        if (hasABTest) {
+          tags.push({ name: 'ab_variant', value: abVariant });
+        }
+
         const response = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -708,12 +730,9 @@ export async function sendEdition(
           body: JSON.stringify({
             from: fromEmail,
             to: [contact.email!],
-            subject,
+            subject: resolvedSubject,
             html: personalizedHtml,
-            tags: [
-              { name: 'edition_id', value: editionId },
-              { name: 'contact_id', value: contact.id },
-            ],
+            tags,
           }),
         });
 
@@ -727,16 +746,22 @@ export async function sendEdition(
       }
     }
 
-    // 7. Update edition status and counts
+    // 8. Update edition status and counts
+    const nowIso = new Date().toISOString();
+    const editionUpdate: Record<string, unknown> = {
+      status: 'sent',
+      sent_at: nowIso,
+      send_count: sent,
+      recipient_count: allContacts.length,
+      updated_at: nowIso,
+    };
+    if (hasABTest) {
+      editionUpdate.active_variant = 'ab_testing';
+      editionUpdate.ab_test_sent_at = nowIso;
+    }
     await tc
       .from('editorial_editions')
-      .update({
-        status: 'sent',
-        sent_at: new Date().toISOString(),
-        send_count: sent,
-        recipient_count: allContacts.length,
-        updated_at: new Date().toISOString(),
-      })
+      .update(editionUpdate)
       .eq('id', editionId);
 
     // 8. Update analytics
@@ -854,6 +879,98 @@ export async function saveVoiceProfile(input: {
       data: null,
       error: err instanceof Error ? err.message : 'Failed to save voice profile',
     };
+  }
+}
+
+// ── Transaction Manager ────────────────────────────────────────────────────────────
+
+const transactionSchema = z.object({
+  address: z.string().min(1).max(200),
+  city: z.string().min(1).max(100).default('Vancouver'),
+  province: z.string().min(1).max(50).default('BC'),
+  transaction_type: z.enum(['just_sold', 'just_listed', 'coming_soon', 'price_reduced']).default('just_sold'),
+  sale_price: z.number().int().positive().nullable().optional(),
+  list_price: z.number().int().positive(),
+  days_on_market: z.number().int().nonnegative().nullable().optional(),
+  bedrooms: z.number().int().nonnegative().nullable().optional(),
+  bathrooms: z.number().nonnegative().nullable().optional(),
+  sqft: z.number().int().positive().nullable().optional(),
+  photo_url: z.string().url().nullable().optional(),
+  headline: z.string().max(120).nullable().optional(),
+  story: z.string().max(600).nullable().optional(),
+  sold_at: z.string().nullable().optional(),
+  listed_at: z.string().nullable().optional(),
+  is_featured: z.boolean().default(false),
+});
+
+export async function listTransactions(): Promise<ActionResult<EditorialTransaction[]>> {
+  try {
+    const tc = await getAuthenticatedTenantClient();
+    const { data, error } = await tc
+      .from('editorial_transactions')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) return { data: null, error: error.message };
+    return { data: data as EditorialTransaction[], error: null };
+  } catch (err) {
+    return { data: null, error: err instanceof Error ? err.message : 'Failed to fetch transactions' };
+  }
+}
+
+export async function createTransaction(
+  input: z.infer<typeof transactionSchema>,
+): Promise<ActionResult<EditorialTransaction>> {
+  try {
+    const parsed = transactionSchema.safeParse(input);
+    if (!parsed.success) return { data: null, error: parsed.error.issues[0].message };
+    const tc = await getAuthenticatedTenantClient();
+    // tc.insert() auto-injects realtor_id — do not pass it explicitly
+    const { data, error } = await tc
+      .from('editorial_transactions')
+      .insert({ ...parsed.data })
+      .select('*')
+      .single();
+    if (error) return { data: null, error: error.message };
+    revalidatePath('/newsletters/editorial');
+    return { data: data as EditorialTransaction, error: null };
+  } catch (err) {
+    return { data: null, error: err instanceof Error ? err.message : 'Failed to create transaction' };
+  }
+}
+
+export async function updateTransaction(
+  id: string,
+  input: Partial<z.infer<typeof transactionSchema>>,
+): Promise<ActionResult<EditorialTransaction>> {
+  try {
+    const idParsed = uuidSchema.safeParse(id);
+    if (!idParsed.success) return { data: null, error: 'Invalid transaction ID' };
+    const tc = await getAuthenticatedTenantClient();
+    const { data, error } = await tc
+      .from('editorial_transactions')
+      .update({ ...input, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) return { data: null, error: error.message };
+    revalidatePath('/newsletters/editorial');
+    return { data: data as EditorialTransaction, error: null };
+  } catch (err) {
+    return { data: null, error: err instanceof Error ? err.message : 'Failed to update transaction' };
+  }
+}
+
+export async function deleteTransaction(id: string): Promise<ActionResult<null>> {
+  try {
+    const idParsed = uuidSchema.safeParse(id);
+    if (!idParsed.success) return { data: null, error: 'Invalid transaction ID' };
+    const tc = await getAuthenticatedTenantClient();
+    const { error } = await tc.from('editorial_transactions').delete().eq('id', id);
+    if (error) return { data: null, error: error.message };
+    revalidatePath('/newsletters/editorial');
+    return { data: null, error: null };
+  } catch (err) {
+    return { data: null, error: err instanceof Error ? err.message : 'Failed to delete transaction' };
   }
 }
 
