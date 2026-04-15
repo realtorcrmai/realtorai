@@ -1,11 +1,25 @@
 'use server';
 
+import { createHmac } from 'crypto';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { getAuthenticatedTenantClient } from '@/lib/supabase/tenant';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { renderEdition } from '@/lib/editorial-renderer';
 import { extractVoiceRules } from '@/lib/editorial-ai';
+
+// ── Unsubscribe URL helper ────────────────────────────────────────────────────
+
+const UNSUBSCRIBE_PLACEHOLDER = '__UNSUBSCRIBE_URL__';
+
+function buildUnsubscribeUrl(email: string, editionId: string): string {
+  const secret = process.env.NEXTAUTH_SECRET ?? '';
+  const token = createHmac('sha256', secret)
+    .update(`${email}:${editionId}`)
+    .digest('hex');
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+  return `${base}/api/editorial/unsubscribe?email=${encodeURIComponent(email)}&edition_id=${encodeURIComponent(editionId)}&token=${token}`;
+}
 import type {
   EditorialEdition,
   EditorialVoiceProfile,
@@ -264,6 +278,10 @@ export async function updateBlocks(
       return { data: null, error: 'Invalid edition ID' };
     }
 
+    if (blocks.length > 15) {
+      return { data: null, error: 'Maximum 15 blocks per edition.' }
+    }
+
     const tc = await getAuthenticatedTenantClient();
 
     // Confirm edition belongs to this realtor
@@ -417,7 +435,7 @@ export async function triggerGeneration(
 
     const { data: edition, error: fetchError } = await tc
       .from('editorial_editions')
-      .select('id, status')
+      .select('id, status, blocks')
       .eq('id', editionId)
       .single();
 
@@ -431,6 +449,15 @@ export async function triggerGeneration(
         data: null,
         error: `Cannot trigger generation for an edition with status "${edition.status}". Only draft or failed editions can be regenerated.`,
       };
+    }
+
+    // Guard: too many blocks will cause generation to timeout (Vercel 30s limit)
+    const rawBlocks = Array.isArray(edition.blocks) ? edition.blocks : []
+    if (rawBlocks.length > 15) {
+      return {
+        data: null,
+        error: `Edition has ${rawBlocks.length} blocks. Maximum is 15. Please remove some blocks before generating.`,
+      }
     }
 
     // Mark as generating immediately
@@ -524,7 +551,8 @@ export async function sendEdition(
           // Required for CASL/CAN-SPAM compliance — physical mailing address in footer
           physicalAddress: process.env.AGENT_PHYSICAL_ADDRESS ?? process.env.AGENT_BROKERAGE ?? '',
         },
-        unsubscribe_url: `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/unsubscribe`,
+        // Use placeholder — replaced per-recipient in the send loop with a signed URL
+        unsubscribe_url: UNSUBSCRIBE_PLACEHOLDER,
       });
     } catch (renderErr) {
       return {
@@ -635,9 +663,26 @@ export async function sendEdition(
     type ContactRow = { id: string; name: string; email: string | null; casl_consent_given: boolean | null };
     const allContacts: ContactRow[] = (contacts ?? []) as ContactRow[];
 
-    // 5. Filter by CASL consent and valid email
+    // 5a. Fetch suppressed contact IDs (fail-safe: table may not exist yet)
+    let suppressedContactIds = new Set<string>();
+    try {
+      const suppressionAdmin = createAdminClient();
+      const { data: suppressions } = await suppressionAdmin
+        .from('contact_suppressions')
+        .select('contact_id')
+        .eq('realtor_id', tc.realtorId);
+      suppressedContactIds = new Set((suppressions ?? []).map((s: { contact_id: string }) => s.contact_id));
+    } catch {
+      // suppression table may not exist yet — proceed without it
+    }
+
+    // 5b. Filter by CASL consent, valid email, and not suppressed
     const sendableContacts = allContacts.filter(
-      (c) => c.casl_consent_given === true && c.email && c.email.trim().length > 0,
+      (c) =>
+        c.casl_consent_given === true &&
+        c.email &&
+        c.email.trim().length > 0 &&
+        !suppressedContactIds.has(c.id),
     );
 
     const skipped = allContacts.length - sendableContacts.length;
@@ -648,6 +693,12 @@ export async function sendEdition(
 
     for (const contact of sendableContacts) {
       try {
+        // Substitute placeholder with a per-recipient HMAC-signed unsubscribe URL
+        const personalizedHtml = html.replace(
+          UNSUBSCRIBE_PLACEHOLDER,
+          buildUnsubscribeUrl(contact.email!, editionId),
+        );
+
         const response = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -658,7 +709,7 @@ export async function sendEdition(
             from: fromEmail,
             to: [contact.email!],
             subject,
-            html,
+            html: personalizedHtml,
             tags: [
               { name: 'edition_id', value: editionId },
               { name: 'contact_id', value: contact.id },

@@ -532,10 +532,10 @@ export function EditionEditorClient({ edition, voiceProfile: _voiceProfile }: Ed
       </div>
 
       {/* Body: two-column layout */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-wrap flex-1 overflow-hidden">
         {/* Left column: block list */}
         <aside
-          className="w-72 flex-shrink-0 border-r border-border overflow-y-auto bg-card"
+          className="w-full md:w-72 flex-shrink-0 border-r border-border overflow-y-auto bg-card"
           aria-label="Block list"
         >
           <BlockList

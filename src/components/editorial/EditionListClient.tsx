@@ -174,6 +174,58 @@ function EditionCard({ edition }: { edition: Edition }) {
 
 // ─── List ────────────────────────────────────────────────────────────────────
 export function EditionListClient({ editions }: EditionListClientProps) {
+  if (editions.length === 0) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "80px 32px",
+          textAlign: "center",
+        }}
+      >
+        <div style={{ fontSize: 48, marginBottom: 16 }}>📰</div>
+        <h3
+          style={{
+            fontSize: 18,
+            fontWeight: 600,
+            color: "#1a1535",
+            margin: "0 0 8px",
+          }}
+        >
+          No editions yet
+        </h3>
+        <p
+          style={{
+            fontSize: 14,
+            color: "#6b6b8d",
+            margin: "0 0 24px",
+            maxWidth: 360,
+          }}
+        >
+          Create your first editorial newsletter. Claude will generate
+          professional content based on your market and voice.
+        </p>
+        <a
+          href="/newsletters/editorial/new"
+          style={{
+            backgroundColor: "#FF7A59",
+            color: "#fff",
+            padding: "10px 20px",
+            borderRadius: 8,
+            textDecoration: "none",
+            fontSize: 14,
+            fontWeight: 600,
+          }}
+        >
+          Create First Edition
+        </a>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">

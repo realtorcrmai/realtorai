@@ -120,7 +120,7 @@ export function EditorPreview({ initialHtml, edition }: EditorPreviewProps) {
 
         <iframe
           srcDoc={html}
-          sandbox="allow-same-origin"
+          sandbox="allow-popups allow-popups-to-escape-sandbox"
           scrolling="auto"
           title={`Email preview — ${edition.title}`}
           style={{
