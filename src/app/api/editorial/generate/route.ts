@@ -49,13 +49,18 @@ export async function POST(request: NextRequest) {
   let authorized = false
   if (authHeader?.startsWith(BEARER_PREFIX)) {
     const token = authHeader.slice(BEARER_PREFIX.length)
-    // Timing-safe comparison: pad/truncate to same length to prevent oracle attacks
-    if (token.length === cronSecret.length) {
-      try {
-        authorized = timingSafeEqual(Buffer.from(token), Buffer.from(cronSecret))
-      } catch {
-        authorized = false
-      }
+    // Timing-safe comparison: always run on same-length padded buffers so an
+    // attacker cannot determine secret length via response time. Length equality
+    // is checked separately after the constant-time comparison.
+    try {
+      const maxLen = Math.max(token.length, cronSecret.length)
+      const tokenBuf = Buffer.alloc(maxLen)
+      const secretBuf = Buffer.alloc(maxLen)
+      Buffer.from(token).copy(tokenBuf)
+      Buffer.from(cronSecret).copy(secretBuf)
+      authorized = timingSafeEqual(tokenBuf, secretBuf) && token.length === cronSecret.length
+    } catch {
+      authorized = false
     }
   }
   if (!authorized) {
@@ -85,7 +90,7 @@ export async function POST(request: NextRequest) {
   const { data: edition, error: fetchError } = await supabase
     .from('editorial_editions')
     .select(
-      'id, realtor_id, title, edition_type, status, blocks, voice_profile_id',
+      'id, realtor_id, title, edition_type, status, blocks, voice_profile_id, updated_at, generation_started_at',
     )
     .eq('id', editionId)
     .single()
@@ -101,6 +106,33 @@ export async function POST(request: NextRequest) {
       { error: `Edition status is '${edition.status}', expected 'generating'` },
       { status: 409 },
     )
+  }
+
+  // Atomic claim: try to mark as "processing" — only one worker wins.
+  // We use a generation_started_at timestamp as an idempotency key.
+  // If generation started more than 3 minutes ago and status is still 'generating',
+  // allow re-processing (stale generation recovery). Otherwise reject.
+  const THREE_MINUTES_AGO = new Date(Date.now() - 3 * 60 * 1000).toISOString()
+  const isStale =
+    edition.generation_started_at && edition.generation_started_at < THREE_MINUTES_AGO
+
+  if (!isStale) {
+    // Check if another worker already advanced past our checkpoint
+    // by attempting an update that only succeeds if nothing changed the row since we read it
+    const { data: claimed } = await supabase
+      .from('editorial_editions')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', editionId)
+      .eq('status', 'generating')
+      .eq('updated_at', edition.updated_at ?? '') // optimistic lock
+      .select('id')
+
+    if (!claimed || claimed.length === 0) {
+      return NextResponse.json(
+        { error: 'Edition is being processed by another worker' },
+        { status: 409 },
+      )
+    }
   }
 
   // Wrap everything from here in try/catch so we can always mark failed

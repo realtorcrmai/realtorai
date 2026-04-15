@@ -1,6 +1,36 @@
 import Anthropic from '@anthropic-ai/sdk';
 
 // ---------------------------------------------------------------------------
+// Prompt injection sanitization
+// ---------------------------------------------------------------------------
+
+/**
+ * Sanitize voice profile strings before injecting into Claude prompts.
+ * Blocks prompt injection attempts while preserving legitimate writing guidance.
+ */
+function sanitizeVoiceInput(input: string): string {
+  return input
+    // Remove common injection phrases
+    .replace(/\b(ignore|forget|disregard|override|bypass)\b.{0,60}\b(instruction|rule|system|prompt|previous|above|all)\b/gi, '[removed]')
+    // Strip backticks (used to inject code blocks)
+    .replace(/`/g, "'")
+    // Strip angle brackets (injection via XML/HTML)
+    .replace(/[<>]/g, '')
+    // Normalize excessive whitespace
+    .replace(/\n{3,}/g, '\n\n')
+    // Hard truncate
+    .slice(0, 300)
+}
+
+function sanitizeVoiceRules(rules: string[]): string[] {
+  return rules
+    .filter(r => typeof r === 'string' && r.trim().length > 0)
+    .map(r => sanitizeVoiceInput(r.trim()))
+    .filter(r => r !== '[removed]' && r.length > 3)
+    .slice(0, 20) // max 20 rules
+}
+
+// ---------------------------------------------------------------------------
 // Inline type definitions
 // ---------------------------------------------------------------------------
 
@@ -99,13 +129,19 @@ export function buildSystemPrompt(context: EditionContext): string {
   const tone = context.voice_profile?.tone ?? 'professional';
   const toneInstruction = toneMap[tone];
 
+  const safeVoiceRules = sanitizeVoiceRules(context.voice_profile?.voice_rules ?? [])
+
   const voiceRulesSection =
-    context.voice_profile?.voice_rules && context.voice_profile.voice_rules.length > 0
-      ? `\n\nVOICE RULES (follow these strictly):\n${context.voice_profile.voice_rules.map((r) => `• ${r}`).join('\n')}`
+    safeVoiceRules.length > 0
+      ? `\n\nVOICE RULES (follow these strictly):\n${safeVoiceRules.map((r) => `• ${r}`).join('\n')}`
       : '';
 
-  const signaturePhraseNote = context.voice_profile?.signature_phrase
-    ? `\n\nSIGNATURE PHRASE: When appropriate, end the copy with: "${context.voice_profile.signature_phrase}"`
+  const safeSignaturePhrase = context.voice_profile?.signature_phrase
+    ? sanitizeVoiceInput(context.voice_profile.signature_phrase)
+    : null;
+
+  const signaturePhraseNote = safeSignaturePhrase
+    ? `\n\nSIGNATURE PHRASE: When appropriate, end the copy with: "${safeSignaturePhrase}"`
     : '';
 
   const marketDataSection =
@@ -178,24 +214,43 @@ function buildMarketCommentaryPrompt(block: EditorBlock, context: EditionContext
     ? `Available stats: median price ${md.median_price ?? 'N/A'}, YoY change ${md.price_change_yoy ?? 'N/A'}, days on market ${md.days_on_market ?? 'N/A'}, sales ratio ${md.sales_ratio ?? 'N/A'}.`
     : 'Use plausible BC market statistics if no data is provided.';
 
+  const currentPeriod = new Date().toLocaleDateString('en-CA', { month: 'long', year: 'numeric' });
+
   void block;
   return `Write market commentary for the ${neighbourhood} real estate market for the newsletter edition "${context.title}".
 
 ${statsHint}
 
 Requirements:
-- body: 80–180 words of substantive analysis
+- headline: max 80 characters, punchy summary of the market condition
+- body: 80–120 words of substantive analysis
 - Must include at least 2 specific statistics (price, ratio, days, volume, or rate figures)
 - Identify whether this is a buyer's market or seller's market and explain why
 - Do NOT use filler phrases like "the market continues to…", "as we move into…", or "it remains to be seen…"
 - End with a forward-looking insight or actionable implication for the reader
 - market_type: one of "buyers" | "sellers" | "balanced"
+- period_label: the reporting period (e.g. "${currentPeriod}" or "Q2 2026")
+- avg_sale_price: formatted string with $ and commas (e.g. "$1,350,000")
+- avg_list_price: formatted string with $ and commas (e.g. "$1,285,000")
+- median_dom: integer number of median days on market
+- active_listings: integer total active listings in the area
+- sold_count: integer number of sales this period
+- price_change_mom_pct: float percent change vs last month (positive = up, negative = down)
+- price_change_yoy_pct: float percent change vs last year (positive = up, negative = down)
 
 Return JSON matching this schema exactly:
 {
-  "body": "string (80-180 words)",
+  "headline": "string (max 80 chars)",
+  "body": "string (80-120 words)",
   "market_type": "buyers | sellers | balanced",
-  "headline": "string (max 70 chars, punchy summary of the market)"
+  "period_label": "string (e.g. '${currentPeriod}')",
+  "avg_sale_price": "$1,350,000",
+  "avg_list_price": "$1,285,000",
+  "median_dom": 14,
+  "active_listings": 1240,
+  "sold_count": 312,
+  "price_change_mom_pct": 1.8,
+  "price_change_yoy_pct": -3.2
 }`;
 }
 
@@ -286,12 +341,14 @@ Return JSON matching this schema exactly:
 }
 
 function buildAgentNotePrompt(block: EditorBlock, context: EditionContext): string {
+  const safeRules = sanitizeVoiceRules(context.voice_profile?.voice_rules ?? []);
   const voiceRules =
-    context.voice_profile?.voice_rules && context.voice_profile.voice_rules.length > 0
-      ? `Follow these voice rules:\n${context.voice_profile.voice_rules.map((r) => `• ${r}`).join('\n')}`
+    safeRules.length > 0
+      ? `Follow these voice rules:\n${safeRules.map((r) => `• ${r}`).join('\n')}`
       : '';
-  const signaturePhrase = context.voice_profile?.signature_phrase
-    ? `End with this signature phrase: "${context.voice_profile.signature_phrase}"`
+  const rawSig = context.voice_profile?.signature_phrase;
+  const signaturePhrase = rawSig
+    ? `End with this signature phrase: "${sanitizeVoiceInput(rawSig)}"`
     : '';
 
   void block;

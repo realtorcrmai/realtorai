@@ -276,18 +276,22 @@ function MarketCommentaryBlock({
 }): React.ReactElement | null {
   const commentary =
     str(content.commentary) ||
+    str(content.body) ||
     (preview_mode
       ? 'Metro Vancouver inventory remains tight with continued buyer demand pushing prices upward in detached segments. Attached properties are seeing more balanced conditions as new supply comes online.'
       : '')
 
   if (!commentary && !preview_mode) return null
 
-  const stat1Label = str(content.stat_1_label) || (preview_mode ? 'Avg. Sale Price' : '')
-  const stat1Value = str(content.stat_1_value) || (preview_mode ? '$1.42M' : '')
-  const stat2Label = str(content.stat_2_label) || (preview_mode ? 'Days on Market' : '')
-  const stat2Value = str(content.stat_2_value) || (preview_mode ? '18' : '')
+  const stat1Label = str(content.period_label) || (preview_mode ? 'This Month' : '')
+  const stat1Value = str(content.avg_sale_price) || (preview_mode ? '$1.42M' : '')
+  const stat2Label = 'Median Days on Market'
+  const stat2Value =
+    content.median_dom !== undefined && content.median_dom !== null
+      ? String(content.median_dom)
+      : (preview_mode ? '18' : '')
   const hasStats = Boolean(stat1Label && stat1Value)
-  const hasBothStats = hasStats && Boolean(stat2Label && stat2Value)
+  const hasBothStats = hasStats && Boolean(stat2Value)
 
   return (
     <Section
