@@ -256,6 +256,17 @@ export interface EditorialVoiceProfile {
   /** Markets this profile focuses on */
   focus_neighbourhoods: string[]
   is_default: boolean
+  /**
+   * Monotonically-increasing version counter.
+   * Incremented each time the voice profile is updated by the learning flywheel.
+   */
+  voice_version: number
+  /**
+   * Confidence score (0.0–1.0) reflecting how much the AI has learned
+   * about this realtor's voice. Grows as more editions are sent.
+   * Profiles at 0.75+ qualify for the autonomous send gate.
+   */
+  confidence_score: number
   created_at: string
   updated_at: string
 }

@@ -18,6 +18,7 @@ import {
   reorderBlocks,
   triggerGeneration,
   sendEdition,
+  getSegmentsForPicker,
 } from '@/actions/editorial'
 import type {
   EditorialEdition,
@@ -189,6 +190,12 @@ function Spinner({ className }: { className?: string }) {
 
 // ── Send dialog ───────────────────────────────────────────────────────────────
 
+interface SegmentOption {
+  id: string
+  name: string
+  contact_count?: number
+}
+
 interface SendDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -196,9 +203,22 @@ interface SendDialogProps {
   onConfirm: () => Promise<void>
   isSending: boolean
   sendError: string | null
+  segments: SegmentOption[]
+  selectedSegmentId: string | undefined
+  onSegmentChange: (id: string | undefined) => void
 }
 
-function SendDialog({ open, onOpenChange, edition, onConfirm, isSending, sendError }: SendDialogProps) {
+function SendDialog({
+  open,
+  onOpenChange,
+  edition,
+  onConfirm,
+  isSending,
+  sendError,
+  segments,
+  selectedSegmentId,
+  onSegmentChange,
+}: SendDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -218,6 +238,30 @@ function SendDialog({ open, onOpenChange, edition, onConfirm, isSending, sendErr
                 : '—'}{' '}
               contacts
             </span>
+          </div>
+
+          {/* Segment picker */}
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="send-segment-select"
+              className="text-sm font-medium text-foreground"
+            >
+              Send to
+            </label>
+            <select
+              id="send-segment-select"
+              value={selectedSegmentId ?? ''}
+              onChange={(e) => onSegmentChange(e.target.value || undefined)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/50"
+            >
+              <option value="">All contacts with CASL consent</option>
+              {segments.map((seg) => (
+                <option key={seg.id} value={seg.id}>
+                  {seg.name}
+                  {seg.contact_count !== undefined ? ` (${seg.contact_count})` : ''}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="rounded-lg border border-border px-4 py-3">
@@ -295,6 +339,8 @@ export function EditionEditorClient({ edition, voiceProfile: _voiceProfile }: Ed
   const [isSending, setIsSending] = React.useState(false)
   const [sendOpen, setSendOpen] = React.useState(false)
   const [sendError, setSendError] = React.useState<string | null>(null)
+  const [selectedSegmentId, setSelectedSegmentId] = React.useState<string | undefined>(undefined)
+  const [segments, setSegments] = React.useState<SegmentOption[]>([])
 
   // Debounce timer ref for auto-save
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -440,12 +486,23 @@ export function EditionEditorClient({ edition, voiceProfile: _voiceProfile }: Ed
     window.location.reload()
   }
 
+  async function handleSendOpen() {
+    setSendOpen(true)
+    // Load segments when dialog opens — graceful degradation if it fails
+    try {
+      const data = await getSegmentsForPicker()
+      setSegments(data)
+    } catch {
+      setSegments([])
+    }
+  }
+
   async function handleSendConfirm() {
     if (isSending) return
     setIsSending(true)
     setSendError(null)
     try {
-      const result = await sendEdition(edition.id)
+      const result = await sendEdition(edition.id, { segment_id: selectedSegmentId })
       if (result && 'error' in result && result.error) {
         setSendError(result.error)
         return
@@ -522,7 +579,7 @@ export function EditionEditorClient({ edition, voiceProfile: _voiceProfile }: Ed
             <Button
               variant="brand"
               size="sm"
-              onClick={() => setSendOpen(true)}
+              onClick={handleSendOpen}
               aria-label="Send this edition"
             >
               📤 Send Edition
@@ -584,6 +641,9 @@ export function EditionEditorClient({ edition, voiceProfile: _voiceProfile }: Ed
         onConfirm={handleSendConfirm}
         isSending={isSending}
         sendError={sendError}
+        segments={segments}
+        selectedSegmentId={selectedSegmentId}
+        onSegmentChange={setSelectedSegmentId}
       />
     </div>
   )
