@@ -44,14 +44,18 @@ export async function POST(request: NextRequest) {
   }
 
   const authHeader = request.headers.get('authorization')
-  const expected = `Bearer ${cronSecret}`
-  // Use timing-safe comparison to prevent secret-length oracle attacks
+  // Validate Bearer prefix explicitly before timing-safe token comparison
+  const BEARER_PREFIX = 'Bearer '
   let authorized = false
-  if (authHeader && authHeader.length === expected.length) {
-    try {
-      authorized = timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected))
-    } catch {
-      authorized = false
+  if (authHeader?.startsWith(BEARER_PREFIX)) {
+    const token = authHeader.slice(BEARER_PREFIX.length)
+    // Timing-safe comparison: pad/truncate to same length to prevent oracle attacks
+    if (token.length === cronSecret.length) {
+      try {
+        authorized = timingSafeEqual(Buffer.from(token), Buffer.from(cronSecret))
+      } catch {
+        authorized = false
+      }
     }
   }
   if (!authorized) {

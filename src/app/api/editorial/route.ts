@@ -20,8 +20,9 @@ export async function POST(req: NextRequest) {
 
   const { edition_type, title } = (body ?? {}) as Record<string, unknown>;
 
-  if (typeof edition_type !== 'string' || !edition_type) {
-    return NextResponse.json({ error: 'edition_type is required' }, { status: 400 });
+  const VALID_EDITION_TYPES = ['market_update', 'just_sold', 'open_house', 'neighbourhood_spotlight', 'rate_watch', 'seasonal'] as const;
+  if (typeof edition_type !== 'string' || !VALID_EDITION_TYPES.includes(edition_type as typeof VALID_EDITION_TYPES[number])) {
+    return NextResponse.json({ error: `edition_type must be one of: ${VALID_EDITION_TYPES.join(', ')}` }, { status: 400 });
   }
   if (typeof title !== 'string' || !title.trim()) {
     return NextResponse.json({ error: 'title is required' }, { status: 400 });
@@ -63,7 +64,8 @@ export async function POST(req: NextRequest) {
       generation_started_at: new Date().toISOString(),
       generation_error: null,
     })
-    .eq('id', edition.id);
+    .eq('id', edition.id)
+    .eq('realtor_id', session.user.id);
 
   return NextResponse.json({ id: edition.id }, { status: 201 });
 }

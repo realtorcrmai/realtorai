@@ -582,6 +582,7 @@ export async function sendEdition(
         .from('contact_segments')
         .select('rules, rule_operator')
         .eq('id', options.segment_id)
+        .eq('realtor_id', tc.realtorId)
         .single();
 
       // If the segment doesn't exist or lookup failed, abort — do NOT fall

@@ -325,12 +325,14 @@ export function EditionEditorClient({ edition, voiceProfile: _voiceProfile }: Ed
           const result = await updateBlocks(edition.id, newBlocks)
           if (result.error) {
             setSaveStatus('error')
+            // Don't auto-dismiss error — user must see the save failed
           } else {
             setSaveStatus('saved')
             savedFadeRef.current = setTimeout(() => setSaveStatus('idle'), 2000)
           }
         } catch {
           setSaveStatus('error')
+          // Don't auto-dismiss error — user must see the save failed
         }
       }, 500)
     },
@@ -439,6 +441,7 @@ export function EditionEditorClient({ edition, voiceProfile: _voiceProfile }: Ed
   }
 
   async function handleSendConfirm() {
+    if (isSending) return
     setIsSending(true)
     setSendError(null)
     try {

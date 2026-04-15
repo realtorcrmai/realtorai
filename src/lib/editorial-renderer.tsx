@@ -408,17 +408,17 @@ function MarketCommentaryBlock({
 // ---------------------------------------------------------------------------
 
 const RATE_ROWS: Array<{ label: string; key: string }> = [
-  { label: '1-Year Fixed', key: 'rate_1yr' },
-  { label: '3-Year Fixed', key: 'rate_3yr' },
-  { label: '5-Year Fixed', key: 'rate_5yr' },
-  { label: 'Variable', key: 'variable_rate' },
+  { label: '1-Year Fixed', key: 'rate_1yr_fixed' },
+  { label: '3-Year Fixed', key: 'rate_3yr_fixed' },
+  { label: '5-Year Fixed', key: 'rate_5yr_fixed' },
+  { label: 'Variable', key: 'rate_5yr_variable' },
 ]
 
 const PREVIEW_RATES: Record<string, string> = {
-  rate_1yr: '5.14%',
-  rate_3yr: '4.89%',
-  rate_5yr: '4.64%',
-  variable_rate: '6.45%',
+  rate_1yr_fixed: '5.14%',
+  rate_3yr_fixed: '4.89%',
+  rate_5yr_fixed: '4.64%',
+  rate_5yr_variable: '6.45%',
 }
 
 function RateWatchBlock({
@@ -428,11 +428,10 @@ function RateWatchBlock({
   content: Record<string, unknown>
   preview_mode: boolean
 }): React.ReactElement | null {
-  // Note: the AI generates 'narrative' (not 'commentary') for this block.
-  // We check both field names for backwards compatibility with any manually-authored blocks.
+  // AI generates 'commentary'; 'narrative' kept as fallback for older editions.
   const commentary =
-    str(content.narrative) ||
     str(content.commentary) ||
+    str(content.narrative) ||
     (preview_mode
       ? 'The Bank of Canada held rates steady this cycle. Economists anticipate a potential cut later this quarter, which may bring further relief to variable-rate borrowers.'
       : '')
@@ -624,16 +623,17 @@ function NeighborhoodSpotlightBlock({
   content: Record<string, unknown>
   preview_mode: boolean
 }): React.ReactElement | null {
-  const name = str(content.name) || (preview_mode ? 'Mount Pleasant' : '')
-  // Note: the AI generates 'body' and 'vibe_tags' for this block.
-  // We also check legacy field names 'description'/'highlights' for manually-authored blocks.
+  // AI generates 'neighbourhood'; 'name' kept as fallback for older editions.
+  const name = str(content.neighbourhood) || str(content.name) || (preview_mode ? 'Mount Pleasant' : '')
+  // AI generates 'description'; 'body' kept as fallback for older editions.
   const description =
-    str(content.body) ||
     str(content.description) ||
+    str(content.body) ||
     (preview_mode
       ? "One of Vancouver's most vibrant and walkable neighbourhoods, Mount Pleasant blends indie coffee shops, art studios, and family-friendly green spaces with a rapidly evolving condo market."
       : '')
-  const highlights = arr(content.vibe_tags).length > 0 ? arr(content.vibe_tags) : arr(content.highlights)
+  // AI generates 'highlights'; 'vibe_tags' kept as fallback for older editions.
+  const highlights = arr(content.highlights).length > 0 ? arr(content.highlights) : arr(content.vibe_tags)
   const displayHighlights =
     preview_mode && highlights.length === 0
       ? ['Walk Score: 92', 'Avg. 2BR: $889K', 'New cafés + breweries']
@@ -736,7 +736,9 @@ function QuickTipBlock({
   content: Record<string, unknown>
   preview_mode: boolean
 }): React.ReactElement | null {
+  // AI generates 'body'; 'tip' kept as fallback for older editions.
   const tip =
+    str(content.body) ||
     str(content.tip) ||
     (preview_mode
       ? "Price your home 2–3% below the nearest comp to generate multiple offers in a balanced market. Controlled competition often yields a better final price than listing high."
@@ -826,13 +828,18 @@ function AgentNoteBlock({
   content: Record<string, unknown>
   preview_mode: boolean
 }): React.ReactElement | null {
+  // AI generates 'body'; 'note' kept as fallback for older editions.
   const note =
+    str(content.body) ||
     str(content.note) ||
     (preview_mode
       ? "Spring is here and so is the competition. I'm seeing buyers who have been sitting on the fence finally making moves — and sellers who listed last fall are getting renewed interest. If you've been thinking about making a move, now is a great time to connect."
       : '')
+  // AI generates 'sign_off'; 'signature' kept as fallback for older editions.
   const signature =
-    str(content.signature) || (preview_mode ? 'Here whenever you need me.' : '')
+    str(content.sign_off) ||
+    str(content.signature) ||
+    (preview_mode ? 'Here whenever you need me.' : '')
 
   if (!note && !preview_mode) return null
 
@@ -902,8 +909,11 @@ function CtaBlock({
   const headline =
     str(content.headline) ||
     (preview_mode ? "Ready to Make Your Move? Let's Talk." : '')
+  // AI generates 'button_label'; 'button_text' kept as fallback for older editions.
   const buttonText =
-    str(content.button_text) || (preview_mode ? 'Book a Free Consultation' : 'Get in Touch')
+    str(content.button_label) ||
+    str(content.button_text) ||
+    (preview_mode ? 'Book a Free Consultation' : 'Get in Touch')
   const buttonUrl = str(content.button_url) || '#'
   const subtext = str(content.subtext)
 

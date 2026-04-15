@@ -162,14 +162,12 @@ ${listingContext}
 
 Requirements:
 - highlights: array of exactly 3 specific, factual points about what made the property sell (e.g. price achievement, days on market, multiple offers)
-- address_note: a brief line about the location or street appeal (property features only, no demographic references)
-- days_narrative: 1–2 sentences interpreting the days_on_market number in the context of current market conditions
+- commentary: 2–3 sentences of market insight — what this sale says about current conditions in the area (property features only, no demographic references)
 
 Return JSON matching this schema exactly:
 {
   "highlights": ["string", "string", "string"],
-  "address_note": "string",
-  "days_narrative": "string"
+  "commentary": "string (2-3 sentences)"
 }`;
 }
 
@@ -256,16 +254,18 @@ function buildNeighborhoodSpotlightPrompt(block: EditorBlock, context: EditionCo
   return `Write a neighbourhood spotlight for ${neighbourhood} for a real estate newsletter.
 
 Requirements:
-- body: 60–100 words describing the lifestyle and character of the area
+- neighbourhood: the name of the neighbourhood (e.g. "Mount Pleasant" or "Kitsilano")
+- description: 60–100 words describing the lifestyle and character of the area
 - Must mention at least 2 specific local references: street names, parks, shops, restaurants, landmarks, or community features
 - Avoid demographic language — describe places, not people groups
 - Focus on what makes the neighbourhood appealing to live in (walkability, food scene, green space, transit, architecture, etc.)
-- vibe_tags: array of 3–5 short tags (e.g. ["walkable", "dog-friendly", "café culture"])
+- highlights: array of 3–5 short tags (e.g. ["Walk Score: 92", "avg 2BR: $889K", "café culture"])
 
 Return JSON matching this schema exactly:
 {
-  "body": "string (60-100 words)",
-  "vibe_tags": ["string", "string", "string"]
+  "neighbourhood": "string",
+  "description": "string (60-100 words)",
+  "highlights": ["string", "string", "string"]
 }`;
 }
 
@@ -274,15 +274,14 @@ function buildQuickTipPrompt(block: EditorBlock, context: EditionContext): strin
   return `Write a quick tip for real estate newsletter readers in ${context.city ?? 'Vancouver, BC'} for an edition about "${context.edition_type}".
 
 Requirements:
-- tip: one actionable tip the reader can act on THIS WEEK — not a generic platitude
-- 40–80 words
+- title: max 60 characters, active verb, entices the reader to read the tip
+- body: one actionable tip the reader can act on THIS WEEK — not a generic platitude, 40–80 words
 - Must be specific and practical (e.g. not "talk to a mortgage broker" but "call your lender before February rate decisions and ask about rate holds — most are free for 90–120 days")
-- headline: max 60 characters, active verb, entices the reader to read the tip
 
 Return JSON matching this schema exactly:
 {
-  "headline": "string (max 60 chars)",
-  "tip": "string (40-80 words)"
+  "title": "string (max 60 chars)",
+  "body": "string (40-80 words)"
 }`;
 }
 
@@ -302,15 +301,13 @@ ${voiceRules}
 ${signaturePhrase}
 
 Requirements:
-- note: 50–100 words in the agent's first-person voice — warm, genuine, not salesy
-- Must feel personal, not corporate — like a note from a trusted advisor, not a press release
-- Self-check: "Would you send this to your mom?" — if not, rewrite it
-- opening_line: the first sentence (must hook the reader in under 15 words)
+- body: 50–100 words in the agent's first-person voice — warm, genuine, not salesy. Must feel personal, not corporate — like a note from a trusted advisor, not a press release. Self-check: "Would you send this to your mom?" — if not, rewrite it.
+- sign_off: a short, warm closing line (e.g. "Here whenever you need me." or "Talk soon,")
 
 Return JSON matching this schema exactly:
 {
-  "opening_line": "string (max 15 words)",
-  "note": "string (50-100 words, including the opening_line)"
+  "body": "string (50-100 words)",
+  "sign_off": "string (max 15 words)"
 }`;
 }
 
