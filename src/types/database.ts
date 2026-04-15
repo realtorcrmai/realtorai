@@ -1448,6 +1448,1599 @@ export interface Database {
           updated_at?: string;
         };
       };
+      // ── Newsletter & Journey Engine ──────────────────────────
+      newsletters: {
+        Row: {
+          id: string;
+          contact_id: string;
+          template_slug: string | null;
+          journey_id: string | null;
+          journey_phase: string | null;
+          email_type: string;
+          subject: string;
+          html_body: string;
+          plain_text: string | null;
+          status: "draft" | "approved" | "sending" | "sent" | "failed" | "skipped";
+          send_mode: "auto" | "review";
+          sent_at: string | null;
+          resend_message_id: string | null;
+          ai_context: Json;
+          error_message: string | null;
+          original_subject: string | null;
+          original_html_body: string | null;
+          edited_at: string | null;
+          edit_distance: number | null;
+          realtor_id: string | null;
+          is_sample: boolean;
+          source_event_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_id: string;
+          template_slug?: string | null;
+          journey_id?: string | null;
+          journey_phase?: string | null;
+          email_type: string;
+          subject: string;
+          html_body: string;
+          plain_text?: string | null;
+          status?: "draft" | "approved" | "sending" | "sent" | "failed" | "skipped";
+          send_mode?: "auto" | "review";
+          sent_at?: string | null;
+          resend_message_id?: string | null;
+          ai_context?: Json;
+          error_message?: string | null;
+          original_subject?: string | null;
+          original_html_body?: string | null;
+          edited_at?: string | null;
+          edit_distance?: number | null;
+          realtor_id?: string | null;
+          is_sample?: boolean;
+          source_event_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          contact_id?: string;
+          template_slug?: string | null;
+          journey_id?: string | null;
+          journey_phase?: string | null;
+          email_type?: string;
+          subject?: string;
+          html_body?: string;
+          plain_text?: string | null;
+          status?: "draft" | "approved" | "sending" | "sent" | "failed" | "skipped";
+          send_mode?: "auto" | "review";
+          sent_at?: string | null;
+          resend_message_id?: string | null;
+          ai_context?: Json;
+          error_message?: string | null;
+          original_subject?: string | null;
+          original_html_body?: string | null;
+          edited_at?: string | null;
+          edit_distance?: number | null;
+          realtor_id?: string | null;
+          is_sample?: boolean;
+          source_event_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      newsletter_templates: {
+        Row: {
+          id: string;
+          slug: string;
+          name: string;
+          description: string | null;
+          email_type: string;
+          default_subject: string | null;
+          preview_image_url: string | null;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          name: string;
+          description?: string | null;
+          email_type: string;
+          default_subject?: string | null;
+          preview_image_url?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          slug?: string;
+          name?: string;
+          description?: string | null;
+          email_type?: string;
+          default_subject?: string | null;
+          preview_image_url?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+        };
+      };
+      newsletter_events: {
+        Row: {
+          id: string;
+          newsletter_id: string;
+          contact_id: string;
+          event_type: "opened" | "clicked" | "bounced" | "unsubscribed" | "complained" | "delivered";
+          link_url: string | null;
+          link_type: "listing" | "showing" | "market_report" | "school_info" | "neighbourhood" | "cma" | "contact_agent" | "unsubscribe" | "other" | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          newsletter_id: string;
+          contact_id: string;
+          event_type: "opened" | "clicked" | "bounced" | "unsubscribed" | "complained" | "delivered";
+          link_url?: string | null;
+          link_type?: "listing" | "showing" | "market_report" | "school_info" | "neighbourhood" | "cma" | "contact_agent" | "unsubscribe" | "other" | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          newsletter_id?: string;
+          contact_id?: string;
+          event_type?: "opened" | "clicked" | "bounced" | "unsubscribed" | "complained" | "delivered";
+          link_url?: string | null;
+          link_type?: "listing" | "showing" | "market_report" | "school_info" | "neighbourhood" | "cma" | "contact_agent" | "unsubscribe" | "other" | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+      };
+      contact_journeys: {
+        Row: {
+          id: string;
+          contact_id: string;
+          journey_type: "buyer" | "seller";
+          current_phase: "lead" | "active" | "under_contract" | "past_client" | "dormant";
+          phase_entered_at: string;
+          next_email_at: string | null;
+          emails_sent_in_phase: number;
+          send_mode: "auto" | "review";
+          is_paused: boolean;
+          pause_reason: string | null;
+          metadata: Json;
+          agent_mode: "schedule" | "agent_driven";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_id: string;
+          journey_type: "buyer" | "seller";
+          current_phase?: "lead" | "active" | "under_contract" | "past_client" | "dormant";
+          phase_entered_at?: string;
+          next_email_at?: string | null;
+          emails_sent_in_phase?: number;
+          send_mode?: "auto" | "review";
+          is_paused?: boolean;
+          pause_reason?: string | null;
+          metadata?: Json;
+          agent_mode?: "schedule" | "agent_driven";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          contact_id?: string;
+          journey_type?: "buyer" | "seller";
+          current_phase?: "lead" | "active" | "under_contract" | "past_client" | "dormant";
+          phase_entered_at?: string;
+          next_email_at?: string | null;
+          emails_sent_in_phase?: number;
+          send_mode?: "auto" | "review";
+          is_paused?: boolean;
+          pause_reason?: string | null;
+          metadata?: Json;
+          agent_mode?: "schedule" | "agent_driven";
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      // ── Email Events (Newsletter Engine v3) ────────────────────
+      email_events: {
+        Row: {
+          id: string;
+          realtor_id: string;
+          event_type: string;
+          event_data: Json;
+          affected_contact_ids: string[] | null;
+          contact_id: string | null;
+          listing_id: string | null;
+          status: "pending" | "processed" | "failed" | "ignored";
+          processed_at: string | null;
+          error_message: string | null;
+          sequence_type: string | null;
+          sequence_step: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          realtor_id: string;
+          event_type: string;
+          event_data?: Json;
+          affected_contact_ids?: string[] | null;
+          contact_id?: string | null;
+          listing_id?: string | null;
+          status?: "pending" | "processed" | "failed" | "ignored";
+          processed_at?: string | null;
+          error_message?: string | null;
+          sequence_type?: string | null;
+          sequence_step?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          realtor_id?: string;
+          event_type?: string;
+          event_data?: Json;
+          affected_contact_ids?: string[] | null;
+          contact_id?: string | null;
+          listing_id?: string | null;
+          status?: "pending" | "processed" | "failed" | "ignored";
+          processed_at?: string | null;
+          error_message?: string | null;
+          sequence_type?: string | null;
+          sequence_step?: number | null;
+          created_at?: string;
+        };
+      };
+      // ── AI Agent Layer ─────────────────────────────────────────
+      agent_recommendations: {
+        Row: {
+          id: string;
+          contact_id: string;
+          action_type: "call" | "send_email" | "send_sms" | "enroll_workflow" | "advance_stage" | "add_tag" | "create_task" | "reengage";
+          action_config: Json;
+          reasoning: string;
+          priority: "hot" | "warm" | "info";
+          status: "pending" | "accepted" | "dismissed" | "expired";
+          expires_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_id: string;
+          action_type: "call" | "send_email" | "send_sms" | "enroll_workflow" | "advance_stage" | "add_tag" | "create_task" | "reengage";
+          action_config?: Json;
+          reasoning: string;
+          priority?: "hot" | "warm" | "info";
+          status?: "pending" | "accepted" | "dismissed" | "expired";
+          expires_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          contact_id?: string;
+          action_type?: "call" | "send_email" | "send_sms" | "enroll_workflow" | "advance_stage" | "add_tag" | "create_task" | "reengage";
+          action_config?: Json;
+          reasoning?: string;
+          priority?: "hot" | "warm" | "info";
+          status?: "pending" | "accepted" | "dismissed" | "expired";
+          expires_at?: string;
+          created_at?: string;
+        };
+      };
+      agent_events: {
+        Row: {
+          id: string;
+          event_type: string;
+          contact_id: string | null;
+          listing_id: string | null;
+          payload: Json;
+          processed: boolean;
+          processed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_type: string;
+          contact_id?: string | null;
+          listing_id?: string | null;
+          payload?: Json;
+          processed?: boolean;
+          processed_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_type?: string;
+          contact_id?: string | null;
+          listing_id?: string | null;
+          payload?: Json;
+          processed?: boolean;
+          processed_at?: string | null;
+          created_at?: string;
+        };
+      };
+      agent_decisions: {
+        Row: {
+          id: string;
+          contact_id: string;
+          event_id: string | null;
+          decision: "send" | "skip" | "defer" | "suppress";
+          email_type: string | null;
+          reasoning: string;
+          relevance_score: number | null;
+          confidence: number | null;
+          context_snapshot: Json;
+          outcome: string | null;
+          newsletter_id: string | null;
+          trust_level: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_id: string;
+          event_id?: string | null;
+          decision: "send" | "skip" | "defer" | "suppress";
+          email_type?: string | null;
+          reasoning: string;
+          relevance_score?: number | null;
+          confidence?: number | null;
+          context_snapshot?: Json;
+          outcome?: string | null;
+          newsletter_id?: string | null;
+          trust_level?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          contact_id?: string;
+          event_id?: string | null;
+          decision?: "send" | "skip" | "defer" | "suppress";
+          email_type?: string | null;
+          reasoning?: string;
+          relevance_score?: number | null;
+          confidence?: number | null;
+          context_snapshot?: Json;
+          outcome?: string | null;
+          newsletter_id?: string | null;
+          trust_level?: string | null;
+          created_at?: string;
+        };
+      };
+      agent_settings: {
+        Row: {
+          id: string;
+          key: string;
+          value: Json;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          key: string;
+          value: Json;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          key?: string;
+          value?: Json;
+          updated_at?: string;
+        };
+      };
+      // ── Progressive Trust ──────────────────────────────────────
+      ghost_drafts: {
+        Row: {
+          id: string;
+          contact_id: string;
+          decision_id: string | null;
+          email_type: string;
+          subject: string;
+          html_body: string;
+          ai_context: Json;
+          reasoning: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_id: string;
+          decision_id?: string | null;
+          email_type: string;
+          subject: string;
+          html_body: string;
+          ai_context?: Json;
+          reasoning: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          contact_id?: string;
+          decision_id?: string | null;
+          email_type?: string;
+          subject?: string;
+          html_body?: string;
+          ai_context?: Json;
+          reasoning?: string;
+          created_at?: string;
+        };
+      };
+      email_recalls: {
+        Row: {
+          id: string;
+          newsletter_id: string;
+          contact_id: string;
+          expires_at: string;
+          recalled: boolean;
+          recalled_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          newsletter_id: string;
+          contact_id: string;
+          expires_at: string;
+          recalled?: boolean;
+          recalled_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          newsletter_id?: string;
+          contact_id?: string;
+          expires_at?: string;
+          recalled?: boolean;
+          recalled_at?: string | null;
+          created_at?: string;
+        };
+      };
+      trust_audit_log: {
+        Row: {
+          id: string;
+          previous_level: string;
+          new_level: string;
+          reason: string;
+          metrics: Json;
+          triggered_by: "auto_promotion" | "manual" | "demotion";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          previous_level: string;
+          new_level: string;
+          reason: string;
+          metrics?: Json;
+          triggered_by: "auto_promotion" | "manual" | "demotion";
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          previous_level?: string;
+          new_level?: string;
+          reason?: string;
+          metrics?: Json;
+          triggered_by?: "auto_promotion" | "manual" | "demotion";
+          created_at?: string;
+        };
+      };
+      edit_history: {
+        Row: {
+          id: string;
+          newsletter_id: string;
+          contact_id: string;
+          original_subject: string;
+          edited_subject: string;
+          original_body_excerpt: string;
+          edited_body_excerpt: string;
+          edit_distance: number;
+          edit_type: "minor_tweak" | "tone_change" | "content_change" | "major_rewrite" | null;
+          extracted_rules: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          newsletter_id: string;
+          contact_id: string;
+          original_subject: string;
+          edited_subject: string;
+          original_body_excerpt: string;
+          edited_body_excerpt: string;
+          edit_distance: number;
+          edit_type?: "minor_tweak" | "tone_change" | "content_change" | "major_rewrite" | null;
+          extracted_rules?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          newsletter_id?: string;
+          contact_id?: string;
+          original_subject?: string;
+          edited_subject?: string;
+          original_body_excerpt?: string;
+          edited_body_excerpt?: string;
+          edit_distance?: number;
+          edit_type?: "minor_tweak" | "tone_change" | "content_change" | "major_rewrite" | null;
+          extracted_rules?: Json;
+          created_at?: string;
+        };
+      };
+      voice_rules: {
+        Row: {
+          id: string;
+          rule_type: "tone" | "greeting" | "sign_off" | "vocabulary" | "structure" | "subject_line" | "avoid" | "always_include";
+          rule_text: string;
+          confidence: number;
+          source_count: number;
+          examples: Json;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          rule_type: "tone" | "greeting" | "sign_off" | "vocabulary" | "structure" | "subject_line" | "avoid" | "always_include";
+          rule_text: string;
+          confidence?: number;
+          source_count?: number;
+          examples?: Json;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          rule_type?: "tone" | "greeting" | "sign_off" | "vocabulary" | "structure" | "subject_line" | "avoid" | "always_include";
+          rule_text?: string;
+          confidence?: number;
+          source_count?: number;
+          examples?: Json;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      send_governor_log: {
+        Row: {
+          id: string;
+          contact_id: string;
+          email_type: string;
+          newsletter_id: string | null;
+          sent_at: string;
+          week_number: number;
+          year: number;
+        };
+        Insert: {
+          id?: string;
+          contact_id: string;
+          email_type: string;
+          newsletter_id?: string | null;
+          sent_at?: string;
+          week_number?: number;
+          year?: number;
+        };
+        Update: {
+          id?: string;
+          contact_id?: string;
+          email_type?: string;
+          newsletter_id?: string | null;
+          sent_at?: string;
+          week_number?: number;
+          year?: number;
+        };
+      };
+      // ── Realtor Agent Config ───────────────────────────────────
+      realtor_agent_config: {
+        Row: {
+          id: string;
+          realtor_id: string;
+          voice_rules: Json;
+          voice_examples: Json;
+          buyer_sequence: Json;
+          seller_sequence: Json;
+          escalation_thresholds: Json;
+          dormancy_days: number;
+          auto_sunset_days: number;
+          re_engagement_attempts: number;
+          frequency_caps: Json;
+          sending_enabled: boolean;
+          skip_weekends: boolean;
+          quiet_hours: Json;
+          default_send_day: string;
+          default_send_hour: number;
+          content_rankings: Json;
+          brand_config: Json;
+          total_emails_analyzed: number;
+          total_conversions: number;
+          learning_confidence: string;
+          last_learning_cycle: string | null;
+          competitive_intel: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          realtor_id: string;
+          voice_rules?: Json;
+          voice_examples?: Json;
+          buyer_sequence?: Json;
+          seller_sequence?: Json;
+          escalation_thresholds?: Json;
+          dormancy_days?: number;
+          auto_sunset_days?: number;
+          re_engagement_attempts?: number;
+          frequency_caps?: Json;
+          sending_enabled?: boolean;
+          skip_weekends?: boolean;
+          quiet_hours?: Json;
+          default_send_day?: string;
+          default_send_hour?: number;
+          content_rankings?: Json;
+          brand_config?: Json;
+          total_emails_analyzed?: number;
+          total_conversions?: number;
+          learning_confidence?: string;
+          last_learning_cycle?: string | null;
+          competitive_intel?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          realtor_id?: string;
+          voice_rules?: Json;
+          voice_examples?: Json;
+          buyer_sequence?: Json;
+          seller_sequence?: Json;
+          escalation_thresholds?: Json;
+          dormancy_days?: number;
+          auto_sunset_days?: number;
+          re_engagement_attempts?: number;
+          frequency_caps?: Json;
+          sending_enabled?: boolean;
+          skip_weekends?: boolean;
+          quiet_hours?: Json;
+          default_send_day?: string;
+          default_send_hour?: number;
+          content_rankings?: Json;
+          brand_config?: Json;
+          total_emails_analyzed?: number;
+          total_conversions?: number;
+          learning_confidence?: string;
+          last_learning_cycle?: string | null;
+          competitive_intel?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      agent_learning_log: {
+        Row: {
+          id: string;
+          realtor_id: string;
+          change_type: string;
+          field_changed: string;
+          old_value: Json | null;
+          new_value: Json | null;
+          reason: string | null;
+          auto_applied: boolean;
+          approved: boolean | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          realtor_id: string;
+          change_type: string;
+          field_changed: string;
+          old_value?: Json | null;
+          new_value?: Json | null;
+          reason?: string | null;
+          auto_applied?: boolean;
+          approved?: boolean | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          realtor_id?: string;
+          change_type?: string;
+          field_changed?: string;
+          old_value?: Json | null;
+          new_value?: Json | null;
+          reason?: string | null;
+          auto_applied?: boolean;
+          approved?: boolean | null;
+          created_at?: string;
+        };
+      };
+      // ── Tasks ──────────────────────────────────────────────────
+      tasks: {
+        Row: {
+          id: string;
+          title: string;
+          description: string | null;
+          status: "pending" | "in_progress" | "completed";
+          priority: "low" | "medium" | "high" | "urgent";
+          category: "follow_up" | "showing" | "document" | "listing" | "marketing" | "inspection" | "closing" | "general";
+          due_date: string | null;
+          contact_id: string | null;
+          listing_id: string | null;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          description?: string | null;
+          status?: "pending" | "in_progress" | "completed";
+          priority?: "low" | "medium" | "high" | "urgent";
+          category?: "follow_up" | "showing" | "document" | "listing" | "marketing" | "inspection" | "closing" | "general";
+          due_date?: string | null;
+          contact_id?: string | null;
+          listing_id?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          description?: string | null;
+          status?: "pending" | "in_progress" | "completed";
+          priority?: "low" | "medium" | "high" | "urgent";
+          category?: "follow_up" | "showing" | "document" | "listing" | "marketing" | "inspection" | "closing" | "general";
+          due_date?: string | null;
+          contact_id?: string | null;
+          listing_id?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      // ── Notifications ──────────────────────────────────────────
+      notifications: {
+        Row: {
+          id: string;
+          realtor_id: string;
+          type: string;
+          title: string;
+          body: string | null;
+          related_type: string | null;
+          related_id: string | null;
+          is_read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          realtor_id: string;
+          type: string;
+          title: string;
+          body?: string | null;
+          related_type?: string | null;
+          related_id?: string | null;
+          is_read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          realtor_id?: string;
+          type?: string;
+          title?: string;
+          body?: string | null;
+          related_type?: string | null;
+          related_id?: string | null;
+          is_read?: boolean;
+          created_at?: string;
+        };
+      };
+      // ── Contact Segments ───────────────────────────────────────
+      contact_segments: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          rules: Json;
+          rule_operator: "AND" | "OR";
+          contact_count: number;
+          is_dynamic: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          rules?: Json;
+          rule_operator?: "AND" | "OR";
+          contact_count?: number;
+          is_dynamic?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          rules?: Json;
+          rule_operator?: "AND" | "OR";
+          contact_count?: number;
+          is_dynamic?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      // ── Smart Lists ────────────────────────────────────────────
+      smart_lists: {
+        Row: {
+          id: string;
+          realtor_id: string;
+          name: string;
+          icon: string;
+          entity_type: "contacts" | "listings" | "showings";
+          rules: Json;
+          match_mode: "all" | "any";
+          sort_field: string;
+          sort_order: "asc" | "desc";
+          is_pinned: boolean;
+          notify_threshold: number | null;
+          position: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          realtor_id: string;
+          name: string;
+          icon?: string;
+          entity_type: "contacts" | "listings" | "showings";
+          rules?: Json;
+          match_mode?: "all" | "any";
+          sort_field?: string;
+          sort_order?: "asc" | "desc";
+          is_pinned?: boolean;
+          notify_threshold?: number | null;
+          position?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          realtor_id?: string;
+          name?: string;
+          icon?: string;
+          entity_type?: "contacts" | "listings" | "showings";
+          rules?: Json;
+          match_mode?: "all" | "any";
+          sort_field?: string;
+          sort_order?: "asc" | "desc";
+          is_pinned?: boolean;
+          notify_threshold?: number | null;
+          position?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      // ── Seller Identities (FINTRAC) ───────────────────────────
+      seller_identities: {
+        Row: {
+          id: string;
+          listing_id: string;
+          contact_id: string | null;
+          full_name: string;
+          dob: string | null;
+          citizenship: string | null;
+          id_type: string | null;
+          id_number: string | null;
+          id_expiry: string | null;
+          phone: string | null;
+          email: string | null;
+          mailing_address: string | null;
+          occupation: string | null;
+          sort_order: number;
+          realtor_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          listing_id: string;
+          contact_id?: string | null;
+          full_name: string;
+          dob?: string | null;
+          citizenship?: string | null;
+          id_type?: string | null;
+          id_number?: string | null;
+          id_expiry?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          mailing_address?: string | null;
+          occupation?: string | null;
+          sort_order?: number;
+          realtor_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          listing_id?: string;
+          contact_id?: string | null;
+          full_name?: string;
+          dob?: string | null;
+          citizenship?: string | null;
+          id_type?: string | null;
+          id_number?: string | null;
+          id_expiry?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          mailing_address?: string | null;
+          occupation?: string | null;
+          sort_order?: number;
+          realtor_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      // ── Listing Enrichment ─────────────────────────────────────
+      listing_enrichment: {
+        Row: {
+          id: string;
+          listing_id: string;
+          geo: Json | null;
+          parcel: Json | null;
+          ltsa: Json | null;
+          assessment: Json | null;
+          strata: Json | null;
+          enrich_status: Json;
+          realtor_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          listing_id: string;
+          geo?: Json | null;
+          parcel?: Json | null;
+          ltsa?: Json | null;
+          assessment?: Json | null;
+          strata?: Json | null;
+          enrich_status?: Json;
+          realtor_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          listing_id?: string;
+          geo?: Json | null;
+          parcel?: Json | null;
+          ltsa?: Json | null;
+          assessment?: Json | null;
+          strata?: Json | null;
+          enrich_status?: Json;
+          realtor_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      // ── Voice Agent ────────────────────────────────────────────
+      voice_notifications: {
+        Row: {
+          id: string;
+          agent_email: string;
+          notification_type: "incoming_lead" | "showing_update" | "compliance_alert" | "listing_update" | "deal_update" | "calendar_reminder";
+          title: string;
+          body: string;
+          payload: Json;
+          priority: "urgent" | "normal" | "low";
+          sent_at: string | null;
+          delivered_at: string | null;
+          read_at: string | null;
+          spoken_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          agent_email: string;
+          notification_type: "incoming_lead" | "showing_update" | "compliance_alert" | "listing_update" | "deal_update" | "calendar_reminder";
+          title: string;
+          body: string;
+          payload?: Json;
+          priority?: "urgent" | "normal" | "low";
+          sent_at?: string | null;
+          delivered_at?: string | null;
+          read_at?: string | null;
+          spoken_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          agent_email?: string;
+          notification_type?: "incoming_lead" | "showing_update" | "compliance_alert" | "listing_update" | "deal_update" | "calendar_reminder";
+          title?: string;
+          body?: string;
+          payload?: Json;
+          priority?: "urgent" | "normal" | "low";
+          sent_at?: string | null;
+          delivered_at?: string | null;
+          read_at?: string | null;
+          spoken_at?: string | null;
+          created_at?: string;
+        };
+      };
+      // ── RAG System ─────────────────────────────────────────────
+      rag_sessions: {
+        Row: {
+          id: string;
+          user_email: string;
+          ui_context: Json;
+          tone_preference: "formal" | "professional" | "casual" | "warm";
+          messages: Json;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_email: string;
+          ui_context?: Json;
+          tone_preference?: "formal" | "professional" | "casual" | "warm";
+          messages?: Json;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_email?: string;
+          ui_context?: Json;
+          tone_preference?: "formal" | "professional" | "casual" | "warm";
+          messages?: Json;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      rag_audit_log: {
+        Row: {
+          id: string;
+          session_id: string | null;
+          user_email: string | null;
+          query_text: string;
+          intent: string | null;
+          query_plan: Json | null;
+          retrieved_ids: string[] | null;
+          retrieved_scores: number[] | null;
+          model_tier: "haiku" | "sonnet" | "opus" | null;
+          response_text: string | null;
+          latency_ms: number | null;
+          guardrail_triggered: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          session_id?: string | null;
+          user_email?: string | null;
+          query_text: string;
+          intent?: string | null;
+          query_plan?: Json | null;
+          retrieved_ids?: string[] | null;
+          retrieved_scores?: number[] | null;
+          model_tier?: "haiku" | "sonnet" | "opus" | null;
+          response_text?: string | null;
+          latency_ms?: number | null;
+          guardrail_triggered?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          session_id?: string | null;
+          user_email?: string | null;
+          query_text?: string;
+          intent?: string | null;
+          query_plan?: Json | null;
+          retrieved_ids?: string[] | null;
+          retrieved_scores?: number[] | null;
+          model_tier?: "haiku" | "sonnet" | "opus" | null;
+          response_text?: string | null;
+          latency_ms?: number | null;
+          guardrail_triggered?: string | null;
+          created_at?: string;
+        };
+      };
+      knowledge_articles: {
+        Row: {
+          id: string;
+          title: string;
+          body: string;
+          category: "faq" | "playbook" | "script" | "explainer" | "process";
+          audience_type: "all" | "buyer" | "seller" | "investor" | "agent";
+          tags: Json;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          body: string;
+          category: "faq" | "playbook" | "script" | "explainer" | "process";
+          audience_type?: "all" | "buyer" | "seller" | "investor" | "agent";
+          tags?: Json;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          body?: string;
+          category?: "faq" | "playbook" | "script" | "explainer" | "process";
+          audience_type?: "all" | "buyer" | "seller" | "investor" | "agent";
+          tags?: Json;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      // ── Social Media Studio ────────────────────────────────────
+      social_brand_kits: {
+        Row: {
+          id: string;
+          user_email: string;
+          logo_url: string | null;
+          headshot_url: string | null;
+          primary_colour: string;
+          secondary_colour: string;
+          accent_colour: string;
+          heading_font: string;
+          body_font: string;
+          voice_tone: string;
+          voice_rules: Json;
+          voice_custom_description: string | null;
+          agent_name: string | null;
+          brokerage_name: string | null;
+          brokerage_logo_url: string | null;
+          license_number: string | null;
+          bio_text: string | null;
+          service_areas: string[];
+          phone: string | null;
+          email: string | null;
+          website_url: string | null;
+          default_hashtags: string[];
+          default_cta: string;
+          emoji_preference: string;
+          preferred_platforms: string[];
+          quiet_hours_start: number;
+          quiet_hours_end: number;
+          posting_days: string[];
+          api_key: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_email: string;
+          logo_url?: string | null;
+          headshot_url?: string | null;
+          primary_colour?: string;
+          secondary_colour?: string;
+          accent_colour?: string;
+          heading_font?: string;
+          body_font?: string;
+          voice_tone?: string;
+          voice_rules?: Json;
+          voice_custom_description?: string | null;
+          agent_name?: string | null;
+          brokerage_name?: string | null;
+          brokerage_logo_url?: string | null;
+          license_number?: string | null;
+          bio_text?: string | null;
+          service_areas?: string[];
+          phone?: string | null;
+          email?: string | null;
+          website_url?: string | null;
+          default_hashtags?: string[];
+          default_cta?: string;
+          emoji_preference?: string;
+          preferred_platforms?: string[];
+          quiet_hours_start?: number;
+          quiet_hours_end?: number;
+          posting_days?: string[];
+          api_key?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_email?: string;
+          logo_url?: string | null;
+          headshot_url?: string | null;
+          primary_colour?: string;
+          secondary_colour?: string;
+          accent_colour?: string;
+          heading_font?: string;
+          body_font?: string;
+          voice_tone?: string;
+          voice_rules?: Json;
+          voice_custom_description?: string | null;
+          agent_name?: string | null;
+          brokerage_name?: string | null;
+          brokerage_logo_url?: string | null;
+          license_number?: string | null;
+          bio_text?: string | null;
+          service_areas?: string[];
+          phone?: string | null;
+          email?: string | null;
+          website_url?: string | null;
+          default_hashtags?: string[];
+          default_cta?: string;
+          emoji_preference?: string;
+          preferred_platforms?: string[];
+          quiet_hours_start?: number;
+          quiet_hours_end?: number;
+          posting_days?: string[];
+          api_key?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      social_posts: {
+        Row: {
+          id: string;
+          brand_kit_id: string;
+          content_type: string;
+          caption: string | null;
+          caption_original: string | null;
+          hashtags: string[];
+          media_urls: string[];
+          media_type: string;
+          template_id: string | null;
+          source_type: string | null;
+          source_id: string | null;
+          source_data: Json;
+          target_platforms: string[];
+          platform_variants: Json;
+          status: string;
+          scheduled_at: string | null;
+          published_at: string | null;
+          approved_at: string | null;
+          approved_by: string | null;
+          ai_generated: boolean;
+          ai_model: string | null;
+          ai_prompt: string | null;
+          ai_reasoning: string | null;
+          content_score: number | null;
+          content_score_breakdown: Json;
+          total_impressions: number;
+          total_engagement: number;
+          total_clicks: number;
+          total_leads: number;
+          utm_source: string | null;
+          utm_medium: string;
+          utm_campaign: string | null;
+          includes_brokerage: boolean;
+          compliance_checked: boolean;
+          compliance_notes: string | null;
+          retry_count: number;
+          last_error: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          brand_kit_id: string;
+          content_type: string;
+          caption?: string | null;
+          caption_original?: string | null;
+          hashtags?: string[];
+          media_urls?: string[];
+          media_type?: string;
+          template_id?: string | null;
+          source_type?: string | null;
+          source_id?: string | null;
+          source_data?: Json;
+          target_platforms?: string[];
+          platform_variants?: Json;
+          status?: string;
+          scheduled_at?: string | null;
+          published_at?: string | null;
+          approved_at?: string | null;
+          approved_by?: string | null;
+          ai_generated?: boolean;
+          ai_model?: string | null;
+          ai_prompt?: string | null;
+          ai_reasoning?: string | null;
+          content_score?: number | null;
+          content_score_breakdown?: Json;
+          total_impressions?: number;
+          total_engagement?: number;
+          total_clicks?: number;
+          total_leads?: number;
+          utm_source?: string | null;
+          utm_medium?: string;
+          utm_campaign?: string | null;
+          includes_brokerage?: boolean;
+          compliance_checked?: boolean;
+          compliance_notes?: string | null;
+          retry_count?: number;
+          last_error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          brand_kit_id?: string;
+          content_type?: string;
+          caption?: string | null;
+          caption_original?: string | null;
+          hashtags?: string[];
+          media_urls?: string[];
+          media_type?: string;
+          template_id?: string | null;
+          source_type?: string | null;
+          source_id?: string | null;
+          source_data?: Json;
+          target_platforms?: string[];
+          platform_variants?: Json;
+          status?: string;
+          scheduled_at?: string | null;
+          published_at?: string | null;
+          approved_at?: string | null;
+          approved_by?: string | null;
+          ai_generated?: boolean;
+          ai_model?: string | null;
+          ai_prompt?: string | null;
+          ai_reasoning?: string | null;
+          content_score?: number | null;
+          content_score_breakdown?: Json;
+          total_impressions?: number;
+          total_engagement?: number;
+          total_clicks?: number;
+          total_leads?: number;
+          utm_source?: string | null;
+          utm_medium?: string;
+          utm_campaign?: string | null;
+          includes_brokerage?: boolean;
+          compliance_checked?: boolean;
+          compliance_notes?: string | null;
+          retry_count?: number;
+          last_error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      social_accounts: {
+        Row: {
+          id: string;
+          brand_kit_id: string;
+          platform: string;
+          platform_account_id: string;
+          account_name: string | null;
+          account_type: string | null;
+          profile_url: string | null;
+          profile_image_url: string | null;
+          followers_count: number;
+          access_token_encrypted: string;
+          refresh_token_encrypted: string | null;
+          token_expires_at: string | null;
+          token_scopes: string[];
+          is_active: boolean;
+          last_used_at: string | null;
+          last_error: string | null;
+          connection_status: string;
+          connected_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          brand_kit_id: string;
+          platform: string;
+          platform_account_id: string;
+          account_name?: string | null;
+          account_type?: string | null;
+          profile_url?: string | null;
+          profile_image_url?: string | null;
+          followers_count?: number;
+          access_token_encrypted: string;
+          refresh_token_encrypted?: string | null;
+          token_expires_at?: string | null;
+          token_scopes?: string[];
+          is_active?: boolean;
+          last_used_at?: string | null;
+          last_error?: string | null;
+          connection_status?: string;
+          connected_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          brand_kit_id?: string;
+          platform?: string;
+          platform_account_id?: string;
+          account_name?: string | null;
+          account_type?: string | null;
+          profile_url?: string | null;
+          profile_image_url?: string | null;
+          followers_count?: number;
+          access_token_encrypted?: string;
+          refresh_token_encrypted?: string | null;
+          token_expires_at?: string | null;
+          token_scopes?: string[];
+          is_active?: boolean;
+          last_used_at?: string | null;
+          last_error?: string | null;
+          connection_status?: string;
+          connected_at?: string;
+          updated_at?: string;
+        };
+      };
+      social_audit_log: {
+        Row: {
+          id: string;
+          brand_kit_id: string;
+          post_id: string | null;
+          action: string;
+          actor: string | null;
+          original_caption: string | null;
+          edited_caption: string | null;
+          voice_rules_extracted: Json | null;
+          compliance_result: Json | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          brand_kit_id: string;
+          post_id?: string | null;
+          action: string;
+          actor?: string | null;
+          original_caption?: string | null;
+          edited_caption?: string | null;
+          voice_rules_extracted?: Json | null;
+          compliance_result?: Json | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          brand_kit_id?: string;
+          post_id?: string | null;
+          action?: string;
+          actor?: string | null;
+          original_caption?: string | null;
+          edited_caption?: string | null;
+          voice_rules_extracted?: Json | null;
+          compliance_result?: Json | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+      };
+      social_usage_tracking: {
+        Row: {
+          id: string;
+          brand_kit_id: string;
+          month: string;
+          captions_generated: number;
+          images_generated: number;
+          videos_generated: number;
+          scores_generated: number;
+          hashtag_suggestions: number;
+          estimated_ai_cost_cents: number;
+          tier: string;
+          captions_limit: number;
+          videos_limit: number;
+        };
+        Insert: {
+          id?: string;
+          brand_kit_id: string;
+          month: string;
+          captions_generated?: number;
+          images_generated?: number;
+          videos_generated?: number;
+          scores_generated?: number;
+          hashtag_suggestions?: number;
+          estimated_ai_cost_cents?: number;
+          tier?: string;
+          captions_limit?: number;
+          videos_limit?: number;
+        };
+        Update: {
+          id?: string;
+          brand_kit_id?: string;
+          month?: string;
+          captions_generated?: number;
+          images_generated?: number;
+          videos_generated?: number;
+          scores_generated?: number;
+          hashtag_suggestions?: number;
+          estimated_ai_cost_cents?: number;
+          tier?: string;
+          captions_limit?: number;
+          videos_limit?: number;
+        };
+      };
+      // ── Website / Realtor Sites ────────────────────────────────
+      realtor_sites: {
+        Row: {
+          id: string;
+          realtor_id: string | null;
+          api_key: string | null;
+          allowed_domains: string[];
+          chatbot_config: Json;
+          integrations_enabled: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          realtor_id?: string | null;
+          api_key?: string | null;
+          allowed_domains?: string[];
+          chatbot_config?: Json;
+          integrations_enabled?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          realtor_id?: string | null;
+          api_key?: string | null;
+          allowed_domains?: string[];
+          chatbot_config?: Json;
+          integrations_enabled?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      // ── Onboarding ─────────────────────────────────────────────
+      onboarding_checklist: {
+        Row: {
+          id: string;
+          user_id: string;
+          item_key: string;
+          completed_at: string | null;
+          dismissed: boolean;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          item_key: string;
+          completed_at?: string | null;
+          dismissed?: boolean;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          item_key?: string;
+          completed_at?: string | null;
+          dismissed?: boolean;
+        };
+      };
+      // ── Contact Suppressions ───────────────────────────────────
+      contact_suppressions: {
+        Row: {
+          id: string;
+          realtor_id: string;
+          contact_id: string;
+          reason: string;
+          suppressed_at: string;
+          created_by: string;
+        };
+        Insert: {
+          id?: string;
+          realtor_id: string;
+          contact_id: string;
+          reason?: string;
+          suppressed_at?: string;
+          created_by?: string;
+        };
+        Update: {
+          id?: string;
+          realtor_id?: string;
+          contact_id?: string;
+          reason?: string;
+          suppressed_at?: string;
+          created_by?: string;
+        };
+      };
       contact_portfolio: {
         Row: {
           id: string;

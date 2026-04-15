@@ -126,6 +126,85 @@ export type HouseholdInsert = Database["public"]["Tables"]["households"]["Insert
 export type ContactRelationship = Database["public"]["Tables"]["contact_relationships"]["Row"];
 export type ContactRelationshipInsert = Database["public"]["Tables"]["contact_relationships"]["Insert"];
 
+// Newsletter & Journey Engine
+export type Newsletter = Database["public"]["Tables"]["newsletters"]["Row"];
+export type NewsletterInsert = Database["public"]["Tables"]["newsletters"]["Insert"];
+export type NewsletterTemplate = Database["public"]["Tables"]["newsletter_templates"]["Row"];
+export type NewsletterEvent = Database["public"]["Tables"]["newsletter_events"]["Row"];
+export type NewsletterEventInsert = Database["public"]["Tables"]["newsletter_events"]["Insert"];
+export type ContactJourney = Database["public"]["Tables"]["contact_journeys"]["Row"];
+export type ContactJourneyInsert = Database["public"]["Tables"]["contact_journeys"]["Insert"];
+export type EmailEvent = Database["public"]["Tables"]["email_events"]["Row"];
+export type EmailEventInsert = Database["public"]["Tables"]["email_events"]["Insert"];
+
+// AI Agent Layer
+export type AgentRecommendation = Database["public"]["Tables"]["agent_recommendations"]["Row"];
+export type AgentRecommendationInsert = Database["public"]["Tables"]["agent_recommendations"]["Insert"];
+export type AgentEvent = Database["public"]["Tables"]["agent_events"]["Row"];
+export type AgentEventInsert = Database["public"]["Tables"]["agent_events"]["Insert"];
+export type AgentDecision = Database["public"]["Tables"]["agent_decisions"]["Row"];
+export type AgentDecisionInsert = Database["public"]["Tables"]["agent_decisions"]["Insert"];
+export type AgentSetting = Database["public"]["Tables"]["agent_settings"]["Row"];
+
+// Progressive Trust
+export type GhostDraft = Database["public"]["Tables"]["ghost_drafts"]["Row"];
+export type GhostDraftInsert = Database["public"]["Tables"]["ghost_drafts"]["Insert"];
+export type EmailRecall = Database["public"]["Tables"]["email_recalls"]["Row"];
+export type TrustAuditLog = Database["public"]["Tables"]["trust_audit_log"]["Row"];
+export type EditHistory = Database["public"]["Tables"]["edit_history"]["Row"];
+export type VoiceRule = Database["public"]["Tables"]["voice_rules"]["Row"];
+export type SendGovernorLog = Database["public"]["Tables"]["send_governor_log"]["Row"];
+
+// Realtor Agent Config
+export type RealtorAgentConfig = Database["public"]["Tables"]["realtor_agent_config"]["Row"];
+export type AgentLearningLog = Database["public"]["Tables"]["agent_learning_log"]["Row"];
+
+// Tasks & Notifications
+export type Task = Database["public"]["Tables"]["tasks"]["Row"];
+export type TaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
+export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
+export type NotificationInsert = Database["public"]["Tables"]["notifications"]["Insert"];
+
+// Segments & Smart Lists
+export type ContactSegment = Database["public"]["Tables"]["contact_segments"]["Row"];
+export type ContactSegmentInsert = Database["public"]["Tables"]["contact_segments"]["Insert"];
+export type SmartList = Database["public"]["Tables"]["smart_lists"]["Row"];
+export type SmartListInsert = Database["public"]["Tables"]["smart_lists"]["Insert"];
+
+// FINTRAC & Enrichment
+export type SellerIdentity = Database["public"]["Tables"]["seller_identities"]["Row"];
+export type SellerIdentityInsert = Database["public"]["Tables"]["seller_identities"]["Insert"];
+export type ListingEnrichment = Database["public"]["Tables"]["listing_enrichment"]["Row"];
+export type ListingEnrichmentInsert = Database["public"]["Tables"]["listing_enrichment"]["Insert"];
+
+// Voice Agent
+export type VoiceNotification = Database["public"]["Tables"]["voice_notifications"]["Row"];
+export type VoiceNotificationInsert = Database["public"]["Tables"]["voice_notifications"]["Insert"];
+
+// RAG System
+export type RagSession = Database["public"]["Tables"]["rag_sessions"]["Row"];
+export type RagAuditLog = Database["public"]["Tables"]["rag_audit_log"]["Row"];
+export type KnowledgeArticle = Database["public"]["Tables"]["knowledge_articles"]["Row"];
+export type KnowledgeArticleInsert = Database["public"]["Tables"]["knowledge_articles"]["Insert"];
+
+// Social Media Studio
+export type SocialBrandKit = Database["public"]["Tables"]["social_brand_kits"]["Row"];
+export type SocialBrandKitInsert = Database["public"]["Tables"]["social_brand_kits"]["Insert"];
+export type SocialPost = Database["public"]["Tables"]["social_posts"]["Row"];
+export type SocialPostInsert = Database["public"]["Tables"]["social_posts"]["Insert"];
+export type SocialAccount = Database["public"]["Tables"]["social_accounts"]["Row"];
+export type SocialAuditLog = Database["public"]["Tables"]["social_audit_log"]["Row"];
+export type SocialUsageTracking = Database["public"]["Tables"]["social_usage_tracking"]["Row"];
+
+// Website / Sites
+export type RealtorSite = Database["public"]["Tables"]["realtor_sites"]["Row"];
+
+// Onboarding
+export type OnboardingChecklist = Database["public"]["Tables"]["onboarding_checklist"]["Row"];
+
+// Suppressions
+export type ContactSuppression = Database["public"]["Tables"]["contact_suppressions"]["Row"];
+
 export type Demographics = {
   birthday?: string;
   anniversary?: string;
