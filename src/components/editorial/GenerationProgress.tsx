@@ -37,7 +37,7 @@ export function GenerationProgress({ editionId, onComplete }: GenerationProgress
       } catch {
         // ignore network errors, keep polling
       }
-    }, 2000)
+    }, 5000)
 
     return () => clearInterval(interval)
   }, [editionId])

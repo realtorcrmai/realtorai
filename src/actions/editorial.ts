@@ -521,6 +521,8 @@ export async function sendEdition(
           phone: process.env.AGENT_PHONE ?? '',
           email: process.env.AGENT_EMAIL ?? '',
           accentColor: '#FF7A59',
+          // Required for CASL/CAN-SPAM compliance — physical mailing address in footer
+          physicalAddress: process.env.AGENT_PHYSICAL_ADDRESS ?? process.env.AGENT_BROKERAGE ?? '',
         },
         unsubscribe_url: `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/unsubscribe`,
       });
