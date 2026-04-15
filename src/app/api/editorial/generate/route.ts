@@ -9,6 +9,7 @@ import {
   type EditionContext,
   type VoiceProfile,
 } from '@/lib/editorial-ai'
+import { resolveExternalData } from '@/lib/newsletter/resolvers'
 import type { EditorialVoiceProfile } from '@/types/editorial'
 
 export const dynamic = 'force-dynamic'
@@ -176,8 +177,20 @@ export async function POST(request: NextRequest) {
       agentCity = agentConfig.preferred_areas[0]
     }
 
-    // ── 6. Resolve market data (cache → fallback) ──────────────────────────
-    const cacheKey = `${edition.edition_type}_${agentCity.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().toISOString().slice(0, 7)}` // e.g. "market_update_vancouver_bc_2026-04"
+    // ── 6. Resolve external data (mortgage rates + local events via cache → live fetch) ──
+    const externalData = await resolveExternalData(
+      edition.realtor_id,
+      agentCity,
+      supabase,
+    )
+
+    console.info(
+      `[editorial/generate] External data resolved for ${agentCity}:`,
+      { cache_hits: externalData.cache_hits, cache_misses: externalData.cache_misses },
+    )
+
+    // ── 6b. Resolve market data (CMS cache → Claude fallback) ──────────────
+    const cacheKey = `${edition.edition_type}_${agentCity.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().toISOString().slice(0, 7)}`
 
     const { data: cacheRow } = await supabase
       .from('external_data_cache')
@@ -224,6 +237,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Merge live mortgage rate data into market_data if available
+    if (externalData.mortgage_rates) {
+      const rates = externalData.mortgage_rates
+      // Support both CA and US rate shapes via duck-typing
+      const caRates = rates as { prime_rate?: number; rate_5yr_fixed?: number; rate_variable?: number }
+      const usRates = rates as { rate_30yr_fixed?: number; rate_15yr_fixed?: number; rate_7yr_arm?: number }
+
+      marketData = {
+        ...marketData,
+        rate_5yr: caRates.rate_5yr_fixed != null
+          ? `${caRates.rate_5yr_fixed}%`
+          : usRates.rate_30yr_fixed != null
+            ? `${usRates.rate_30yr_fixed}%`
+            : marketData?.rate_5yr,
+        variable_rate: caRates.rate_variable != null
+          ? `${caRates.rate_variable}%`
+          : usRates.rate_7yr_arm != null
+            ? `${usRates.rate_7yr_arm}%`
+            : marketData?.variable_rate,
+      }
+    }
+
     // ── 7. Build EditionContext ────────────────────────────────────────────
     const editionContext: EditionContext = {
       edition_type: edition.edition_type,
@@ -231,6 +266,7 @@ export async function POST(request: NextRequest) {
       city: agentCity,
       voice_profile: voiceProfile,
       market_data: marketData,
+      local_events: externalData.local_events ?? undefined,
     }
 
     // ── 8. Scaffold blocks from edition type if empty ────────────────────

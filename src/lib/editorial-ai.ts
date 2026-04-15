@@ -1,4 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { generateBlockContent as generateBlockContentFromGenerators } from './newsletter/generators/index';
+import { checkContentSafety, sanitizeBlockContent } from './newsletter/content-safety';
 
 // ---------------------------------------------------------------------------
 // Prompt injection sanitization
@@ -39,6 +42,8 @@ export interface VoiceProfile {
   writing_style: string;
   signature_phrase?: string;
   voice_rules: string[]; // e.g. ['Use active voice', 'Always include a statistic']
+  /** Sample email excerpts used to tune generation */
+  writing_examples?: string[];
 }
 
 export interface EditorBlock {
@@ -69,6 +74,16 @@ export interface EditionContext {
     sale_price: string;
     list_price?: string;
     days_on_market?: number;
+  }>;
+  /** Live local events from web_search — used by local_intel block */
+  local_events?: Array<{
+    title: string;
+    date: string;
+    venue: string | null;
+    description: string;
+    category: string;
+    source_url: string | null;
+    source_label?: string;
   }>;
 }
 
@@ -286,8 +301,13 @@ Return JSON matching this schema exactly (rates as numbers, NOT strings with % s
 function buildLocalIntelPrompt(block: EditorBlock, context: EditionContext): string {
   const neighbourhood = context.neighbourhood ?? context.city ?? 'Vancouver, BC';
   void block;
-  return `Write a local intelligence item for the ${neighbourhood} area for a real estate newsletter.
 
+  const eventsContext = context.local_events && context.local_events.length > 0
+    ? `\n\nLIVE LOCAL EVENTS/NEWS (use one of these as the basis for your item):\n${JSON.stringify(context.local_events.slice(0, 3), null, 2)}`
+    : '';
+
+  return `Write a local intelligence item for the ${neighbourhood} area for a real estate newsletter.
+${eventsContext}
 Requirements:
 - headline: max 70 characters, specific and newsworthy (e.g. a new development, rezoning, transit expansion, business opening, park improvement)
 - body: 60–100 words expanding on the headline with local impact and what it means for residents and property values
@@ -436,34 +456,36 @@ export async function generateBlock(
   context: EditionContext,
   retries = 2,
 ): Promise<EditorBlock> {
-  const systemPrompt = buildSystemPrompt(context);
-  const userPrompt = getBlockPrompt(block, context);
-  const maxTokens = block.type === 'market_commentary' ? 2048 : 1024;
+  // Delegate to the new structured per-block generators.
+  // They handle their own Claude calls, content safety checks, and library
+  // rotation internally — maintaining backward-compatible block shape.
+  const supabase = createAdminClient();
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const response = await anthropic.messages.create({
-        model: MODEL_SONNET,
-        max_tokens: maxTokens,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }],
-      });
+      const generatedContent = await generateBlockContentFromGenerators(
+        block.type as Parameters<typeof generateBlockContentFromGenerators>[0],
+        context,
+        supabase,
+      );
 
-      const rawText =
-        response.content[0]?.type === 'text' ? response.content[0].text : '';
-      const parsed = safeParseJSON(rawText);
+      // Apply a final content safety pass on any string fields
+      const { content: safeContent } = sanitizeBlockContent(generatedContent);
 
       return {
         ...block,
         content: {
           ...block.content,
-          ...parsed,
+          ...safeContent,
           _generated_at: new Date().toISOString(),
         },
       };
     } catch (err) {
       if (attempt === retries) {
-        console.error(`[editorial-ai] generateBlock failed for block ${block.id} (type: ${block.type}) after ${retries + 1} attempts:`, err);
+        console.error(
+          `[editorial-ai] generateBlock failed for block ${block.id} (type: ${block.type}) after ${retries + 1} attempts:`,
+          err,
+        );
         return {
           ...block,
           content: {
@@ -560,10 +582,21 @@ Return JSON matching this schema exactly:
     const parsed = safeParseJSON(rawText) as { subject_a?: string; subject_b?: string };
 
     if (parsed.subject_a && parsed.subject_b) {
-      return {
-        subject_a: String(parsed.subject_a).slice(0, 90),
-        subject_b: String(parsed.subject_b).slice(0, 90),
-      };
+      const safeA = checkContentSafety(String(parsed.subject_a).slice(0, 90));
+      const safeB = checkContentSafety(String(parsed.subject_b).slice(0, 90));
+
+      // Use cleaned subject lines; fall back if violations made the text empty
+      const subjectA =
+        safeA.violations.length > 0 && safeA.cleaned_text.trim().length < 10
+          ? fallback.subject_a
+          : safeA.cleaned_text || String(parsed.subject_a).slice(0, 90);
+
+      const subjectB =
+        safeB.violations.length > 0 && safeB.cleaned_text.trim().length < 10
+          ? fallback.subject_b
+          : safeB.cleaned_text || String(parsed.subject_b).slice(0, 90);
+
+      return { subject_a: subjectA, subject_b: subjectB };
     }
 
     return fallback;
