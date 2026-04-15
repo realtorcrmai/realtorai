@@ -186,13 +186,48 @@ function JustSoldEditor({
   content,
   onChange,
   disabled,
+  onLoadTransaction,
 }: {
   content: JustSoldBlockContent
   onChange: (update: Partial<JustSoldBlockContent>) => void
   disabled: boolean
+  onLoadTransaction?: () => Promise<void>
 }) {
+  const [loadingTx, setLoadingTx] = React.useState(false)
+
+  async function handleLoadTransaction() {
+    if (!onLoadTransaction) return
+    setLoadingTx(true)
+    try {
+      await onLoadTransaction()
+    } finally {
+      setLoadingTx(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
+      {onLoadTransaction && (
+        <div className="mb-2">
+          <button
+            type="button"
+            onClick={handleLoadTransaction}
+            disabled={disabled || loadingTx}
+            style={{
+              fontSize: 13,
+              color: '#FF7A59',
+              background: 'none',
+              border: '1px solid #FF7A59',
+              borderRadius: 6,
+              padding: '4px 12px',
+              cursor: disabled || loadingTx ? 'not-allowed' : 'pointer',
+              opacity: disabled || loadingTx ? 0.6 : 1,
+            }}
+          >
+            {loadingTx ? '⏳ Loading…' : '📥 Load from my transactions'}
+          </button>
+        </div>
+      )}
       <FieldGroup>
         <Label htmlFor="js-address">Address *</Label>
         <Input
@@ -911,6 +946,25 @@ export function BlockEditor({ block, onUpdate, onToggleLock, isGenerating }: Blo
     return Object.values(c).some((v) => v !== null && v !== '' && v !== undefined)
   })()
 
+  /** Load the most recent just_sold transaction and auto-populate this block */
+  async function handleLoadTransaction() {
+    const { listTransactions } = await import('@/actions/editorial')
+    const result = await listTransactions()
+    if (!result.data || result.data.length === 0) return
+
+    // Prefer a just_sold transaction; fall back to whatever exists
+    const tx = result.data.find(t => t.transaction_type === 'just_sold') ?? result.data[0]
+
+    onUpdate(block.id, {
+      address: tx.address,
+      sale_price: tx.sale_price ? tx.sale_price / 100 : 0,
+      list_price: tx.list_price / 100,
+      days_on_market: tx.days_on_market ?? 0,
+      commentary: tx.story ?? null,
+      sold_date: tx.sold_at ?? '',
+    } as Partial<EditorBlockContent>)
+  }
+
   return (
     <div className="flex flex-col">
       {/* Lock banner */}
@@ -934,6 +988,7 @@ export function BlockEditor({ block, onUpdate, onToggleLock, isGenerating }: Blo
           content={block.content}
           onChange={(u) => handleChange(u)}
           disabled={isGenerating}
+          onLoadTransaction={handleLoadTransaction}
         />
       )}
       {block.type === 'market_commentary' && (

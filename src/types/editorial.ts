@@ -260,6 +260,31 @@ export interface EditorialVoiceProfile {
   updated_at: string
 }
 
+// ── Transaction ───────────────────────────────────────────────────────────────
+
+export interface EditorialTransaction {
+  id: string
+  realtor_id: string
+  address: string
+  city: string
+  province: string
+  transaction_type: 'just_sold' | 'just_listed' | 'coming_soon' | 'price_reduced'
+  sale_price: number | null  // in cents
+  list_price: number          // in cents
+  days_on_market: number | null
+  bedrooms: number | null
+  bathrooms: number | null
+  sqft: number | null
+  photo_url: string | null
+  headline: string | null
+  story: string | null
+  sold_at: string | null
+  listed_at: string | null
+  is_featured: boolean
+  created_at: string
+  updated_at: string
+}
+
 // ── Block Template ────────────────────────────────────────────────────────────
 
 export interface EditorialBlockTemplate {

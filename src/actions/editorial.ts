@@ -776,12 +776,86 @@ export async function sendEdition(
 
     revalidatePath('/newsletters/editorial');
 
+    // Fire-and-forget voice learning — never fails the send
+    void extractVoiceSignalFromEdition(
+      editionId,
+      tc.realtorId,
+      (edition.blocks as unknown[]) ?? [],
+    );
+
     return {
       data: { sent, skipped, failed, edition_id: editionId },
       error: null,
     };
   } catch (err) {
     return { data: null, error: err instanceof Error ? err.message : 'Failed to send edition' };
+  }
+}
+
+// ── 9a. extractVoiceSignalFromEdition (private) ───────────────────────────────
+
+async function extractVoiceSignalFromEdition(
+  editionId: string,
+  realtorId: string,
+  blocks: unknown[],
+): Promise<void> {
+  try {
+    const admin = createAdminClient();
+
+    // Get the realtor's voice profile
+    const { data: voiceProfile } = await admin
+      .from('editorial_voice_profiles')
+      .select('id, voice_version, preferred_phrases, voice_rules')
+      .eq('realtor_id', realtorId)
+      .single();
+
+    if (!voiceProfile) return; // No profile to update
+
+    // Extract text content from all text-bearing blocks
+    const textContent: string[] = [];
+    for (const block of blocks) {
+      const b = block as Record<string, unknown>;
+      const content = (b.content ?? {}) as Record<string, unknown>;
+      for (const val of Object.values(content)) {
+        if (typeof val === 'string' && val.length > 20) {
+          textContent.push(val.slice(0, 200));
+        }
+      }
+    }
+
+    if (textContent.length === 0) return;
+
+    // Extract voice rules from the edition's text blocks
+    const emailSample = textContent.slice(0, 5).join('\n\n');
+    const newRules = await extractVoiceRules(emailSample, 'professional');
+
+    if (!newRules || newRules.length === 0) return;
+
+    // Merge new rules with existing, deduplicate, cap at 30
+    const existingPreferred = (voiceProfile.preferred_phrases as string[] | null) ?? [];
+    const merged = [...new Set([...existingPreferred, ...newRules])].slice(0, 30);
+
+    // Increment voice_version and update confidence_score
+    const newVersion = ((voiceProfile.voice_version as number | null) ?? 1) + 1;
+    // Confidence grows with more editions: after 5 → 0.25, after 10 → 0.5, after 20 → 1.0
+    const confidence = Math.min(1.0, newVersion / 20);
+
+    await admin
+      .from('editorial_voice_profiles')
+      .update({
+        preferred_phrases: merged,
+        voice_version: newVersion,
+        confidence_score: parseFloat(confidence.toFixed(2)),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', (voiceProfile as { id: string }).id);
+
+    console.log(
+      `[voice-learning] edition=${editionId} realtor=${realtorId} v${newVersion} confidence=${confidence.toFixed(2)} rules=${merged.length}`,
+    );
+  } catch (err) {
+    // Voice learning is best-effort — never fail the send
+    console.warn('[voice-learning] Failed to extract voice signal:', err);
   }
 }
 
@@ -1024,5 +1098,31 @@ export async function getGenerationStatus(
       data: null,
       error: err instanceof Error ? err.message : 'Failed to fetch generation status',
     };
+  }
+}
+
+// ── 13. getSegmentsForPicker ──────────────────────────────────────────────────
+/** Lightweight segment list for the send-dialog picker. */
+export async function getSegmentsForPicker(): Promise<
+  Array<{ id: string; name: string; contact_count?: number }>
+> {
+  try {
+    const tc = await getAuthenticatedTenantClient();
+    const { data } = await tc
+      .from('contact_segments')
+      .select('id, name, contact_count')
+      .order('name', { ascending: true })
+      .limit(100);
+
+    type SegmentRow = { id: string; name: string; contact_count?: number | null };
+    return ((data ?? []) as SegmentRow[]).map((s) => ({
+      id: s.id,
+      name: s.name,
+      ...(s.contact_count !== null && s.contact_count !== undefined
+        ? { contact_count: s.contact_count }
+        : {}),
+    }));
+  } catch {
+    return [];
   }
 }
