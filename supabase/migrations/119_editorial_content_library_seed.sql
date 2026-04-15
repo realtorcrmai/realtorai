@@ -25,6 +25,8 @@ ALTER TABLE editorial_content_library
 
 -- Update RLS to allow all agents to read platform tips (realtor_id IS NULL)
 DROP POLICY IF EXISTS editorial_content_library_realtor_policy ON editorial_content_library;
+DROP POLICY IF EXISTS editorial_content_library_read_policy ON editorial_content_library;
+DROP POLICY IF EXISTS editorial_content_library_write_policy ON editorial_content_library;
 CREATE POLICY editorial_content_library_read_policy
   ON editorial_content_library
   FOR SELECT
