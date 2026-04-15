@@ -21,6 +21,8 @@ export interface RealtorBranding {
   headshotUrl?: string;
   logoUrl?: string;
   accentColor?: string;
+  /** Physical mailing address — required for CASL/CAN-SPAM compliance */
+  physicalAddress?: string;
 }
 
 interface BaseLayoutProps {
@@ -100,6 +102,9 @@ export function BaseLayout({ previewText, branding, children, unsubscribeUrl }: 
               <Link href={unsubscribeUrl} style={unsubscribeLinkStyle}>Unsubscribe</Link>
               {" "}from these emails
             </Text>
+            {branding.physicalAddress && (
+              <Text style={physicalAddressStyle}>{branding.physicalAddress}</Text>
+            )}
           </Section>
         </Container>
       </Body>
@@ -175,4 +180,10 @@ const unsubscribeTextStyle = {
 const unsubscribeLinkStyle = {
   color: "#a0a0b0",
   textDecoration: "underline",
+};
+
+const physicalAddressStyle = {
+  fontSize: "10px",
+  color: "#b0b0c0",
+  margin: "4px 0 0",
 };

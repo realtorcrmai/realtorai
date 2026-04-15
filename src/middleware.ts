@@ -37,6 +37,9 @@ export async function middleware(request: NextRequest) {
     // Crons (verified by Bearer CRON_SECRET, not session)
     pathname.startsWith("/api/cron") ||
 
+    // Editorial generation worker (CRON_SECRET auth, not session)
+    pathname === "/api/editorial/generate" ||
+
     // Unsubscribe (HMAC-signed token, not session)
     pathname.startsWith("/api/newsletters/unsubscribe") ||
 
