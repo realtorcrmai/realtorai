@@ -112,3 +112,17 @@ UPDATE editorial_voice_profiles SET is_default = true;
 CREATE INDEX IF NOT EXISTS idx_editorial_voice_profiles_realtor_default
   ON editorial_voice_profiles (realtor_id, is_default)
   WHERE is_default = true;
+
+-- =============================================================================
+-- PART 3: Additional indexes for query performance
+-- =============================================================================
+
+-- Composite index on (realtor_id, status) — common filter pattern when
+-- listing editions for a realtor filtered by status
+CREATE INDEX IF NOT EXISTS idx_editorial_editions_realtor_status
+  ON editorial_editions (realtor_id, status);
+
+-- Partial index for stale/errored cache entries — used in cleanup queries
+CREATE INDEX IF NOT EXISTS idx_external_data_cache_stale
+  ON external_data_cache (realtor_id, expires_at)
+  WHERE fetch_status != 'ok';
