@@ -54,10 +54,10 @@ CREATE INDEX IF NOT EXISTS idx_contacts_realtor_lifecycle
 CREATE INDEX IF NOT EXISTS idx_appointments_realtor_buyer_email
   ON appointments(realtor_id, buyer_agent_email);
 
--- 2c. newsletter_events(status) — used by analytics queries that
---     aggregate events by status (open, click, bounce, etc.).
-CREATE INDEX IF NOT EXISTS idx_newsletter_events_status
-  ON newsletter_events(status);
+-- 2c. newsletter_events(event_type) — used by analytics queries that
+--     aggregate events by type (open, click, bounce, etc.).
+CREATE INDEX IF NOT EXISTS idx_newsletter_events_event_type
+  ON newsletter_events(event_type);
 
 -- 2d. Composite (realtor_id, created_at DESC) on contacts — used by
 --     default sort order on the contacts list page.
