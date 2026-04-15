@@ -204,16 +204,11 @@ export async function createEdition(input: {
       return { data: null, error: insertError?.message ?? 'Failed to create edition' };
     }
 
-    // Create companion analytics row (newsletter_analytics table, columns per migration 113)
-    await admin.from('newsletter_analytics').insert({
-      edition_id: edition.id,
-      realtor_id: tc.realtorId,
-      recipient_count: 0,
-      open_count: 0,
-      click_count: 0,
-      bounce_count: 0,
-      unsubscribe_count: 0,
-    });
+    // Create companion analytics row (editorial_analytics table, per migration 115)
+    await admin.from('editorial_analytics').upsert(
+      { edition_id: edition.id, realtor_id: tc.realtorId },
+      { onConflict: 'edition_id', ignoreDuplicates: true },
+    );
 
     revalidatePath('/newsletters/editorial');
 

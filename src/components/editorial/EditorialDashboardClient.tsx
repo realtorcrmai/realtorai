@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
 import { triggerGeneration, deleteEdition } from '@/actions/editorial'
+import { TransactionManager } from '@/components/editorial/TransactionManager'
 import type { EditorialEdition, EditionStatus, EditionType } from '@/types/editorial'
 
 // ─── Edition type label map ──────────────────────────────────────────────────
@@ -335,6 +336,11 @@ export function EditorialDashboardClient({
           ))}
         </div>
       )}
+
+      {/* Transactions section */}
+      <div style={{ marginTop: 40, borderTop: '1px solid #e5e7eb', paddingTop: 32 }}>
+        <TransactionManager />
+      </div>
     </div>
   )
 }

@@ -126,3 +126,8 @@ CREATE INDEX IF NOT EXISTS idx_editorial_editions_realtor_status
 CREATE INDEX IF NOT EXISTS idx_external_data_cache_stale
   ON external_data_cache (realtor_id, expires_at)
   WHERE fetch_status != 'ok';
+
+-- Full composite index for the general cache cleanup query (DELETE WHERE expires_at < now())
+-- and any per-realtor expiry scans regardless of fetch_status
+CREATE INDEX IF NOT EXISTS idx_external_data_cache_realtor_expires
+  ON external_data_cache (realtor_id, expires_at);

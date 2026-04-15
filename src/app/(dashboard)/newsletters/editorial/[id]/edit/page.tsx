@@ -134,6 +134,7 @@ export default async function EditionEditPage({
             <EditionEditorClient
               edition={typedEdition}
               voiceProfile={typedVoice}
+              hasVoiceProfile={!!typedVoice}
             />
           </div>
         </div>

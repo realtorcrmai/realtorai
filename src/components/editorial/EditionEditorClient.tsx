@@ -329,9 +329,10 @@ function EmptyBlockState() {
 interface EditionEditorClientProps {
   edition: EditorialEdition
   voiceProfile: EditorialVoiceProfile | null
+  hasVoiceProfile?: boolean
 }
 
-export function EditionEditorClient({ edition, voiceProfile: _voiceProfile }: EditionEditorClientProps) {
+export function EditionEditorClient({ edition, voiceProfile: _voiceProfile, hasVoiceProfile }: EditionEditorClientProps) {
   const [blocks, setBlocks] = React.useState<EditorBlock[]>(edition.blocks ?? [])
   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null)
   const [saveStatus, setSaveStatus] = React.useState<SaveStatus>('idle')
@@ -529,6 +530,18 @@ export function EditionEditorClient({ edition, voiceProfile: _voiceProfile }: Ed
           editionId={edition.id}
           onComplete={handleGenerationComplete}
         />
+      )}
+
+      {/* Voice profile banner */}
+      {hasVoiceProfile === false && (
+        <div style={{ backgroundColor: '#fefce8', border: '1px solid #fde047', borderRadius: 8, padding: '12px 16px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 14, color: '#854d0e' }}>
+            📝 No voice profile set up yet. AI will draft in a neutral professional tone.
+          </span>
+          <a href="/newsletters/editorial/setup" style={{ fontSize: 13, color: '#854d0e', fontWeight: 600, textDecoration: 'underline' }}>
+            Set up voice →
+          </a>
+        </div>
       )}
 
       {/* Top toolbar */}
