@@ -12,7 +12,7 @@ import { checkApiRateLimit } from "@/lib/api-rate-limit";
 
 export async function GET(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const rateCheck = checkApiRateLimit(ip, "unsubscribe");
+  const rateCheck = checkApiRateLimit(ip, "consent-reconfirm");
   if (!rateCheck.allowed) {
     return new NextResponse("Too many requests.", { status: 429 });
   }

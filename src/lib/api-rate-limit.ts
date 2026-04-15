@@ -10,6 +10,7 @@ interface RateWindow {
 }
 
 const windows = new Map<string, RateWindow>();
+const MAX_WINDOWS = 10_000;
 
 // Clean stale entries every 5 minutes
 if (typeof setInterval !== "undefined") {
@@ -17,6 +18,13 @@ if (typeof setInterval !== "undefined") {
     const now = Date.now();
     for (const [key, window] of windows) {
       if (window.resetAt < now) windows.delete(key);
+    }
+    // Emergency eviction if still too large after cleanup
+    if (windows.size > MAX_WINDOWS) {
+      const entries = [...windows.entries()]
+        .sort((a, b) => a[1].resetAt - b[1].resetAt);
+      const toRemove = entries.slice(0, entries.length - MAX_WINDOWS / 2);
+      for (const [key] of toRemove) windows.delete(key);
     }
   }, 5 * 60 * 1000);
 }
@@ -31,6 +39,7 @@ const RATE_LIMITS: Record<string, RateLimitConfig> = {
   "rag-chat": { maxRequests: 30, windowMs: 60 * 1000 }, // 30 req/min
   "rag-search": { maxRequests: 60, windowMs: 60 * 1000 }, // 60 req/min
   unsubscribe: { maxRequests: 10, windowMs: 60 * 1000 }, // 10 req/min — abuse prevention
+  "consent-reconfirm": { maxRequests: 30, windowMs: 60 * 1000 }, // 30 req/min — legitimate consent ops
   "lead-capture": { maxRequests: 20, windowMs: 60 * 1000 }, // 20 req/min — spam prevention
   "user-data-delete": { maxRequests: 3, windowMs: 60 * 60 * 1000 }, // 3 req/hour — destructive
   "contact-api": { maxRequests: 60, windowMs: 60 * 1000 }, // 60 req/min

@@ -41,6 +41,12 @@ async function handleJSONImport(_tc: any, request: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  // Guard against oversized payloads (10 MB limit)
+  const contentLength = parseInt(request.headers.get("content-length") || "0");
+  if (contentLength > 10 * 1024 * 1024) {
+    return NextResponse.json({ error: "Import payload too large (10 MB max)" }, { status: 413 });
+  }
+
   const { contacts, source } = await request.json();
   if (!Array.isArray(contacts) || contacts.length === 0) {
     return NextResponse.json({ error: "No contacts provided" }, { status: 400 });

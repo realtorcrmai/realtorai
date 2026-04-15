@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     } = supabase.storage.from("listing-documents").getPublicUrl(storagePath);
 
     // Upsert form_submissions as completed
-    await supabase
+    const { error: formError } = await supabase
       .from("form_submissions")
       .upsert(
         {
@@ -91,9 +91,17 @@ export async function POST(req: NextRequest) {
         { onConflict: "listing_id,form_key" }
       );
 
+    if (formError) {
+      console.error("[forms/complete] form_submissions upsert failed:", formError.message);
+      return NextResponse.json(
+        { error: "Failed to save form submission" },
+        { status: 500 }
+      );
+    }
+
     // Also upsert listing_documents for readiness tracking
     const docType = getDocType(formKey);
-    await supabase
+    const { error: docError } = await supabase
       .from("listing_documents")
       .upsert(
         {
@@ -104,6 +112,11 @@ export async function POST(req: NextRequest) {
         },
         { onConflict: "listing_id,doc_type" }
       );
+
+    if (docError) {
+      // Form submission succeeded but document tracking failed — log but don't fail
+      console.error("[forms/complete] listing_documents upsert failed:", docError.message);
+    }
 
     return NextResponse.json({
       success: true,
