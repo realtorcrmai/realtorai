@@ -1394,14 +1394,28 @@ export async function upsertVoiceProfile(data: {
       styleDescription = `Market: ${data.market}${specialtiesStr}${data.style_description ? `\n${data.style_description}` : ''}`;
     }
 
+    // If a writing sample is provided, extract AI voice rules and merge
+    let finalRules = data.voice_rules;
+    if (data.writing_sample && data.writing_sample.trim().length > 50) {
+      try {
+        const extracted = await extractVoiceRules(data.writing_sample, data.tone);
+        const combined = [...data.voice_rules, ...extracted].filter(
+          (r, i, arr) => r.trim().length > 0 && arr.indexOf(r) === i,
+        );
+        finalRules = combined.slice(0, 10);
+      } catch {
+        // Best-effort — do not block the save on AI failure
+      }
+    }
+
     const payload: Record<string, unknown> = {
       realtor_id: tc.realtorId,
       name: data.name,
       tone: data.tone,
       writing_style: data.style_description || 'clear-and-direct',
       style_description: styleDescription,
-      voice_rules: data.voice_rules,
-      preferred_phrases: data.voice_rules,
+      voice_rules: finalRules,
+      preferred_phrases: finalRules,
       bio_snippet: data.bio_snippet ?? null,
       default_sign_off: data.default_sign_off ?? null,
       focus_neighbourhoods: data.focus_neighbourhoods ?? [],
