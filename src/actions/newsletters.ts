@@ -5,31 +5,14 @@ import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { sendEmail } from "@/lib/resend";
 import { validatedSend } from "@/lib/validated-send";
 import { generateNewsletterContent, NewsletterContext } from "@/lib/newsletter-ai";
-import { render } from "@react-email/components";
 import { revalidatePath } from "next/cache";
 import { triggerIngest } from "@/lib/rag/realtime-ingest";
 import { canSendToContact, filterSendable } from "@/lib/compliance/can-send";
 import { trackEvent } from "@/lib/analytics";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 
-// React Email template imports
-import { NewListingAlert } from "@/emails/NewListingAlert";
-import { MarketUpdate } from "@/emails/MarketUpdate";
-import { JustSold } from "@/emails/JustSold";
-import { OpenHouseInvite } from "@/emails/OpenHouseInvite";
-import { NeighbourhoodGuide } from "@/emails/NeighbourhoodGuide";
-import { HomeAnniversary } from "@/emails/HomeAnniversary";
-import { PremiumListingShowcase } from "@/emails/PremiumListingShowcase";
-import { ClosingReminder } from "@/emails/ClosingReminder";
-import { BuyerGuide } from "@/emails/BuyerGuide";
-import { ClientTestimonial } from "@/emails/ClientTestimonial";
-import { HomeValueUpdate } from "@/emails/HomeValueUpdate";
-import { MortgageRenewalAlert } from "@/emails/MortgageRenewalAlert";
-import { InspectionReminder } from "@/emails/InspectionReminder";
-import { YearInReview } from "@/emails/YearInReview";
-import { CommunityEvent } from "@/emails/CommunityEvent";
-import { PriceDropAlert } from "@/emails/PriceDropAlert";
-import { ReferralThankYou } from "@/emails/ReferralThankYou";
+// Apple-quality block-based email system (SF Pro Display / Inter font stack)
+import { assembleEmail, getBrandConfig, type EmailData } from "@/lib/email-blocks";
 import type { RealtorBranding } from "@/emails/BaseLayout";
 
 async function getRealtorBranding(): Promise<RealtorBranding> {
@@ -48,6 +31,11 @@ function getUnsubscribeUrl(contactId: string): string {
   return buildUnsubscribeUrl(contactId);
 }
 
+/**
+ * Renders any newsletter type using the Apple-quality block system (email-blocks.ts).
+ * Font: SF Pro Display → SF Pro Text → Inter → Helvetica Neue (exact Apple stack).
+ * All email types map to one of the block-system template keys.
+ */
 async function renderEmailTemplate(
   emailType: string,
   content: any,
@@ -56,256 +44,131 @@ async function renderEmailTemplate(
   contactId: string,
   preferredArea?: string
 ): Promise<string> {
-  const unsubscribeUrl = getUnsubscribeUrl(contactId);
   const firstName = contactName.split(" ")[0];
   const areaFallback = preferredArea || "your neighbourhood";
 
-  const templateProps: Record<string, any> = {
-    branding,
-    recipientName: firstName,
-    unsubscribeUrl,
+  // Map newsletter email types to block-system template keys
+  const typeMap: Record<string, string> = {
+    new_listing_alert: "listing_alert",
+    market_update: "market_update",
+    just_sold: "just_sold",
+    open_house_invite: "open_house",
+    neighbourhood_guide: "neighbourhood_guide",
+    home_anniversary: "home_anniversary",
+    premium_listing_showcase: "luxury_showcase",
+    closing_reminder: "seller_report",
+    buyer_guide: "welcome",
+    client_testimonial: "just_sold",
+    home_value_update: "cma_preview",
+    mortgage_renewal_alert: "re_engagement",
+    inspection_reminder: "seller_report",
+    year_in_review: "market_update",
+    community_event: "neighbourhood_guide",
+    price_drop_alert: "listing_alert",
+    referral_thank_you: "welcome",
   };
 
-  let element: React.ReactElement;
+  const blockType = typeMap[emailType] || "welcome";
 
-  switch (emailType) {
-    case "new_listing_alert":
-      element = NewListingAlert({
-        ...templateProps,
-        area: content.area || areaFallback,
-        intro: content.intro,
-        listings: content.listings || [],
-        ctaText: content.ctaText,
-      } as any);
-      break;
+  const brandConfig = await getBrandConfig();
 
-    case "market_update":
-      element = MarketUpdate({
-        ...templateProps,
-        area: content.area || areaFallback,
-        month: content.month || new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
-        intro: content.intro,
-        stats: content.stats || [],
-        recentSales: content.recentSales || [],
-        commentary: content.body,
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "just_sold":
-      element = JustSold({
-        ...templateProps,
-        address: content.address || "",
-        salePrice: content.salePrice || "",
-        daysOnMarket: content.daysOnMarket || 0,
-        photo: content.photo,
-        message: content.body,
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "open_house_invite":
-      element = OpenHouseInvite({
-        ...templateProps,
-        address: content.address || "",
-        price: content.price || "",
-        date: content.date || "",
-        time: content.time || "",
-        photo: content.photo,
-        description: content.body,
-        features: content.highlights || [],
-      } as any);
-      break;
-
-    case "neighbourhood_guide":
-      element = NeighbourhoodGuide({
-        ...templateProps,
-        area: content.area || areaFallback,
-        intro: content.intro,
-        highlights: content.highlights?.map((h: string) => ({
-          category: "Highlights",
-          items: [h],
-        })) || [],
-        funFact: content.funFact,
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "home_anniversary":
-      element = HomeAnniversary({
-        ...templateProps,
-        address: content.address || "",
-        purchaseDate: content.purchaseDate || "",
-        years: content.years || 1,
-        estimatedValue: content.estimatedValue,
-        appreciation: content.appreciation,
-        message: content.body,
-        tips: content.tips || [],
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "premium_listing_showcase":
-      element = PremiumListingShowcase({
-        ...templateProps,
-        address: content.address || "",
-        cityStatePostal: content.cityStatePostal || content.city || "",
-        price: content.price || "",
-        beds: content.beds || 0,
-        baths: content.baths || 0,
+  const emailData: EmailData = {
+    contact: {
+      name: contactName,
+      firstName,
+      type: content.contactType || "buyer",
+    },
+    agent: {
+      name: branding.name || brandConfig.name,
+      brokerage: branding.brokerage || brandConfig.brokerage,
+      phone: branding.phone || brandConfig.phone,
+      initials: (branding.name || brandConfig.name).split(" ").map((w: string) => w[0]).join("").slice(0, 2),
+    },
+    content: {
+      subject: content.subject || content.title || "",
+      intro: content.intro || content.body || "",
+      body: content.body || "",
+      ctaText: content.ctaText || "Get In Touch",
+      ctaUrl: content.ctaUrl || `mailto:${branding.email || ""}`,
+    },
+    // Listing data (listing_alert, luxury_showcase, open_house, just_sold)
+    ...(content.address ? {
+      listing: {
+        address: content.address,
+        area: content.area || content.city || areaFallback,
+        price: content.price || content.salePrice || "",
+        beds: content.beds,
+        baths: content.baths,
         sqft: content.sqft,
-        propertyType: content.propertyType,
-        heroPhoto: content.heroPhoto || content.photo || "",
-        galleryPhotos: (content.galleryPhotos || []).map((p: any) =>
-          typeof p === "string" ? { url: p } : p
+        photos: [
+          content.heroPhoto || content.photo,
+          ...(content.galleryPhotos || []).map((p: any) => typeof p === "string" ? p : p?.url),
+        ].filter(Boolean),
+        features: (content.features || content.highlights || []).map((f: any) =>
+          typeof f === "string" ? { icon: "✓", title: f, desc: "" } : f
         ),
-        headline: content.headline || content.subject || "",
-        description: content.description || content.body || "",
-        features: content.features || content.highlights || [],
         openHouseDate: content.openHouseDate || content.date,
         openHouseTime: content.openHouseTime || content.time,
-        listingUrl: content.listingUrl,
-      } as any);
-      break;
+      },
+    } : {}),
+    // Market data (market_update, cma_preview, seller_report)
+    ...(content.stats || content.recentSales ? {
+      market: {
+        avgPrice: content.avgPrice || content.stats?.find((s: any) => s.label?.toLowerCase().includes("price"))?.value,
+        avgDom: content.avgDom || content.daysOnMarket,
+        inventoryChange: content.inventoryChange,
+        recentSales: content.recentSales || [],
+        priceComparison: content.priceComparison || (content.currentValue ? {
+          listing: content.currentValue,
+          average: content.previousValue || "",
+          diff: content.changePercent || content.appreciation || "",
+        } : undefined),
+      },
+    } : {}),
+    // Anniversary data
+    ...(content.purchaseDate || content.estimatedValue ? {
+      anniversary: {
+        purchasePrice: content.purchasePrice,
+        currentEstimate: content.estimatedValue || content.currentValue,
+        appreciation: content.appreciation || content.changePercent,
+        equityGained: content.equityGained,
+        areaHighlights: (content.highlights || []).map((h: any) =>
+          typeof h === "string" ? { icon: "📍", text: h } : h
+        ),
+      },
+    } : {}),
+    // Testimonial
+    ...(content.quote ? {
+      testimonial: {
+        quote: content.quote,
+        name: content.clientName || content.name || "",
+        role: content.role || "Client",
+      },
+    } : {}),
+    // Mortgage calculator
+    ...(content.monthly || content.currentRate ? {
+      mortgageCalc: {
+        monthly: content.monthly || "",
+        downPayment: content.downPayment || "20%",
+        rate: content.currentRate || content.rate || "4.39%",
+        details: content.mortgageDetails,
+      },
+    } : {}),
+    // Countdown (closing reminder, inspection)
+    ...(content.daysRemaining || content.closingDate ? {
+      countdown: {
+        value: content.daysRemaining ? `${content.daysRemaining}d` : "",
+        label: content.closingDate ? "Until Closing" : "Time Remaining",
+        subtext: content.closingDate || content.inspectionDate || content.renewalDate || "",
+      },
+    } : {}),
+    // Listings grid (buyer guide, re-engagement)
+    ...(content.listings ? { listings: content.listings } : {}),
+    // Social proof
+    ...(content.socialProof ? { socialProof: content.socialProof } : {}),
+  };
 
-    case "closing_reminder":
-      element = ClosingReminder({
-        ...templateProps,
-        address: content.address || "",
-        closingDate: content.closingDate || content.date || "",
-        daysRemaining: content.daysRemaining || 0,
-        checklist: content.checklist || content.highlights || content.tips || [],
-        message: content.body || content.intro || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "buyer_guide":
-      element = BuyerGuide({
-        ...templateProps,
-        title: content.subject || "Your Buyer Guide",
-        intro: content.intro || content.body || "",
-        steps: content.steps || content.highlights?.map((h: string, i: number) => ({
-          stepNumber: i + 1,
-          title: h,
-          description: "",
-        })) || [],
-        tip: content.funFact || content.tips?.[0] || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "client_testimonial":
-      element = ClientTestimonial({
-        ...templateProps,
-        clientName: content.clientName || content.name || "",
-        quote: content.quote || content.body || "",
-        address: content.address || "",
-        salePrice: content.salePrice || content.price || "",
-        photo: content.photo,
-        message: content.intro || content.message || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "home_value_update":
-      element = HomeValueUpdate({
-        ...templateProps,
-        address: content.address || "",
-        currentValue: content.currentValue || content.estimatedValue || "",
-        previousValue: content.previousValue || "",
-        changePercent: content.changePercent || content.appreciation || "",
-        stats: content.stats || [],
-        message: content.body || content.intro || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "mortgage_renewal_alert":
-      element = MortgageRenewalAlert({
-        ...templateProps,
-        address: content.address || "",
-        renewalDate: content.renewalDate || content.date || "",
-        currentRate: content.currentRate || "",
-        tips: content.tips || content.highlights || [],
-        message: content.body || content.intro || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "inspection_reminder":
-      element = InspectionReminder({
-        ...templateProps,
-        address: content.address || "",
-        inspectionDate: content.inspectionDate || content.date || "",
-        inspectionType: content.inspectionType || "Home Inspection",
-        checklist: content.checklist || content.highlights || content.tips || [],
-        message: content.body || content.intro || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "year_in_review":
-      element = YearInReview({
-        ...templateProps,
-        year: content.year || new Date().getFullYear().toString(),
-        stats: content.stats || [],
-        highlights: content.highlights || [],
-        message: content.body || content.intro || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "community_event":
-      element = CommunityEvent({
-        ...templateProps,
-        eventName: content.eventName || content.subject || "",
-        date: content.date || "",
-        time: content.time || "",
-        location: content.location || content.address || "",
-        description: content.body || content.intro || "",
-        highlights: content.highlights || [],
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "price_drop_alert":
-      element = PriceDropAlert({
-        ...templateProps,
-        address: content.address || "",
-        originalPrice: content.originalPrice || "",
-        newPrice: content.newPrice || content.price || "",
-        dropPercent: content.dropPercent || "",
-        photo: content.photo,
-        features: content.features || content.highlights || [],
-        message: content.body || content.intro || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "referral_thank_you":
-      element = ReferralThankYou({
-        ...templateProps,
-        referrerName: content.referrerName || content.name || firstName,
-        referredName: content.referredName || "",
-        message: content.body || content.intro || "",
-        reward: content.reward || content.funFact || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    default:
-      // Fallback: use neighbourhood guide as generic template
-      element = NeighbourhoodGuide({
-        ...templateProps,
-        area: "",
-        intro: content.intro || content.body,
-        highlights: [],
-        ctaText: content.ctaText,
-      } as any);
-  }
-
-  return await render(element);
+  return assembleEmail(blockType, emailData);
 }
 
 export async function generateAndQueueNewsletter(
