@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition, useState } from "react";
+import { useRouter } from "next/navigation";
 import { pauseJourney, resumeJourney, triggerNextEmail, enrollContactInJourney } from "@/actions/journeys";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +57,7 @@ export function JourneyRowControls({
   isPaused: boolean;
   nextEmailAt: string | null;
 }) {
+  const router = useRouter();
   const [pendingPause, startPause] = useTransition();
   const [pendingResume, startResume] = useTransition();
   const [pendingSend, startSend] = useTransition();
@@ -72,6 +74,7 @@ export function JourneyRowControls({
         return;
       }
       toast.success("Journey paused");
+      router.refresh();
     });
   }
 
@@ -83,6 +86,7 @@ export function JourneyRowControls({
         return;
       }
       toast.success("Journey resumed");
+      router.refresh();
     });
   }
 
@@ -94,6 +98,7 @@ export function JourneyRowControls({
         return;
       }
       toast.success("Next email sent");
+      router.refresh();
     });
   }
 

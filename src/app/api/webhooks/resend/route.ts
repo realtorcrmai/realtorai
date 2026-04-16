@@ -52,7 +52,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
-    // Handle unsubscribe and complaint events by email address (no newsletter_id needed)
+    // Fix 5 (GAP 3-A): Handle unsubscribe AND complaint in this early block only.
+    // After processing, return early so the eventTypeMap block below never fires a
+    // duplicate update for "complained".
     if (type === "email.unsubscribed" || type === "email.complained") {
       const email = data.email?.to?.[0] || data.to;
       if (email) {
@@ -78,6 +80,7 @@ export async function POST(request: NextRequest) {
             .eq("contact_id", contact.id);
         }
       }
+      // Return early — prevents the eventTypeMap block from firing a duplicate complained handler
       return NextResponse.json({ ok: true });
     }
 
@@ -106,7 +109,7 @@ export async function POST(request: NextRequest) {
       "email.opened": "opened",
       "email.clicked": "clicked",
       "email.bounced": "bounced",
-      "email.complained": "complained",
+      // Note: "email.complained" is intentionally absent — handled in the early block above
     };
 
     const eventType = eventTypeMap[type];
@@ -148,7 +151,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true }); // Already processed
     }
 
-    // Classify click link
+    // Classify click link — keep internal linkType for business logic
     let linkUrl: string | null = null;
     let linkType: string | null = null;
     let scoreImpact = eventType === "opened" ? 2 : 0;
@@ -159,13 +162,14 @@ export async function POST(request: NextRequest) {
       scoreImpact = classification.score_impact;
     }
 
-    // Log event
+    // Fix 1 (P0-2/H-2): Normalize internal linkType to the DB enum before inserting.
+    // Internal linkType values are kept for business logic below; only the DB insert uses the normalized value.
     await supabase.from("newsletter_events").insert({
       newsletter_id: newsletterId,
       contact_id: contactId,
       event_type: eventType,
       link_url: linkUrl,
-      link_type: linkType,
+      link_type: linkType !== null ? normalizeToDbLinkType(linkType) : null,
       metadata: {
         resend_event_id: data.email_id,
         timestamp: data.created_at,
@@ -191,30 +195,34 @@ export async function POST(request: NextRequest) {
         newsletterId,
       );
 
+      // Fix 2 (GAP 2-A): Track whether a phase advance occurred.
+      // If it did, skip the NBA next_email_at override so the phase's own schedule is preserved.
+      let phaseWasAdvanced = false;
+
       // Advance journey phase on high-intent action
+      // Fix 3 (GAP 2-B): Use direct DB update from webhook (no session available for server actions).
+      // phaseProgression now includes the 'active' entry.
       if (scoreImpact >= 25 && updatedIntel) {
-        try {
-          const { advanceJourneyPhase } = await import("@/actions/journeys");
-          type JourneyType = "buyer" | "seller" | "customer" | "agent";
-          type JourneyPhase = "lead" | "active" | "under_contract" | "past_client" | "dormant";
-          const currentPhase = (updatedIntel.current_journey_phase ?? "lead") as JourneyPhase;
-          const phaseProgression: Partial<Record<JourneyPhase, JourneyPhase>> = {
-            lead: "active",
-            dormant: "lead", // re-entering the funnel
-            // active stays active — don't over-advance on a single click
-          };
-          const nextPhase = phaseProgression[currentPhase];
-          const resolvedType = (updatedIntel.contact_type ?? "buyer") as JourneyType;
-          if (nextPhase && currentPhase !== nextPhase) {
-            await advanceJourneyPhase(contactId, resolvedType, nextPhase);
+        const phaseProgression: Record<string, string> = {
+          lead: "active",
+          active: "active", // high-intent click from active keeps them active (re-engages)
+          dormant: "lead",  // re-entering the funnel
+          // Note: active → under_contract and active → past_client are triggered by
+          // listing status changes in listings.ts, not by clicks
+        };
+        const currentPhase = updatedIntel.current_journey_phase ?? "lead";
+        const nextPhase = phaseProgression[currentPhase];
+        if (nextPhase && currentPhase !== nextPhase) {
+          const advanced = await advancePhaseFromWebhook(supabase, contactId, nextPhase);
+          if (advanced) {
+            phaseWasAdvanced = true;
           }
-        } catch (e) {
-          console.warn("[webhook] Could not advance journey on high-intent click:", e);
         }
       }
 
-      // Next-best-action: override next email type based on what they clicked
-      if (scoreImpact >= 25 && linkType) {
+      // Next-best-action: override next email type based on what they clicked.
+      // Fix 2 (GAP 2-A): Only set NBA override if a phase advance did NOT already occur.
+      if (!phaseWasAdvanced && scoreImpact >= 25 && linkType) {
         const NBA_MAP: Record<string, string> = {
           book_showing:    "open_house_invite",   // they want to see properties → invite to open house
           get_cma:         "market_update",        // they want market data → send full market update
@@ -222,8 +230,8 @@ export async function POST(request: NextRequest) {
           seller_inquiry:  "market_update",        // seller interested → market conditions
           listing_inquiry: "new_listing_alert",    // they clicked a listing → send more listings
           market_research: "market_update",        // market curious → full market update
-        }
-        const nextEmailType = NBA_MAP[linkType]
+        };
+        const nextEmailType = NBA_MAP[linkType];
         if (nextEmailType) {
           try {
             // H-20: reuse top-level supabase client — no new createAdminClient()
@@ -235,9 +243,9 @@ export async function POST(request: NextRequest) {
                 updated_at: new Date().toISOString(),
               })
               .eq("contact_id", contactId)
-              .eq("is_paused", false)
+              .eq("is_paused", false);
           } catch (e) {
-            console.warn("[webhook] Could not set next-best-action:", e)
+            console.warn("[webhook] Could not set next-best-action:", e);
           }
         }
       }
@@ -251,16 +259,16 @@ export async function POST(request: NextRequest) {
             .from("contacts")
             .select("name, email")
             .eq("id", contactId)
-            .single()
+            .single();
 
           const taskTitle = linkType === "book_showing"
             ? `Follow up with ${taskContact?.name ?? "contact"} — clicked Book Showing`
             : linkType === "get_valuation" || linkType === "get_cma"
             ? `Follow up with ${taskContact?.name ?? "contact"} — requested valuation`
-            : `Follow up with ${taskContact?.name ?? "contact"} — high-intent email click`
+            : `Follow up with ${taskContact?.name ?? "contact"} — high-intent email click`;
 
           // C-11: realtor_id is required — look it up from the newsletter (already fetched above)
-          const realtorId = newsletter?.realtor_id ?? null
+          const realtorId = newsletter?.realtor_id ?? null;
           if (realtorId) {
             await supabase.from("tasks").insert({
               realtor_id: realtorId,
@@ -271,22 +279,28 @@ export async function POST(request: NextRequest) {
               priority: "high",
               status: "pending",
               category: "follow_up",
-            })
+            });
           } else {
-            console.warn("[webhook] Could not create follow-up task — realtor_id not found for newsletter", newsletterId)
+            console.warn("[webhook] Could not create follow-up task — realtor_id not found for newsletter", newsletterId);
           }
         } catch (e) {
-          console.warn("[webhook] Could not create follow-up task:", e)
+          console.warn("[webhook] Could not create follow-up task:", e);
         }
       }
 
-      // Re-engage dormant contacts on any click
+      // Fix 4 (GAP 2-C): Re-engage dormant contacts on any click, with journey_type filter.
+      // If the email's journey_type tag is available, scope the re-activation to that journey.
+      // If not, limit to buyer/seller/customer journeys only (never agent journeys).
       if (eventType === "clicked") {
         const currentPhase = updatedIntel?.current_journey_phase ?? null;
         if (currentPhase === "dormant") {
           try {
             // H-20: reuse top-level supabase client — no new createAdminClient()
-            await supabase
+            const journeyTypeTag: string | undefined = data.tags?.find(
+              (t: { name: string; value: string }) => t.name === "journey_type"
+            )?.value;
+
+            const updateQuery = supabase
               .from("contact_journeys")
               .update({
                 is_paused: false,
@@ -296,6 +310,14 @@ export async function POST(request: NextRequest) {
               })
               .eq("contact_id", contactId)
               .eq("is_paused", true);
+
+            if (journeyTypeTag) {
+              // Scope to the specific journey type from the email tag
+              await updateQuery.eq("journey_type", journeyTypeTag);
+            } else {
+              // Limit to buyer/seller/customer journeys — never re-activate agent journeys blindly
+              await updateQuery.in("journey_type", ["buyer", "seller", "customer"]);
+            }
           } catch (e) {
             console.warn("[webhook] Could not re-engage dormant contact:", e);
           }
@@ -327,38 +349,58 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Handle bounce — mark as unsubscribed
+    // Fix 6 (GAP 3-C): Bounce handler sets pause_reason: 'bounced' (was missing before)
     if (eventType === "bounced") {
       await supabase
         .from("contacts")
         .update({ newsletter_unsubscribed: true })
         .eq("id", contactId);
 
-      // Pause all journeys
+      // Pause all journeys with explicit pause_reason
       await supabase
         .from("contact_journeys")
-        .update({ is_paused: true, pause_reason: "bounced" })
+        .update({ is_paused: true, pause_reason: "bounced", updated_at: new Date().toISOString() })
         .eq("contact_id", contactId);
     }
 
-    // Handle complaint — unsubscribe + log
-    if (eventType === "complained") {
-      await supabase
-        .from("contacts")
-        .update({ newsletter_unsubscribed: true })
-        .eq("id", contactId);
-
-      await supabase
-        .from("contact_journeys")
-        .update({ is_paused: true, pause_reason: "complained" })
-        .eq("contact_id", contactId);
-    }
+    // Note: "complained" eventType no longer appears in eventTypeMap above — it is fully handled
+    // in the early block before newsletterId extraction, so this block is never reached for complaints.
 
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("Resend webhook error:", e);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
+}
+
+/**
+ * Fix 3 (GAP 2-B): Advance journey phase directly via admin DB client.
+ * The webhook handler has no user session, so calling the server action
+ * advanceJourneyPhase() (which calls getAuthenticatedTenantClient()) would fail.
+ * This function performs the same phase advance without requiring a session.
+ *
+ * Returns true if the update succeeded, false otherwise.
+ */
+async function advancePhaseFromWebhook(
+  supabase: ReturnType<typeof createAdminClient>,
+  contactId: string,
+  newPhase: string,
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("contact_journeys")
+    .update({
+      current_phase: newPhase,
+      emails_sent_in_phase: 0,
+      phase_entered_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("contact_id", contactId)
+    .eq("is_paused", false);
+  if (error) {
+    console.warn("[webhook] advancePhaseFromWebhook failed:", error);
+    return false;
+  }
+  return true;
 }
 
 function mapLinkTypeToConversionEvent(linkType: string): string {
@@ -402,6 +444,43 @@ function classifyClick(url: string): ClickClassification {
     }
   }
   return { type: "other", score_impact: 5 };
+}
+
+/**
+ * Fix 1 (P0-2/H-2): Map internal link classification types to the newsletter_events.link_type DB enum.
+ *
+ * The DB CHECK constraint only allows:
+ *   'listing' | 'showing' | 'market_report' | 'school_info' | 'neighbourhood'
+ *   | 'cma' | 'contact_agent' | 'unsubscribe' | 'other'
+ *
+ * Internal classifyClick() types are kept for business logic (NBA map, inferred interests, etc.)
+ * and ONLY normalized here before writing to newsletter_events.link_type.
+ */
+function normalizeToDbLinkType(internalType: string): string {
+  const map: Record<string, string> = {
+    book_showing:    "showing",
+    get_cma:         "cma",
+    get_valuation:   "other",
+    seller_inquiry:  "contact_agent",
+    mortgage_calc:   "other",
+    investment:      "other",
+    open_house_rsvp: "showing",
+    market_research: "market_report",
+    market_stats:    "market_report",
+    price_drop:      "listing",
+    forwarded:       "other",
+    // Pass-through values that are already valid DB enum members
+    listing:         "listing",
+    showing:         "showing",
+    market_report:   "market_report",
+    school_info:     "school_info",
+    neighbourhood:   "neighbourhood",
+    cma:             "cma",
+    contact_agent:   "contact_agent",
+    unsubscribe:     "unsubscribe",
+    other:           "other",
+  };
+  return map[internalType] ?? "other";
 }
 
 /**

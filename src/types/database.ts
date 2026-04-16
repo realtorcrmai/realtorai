@@ -1590,9 +1590,9 @@ export interface Database {
           id: string;
           newsletter_id: string;
           contact_id: string;
-          event_type: "opened" | "clicked" | "bounced" | "unsubscribed" | "complained" | "delivered";
+          event_type: "opened" | "clicked" | "bounced" | "unsubscribed" | "complained" | "delivered" | "failed" | "deferred";
           link_url: string | null;
-          link_type: "listing" | "showing" | "market_report" | "school_info" | "neighbourhood" | "cma" | "contact_agent" | "unsubscribe" | "other" | null;
+          link_type: "listing" | "showing" | "market_report" | "school_info" | "neighbourhood" | "cma" | "contact_agent" | "unsubscribe" | "other" | "book_showing" | "get_cma" | "get_valuation" | "seller_inquiry" | "mortgage_calc" | "investment" | "open_house_rsvp" | "market_research" | "market_stats" | "price_drop" | "forwarded" | null;
           metadata: Json;
           created_at: string;
         };
@@ -1600,9 +1600,9 @@ export interface Database {
           id?: string;
           newsletter_id: string;
           contact_id: string;
-          event_type: "opened" | "clicked" | "bounced" | "unsubscribed" | "complained" | "delivered";
+          event_type: "opened" | "clicked" | "bounced" | "unsubscribed" | "complained" | "delivered" | "failed" | "deferred";
           link_url?: string | null;
-          link_type?: "listing" | "showing" | "market_report" | "school_info" | "neighbourhood" | "cma" | "contact_agent" | "unsubscribe" | "other" | null;
+          link_type?: "listing" | "showing" | "market_report" | "school_info" | "neighbourhood" | "cma" | "contact_agent" | "unsubscribe" | "other" | "book_showing" | "get_cma" | "get_valuation" | "seller_inquiry" | "mortgage_calc" | "investment" | "open_house_rsvp" | "market_research" | "market_stats" | "price_drop" | "forwarded" | null;
           metadata?: Json;
           created_at?: string;
         };
@@ -1610,9 +1610,9 @@ export interface Database {
           id?: string;
           newsletter_id?: string;
           contact_id?: string;
-          event_type?: "opened" | "clicked" | "bounced" | "unsubscribed" | "complained" | "delivered";
+          event_type?: "opened" | "clicked" | "bounced" | "unsubscribed" | "complained" | "delivered" | "failed" | "deferred";
           link_url?: string | null;
-          link_type?: "listing" | "showing" | "market_report" | "school_info" | "neighbourhood" | "cma" | "contact_agent" | "unsubscribe" | "other" | null;
+          link_type?: "listing" | "showing" | "market_report" | "school_info" | "neighbourhood" | "cma" | "contact_agent" | "unsubscribe" | "other" | "book_showing" | "get_cma" | "get_valuation" | "seller_inquiry" | "mortgage_calc" | "investment" | "open_house_rsvp" | "market_research" | "market_stats" | "price_drop" | "forwarded" | null;
           metadata?: Json;
           created_at?: string;
         };
@@ -1626,7 +1626,7 @@ export interface Database {
           phase_entered_at: string;
           next_email_at: string | null;
           emails_sent_in_phase: number;
-          send_mode: "auto" | "review" | null;
+          send_mode: "auto" | "review";
           trust_level: "ghost" | "copilot" | "supervised" | "autonomous" | null;
           is_paused: boolean;
           pause_reason: string | null;

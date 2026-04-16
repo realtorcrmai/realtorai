@@ -29,6 +29,15 @@ export type QualityScoreInput = {
   contactNotes?: string;
   voiceRules?: string[];
   previousSubjects?: string[];
+  /**
+   * If provided and an existing quality score is already >= this threshold,
+   * skip the Claude scoring call and return a synthetic score using the
+   * pre-computed value. Prevents double-scoring when the caller has already
+   * scored the content upstream (e.g. sendNewsletter → validatedSend path).
+   */
+  skipIfScoreAbove?: number;
+  /** Pre-computed overall score to reuse when skipIfScoreAbove applies. */
+  preComputedScore?: number;
 };
 
 export type QualityScore = {
@@ -66,6 +75,32 @@ function getClient() {
 }
 
 export async function scoreEmailQuality(input: QualityScoreInput): Promise<QualityScore> {
+  // Fix 3: Skip re-scoring when a pre-computed score already meets the threshold.
+  // This prevents double-scoring in the sendNewsletter → validatedSend path.
+  if (
+    input.skipIfScoreAbove !== undefined &&
+    input.preComputedScore !== undefined &&
+    input.preComputedScore >= input.skipIfScoreAbove
+  ) {
+    const clamped = clamp(input.preComputedScore);
+    return {
+      overall: input.preComputedScore,
+      dimensions: {
+        personalization: clamped,
+        relevance: clamped,
+        dataAccuracy: clamped,
+        toneMatch: clamped,
+        ctaClarity: clamped,
+        length: clamped,
+        uniqueness: clamped,
+      },
+      feedback: `Pre-computed score ${input.preComputedScore}/10 reused — scoring skipped to avoid double-call`,
+      suggestions: [],
+      shouldRegenerate: input.preComputedScore < 6,
+      shouldBlock: input.preComputedScore < 4,
+    };
+  }
+
   const client = getClient();
 
   const prompt = `Score this real estate email on 7 dimensions (1-10 each).
@@ -163,10 +198,19 @@ export function makeQualityDecision(
   }
 
   if (score.shouldRegenerate || score.overall < minScore) {
+    // Fix 4: Return 'send' instead of 'regenerate' because there is no retry
+    // loop in any caller. Returning 'regenerate' was a dead end — the email
+    // would never be sent AND never be regenerated. Instead we degrade
+    // gracefully: send the email with a logged warning and a reduced score
+    // note so the realtor sees it in the quality feed. If a retry mechanism
+    // is added later, replace this with action: 'regenerate'.
+    console.warn(
+      `[quality-pipeline] Score ${score.overall}/10 below threshold ${minScore} — sending anyway (no retry loop). Suggestions: ${score.suggestions.join("; ")}`
+    );
     return {
-      action: "regenerate",
+      action: "send",
       score: score.overall,
-      reason: `Score ${score.overall}/10 below threshold ${minScore}. Suggestions: ${score.suggestions.join("; ")}`,
+      reason: `Score ${score.overall}/10 below threshold ${minScore} — proceeding (no regeneration available). Suggestions: ${score.suggestions.join("; ")}`,
       qualityScore: score,
     };
   }

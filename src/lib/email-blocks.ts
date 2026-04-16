@@ -400,6 +400,11 @@ const blocks: Record<string, BlockFn> = {
 
 const TEMPLATE_BLOCKS: Record<string, string[]> = {
   listing_alert: ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "priceComparison", "mortgageCalc", "openHouse", "cta", "agentCard", "footer"],
+  // Fix 5: Welcome template — warm greeting (personalNote), value prop (heroGradient),
+  // optional matching properties (propertyGrid → returns "" when data.listings is absent),
+  // optional social proof (socialProof → returns "" when data.socialProof is absent),
+  // single CTA, agent card, footer.  All optional blocks degrade gracefully — no
+  // required fields beyond contact + agent + content.
   welcome: ["header", "heroGradient", "personalNote", "propertyGrid", "socialProof", "cta", "agentCard", "footer"],
   market_update: ["header", "heroGradient", "statsRow", "personalNote", "recentSales", "propertyGrid", "cta", "agentCard", "footer"],
   neighbourhood_guide: ["header", "heroGradient", "personalNote", "areaHighlights", "mapPreview", "cta", "agentCard", "footer"],

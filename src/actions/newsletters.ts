@@ -578,19 +578,6 @@ export async function sendNewsletter(newsletterId: string) {
       const decision = makeQualityDecision(qualityScore);
       await recordQualityOutcome(newsletterId, qualityScore.overall, qualityScore.dimensions);
 
-      // Fix #5: persist quality score on the newsletter row regardless of outcome
-      try {
-        await tc
-          .from("newsletters")
-          .update({
-            quality_score: qualityScore.overall,
-            quality_checked_at: new Date().toISOString(),
-          })
-          .eq("id", newsletterId);
-      } catch {
-        // quality_score column may not exist yet — fail silently
-      }
-
       if (decision.action === "block") {
         await tc.from("newsletters").update({
           status: "failed",
@@ -749,10 +736,12 @@ export async function skipNewsletter(newsletterId: string) {
 export async function getApprovalQueue() {
   const tc = await getAuthenticatedTenantClient();
 
+  // BUG-01: Include 'deferred' newsletters so the cron can retry them.
+  // Deferred newsletters (blocked by send governor) are retriable once scheduling window re-opens.
   const { data } = await tc
     .from("newsletters")
     .select("*, contacts(id, name, email, type)")
-    .eq("status", "draft")
+    .in("status", ["draft", "deferred"])
     .eq("send_mode", "review")
     .order("created_at", { ascending: false });
 
@@ -775,10 +764,17 @@ export async function getNewsletterAnalytics(days: number = 30) {
     .gte("created_at", since);
 
   const sent = newsletters?.length || 0;
-  const opens = events?.filter((e: { event_type: string }) => e.event_type === "opened").length || 0;
-  const clicks = events?.filter((e: { event_type: string }) => e.event_type === "clicked").length || 0;
-  const bounces = events?.filter((e: { event_type: string }) => e.event_type === "bounced").length || 0;
-  const unsubscribes = events?.filter((e: { event_type: string }) => e.event_type === "unsubscribed").length || 0;
+  // BUG-08: Scope events to only newsletters in the fetched set to avoid double-counting.
+  // Without this, events for newsletters outside the time window (or with different statuses)
+  // can inflate open/click counts when the period filter is applied only to created_at.
+  const newsletterIds = new Set((newsletters || []).map((n: { id: string }) => n.id));
+  const scopedEvents = (events || []).filter(
+    (e: { newsletter_id: string }) => newsletterIds.has(e.newsletter_id)
+  );
+  const opens = scopedEvents.filter((e: { event_type: string }) => e.event_type === "opened").length;
+  const clicks = scopedEvents.filter((e: { event_type: string }) => e.event_type === "clicked").length;
+  const bounces = scopedEvents.filter((e: { event_type: string }) => e.event_type === "bounced").length;
+  const unsubscribes = scopedEvents.filter((e: { event_type: string }) => e.event_type === "unsubscribed").length;
 
   // Group by email type
   const byType: Record<string, { sent: number; opens: number; clicks: number }> = {};
@@ -786,7 +782,7 @@ export async function getNewsletterAnalytics(days: number = 30) {
     if (!byType[n.email_type]) byType[n.email_type] = { sent: 0, opens: 0, clicks: 0 };
     byType[n.email_type].sent++;
   }
-  for (const e of events || []) {
+  for (const e of scopedEvents) {
     const newsletter = newsletters?.find((n: { id: string; email_type: string }) => n.id === e.newsletter_id);
     if (newsletter && byType[newsletter.email_type]) {
       if (e.event_type === "opened") byType[newsletter.email_type].opens++;
@@ -807,16 +803,30 @@ export async function getNewsletterAnalytics(days: number = 30) {
 }
 
 export async function bulkApproveNewsletters(ids: string[]) {
-  const results = [];
-  for (const id of ids) {
-    try {
-      const result = await sendNewsletter(id);
-      results.push({ id, ...result });
-    } catch (e) {
-      results.push({ id, error: String(e) });
-    }
+  // BUG-06: Process in parallel batches of 10 to avoid Vercel 10-second timeout
+  // for bulk approvals with many newsletters.
+  const BATCH_SIZE = 10;
+  const allResults: Array<{ id: string; success?: boolean; error?: string; [key: string]: unknown }> = [];
+
+  for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+    const batch = ids.slice(i, i + BATCH_SIZE);
+    const settled = await Promise.allSettled(batch.map(id => sendNewsletter(id)));
+    settled.forEach((result, idx) => {
+      const id = batch[idx];
+      if (result.status === "rejected") {
+        console.error(`[bulkApprove] Failed for newsletter ${id}:`, result.reason);
+        allResults.push({ id, error: String(result.reason) });
+      } else {
+        allResults.push({ id, ...result.value });
+      }
+    });
   }
-  return { results, sent: results.filter(r => r.success).length, failed: results.filter(r => r.error).length };
+
+  return {
+    results: allResults,
+    sent: allResults.filter(r => r.success).length,
+    failed: allResults.filter(r => r.error).length,
+  };
 }
 
 export async function sendCampaign(emailType: string, recipients: string, subject: string) {
@@ -862,21 +872,27 @@ export async function sendCampaign(emailType: string, recipients: string, subjec
   let sent = 0;
   let failed = 0;
 
-  for (const contact of contacts) {
-    if (!contact.id) continue; // Type guard — DB rows always have id
-    try {
-      const result = await generateAndQueueNewsletter(
-        contact.id,
-        emailType,
-        "campaign",
-        undefined,
-        "auto"
-      );
-      if (result.data) sent++;
-      else failed++;
-    } catch {
-      failed++;
-    }
+  // BUG-07: Process in parallel batches of 10 to avoid Vercel 10-second timeout
+  // for campaigns with >10 contacts.
+  const BATCH_SIZE = 10;
+  const validContacts = contacts.filter(c => !!c.id);
+  for (let i = 0; i < validContacts.length; i += BATCH_SIZE) {
+    const batch = validContacts.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map(contact =>
+        generateAndQueueNewsletter(contact.id!, emailType, "campaign", undefined, "auto")
+      )
+    );
+    results.forEach((result, idx) => {
+      if (result.status === "rejected") {
+        console.error(`[campaign] Failed for contact ${batch[idx].id}:`, result.reason);
+        failed++;
+      } else if (result.value?.data) {
+        sent++;
+      } else {
+        failed++;
+      }
+    });
   }
 
   revalidatePath("/newsletters");

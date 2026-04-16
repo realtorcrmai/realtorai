@@ -45,6 +45,8 @@ const GeneratedContentSchema = z.object({
 });
 
 export interface NewsletterContext {
+  /** The database UUID of the contact — required for RAG context retrieval. */
+  contact_id?: string | null;
   contact: {
     name: string;
     firstName: string;
@@ -118,7 +120,9 @@ export async function generateNewsletterContent(
   let ragContext = '';
   try {
     const { retrieveContext } = await import('@/lib/rag/retriever');
-    const contactId = (context as any).contact?.id;
+    // Fix 8: use the top-level contact_id field (not contact.id which doesn't exist
+    // on the NewsletterContext type). Callers must populate context.contact_id.
+    const contactId = context.contact_id ?? undefined;
     const db = createAdminClient();
     const retrieved = await retrieveContext(
       db,
@@ -382,4 +386,83 @@ Contact: ${sanitizeForPrompt(contact.name)} (${contact.type}, ${journeyPhase} ph
   }
 
   return prompt;
+}
+
+// ═══════════════════════════════════════════════
+// REALTOR BRANDING — Fix 7: per-realtor DB lookup
+// ═══════════════════════════════════════════════
+
+export type RealtorBranding = {
+  name: string;
+  email: string;
+  brokerage?: string;
+  phone?: string;
+};
+
+/**
+ * Get realtor branding for email generation.
+ *
+ * Fix 7 (GAP 1-E): In a multi-tenant context, env vars return the same agent
+ * for every contact. This function looks up the realtor's data from the DB
+ * first (by realtorId), then falls back to env vars. This ensures each
+ * contact's emails are attributed to the correct realtor.
+ *
+ * @param realtorId - The UUID of the realtor (from listings.realtor_id,
+ *                    contact_journeys, or the authenticated session).
+ *                    Pass null/undefined to get the env-var fallback only.
+ */
+export async function getRealtorBranding(
+  realtorId?: string | null
+): Promise<RealtorBranding> {
+  if (realtorId) {
+    try {
+      const supabase = createAdminClient();
+
+      // Try realtor_agent_config.brand_config first (richest data)
+      const { data: configRow } = await supabase
+        .from("realtor_agent_config")
+        .select("brand_config")
+        .eq("realtor_id", realtorId)
+        .maybeSingle();
+
+      if (configRow?.brand_config) {
+        const bc = configRow.brand_config as Record<string, string>;
+        if (bc.name) {
+          return {
+            name: bc.name,
+            email: bc.email ?? process.env.RESEND_FROM_EMAIL ?? '',
+            brokerage: bc.brokerage,
+            phone: bc.phone,
+          };
+        }
+      }
+
+      // Fallback: users table
+      const { data: user } = await supabase
+        .from("users")
+        .select("name, email, metadata")
+        .eq("id", realtorId)
+        .maybeSingle();
+
+      if (user?.name) {
+        const meta = user.metadata as Record<string, string> | null;
+        return {
+          name: user.name,
+          email: user.email ?? process.env.RESEND_FROM_EMAIL ?? '',
+          brokerage: meta?.brokerage,
+          phone: meta?.phone,
+        };
+      }
+    } catch (err) {
+      console.warn('[newsletter-ai] getRealtorBranding DB lookup failed, using env vars:', err);
+    }
+  }
+
+  // Env-var fallback (single-tenant / dev mode)
+  return {
+    name: process.env.AGENT_NAME ?? 'Your Agent',
+    email: process.env.RESEND_FROM_EMAIL ?? '',
+    brokerage: process.env.AGENT_BROKERAGE,
+    phone: process.env.AGENT_PHONE,
+  };
 }

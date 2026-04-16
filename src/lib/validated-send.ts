@@ -57,14 +57,16 @@ export async function validatedSend(
 ): Promise<ValidatedSendResult> {
   const supabase = createAdminClient();
 
-  // H-10: Idempotency guard — if already sent, skip and return existing message ID
+  // H-10: Idempotency guard — only short-circuit if the email was actually successfully sent.
+  // If status is 'sending' (process crashed mid-send), do NOT return early — let the
+  // send proceed again to avoid a permanent 'sending' state (BUG-15).
   const { data: existingNewsletter } = await supabase
     .from("newsletters")
     .select("resend_message_id, status")
     .eq("id", input.newsletterId)
     .maybeSingle();
 
-  if (existingNewsletter?.resend_message_id) {
+  if (existingNewsletter?.resend_message_id && existingNewsletter?.status === "sent") {
     return {
       sent: true,
       action: "sent",
@@ -207,8 +209,9 @@ export async function validatedSend(
 
     case "defer": {
       // Frequency/timing issue — defer to later
+      // BUG-01: Set status to 'deferred' (not 'draft') so the recovery cron can find and retry these.
       await supabase.from("newsletters").update({
-        status: "draft",
+        status: "deferred",
         ai_context: {
           deferred: true,
           defer_reason: validationResult.complianceResult.reason,

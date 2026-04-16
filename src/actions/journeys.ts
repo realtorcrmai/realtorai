@@ -240,8 +240,73 @@ export async function pauseJourney(contactId: string, journeyType: JourneyType, 
   return { success: true };
 }
 
+// Phase progression order for BUG-03 exhausted-phase handling
+const PHASE_ORDER: JourneyPhase[] = ["lead", "active", "under_contract", "past_client", "dormant"];
+
 export async function resumeJourney(contactId: string, journeyType: JourneyType) {
   const tc = await getAuthenticatedTenantClient();
+
+  // BUG-03 FIX: fetch current journey state so we can detect exhausted phase before setting next_email_at.
+  const { data: currentJourney, error: fetchError } = await tc
+    .from("contact_journeys")
+    .select("current_phase, emails_sent_in_phase")
+    .eq("contact_id", contactId)
+    .eq("journey_type", journeyType)
+    .single();
+
+  if (fetchError) return { error: fetchError.message };
+
+  const currentPhase = (currentJourney?.current_phase ?? "lead") as JourneyPhase;
+  const emailsSent = currentJourney?.emails_sent_in_phase ?? 0;
+  const schedule = JOURNEY_SCHEDULES[journeyType][currentPhase];
+  const phaseExhausted = emailsSent >= schedule.length;
+
+  if (phaseExhausted) {
+    // All emails in the current phase have been sent and no event advanced the phase.
+    // Advance to the next phase automatically instead of freezing the journey.
+    const currentIdx = PHASE_ORDER.indexOf(currentPhase);
+    const nextPhase: JourneyPhase | undefined = PHASE_ORDER[currentIdx + 1];
+
+    if (!nextPhase || nextPhase === "dormant" && currentPhase === "past_client") {
+      // Already at past_client with no next meaningful phase — pause the journey.
+      const { error } = await tc
+        .from("contact_journeys")
+        .update({
+          is_paused: true,
+          pause_reason: "phase_exhausted_no_next_phase",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("contact_id", contactId)
+        .eq("journey_type", journeyType);
+      if (error) return { error: error.message };
+      revalidatePath("/newsletters");
+      return { success: true };
+    }
+
+    // Advance to next phase
+    const nextSchedule = JOURNEY_SCHEDULES[journeyType][nextPhase];
+    const nextEmailAt = nextSchedule.length > 0
+      ? new Date(Date.now() + nextSchedule[0].delayHours * 3600000).toISOString()
+      : null;
+
+    const { error } = await tc
+      .from("contact_journeys")
+      .update({
+        is_paused: false,
+        pause_reason: null,
+        current_phase: nextPhase,
+        phase_entered_at: new Date().toISOString(),
+        emails_sent_in_phase: 0,
+        next_email_at: nextEmailAt,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("contact_id", contactId)
+      .eq("journey_type", journeyType);
+
+    if (error) return { error: error.message };
+    revalidatePath("/newsletters");
+    return { success: true };
+  }
 
   // H-05: Use 1 hour after resume instead of forcing a 24h wait.
   // The scheduler will pick up immediately and use the phase schedule for subsequent emails.
@@ -328,13 +393,16 @@ export async function getJourneyDashboard() {
 }
 
 export async function processJourneyQueue() {
-  const tc = await getAuthenticatedTenantClient();
+  // BUG-01 FIX: cron has no user session — use admin client so journeys actually process.
+  // This function processes all realtors' journeys system-wide; admin client is correct here.
+  const tc = createAdminClient();
 
   // Find journeys that need an email sent.
   // Fetch CASL fields so we can enforce canSendToContact() in-loop.
+  // 5-D FIX: also select send_mode so we respect the realtor's review preference.
   const { data: dueJourneys } = await tc
     .from("contact_journeys")
-    .select("*, next_email_type_override, contacts(id, name, email, type, newsletter_intelligence, newsletter_unsubscribed, casl_consent_given, casl_consent_date, buyer_preferences)")
+    .select("*, send_mode, next_email_type_override, contacts(id, name, email, type, newsletter_intelligence, newsletter_unsubscribed, casl_consent_given, casl_consent_date, buyer_preferences)")
     .eq("is_paused", false)
     .not("next_email_at", "is", null)
     .lte("next_email_at", new Date().toISOString())
@@ -394,7 +462,7 @@ export async function processJourneyQueue() {
           emailType,
           journey.current_phase,
           journey.id,
-          "auto"
+          journey.send_mode ?? "auto"
         );
       } catch (err) {
         console.error('[journey:queue] Newsletter generation failed for journey', journey.id, err);

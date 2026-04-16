@@ -42,11 +42,16 @@ const PHASE_FREQUENCY_CAPS: Record<string, { maxPerDay: number; minHoursBetween:
  * Check if the send governor allows sending to this contact.
  * More sophisticated than compliance gate — considers engagement trends,
  * per-phase caps, and realtor config.
+ *
+ * Accepts an optional pre-created supabase client. Callers that invoke this
+ * in a loop (e.g. campaign of 500 contacts) should create one client outside
+ * the loop and pass it here to avoid 500 separate DB connections.
  */
 export async function checkSendGovernor(
-  input: GovernorInput
+  input: GovernorInput,
+  supabaseClient?: ReturnType<typeof createAdminClient>
 ): Promise<GovernorResult> {
-  const supabase = createAdminClient();
+  const supabase = supabaseClient ?? createAdminClient();
   const adjustments: string[] = [];
 
   // 1. Get realtor config (or use defaults)
@@ -128,34 +133,31 @@ export async function checkSendGovernor(
   }
 
   // 4. Auto-sunset check (0 opens in 90 days)
+  // Fix: single query to get all sent newsletter IDs in the window, then
+  // check events in one go — avoids nested correlated subquery.
   const sunsetDays = (config?.auto_sunset_days as number) || 90;
   const sunsetCutoff = new Date(Date.now() - sunsetDays * 24 * 60 * 60 * 1000).toISOString();
 
-  const { data: recentOpens } = await supabase
-    .from("newsletter_events")
-    .select("id, newsletter_id")
-    .eq("event_type", "opened")
-    .in(
-      "newsletter_id",
-      (await supabase
-        .from("newsletters")
-        .select("id")
-        .eq("contact_id", input.contactId)
-        .eq("status", "sent")
-        .gte("sent_at", sunsetCutoff)
-      ).data?.map((n: { id: string }) => n.id) || []
-    )
-    .limit(1);
-
-  // Check if we had enough emails sent to judge
-  const { count: sentInPeriod } = await supabase
+  const { data: sentNewsletters } = await supabase
     .from("newsletters")
-    .select("id", { count: "exact", head: true })
+    .select("id")
     .eq("contact_id", input.contactId)
     .eq("status", "sent")
     .gte("sent_at", sunsetCutoff);
 
-  if (sentInPeriod && sentInPeriod >= 5 && (!recentOpens || recentOpens.length === 0)) {
+  const sentInPeriod = sentNewsletters?.length ?? 0;
+  const sentIds = sentNewsletters?.map((n: { id: string }) => n.id) ?? [];
+
+  const { data: recentOpens } = sentIds.length > 0
+    ? await supabase
+        .from("newsletter_events")
+        .select("id, newsletter_id")
+        .eq("event_type", "opened")
+        .in("newsletter_id", sentIds)
+        .limit(1)
+    : { data: [] };
+
+  if (sentInPeriod >= 5 && (!recentOpens || recentOpens.length === 0)) {
     adjustments.push(`Auto-sunset: 0 opens in ${sunsetDays} days across ${sentInPeriod} emails`);
 
     // H-08: Only pause the specific journey type that triggered sunset (not ALL journeys).

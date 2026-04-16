@@ -29,10 +29,6 @@
       "schedule": "30 */4 * * *"
     },
     {
-      "path": "/api/cron/process-journeys",
-      "schedule": "0 9 * * *"
-    },
-    {
       "path": "/api/cron/detect-dormant",
       "schedule": "0 2 * * *"
     }

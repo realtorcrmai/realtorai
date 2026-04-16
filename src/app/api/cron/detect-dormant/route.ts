@@ -14,7 +14,12 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  // BUG-25: Guard against undefined CRON_SECRET — prevents "Bearer undefined" bypass
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret) {
+    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 })
+  }
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -69,17 +74,27 @@ export async function GET(request: Request) {
     return true
   })
 
+  // BUG-28 + BUG-24: Single bulk UPDATE (no timeout risk) + set next_email_at so
+  // the re-engagement queue picks them up immediately (not NULL-filtered out).
   let moved = 0
-  for (const journey of staleJourneys) {
-    const { error: updateError } = await supabase
+  if (staleJourneys.length > 0) {
+    const ids = staleJourneys.map((j) => j.id)
+    const now = new Date().toISOString()
+    const { error: bulkError } = await supabase
       .from('contact_journeys')
-      .update({ current_phase: 'dormant', updated_at: new Date().toISOString() })
-      .eq('id', journey.id)
+      .update({
+        current_phase: 'dormant',
+        next_email_at: now,        // Trigger re-engagement queue pickup
+        emails_sent_in_phase: 0,   // Reset counter for re-engagement sequence
+        phase_entered_at: now,
+        updated_at: now,
+      })
+      .in('id', ids)
 
-    if (!updateError) {
-      moved++
+    if (bulkError) {
+      console.error('[cron/detect-dormant] bulk update error:', bulkError)
     } else {
-      console.error(`[cron/detect-dormant] failed to move journey ${journey.id}:`, updateError)
+      moved = ids.length
     }
   }
 
