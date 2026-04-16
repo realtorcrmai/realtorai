@@ -225,6 +225,23 @@ export async function overrideListingStatus(
               .eq("id", stageListing.seller_id);
           }
         }
+
+        // GAP 4-A/4-B: Advance seller journey phase when listing status changes
+        if (newStatus === "conditional") {
+          try {
+            const { advanceJourneyPhase } = await import("@/actions/journeys");
+            await advanceJourneyPhase(stageListing.seller_id, "seller", "under_contract");
+          } catch (err) {
+            console.error("[listings] Failed to advance seller journey to under_contract:", err);
+          }
+        } else if (newStatus === "sold") {
+          try {
+            const { advanceJourneyPhase } = await import("@/actions/journeys");
+            await advanceJourneyPhase(stageListing.seller_id, "seller", "past_client");
+          } catch (err) {
+            console.error("[listings] Failed to advance seller journey to past_client:", err);
+          }
+        }
       }
     } catch {
       // Don't fail status update if seller stage sync fails
@@ -358,6 +375,57 @@ export async function updateListingStatus(
     }
   }
 
+  // GAP 4-A/4-B/4-C: Advance journey phases on key status transitions.
+  // Called from authenticated user sessions — advanceJourneyPhase uses getAuthenticatedTenantClient() correctly.
+  // Dynamic import avoids circular dependency. Wrapped in try/catch so a journey error never fails the listing update.
+  if (newStatus === "pending" || newStatus === "sold") {
+    try {
+      const { data: journeyListing } = await tc
+        .from("listings")
+        .select("seller_id, buyer_id")
+        .eq("id", id)
+        .single();
+
+      const sellerId = (journeyListing as { seller_id?: string | null } | null)?.seller_id ?? null;
+      const buyerId = (journeyListing as { buyer_id?: string | null } | null)?.buyer_id ?? null;
+
+      if (newStatus === "pending") {
+        // listing is under contract — advance seller to under_contract phase
+        if (sellerId) {
+          try {
+            const { advanceJourneyPhase } = await import("@/actions/journeys");
+            await advanceJourneyPhase(sellerId, "seller", "under_contract");
+          } catch (err) {
+            console.error("[listings] Failed to advance seller journey to under_contract:", err);
+          }
+        }
+        // Advance buyer to under_contract phase if buyer is linked
+        if (buyerId) {
+          try {
+            const { advanceJourneyPhase } = await import("@/actions/journeys");
+            await advanceJourneyPhase(buyerId, "buyer", "under_contract");
+          } catch (err) {
+            console.error("[listings] Failed to advance buyer journey to under_contract:", err);
+          }
+        }
+      }
+
+      if (newStatus === "sold") {
+        // listing closed — advance seller to past_client phase
+        if (sellerId) {
+          try {
+            const { advanceJourneyPhase } = await import("@/actions/journeys");
+            await advanceJourneyPhase(sellerId, "seller", "past_client");
+          } catch (err) {
+            console.error("[listings] Failed to advance seller journey to past_client:", err);
+          }
+        }
+      }
+    } catch {
+      // Don't fail status update if journey advancement fails
+    }
+  }
+
   // Fire listing_active trigger for blast automation rules
   if (newStatus === "active") {
     try {
@@ -365,6 +433,21 @@ export async function updateListingStatus(
       await executeListingBlastRules("listing_active", id);
     } catch {
       // Don't fail status update if blast fails
+    }
+
+    // Enroll seller in journey when listing goes active
+    try {
+      const { autoEnrollNewContact } = await import("@/actions/journeys");
+      const { data: activeListing } = await tc
+        .from("listings")
+        .select("seller_id")
+        .eq("id", id)
+        .single();
+      if (activeListing?.seller_id) {
+        await autoEnrollNewContact(activeListing.seller_id, "seller");
+      }
+    } catch (e) {
+      console.warn("[listings] Could not enroll seller in journey:", e);
     }
   }
 

@@ -70,7 +70,7 @@ export async function buildWelcomeEmail(options: {
 /**
  * Build a listing alert email using the block system.
  */
-export function buildListingAlertEmail(options: {
+export async function buildListingAlertEmail(options: {
   firstName: string;
   intro: string;
   listings: Array<{
@@ -83,8 +83,8 @@ export function buildListingAlertEmail(options: {
   }>;
   brand?: Partial<BrandConfig>;
   contactId?: string;
-}): { html: string } {
-  const html = buildEmailFromType(
+}): Promise<{ html: string }> {
+  const html = await buildEmailFromType(
     "new_listing",
     options.firstName,
     "buyer",
@@ -99,7 +99,7 @@ export function buildListingAlertEmail(options: {
 /**
  * Build a market update email using the block system.
  */
-export function buildMarketUpdateEmail(options: {
+export async function buildMarketUpdateEmail(options: {
   firstName: string;
   area: string;
   intro: string;
@@ -107,8 +107,8 @@ export function buildMarketUpdateEmail(options: {
   recentSales?: Array<{ address: string; price: string }>;
   brand?: Partial<BrandConfig>;
   contactId?: string;
-}): { html: string } {
-  const html = buildEmailFromType(
+}): Promise<{ html: string }> {
+  const html = await buildEmailFromType(
     "market_update",
     options.firstName,
     "buyer",

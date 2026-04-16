@@ -107,9 +107,26 @@ export async function createShowingRequest(
 
   trackEvent('feature_used', tc.realtorId, { feature: 'showings', action: 'create' });
 
+  // Advance buyer journey from lead → active when first showing booked
+  // The buyer_agent is not a CRM contact, but the listing may have a buyer_id
+  try {
+    const { data: showingListing } = await tc
+      .from("listings")
+      .select("buyer_id")
+      .eq("id", listingId)
+      .single();
+    const buyerContactId = showingListing?.buyer_id ?? null;
+    if (buyerContactId) {
+      const { advanceJourneyPhase } = await import("@/actions/journeys");
+      await advanceJourneyPhase(buyerContactId, "buyer", "active");
+    }
+  } catch (e) {
+    console.warn("[showings] Could not advance journey phase:", e);
+  }
+
   // Send Twilio notification to seller
   try {
-    const messageSid = await sendShowingRequest({
+    const result = await sendShowingRequest({
       to: seller.phone,
       channel: seller.pref_channel,
       address: listing.address,
@@ -117,10 +134,14 @@ export async function createShowingRequest(
       buyerAgentName,
     });
 
-    await tc
-      .from("appointments")
-      .update({ twilio_message_sid: messageSid })
-      .eq("id", appointment.id);
+    if (result.success && result.sid) {
+      await tc
+        .from("appointments")
+        .update({ twilio_message_sid: result.sid })
+        .eq("id", appointment.id);
+    } else if (!result.success) {
+      console.error("[showings] Twilio sendShowingRequest failed:", result.error);
+    }
 
     await tc.from("communications").insert({
       contact_id: seller.id,

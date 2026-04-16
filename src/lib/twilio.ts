@@ -25,7 +25,7 @@ export async function sendShowingRequest(params: {
   address: string;
   startTime: Date;
   buyerAgentName: string;
-}) {
+}): Promise<{ success: boolean; sid?: string; error?: string }> {
   const { to, channel, address, startTime, buyerAgentName } = params;
 
   const timeStr = startTime.toLocaleString("en-CA", {
@@ -45,13 +45,17 @@ export async function sendShowingRequest(params: {
       ? process.env.TWILIO_WHATSAPP_NUMBER!
       : process.env.TWILIO_PHONE_NUMBER!;
 
-  const message = await client.messages.create({
-    body,
-    from,
-    to: formatNumber(to, channel),
-  });
-
-  return message.sid;
+  try {
+    const message = await client.messages.create({
+      body,
+      from,
+      to: formatNumber(to, channel),
+    });
+    return { success: true, sid: message.sid };
+  } catch (err) {
+    console.error("[twilio] Send failed:", err instanceof Error ? err.message : err);
+    return { success: false, error: err instanceof Error ? err.message : "SMS send failed" };
+  }
 }
 
 export async function sendLockboxCode(params: {
@@ -60,7 +64,7 @@ export async function sendLockboxCode(params: {
   address: string;
   lockboxCode: string;
   showingTime: Date;
-}) {
+}): Promise<{ success: boolean; sid?: string; error?: string }> {
   const { to, channel, address, lockboxCode, showingTime } = params;
 
   const timeStr = showingTime.toLocaleString("en-CA", {
@@ -77,11 +81,17 @@ export async function sendLockboxCode(params: {
       ? process.env.TWILIO_WHATSAPP_NUMBER!
       : process.env.TWILIO_PHONE_NUMBER!;
 
-  await client.messages.create({
-    body,
-    from,
-    to: formatNumber(to, channel),
-  });
+  try {
+    const message = await client.messages.create({
+      body,
+      from,
+      to: formatNumber(to, channel),
+    });
+    return { success: true, sid: message.sid };
+  } catch (err) {
+    console.error("[twilio] Send failed:", err instanceof Error ? err.message : err);
+    return { success: false, error: err instanceof Error ? err.message : "SMS send failed" };
+  }
 }
 
 export async function sendGenericMessage(params: {

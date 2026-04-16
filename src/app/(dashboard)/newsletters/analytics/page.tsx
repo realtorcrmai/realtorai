@@ -51,10 +51,10 @@ export default async function NewsletterAnalyticsPage() {
     { data: allEvents },
     { data: agentRuns },
     { data: contactsWithIntel },
-    { data: allContacts },
-    { data: suppressedContacts },
-    { data: unsubscribedContacts },
-    { data: noEmailContacts },
+    { count: activeContactsCount },
+    { count: suppressedContactsCount },
+    { count: unsubscribedContactsCount },
+    { count: noEmailContactsCount },
     { data: recentEvents },
     { data: abTests },
   ] = await Promise.all([
@@ -212,10 +212,11 @@ export default async function NewsletterAnalyticsPage() {
     .slice(0, 10);
 
   // ── List health ──
-  const activeCount = (allContacts as any) ?? 0;
-  const suppressedCount = (suppressedContacts as any) ?? 0;
-  const unsubscribedCount = (unsubscribedContacts as any) ?? 0;
-  const noEmailCount = (noEmailContacts as any) ?? 0;
+  // These use { count: 'exact', head: true } — the row count is in `.count`, not `.data`
+  const activeCount = activeContactsCount ?? 0;
+  const suppressedCount = suppressedContactsCount ?? 0;
+  const unsubscribedCount = unsubscribedContactsCount ?? 0;
+  const noEmailCount = noEmailContactsCount ?? 0;
 
   // ── A/B test summary ──
   const abTestCount = (abTests ?? []).length;

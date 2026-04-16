@@ -1,25 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync } from "fs";
-import { resolve } from "path";
 import { createWithRetry } from "@/lib/anthropic/retry";
 
-function getAnthropicKey(): string {
-  const envKey = process.env.ANTHROPIC_API_KEY;
-  if (envKey && envKey.startsWith("sk-")) return envKey;
-
-  try {
-    const envPath = resolve(process.cwd(), ".env.local");
-    const content = readFileSync(envPath, "utf-8");
-    const match = content.match(/^ANTHROPIC_API_KEY=(.+)$/m);
-    if (match?.[1]) return match[1].trim();
-  } catch {
-    // ignore
-  }
-  return "";
-}
-
 const anthropic = new Anthropic({
-  apiKey: getAnthropicKey(),
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 function cleanJsonResponse(text: string): string {

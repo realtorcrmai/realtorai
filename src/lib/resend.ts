@@ -3,6 +3,12 @@
 import { Resend } from "resend";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 
+// H-14: Fail fast at import time in production if the API key is missing.
+// In development/test environments, this is a warning only so local dev still works.
+if (!process.env.RESEND_API_KEY && process.env.NODE_ENV === "production") {
+  throw new Error("[resend] RESEND_API_KEY environment variable is required in production");
+}
+
 let resendClient: Resend | null = null;
 
 function getResend(): Resend {
@@ -45,8 +51,14 @@ async function sendWithRetry<T>(
       return await fn();
     } catch (e: unknown) {
       const err = e as { statusCode?: number };
-      const isRetryable = err?.statusCode === 429 || err?.statusCode === 503 || (err?.statusCode ?? 0) >= 500;
-      if (!isRetryable || attempt === maxRetries) throw e;
+      const statusCode = err?.statusCode ?? 500;
+
+      // H-13: Do NOT retry permanent 4xx client errors (except 429 rate limit).
+      // Only retry on 429 (rate limit) or 5xx (server errors).
+      const isPermanentClientError =
+        statusCode >= 400 && statusCode < 500 && statusCode !== 429;
+      if (isPermanentClientError || attempt === maxRetries) throw e;
+
       const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
       await new Promise((r) => setTimeout(r, delay));
     }
@@ -81,7 +93,7 @@ export async function sendEmail(params: SendEmailParams) {
     ].filter(Boolean).join("");
 
     const banner = `<div style="background:#faf5ff;border:2px solid #d8b4fe;border-radius:8px;padding:12px;margin-bottom:16px;font-family:sans-serif;font-size:12px;color:#374151;">
-      <div style="font-weight:700;color:#6b21a8;margin-bottom:6px;font-size:13px;">ListingFlow Test Metadata</div>
+      <div style="font-weight:700;color:#6b21a8;margin-bottom:6px;font-size:13px;">Realtors360 Test Metadata</div>
       <table style="border-collapse:collapse;width:100%;">${rows}</table>
     </div>`;
 

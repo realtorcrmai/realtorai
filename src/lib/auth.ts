@@ -199,21 +199,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             } else if (trigger === "signIn" || account) {
               const isAdmin = ADMIN_EMAIL && token.email === ADMIN_EMAIL;
               const defaultPlan = isAdmin ? "admin" : "free";
+              // Use upsert instead of insert to handle race conditions on simultaneous
+              // OAuth sign-ins (e.g. double-click, multi-tab) — ignoreDuplicates preserves
+              // existing user data when the row already exists.
               const { data: newUser, error: insertError } = await supabase
                 .from("users")
-                .insert({
-                  email: token.email,
-                  name: token.name as string | undefined,
-                  role: isAdmin ? "admin" : "realtor",
-                  plan: defaultPlan,
-                  personalization_completed: false,
-                  onboarding_completed: false,
-                })
+                .upsert(
+                  {
+                    email: token.email,
+                    name: token.name as string | undefined,
+                    role: isAdmin ? "admin" : "realtor",
+                    plan: defaultPlan,
+                    personalization_completed: false,
+                    onboarding_completed: false,
+                  },
+                  { onConflict: "email", ignoreDuplicates: true }
+                )
                 .select("id, role, plan, enabled_features, trial_ends_at, trial_plan")
                 .single();
 
               if (insertError) {
-                console.error("[auth] Error inserting user:", insertError.message);
+                console.error("[auth] Error upserting user:", insertError.message);
               }
 
               if (newUser?.id) {

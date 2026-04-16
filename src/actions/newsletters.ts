@@ -5,31 +5,14 @@ import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { sendEmail } from "@/lib/resend";
 import { validatedSend } from "@/lib/validated-send";
 import { generateNewsletterContent, NewsletterContext } from "@/lib/newsletter-ai";
-import { render } from "@react-email/components";
 import { revalidatePath } from "next/cache";
 import { triggerIngest } from "@/lib/rag/realtime-ingest";
 import { canSendToContact, filterSendable } from "@/lib/compliance/can-send";
 import { trackEvent } from "@/lib/analytics";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 
-// React Email template imports
-import { NewListingAlert } from "@/emails/NewListingAlert";
-import { MarketUpdate } from "@/emails/MarketUpdate";
-import { JustSold } from "@/emails/JustSold";
-import { OpenHouseInvite } from "@/emails/OpenHouseInvite";
-import { NeighbourhoodGuide } from "@/emails/NeighbourhoodGuide";
-import { HomeAnniversary } from "@/emails/HomeAnniversary";
-import { PremiumListingShowcase } from "@/emails/PremiumListingShowcase";
-import { ClosingReminder } from "@/emails/ClosingReminder";
-import { BuyerGuide } from "@/emails/BuyerGuide";
-import { ClientTestimonial } from "@/emails/ClientTestimonial";
-import { HomeValueUpdate } from "@/emails/HomeValueUpdate";
-import { MortgageRenewalAlert } from "@/emails/MortgageRenewalAlert";
-import { InspectionReminder } from "@/emails/InspectionReminder";
-import { YearInReview } from "@/emails/YearInReview";
-import { CommunityEvent } from "@/emails/CommunityEvent";
-import { PriceDropAlert } from "@/emails/PriceDropAlert";
-import { ReferralThankYou } from "@/emails/ReferralThankYou";
+// Apple-quality block-based email system (SF Pro Display / Inter font stack)
+import { assembleEmail, getBrandConfig, type EmailData } from "@/lib/email-blocks";
 import type { RealtorBranding } from "@/emails/BaseLayout";
 
 async function getRealtorBranding(): Promise<RealtorBranding> {
@@ -48,6 +31,11 @@ function getUnsubscribeUrl(contactId: string): string {
   return buildUnsubscribeUrl(contactId);
 }
 
+/**
+ * Renders any newsletter type using the Apple-quality block system (email-blocks.ts).
+ * Font: SF Pro Display → SF Pro Text → Inter → Helvetica Neue (exact Apple stack).
+ * All email types map to one of the block-system template keys.
+ */
 async function renderEmailTemplate(
   emailType: string,
   content: any,
@@ -56,256 +44,197 @@ async function renderEmailTemplate(
   contactId: string,
   preferredArea?: string
 ): Promise<string> {
-  const unsubscribeUrl = getUnsubscribeUrl(contactId);
   const firstName = contactName.split(" ")[0];
   const areaFallback = preferredArea || "your neighbourhood";
 
-  const templateProps: Record<string, any> = {
-    branding,
-    recipientName: firstName,
-    unsubscribeUrl,
+  // Map newsletter email types to block-system template keys
+  const typeMap: Record<string, string> = {
+    new_listing_alert: "listing_alert",
+    market_update: "market_update",
+    just_sold: "just_sold",
+    open_house_invite: "open_house",
+    neighbourhood_guide: "neighbourhood_guide",
+    home_anniversary: "home_anniversary",
+    premium_listing_showcase: "luxury_showcase",
+    closing_reminder: "seller_report",
+    buyer_guide: "buyer_guide",
+    seller_guide: "seller_guide",
+    client_testimonial: "just_sold",
+    home_value_update: "cma_preview",
+    mortgage_renewal_alert: "mortgage_renewal",
+    inspection_reminder: "inspection_reminder",
+    closing_checklist: "closing_checklist",
+    closing_countdown: "closing_countdown",
+    referral_ask: "referral",
+    referral_thank_you: "referral",
+    reengagement: "re_engagement",
+    year_in_review: "market_update",
+    community_event: "neighbourhood_guide",
+    price_drop_alert: "listing_alert",
   };
 
-  let element: React.ReactElement;
+  const blockType = typeMap[emailType] || "welcome";
 
-  switch (emailType) {
-    case "new_listing_alert":
-      element = NewListingAlert({
-        ...templateProps,
-        area: content.area || areaFallback,
-        intro: content.intro,
-        listings: content.listings || [],
-        ctaText: content.ctaText,
-      } as any);
-      break;
+  const brandConfig = await getBrandConfig();
 
-    case "market_update":
-      element = MarketUpdate({
-        ...templateProps,
-        area: content.area || areaFallback,
-        month: content.month || new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
-        intro: content.intro,
-        stats: content.stats || [],
-        recentSales: content.recentSales || [],
-        commentary: content.body,
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "just_sold":
-      element = JustSold({
-        ...templateProps,
-        address: content.address || "",
-        salePrice: content.salePrice || "",
-        daysOnMarket: content.daysOnMarket || 0,
-        photo: content.photo,
-        message: content.body,
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "open_house_invite":
-      element = OpenHouseInvite({
-        ...templateProps,
-        address: content.address || "",
-        price: content.price || "",
-        date: content.date || "",
-        time: content.time || "",
-        photo: content.photo,
-        description: content.body,
-        features: content.highlights || [],
-      } as any);
-      break;
-
-    case "neighbourhood_guide":
-      element = NeighbourhoodGuide({
-        ...templateProps,
-        area: content.area || areaFallback,
-        intro: content.intro,
-        highlights: content.highlights?.map((h: string) => ({
-          category: "Highlights",
-          items: [h],
-        })) || [],
-        funFact: content.funFact,
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "home_anniversary":
-      element = HomeAnniversary({
-        ...templateProps,
-        address: content.address || "",
-        purchaseDate: content.purchaseDate || "",
-        years: content.years || 1,
-        estimatedValue: content.estimatedValue,
-        appreciation: content.appreciation,
-        message: content.body,
-        tips: content.tips || [],
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "premium_listing_showcase":
-      element = PremiumListingShowcase({
-        ...templateProps,
-        address: content.address || "",
-        cityStatePostal: content.cityStatePostal || content.city || "",
-        price: content.price || "",
-        beds: content.beds || 0,
-        baths: content.baths || 0,
+  const emailData: EmailData = {
+    contact: {
+      name: contactName,
+      firstName,
+      type: content.contactType || "buyer",
+    },
+    agent: {
+      name: branding.name || brandConfig.name,
+      brokerage: branding.brokerage || brandConfig.brokerage,
+      phone: branding.phone || brandConfig.phone,
+      initials: (branding.name || brandConfig.name).split(" ").map((w: string) => w[0]).join("").slice(0, 2),
+    },
+    content: {
+      subject: content.subject || content.title || "",
+      intro: content.intro || content.body || "",
+      body: content.body || "",
+      ctaText: content.ctaText || "Get In Touch",
+      ctaUrl: content.ctaUrl || `mailto:${branding.email || ""}`,
+    },
+    // Listing data (listing_alert, luxury_showcase, open_house, just_sold)
+    ...(content.address ? {
+      listing: {
+        address: content.address,
+        area: content.area || content.city || areaFallback,
+        price: content.price || content.salePrice || "",
+        beds: content.beds,
+        baths: content.baths,
         sqft: content.sqft,
-        propertyType: content.propertyType,
-        heroPhoto: content.heroPhoto || content.photo || "",
-        galleryPhotos: (content.galleryPhotos || []).map((p: any) =>
-          typeof p === "string" ? { url: p } : p
+        photos: [
+          content.heroPhoto || content.photo,
+          ...(content.galleryPhotos || []).map((p: any) => typeof p === "string" ? p : p?.url),
+        ].filter(Boolean),
+        features: (content.features || content.highlights || []).map((f: any) =>
+          typeof f === "string" ? { icon: "✓", title: f, desc: "" } : f
         ),
-        headline: content.headline || content.subject || "",
-        description: content.description || content.body || "",
-        features: content.features || content.highlights || [],
         openHouseDate: content.openHouseDate || content.date,
         openHouseTime: content.openHouseTime || content.time,
-        listingUrl: content.listingUrl,
-      } as any);
-      break;
+      },
+    } : {}),
+    // Market data (market_update, cma_preview, seller_report)
+    ...(content.stats || content.recentSales ? {
+      market: {
+        avgPrice: content.avgPrice || content.stats?.find((s: { label?: string; value?: unknown }) => s.label?.toLowerCase().includes("price"))?.value,
+        avgDom: content.avgDom || content.daysOnMarket,
+        inventoryChange: content.inventoryChange,
+        recentSales: content.recentSales || [],
+        priceComparison: content.priceComparison || (content.currentValue ? {
+          listing: content.currentValue,
+          average: content.previousValue || "",
+          diff: content.changePercent || content.appreciation || "",
+        } : undefined),
+      },
+    } : {}),
+    // Anniversary data
+    ...(content.purchaseDate || content.estimatedValue ? {
+      anniversary: {
+        purchasePrice: content.purchasePrice,
+        currentEstimate: content.estimatedValue || content.currentValue,
+        appreciation: content.appreciation || content.changePercent,
+        equityGained: content.equityGained,
+        areaHighlights: (content.highlights || []).map((h: any) =>
+          typeof h === "string" ? { icon: "📍", text: h } : h
+        ),
+      },
+    } : {}),
+    // Testimonial
+    ...(content.quote ? {
+      testimonial: {
+        quote: content.quote,
+        name: content.clientName || content.name || "",
+        role: content.role || "Client",
+      },
+    } : {}),
+    // Mortgage calculator
+    ...(content.monthly || content.currentRate ? {
+      mortgageCalc: {
+        monthly: content.monthly || "",
+        downPayment: content.downPayment || "20%",
+        rate: content.currentRate || content.rate || "4.39%",
+        details: content.mortgageDetails,
+      },
+    } : {}),
+    // Countdown (closing reminder, inspection)
+    ...(content.daysRemaining || content.closingDate ? {
+      countdown: {
+        value: content.daysRemaining ? `${content.daysRemaining}d` : "",
+        label: content.closingDate ? "Until Closing" : "Time Remaining",
+        subtext: content.closingDate || content.inspectionDate || content.renewalDate || "",
+      },
+    } : {}),
+    // Listings grid (buyer guide, re-engagement)
+    ...(content.listings ? { listings: content.listings } : {}),
+    // Social proof
+    ...(content.socialProof ? { socialProof: content.socialProof } : {}),
+    // Closing checklist — featureList with transaction milestone items
+    ...(emailType === "closing_checklist" && !content.address ? {
+      listing: {
+        address: content.address || content.property || "your property",
+        area: content.area || areaFallback,
+        price: content.price || "",
+        features: content.features?.length ? content.features.map((f: any) =>
+          typeof f === "string" ? { icon: "✅", title: f, desc: "" } : f
+        ) : [
+          { icon: "🚶", title: "Final walkthrough scheduled", desc: "Confirm everything is as agreed" },
+          { icon: "💡", title: "Utilities transfer confirmed", desc: "Ensure seamless handover" },
+          { icon: "📦", title: "Moving company booked", desc: "Coordinate possession date with movers" },
+          { icon: "🔑", title: "Keys and access codes ready", desc: "Garage openers, mailbox, alarm codes" },
+          { icon: "📋", title: "Completion documents signed", desc: "All required paperwork executed" },
+        ],
+      },
+    } : {}),
+    // Inspection reminder — featureList with review guidance
+    ...(emailType === "inspection_reminder" && !content.address ? {
+      listing: {
+        address: content.address || content.property || "your property",
+        area: content.area || areaFallback,
+        price: content.price || "",
+        features: content.features?.length ? content.features.map((f: any) =>
+          typeof f === "string" ? { icon: "🔍", title: f, desc: "" } : f
+        ) : [
+          { icon: "📄", title: "Review inspection report with your agent", desc: "Identify all items to address" },
+          { icon: "⚖️", title: "Prioritize repairs vs. credits", desc: "Decide what to fix vs. negotiate" },
+          { icon: "🧾", title: "Request receipts for completed work", desc: "Document all repairs done by seller" },
+          { icon: "🏠", title: "Re-inspect major deficiencies", desc: "Verify agreed repairs were completed" },
+        ],
+      },
+    } : {}),
+    // Closing countdown — statsRow with days to close
+    ...(emailType === "closing_countdown" && !content.stats && !content.recentSales ? {
+      market: {
+        avgPrice: content.price || content.listPrice || "",
+        avgDom: content.daysRemaining ?? undefined,
+        inventoryChange: content.closingDate ? `Closing ${content.closingDate}` : undefined,
+      },
+      countdown: content.countdown || (content.daysRemaining || content.closingDate ? {
+        value: content.daysRemaining ? `${content.daysRemaining}` : "",
+        label: "Days Until Closing",
+        subtext: content.closingDate ? `Possession: ${content.closingDate}` : (content.possessionDate ?? "your closing date"),
+      } : undefined),
+    } : {}),
+    // Mortgage renewal — statsRow for rate comparison
+    ...(emailType === "mortgage_renewal_alert" && !content.stats && !content.recentSales && !content.monthly && !content.currentRate ? {
+      market: {
+        avgPrice: content.currentRate ? `${content.currentRate} current` : undefined,
+        avgDom: undefined,
+        inventoryChange: content.renewalRate ? `${content.renewalRate} renewal rate` : undefined,
+        priceComparison: content.currentRate && content.renewalRate ? {
+          listing: content.currentRate,
+          average: content.renewalRate,
+          diff: content.saving || "potential savings",
+        } : undefined,
+      },
+    } : {}),
+    // Referral — no extra data, the personalNote + CTA carries the message
+    // (no-op: intro/ctaText from the base content object are sufficient)
+  };
 
-    case "closing_reminder":
-      element = ClosingReminder({
-        ...templateProps,
-        address: content.address || "",
-        closingDate: content.closingDate || content.date || "",
-        daysRemaining: content.daysRemaining || 0,
-        checklist: content.checklist || content.highlights || content.tips || [],
-        message: content.body || content.intro || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "buyer_guide":
-      element = BuyerGuide({
-        ...templateProps,
-        title: content.subject || "Your Buyer Guide",
-        intro: content.intro || content.body || "",
-        steps: content.steps || content.highlights?.map((h: string, i: number) => ({
-          stepNumber: i + 1,
-          title: h,
-          description: "",
-        })) || [],
-        tip: content.funFact || content.tips?.[0] || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "client_testimonial":
-      element = ClientTestimonial({
-        ...templateProps,
-        clientName: content.clientName || content.name || "",
-        quote: content.quote || content.body || "",
-        address: content.address || "",
-        salePrice: content.salePrice || content.price || "",
-        photo: content.photo,
-        message: content.intro || content.message || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "home_value_update":
-      element = HomeValueUpdate({
-        ...templateProps,
-        address: content.address || "",
-        currentValue: content.currentValue || content.estimatedValue || "",
-        previousValue: content.previousValue || "",
-        changePercent: content.changePercent || content.appreciation || "",
-        stats: content.stats || [],
-        message: content.body || content.intro || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "mortgage_renewal_alert":
-      element = MortgageRenewalAlert({
-        ...templateProps,
-        address: content.address || "",
-        renewalDate: content.renewalDate || content.date || "",
-        currentRate: content.currentRate || "",
-        tips: content.tips || content.highlights || [],
-        message: content.body || content.intro || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "inspection_reminder":
-      element = InspectionReminder({
-        ...templateProps,
-        address: content.address || "",
-        inspectionDate: content.inspectionDate || content.date || "",
-        inspectionType: content.inspectionType || "Home Inspection",
-        checklist: content.checklist || content.highlights || content.tips || [],
-        message: content.body || content.intro || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "year_in_review":
-      element = YearInReview({
-        ...templateProps,
-        year: content.year || new Date().getFullYear().toString(),
-        stats: content.stats || [],
-        highlights: content.highlights || [],
-        message: content.body || content.intro || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "community_event":
-      element = CommunityEvent({
-        ...templateProps,
-        eventName: content.eventName || content.subject || "",
-        date: content.date || "",
-        time: content.time || "",
-        location: content.location || content.address || "",
-        description: content.body || content.intro || "",
-        highlights: content.highlights || [],
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "price_drop_alert":
-      element = PriceDropAlert({
-        ...templateProps,
-        address: content.address || "",
-        originalPrice: content.originalPrice || "",
-        newPrice: content.newPrice || content.price || "",
-        dropPercent: content.dropPercent || "",
-        photo: content.photo,
-        features: content.features || content.highlights || [],
-        message: content.body || content.intro || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    case "referral_thank_you":
-      element = ReferralThankYou({
-        ...templateProps,
-        referrerName: content.referrerName || content.name || firstName,
-        referredName: content.referredName || "",
-        message: content.body || content.intro || "",
-        reward: content.reward || content.funFact || "",
-        ctaText: content.ctaText,
-      } as any);
-      break;
-
-    default:
-      // Fallback: use neighbourhood guide as generic template
-      element = NeighbourhoodGuide({
-        ...templateProps,
-        area: "",
-        intro: content.intro || content.body,
-        highlights: [],
-        ctaText: content.ctaText,
-      } as any);
-  }
-
-  return await render(element);
+  return assembleEmail(blockType, emailData);
 }
 
 export async function generateAndQueueNewsletter(
@@ -352,6 +281,11 @@ export async function generateAndQueueNewsletter(
     .eq("id", contactId)
     .single();
 
+  if (!contact) {
+    console.error('[newsletter] Contact not found for id:', contactId)
+    return { error: 'Contact not found' }
+  }
+
   // Central CASL + unsubscribe gate — do NOT bypass.
   // See src/lib/compliance/can-send.ts for the rules.
   const sendCheck = canSendToContact(contact);
@@ -362,7 +296,7 @@ export async function generateAndQueueNewsletter(
   // Fetch relevant listings with full data
   const { data: listings } = await tc
     .from("listings")
-    .select("id, address, list_price, status, hero_image_url, bedrooms, bathrooms, square_footage")
+    .select("id, address, list_price, status, hero_image_url")
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(5);
@@ -370,19 +304,20 @@ export async function generateAndQueueNewsletter(
   const branding = await getRealtorBranding();
 
   // Build AI context
-  const intelligence = (contact.newsletter_intelligence as any) || {};
-  const aiLeadScore = (contact as any).ai_lead_score as Record<string, any> | null;
+  const intelligence = (contact.newsletter_intelligence as Record<string, unknown>) || {};
+  const aiLeadScore = (contact as unknown as { ai_lead_score?: Record<string, unknown> }).ai_lead_score ?? null;
+  const intelligenceInterests = intelligence.inferred_interests as Record<string, unknown> | undefined;
   const aiContext: NewsletterContext = {
     contact: {
       name: contact.name,
       firstName: contact.name.split(" ")[0],
       type: contact.type as any,
       email: contact.email,
-      areas: intelligence.inferred_interests?.areas,
-      preferences: contact.buyer_preferences as any,
-      engagementScore: intelligence.engagement_score,
-      clickHistory: intelligence.click_history?.slice(-5),
-      aiHints: aiLeadScore?.personalization_hints,
+      areas: intelligenceInterests?.areas as string[] | undefined,
+      preferences: contact.buyer_preferences as NewsletterContext['contact']['preferences'],
+      engagementScore: intelligence.engagement_score as number | undefined,
+      clickHistory: intelligence.click_history as NewsletterContext['contact']['clickHistory'],
+      aiHints: aiLeadScore?.personalization_hints as NewsletterContext['contact']['aiHints'],
     },
     realtor: {
       name: branding.name,
@@ -390,11 +325,9 @@ export async function generateAndQueueNewsletter(
       phone: branding.phone,
       email: branding.email,
     },
-    listings: listings?.map((l: any) => ({
+    listings: listings?.map((l: { address: string; list_price: number | null; status: string; hero_image_url: string | null }) => ({
       address: l.address,
       price: l.list_price || 0,
-      beds: (l as any).bedrooms || 0,
-      baths: (l as any).bathrooms || 0,
       status: l.status,
       heroImageUrl: l.hero_image_url,
     })),
@@ -406,8 +339,9 @@ export async function generateAndQueueNewsletter(
   const content = await generateNewsletterContent(aiContext);
 
   // Render HTML — pass contact's preferred area for template fallback
-  const preferredArea = intelligence.preferred_areas?.[0]
-    || intelligence.inferred_interests?.areas?.[0]
+  const preferredAreas0 = intelligence.preferred_areas as string[] | undefined;
+  const preferredArea = preferredAreas0?.[0]
+    || (intelligenceInterests?.areas as string[] | undefined)?.[0]
     || undefined;
   const html = await renderEmailTemplate(
     emailType,
@@ -431,19 +365,17 @@ export async function generateAndQueueNewsletter(
       html_body: html,
       status: sendMode === "auto" ? "approved" : "draft",
       send_mode: sendMode,
-      ai_context: aiContext as any,
+      ai_context: aiContext as unknown as Record<string, unknown>,
     })
     .select()
     .single();
 
   if (error) return { error: error.message };
 
-  // Real-time RAG ingestion for the new newsletter
-  if (newsletter) triggerIngest("newsletters", newsletter.id);
-
-  // Auto-send if in auto mode
-  if (sendMode === "auto" && newsletter) {
-    await sendNewsletter(newsletter.id);
+  // Real-time RAG ingestion and optional auto-send
+  if (newsletter) {
+    triggerIngest("newsletters", newsletter.id);
+    if (sendMode === "auto") await sendNewsletter(newsletter.id);
   }
 
   revalidatePath("/newsletters");
@@ -456,14 +388,37 @@ export async function sendNewsletter(newsletterId: string) {
   // Fetch newsletter with full contact data (including buyer_preferences and type)
   const { data: newsletter } = await tc
     .from("newsletters")
-    .select("*, contacts(id, email, name, type, buyer_preferences)")
+    .select("*, contacts(id, email, name, type, buyer_preferences, newsletter_intelligence, casl_consent_given, newsletter_unsubscribed)")
     .eq("id", newsletterId)
     .single();
 
   if (!newsletter) return { error: "Newsletter not found" };
 
-  const contact = newsletter.contacts as any;
+  // Define a typed shape for the contact joined via select()
+  type NewsletterContact = {
+    id: string;
+    email: string | null;
+    name: string;
+    type: string;
+    buyer_preferences: Record<string, unknown> | null;
+    newsletter_intelligence: Record<string, unknown> | null;
+    casl_consent_given: boolean | null;
+    newsletter_unsubscribed: boolean | null;
+  };
+  const contact = newsletter.contacts as NewsletterContact;
   if (!contact?.email) return { error: "Contact has no email" };
+
+  // H-01: CASL consent gate — never send without explicit consent
+  if (!contact.casl_consent_given) {
+    console.warn('[newsletter] Skipping send — CASL consent not given for contact:', contact.id);
+    await tc.from('newsletters').update({ status: 'skipped', error_message: 'No CASL consent' }).eq('id', newsletterId);
+    return { error: 'No CASL consent' };
+  }
+  if (contact.newsletter_unsubscribed) {
+    console.warn('[newsletter] Skipping send — contact is unsubscribed:', contact.id);
+    await tc.from('newsletters').update({ status: 'skipped', error_message: 'Contact unsubscribed' }).eq('id', newsletterId);
+    return { error: 'Contact unsubscribed' };
+  }
 
   // Extract buyer preferences for validation pipeline
   const buyerPrefs = (contact.buyer_preferences as Record<string, any>) || {};
@@ -479,7 +434,10 @@ export async function sendNewsletter(newsletterId: string) {
     .limit(1)
     .maybeSingle();
 
-  const trustLevel = (journey as any)?.trust_level ?? 0;
+  const trustLevelLabel = (journey as { trust_level?: string } | null)?.trust_level ?? 'ghost';
+  // Map trust level labels to numeric levels (0=ghost, 1=copilot, 2=supervised, 3=autonomous)
+  const trustLevelMap: Record<string, number> = { ghost: 0, copilot: 1, supervised: 2, autonomous: 3 };
+  const trustLevel = trustLevelMap[trustLevelLabel] ?? 0;
   const journeyPhase = journey?.current_phase || newsletter.journey_phase || undefined;
 
   // Fetch recent subjects for deduplication check
@@ -493,15 +451,61 @@ export async function sendNewsletter(newsletterId: string) {
     .order("sent_at", { ascending: false })
     .limit(5);
 
-  const lastSubjects = recentNewsletters?.map((n: any) => n.subject).filter(Boolean) || [];
+  const lastSubjects = recentNewsletters?.map((n: { subject: string | null }) => n.subject).filter((s: string | null): s is string => !!s) || [];
 
-  // Capture the current status so we can roll back if needed
-  const previousStatus = newsletter.status as string;
+  // ── SEND GOVERNOR — frequency caps + auto-sunset + engagement throttle ──
+  try {
+    const { checkSendGovernor } = await import("@/lib/send-governor");
+    const contactIntel = (contact.newsletter_intelligence as Record<string, unknown>) || {};
+    const engagementScore = typeof contactIntel.engagement_score === "number" ? contactIntel.engagement_score : 50;
+    const engagementTrend = typeof contactIntel.engagement_trend === "string" ? contactIntel.engagement_trend : "stable";
+    const governorResult = await checkSendGovernor({
+      contactId: contact.id,
+      contactType: contact.type || "buyer",
+      journeyPhase: journeyPhase || "lead",
+      engagementScore,
+      engagementTrend,
+      realtorId: tc.realtorId,
+    });
+    if (!governorResult.allowed) {
+      await tc.from("newsletters").update({
+        status: "deferred",
+        ai_context: {
+          ...((newsletter.ai_context as object) || {}),
+          governor_blocked: true,
+          governor_reason: governorResult.reason,
+          governor_suggested_delay_hours: governorResult.suggestedDelay,
+          governor_adjustments: governorResult.adjustments,
+        },
+      }).eq("id", newsletterId);
+      revalidatePath("/newsletters");
+      return {
+        error: `Send deferred by governor: ${governorResult.reason}`,
+        action: "deferred",
+        suggestedDelay: governorResult.suggestedDelay,
+      };
+    }
+  } catch (governorErr) {
+    // Fail open — log warning and continue
+    console.warn("[sendNewsletter] send-governor check failed, continuing:", governorErr instanceof Error ? governorErr.message : governorErr);
+  }
 
-  await tc
+  // H-03: Atomic: only transition from draft/approved → sending to prevent race conditions
+  const { data: claimed, error: claimErr } = await tc
     .from("newsletters")
     .update({ status: "sending" })
-    .eq("id", newsletterId);
+    .eq("id", newsletterId)
+    .in("status", ["draft", "approved"])
+    .select("id, status")
+    .single();
+
+  if (claimErr || !claimed) {
+    // Another process got here first, or newsletter is already sent/failed
+    return { error: "Newsletter already being sent or has invalid status" };
+  }
+
+  // Capture the previous status for rollback (we know it was draft or approved)
+  const previousStatus = newsletter.status as string;
 
   try {
     // ── TEXT PIPELINE — clean and validate content before sending ──
@@ -546,8 +550,10 @@ export async function sendNewsletter(newsletterId: string) {
           },
         }).eq("id", newsletterId);
       }
-    } catch {
-      // Don't block sending if pipeline fails
+    } catch (textErr) {
+      // H-02: Log pipeline errors rather than swallowing silently
+      console.error('[newsletter] Text pipeline failed, using raw content:', textErr instanceof Error ? textErr.message : textErr);
+      // Continue with raw content rather than crashing
     }
 
     // ── QUALITY SCORING — rate email before sending ──
@@ -602,8 +608,9 @@ export async function sendNewsletter(newsletterId: string) {
         revalidatePath("/newsletters");
         return { error: `Quality too low (${qualityScore.overall}/10) — kept as draft for review. ${qualityScore.suggestions.join("; ")}`, action: "regenerate" };
       }
-    } catch {
-      // Don't block sending if quality scoring fails
+    } catch (qualityErr) {
+      // H-02: Log quality pipeline errors rather than swallowing silently
+      console.error('[newsletter] Quality pipeline failed, continuing with send:', qualityErr instanceof Error ? qualityErr.message : qualityErr);
     }
 
     const result = await validatedSend({
@@ -729,10 +736,12 @@ export async function skipNewsletter(newsletterId: string) {
 export async function getApprovalQueue() {
   const tc = await getAuthenticatedTenantClient();
 
+  // BUG-01: Include 'deferred' newsletters so the cron can retry them.
+  // Deferred newsletters (blocked by send governor) are retriable once scheduling window re-opens.
   const { data } = await tc
     .from("newsletters")
     .select("*, contacts(id, name, email, type)")
-    .eq("status", "draft")
+    .in("status", ["draft", "deferred"])
     .eq("send_mode", "review")
     .order("created_at", { ascending: false });
 
@@ -755,10 +764,17 @@ export async function getNewsletterAnalytics(days: number = 30) {
     .gte("created_at", since);
 
   const sent = newsletters?.length || 0;
-  const opens = events?.filter((e: any) => e.event_type === "opened").length || 0;
-  const clicks = events?.filter((e: any) => e.event_type === "clicked").length || 0;
-  const bounces = events?.filter((e: any) => e.event_type === "bounced").length || 0;
-  const unsubscribes = events?.filter((e: any) => e.event_type === "unsubscribed").length || 0;
+  // BUG-08: Scope events to only newsletters in the fetched set to avoid double-counting.
+  // Without this, events for newsletters outside the time window (or with different statuses)
+  // can inflate open/click counts when the period filter is applied only to created_at.
+  const newsletterIds = new Set((newsletters || []).map((n: { id: string }) => n.id));
+  const scopedEvents = (events || []).filter(
+    (e: { newsletter_id: string }) => newsletterIds.has(e.newsletter_id)
+  );
+  const opens = scopedEvents.filter((e: { event_type: string }) => e.event_type === "opened").length;
+  const clicks = scopedEvents.filter((e: { event_type: string }) => e.event_type === "clicked").length;
+  const bounces = scopedEvents.filter((e: { event_type: string }) => e.event_type === "bounced").length;
+  const unsubscribes = scopedEvents.filter((e: { event_type: string }) => e.event_type === "unsubscribed").length;
 
   // Group by email type
   const byType: Record<string, { sent: number; opens: number; clicks: number }> = {};
@@ -766,8 +782,8 @@ export async function getNewsletterAnalytics(days: number = 30) {
     if (!byType[n.email_type]) byType[n.email_type] = { sent: 0, opens: 0, clicks: 0 };
     byType[n.email_type].sent++;
   }
-  for (const e of events || []) {
-    const newsletter = newsletters?.find((n: any) => n.id === e.newsletter_id);
+  for (const e of scopedEvents) {
+    const newsletter = newsletters?.find((n: { id: string; email_type: string }) => n.id === e.newsletter_id);
     if (newsletter && byType[newsletter.email_type]) {
       if (e.event_type === "opened") byType[newsletter.email_type].opens++;
       if (e.event_type === "clicked") byType[newsletter.email_type].clicks++;
@@ -787,16 +803,30 @@ export async function getNewsletterAnalytics(days: number = 30) {
 }
 
 export async function bulkApproveNewsletters(ids: string[]) {
-  const results = [];
-  for (const id of ids) {
-    try {
-      const result = await sendNewsletter(id);
-      results.push({ id, ...result });
-    } catch (e) {
-      results.push({ id, error: String(e) });
-    }
+  // BUG-06: Process in parallel batches of 10 to avoid Vercel 10-second timeout
+  // for bulk approvals with many newsletters.
+  const BATCH_SIZE = 10;
+  const allResults: Array<{ id: string; success?: boolean; error?: string; [key: string]: unknown }> = [];
+
+  for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+    const batch = ids.slice(i, i + BATCH_SIZE);
+    const settled = await Promise.allSettled(batch.map(id => sendNewsletter(id)));
+    settled.forEach((result, idx) => {
+      const id = batch[idx];
+      if (result.status === "rejected") {
+        console.error(`[bulkApprove] Failed for newsletter ${id}:`, result.reason);
+        allResults.push({ id, error: String(result.reason) });
+      } else {
+        allResults.push({ id, ...result.value });
+      }
+    });
   }
-  return { results, sent: results.filter(r => r.success).length, failed: results.filter(r => r.error).length };
+
+  return {
+    results: allResults,
+    sent: allResults.filter(r => r.success).length,
+    failed: allResults.filter(r => r.error).length,
+  };
 }
 
 export async function sendCampaign(emailType: string, recipients: string, subject: string) {
@@ -842,21 +872,27 @@ export async function sendCampaign(emailType: string, recipients: string, subjec
   let sent = 0;
   let failed = 0;
 
-  for (const contact of contacts) {
-    if (!contact.id) continue; // Type guard — DB rows always have id
-    try {
-      const result = await generateAndQueueNewsletter(
-        contact.id,
-        emailType,
-        "campaign",
-        undefined,
-        "auto"
-      );
-      if (result.data) sent++;
-      else failed++;
-    } catch {
-      failed++;
-    }
+  // BUG-07: Process in parallel batches of 10 to avoid Vercel 10-second timeout
+  // for campaigns with >10 contacts.
+  const BATCH_SIZE = 10;
+  const validContacts = contacts.filter(c => !!c.id);
+  for (let i = 0; i < validContacts.length; i += BATCH_SIZE) {
+    const batch = validContacts.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map(contact =>
+        generateAndQueueNewsletter(contact.id!, emailType, "campaign", undefined, "auto")
+      )
+    );
+    results.forEach((result, idx) => {
+      if (result.status === "rejected") {
+        console.error(`[campaign] Failed for contact ${batch[idx].id}:`, result.reason);
+        failed++;
+      } else if (result.value?.data) {
+        sent++;
+      } else {
+        failed++;
+      }
+    });
   }
 
   revalidatePath("/newsletters");
@@ -870,7 +906,9 @@ export async function sendCampaign(emailType: string, recipients: string, subjec
 }
 
 export async function sendListingBlast(listingId: string, _template: string) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.NODE_ENV === 'production'
+    ? (() => { console.error('[newsletter] NEXT_PUBLIC_APP_URL not set in production!'); return 'https://realtors360.ai'; })()
+    : 'http://localhost:3000');
   try {
     const res = await fetch(`${appUrl}/api/listings/blast`, {
       method: "POST",

@@ -23,7 +23,7 @@ interface ContentLibraryRow {
   id: string
   realtor_id: string | null
   block_type: string
-  content_json: Record<string, unknown>
+  content: Record<string, unknown>  // actual DB column name
   context_tags: string[]
   country: string | null
   season: string | null
@@ -52,7 +52,7 @@ export async function generateQuickTip(
   try {
     const { data: libraryRows } = await supabase
       .from('editorial_content_library')
-      .select('id, realtor_id, block_type, content_json, context_tags, country, season, use_count, created_at')
+      .select('id, realtor_id, block_type, content, context_tags, country, season, use_count, created_at')
       .eq('block_type', 'quick_tip')
       .or(`season.eq.${season},season.is.null`)
       .or(`country.eq.${country},country.is.null`)
@@ -71,9 +71,18 @@ export async function generateQuickTip(
       const randomIndex = Math.floor(Math.random() * Math.min(matchingRows.length, 5))
       const chosen = matchingRows[randomIndex]
 
-      if (chosen?.content_json) {
-        const raw = chosen.content_json as Record<string, unknown>
-        const { content: safeContent } = sanitizeBlockContent(raw)
+      if (chosen?.content) {
+        const raw = chosen.content as Record<string, unknown>
+
+        // Normalize field names — seeded tips use headline/tip_text/tip_category keys
+        const normalized: Record<string, unknown> = {
+          title: raw.title ?? raw.headline,
+          body: raw.body ?? raw.tip_text,
+          category: raw.category ?? raw.tip_category,
+          icon_emoji: raw.icon_emoji,
+        }
+
+        const { content: safeContent } = sanitizeBlockContent(normalized)
 
         // Increment use_count
         await supabase
@@ -84,10 +93,10 @@ export async function generateQuickTip(
         libraryTip = {
           title: String(safeContent.title ?? fallback.title),
           body: String(safeContent.body ?? fallback.body),
-          category: isValidCategory(raw.category)
-            ? (raw.category as QuickTipBlockContent['category'])
+          category: isValidCategory(normalized.category)
+            ? (normalized.category as QuickTipBlockContent['category'])
             : 'general',
-          icon_emoji: typeof raw.icon_emoji === 'string' ? raw.icon_emoji : '💡',
+          icon_emoji: typeof normalized.icon_emoji === 'string' ? normalized.icon_emoji : '💡',
         }
       }
     }
@@ -118,10 +127,10 @@ export async function generateQuickTip(
     await supabase.from('editorial_content_library').insert({
       realtor_id: null, // platform-wide tip
       block_type: 'quick_tip',
-      content_json: {
-        title: freshTip.title,
-        body: freshTip.body,
-        category: freshTip.category,
+      content: {
+        headline: freshTip.title,
+        tip_text: freshTip.body,
+        tip_category: freshTip.category,
         icon_emoji: freshTip.icon_emoji,
       },
       context_tags: [ctx.edition_type, season],

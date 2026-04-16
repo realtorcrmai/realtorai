@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Send, X, Pencil, Save, Undo2, Brain } from "lucide-react";
+import { toast } from "sonner";
 
 interface QueueItem {
   id: string;
@@ -66,11 +67,17 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
   const handleApprove = (id: string) => {
     setLoading(id, true);
     startTransition(async () => {
-      await approveNewsletter(id);
+      const result = await approveNewsletter(id);
+      if (result?.error) {
+        toast.error("Failed to send newsletter: " + result.error);
+        setLoading(id, false);
+        return;
+      }
       setQueue((q) => q.filter((item) => item.id !== id));
       if (previewId === id) setPreviewId(null);
       if (editingId === id) setEditingId(null);
       setLoading(id, false);
+      toast.success("Newsletter sent");
       router.refresh();
     });
   };
@@ -78,21 +85,35 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
   const handleSkip = (id: string) => {
     setLoading(id, true);
     startTransition(async () => {
-      await skipNewsletter(id);
+      const result = await skipNewsletter(id) as { success?: boolean; error?: string };
+      if (result?.error) {
+        toast.error("Failed to skip newsletter: " + result.error);
+        setLoading(id, false);
+        return;
+      }
       setQueue((q) => q.filter((item) => item.id !== id));
       if (previewId === id) setPreviewId(null);
       if (editingId === id) setEditingId(null);
       setLoading(id, false);
+      toast.success("Newsletter skipped");
       router.refresh();
     });
   };
 
   const handleBulkApprove = () => {
+    const confirmed = window.confirm(`Send all ${queue.length} newsletters now?`);
+    if (!confirmed) return;
     startTransition(async () => {
       const ids = queue.map((q) => q.id);
       setLoadingIds(new Set(ids));
-      for (const id of ids) {
-        await approveNewsletter(id);
+      const results = await Promise.allSettled(ids.map((id) => approveNewsletter(id)));
+      const failures = results.filter(
+        (r) => r.status === "rejected" || (r.status === "fulfilled" && r.value?.error)
+      );
+      if (failures.length > 0) {
+        toast.error(`${failures.length} newsletter${failures.length > 1 ? "s" : ""} failed to send`);
+      } else {
+        toast.success(`${ids.length} newsletter${ids.length > 1 ? "s" : ""} sent`);
       }
       setQueue([]);
       setPreviewId(null);
@@ -156,10 +177,13 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
           });
         }
 
+        toast.success("Draft saved");
         setEditingId(null);
+      } else {
+        toast.error("Failed to save draft" + (result.error ? ": " + result.error : ""));
       }
-    } catch {
-      // Error handled silently -- the user sees the edit is still open
+    } catch (e) {
+      toast.error("Failed to save edit: " + (e instanceof Error ? e.message : "Unknown error"));
     } finally {
       setSaving(false);
     }

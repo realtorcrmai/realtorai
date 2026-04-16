@@ -21,6 +21,11 @@ function verifyBearerToken(header: string | null): boolean {
   }
 }
 
+// Vercel crons always call GET — delegate to the POST handler so both paths work
+export async function GET(req: NextRequest) {
+  return POST(req);
+}
+
 export async function POST(req: NextRequest) {
   if (!verifyBearerToken(req.headers.get('authorization'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

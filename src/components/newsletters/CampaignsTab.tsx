@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -300,7 +301,18 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
                   onClick={async () => {
                     if (onSendBlast && selectedListing) {
                       setIsSending(true);
-                      try { await onSendBlast(selectedListing.id, "listing_alert"); } catch {}
+                      try {
+                        const result = await onSendBlast(selectedListing.id, "listing_alert");
+                        if (result?.error) {
+                          toast.error(result.error);
+                          setIsSending(false);
+                          return;
+                        }
+                      } catch (err: unknown) {
+                        toast.error(err instanceof Error ? err.message : "Failed to send blast");
+                        setIsSending(false);
+                        return;
+                      }
                       setIsSending(false);
                     }
                     setBlastSent(true);
@@ -423,7 +435,18 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
                   onClick={async () => {
                     if (onSendCampaign && selectedTemplate) {
                       setIsSending(true);
-                      try { await onSendCampaign(selectedTemplate.id, selectedRecipients, selectedTemplate.desc); } catch {}
+                      try {
+                        const result = await onSendCampaign(selectedTemplate.id, selectedRecipients, selectedTemplate.desc);
+                        if (result?.error) {
+                          toast.error(result.error);
+                          setIsSending(false);
+                          return;
+                        }
+                      } catch (err: unknown) {
+                        toast.error(err instanceof Error ? err.message : "Failed to send campaign");
+                        setIsSending(false);
+                        return;
+                      }
                       setIsSending(false);
                     }
                     setCampaignSent(true);

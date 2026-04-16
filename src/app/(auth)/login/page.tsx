@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,12 +8,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowRight } from "lucide-react";
 import { LogoSpinner, LogoVideo, LogoIcon } from "@/components/brand/Logo";
+import { loginAsDemo } from "@/actions/auth";
+
+const DEMO_SLOTS = [
+  { label: "Kunal (Pro)", slot: 0, color: "bg-brand-muted text-brand-dark hover:bg-brand/20" },
+  { label: "Sarah (Studio)", slot: 1, color: "bg-brand-muted text-brand-dark hover:bg-brand-muted-strong" },
+  { label: "Mike (Pro)", slot: 2, color: "bg-amber-100 text-amber-700 hover:bg-amber-200" },
+  { label: "Priya (Free)", slot: 3, color: "bg-pink-100 text-pink-700 hover:bg-pink-200" },
+] as const;
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   async function handleCredentialsLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -137,46 +146,27 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              {/* Quick login — demo accounts */}
+              {/* Quick login — demo accounts (credentials stored server-side only) */}
               <div className="pt-2 border-t space-y-2">
                 <p className="text-xs text-muted-foreground text-center font-medium">
                   Quick Login (Demo)
                 </p>
                 <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { label: "Kunal (Pro)", email: "demo@realestatecrm.com", pw: "demo1234", color: "bg-brand-muted text-brand-dark hover:bg-brand/20" },
-                    { label: "Sarah (Studio)", email: "sarah@realtors360.com", pw: "demo1234", color: "bg-brand-muted text-brand-dark hover:bg-brand-muted-strong" },
-                    { label: "Mike (Pro)", email: "mike@realtors360.com", pw: "demo1234", color: "bg-amber-100 text-amber-700 hover:bg-amber-200" },
-                    { label: "Priya (Free)", email: "priya@realtors360.com", pw: "demo1234", color: "bg-pink-100 text-pink-700 hover:bg-pink-200" },
-                    { label: "Admin", email: "admin@realtors360.ai", pw: "Admin360!secure", color: "bg-gray-100 text-gray-700 hover:bg-gray-200 col-span-2" },
-                  ].map((user) => (
+                  {DEMO_SLOTS.map(({ label, slot, color }) => (
                     <button
-                      key={user.email}
+                      key={slot}
                       type="button"
-                      className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${user.color}`}
-                      disabled={loading}
-                      onClick={async () => {
-                        setLoading(true);
+                      className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${color}`}
+                      disabled={loading || isPending}
+                      onClick={() => {
                         setError("");
-                        const result = await signIn("credentials", {
-                          email: user.email,
-                          password: user.pw,
-                          redirect: false,
+                        startTransition(async () => {
+                          const result = await loginAsDemo(slot);
+                          if (result?.error) setError(result.error);
                         });
-                        if (result?.error) {
-                          setError("Login failed");
-                          setLoading(false);
-                        } else {
-                          try {
-                            const sess = await fetch("/api/auth/session").then(r => r.json());
-                            window.location.href = sess?.user?.role === "admin" ? "/admin" : "/";
-                          } catch {
-                            window.location.href = "/";
-                          }
-                        }
                       }}
                     >
-                      {user.label}
+                      {label}
                     </button>
                   ))}
                 </div>

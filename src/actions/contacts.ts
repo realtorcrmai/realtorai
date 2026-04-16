@@ -1023,3 +1023,100 @@ export async function bulkExportContacts(contactIds: string[]) {
   const csv = [headers.join(","), ...rows].join("\n");
   return { error: null, csv };
 }
+
+// ── Unsubscribe / Re-subscribe (public — uses admin client, no auth required) ──
+
+/**
+ * Mark a contact as unsubscribed from newsletters.
+ * Validates the HMAC-signed token before touching the DB.
+ * Uses admin client because this route is public (no session).
+ */
+export async function unsubscribeContact(
+  token: string
+): Promise<{ success: boolean; contactId?: string; email?: string; agentName?: string; error?: string }> {
+  const { verifyUnsubscribeToken } = await import("@/lib/unsubscribe-token");
+  const contactId = verifyUnsubscribeToken(token);
+  if (!contactId) {
+    return { success: false, error: "Invalid or expired unsubscribe link." };
+  }
+
+  const supabase = createAdminClient();
+
+  const { data: contact, error: fetchErr } = await supabase
+    .from("contacts")
+    .select("id, email, realtor_id")
+    .eq("id", contactId)
+    .single();
+
+  if (fetchErr || !contact) {
+    return { success: false, error: "Contact not found." };
+  }
+
+  const { error: updateErr } = await supabase
+    .from("contacts")
+    .update({ newsletter_unsubscribed: true } as Record<string, unknown>)
+    .eq("id", contactId);
+
+  if (updateErr) {
+    return { success: false, error: "Failed to process unsubscribe request." };
+  }
+
+  // Pause all active journeys for this contact
+  await supabase
+    .from("contact_journeys")
+    .update({ is_paused: true, pause_reason: "unsubscribed" })
+    .eq("contact_id", contactId)
+    .eq("is_paused", false);
+
+  // Fetch realtor name for the confirmation page
+  let agentName: string | undefined;
+  if (contact.realtor_id) {
+    const { data: user } = await supabase
+      .from("users")
+      .select("name")
+      .eq("id", contact.realtor_id)
+      .single();
+    agentName = user?.name ?? undefined;
+  }
+
+  return {
+    success: true,
+    contactId: contact.id,
+    email: contact.email ?? undefined,
+    agentName,
+  };
+}
+
+/**
+ * Re-subscribe a contact to newsletters.
+ * Validates the same HMAC-signed token.
+ */
+export async function resubscribeContact(
+  token: string
+): Promise<{ success: boolean; error?: string }> {
+  const { verifyUnsubscribeToken } = await import("@/lib/unsubscribe-token");
+  const contactId = verifyUnsubscribeToken(token);
+  if (!contactId) {
+    return { success: false, error: "Invalid or expired link." };
+  }
+
+  const supabase = createAdminClient();
+
+  const { error: updateErr } = await supabase
+    .from("contacts")
+    .update({ newsletter_unsubscribed: false } as Record<string, unknown>)
+    .eq("id", contactId);
+
+  if (updateErr) {
+    return { success: false, error: "Failed to re-subscribe. Please try again." };
+  }
+
+  // Resume paused journeys that were paused due to unsubscribe
+  await supabase
+    .from("contact_journeys")
+    .update({ is_paused: false, pause_reason: null })
+    .eq("contact_id", contactId)
+    .eq("pause_reason", "unsubscribed");
+
+  return { success: true };
+}

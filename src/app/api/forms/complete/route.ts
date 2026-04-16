@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/api-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadPdfFromUrl, flattenPdf } from "@/lib/forms/pdf-service";
@@ -140,11 +141,15 @@ export async function POST(req: NextRequest) {
       console.error("[forms/complete] listing_documents upsert failed:", docError.message);
     }
 
-    return NextResponse.json({
-      success: true,
-      pdfUrl: publicUrl,
-      fileName,
-    });
+    revalidatePath("/listings");
+    return NextResponse.json(
+      {
+        success: true,
+        pdfUrl: publicUrl,
+        fileName,
+      },
+      { status: 201 }
+    );
   } catch (err) {
     console.error("[/api/forms/complete]", err);
     return NextResponse.json(

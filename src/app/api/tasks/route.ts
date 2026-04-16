@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { taskSchema } from "@/lib/schemas";
 
@@ -94,6 +95,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  revalidatePath("/tasks");
   return NextResponse.json(data);
 }
 
@@ -115,5 +117,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  revalidatePath("/tasks");
   return NextResponse.json({ success: true });
 }

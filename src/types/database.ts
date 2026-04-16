@@ -42,6 +42,11 @@ export interface Database {
           is_indirect: boolean | null;
           indirect_source: string | null;
           social_profiles: Json | null;
+          newsletter_unsubscribed: boolean | null;
+          newsletter_intelligence: Json | null;
+          casl_consent_given: boolean | null;
+          casl_consent_date: string | null;
+          casl_consent_type: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -77,6 +82,11 @@ export interface Database {
           is_indirect?: boolean | null;
           indirect_source?: string | null;
           social_profiles?: Json | null;
+          newsletter_unsubscribed?: boolean | null;
+          newsletter_intelligence?: Json | null;
+          casl_consent_given?: boolean | null;
+          casl_consent_date?: string | null;
+          casl_consent_type?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -112,6 +122,11 @@ export interface Database {
           is_indirect?: boolean | null;
           indirect_source?: string | null;
           social_profiles?: Json | null;
+          newsletter_unsubscribed?: boolean | null;
+          newsletter_intelligence?: Json | null;
+          casl_consent_given?: boolean | null;
+          casl_consent_date?: string | null;
+          casl_consent_type?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1463,7 +1478,7 @@ export interface Database {
           subject: string;
           html_body: string;
           plain_text: string | null;
-          status: "draft" | "approved" | "sending" | "sent" | "failed" | "skipped";
+          status: "draft" | "approved" | "sending" | "sent" | "failed" | "skipped" | "deferred";
           send_mode: "auto" | "review";
           sent_at: string | null;
           resend_message_id: string | null;
@@ -1476,6 +1491,8 @@ export interface Database {
           realtor_id: string | null;
           is_sample: boolean;
           source_event_id: string | null;
+          quality_score: number | null;
+          quality_checked_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -1489,7 +1506,7 @@ export interface Database {
           subject: string;
           html_body: string;
           plain_text?: string | null;
-          status?: "draft" | "approved" | "sending" | "sent" | "failed" | "skipped";
+          status?: "draft" | "approved" | "sending" | "sent" | "failed" | "skipped" | "deferred";
           send_mode?: "auto" | "review";
           sent_at?: string | null;
           resend_message_id?: string | null;
@@ -1502,6 +1519,8 @@ export interface Database {
           realtor_id?: string | null;
           is_sample?: boolean;
           source_event_id?: string | null;
+          quality_score?: number | null;
+          quality_checked_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1515,7 +1534,7 @@ export interface Database {
           subject?: string;
           html_body?: string;
           plain_text?: string | null;
-          status?: "draft" | "approved" | "sending" | "sent" | "failed" | "skipped";
+          status?: "draft" | "approved" | "sending" | "sent" | "failed" | "skipped" | "deferred";
           send_mode?: "auto" | "review";
           sent_at?: string | null;
           resend_message_id?: string | null;
@@ -1528,6 +1547,8 @@ export interface Database {
           realtor_id?: string | null;
           is_sample?: boolean;
           source_event_id?: string | null;
+          quality_score?: number | null;
+          quality_checked_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1572,9 +1593,9 @@ export interface Database {
           id: string;
           newsletter_id: string;
           contact_id: string;
-          event_type: "opened" | "clicked" | "bounced" | "unsubscribed" | "complained" | "delivered";
+          event_type: "opened" | "clicked" | "bounced" | "unsubscribed" | "complained" | "delivered" | "failed" | "deferred";
           link_url: string | null;
-          link_type: "listing" | "showing" | "market_report" | "school_info" | "neighbourhood" | "cma" | "contact_agent" | "unsubscribe" | "other" | null;
+          link_type: "listing" | "showing" | "market_report" | "school_info" | "neighbourhood" | "cma" | "contact_agent" | "unsubscribe" | "other" | "book_showing" | "get_cma" | "get_valuation" | "seller_inquiry" | "mortgage_calc" | "investment" | "open_house_rsvp" | "market_research" | "market_stats" | "price_drop" | "forwarded" | null;
           metadata: Json;
           created_at: string;
         };
@@ -1582,9 +1603,9 @@ export interface Database {
           id?: string;
           newsletter_id: string;
           contact_id: string;
-          event_type: "opened" | "clicked" | "bounced" | "unsubscribed" | "complained" | "delivered";
+          event_type: "opened" | "clicked" | "bounced" | "unsubscribed" | "complained" | "delivered" | "failed" | "deferred";
           link_url?: string | null;
-          link_type?: "listing" | "showing" | "market_report" | "school_info" | "neighbourhood" | "cma" | "contact_agent" | "unsubscribe" | "other" | null;
+          link_type?: "listing" | "showing" | "market_report" | "school_info" | "neighbourhood" | "cma" | "contact_agent" | "unsubscribe" | "other" | "book_showing" | "get_cma" | "get_valuation" | "seller_inquiry" | "mortgage_calc" | "investment" | "open_house_rsvp" | "market_research" | "market_stats" | "price_drop" | "forwarded" | null;
           metadata?: Json;
           created_at?: string;
         };
@@ -1592,9 +1613,9 @@ export interface Database {
           id?: string;
           newsletter_id?: string;
           contact_id?: string;
-          event_type?: "opened" | "clicked" | "bounced" | "unsubscribed" | "complained" | "delivered";
+          event_type?: "opened" | "clicked" | "bounced" | "unsubscribed" | "complained" | "delivered" | "failed" | "deferred";
           link_url?: string | null;
-          link_type?: "listing" | "showing" | "market_report" | "school_info" | "neighbourhood" | "cma" | "contact_agent" | "unsubscribe" | "other" | null;
+          link_type?: "listing" | "showing" | "market_report" | "school_info" | "neighbourhood" | "cma" | "contact_agent" | "unsubscribe" | "other" | "book_showing" | "get_cma" | "get_valuation" | "seller_inquiry" | "mortgage_calc" | "investment" | "open_house_rsvp" | "market_research" | "market_stats" | "price_drop" | "forwarded" | null;
           metadata?: Json;
           created_at?: string;
         };
@@ -1603,48 +1624,54 @@ export interface Database {
         Row: {
           id: string;
           contact_id: string;
-          journey_type: "buyer" | "seller";
+          journey_type: "buyer" | "seller" | "customer" | "agent";
           current_phase: "lead" | "active" | "under_contract" | "past_client" | "dormant";
           phase_entered_at: string;
           next_email_at: string | null;
           emails_sent_in_phase: number;
           send_mode: "auto" | "review";
+          trust_level: "ghost" | "copilot" | "supervised" | "autonomous" | null;
           is_paused: boolean;
           pause_reason: string | null;
           metadata: Json;
           agent_mode: "schedule" | "agent_driven";
+          next_email_type_override: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
           contact_id: string;
-          journey_type: "buyer" | "seller";
+          journey_type: "buyer" | "seller" | "customer" | "agent";
           current_phase?: "lead" | "active" | "under_contract" | "past_client" | "dormant";
           phase_entered_at?: string;
           next_email_at?: string | null;
           emails_sent_in_phase?: number;
-          send_mode?: "auto" | "review";
+          send_mode?: "auto" | "review" | null;
+          trust_level?: "ghost" | "copilot" | "supervised" | "autonomous" | null;
           is_paused?: boolean;
           pause_reason?: string | null;
           metadata?: Json;
           agent_mode?: "schedule" | "agent_driven";
+          next_email_type_override?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
           contact_id?: string;
-          journey_type?: "buyer" | "seller";
+          journey_type?: "buyer" | "seller" | "customer" | "agent";
           current_phase?: "lead" | "active" | "under_contract" | "past_client" | "dormant";
           phase_entered_at?: string;
           next_email_at?: string | null;
           emails_sent_in_phase?: number;
-          send_mode?: "auto" | "review";
+          send_mode?: "auto" | "review" | null;
+          trust_level?: "ghost" | "copilot" | "supervised" | "autonomous" | null;
           is_paused?: boolean;
           pause_reason?: string | null;
           metadata?: Json;
           agent_mode?: "schedule" | "agent_driven";
+          next_email_type_override?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -3533,6 +3560,81 @@ export interface Database {
           updated_at?: string;
         };
         Relationships: [];
+      };
+      // ── Conversion Events ──────────────────────────────────────
+      conversion_events: {
+        Row: {
+          id: string;
+          contact_id: string | null;
+          newsletter_id: string | null;
+          event_type: string;
+          email_type: string | null;
+          link_type: string | null;
+          link_url: string | null;
+          metadata: Json | null;
+          converted_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_id?: string | null;
+          newsletter_id?: string | null;
+          event_type: string;
+          email_type?: string | null;
+          link_type?: string | null;
+          link_url?: string | null;
+          metadata?: Json | null;
+          converted_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          contact_id?: string | null;
+          newsletter_id?: string | null;
+          event_type?: string;
+          email_type?: string | null;
+          link_type?: string | null;
+          link_url?: string | null;
+          metadata?: Json | null;
+          converted_at?: string;
+          created_at?: string;
+        };
+      };
+      // ── Journey Phase Transitions ──────────────────────────────
+      journey_phase_transitions: {
+        Row: {
+          id: string;
+          contact_id: string | null;
+          journey_id: string | null;
+          journey_type: string;
+          from_phase: string | null;
+          to_phase: string;
+          trigger: string;
+          metadata: Json | null;
+          transitioned_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_id?: string | null;
+          journey_id?: string | null;
+          journey_type: string;
+          from_phase?: string | null;
+          to_phase: string;
+          trigger?: string;
+          metadata?: Json | null;
+          transitioned_at?: string;
+        };
+        Update: {
+          id?: string;
+          contact_id?: string | null;
+          journey_id?: string | null;
+          journey_type?: string;
+          from_phase?: string | null;
+          to_phase?: string;
+          trigger?: string;
+          metadata?: Json | null;
+          transitioned_at?: string;
+        };
       };
     };
     Views: Record<string, never>;
