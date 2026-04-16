@@ -194,6 +194,7 @@ export async function POST(request: NextRequest) {
           const currentPhase = (updatedIntel.current_journey_phase ?? "lead") as JourneyPhase;
           const phaseProgression: Partial<Record<JourneyPhase, JourneyPhase>> = {
             lead: "active",
+            dormant: "lead", // re-entering the funnel
             // active stays active — don't over-advance on a single click
           };
           const nextPhase = phaseProgression[currentPhase];
@@ -203,6 +204,28 @@ export async function POST(request: NextRequest) {
           }
         } catch (e) {
           console.warn("[webhook] Could not advance journey on high-intent click:", e);
+        }
+      }
+
+      // Re-engage dormant contacts on any click
+      if (eventType === "clicked") {
+        const currentPhase = updatedIntel?.current_journey_phase ?? null;
+        if (currentPhase === "dormant") {
+          try {
+            const dormantSupabase = createAdminClient();
+            await dormantSupabase
+              .from("contact_journeys")
+              .update({
+                is_paused: false,
+                current_phase: "lead",
+                next_email_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(), // 48h
+                updated_at: new Date().toISOString(),
+              })
+              .eq("contact_id", contactId)
+              .eq("is_paused", true);
+          } catch (e) {
+            console.warn("[webhook] Could not re-engage dormant contact:", e);
+          }
         }
       }
 
@@ -263,6 +286,17 @@ export async function POST(request: NextRequest) {
     console.error("Resend webhook error:", e);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
+}
+
+function mapLinkTypeToConversionEvent(linkType: string): string {
+  const map: Record<string, string> = {
+    book_showing: "showing_booked",
+    get_cma: "cma_requested",
+    get_valuation: "valuation_requested",
+    seller_inquiry: "seller_inquiry",
+    listing_inquiry: "listing_inquiry",
+  };
+  return map[linkType] ?? "listing_inquiry";
 }
 
 interface ClickClassification {
@@ -407,6 +441,45 @@ async function updateContactIntelligence(
     .update({ newsletter_intelligence: intel })
     .eq("id", contactId);
 
+  // Sync inferred interests into buyer_preferences for AI generation
+  const inferredInterests = intel.inferred_interests as {
+    areas?: string[];
+    property_types?: string[];
+    lifestyle_tags?: string[];
+  } | undefined;
+  if (inferredInterests?.areas?.length || inferredInterests?.property_types?.length) {
+    try {
+      const { data: contactData } = await supabase
+        .from("contacts")
+        .select("buyer_preferences")
+        .eq("id", contactId)
+        .single();
+
+      const currentPrefs = (contactData?.buyer_preferences as Record<string, unknown>) ?? {};
+      const updatedPrefs = {
+        ...currentPrefs,
+        // Merge inferred areas — deduplicated
+        preferred_areas: Array.from(new Set([
+          ...((currentPrefs.preferred_areas as string[]) ?? []),
+          ...(inferredInterests.areas ?? []),
+        ])).slice(0, 10),
+        // Merge inferred property types
+        property_types: Array.from(new Set([
+          ...((currentPrefs.property_types as string[]) ?? []),
+          ...(inferredInterests.property_types ?? []),
+        ])).slice(0, 5),
+        last_synced_from_clicks: new Date().toISOString(),
+      };
+
+      await supabase
+        .from("contacts")
+        .update({ buyer_preferences: updatedPrefs })
+        .eq("id", contactId);
+    } catch (e) {
+      console.warn("[webhook] Could not sync buyer_preferences from clicks:", e);
+    }
+  }
+
   // HIGH intent clicks (score_impact >= 30): log to communications table + agent notification
   if (scoreImpact >= 30 && linkType) {
     const labelMap: Record<string, string> = {
@@ -432,6 +505,27 @@ async function updateContactIntelligence(
       contact_id: contactId,
       action_url: `/contacts/${contactId}`,
     });
+
+    // Log to conversion_events for funnel attribution
+    if (scoreImpact >= 25) {
+      try {
+        await supabase.from("conversion_events").insert({
+          contact_id: contactId,
+          newsletter_id: newsletterId,
+          event_type: mapLinkTypeToConversionEvent(linkType),
+          email_type: eventData.email_type || eventData.tags?.email_type || null,
+          link_type: linkType,
+          link_url: linkUrl,
+          metadata: {
+            engagement_score: newScore,
+            score_impact: scoreImpact,
+          },
+          converted_at: new Date().toISOString(),
+        });
+      } catch (e) {
+        console.warn("[webhook] Could not log conversion_event:", e);
+      }
+    }
   }
 
   // Resolve current journey phase for caller (used for journey advancement)
