@@ -381,3 +381,47 @@ export async function autoEnrollNewContact(contactId: string, contactType: strin
   }
   return { error: "No journey defined for this contact type" };
 }
+
+export async function triggerNextEmail(journeyId: string) {
+  const tc = await getAuthenticatedTenantClient();
+
+  // Set next_email_at to now so processJourneyQueue picks it up immediately
+  const { error } = await tc
+    .from("contact_journeys")
+    .update({ next_email_at: new Date().toISOString() })
+    .eq("id", journeyId);
+
+  if (error) return { error: error.message };
+
+  // Process the queue now so the email goes out immediately
+  await processJourneyQueue();
+
+  revalidatePath("/newsletters/relationships");
+  revalidatePath("/newsletters");
+  return { success: true };
+}
+
+export async function getJourneysForRelationshipsPage() {
+  const tc = await getAuthenticatedTenantClient();
+
+  const { data: journeys } = await tc
+    .from("contact_journeys")
+    .select("id, contact_id, journey_type, current_phase, is_paused, pause_reason, next_email_at, emails_sent_in_phase, contacts(id, name, email, type)")
+    .order("updated_at", { ascending: false });
+
+  // Contacts not enrolled in any journey
+  const enrolledContactIds = new Set((journeys || []).map((j: any) => j.contact_id));
+
+  const { data: allContacts } = await tc
+    .from("contacts")
+    .select("id, name, email, type")
+    .in("type", ["buyer", "seller", "customer"])
+    .order("name");
+
+  const unenrolledContacts = (allContacts || []).filter((c: any) => !enrolledContactIds.has(c.id));
+
+  return {
+    journeys: journeys || [],
+    unenrolledContacts,
+  };
+}
