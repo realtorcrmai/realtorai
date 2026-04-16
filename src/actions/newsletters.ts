@@ -342,7 +342,7 @@ export async function sendNewsletter(newsletterId: string) {
     .limit(1)
     .maybeSingle();
 
-  const trustLevel = (journey as any)?.trust_level ?? 0;
+  const trustLevel = (journey as any)?.trust_level ?? 'ghost';
   const journeyPhase = journey?.current_phase || newsletter.journey_phase || undefined;
 
   // Fetch recent subjects for deduplication check

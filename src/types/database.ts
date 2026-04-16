@@ -41,6 +41,11 @@ export interface Database {
           is_indirect: boolean | null;
           indirect_source: string | null;
           social_profiles: Json | null;
+          newsletter_unsubscribed: boolean | null;
+          newsletter_intelligence: Json | null;
+          casl_consent_given: boolean | null;
+          casl_consent_date: string | null;
+          casl_consent_type: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -75,6 +80,11 @@ export interface Database {
           is_indirect?: boolean | null;
           indirect_source?: string | null;
           social_profiles?: Json | null;
+          newsletter_unsubscribed?: boolean | null;
+          newsletter_intelligence?: Json | null;
+          casl_consent_given?: boolean | null;
+          casl_consent_date?: string | null;
+          casl_consent_type?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -109,6 +119,11 @@ export interface Database {
           is_indirect?: boolean | null;
           indirect_source?: string | null;
           social_profiles?: Json | null;
+          newsletter_unsubscribed?: boolean | null;
+          newsletter_intelligence?: Json | null;
+          casl_consent_given?: boolean | null;
+          casl_consent_date?: string | null;
+          casl_consent_type?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1473,6 +1488,8 @@ export interface Database {
           realtor_id: string | null;
           is_sample: boolean;
           source_event_id: string | null;
+          quality_score: number | null;
+          quality_checked_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -1499,6 +1516,8 @@ export interface Database {
           realtor_id?: string | null;
           is_sample?: boolean;
           source_event_id?: string | null;
+          quality_score?: number | null;
+          quality_checked_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1525,6 +1544,8 @@ export interface Database {
           realtor_id?: string | null;
           is_sample?: boolean;
           source_event_id?: string | null;
+          quality_score?: number | null;
+          quality_checked_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1605,7 +1626,8 @@ export interface Database {
           phase_entered_at: string;
           next_email_at: string | null;
           emails_sent_in_phase: number;
-          send_mode: "auto" | "review";
+          send_mode: "auto" | "review" | null;
+          trust_level: "ghost" | "copilot" | "supervised" | "autonomous" | null;
           is_paused: boolean;
           pause_reason: string | null;
           metadata: Json;
@@ -1621,7 +1643,8 @@ export interface Database {
           phase_entered_at?: string;
           next_email_at?: string | null;
           emails_sent_in_phase?: number;
-          send_mode?: "auto" | "review";
+          send_mode?: "auto" | "review" | null;
+          trust_level?: "ghost" | "copilot" | "supervised" | "autonomous" | null;
           is_paused?: boolean;
           pause_reason?: string | null;
           metadata?: Json;
@@ -1637,7 +1660,8 @@ export interface Database {
           phase_entered_at?: string;
           next_email_at?: string | null;
           emails_sent_in_phase?: number;
-          send_mode?: "auto" | "review";
+          send_mode?: "auto" | "review" | null;
+          trust_level?: "ghost" | "copilot" | "supervised" | "autonomous" | null;
           is_paused?: boolean;
           pause_reason?: string | null;
           metadata?: Json;
@@ -3530,6 +3554,81 @@ export interface Database {
           updated_at?: string;
         };
         Relationships: [];
+      };
+      // ── Conversion Events ──────────────────────────────────────
+      conversion_events: {
+        Row: {
+          id: string;
+          contact_id: string | null;
+          newsletter_id: string | null;
+          event_type: string;
+          email_type: string | null;
+          link_type: string | null;
+          link_url: string | null;
+          metadata: Json | null;
+          converted_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_id?: string | null;
+          newsletter_id?: string | null;
+          event_type: string;
+          email_type?: string | null;
+          link_type?: string | null;
+          link_url?: string | null;
+          metadata?: Json | null;
+          converted_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          contact_id?: string | null;
+          newsletter_id?: string | null;
+          event_type?: string;
+          email_type?: string | null;
+          link_type?: string | null;
+          link_url?: string | null;
+          metadata?: Json | null;
+          converted_at?: string;
+          created_at?: string;
+        };
+      };
+      // ── Journey Phase Transitions ──────────────────────────────
+      journey_phase_transitions: {
+        Row: {
+          id: string;
+          contact_id: string | null;
+          journey_id: string | null;
+          journey_type: string;
+          from_phase: string | null;
+          to_phase: string;
+          trigger: string;
+          metadata: Json | null;
+          transitioned_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_id?: string | null;
+          journey_id?: string | null;
+          journey_type: string;
+          from_phase?: string | null;
+          to_phase: string;
+          trigger?: string;
+          metadata?: Json | null;
+          transitioned_at?: string;
+        };
+        Update: {
+          id?: string;
+          contact_id?: string | null;
+          journey_id?: string | null;
+          journey_type?: string;
+          from_phase?: string | null;
+          to_phase?: string;
+          trigger?: string;
+          metadata?: Json | null;
+          transitioned_at?: string;
+        };
       };
     };
     Views: Record<string, never>;
