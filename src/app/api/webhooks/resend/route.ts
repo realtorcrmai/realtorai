@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 
 /**
  * POST /api/webhooks/resend
@@ -38,7 +38,11 @@ export async function POST(request: NextRequest) {
       const computed = createHmac("sha256", secretBytes)
         .update(signPayload)
         .digest("base64");
-      return computed === hash;
+      try {
+        return timingSafeEqual(Buffer.from(computed), Buffer.from(hash));
+      } catch {
+        return false;
+      }
     });
     if (!verified) {
       console.warn("[webhook] Resend webhook signature verification failed");

@@ -126,7 +126,7 @@ export async function createShowingRequest(
 
   // Send Twilio notification to seller
   try {
-    const messageSid = await sendShowingRequest({
+    const result = await sendShowingRequest({
       to: seller.phone,
       channel: seller.pref_channel,
       address: listing.address,
@@ -134,10 +134,14 @@ export async function createShowingRequest(
       buyerAgentName,
     });
 
-    await tc
-      .from("appointments")
-      .update({ twilio_message_sid: messageSid })
-      .eq("id", appointment.id);
+    if (result.success && result.sid) {
+      await tc
+        .from("appointments")
+        .update({ twilio_message_sid: result.sid })
+        .eq("id", appointment.id);
+    } else if (!result.success) {
+      console.error("[showings] Twilio sendShowingRequest failed:", result.error);
+    }
 
     await tc.from("communications").insert({
       contact_id: seller.id,

@@ -19,7 +19,6 @@ export function TourLauncher({ tour, className, children }: TourLauncherProps) {
     const validSteps = tour.steps.filter((step) => {
       const el = document.querySelector(step.element);
       if (!el) {
-        console.warn(`[Tour] Skipping step: selector "${step.element}" not found`);
         return false;
       }
       return true;

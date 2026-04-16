@@ -24,13 +24,17 @@ import { logVoiceCall } from "@/actions/voice-calls";
 type SpeechRecognitionType = any;
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-const VOICE_AGENT_API =
-  process.env.NEXT_PUBLIC_VOICE_AGENT_URL || "http://127.0.0.1:8768";
+// All calls to the external voice agent go through the server-side proxy.
+// No client-side API key needed.
+const VOICE_PROXY = "/api/voice-agent/proxy";
 
-const API_HEADERS: Record<string, string> = {
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${process.env.NEXT_PUBLIC_VOICE_AGENT_API_KEY || ""}`,
-};
+function proxyFetch(path: string, body: unknown): Promise<Response> {
+  return fetch(VOICE_PROXY, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path, body }),
+  });
+}
 
 type Message = {
   role: "user" | "assistant" | "system" | "tool" | "nav";
@@ -106,12 +110,7 @@ function getGreeting(pathname: string): string {
 
 async function fetchTTSAudio(text: string): Promise<ArrayBuffer | null> {
   try {
-    const resp = await fetch(`${VOICE_AGENT_API}/api/tts`, {
-      method: "POST",
-      headers: API_HEADERS,
-      body: JSON.stringify({ text, voice: "en-US-AvaMultilingualNeural" }),
-      signal: AbortSignal.timeout(15000),
-    });
+    const resp = await proxyFetch("/api/tts", { text, voice: "en-US-AvaMultilingualNeural" });
     if (!resp.ok) return null;
     return await resp.arrayBuffer();
   } catch {
@@ -193,7 +192,12 @@ export function VoiceAgentWidget() {
     let interval: ReturnType<typeof setInterval> | null = null;
     async function check() {
       try {
-        const resp = await fetch(`${VOICE_AGENT_API}/api/health`, { signal: AbortSignal.timeout(3000) });
+        const resp = await fetch("/api/voice-agent/proxy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path: "/api/health", body: {} }),
+          signal: AbortSignal.timeout(3000),
+        });
         const data = await resp.json();
         if (data.ok) {
           setConnected(true);
@@ -360,11 +364,11 @@ export function VoiceAgentWidget() {
         // Send to Whisper
         setInput("Transcribing...");
         try {
+          // STT uses multipart — send directly to a dedicated CRM proxy endpoint
           const form = new FormData();
           form.append("audio", blob, "recording.webm");
-          const resp = await fetch(`${VOICE_AGENT_API}/api/stt`, {
+          const resp = await fetch("/api/voice-agent/proxy/stt", {
             method: "POST",
-            headers: { Authorization: API_HEADERS.Authorization },
             body: form,
           });
           const data = await resp.json();
@@ -432,11 +436,7 @@ export function VoiceAgentWidget() {
 
   async function createSession(): Promise<string | null> {
     try {
-      const resp = await fetch(`${VOICE_AGENT_API}/api/session/create`, {
-        method: "POST",
-        headers: API_HEADERS,
-        body: JSON.stringify({ mode: "realtor" }),
-      });
+      const resp = await proxyFetch("/api/session/create", { mode: "realtor" });
       const data = await resp.json();
       if (data.ok) {
         setSessionId(data.session_id);
@@ -510,11 +510,7 @@ export function VoiceAgentWidget() {
     }
 
     try {
-      const resp = await fetch(`${VOICE_AGENT_API}/api/chat/stream`, {
-        method: "POST",
-        headers: API_HEADERS,
-        body: JSON.stringify({ session_id: sid, message: text }),
-      });
+      const resp = await proxyFetch("/api/chat/stream", { session_id: sid, message: text });
 
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({}));

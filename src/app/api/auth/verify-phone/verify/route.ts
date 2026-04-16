@@ -3,10 +3,29 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyTokenHash } from "@/lib/auth/verification";
 import { auth } from "@/lib/auth";
 
+// Rate limiter — in-memory Map, resets on server restart
+const rateMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(key: string, maxRequests: number, windowMs: number): boolean {
+  const now = Date.now();
+  const entry = rateMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateMap.set(key, { count: 1, resetAt: now + windowMs });
+    return true; // allowed
+  }
+  if (entry.count >= maxRequests) return false; // blocked
+  entry.count++;
+  return true; // allowed
+}
+
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  if (!checkRateLimit(`verify-phone:${session.user.id}`, 10, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many attempts. Try again in 1 hour." }, { status: 429 });
   }
 
   const { otp } = await request.json();

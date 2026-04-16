@@ -7,9 +7,12 @@ async function getOAuth2Client(userEmail: string) {
     .from("google_tokens")
     .select("*")
     .eq("user_email", userEmail)
-    .single();
+    .maybeSingle();
 
-  if (!tokenRow) throw new Error("No Google token found for user");
+  if (!tokenRow) {
+    console.warn(`[google-calendar] No token row found for user: ${userEmail}`);
+    throw new Error("No Google token found for user");
+  }
 
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,

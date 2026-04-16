@@ -116,13 +116,14 @@ export function CRMCalendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [view, setView] = useState<View>(() => isMobile ? "agenda" : "week");
   const [date, setDate] = useState(new Date());
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const fetchEvents = useCallback(async (rangeStart: Date, rangeEnd: Date): Promise<CalendarEvent[]> => {
     try {
       const res = await fetch(
         `/api/calendar/events?start=${rangeStart.toISOString()}&end=${rangeEnd.toISOString()}`
       );
-      if (!res.ok) return [];
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
       const data = await res.json();
 
       return [
@@ -160,19 +161,25 @@ export function CRMCalendar() {
       ];
     } catch (err) {
       console.error("Failed to fetch calendar events:", err);
+      setFetchError("Unable to load calendar events. Please try again.");
       return [];
     }
   }, []);
 
-  useEffect(() => {
+  const loadEvents = useCallback((forDate: Date) => {
+    setFetchError(null);
+    const start = subDays(forDate, 30);
+    const end = addDays(forDate, 30);
     let cancelled = false;
-    const start = subDays(date, 30);
-    const end = addDays(date, 30);
     fetchEvents(start, end).then((result) => {
       if (!cancelled) setEvents(result);
     });
     return () => { cancelled = true; };
-  }, [date, fetchEvents]);
+  }, [fetchEvents]);
+
+  useEffect(() => {
+    return loadEvents(date);
+  }, [date, loadEvents]);
 
   // Sync view when screen size changes from desktop to mobile
   useEffect(() => {
@@ -199,26 +206,38 @@ export function CRMCalendar() {
         </Badge>
       </div>
 
-      <div className="h-[600px] md:h-[700px]">
-        <Calendar
-          localizer={localizer}
-          events={events}
-          startAccessor="start"
-          endAccessor="end"
-          view={view}
-          onView={setView}
-          date={date}
-          onNavigate={setDate}
-          eventPropGetter={eventStyleGetter}
-          components={{
-            event: EventComponent,
-          }}
-          views={["month", "week", "day", "agenda"]}
-          step={30}
-          timeslots={2}
-          popup
-        />
-      </div>
+      {fetchError ? (
+        <div className="flex flex-col items-center justify-center h-[600px] md:h-[700px] gap-3 text-center">
+          <p className="text-sm text-red-600">⚠️ {fetchError}</p>
+          <button
+            onClick={() => loadEvents(date)}
+            className="px-4 py-2 text-sm rounded-lg border border-input bg-background hover:bg-accent transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      ) : (
+        <div className="h-[600px] md:h-[700px]">
+          <Calendar
+            localizer={localizer}
+            events={events}
+            startAccessor="start"
+            endAccessor="end"
+            view={view}
+            onView={setView}
+            date={date}
+            onNavigate={setDate}
+            eventPropGetter={eventStyleGetter}
+            components={{
+              event: EventComponent,
+            }}
+            views={["month", "week", "day", "agenda"]}
+            step={30}
+            timeslots={2}
+            popup
+          />
+        </div>
+      )}
     </div>
   );
 }
