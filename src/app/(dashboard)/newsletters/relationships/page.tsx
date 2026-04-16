@@ -11,6 +11,8 @@ import {
   BulkEnrollModal,
 } from "@/components/newsletters/JourneyControls";
 
+const PAGE_SIZE = 50;
+
 const JOURNEY_TYPE_ICONS: Record<string, string> = {
   buyer: "🏠",
   seller: "🏷️",
@@ -18,8 +20,15 @@ const JOURNEY_TYPE_ICONS: Record<string, string> = {
   agent: "🤝",
 };
 
-export default async function RelationshipsPage() {
-  const { journeys, unenrolledContacts } = await getJourneysForRelationshipsPage();
+export default async function RelationshipsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const params = await searchParams;
+  const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+  const offset = (page - 1) * PAGE_SIZE;
+  const { journeys, unenrolledContacts, hasMore } = await getJourneysForRelationshipsPage(PAGE_SIZE, offset);
 
   const activeCount = journeys.filter((j: any) => !j.is_paused).length;
   const pausedCount = journeys.filter((j: any) => j.is_paused).length;
@@ -163,6 +172,33 @@ export default async function RelationshipsPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Pagination controls */}
+        {(page > 1 || hasMore) && (
+          <div className="flex items-center justify-between gap-3 pt-1">
+            <span className="text-xs text-muted-foreground">
+              Page {page} · showing {offset + 1}–{offset + journeys.length}
+            </span>
+            <div className="flex items-center gap-2">
+              {page > 1 && (
+                <a
+                  href={`?page=${page - 1}`}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border bg-card text-xs font-medium hover:bg-muted transition-colors"
+                >
+                  ← Previous
+                </a>
+              )}
+              {hasMore && (
+                <a
+                  href={`?page=${page + 1}`}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border bg-card text-xs font-medium hover:bg-muted transition-colors"
+                >
+                  Next →
+                </a>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Un-enrolled contacts callout */}
         {unenrolledContacts.length > 0 && (

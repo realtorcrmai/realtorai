@@ -1475,7 +1475,7 @@ export interface Database {
           subject: string;
           html_body: string;
           plain_text: string | null;
-          status: "draft" | "approved" | "sending" | "sent" | "failed" | "skipped";
+          status: "draft" | "approved" | "sending" | "sent" | "failed" | "skipped" | "deferred";
           send_mode: "auto" | "review";
           sent_at: string | null;
           resend_message_id: string | null;
@@ -1503,7 +1503,7 @@ export interface Database {
           subject: string;
           html_body: string;
           plain_text?: string | null;
-          status?: "draft" | "approved" | "sending" | "sent" | "failed" | "skipped";
+          status?: "draft" | "approved" | "sending" | "sent" | "failed" | "skipped" | "deferred";
           send_mode?: "auto" | "review";
           sent_at?: string | null;
           resend_message_id?: string | null;
@@ -1531,7 +1531,7 @@ export interface Database {
           subject?: string;
           html_body?: string;
           plain_text?: string | null;
-          status?: "draft" | "approved" | "sending" | "sent" | "failed" | "skipped";
+          status?: "draft" | "approved" | "sending" | "sent" | "failed" | "skipped" | "deferred";
           send_mode?: "auto" | "review";
           sent_at?: string | null;
           resend_message_id?: string | null;
@@ -1621,7 +1621,7 @@ export interface Database {
         Row: {
           id: string;
           contact_id: string;
-          journey_type: "buyer" | "seller";
+          journey_type: "buyer" | "seller" | "customer" | "agent";
           current_phase: "lead" | "active" | "under_contract" | "past_client" | "dormant";
           phase_entered_at: string;
           next_email_at: string | null;
@@ -1639,7 +1639,7 @@ export interface Database {
         Insert: {
           id?: string;
           contact_id: string;
-          journey_type: "buyer" | "seller";
+          journey_type: "buyer" | "seller" | "customer" | "agent";
           current_phase?: "lead" | "active" | "under_contract" | "past_client" | "dormant";
           phase_entered_at?: string;
           next_email_at?: string | null;
@@ -1657,7 +1657,7 @@ export interface Database {
         Update: {
           id?: string;
           contact_id?: string;
-          journey_type?: "buyer" | "seller";
+          journey_type?: "buyer" | "seller" | "customer" | "agent";
           current_phase?: "lead" | "active" | "under_contract" | "past_client" | "dormant";
           phase_entered_at?: string;
           next_email_at?: string | null;

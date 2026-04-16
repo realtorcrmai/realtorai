@@ -57,6 +57,23 @@ export async function validatedSend(
 ): Promise<ValidatedSendResult> {
   const supabase = createAdminClient();
 
+  // H-10: Idempotency guard — if already sent, skip and return existing message ID
+  const { data: existingNewsletter } = await supabase
+    .from("newsletters")
+    .select("resend_message_id, status")
+    .eq("id", input.newsletterId)
+    .maybeSingle();
+
+  if (existingNewsletter?.resend_message_id) {
+    return {
+      sent: true,
+      action: "sent",
+      messageId: existingNewsletter.resend_message_id,
+      validationResult: {} as ValidatedSendResult["validationResult"],
+      error: null,
+    };
+  }
+
   // Run the full validation pipeline
   const validationResult = await runValidationPipeline({
     contactId: input.contactId,
@@ -146,6 +163,16 @@ export async function validatedSend(
             failed_at: new Date().toISOString(),
           },
         }).eq("id", input.newsletterId);
+
+        // H-12: Log outcome event even on failure so attribution chain is complete
+        await supabase.from("newsletter_events").insert({
+          newsletter_id: input.newsletterId,
+          event_type: "failed",
+          metadata: {
+            error: sendError instanceof Error ? sendError.message : String(sendError),
+          },
+          created_at: new Date().toISOString(),
+        });
 
         return {
           sent: false,

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+
+const LOCAL_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 import type {
   EmailActivityItem,
   WorkflowOverview,
@@ -203,7 +205,7 @@ function EmailActivityTab({ items, startTransition }: { items: EmailActivityItem
 
                   {/* Date */}
                   <div style={{ fontSize: 12, color: "#a0a0b0", minWidth: 80, textAlign: "right" }}>
-                    {item.sent_at ? new Date(item.sent_at).toLocaleDateString() : new Date(item.created_at).toLocaleDateString()}
+                    {item.sent_at ? new Date(item.sent_at).toLocaleDateString(undefined, { timeZone: LOCAL_TZ }) : new Date(item.created_at).toLocaleDateString(undefined, { timeZone: LOCAL_TZ })}
                   </div>
 
                   {/* Actions */}
@@ -328,7 +330,7 @@ function WorkflowsTab({ workflows, startTransition }: { workflows: WorkflowOverv
                           {e.status}
                         </span>
                         <span style={{ fontSize: 11, color: "#a0a0b0" }}>
-                          {new Date(e.enrolled_at).toLocaleDateString()}
+                          {new Date(e.enrolled_at).toLocaleDateString(undefined, { timeZone: LOCAL_TZ })}
                         </span>
                       </div>
                     ))}
@@ -462,7 +464,7 @@ function ContactJourneysTab({ journeys, startTransition }: { journeys: ContactJo
                           {j.last_email_subject}
                         </div>
                         <div style={{ fontSize: 11, color: "#a0a0b0" }}>
-                          {j.last_email_date ? new Date(j.last_email_date).toLocaleDateString() : ""}
+                          {j.last_email_date ? new Date(j.last_email_date).toLocaleDateString(undefined, { timeZone: LOCAL_TZ }) : ""}
                         </div>
                       </div>
                     ) : (
@@ -537,7 +539,7 @@ function ContactJourneysTab({ journeys, startTransition }: { journeys: ContactJo
                             </span>
                           )}
                           <span style={{ fontSize: 11, color: "#a0a0b0" }}>
-                            {email.sent_at ? new Date(email.sent_at).toLocaleDateString() : new Date(email.created_at).toLocaleDateString()}
+                            {email.sent_at ? new Date(email.sent_at).toLocaleDateString(undefined, { timeZone: LOCAL_TZ }) : new Date(email.created_at).toLocaleDateString(undefined, { timeZone: LOCAL_TZ })}
                           </span>
                         </div>
                       ))}
@@ -565,6 +567,7 @@ function ScheduleTab({ items, startTransition }: { items: ScheduleItem[]; startT
       weekday: "long",
       month: "long",
       day: "numeric",
+      timeZone: LOCAL_TZ,
     });
     if (!grouped[dateKey]) grouped[dateKey] = [];
     grouped[dateKey].push(item);

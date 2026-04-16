@@ -12,6 +12,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 // ─── Phase badge labels ───────────────────────────────────────────────────────
 const PHASE_LABELS: Record<string, string> = {
@@ -31,12 +32,14 @@ const PHASE_COLORS: Record<string, string> = {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+const LOCAL_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 function formatNextEmail(dateStr: string | null): string {
   if (!dateStr) return "No email scheduled";
   const d = new Date(dateStr);
   const now = new Date();
   if (d < now) return "Due now";
-  return "Next email: " + d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return "Next email: " + d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: LOCAL_TZ });
 }
 
 // ─── Pause/Resume + Send Next controls per journey row ───────────────────────
@@ -60,20 +63,37 @@ export function JourneyRowControls({
   const isFuture = nextEmailAt ? new Date(nextEmailAt) > new Date() : false;
 
   function handlePause() {
+    const confirmed = window.confirm("Pause this journey? The contact will stop receiving emails.");
+    if (!confirmed) return;
     startPause(async () => {
-      await pauseJourney(contactId, journeyType as any, "manual");
+      const result = await pauseJourney(contactId, journeyType as any, "manual");
+      if (result?.error) {
+        toast.error("Failed to pause journey: " + result.error);
+        return;
+      }
+      toast.success("Journey paused");
     });
   }
 
   function handleResume() {
     startResume(async () => {
-      await resumeJourney(contactId, journeyType as any);
+      const result = await resumeJourney(contactId, journeyType as any);
+      if (result?.error) {
+        toast.error("Failed to resume journey: " + result.error);
+        return;
+      }
+      toast.success("Journey resumed");
     });
   }
 
   function handleSendNext() {
     startSend(async () => {
-      await triggerNextEmail(journeyId);
+      const result = await triggerNextEmail(journeyId);
+      if (result?.error) {
+        toast.error("Failed to send next email: " + result.error);
+        return;
+      }
+      toast.success("Next email sent");
     });
   }
 
@@ -149,8 +169,17 @@ export function BulkEnrollModal({
   function handleEnroll() {
     if (selected.size === 0) return;
     startTransition(async () => {
-      for (const contactId of selected) {
-        await enrollContactInJourney(contactId, journeyType);
+      const selectedIds = Array.from(selected);
+      const results = await Promise.allSettled(
+        selectedIds.map((id) => enrollContactInJourney(id, journeyType))
+      );
+      const failures = results.filter(
+        (r) => r.status === "rejected" || (r.status === "fulfilled" && r.value?.error)
+      );
+      if (failures.length > 0) {
+        toast.error(`${failures.length} contact${failures.length > 1 ? "s" : ""} failed to enroll`);
+      } else {
+        toast.success(`${selectedIds.length} contact${selectedIds.length > 1 ? "s" : ""} enrolled`);
       }
       setDone(true);
       setSelected(new Set());

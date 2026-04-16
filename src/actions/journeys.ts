@@ -122,30 +122,38 @@ export async function enrollContactInJourney(contactId: string, journeyType: Jou
     console.warn(`[journeys] Contact ${contactId} type=${contact.type} enrolled in seller journey — mismatch`);
   }
 
+  // C-08: Explicit existence check — upsert with ignoreDuplicates returns null on conflict
+  const { data: existing } = await tc
+    .from("contact_journeys")
+    .select("id, is_paused, current_phase")
+    .eq("contact_id", contactId)
+    .eq("journey_type", journeyType)
+    .maybeSingle();
+
+  if (existing) {
+    return { data: existing, alreadyEnrolled: true };
+  }
+
   // Get first email schedule
   const schedule = JOURNEY_SCHEDULES[journeyType].lead;
   const nextEmailAt = schedule.length > 0
     ? new Date(Date.now() + schedule[0].delayHours * 3600000).toISOString()
     : null;
 
+  // Not enrolled — insert fresh
   const { data, error } = await tc
     .from("contact_journeys")
-    .upsert(
-      {
-        contact_id: contactId,
-        journey_type: journeyType,
-        current_phase: "lead",
-        next_email_at: nextEmailAt,
-        emails_sent_in_phase: 0,
-      },
-      { onConflict: "contact_id,journey_type", ignoreDuplicates: true }
-    )
+    .insert({
+      contact_id: contactId,
+      journey_type: journeyType,
+      current_phase: "lead",
+      next_email_at: nextEmailAt,
+      emails_sent_in_phase: 0,
+    })
     .select()
     .single();
 
   if (error) return { error: error.message };
-  // ignoreDuplicates: if row already existed, select() returns null
-  if (!data) return { error: "Contact already enrolled in this journey" };
 
   revalidatePath("/newsletters");
   return { data };
@@ -186,7 +194,7 @@ export async function advanceJourneyPhase(
 
   if (error) return { error: error.message };
 
-  // Audit log — non-blocking
+  // Audit log — secondary, log but don't fail
   try {
     await tc.from("communications").insert({
       contact_id: contactId,
@@ -195,19 +203,19 @@ export async function advanceJourneyPhase(
       body: `Journey phase advanced: ${oldPhase} → ${newPhase} (${journeyType})`,
       created_at: new Date().toISOString(),
     });
-  } catch {
-    // Don't fail phase advancement if audit log fails
+  } catch (auditErr) {
+    console.error('[journey:advance] Audit log failed (phase DID advance):', auditErr);
   }
 
-  // Fire phase_changed trigger — pauses irrelevant workflows, enrolls new ones
+  // Fire phase_changed trigger — secondary, log but don't fail
   try {
     const { fireTrigger } = await import("@/lib/trigger-engine");
     await fireTrigger("phase_changed", contactId, {
       contactType: journeyType,
       newPhase,
     });
-  } catch {
-    // Don't fail phase advancement if trigger fails
+  } catch (triggerErr) {
+    console.error('[journey:advance] Trigger failed (phase DID advance):', triggerErr);
   }
 
   revalidatePath("/newsletters");
@@ -235,12 +243,14 @@ export async function pauseJourney(contactId: string, journeyType: JourneyType, 
 export async function resumeJourney(contactId: string, journeyType: JourneyType) {
   const tc = await getAuthenticatedTenantClient();
 
+  // H-05: Use 1 hour after resume instead of forcing a 24h wait.
+  // The scheduler will pick up immediately and use the phase schedule for subsequent emails.
   const { error } = await tc
     .from("contact_journeys")
     .update({
       is_paused: false,
       pause_reason: null,
-      next_email_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      next_email_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour after resume
       updated_at: new Date().toISOString(),
     })
     .eq("contact_id", contactId)
@@ -376,13 +386,25 @@ export async function processJourneyQueue() {
       // Import dynamically to avoid circular deps
       const { generateAndQueueNewsletter } = await import("@/actions/newsletters");
 
-      await generateAndQueueNewsletter(
-        contact.id,
-        emailType,
-        journey.current_phase,
-        journey.id,
-        "auto"
-      );
+      // C-06: Separate try/catch for newsletter generation so a failure backs off
+      // 6 hours rather than retrying immediately on every cron tick.
+      try {
+        await generateAndQueueNewsletter(
+          contact.id,
+          emailType,
+          journey.current_phase,
+          journey.id,
+          "auto"
+        );
+      } catch (err) {
+        console.error('[journey:queue] Newsletter generation failed for journey', journey.id, err);
+        // Back off 6 hours so we don't hammer the same contact on every cron tick
+        await tc.from('contact_journeys').update({
+          next_email_at: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date().toISOString(),
+        }).eq('id', journey.id);
+        continue;
+      }
 
       // Schedule next email
       const nextIndex = emailIndex + 1;
@@ -401,7 +423,7 @@ export async function processJourneyQueue() {
 
       processed++;
     } catch (e) {
-      console.error(`Journey queue error for contact ${contact.id}:`, e);
+      console.error(`[journey:queue] Unexpected error for journey ${journey.id} (contact ${contact.id}):`, e);
       // Don't stop processing other journeys
     }
   }
@@ -409,10 +431,14 @@ export async function processJourneyQueue() {
   return { processed, skipped_casl: skippedCasl };
 }
 
+// L-03: Type predicate to narrow string → JourneyType without a redundant cast
+function isJourneyType(value: string): value is JourneyType {
+  return (["buyer", "seller", "customer", "agent"] as const).includes(value as JourneyType);
+}
+
 export async function autoEnrollNewContact(contactId: string, contactType: string) {
-  // Only enroll types that have journey schedules
-  if (["buyer", "seller", "customer", "agent"].includes(contactType)) {
-    return enrollContactInJourney(contactId, contactType as JourneyType);
+  if (isJourneyType(contactType)) {
+    return enrollContactInJourney(contactId, contactType);
   }
   return { error: "No journey defined for this contact type" };
 }
@@ -436,13 +462,14 @@ export async function triggerNextEmail(journeyId: string) {
   return { success: true };
 }
 
-export async function getJourneysForRelationshipsPage() {
+export async function getJourneysForRelationshipsPage(limit = 50, offset = 0) {
   const tc = await getAuthenticatedTenantClient();
 
   const { data: journeys } = await tc
     .from("contact_journeys")
     .select("id, contact_id, journey_type, current_phase, is_paused, pause_reason, next_email_at, emails_sent_in_phase, contacts(id, name, email, type)")
-    .order("updated_at", { ascending: false });
+    .order("updated_at", { ascending: false })
+    .range(offset, offset + limit - 1);
 
   // Contacts not enrolled in any journey
   const enrolledContactIds = new Set((journeys || []).map((j: any) => j.contact_id));
@@ -458,5 +485,8 @@ export async function getJourneysForRelationshipsPage() {
   return {
     journeys: journeys || [],
     unenrolledContacts,
+    hasMore: (journeys || []).length === limit,
+    offset,
+    limit,
   };
 }

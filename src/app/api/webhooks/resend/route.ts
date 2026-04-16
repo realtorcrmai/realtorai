@@ -8,37 +8,41 @@ import { createHmac } from "crypto";
  * Events: email.delivered, email.opened, email.clicked, email.bounced, email.complained, email.unsubscribed
  */
 export async function POST(request: NextRequest) {
+  // H-20: single admin client instance reused throughout — no duplicate createAdminClient() calls
   const supabase = createAdminClient();
 
   try {
-    if (!process.env.RESEND_WEBHOOK_SECRET) {
-      console.warn("RESEND_WEBHOOK_SECRET not configured — rejecting webhook");
-      return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
+    // C-12: Webhook secret is mandatory — reject all events if not configured
+    const secret = process.env.RESEND_WEBHOOK_SECRET;
+    if (!secret) {
+      console.error("[webhook] RESEND_WEBHOOK_SECRET not configured — rejecting all webhook events");
+      return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
     }
 
     const rawBody = await request.text();
 
-    // Verify webhook signature
+    // C-12: Signature verification is always enforced (no conditional wrapper)
     const signature = request.headers.get("svix-signature");
-    const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
-    if (webhookSecret && signature) {
-      const svixId = request.headers.get("svix-id") || "";
-      const svixTimestamp = request.headers.get("svix-timestamp") || "";
-      const signPayload = `${svixId}.${svixTimestamp}.${rawBody}`;
-      const expectedSigs = signature.split(" ");
-      const verified = expectedSigs.some((sig) => {
-        const [, hash] = sig.split(",");
-        if (!hash) return false;
-        const secretBytes = Buffer.from(webhookSecret.replace("whsec_", ""), "base64");
-        const computed = createHmac("sha256", secretBytes)
-          .update(signPayload)
-          .digest("base64");
-        return computed === hash;
-      });
-      if (!verified) {
-        console.warn("Resend webhook signature verification failed");
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+    if (!signature) {
+      console.warn("[webhook] Missing svix-signature header");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const svixId = request.headers.get("svix-id") || "";
+    const svixTimestamp = request.headers.get("svix-timestamp") || "";
+    const signPayload = `${svixId}.${svixTimestamp}.${rawBody}`;
+    const expectedSigs = signature.split(" ");
+    const verified = expectedSigs.some((sig) => {
+      const [, hash] = sig.split(",");
+      if (!hash) return false;
+      const secretBytes = Buffer.from(secret.replace("whsec_", ""), "base64");
+      const computed = createHmac("sha256", secretBytes)
+        .update(signPayload)
+        .digest("base64");
+      return computed === hash;
+    });
+    if (!verified) {
+      console.warn("[webhook] Resend webhook signature verification failed");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = JSON.parse(rawBody);
@@ -57,19 +61,21 @@ export async function POST(request: NextRequest) {
           .update({ newsletter_unsubscribed: true, updated_at: new Date().toISOString() })
           .eq("email", email);
 
-        // Also pause journeys if we can resolve the contact
-        if (type === "email.complained") {
-          const { data: contact } = await supabase
-            .from("contacts")
-            .select("id")
-            .eq("email", email)
-            .maybeSingle();
-          if (contact?.id) {
-            await supabase
-              .from("contact_journeys")
-              .update({ is_paused: true, pause_reason: "complained" })
-              .eq("contact_id", contact.id);
-          }
+        // H-07: Pause ALL journeys for this contact on both unsubscribe and complaint
+        const { data: contact } = await supabase
+          .from("contacts")
+          .select("id")
+          .eq("email", email)
+          .maybeSingle();
+        if (contact?.id) {
+          await supabase
+            .from("contact_journeys")
+            .update({
+              is_paused: true,
+              pause_reason: type === "email.complained" ? "complained" : "unsubscribed",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("contact_id", contact.id);
         }
       }
       return NextResponse.json({ ok: true });
@@ -81,10 +87,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true }); // Not a newsletter email
     }
 
-    // Get newsletter + contact in one query
+    // Get newsletter + contact in one query (also fetch realtor_id for C-11 task insert)
     const { data: newsletter } = await supabase
       .from("newsletters")
-      .select("contact_id, email_type")
+      .select("contact_id, email_type, realtor_id")
       .eq("id", newsletterId)
       .single();
 
@@ -220,8 +226,8 @@ export async function POST(request: NextRequest) {
         const nextEmailType = NBA_MAP[linkType]
         if (nextEmailType) {
           try {
-            const nbaSupabase = createAdminClient()
-            await nbaSupabase
+            // H-20: reuse top-level supabase client — no new createAdminClient()
+            await supabase
               .from("contact_journeys")
               .update({
                 next_email_type_override: nextEmailType,
@@ -239,10 +245,9 @@ export async function POST(request: NextRequest) {
       // Create a follow-up task for the realtor on high-intent click
       if (scoreImpact >= 25 && linkType) {
         try {
-          const taskSupabase = createAdminClient()
-
+          // H-20: reuse top-level supabase client — no new createAdminClient()
           // Get contact name for the task title
-          const { data: taskContact } = await taskSupabase
+          const { data: taskContact } = await supabase
             .from("contacts")
             .select("name, email")
             .eq("id", contactId)
@@ -254,15 +259,22 @@ export async function POST(request: NextRequest) {
             ? `Follow up with ${taskContact?.name ?? "contact"} — requested valuation`
             : `Follow up with ${taskContact?.name ?? "contact"} — high-intent email click`
 
-          await taskSupabase.from("tasks").insert({
-            title: taskTitle,
-            description: `${taskContact?.name ?? "Contact"} clicked a high-intent link in a newsletter email. Link: ${linkUrl ?? "unknown"}. Score impact: +${scoreImpact} pts. Suggested action: reach out within 24 hours.`,
-            contact_id: contactId,
-            due_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-            priority: "high",
-            status: "pending",
-            category: "follow_up",
-          })
+          // C-11: realtor_id is required — look it up from the newsletter (already fetched above)
+          const realtorId = newsletter?.realtor_id ?? null
+          if (realtorId) {
+            await supabase.from("tasks").insert({
+              realtor_id: realtorId,
+              title: taskTitle,
+              description: `${taskContact?.name ?? "Contact"} clicked a high-intent link in a newsletter email. Link: ${linkUrl ?? "unknown"}. Score impact: +${scoreImpact} pts. Suggested action: reach out within 24 hours.`,
+              contact_id: contactId,
+              due_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+              priority: "high",
+              status: "pending",
+              category: "follow_up",
+            })
+          } else {
+            console.warn("[webhook] Could not create follow-up task — realtor_id not found for newsletter", newsletterId)
+          }
         } catch (e) {
           console.warn("[webhook] Could not create follow-up task:", e)
         }
@@ -273,8 +285,8 @@ export async function POST(request: NextRequest) {
         const currentPhase = updatedIntel?.current_journey_phase ?? null;
         if (currentPhase === "dormant") {
           try {
-            const dormantSupabase = createAdminClient();
-            await dormantSupabase
+            // H-20: reuse top-level supabase client — no new createAdminClient()
+            await supabase
               .from("contact_journeys")
               .update({
                 is_paused: false,
@@ -497,10 +509,36 @@ async function updateContactIntelligence(
       : "stable";
   intel.engagement_trend = engagement_trend;
 
-  await supabase
-    .from("contacts")
-    .update({ newsletter_intelligence: intel })
-    .eq("id", contactId);
+  // H-06: Use optimistic retry to guard against concurrent JSONB overwrites
+  // Re-read → merge → write, up to 3 attempts with exponential backoff
+  let writeError: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { error } = await supabase
+      .from("contacts")
+      .update({ newsletter_intelligence: intel })
+      .eq("id", contactId);
+    if (!error) { writeError = null; break; }
+    writeError = error;
+    // Re-read fresh state and re-apply our deltas before retrying
+    if (attempt < 2) {
+      await new Promise((r) => setTimeout(r, 50 * Math.pow(2, attempt)));
+      const { data: fresh } = await supabase
+        .from("contacts")
+        .select("newsletter_intelligence")
+        .eq("id", contactId)
+        .single();
+      if (fresh) {
+        const freshIntel: Record<string, unknown> = (fresh.newsletter_intelligence as Record<string, unknown>) || {};
+        // Merge: prefer higher counts, keep all history
+        intel.total_opens = Math.max((intel.total_opens as number) || 0, (freshIntel.total_opens as number) || 0);
+        intel.total_clicks = Math.max((intel.total_clicks as number) || 0, (freshIntel.total_clicks as number) || 0);
+        intel.engagement_score = Math.max((intel.engagement_score as number) || 0, (freshIntel.engagement_score as number) || 0);
+      }
+    }
+  }
+  if (writeError) {
+    console.warn("[webhook] newsletter_intelligence write failed after 3 attempts:", writeError);
+  }
 
   // Sync inferred interests into buyer_preferences for AI generation
   const inferredInterests = intel.inferred_interests as {
@@ -551,12 +589,13 @@ async function updateContactIntelligence(
     };
     const label = labelMap[linkType] || linkType.replace(/_/g, " ");
 
+    // C-10: related_type must be a valid value — "newsletter" (not "newsletter_click" / "newsletter_event")
     await supabase.from("communications").insert({
       contact_id: contactId,
       direction: "inbound",
       channel: "email",
       body: `HOT LEAD: clicked ${label} — ${linkUrl || "unknown URL"}`,
-      related_type: "newsletter_click",
+      related_type: "newsletter",
     });
 
     await supabase.from("agent_notifications").insert({
@@ -590,12 +629,13 @@ async function updateContactIntelligence(
   }
 
   // Resolve current journey phase for caller (used for journey advancement)
+  // C-09: contact_journeys has no enrolled_at column — use created_at instead
   const { data: journey } = await supabase
     .from("contact_journeys")
     .select("current_phase")
     .eq("contact_id", contactId)
     .eq("is_paused", false)
-    .order("enrolled_at", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 

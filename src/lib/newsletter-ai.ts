@@ -5,6 +5,16 @@ import { createWithRetry } from "@/lib/anthropic/retry";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 
+const MODEL = process.env.NEWSLETTER_AI_MODEL ?? 'claude-haiku-4-5-20251001';
+
+function sanitizeForPrompt(value: string | null | undefined, maxLen = 200): string {
+  if (!value) return ''
+  return String(value)
+    .replace(/[`<>]/g, '')
+    .replace(/ignore\s+previous|disregard|system\s+prompt|you\s+are\s+now/gi, '[redacted]')
+    .slice(0, maxLen)
+}
+
 const anthropic = new Anthropic();
 
 const GeneratedContentSchema = z.object({
@@ -122,11 +132,11 @@ export async function generateNewsletterContent(
     if (retrieved.formatted) {
       ragContext = `\n\nRELEVANT CONTEXT FROM CRM (use to personalize):\n${retrieved.formatted}`;
     }
-  } catch {
-    // RAG not available — continue without
+  } catch (err) {
+    console.warn('[newsletter-ai] RAG query failed, proceeding without context:', err)
   }
 
-  const model = process.env.NEWSLETTER_AI_MODEL || "claude-sonnet-4-20250514";
+  const model = MODEL;
 
   const message = await createWithRetry(anthropic, {
     model,
@@ -253,7 +263,7 @@ BUYER CONTEXT — This contact is a property buyer. Your email must:
   };
   const phaseInstruction = phaseInstructions[context.journeyPhase] ?? phaseInstructions.lead;
 
-  return `You are a real estate email copywriter for ${context.realtor.name}${context.realtor.brokerage ? ` at ${context.realtor.brokerage}` : ""}.
+  return `You are a real estate email copywriter for ${sanitizeForPrompt(context.realtor.name)}${context.realtor.brokerage ? ` at ${sanitizeForPrompt(context.realtor.brokerage) || 'your brokerage'}` : ""}.
 
 Write warm, professional, personal emails that feel like they're from a trusted advisor — NOT a marketing machine.
 
@@ -298,10 +308,10 @@ function buildUserPrompt(context: NewsletterContext): string {
 
   let prompt = `Generate a "${emailType}" email for:
 
-Contact: ${contact.name} (${contact.type}, ${journeyPhase} phase)`;
+Contact: ${sanitizeForPrompt(contact.name)} (${contact.type}, ${journeyPhase} phase)`;
 
   if (contact.areas?.length) {
-    prompt += `\nInterested areas: ${contact.areas.join(", ")}`;
+    prompt += `\nInterested areas: ${contact.areas.map(a => sanitizeForPrompt(a)).join(", ")}`;
   }
 
   if (contact.preferences) {
@@ -311,7 +321,7 @@ Contact: ${contact.name} (${contact.type}, ${journeyPhase} phase)`;
       parts.push(`budget: $${(prefs.price_range_min || 0).toLocaleString()}-$${(prefs.price_range_max || 0).toLocaleString()}`);
     }
     if (prefs.bedrooms) parts.push(`${prefs.bedrooms}+ bedrooms`);
-    if (prefs.property_types?.length) parts.push(`types: ${prefs.property_types.join(", ")}`);
+    if (prefs.property_types?.length) parts.push(`types: ${prefs.property_types.map(t => sanitizeForPrompt(t)).join(", ")}`);
     if (parts.length) prompt += `\nBUYER PREFERENCES: ${parts.join(", ")}`;
   }
 
@@ -368,7 +378,7 @@ Contact: ${contact.name} (${contact.type}, ${journeyPhase} phase)`;
   }
 
   if (additionalContext) {
-    prompt += `\n\nAdditional context: ${additionalContext}`;
+    prompt += `\n\nAdditional context: ${sanitizeForPrompt(additionalContext, 500)}`;
   }
 
   return prompt;

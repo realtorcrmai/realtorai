@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { setEditionABSubjects, pickABWinner } from "@/actions/editorial";
+import { toast } from "sonner";
 
 type ABTest = {
   id: string;
@@ -57,12 +58,15 @@ function getTestStatus(test: ABTest): { label: string; variant: "success" | "war
   return { label: "Draft", variant: "secondary" };
 }
 
+const LOCAL_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-CA", {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: LOCAL_TZ,
   });
 }
 
@@ -123,9 +127,16 @@ export function ABTestingClient({ tests, drafts }: Props) {
   }
 
   function handlePickWinner(editionId: string, winner: "a" | "b") {
+    const confirmed = window.confirm(`Pick Variant ${winner.toUpperCase()} as the winner? This cannot be undone.`);
+    if (!confirmed) return;
     setPickingWinner(editionId + winner);
     startTransition(async () => {
-      await pickABWinner(editionId, winner);
+      const result = await pickABWinner(editionId, winner);
+      if (result?.error) {
+        toast.error("Failed to pick winner: " + result.error);
+      } else {
+        toast.success(`Variant ${winner.toUpperCase()} selected as winner`);
+      }
       setPickingWinner(null);
     });
   }

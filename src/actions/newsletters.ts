@@ -119,7 +119,7 @@ async function renderEmailTemplate(
     // Market data (market_update, cma_preview, seller_report)
     ...(content.stats || content.recentSales ? {
       market: {
-        avgPrice: content.avgPrice || content.stats?.find((s: any) => s.label?.toLowerCase().includes("price"))?.value,
+        avgPrice: content.avgPrice || content.stats?.find((s: { label?: string; value?: unknown }) => s.label?.toLowerCase().includes("price"))?.value,
         avgDom: content.avgDom || content.daysOnMarket,
         inventoryChange: content.inventoryChange,
         recentSales: content.recentSales || [],
@@ -281,6 +281,11 @@ export async function generateAndQueueNewsletter(
     .eq("id", contactId)
     .single();
 
+  if (!contact) {
+    console.error('[newsletter] Contact not found for id:', contactId)
+    return { error: 'Contact not found' }
+  }
+
   // Central CASL + unsubscribe gate — do NOT bypass.
   // See src/lib/compliance/can-send.ts for the rules.
   const sendCheck = canSendToContact(contact);
@@ -291,7 +296,7 @@ export async function generateAndQueueNewsletter(
   // Fetch relevant listings with full data
   const { data: listings } = await tc
     .from("listings")
-    .select("id, address, list_price, status, hero_image_url, bedrooms, bathrooms, square_footage")
+    .select("id, address, list_price, status, hero_image_url")
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(5);
@@ -299,19 +304,20 @@ export async function generateAndQueueNewsletter(
   const branding = await getRealtorBranding();
 
   // Build AI context
-  const intelligence = (contact.newsletter_intelligence as any) || {};
-  const aiLeadScore = (contact as any).ai_lead_score as Record<string, any> | null;
+  const intelligence = (contact.newsletter_intelligence as Record<string, unknown>) || {};
+  const aiLeadScore = (contact as unknown as { ai_lead_score?: Record<string, unknown> }).ai_lead_score ?? null;
+  const intelligenceInterests = intelligence.inferred_interests as Record<string, unknown> | undefined;
   const aiContext: NewsletterContext = {
     contact: {
       name: contact.name,
       firstName: contact.name.split(" ")[0],
       type: contact.type as any,
       email: contact.email,
-      areas: intelligence.inferred_interests?.areas,
-      preferences: contact.buyer_preferences as any,
-      engagementScore: intelligence.engagement_score,
-      clickHistory: intelligence.click_history?.slice(-5),
-      aiHints: aiLeadScore?.personalization_hints,
+      areas: intelligenceInterests?.areas as string[] | undefined,
+      preferences: contact.buyer_preferences as NewsletterContext['contact']['preferences'],
+      engagementScore: intelligence.engagement_score as number | undefined,
+      clickHistory: intelligence.click_history as NewsletterContext['contact']['clickHistory'],
+      aiHints: aiLeadScore?.personalization_hints as NewsletterContext['contact']['aiHints'],
     },
     realtor: {
       name: branding.name,
@@ -319,11 +325,9 @@ export async function generateAndQueueNewsletter(
       phone: branding.phone,
       email: branding.email,
     },
-    listings: listings?.map((l: any) => ({
+    listings: listings?.map((l: { address: string; list_price: number | null; status: string; hero_image_url: string | null }) => ({
       address: l.address,
       price: l.list_price || 0,
-      beds: (l as any).bedrooms || 0,
-      baths: (l as any).bathrooms || 0,
       status: l.status,
       heroImageUrl: l.hero_image_url,
     })),
@@ -335,8 +339,9 @@ export async function generateAndQueueNewsletter(
   const content = await generateNewsletterContent(aiContext);
 
   // Render HTML — pass contact's preferred area for template fallback
-  const preferredArea = intelligence.preferred_areas?.[0]
-    || intelligence.inferred_interests?.areas?.[0]
+  const preferredAreas0 = intelligence.preferred_areas as string[] | undefined;
+  const preferredArea = preferredAreas0?.[0]
+    || (intelligenceInterests?.areas as string[] | undefined)?.[0]
     || undefined;
   const html = await renderEmailTemplate(
     emailType,
@@ -360,19 +365,17 @@ export async function generateAndQueueNewsletter(
       html_body: html,
       status: sendMode === "auto" ? "approved" : "draft",
       send_mode: sendMode,
-      ai_context: aiContext as any,
+      ai_context: aiContext as unknown as Record<string, unknown>,
     })
     .select()
     .single();
 
   if (error) return { error: error.message };
 
-  // Real-time RAG ingestion for the new newsletter
-  if (newsletter) triggerIngest("newsletters", newsletter.id);
-
-  // Auto-send if in auto mode
-  if (sendMode === "auto" && newsletter) {
-    await sendNewsletter(newsletter.id);
+  // Real-time RAG ingestion and optional auto-send
+  if (newsletter) {
+    triggerIngest("newsletters", newsletter.id);
+    if (sendMode === "auto") await sendNewsletter(newsletter.id);
   }
 
   revalidatePath("/newsletters");
@@ -385,14 +388,37 @@ export async function sendNewsletter(newsletterId: string) {
   // Fetch newsletter with full contact data (including buyer_preferences and type)
   const { data: newsletter } = await tc
     .from("newsletters")
-    .select("*, contacts(id, email, name, type, buyer_preferences, newsletter_intelligence)")
+    .select("*, contacts(id, email, name, type, buyer_preferences, newsletter_intelligence, casl_consent_given, newsletter_unsubscribed)")
     .eq("id", newsletterId)
     .single();
 
   if (!newsletter) return { error: "Newsletter not found" };
 
-  const contact = newsletter.contacts as any;
+  // Define a typed shape for the contact joined via select()
+  type NewsletterContact = {
+    id: string;
+    email: string | null;
+    name: string;
+    type: string;
+    buyer_preferences: Record<string, unknown> | null;
+    newsletter_intelligence: Record<string, unknown> | null;
+    casl_consent_given: boolean | null;
+    newsletter_unsubscribed: boolean | null;
+  };
+  const contact = newsletter.contacts as NewsletterContact;
   if (!contact?.email) return { error: "Contact has no email" };
+
+  // H-01: CASL consent gate — never send without explicit consent
+  if (!contact.casl_consent_given) {
+    console.warn('[newsletter] Skipping send — CASL consent not given for contact:', contact.id);
+    await tc.from('newsletters').update({ status: 'skipped', error_message: 'No CASL consent' }).eq('id', newsletterId);
+    return { error: 'No CASL consent' };
+  }
+  if (contact.newsletter_unsubscribed) {
+    console.warn('[newsletter] Skipping send — contact is unsubscribed:', contact.id);
+    await tc.from('newsletters').update({ status: 'skipped', error_message: 'Contact unsubscribed' }).eq('id', newsletterId);
+    return { error: 'Contact unsubscribed' };
+  }
 
   // Extract buyer preferences for validation pipeline
   const buyerPrefs = (contact.buyer_preferences as Record<string, any>) || {};
@@ -408,7 +434,10 @@ export async function sendNewsletter(newsletterId: string) {
     .limit(1)
     .maybeSingle();
 
-  const trustLevel = (journey as any)?.trust_level ?? 'ghost';
+  const trustLevelLabel = (journey as { trust_level?: string } | null)?.trust_level ?? 'ghost';
+  // Map trust level labels to numeric levels (0=ghost, 1=copilot, 2=supervised, 3=autonomous)
+  const trustLevelMap: Record<string, number> = { ghost: 0, copilot: 1, supervised: 2, autonomous: 3 };
+  const trustLevel = trustLevelMap[trustLevelLabel] ?? 0;
   const journeyPhase = journey?.current_phase || newsletter.journey_phase || undefined;
 
   // Fetch recent subjects for deduplication check
@@ -422,7 +451,7 @@ export async function sendNewsletter(newsletterId: string) {
     .order("sent_at", { ascending: false })
     .limit(5);
 
-  const lastSubjects = recentNewsletters?.map((n: any) => n.subject).filter(Boolean) || [];
+  const lastSubjects = recentNewsletters?.map((n: { subject: string | null }) => n.subject).filter((s: string | null): s is string => !!s) || [];
 
   // ── SEND GOVERNOR — frequency caps + auto-sunset + engagement throttle ──
   try {
@@ -461,13 +490,22 @@ export async function sendNewsletter(newsletterId: string) {
     console.warn("[sendNewsletter] send-governor check failed, continuing:", governorErr instanceof Error ? governorErr.message : governorErr);
   }
 
-  // Capture the current status so we can roll back if needed
-  const previousStatus = newsletter.status as string;
-
-  await tc
+  // H-03: Atomic: only transition from draft/approved → sending to prevent race conditions
+  const { data: claimed, error: claimErr } = await tc
     .from("newsletters")
     .update({ status: "sending" })
-    .eq("id", newsletterId);
+    .eq("id", newsletterId)
+    .in("status", ["draft", "approved"])
+    .select("id, status")
+    .single();
+
+  if (claimErr || !claimed) {
+    // Another process got here first, or newsletter is already sent/failed
+    return { error: "Newsletter already being sent or has invalid status" };
+  }
+
+  // Capture the previous status for rollback (we know it was draft or approved)
+  const previousStatus = newsletter.status as string;
 
   try {
     // ── TEXT PIPELINE — clean and validate content before sending ──
@@ -512,8 +550,10 @@ export async function sendNewsletter(newsletterId: string) {
           },
         }).eq("id", newsletterId);
       }
-    } catch {
-      // Don't block sending if pipeline fails
+    } catch (textErr) {
+      // H-02: Log pipeline errors rather than swallowing silently
+      console.error('[newsletter] Text pipeline failed, using raw content:', textErr instanceof Error ? textErr.message : textErr);
+      // Continue with raw content rather than crashing
     }
 
     // ── QUALITY SCORING — rate email before sending ──
@@ -581,8 +621,9 @@ export async function sendNewsletter(newsletterId: string) {
         revalidatePath("/newsletters");
         return { error: `Quality too low (${qualityScore.overall}/10) — kept as draft for review. ${qualityScore.suggestions.join("; ")}`, action: "regenerate" };
       }
-    } catch {
-      // Don't block sending if quality scoring fails
+    } catch (qualityErr) {
+      // H-02: Log quality pipeline errors rather than swallowing silently
+      console.error('[newsletter] Quality pipeline failed, continuing with send:', qualityErr instanceof Error ? qualityErr.message : qualityErr);
     }
 
     const result = await validatedSend({
@@ -734,10 +775,10 @@ export async function getNewsletterAnalytics(days: number = 30) {
     .gte("created_at", since);
 
   const sent = newsletters?.length || 0;
-  const opens = events?.filter((e: any) => e.event_type === "opened").length || 0;
-  const clicks = events?.filter((e: any) => e.event_type === "clicked").length || 0;
-  const bounces = events?.filter((e: any) => e.event_type === "bounced").length || 0;
-  const unsubscribes = events?.filter((e: any) => e.event_type === "unsubscribed").length || 0;
+  const opens = events?.filter((e: { event_type: string }) => e.event_type === "opened").length || 0;
+  const clicks = events?.filter((e: { event_type: string }) => e.event_type === "clicked").length || 0;
+  const bounces = events?.filter((e: { event_type: string }) => e.event_type === "bounced").length || 0;
+  const unsubscribes = events?.filter((e: { event_type: string }) => e.event_type === "unsubscribed").length || 0;
 
   // Group by email type
   const byType: Record<string, { sent: number; opens: number; clicks: number }> = {};
@@ -746,7 +787,7 @@ export async function getNewsletterAnalytics(days: number = 30) {
     byType[n.email_type].sent++;
   }
   for (const e of events || []) {
-    const newsletter = newsletters?.find((n: any) => n.id === e.newsletter_id);
+    const newsletter = newsletters?.find((n: { id: string; email_type: string }) => n.id === e.newsletter_id);
     if (newsletter && byType[newsletter.email_type]) {
       if (e.event_type === "opened") byType[newsletter.email_type].opens++;
       if (e.event_type === "clicked") byType[newsletter.email_type].clicks++;
@@ -849,7 +890,9 @@ export async function sendCampaign(emailType: string, recipients: string, subjec
 }
 
 export async function sendListingBlast(listingId: string, _template: string) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.NODE_ENV === 'production'
+    ? (() => { console.error('[newsletter] NEXT_PUBLIC_APP_URL not set in production!'); return 'https://realtors360.ai'; })()
+    : 'http://localhost:3000');
   try {
     const res = await fetch(`${appUrl}/api/listings/blast`, {
       method: "POST",

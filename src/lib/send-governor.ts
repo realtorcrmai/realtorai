@@ -12,6 +12,7 @@ type GovernorInput = {
   contactId: string;
   contactType: string;
   journeyPhase: string;
+  journeyType?: string; // H-08: caller passes the specific journey type to sunset
   engagementScore: number;
   engagementTrend: string;
   realtorId?: string;
@@ -157,11 +158,18 @@ export async function checkSendGovernor(
   if (sentInPeriod && sentInPeriod >= 5 && (!recentOpens || recentOpens.length === 0)) {
     adjustments.push(`Auto-sunset: 0 opens in ${sunsetDays} days across ${sentInPeriod} emails`);
 
-    // Pause the journey
-    await supabase
+    // H-08: Only pause the specific journey type that triggered sunset (not ALL journeys).
+    // H-09: Single batch UPDATE — no per-row loops.
+    const pauseQuery = supabase
       .from("contact_journeys")
       .update({ is_paused: true })
       .eq("contact_id", input.contactId);
+
+    const finalPauseQuery = input.journeyType
+      ? pauseQuery.eq("journey_type", input.journeyType)
+      : pauseQuery;
+
+    await finalPauseQuery;
 
     return {
       allowed: false,

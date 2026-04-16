@@ -16,6 +16,8 @@ export type EmailData = {
   contact: { name: string; firstName: string; type: string };
   agent: { name: string; brokerage: string; phone: string; initials?: string };
   content: { subject: string; intro: string; body: string; ctaText: string; ctaUrl?: string };
+  unsubscribeUrl?: string;
+  physicalAddress?: string;
   listing?: {
     address: string; area: string; price: string | number;
     beds?: number; baths?: number; sqft?: string; year?: number;
@@ -40,7 +42,8 @@ export type EmailData = {
   socialProof?: { headline?: string; text: string; stats?: { value: string; label: string }[] };
 };
 
-type BlockFn = (data: EmailData) => string;
+type Branding = { name: string; brokerage?: string; phone?: string; initials?: string };
+type BlockFn = (data: EmailData, branding?: Branding) => string;
 
 // ═══════════════════════════════════════════════
 // SHARED STYLES
@@ -54,10 +57,10 @@ const FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','I
 
 const blocks: Record<string, BlockFn> = {
 
-  header: (d) => `
+  header: (d, branding) => `
     <tr><td style="padding:20px 32px 16px;">
       <table width="100%"><tr>
-        <td><span style="font-size:15px;font-weight:700;color:#1d1d1f;letter-spacing:-0.3px;">ListingFlow</span></td>
+        <td><span style="font-size:15px;font-weight:700;color:#1d1d1f;letter-spacing:-0.3px;">${branding?.name ?? 'Your Agent'}</span></td>
         <td align="right"><span style="font-size:11px;color:#86868b;letter-spacing:0.5px;text-transform:uppercase;">${d.content.subject.includes("Welcome") ? "Welcome" : d.listing ? "New Listing" : "Update"}</span></td>
       </tr></table>
     </td></tr>`,
@@ -362,7 +365,7 @@ const blocks: Record<string, BlockFn> = {
 
   cta: (d) => `
     <tr><td style="padding:28px 32px 0;text-align:center;">
-      <a href="${d.content.ctaUrl || "#"}" style="display:inline-block;background:#1d1d1f;color:#fff;padding:16px 48px;border-radius:980px;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:-0.2px;">${d.content.ctaText}</a>
+      <a href="${d.content.ctaUrl || "#"}" class="email-cta-btn" style="display:inline-block;background:#1d1d1f;color:#ffffff;padding:16px 48px;border-radius:980px;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:-0.2px;">${d.content.ctaText}</a>
     </td></tr>`,
 
   agentCard: (d) => `
@@ -383,7 +386,10 @@ const blocks: Record<string, BlockFn> = {
     <tr><td style="padding:24px 32px 20px;text-align:center;">
       <p style="font-size:11px;color:#86868b;margin:0;line-height:1.6;">
         ${d.agent.name} · ${d.agent.brokerage}<br>
-        <a href="#" style="color:#86868b;text-decoration:underline;">Unsubscribe</a> · <a href="#" style="color:#86868b;text-decoration:underline;">Privacy</a>
+        <a href="${d.unsubscribeUrl ?? '#'}" style="color:#86868b;text-decoration:underline;">Unsubscribe</a> · <a href="#" style="color:#86868b;text-decoration:underline;">Privacy</a>
+      </p>
+      <p style="font-size:11px;color:#999;text-align:center;margin:4px 0 0">
+        ${d.physicalAddress ?? 'Please contact us for our mailing address'}
       </p>
     </td></tr>`,
 };
@@ -418,13 +424,33 @@ const TEMPLATE_BLOCKS: Record<string, string[]> = {
 // ASSEMBLER — builds full email HTML from blocks
 // ═══════════════════════════════════════════════
 
-export function assembleEmail(emailType: string, data: EmailData): string {
+export function assembleEmail(
+  emailType: string,
+  data: EmailData,
+  unsubscribeUrl?: string,
+  physicalAddress?: string,
+): string {
   const blockList = TEMPLATE_BLOCKS[emailType] || TEMPLATE_BLOCKS.welcome;
+
+  // Merge CASL-required fields into data so footer block can access them
+  const enrichedData: EmailData = {
+    ...data,
+    unsubscribeUrl: unsubscribeUrl ?? data.unsubscribeUrl,
+    physicalAddress: physicalAddress ?? data.physicalAddress,
+  };
+
+  // Derive branding from agent field for blocks that need it (e.g. header)
+  const branding: Branding = {
+    name: data.agent.name,
+    brokerage: data.agent.brokerage,
+    phone: data.agent.phone,
+    initials: data.agent.initials,
+  };
 
   const renderedBlocks = blockList
     .map(blockName => {
       const fn = blocks[blockName];
-      return fn ? fn(data) : "";
+      return fn ? fn(enrichedData, branding) : "";
     })
     .filter(Boolean)
     .join("\n");
@@ -433,9 +459,10 @@ export function assembleEmail(emailType: string, data: EmailData): string {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <meta name="color-scheme" content="light dark">
 <style>
-  @media(prefers-color-scheme:dark){
+  @media (prefers-color-scheme: dark) {
     .email-body{background:#111!important}
     .email-card{background:#1c1c1e!important}
+    .email-cta-btn{background:#ff5c3a!important;color:#ffffff!important}
   }
   @media(max-width:600px){
     .photo-grid td{display:block!important;width:100%!important;padding:2px 0!important}
