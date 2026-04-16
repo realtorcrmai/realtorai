@@ -446,33 +446,77 @@ ${renderedBlocks}
 </body></html>`;
 }
 
-// Default brand config — used when DB config not available
-const DEFAULT_BRAND = { name: "Kunal", brokerage: "RE/MAX City Realty", phone: "604-555-0123", initials: "K" };
+// Default brand config — used only as last-resort fallback
+const DEFAULT_BRAND = { name: "Your Realtor", brokerage: "", phone: "", initials: "R" };
 
 /**
- * Get brand config from DB or use defaults.
- * Caches for 5 minutes to avoid repeated DB calls.
+ * Get brand config from DB for the authenticated tenant.
+ * Queries realtor_agent_config.brand_config first, then users table as fallback.
+ * Caches for 5 minutes to avoid repeated DB calls per server request.
  */
 let brandCache: { data: typeof DEFAULT_BRAND; expires: number } | null = null;
 
 export async function getBrandConfig(): Promise<typeof DEFAULT_BRAND> {
   if (brandCache && Date.now() < brandCache.expires) return brandCache.data;
   try {
-    const { createAdminClient } = await import("@/lib/supabase/admin");
-    const supabase = createAdminClient();
-    const { data } = await supabase.from("realtor_agent_config").select("brand_config").eq("realtor_id", "demo").single();
-    if (data?.brand_config) {
-      const bc = data.brand_config as Record<string, string>;
+    const { getAuthenticatedTenantClient } = await import("@/lib/supabase/tenant");
+    const tc = await getAuthenticatedTenantClient();
+    const realtorId = tc.realtorId;
+    const supabase = tc.raw;
+
+    // 1. Try realtor_agent_config.brand_config
+    const { data: configRow } = await supabase
+      .from("realtor_agent_config")
+      .select("brand_config")
+      .eq("realtor_id", realtorId)
+      .maybeSingle();
+
+    if (configRow?.brand_config) {
+      const bc = configRow.brand_config as Record<string, string>;
+      if (bc.name) {
+        const initials = bc.name
+          .split(" ")
+          .map((w: string) => w[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2);
+        const brand = {
+          name: bc.name,
+          brokerage: bc.brokerage || DEFAULT_BRAND.brokerage,
+          phone: bc.phone || DEFAULT_BRAND.phone,
+          initials,
+        };
+        brandCache = { data: brand, expires: Date.now() + 300000 };
+        return brand;
+      }
+    }
+
+    // 2. Fallback: users table name + email
+    const { data: userRow } = await supabase
+      .from("users")
+      .select("name, email")
+      .eq("id", realtorId)
+      .maybeSingle();
+
+    if (userRow?.name) {
+      const initials = userRow.name
+        .split(" ")
+        .map((w: string) => w[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
       const brand = {
-        name: bc.name || DEFAULT_BRAND.name,
-        brokerage: bc.brokerage || DEFAULT_BRAND.brokerage,
-        phone: bc.phone || DEFAULT_BRAND.phone,
-        initials: (bc.name || DEFAULT_BRAND.name)[0],
+        name: userRow.name,
+        brokerage: DEFAULT_BRAND.brokerage,
+        phone: DEFAULT_BRAND.phone,
+        initials,
       };
       brandCache = { data: brand, expires: Date.now() + 300000 };
       return brand;
     }
-  } catch {}
+  } catch {
+    // Not authenticated or DB unavailable — fall through to DEFAULT_BRAND
+  }
   return DEFAULT_BRAND;
 }
 
@@ -480,17 +524,18 @@ export async function getBrandConfig(): Promise<typeof DEFAULT_BRAND> {
  * Quick helper — build email with minimal input.
  * Used by seed script and workflow engine.
  */
-export function buildEmailFromType(
+export async function buildEmailFromType(
   emailType: string,
   contactName: string,
   contactType: string,
   subject: string,
   bodyText: string,
   ctaText: string = "View Details",
-): string {
+): Promise<string> {
+  const brand = await getBrandConfig();
   return assembleEmail(emailType, {
     contact: { name: contactName, firstName: contactName.split(" ")[0], type: contactType },
-    agent: DEFAULT_BRAND,
+    agent: brand,
     content: { subject, intro: bodyText, body: "", ctaText },
   });
 }

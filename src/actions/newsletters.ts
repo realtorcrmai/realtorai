@@ -319,7 +319,7 @@ export async function sendNewsletter(newsletterId: string) {
   // Fetch newsletter with full contact data (including buyer_preferences and type)
   const { data: newsletter } = await tc
     .from("newsletters")
-    .select("*, contacts(id, email, name, type, buyer_preferences)")
+    .select("*, contacts(id, email, name, type, buyer_preferences, newsletter_intelligence)")
     .eq("id", newsletterId)
     .single();
 
@@ -357,6 +357,43 @@ export async function sendNewsletter(newsletterId: string) {
     .limit(5);
 
   const lastSubjects = recentNewsletters?.map((n: any) => n.subject).filter(Boolean) || [];
+
+  // ── SEND GOVERNOR — frequency caps + auto-sunset + engagement throttle ──
+  try {
+    const { checkSendGovernor } = await import("@/lib/send-governor");
+    const contactIntel = (contact.newsletter_intelligence as Record<string, unknown>) || {};
+    const engagementScore = typeof contactIntel.engagement_score === "number" ? contactIntel.engagement_score : 50;
+    const engagementTrend = typeof contactIntel.engagement_trend === "string" ? contactIntel.engagement_trend : "stable";
+    const governorResult = await checkSendGovernor({
+      contactId: contact.id,
+      contactType: contact.type || "buyer",
+      journeyPhase: journeyPhase || "lead",
+      engagementScore,
+      engagementTrend,
+      realtorId: tc.realtorId,
+    });
+    if (!governorResult.allowed) {
+      await tc.from("newsletters").update({
+        status: "deferred",
+        ai_context: {
+          ...((newsletter.ai_context as object) || {}),
+          governor_blocked: true,
+          governor_reason: governorResult.reason,
+          governor_suggested_delay_hours: governorResult.suggestedDelay,
+          governor_adjustments: governorResult.adjustments,
+        },
+      }).eq("id", newsletterId);
+      revalidatePath("/newsletters");
+      return {
+        error: `Send deferred by governor: ${governorResult.reason}`,
+        action: "deferred",
+        suggestedDelay: governorResult.suggestedDelay,
+      };
+    }
+  } catch (governorErr) {
+    // Fail open — log warning and continue
+    console.warn("[sendNewsletter] send-governor check failed, continuing:", governorErr instanceof Error ? governorErr.message : governorErr);
+  }
 
   // Capture the current status so we can roll back if needed
   const previousStatus = newsletter.status as string;

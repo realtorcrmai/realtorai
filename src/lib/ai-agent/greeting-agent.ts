@@ -263,7 +263,7 @@ export async function evaluateGreetings(): Promise<{
       // Use Apple-quality email block system
       const { buildEmailFromType } = await import("@/lib/email-blocks");
       const emailBlockType = decision.occasion === "home_anniversary" ? "home_anniversary" : "welcome";
-      const html = buildEmailFromType(
+      const html = await buildEmailFromType(
         emailBlockType,
         candidate?.contactName || "Friend",
         candidate?.contactType || "buyer",

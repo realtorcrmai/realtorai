@@ -53,6 +53,8 @@ export interface NewsletterContext {
       area?: string;
       date: string;
     }>;
+    /** Raw newsletter_intelligence JSONB from contacts table */
+    newsletter_intelligence?: Record<string, unknown> | null;
     aiHints?: {
       tone?: string;
       interests?: string[];
@@ -177,6 +179,34 @@ ${hints.relationship_stage ? `- Relationship: ${hints.relationship_stage}` : ""}
 ${hints.note ? `- Note: ${hints.note}` : ""}
 Use these hints to personalize the content. They are based on the contact's actual click behavior and engagement patterns.` : "";
 
+  // Build contact intelligence block from newsletter_intelligence JSONB
+  let intelligenceBlock = "";
+  const intel = context.contact.newsletter_intelligence;
+  if (intel) {
+    const score = typeof intel.engagement_score === "number" ? intel.engagement_score : 0;
+    const clickHistory = Array.isArray(intel.click_history) ? intel.click_history as Array<{ topic?: string; link_type?: string; area?: string }> : [];
+    const inferredInterests = Array.isArray(intel.inferred_interests) ? (intel.inferred_interests as string[]) : [];
+    const lastClickedAt = typeof intel.last_clicked_at === "string" ? intel.last_clicked_at : null;
+
+    const hasMeaningfulData = score > 0 || clickHistory.length > 0;
+    if (hasMeaningfulData) {
+      const scoreLabel = score >= 70 ? "high" : score >= 40 ? "medium" : "low";
+      const recentTopics = clickHistory
+        .slice(-5)
+        .map((c) => c.topic || c.link_type || c.area)
+        .filter(Boolean)
+        .join(", ");
+
+      intelligenceBlock = `
+
+CONTACT INTELLIGENCE:
+- Engagement score: ${score}/100 (${scoreLabel})${lastClickedAt ? ` — last clicked ${lastClickedAt.split("T")[0]}` : ""}
+${recentTopics ? `- Recent click interests: ${recentTopics}` : ""}
+${inferredInterests.length ? `- Inferred property interests: ${inferredInterests.join(", ")}` : ""}
+Use this to personalize the email angle — emphasize what this contact has shown interest in.`;
+    }
+  }
+
   return `You are a real estate email copywriter for ${context.realtor.name}${context.realtor.brokerage ? ` at ${context.realtor.brokerage}` : ""}.
 
 Write warm, professional, personal emails that feel like they're from a trusted advisor — NOT a marketing machine.
@@ -188,7 +218,7 @@ CONTENT BEST PRACTICES (BC real estate):
 - CTA: One clear action per email. "Book a Showing" not "Learn More"
 - Local flavor: Reference specific BC neighborhoods, schools, parks, transit by name
 - Length: 150-300 words for market updates, 100-200 for listing alerts
-${hintsBlock}
+${hintsBlock}${intelligenceBlock}
 
 Rules:
 - Keep it concise (150-250 words for the body)
