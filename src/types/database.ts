@@ -25,6 +25,7 @@ export interface Database {
           address: string | null;
           buyer_preferences: Json | null;
           source: string | null;
+          postal_code: string | null;
           tags: Json;
           lead_status: string;
           partner_type: string | null;
@@ -59,6 +60,7 @@ export interface Database {
           address?: string | null;
           buyer_preferences?: Json | null;
           source?: string | null;
+          postal_code?: string | null;
           tags?: Json;
           lead_status?: string;
           partner_type?: string | null;
@@ -93,6 +95,7 @@ export interface Database {
           address?: string | null;
           buyer_preferences?: Json | null;
           source?: string | null;
+          postal_code?: string | null;
           tags?: Json;
           lead_status?: string;
           partner_type?: string | null;
