@@ -5,7 +5,7 @@ import { createHmac } from "crypto";
 /**
  * POST /api/webhooks/resend
  * Handle Resend webhook events with signature verification.
- * Events: email.delivered, email.opened, email.clicked, email.bounced, email.complained
+ * Events: email.delivered, email.opened, email.clicked, email.bounced, email.complained, email.unsubscribed
  */
 export async function POST(request: NextRequest) {
   const supabase = createAdminClient();
@@ -48,6 +48,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
+    // Handle unsubscribe and complaint events by email address (no newsletter_id needed)
+    if (type === "email.unsubscribed" || type === "email.complained") {
+      const email = data.email?.to?.[0] || data.to;
+      if (email) {
+        await supabase
+          .from("contacts")
+          .update({ newsletter_unsubscribed: true, updated_at: new Date().toISOString() })
+          .eq("email", email);
+
+        // Also pause journeys if we can resolve the contact
+        if (type === "email.complained") {
+          const { data: contact } = await supabase
+            .from("contacts")
+            .select("id")
+            .eq("email", email)
+            .maybeSingle();
+          if (contact?.id) {
+            await supabase
+              .from("contact_journeys")
+              .update({ is_paused: true, pause_reason: "complained" })
+              .eq("contact_id", contact.id);
+          }
+        }
+      }
+      return NextResponse.json({ ok: true });
+    }
+
     // Extract newsletter_id from tags
     const newsletterId = data.tags?.find((t: { name: string; value: string }) => t.name === "newsletter_id")?.value;
     if (!newsletterId) {
@@ -81,17 +108,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // Deduplicate events (check if same event already logged within 60s)
-    const dedupeWindow = new Date(Date.now() - 60000).toISOString();
-    const { data: existingEvent } = await supabase
-      .from("newsletter_events")
-      .select("id")
-      .eq("newsletter_id", newsletterId)
-      .eq("event_type", eventType)
-      .eq("link_url", data.click?.link || "")
-      .gte("created_at", dedupeWindow)
-      .limit(1)
-      .maybeSingle();
+    // Deduplicate events — different strategy for opens vs clicks
+    // Opens: deduplicate on (newsletter_id, contact_id, event_type) within 1-hour window
+    // Clicks: deduplicate on link_url within 60-second window (avoid double-fire)
+    let existingEvent = null;
+    if (eventType === "opened") {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { data: found } = await supabase
+        .from("newsletter_events")
+        .select("id")
+        .eq("newsletter_id", newsletterId)
+        .eq("contact_id", contactId)
+        .eq("event_type", "opened")
+        .gte("created_at", oneHourAgo)
+        .limit(1)
+        .maybeSingle();
+      existingEvent = found;
+    } else {
+      const dedupeWindow = new Date(Date.now() - 60000).toISOString();
+      const { data: found } = await supabase
+        .from("newsletter_events")
+        .select("id")
+        .eq("newsletter_id", newsletterId)
+        .eq("event_type", eventType)
+        .eq("link_url", data.click?.link || "")
+        .gte("created_at", dedupeWindow)
+        .limit(1)
+        .maybeSingle();
+      existingEvent = found;
+    }
 
     if (existingEvent) {
       return NextResponse.json({ ok: true }); // Already processed
@@ -129,7 +174,37 @@ export async function POST(request: NextRequest) {
 
     // Update contact intelligence on engagement events
     if (eventType === "opened" || eventType === "clicked") {
-      await updateContactIntelligence(supabase, contactId, eventType, linkType, linkUrl, scoreImpact);
+      const updatedIntel = await updateContactIntelligence(
+        supabase,
+        contactId,
+        eventType,
+        linkType,
+        linkUrl,
+        scoreImpact,
+        data,
+        newsletterId,
+      );
+
+      // Advance journey phase on high-intent action
+      if (scoreImpact >= 25 && updatedIntel) {
+        try {
+          const { advanceJourneyPhase } = await import("@/actions/journeys");
+          type JourneyType = "buyer" | "seller" | "customer" | "agent";
+          type JourneyPhase = "lead" | "active" | "under_contract" | "past_client" | "dormant";
+          const currentPhase = (updatedIntel.current_journey_phase ?? "lead") as JourneyPhase;
+          const phaseProgression: Partial<Record<JourneyPhase, JourneyPhase>> = {
+            lead: "active",
+            // active stays active — don't over-advance on a single click
+          };
+          const nextPhase = phaseProgression[currentPhase];
+          const resolvedType = (updatedIntel.contact_type ?? "buyer") as JourneyType;
+          if (nextPhase && currentPhase !== nextPhase) {
+            await advanceJourneyPhase(contactId, resolvedType, nextPhase);
+          }
+        } catch (e) {
+          console.warn("[webhook] Could not advance journey on high-intent click:", e);
+        }
+      }
 
       // Emit agent events for AI evaluation
       try {
@@ -197,11 +272,14 @@ interface ClickClassification {
 
 const CLICK_CATEGORIES: { type: string; score_impact: number; keywords: string[] }[] = [
   { type: "book_showing", score_impact: 30, keywords: ["showing", "book", "schedule", "tour"] },
-  { type: "get_cma", score_impact: 30, keywords: ["cma", "valuation", "home-value", "appraisal"] },
+  { type: "get_cma", score_impact: 30, keywords: ["cma", "appraisal"] },
+  { type: "get_valuation", score_impact: 30, keywords: ["valuation", "home-value"] },
+  { type: "seller_inquiry", score_impact: 25, keywords: ["list", "sell", "seller"] },
   { type: "mortgage_calc", score_impact: 20, keywords: ["mortgage", "calculator", "rate", "payment"] },
   { type: "listing", score_impact: 15, keywords: ["listing", "property", "home", "house", "mls"] },
   { type: "investment", score_impact: 15, keywords: ["investment", "rental", "roi", "income"] },
   { type: "open_house_rsvp", score_impact: 15, keywords: ["rsvp", "open-house", "register"] },
+  { type: "market_research", score_impact: 15, keywords: ["market-report", "market_report"] },
   { type: "school_info", score_impact: 10, keywords: ["school", "education", "district"] },
   { type: "market_stats", score_impact: 10, keywords: ["market", "stats", "report", "trend"] },
   { type: "neighbourhood", score_impact: 10, keywords: ["neighbourhood", "neighborhood", "area", "community"] },
@@ -219,37 +297,51 @@ function classifyClick(url: string): ClickClassification {
   return { type: "other", score_impact: 5 };
 }
 
+/**
+ * Returns an object with current_journey_phase and contact_type for downstream use,
+ * or null if the contact could not be fetched.
+ */
 async function updateContactIntelligence(
   supabase: ReturnType<typeof createAdminClient>,
   contactId: string,
   eventType: string,
   linkType: string | null,
   linkUrl: string | null,
-  scoreImpact: number = 5
-) {
+  scoreImpact: number = 5,
+  eventData: Record<string, any> = {},
+  newsletterId: string | null = null,
+): Promise<{ current_journey_phase: string | null; contact_type: string | null } | null> {
   const { data: contact } = await supabase
     .from("contacts")
-    .select("newsletter_intelligence, name")
+    .select("newsletter_intelligence, name, type")
     .eq("id", contactId)
     .single();
+
+  if (!contact) return null;
 
   const intel: Record<string, any> = (contact?.newsletter_intelligence as Record<string, any>) || {};
 
   if (eventType === "opened") {
     intel.total_opens = (intel.total_opens || 0) + 1;
-    intel.last_opened = new Date().toISOString();
+    const now = new Date().toISOString();
+    intel.last_opened = now;
+    intel.last_opened_at = now; // alias for compatibility
   }
 
   if (eventType === "clicked") {
     intel.total_clicks = (intel.total_clicks || 0) + 1;
-    intel.last_clicked = new Date().toISOString();
+    const now = new Date().toISOString();
+    intel.last_clicked = now;
+    intel.last_clicked_at = now; // alias for compatibility
 
-    // Click history (keep last 50)
+    // Click history (keep last 50) — include email_type and newsletter_id for AI correlation
     if (!intel.click_history) intel.click_history = [];
     intel.click_history.push({
       link_type: linkType,
       link_url: linkUrl,
       clicked_at: new Date().toISOString(),
+      email_type: eventData.email_type || eventData.tags?.email_type || "unknown",
+      newsletter_id: eventData.tags?.newsletter_id || newsletterId || null,
     });
     if (intel.click_history.length > 50) {
       intel.click_history = intel.click_history.slice(-50);
@@ -263,7 +355,10 @@ async function updateContactIntelligence(
     if (linkType === "school_info" && !tags.includes("family")) tags.push("family");
     if (linkType === "listing" && !tags.includes("active_searcher")) tags.push("active_searcher");
     if (linkType === "get_cma" && !tags.includes("considering_selling")) tags.push("considering_selling");
+    if (linkType === "get_valuation" && !tags.includes("considering_selling")) tags.push("considering_selling");
+    if (linkType === "seller_inquiry" && !tags.includes("considering_selling")) tags.push("considering_selling");
     if (linkType === "market_stats") intel.content_preference = "data_driven";
+    if (linkType === "market_research") intel.content_preference = "data_driven";
     if (linkType === "neighbourhood") intel.content_preference = "lifestyle";
     if (linkType === "investment" && !tags.includes("investor")) tags.push("investor");
     if (linkType === "mortgage_calc" && !tags.includes("financing")) tags.push("financing");
@@ -282,9 +377,30 @@ async function updateContactIntelligence(
     }
   }
 
-  // Engagement score: add click/open score impact, capped at 100
+  // Engagement score: apply time-based decay, then add event impact, cap at 100
   const currentScore = intel.engagement_score || 0;
-  intel.engagement_score = Math.min(100, currentScore + scoreImpact);
+  const previousScore = currentScore;
+
+  const daysSinceLastEngagement = intel.last_opened
+    ? (Date.now() - new Date(intel.last_opened).getTime()) / (1000 * 60 * 60 * 24)
+    : 0;
+  const decayedScore = daysSinceLastEngagement > 60
+    ? Math.max(0, currentScore - Math.floor(daysSinceLastEngagement / 30) * 5)
+    : currentScore;
+
+  const newScore = Math.min(100, decayedScore + scoreImpact);
+  intel.engagement_score = newScore;
+
+  // Engagement trend
+  const daysSinceLastOpen = intel.last_opened
+    ? (Date.now() - new Date(intel.last_opened).getTime()) / (1000 * 60 * 60 * 24)
+    : 999;
+  const engagement_trend = daysSinceLastOpen > 30
+    ? "declining"
+    : newScore > previousScore + 5
+      ? "improving"
+      : "stable";
+  intel.engagement_trend = engagement_trend;
 
   await supabase
     .from("contacts")
@@ -296,6 +412,8 @@ async function updateContactIntelligence(
     const labelMap: Record<string, string> = {
       book_showing: "Book a Showing",
       get_cma: "Get a CMA / Home Valuation",
+      get_valuation: "Get a Home Valuation",
+      seller_inquiry: "Seller / Listing Inquiry",
     };
     const label = labelMap[linkType] || linkType.replace(/_/g, " ");
 
@@ -315,4 +433,19 @@ async function updateContactIntelligence(
       action_url: `/contacts/${contactId}`,
     });
   }
+
+  // Resolve current journey phase for caller (used for journey advancement)
+  const { data: journey } = await supabase
+    .from("contact_journeys")
+    .select("current_phase")
+    .eq("contact_id", contactId)
+    .eq("is_paused", false)
+    .order("enrolled_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return {
+    current_journey_phase: journey?.current_phase ?? null,
+    contact_type: contact.type ?? null,
+  };
 }

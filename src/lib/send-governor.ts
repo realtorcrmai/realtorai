@@ -25,6 +25,19 @@ type GovernorResult = {
 };
 
 /**
+ * Phase-aware frequency caps.
+ * These are the defaults used when no realtor config is present, or as a
+ * floor so realtor config cannot send faster than these limits.
+ */
+const PHASE_FREQUENCY_CAPS: Record<string, { maxPerDay: number; minHoursBetween: number }> = {
+  lead: { maxPerDay: 1, minHoursBetween: 72 },          // 1/3 days — don't overwhelm new leads
+  active: { maxPerDay: 1, minHoursBetween: 48 },        // every 2 days — actively engaged
+  under_contract: { maxPerDay: 1, minHoursBetween: 24 }, // daily updates ok during contract
+  past_client: { maxPerDay: 1, minHoursBetween: 168 },  // weekly max for past clients
+  dormant: { maxPerDay: 1, minHoursBetween: 336 },       // every 2 weeks max for dormant
+};
+
+/**
  * Check if the send governor allows sending to this contact.
  * More sophisticated than compliance gate — considers engagement trends,
  * per-phase caps, and realtor config.
@@ -46,17 +59,52 @@ export async function checkSendGovernor(
     config = data;
   }
 
-  const frequencyCaps = (config?.frequency_caps as Record<string, { per_week?: number; per_month?: number; min_gap_hours: number }>) || {
-    lead: { per_week: 2, min_gap_hours: 48 },
-    active: { per_week: 3, min_gap_hours: 18 },
-    under_contract: { per_week: 1, min_gap_hours: 72 },
-    past_client: { per_month: 2, min_gap_hours: 168 },
-    dormant: { per_month: 1, min_gap_hours: 336 },
+  // Phase-aware caps — use PHASE_FREQUENCY_CAPS as the source of truth.
+  // Realtor config's frequency_caps can override min_gap_hours but we still
+  // enforce the phase defaults as a reasonable baseline.
+  const realtorFrequencyCaps = (config?.frequency_caps as Record<string, { per_week?: number; per_month?: number; min_gap_hours: number }>) || {};
+
+  // Resolve the active phase cap: prefer phase-aware defaults, allow realtor
+  // config to extend min_gap_hours (but never shorten below phase minimum).
+  const phase = input.journeyPhase || "lead";
+  const phaseDefault = PHASE_FREQUENCY_CAPS[phase] ?? PHASE_FREQUENCY_CAPS.lead;
+  const realtorPhaseCap = realtorFrequencyCaps[phase];
+
+  const minHoursBetween = realtorPhaseCap?.min_gap_hours
+    ? Math.max(phaseDefault.minHoursBetween, realtorPhaseCap.min_gap_hours)
+    : phaseDefault.minHoursBetween;
+
+  const phaseCap = {
+    ...phaseDefault,
+    min_gap_hours: minHoursBetween,
   };
 
-  const phaseCap = frequencyCaps[input.journeyPhase] || frequencyCaps.lead;
+  // 2. Enforce phase-aware minimum gap between sends
+  const gapCutoff = new Date(Date.now() - minHoursBetween * 60 * 60 * 1000).toISOString();
+  const { data: recentSend } = await supabase
+    .from("newsletters")
+    .select("id, sent_at")
+    .eq("contact_id", input.contactId)
+    .eq("status", "sent")
+    .gte("sent_at", gapCutoff)
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  // 2. Engagement-based throttling
+  if (recentSend) {
+    const sentAt = new Date(recentSend.sent_at).getTime();
+    const hoursAgo = (Date.now() - sentAt) / (1000 * 60 * 60);
+    const hoursRemaining = Math.ceil(minHoursBetween - hoursAgo);
+    adjustments.push(`Phase "${phase}" cap: min ${minHoursBetween}h between sends`);
+    return {
+      allowed: false,
+      reason: `Too soon for phase "${phase}" — last email ${Math.floor(hoursAgo)}h ago, next in ${hoursRemaining}h`,
+      suggestedDelay: hoursRemaining,
+      adjustments,
+    };
+  }
+
+  // 3. Engagement-based throttling
   if (input.engagementTrend === "declining" && input.engagementScore < 30) {
     // Reduce frequency for declining contacts
     adjustments.push("Engagement declining — reducing frequency to 1/2 weeks");
@@ -78,7 +126,7 @@ export async function checkSendGovernor(
     }
   }
 
-  // 3. Auto-sunset check (0 opens in 90 days)
+  // 4. Auto-sunset check (0 opens in 90 days)
   const sunsetDays = (config?.auto_sunset_days as number) || 90;
   const sunsetCutoff = new Date(Date.now() - sunsetDays * 24 * 60 * 60 * 1000).toISOString();
 
@@ -123,7 +171,7 @@ export async function checkSendGovernor(
     };
   }
 
-  // 4. Skip weekends check
+  // 5. Skip weekends check
   const skipWeekends = (config?.skip_weekends as boolean) || false;
   if (skipWeekends) {
     const day = new Date().getDay();
@@ -137,7 +185,7 @@ export async function checkSendGovernor(
     }
   }
 
-  // 5. Master switch check
+  // 6. Master switch check
   const sendingEnabled = config?.sending_enabled !== false;
   if (!sendingEnabled) {
     return {
@@ -151,7 +199,7 @@ export async function checkSendGovernor(
   return {
     allowed: true,
     reason: null,
-    suggestedDelay: phaseCap.min_gap_hours,
+    suggestedDelay: phaseCap.minHoursBetween,
     adjustments,
   };
 }
