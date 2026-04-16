@@ -366,6 +366,21 @@ export async function updateListingStatus(
     } catch {
       // Don't fail status update if blast fails
     }
+
+    // Enroll seller in journey when listing goes active
+    try {
+      const { autoEnrollNewContact } = await import("@/actions/journeys");
+      const { data: activeListing } = await tc
+        .from("listings")
+        .select("seller_id")
+        .eq("id", id)
+        .single();
+      if (activeListing?.seller_id) {
+        await autoEnrollNewContact(activeListing.seller_id, "seller");
+      }
+    } catch (e) {
+      console.warn("[listings] Could not enroll seller in journey:", e);
+    }
   }
 
   // Fire listing_status_change trigger for workflow auto-enrollment (e.g., post-close workflows)

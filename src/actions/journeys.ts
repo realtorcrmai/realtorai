@@ -45,7 +45,11 @@ const JOURNEY_SCHEDULES: Record<JourneyType, Record<JourneyPhase, Array<{ emailT
     active: [
       { emailType: "market_update", delayHours: 168 },
     ],
-    under_contract: [],
+    under_contract: [
+      { emailType: "closing_checklist", delayHours: 0 },
+      { emailType: "inspection_reminder", delayHours: 72 },
+      { emailType: "closing_countdown", delayHours: 168 },
+    ],
     past_client: [
       { emailType: "market_update", delayHours: 720 },
       { emailType: "referral_ask", delayHours: 2160 },
@@ -86,6 +90,15 @@ const JOURNEY_SCHEDULES: Record<JourneyType, Record<JourneyPhase, Array<{ emailT
 export async function enrollContactInJourney(contactId: string, journeyType: JourneyType) {
   const tc = await getAuthenticatedTenantClient();
 
+  // Validate contact type matches journey type
+  const { data: contact } = await tc.from("contacts").select("type").eq("id", contactId).single();
+  if (contact && journeyType === "buyer" && !["buyer", "customer"].includes(contact.type)) {
+    console.warn(`[journeys] Contact ${contactId} type=${contact.type} enrolled in buyer journey — mismatch`);
+  }
+  if (contact && journeyType === "seller" && contact.type !== "seller") {
+    console.warn(`[journeys] Contact ${contactId} type=${contact.type} enrolled in seller journey — mismatch`);
+  }
+
   // Get first email schedule
   const schedule = JOURNEY_SCHEDULES[journeyType].lead;
   const nextEmailAt = schedule.length > 0
@@ -122,6 +135,15 @@ export async function advanceJourneyPhase(
 ) {
   const tc = await getAuthenticatedTenantClient();
 
+  // Capture old phase for audit log
+  const { data: currentJourney } = await tc
+    .from("contact_journeys")
+    .select("current_phase")
+    .eq("contact_id", contactId)
+    .eq("journey_type", journeyType)
+    .single();
+  const oldPhase = currentJourney?.current_phase ?? "unknown";
+
   const schedule = JOURNEY_SCHEDULES[journeyType][newPhase];
   const nextEmailAt = schedule.length > 0
     ? new Date(Date.now() + schedule[0].delayHours * 3600000).toISOString()
@@ -140,6 +162,19 @@ export async function advanceJourneyPhase(
     .eq("journey_type", journeyType);
 
   if (error) return { error: error.message };
+
+  // Audit log — non-blocking
+  try {
+    await tc.from("communications").insert({
+      contact_id: contactId,
+      direction: "internal",
+      channel: "system",
+      body: `Journey phase advanced: ${oldPhase} → ${newPhase} (${journeyType})`,
+      created_at: new Date().toISOString(),
+    });
+  } catch {
+    // Don't fail phase advancement if audit log fails
+  }
 
   // Fire phase_changed trigger — pauses irrelevant workflows, enrolls new ones
   try {
@@ -182,7 +217,7 @@ export async function resumeJourney(contactId: string, journeyType: JourneyType)
     .update({
       is_paused: false,
       pause_reason: null,
-      next_email_at: new Date().toISOString(),
+      next_email_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq("contact_id", contactId)
@@ -311,7 +346,7 @@ export async function processJourneyQueue() {
         emailConfig.emailType,
         journey.current_phase,
         journey.id,
-        journey.send_mode || "review"
+        "auto"
       );
 
       // Schedule next email
