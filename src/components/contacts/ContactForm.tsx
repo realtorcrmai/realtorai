@@ -26,6 +26,7 @@ import {
 import { createContact, updateContact } from "@/actions/contacts";
 import { Plus, Trash2 } from "lucide-react";
 import type { Contact } from "@/types";
+import { formatPhone, formatPostalCode, normalizePhoneE164, titleCaseName } from "@/lib/format";
 
 const SOCIAL_PLATFORMS = [
   { key: "instagram", label: "Instagram", icon: "📸", placeholder: "username" },
@@ -53,6 +54,13 @@ const formSchema = z.object({
   pref_channel: z.enum(["whatsapp", "sms"]),
   notes: z.string().optional(),
   address: z.string().optional(),
+  postal_code: z.string()
+    .optional()
+    .or(z.literal(""))
+    .refine(
+      (v) => !v || /^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$/.test(v) || /^\d{5}(-\d{4})?$/.test(v),
+      { message: "Postal code must be Canadian (V5K 0A1) or US (12345)" }
+    ),
   referred_by_id: z.string().uuid().optional().or(z.literal("")),
   source: z.string().optional(),
   lead_status: z.enum(LEAD_STATUSES).optional(),
@@ -118,6 +126,7 @@ export function ContactFormContent({
           pref_channel: contact.pref_channel as FormData["pref_channel"],
           notes: contact.notes ?? "",
           address: contact.address ?? "",
+          postal_code: contact.postal_code ?? "",
           referred_by_id: contact.referred_by_id ?? "",
           source: contact.source ?? "",
           lead_status: (contact.lead_status ?? "new") as FormData["lead_status"],
@@ -144,8 +153,16 @@ export function ContactFormContent({
   const selectedType = watch("type");
 
   function buildPayload(data: FormData) {
+    // Normalize phone to E.164 at the payload boundary so storage is canonical
+    // regardless of how the user typed it. Display format is rehydrated via
+    // formatPhone() wherever the phone is rendered.
+    const phoneE164 = normalizePhoneE164(data.phone);
     return {
       ...data,
+      phone: phoneE164 ?? data.phone,
+      email: data.email?.trim().toLowerCase() || undefined,
+      name: data.name.trim(),
+      postal_code: data.postal_code?.trim() || undefined,
       social_profiles: Object.keys(socialProfiles).length > 0 ? socialProfiles : undefined,
       ...(data.type !== "partner" && {
         partner_type: undefined,
@@ -195,7 +212,15 @@ export function ContactFormContent({
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
         <Label htmlFor="name">Name</Label>
-        <Input {...register("name")} id="name" placeholder="John Doe" aria-describedby={errors.name ? "name-error" : undefined} aria-invalid={!!errors.name} />
+        <Input
+          {...register("name", {
+            onBlur: (e) => setValue("name", titleCaseName(e.target.value), { shouldValidate: true, shouldDirty: true }),
+          })}
+          id="name"
+          placeholder="John Doe"
+          aria-describedby={errors.name ? "name-error" : undefined}
+          aria-invalid={!!errors.name}
+        />
         {errors.name && (
           <p id="name-error" className="text-sm text-red-600 mt-1" role="alert">
             {errors.name.message}
@@ -205,7 +230,16 @@ export function ContactFormContent({
 
       <div>
         <Label htmlFor="phone">Phone</Label>
-        <Input {...register("phone")} id="phone" placeholder="604-555-0123" aria-describedby={errors.phone ? "phone-error" : undefined} aria-invalid={!!errors.phone} />
+        <Input
+          {...register("phone", {
+            onBlur: (e) => setValue("phone", formatPhone(e.target.value), { shouldValidate: true, shouldDirty: true }),
+          })}
+          id="phone"
+          type="tel"
+          placeholder="+1 (604) 555-0123"
+          aria-describedby={errors.phone ? "phone-error" : undefined}
+          aria-invalid={!!errors.phone}
+        />
         {errors.phone && (
           <p id="phone-error" className="text-sm text-red-600 mt-1" role="alert">
             {errors.phone.message}
@@ -216,7 +250,9 @@ export function ContactFormContent({
       <div>
         <Label htmlFor="email">Email (optional)</Label>
         <Input
-          {...register("email")}
+          {...register("email", {
+            onBlur: (e) => setValue("email", e.target.value.trim().toLowerCase(), { shouldValidate: true, shouldDirty: true }),
+          })}
           placeholder="john@example.com"
           type="email"
         />
@@ -330,14 +366,34 @@ export function ContactFormContent({
         </div>
       )}
 
-      <div>
-        <Label htmlFor="address">Address (optional)</Label>
-        <AddressAutocompleteInput
-          value={watch("address") ?? ""}
-          onChange={(val) => setValue("address", val, { shouldValidate: false })}
-          placeholder="123 Main St, Vancouver, BC"
-          disabled={submitting}
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="sm:col-span-2">
+          <Label htmlFor="address">Address (optional)</Label>
+          <AddressAutocompleteInput
+            value={watch("address") ?? ""}
+            onChange={(val) => setValue("address", val, { shouldValidate: false })}
+            placeholder="123 Main St, Vancouver, BC"
+            disabled={submitting}
+          />
+        </div>
+        <div>
+          <Label htmlFor="postal_code">Postal Code (optional)</Label>
+          <Input
+            {...register("postal_code", {
+              onBlur: (e) => setValue("postal_code", formatPostalCode(e.target.value), { shouldValidate: true, shouldDirty: true }),
+            })}
+            id="postal_code"
+            placeholder="V5K 0A1"
+            maxLength={7}
+            aria-describedby={errors.postal_code ? "postal-error" : undefined}
+            aria-invalid={!!errors.postal_code}
+          />
+          {errors.postal_code && (
+            <p id="postal-error" className="text-sm text-red-600 mt-1" role="alert">
+              {errors.postal_code.message}
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

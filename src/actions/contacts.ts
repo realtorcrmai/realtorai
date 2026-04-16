@@ -74,6 +74,7 @@ export async function createContact(formData: ContactFormData, force = false) {
       pref_channel: parsed.data.pref_channel,
       notes: parsed.data.notes || null,
       address: parsed.data.address || null,
+      postal_code: parsed.data.postal_code || null,
       referred_by_id: parsed.data.referred_by_id || null,
       source: parsed.data.source || null,
       lead_status: parsed.data.lead_status || "new",
@@ -192,6 +193,7 @@ export async function updateContact(
   if (formData.pref_channel !== undefined) updatePayload.pref_channel = formData.pref_channel;
   if (formData.notes !== undefined) updatePayload.notes = formData.notes || null;
   if (formData.address !== undefined) updatePayload.address = formData.address || null;
+  if (formData.postal_code !== undefined) updatePayload.postal_code = formData.postal_code || null;
   if (formData.referred_by_id !== undefined) updatePayload.referred_by_id = formData.referred_by_id || null;
   if (formData.family_members !== undefined) updatePayload.family_members = formData.family_members;
   if (formData.buyer_preferences !== undefined) updatePayload.buyer_preferences = formData.buyer_preferences;

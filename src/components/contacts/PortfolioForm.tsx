@@ -8,6 +8,7 @@ import { AddressAutocompleteInput } from "@/components/shared/AddressAutocomplet
 import type { AddressSuggestion } from "@/components/shared/AddressAutocompleteInput";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { formatPhone, formatPostalCode, formatCurrency, unformatCurrency } from "@/lib/format";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -112,40 +113,6 @@ const PROPERTY_TYPES = [
   "Duplex", "Triplex", "Fourplex", "Multi-Family",
   "Commercial", "Industrial", "Land/Lot", "Mixed-Use", "Other",
 ];
-
-// ── Formatters ──────────────────────────────────────────────
-
-/** Format Canadian postal code: "v5k0a1" → "V5K 0A1" */
-function formatPostalCode(raw: string): string {
-  const cleaned = raw.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-  if (cleaned.length <= 3) return cleaned;
-  return cleaned.slice(0, 3) + " " + cleaned.slice(3, 6);
-}
-
-/** Format phone: strip non-digits, add +1 prefix and grouping: +1 (604) 555-0100 */
-function formatPhone(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
-  if (digits.length === 0) return "";
-  // If starts with 1 and has 11 digits, or 10 digits without leading 1
-  const national = digits.startsWith("1") && digits.length >= 11
-    ? digits.slice(1, 11)
-    : digits.slice(0, 10);
-  if (national.length <= 3) return national;
-  if (national.length <= 6) return `(${national.slice(0, 3)}) ${national.slice(3)}`;
-  return `+1 (${national.slice(0, 3)}) ${national.slice(3, 6)}-${national.slice(6, 10)}`;
-}
-
-/** Format currency input: "950000" → "950,000" (display only, strips commas for storage) */
-function formatCurrency(raw: string): string {
-  const digits = raw.replace(/[^0-9]/g, "");
-  if (!digits) return "";
-  return Number(digits).toLocaleString("en-CA");
-}
-
-/** Strip formatting to get raw number string */
-function unformatCurrency(formatted: string): string {
-  return formatted.replace(/[^0-9]/g, "");
-}
 
 // ── Sub-components ─────────────────────────────────────────
 
