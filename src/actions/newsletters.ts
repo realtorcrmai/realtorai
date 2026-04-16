@@ -472,6 +472,19 @@ export async function sendNewsletter(newsletterId: string) {
       const decision = makeQualityDecision(qualityScore);
       await recordQualityOutcome(newsletterId, qualityScore.overall, qualityScore.dimensions);
 
+      // Fix #5: persist quality score on the newsletter row regardless of outcome
+      try {
+        await tc
+          .from("newsletters")
+          .update({
+            quality_score: qualityScore.overall,
+            quality_checked_at: new Date().toISOString(),
+          })
+          .eq("id", newsletterId);
+      } catch {
+        // quality_score column may not exist yet — fail silently
+      }
+
       if (decision.action === "block") {
         await tc.from("newsletters").update({
           status: "failed",

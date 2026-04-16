@@ -601,6 +601,38 @@ export async function runPreSendChecks(
 }
 
 /**
+ * Fix #4: Phase-aware CTA helper.
+ * Returns the right call-to-action text and URL based on contact type and journey phase.
+ * Callers can override with a custom CTA by passing the `customCTA` parameter.
+ */
+export function getPhaseAwareCTA(
+  contactType: string,
+  journeyPhase: string,
+  customCTA?: { text: string; url: string }
+): { text: string; url: string } {
+  if (customCTA) return customCTA;
+
+  const ctaMap: Record<string, Record<string, { text: string; url: string }>> = {
+    buyer: {
+      lead: { text: "Get Your Free Market Report", url: "#market-report" },
+      active: { text: "Book a Private Showing", url: "#book-showing" },
+      under_contract: { text: "Track Your Closing Milestones", url: "#closing" },
+      past_client: { text: "See What Your Home Is Worth Now", url: "#valuation" },
+      dormant: { text: "See What's New in Your Area", url: "#new-listings" },
+    },
+    seller: {
+      lead: { text: "Get Your Free Home Valuation", url: "#valuation" },
+      active: { text: "Review Your Marketing Plan", url: "#marketing" },
+      under_contract: { text: "View Your Closing Checklist", url: "#closing" },
+      past_client: { text: "Track Your Home's Value", url: "#equity" },
+      dormant: { text: "See What Homes Are Selling For", url: "#market" },
+    },
+  };
+
+  return ctaMap[contactType]?.[journeyPhase] ?? { text: "Learn More", url: "#" };
+}
+
+/**
  * Generate plain text version from HTML for email clients that don't render HTML.
  */
 export function generatePlainText(html: string): string {

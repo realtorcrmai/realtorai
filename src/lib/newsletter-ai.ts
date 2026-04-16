@@ -185,12 +185,29 @@ Use these hints to personalize the content. They are based on the contact's actu
   if (intel) {
     const score = typeof intel.engagement_score === "number" ? intel.engagement_score : 0;
     const clickHistory = Array.isArray(intel.click_history) ? intel.click_history as Array<{ topic?: string; link_type?: string; area?: string }> : [];
-    const inferredInterests = Array.isArray(intel.inferred_interests) ? (intel.inferred_interests as string[]) : [];
-    const lastClickedAt = typeof intel.last_clicked_at === "string" ? intel.last_clicked_at : null;
+    // Fix #3: read inferred_interests as object with .areas and .property_types (not flat array)
+    const inferredInterestsObj = (intel.inferred_interests && !Array.isArray(intel.inferred_interests))
+      ? (intel.inferred_interests as Record<string, unknown>)
+      : null;
+    const inferredAreas: string[] = inferredInterestsObj?.areas
+      ? (inferredInterestsObj.areas as string[])
+      : (Array.isArray(intel.inferred_interests) ? (intel.inferred_interests as string[]) : []);
+    const inferredPropertyTypes: string[] = inferredInterestsObj?.property_types
+      ? (inferredInterestsObj.property_types as string[])
+      : [];
+    const engagementScore = typeof intel.engagement_score === "number" ? intel.engagement_score : 0;
 
-    const hasMeaningfulData = score > 0 || clickHistory.length > 0;
+    // Fix #6: fall back to both last_clicked_at and last_clicked field names
+    const lastClicked = typeof intel.last_clicked_at === "string"
+      ? intel.last_clicked_at
+      : (typeof intel.last_clicked === "string" ? intel.last_clicked : null);
+    const lastOpened = typeof intel.last_opened_at === "string"
+      ? intel.last_opened_at
+      : (typeof intel.last_opened === "string" ? intel.last_opened : null);
+
+    const hasMeaningfulData = score > 0 || clickHistory.length > 0 || inferredAreas.length > 0 || inferredPropertyTypes.length > 0;
     if (hasMeaningfulData) {
-      const scoreLabel = score >= 70 ? "high" : score >= 40 ? "medium" : "low";
+      const scoreLabel = engagementScore >= 70 ? "high" : engagementScore >= 40 ? "medium" : "low";
       const recentTopics = clickHistory
         .slice(-5)
         .map((c) => c.topic || c.link_type || c.area)
@@ -200,12 +217,41 @@ Use these hints to personalize the content. They are based on the contact's actu
       intelligenceBlock = `
 
 CONTACT INTELLIGENCE:
-- Engagement score: ${score}/100 (${scoreLabel})${lastClickedAt ? ` — last clicked ${lastClickedAt.split("T")[0]}` : ""}
+- Engagement score: ${engagementScore}/100 (${scoreLabel})${lastClicked ? ` — last clicked ${lastClicked.split("T")[0]}` : ""}${lastOpened ? ` — last opened ${lastOpened.split("T")[0]}` : ""}
 ${recentTopics ? `- Recent click interests: ${recentTopics}` : ""}
-${inferredInterests.length ? `- Inferred property interests: ${inferredInterests.join(", ")}` : ""}
+${inferredAreas.length ? `- Inferred areas of interest: ${inferredAreas.join(", ")}` : ""}
+${inferredPropertyTypes.length ? `- Inferred property types: ${inferredPropertyTypes.join(", ")}` : ""}
 Use this to personalize the email angle — emphasize what this contact has shown interest in.`;
     }
   }
+
+  // Fix #1: Buyer vs seller differentiation
+  const contactTypeInstructions = context.contact.type === "seller"
+    ? `
+SELLER CONTEXT — This contact is a property seller. Your email must:
+- Lead with market positioning: days on market, list-to-sale ratios, competing inventory
+- Emphasize equity, proceeds, and timeline to close
+- Use authority language: "Your home is worth..." / "Sellers in your market are achieving..."
+- Primary CTA should be about pricing strategy, marketing plans, or listing timelines
+- Avoid buyer-centric language like "find your perfect home"
+- Create urgency around market windows and seasonal timing`
+    : `
+BUYER CONTEXT — This contact is a property buyer. Your email must:
+- Lead with opportunity: new listings, price reductions, interest rate changes
+- Emphasize value, lifestyle fit, and financial benefit of acting now
+- Use discovery language: "We found..." / "New to market..." / "Before it sells..."
+- Primary CTA should be about booking showings or getting pre-approved
+- Avoid seller-centric language like "list your home" or "your equity"
+- Create urgency around inventory scarcity and rate windows`;
+
+  const phaseInstructions: Record<string, string> = {
+    lead: "Tone: Educational and trust-building. They are just getting to know you. Focus on your expertise and the market.",
+    active: "Tone: Action-oriented. They are actively searching/listing. Focus on specific opportunities and next steps.",
+    under_contract: "Tone: Supportive and informative. They have an accepted deal. Focus on closing milestones and what to expect.",
+    past_client: "Tone: Warm and relationship-driven. They closed with you. Focus on referrals, home value updates, and anniversary milestones.",
+    dormant: "Tone: Re-engagement. They have gone quiet. Win them back with something genuinely valuable — not a generic check-in.",
+  };
+  const phaseInstruction = phaseInstructions[context.journeyPhase] ?? phaseInstructions.lead;
 
   return `You are a real estate email copywriter for ${context.realtor.name}${context.realtor.brokerage ? ` at ${context.realtor.brokerage}` : ""}.
 
@@ -218,6 +264,10 @@ CONTENT BEST PRACTICES (BC real estate):
 - CTA: One clear action per email. "Book a Showing" not "Learn More"
 - Local flavor: Reference specific BC neighborhoods, schools, parks, transit by name
 - Length: 150-300 words for market updates, 100-200 for listing alerts
+${contactTypeInstructions}
+
+JOURNEY PHASE: ${context.journeyPhase}
+${phaseInstruction}
 ${hintsBlock}${intelligenceBlock}
 
 Rules:
@@ -262,7 +312,42 @@ Contact: ${contact.name} (${contact.type}, ${journeyPhase} phase)`;
     }
     if (prefs.bedrooms) parts.push(`${prefs.bedrooms}+ bedrooms`);
     if (prefs.property_types?.length) parts.push(`types: ${prefs.property_types.join(", ")}`);
-    if (parts.length) prompt += `\nPreferences: ${parts.join(", ")}`;
+    if (parts.length) prompt += `\nBUYER PREFERENCES: ${parts.join(", ")}`;
+  }
+
+  // Fix #2: seller_preferences context
+  const sellerPrefs = contact.type === "seller" ? (contact as any).seller_preferences : null;
+  if (sellerPrefs) {
+    const parts = [];
+    if (sellerPrefs.target_price) parts.push(`target sale price: ${sellerPrefs.target_price}`);
+    if (sellerPrefs.timeline) parts.push(`timeline: ${sellerPrefs.timeline}`);
+    if (sellerPrefs.motivation) parts.push(`motivation: ${sellerPrefs.motivation}`);
+    if (sellerPrefs.condition) parts.push(`property condition: ${sellerPrefs.condition}`);
+    if (parts.length) {
+      prompt += `\nSELLER PREFERENCES:\n${parts.map(p => `- ${p}`).join("\n")}`;
+    }
+  }
+
+  // Fix #3: inferred interests from newsletter_intelligence.inferred_interests (object shape)
+  const intel = (contact as any).newsletter_intelligence as Record<string, any> | null;
+  if (intel) {
+    const inferredInterestsObj = (intel.inferred_interests && !Array.isArray(intel.inferred_interests))
+      ? (intel.inferred_interests as Record<string, unknown>)
+      : null;
+    const inferredAreas: string[] = inferredInterestsObj?.areas
+      ? (inferredInterestsObj.areas as string[])
+      : (Array.isArray(intel.inferred_interests) ? (intel.inferred_interests as string[]) : []);
+    const inferredPropertyTypes: string[] = inferredInterestsObj?.property_types
+      ? (inferredInterestsObj.property_types as string[])
+      : [];
+
+    if (inferredAreas.length > 0 || inferredPropertyTypes.length > 0) {
+      prompt += `\nINFERRED INTERESTS FROM EMAIL CLICKS:`;
+      if (inferredAreas.length > 0) prompt += `\n- Areas of interest: ${inferredAreas.join(", ")}`;
+      if (inferredPropertyTypes.length > 0) prompt += `\n- Property types: ${inferredPropertyTypes.join(", ")}`;
+      const engScore = typeof intel.engagement_score === "number" ? intel.engagement_score : null;
+      if (engScore !== null) prompt += `\n- Engagement score: ${engScore}/100`;
+    }
   }
 
   if (contact.engagementScore !== undefined) {
