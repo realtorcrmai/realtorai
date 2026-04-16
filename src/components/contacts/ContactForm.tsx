@@ -26,6 +26,7 @@ import {
 import { createContact, updateContact } from "@/actions/contacts";
 import { Plus, Trash2 } from "lucide-react";
 import type { Contact } from "@/types";
+import { formatPhone, normalizePhoneE164, titleCaseName } from "@/lib/format";
 
 const SOCIAL_PLATFORMS = [
   { key: "instagram", label: "Instagram", icon: "📸", placeholder: "username" },
@@ -144,8 +145,15 @@ export function ContactFormContent({
   const selectedType = watch("type");
 
   function buildPayload(data: FormData) {
+    // Normalize phone to E.164 at the payload boundary so storage is canonical
+    // regardless of how the user typed it. Display format is rehydrated via
+    // formatPhone() wherever the phone is rendered.
+    const phoneE164 = normalizePhoneE164(data.phone);
     return {
       ...data,
+      phone: phoneE164 ?? data.phone,
+      email: data.email?.trim().toLowerCase() || undefined,
+      name: data.name.trim(),
       social_profiles: Object.keys(socialProfiles).length > 0 ? socialProfiles : undefined,
       ...(data.type !== "partner" && {
         partner_type: undefined,
@@ -195,7 +203,15 @@ export function ContactFormContent({
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
         <Label htmlFor="name">Name</Label>
-        <Input {...register("name")} id="name" placeholder="John Doe" aria-describedby={errors.name ? "name-error" : undefined} aria-invalid={!!errors.name} />
+        <Input
+          {...register("name", {
+            onBlur: (e) => setValue("name", titleCaseName(e.target.value), { shouldValidate: true, shouldDirty: true }),
+          })}
+          id="name"
+          placeholder="John Doe"
+          aria-describedby={errors.name ? "name-error" : undefined}
+          aria-invalid={!!errors.name}
+        />
         {errors.name && (
           <p id="name-error" className="text-sm text-red-600 mt-1" role="alert">
             {errors.name.message}
@@ -205,7 +221,16 @@ export function ContactFormContent({
 
       <div>
         <Label htmlFor="phone">Phone</Label>
-        <Input {...register("phone")} id="phone" placeholder="604-555-0123" aria-describedby={errors.phone ? "phone-error" : undefined} aria-invalid={!!errors.phone} />
+        <Input
+          {...register("phone", {
+            onBlur: (e) => setValue("phone", formatPhone(e.target.value), { shouldValidate: true, shouldDirty: true }),
+          })}
+          id="phone"
+          type="tel"
+          placeholder="+1 (604) 555-0123"
+          aria-describedby={errors.phone ? "phone-error" : undefined}
+          aria-invalid={!!errors.phone}
+        />
         {errors.phone && (
           <p id="phone-error" className="text-sm text-red-600 mt-1" role="alert">
             {errors.phone.message}
@@ -216,7 +241,9 @@ export function ContactFormContent({
       <div>
         <Label htmlFor="email">Email (optional)</Label>
         <Input
-          {...register("email")}
+          {...register("email", {
+            onBlur: (e) => setValue("email", e.target.value.trim().toLowerCase(), { shouldValidate: true, shouldDirty: true }),
+          })}
           placeholder="john@example.com"
           type="email"
         />

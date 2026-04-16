@@ -38,6 +38,7 @@ import {
   type ContactType,
   type LeadStatus,
 } from "@/lib/constants";
+import { formatPhone } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -257,7 +258,7 @@ export default async function ContactDetailPage({
           sectionId: "section-contact-info",
           items: [
             { label: "Name", value: contact.name, filled: !!contact.name },
-            { label: "Phone", value: contact.phone, filled: !!contact.phone },
+            { label: "Phone", value: contact.phone ? formatPhone(contact.phone) : contact.phone, filled: !!contact.phone },
             { label: "Email", value: contact.email, filled: !!contact.email },
             { label: "Pref Channel", value: contact.pref_channel, filled: !!contact.pref_channel },
           ],
@@ -301,7 +302,7 @@ export default async function ContactDetailPage({
           sectionId: "section-contact-info",
           items: [
             { label: "Name", value: contact.name, filled: !!contact.name },
-            { label: "Phone", value: contact.phone, filled: !!contact.phone },
+            { label: "Phone", value: contact.phone ? formatPhone(contact.phone) : contact.phone, filled: !!contact.phone },
             { label: "Email", value: contact.email, filled: !!contact.email },
             { label: "Pref Channel", value: contact.pref_channel, filled: !!contact.pref_channel },
           ],
@@ -504,7 +505,7 @@ export default async function ContactDetailPage({
                     <div className="flex items-center gap-4 text-sm mt-1.5 flex-wrap">
                       <a href={`tel:${contact.phone}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
                         <Phone className="h-3.5 w-3.5" />
-                        <span>{contact.phone}</span>
+                        <span>{formatPhone(contact.phone)}</span>
                       </a>
                       {contact.email && (
                         <a href={`mailto:${contact.email}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">

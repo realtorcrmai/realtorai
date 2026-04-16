@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ContactFamilyMember } from "@/types";
+import { formatPhone, normalizePhoneE164, titleCaseName } from "@/lib/format";
 
 type Relationship = "spouse" | "child" | "parent" | "sibling" | "other";
 
@@ -65,8 +66,8 @@ export function FamilyMemberForm({ contactId, contactName, editMember }: FamilyM
         const body = {
           name: name.trim(),
           relationship,
-          phone: phone.trim() || null,
-          email: email.trim() || null,
+          phone: normalizePhoneE164(phone) ?? (phone.trim() || null),
+          email: email.trim().toLowerCase() || null,
           notes: notes.trim() || null,
         };
 
@@ -175,6 +176,7 @@ export function FamilyMemberForm({ contactId, contactName, editMember }: FamilyM
                 autoFocus
                 value={name}
                 onChange={(e) => { setName(e.target.value); setErrors((p) => ({ ...p, name: undefined })); }}
+                onBlur={(e) => setName(titleCaseName(e.target.value))}
                 placeholder={`${RELATIONSHIPS.find((r) => r.value === relationship)?.label ?? "Member"}'s name`}
                 className={cn("h-11 text-sm", errors.name && "border-destructive")}
               />
@@ -186,7 +188,8 @@ export function FamilyMemberForm({ contactId, contactName, editMember }: FamilyM
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="604-555-1234"
+                onBlur={(e) => setPhone(formatPhone(e.target.value))}
+                placeholder="+1 (604) 555-1234"
                 className="h-11 text-sm"
               />
             </div>
@@ -197,6 +200,7 @@ export function FamilyMemberForm({ contactId, contactName, editMember }: FamilyM
               type="email"
               value={email}
               onChange={(e) => { setEmail(e.target.value); setErrors((p) => ({ ...p, email: undefined })); }}
+              onBlur={(e) => setEmail(e.target.value.trim().toLowerCase())}
               placeholder="name@example.com"
               className={cn("h-11 text-sm", errors.email && "border-destructive")}
             />
