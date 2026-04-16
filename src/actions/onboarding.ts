@@ -332,6 +332,7 @@ export async function seedSampleData() {
       type: "buyer",
       source: "sample",
       is_sample: true,
+      pref_channel: "sms",
       notes: "Looking for a 2BR condo in Vancouver. Budget $650K-$800K.",
     },
     {
@@ -342,6 +343,7 @@ export async function seedSampleData() {
       type: "seller",
       source: "sample",
       is_sample: true,
+      pref_channel: "sms",
       notes: "Owns townhouse on Main St. Considering selling in spring.",
     },
     {
@@ -363,6 +365,7 @@ export async function seedSampleData() {
       type: "seller",
       source: "sample",
       is_sample: true,
+      pref_channel: "sms",
       notes: "Investment property owner. Has 3 units in Burnaby.",
     },
     {
@@ -399,9 +402,6 @@ export async function seedSampleData() {
         status: "active",
         list_price: 1250000,
         property_type: "Townhouse",
-        bedrooms: 3,
-        bathrooms: 2,
-        sqft: 1480,
         is_sample: true,
       },
       {
@@ -411,9 +411,6 @@ export async function seedSampleData() {
         status: "active",
         list_price: 889000,
         property_type: "Condo",
-        bedrooms: 2,
-        bathrooms: 2,
-        sqft: 1050,
         is_sample: true,
       },
       {
@@ -423,9 +420,6 @@ export async function seedSampleData() {
         status: "pending",
         list_price: 2150000,
         property_type: "Detached",
-        bedrooms: 5,
-        bathrooms: 3,
-        sqft: 2800,
         is_sample: true,
       },
     ]).select("id");
@@ -434,6 +428,7 @@ export async function seedSampleData() {
     if (listings && listings.length >= 2) {
       await supabase.from("appointments").insert([
         {
+          realtor_id: session.user.id,
           listing_id: listings[0].id,
           buyer_agent_name: "Rachel Kim",
           buyer_agent_email: "rachel.kim@example.com",
@@ -443,6 +438,7 @@ export async function seedSampleData() {
           is_sample: true,
         },
         {
+          realtor_id: session.user.id,
           listing_id: listings[1].id,
           buyer_agent_name: "David Huang",
           buyer_agent_email: "david.huang@example.com",
