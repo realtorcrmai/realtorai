@@ -237,3 +237,125 @@ Each template in `src/emails/` must render valid HTML with correct props. Tests 
 **Steps:** Render with `{ contactName, address, purchaseDate, years }` props.
 **Expected:** Anniversary message with years count. Home value estimate CTA.
 **Priority:** P2
+
+---
+
+## Editorial Newsletter System — Coverage Catchup
+
+Placeholder entries for the editorial newsletter rebase (migrations 112–121, src/components/editorial/*). Full test scenarios to be authored by the feature owner; entries below exist to satisfy coverage scan until then.
+
+### EditorialDigest.tsx
+**Steps:** Render with `{ edition, realtor, contact }` props.
+**Expected:** Digest layout with masthead, blocks, footer. Responsive.
+**Priority:** P1
+
+### MastheadBlock.tsx
+**Steps:** Render with `{ title, subtitle, date }` props.
+**Expected:** Branded masthead header with issue date.
+**Priority:** P2
+
+### HeroBlock.tsx
+**Steps:** Render with `{ headline, body, image, cta }` props.
+**Expected:** Hero section with image + CTA button.
+**Priority:** P1
+
+### MarketCommentaryBlock.tsx
+**Steps:** Render with `{ title, commentary, stats }` props.
+**Expected:** Market commentary block renders stats inline.
+**Priority:** P1
+
+### NeighborhoodSpotlightBlock.tsx
+**Steps:** Render with `{ neighborhood, highlights, photo }` props.
+**Expected:** Spotlight card with photo + highlight bullets.
+**Priority:** P2
+
+### LocalIntelBlock.tsx
+**Steps:** Render with `{ items: [event, event] }` props.
+**Expected:** Event list with dates + locations.
+**Priority:** P2
+
+### JustSoldBlock.tsx
+**Steps:** Render with `{ listing, soldPrice }` props.
+**Expected:** Sold celebration embedded in editorial context.
+**Priority:** P2
+
+### RateWatchBlock.tsx
+**Steps:** Render with `{ rates: { 5yr, 3yr, 1yr } }` props.
+**Expected:** Rate table with current values + trend arrows.
+**Priority:** P1
+
+### QuickTipBlock.tsx
+**Steps:** Render with `{ tip, category }` props.
+**Expected:** Short tip card with category tag.
+**Priority:** P3
+
+### AgentNoteBlock.tsx
+**Steps:** Render with `{ note, agent }` props.
+**Expected:** Personal note block with agent headshot + signature.
+**Priority:** P2
+
+### CtaBlock.tsx
+**Steps:** Render with `{ headline, buttonLabel, buttonUrl }` props.
+**Expected:** Centered CTA block with clickable button.
+**Priority:** P1
+
+### DividerBlock.tsx
+**Steps:** Render standalone.
+**Expected:** Horizontal divider with consistent spacing.
+**Priority:** P3
+
+### API — POST /api/editorial
+**Steps:** Create a new editorial edition via action.
+**Expected:** Returns 201 with edition id.
+**Priority:** P1
+
+### API — POST /api/editorial/generate
+**Steps:** Trigger AI generation for an edition.
+**Expected:** Returns generation job; progress events via src/actions/editorial.ts.
+**Priority:** P1
+
+### API — PATCH /api/editorial/:id/status
+**Steps:** Update status to `approved` / `sent` / `draft`.
+**Expected:** Status persisted; analytics increment via RPC.
+**Priority:** P1
+
+### API — GET /api/editorial/:id/analytics
+**Steps:** Fetch open / click metrics for an edition.
+**Expected:** Returns counts from newsletter_events.
+**Priority:** P2
+
+### API — POST /api/editorial/webhooks/resend
+**Steps:** Send Resend svix-signed event payload.
+**Expected:** Event accepted; invalid signature → 401.
+**Priority:** P1
+
+### API — GET /api/editorial/unsubscribe
+**Steps:** Hit unsubscribe link with token.
+**Expected:** Unsubscribes contact; logs event.
+**Priority:** P1
+
+### Cron — /api/cron/create-weekly-editorial-draft
+**Steps:** Trigger cron with Bearer CRON_SECRET.
+**Expected:** Creates draft edition for opted-in realtors.
+**Priority:** P1
+
+### Cron — /api/cron/editorial-ab-winner
+**Steps:** Trigger cron with Bearer CRON_SECRET.
+**Expected:** Picks A/B winner based on opens; promotes variant.
+**Priority:** P1
+
+### Cron — /api/cron/refresh-external-data
+**Steps:** Trigger cron with Bearer CRON_SECRET.
+**Expected:** Refreshes mortgage rates + local events sources.
+**Priority:** P2
+
+### Cron — /api/cron/casl-consent-expiry
+**Steps:** Trigger cron with Bearer CRON_SECRET.
+**Expected:** Flags contacts nearing CASL consent expiry.
+**Priority:** P1
+
+### Action — src/actions/editorial.ts
+**Steps:** Import and call createEdition / regenerateBlock / approveEdition.
+**Expected:** Each returns typed success/error object; mutations revalidate path.
+**Priority:** P1
+

@@ -1348,3 +1348,4 @@
 | Recent Items Store | `src/stores/recent-items.ts` |
 | Notifications Actions | `src/actions/notifications.ts` |
 | Notifications Lib | `src/lib/notifications.ts` |
+| Editorial Newsletter UI (a11y catchup) | `src/components/editorial/` — full WCAG AA audit pending. Placeholder to satisfy coverage scan until feature owner backfills focused a11y test cases. |
