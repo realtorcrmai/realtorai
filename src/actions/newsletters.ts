@@ -57,15 +57,20 @@ async function renderEmailTemplate(
     home_anniversary: "home_anniversary",
     premium_listing_showcase: "luxury_showcase",
     closing_reminder: "seller_report",
-    buyer_guide: "welcome",
+    buyer_guide: "buyer_guide",
+    seller_guide: "seller_guide",
     client_testimonial: "just_sold",
     home_value_update: "cma_preview",
-    mortgage_renewal_alert: "re_engagement",
-    inspection_reminder: "seller_report",
+    mortgage_renewal_alert: "mortgage_renewal",
+    inspection_reminder: "inspection_reminder",
+    closing_checklist: "closing_checklist",
+    closing_countdown: "closing_countdown",
+    referral_ask: "referral",
+    referral_thank_you: "referral",
+    reengagement: "re_engagement",
     year_in_review: "market_update",
     community_event: "neighbourhood_guide",
     price_drop_alert: "listing_alert",
-    referral_thank_you: "welcome",
   };
 
   const blockType = typeMap[emailType] || "welcome";
@@ -166,6 +171,67 @@ async function renderEmailTemplate(
     ...(content.listings ? { listings: content.listings } : {}),
     // Social proof
     ...(content.socialProof ? { socialProof: content.socialProof } : {}),
+    // Closing checklist — featureList with transaction milestone items
+    ...(emailType === "closing_checklist" && !content.address ? {
+      listing: {
+        address: content.address || content.property || "your property",
+        area: content.area || areaFallback,
+        price: content.price || "",
+        features: content.features?.length ? content.features.map((f: any) =>
+          typeof f === "string" ? { icon: "✅", title: f, desc: "" } : f
+        ) : [
+          { icon: "🚶", title: "Final walkthrough scheduled", desc: "Confirm everything is as agreed" },
+          { icon: "💡", title: "Utilities transfer confirmed", desc: "Ensure seamless handover" },
+          { icon: "📦", title: "Moving company booked", desc: "Coordinate possession date with movers" },
+          { icon: "🔑", title: "Keys and access codes ready", desc: "Garage openers, mailbox, alarm codes" },
+          { icon: "📋", title: "Completion documents signed", desc: "All required paperwork executed" },
+        ],
+      },
+    } : {}),
+    // Inspection reminder — featureList with review guidance
+    ...(emailType === "inspection_reminder" && !content.address ? {
+      listing: {
+        address: content.address || content.property || "your property",
+        area: content.area || areaFallback,
+        price: content.price || "",
+        features: content.features?.length ? content.features.map((f: any) =>
+          typeof f === "string" ? { icon: "🔍", title: f, desc: "" } : f
+        ) : [
+          { icon: "📄", title: "Review inspection report with your agent", desc: "Identify all items to address" },
+          { icon: "⚖️", title: "Prioritize repairs vs. credits", desc: "Decide what to fix vs. negotiate" },
+          { icon: "🧾", title: "Request receipts for completed work", desc: "Document all repairs done by seller" },
+          { icon: "🏠", title: "Re-inspect major deficiencies", desc: "Verify agreed repairs were completed" },
+        ],
+      },
+    } : {}),
+    // Closing countdown — statsRow with days to close
+    ...(emailType === "closing_countdown" && !content.stats && !content.recentSales ? {
+      market: {
+        avgPrice: content.price || content.listPrice || "",
+        avgDom: content.daysRemaining ?? undefined,
+        inventoryChange: content.closingDate ? `Closing ${content.closingDate}` : undefined,
+      },
+      countdown: content.countdown || (content.daysRemaining || content.closingDate ? {
+        value: content.daysRemaining ? `${content.daysRemaining}` : "",
+        label: "Days Until Closing",
+        subtext: content.closingDate ? `Possession: ${content.closingDate}` : (content.possessionDate ?? "your closing date"),
+      } : undefined),
+    } : {}),
+    // Mortgage renewal — statsRow for rate comparison
+    ...(emailType === "mortgage_renewal_alert" && !content.stats && !content.recentSales && !content.monthly && !content.currentRate ? {
+      market: {
+        avgPrice: content.currentRate ? `${content.currentRate} current` : undefined,
+        avgDom: undefined,
+        inventoryChange: content.renewalRate ? `${content.renewalRate} renewal rate` : undefined,
+        priceComparison: content.currentRate && content.renewalRate ? {
+          listing: content.currentRate,
+          average: content.renewalRate,
+          diff: content.saving || "potential savings",
+        } : undefined,
+      },
+    } : {}),
+    // Referral — no extra data, the personalNote + CTA carries the message
+    // (no-op: intro/ctaText from the base content object are sufficient)
   };
 
   return assembleEmail(blockType, emailData);

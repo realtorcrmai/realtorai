@@ -404,6 +404,14 @@ const TEMPLATE_BLOCKS: Record<string, string[]> = {
   cma_preview: ["header", "heroGradient", "personalNote", "priceComparison", "recentSales", "socialProof", "cta", "agentCard", "footer"],
   re_engagement: ["header", "heroGradient", "personalNote", "statsRow", "propertyGrid", "cta", "agentCard", "footer"],
   luxury_showcase: ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "videoThumbnail", "cta", "agentCard", "footer"],
+  // Transaction lifecycle templates
+  closing_checklist: ["header", "personalNote", "featureList", "cta", "agentCard", "footer"],
+  inspection_reminder: ["header", "personalNote", "featureList", "cta", "agentCard", "footer"],
+  closing_countdown: ["header", "heroGradient", "personalNote", "statsRow", "countdown", "cta", "agentCard", "footer"],
+  mortgage_renewal: ["header", "personalNote", "statsRow", "priceComparison", "featureList", "cta", "agentCard", "footer"],
+  referral: ["header", "personalNote", "socialProof", "cta", "agentCard", "footer"],
+  buyer_guide: ["header", "heroGradient", "personalNote", "featureList", "propertyGrid", "cta", "agentCard", "footer"],
+  seller_guide: ["header", "heroGradient", "personalNote", "featureList", "cta", "agentCard", "footer"],
 };
 
 // ═══════════════════════════════════════════════
