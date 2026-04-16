@@ -2951,3 +2951,17 @@ Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. Thi
 **Steps:** Call `getAgentSettings()`, then `updateAgentSettings({ voice_style, response_mode })`.
 **Expected:** Returns current agent config. Update persists new settings.
 **Priority:** P2
+
+---
+
+### Category 57: Repliers MLS Integration
+
+#### API-REPLIERS-001: GET /api/repliers/listings
+**Steps:** Call `/api/repliers/listings?query=vancouver` with authenticated session.
+**Expected:** Returns proxied Repliers API results. Unauthorized requests rejected.
+**Priority:** P1
+
+#### API-REPLIERS-002: POST /api/repliers/import
+**Steps:** POST body `{ mlsNumber, address, listPrice, propertyType, description }` with authenticated session.
+**Expected:** Creates a listing row. Auto-creates placeholder seller contact. Returns 400 on address < 5 chars.
+**Priority:** P1
