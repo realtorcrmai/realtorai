@@ -324,7 +324,7 @@ export async function processJourneyQueue() {
   // Fetch CASL fields so we can enforce canSendToContact() in-loop.
   const { data: dueJourneys } = await tc
     .from("contact_journeys")
-    .select("*, contacts(id, name, email, type, newsletter_intelligence, newsletter_unsubscribed, casl_consent_given, casl_consent_date, buyer_preferences)")
+    .select("*, next_email_type_override, contacts(id, name, email, type, newsletter_intelligence, newsletter_unsubscribed, casl_consent_given, casl_consent_date, buyer_preferences)")
     .eq("is_paused", false)
     .not("next_email_at", "is", null)
     .lte("next_email_at", new Date().toISOString())
@@ -360,13 +360,25 @@ export async function processJourneyQueue() {
 
     const emailConfig = schedule[emailIndex];
 
+    // Check for next-best-action override set by the webhook on high-intent click
+    const nbaOverride: string | null = (journey as any).next_email_type_override ?? null;
+    const emailType = nbaOverride ?? emailConfig.emailType;
+
     try {
+      // If an NBA override was used, clear it immediately before sending
+      if (nbaOverride) {
+        await tc
+          .from("contact_journeys")
+          .update({ next_email_type_override: null })
+          .eq("id", journey.id);
+      }
+
       // Import dynamically to avoid circular deps
       const { generateAndQueueNewsletter } = await import("@/actions/newsletters");
 
       await generateAndQueueNewsletter(
         contact.id,
-        emailConfig.emailType,
+        emailType,
         journey.current_phase,
         journey.id,
         "auto"

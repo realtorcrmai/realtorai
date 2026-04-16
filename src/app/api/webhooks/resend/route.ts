@@ -207,6 +207,67 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Next-best-action: override next email type based on what they clicked
+      if (scoreImpact >= 25 && linkType) {
+        const NBA_MAP: Record<string, string> = {
+          book_showing:    "open_house_invite",   // they want to see properties → invite to open house
+          get_cma:         "market_update",        // they want market data → send full market update
+          get_valuation:   "just_sold",            // seller wants to know values → show recent sales
+          seller_inquiry:  "market_update",        // seller interested → market conditions
+          listing_inquiry: "new_listing_alert",    // they clicked a listing → send more listings
+          market_research: "market_update",        // market curious → full market update
+        }
+        const nextEmailType = NBA_MAP[linkType]
+        if (nextEmailType) {
+          try {
+            const nbaSupabase = createAdminClient()
+            await nbaSupabase
+              .from("contact_journeys")
+              .update({
+                next_email_type_override: nextEmailType,
+                next_email_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // 2h later
+                updated_at: new Date().toISOString(),
+              })
+              .eq("contact_id", contactId)
+              .eq("is_paused", false)
+          } catch (e) {
+            console.warn("[webhook] Could not set next-best-action:", e)
+          }
+        }
+      }
+
+      // Create a follow-up task for the realtor on high-intent click
+      if (scoreImpact >= 25 && linkType) {
+        try {
+          const taskSupabase = createAdminClient()
+
+          // Get contact name for the task title
+          const { data: taskContact } = await taskSupabase
+            .from("contacts")
+            .select("name, email")
+            .eq("id", contactId)
+            .single()
+
+          const taskTitle = linkType === "book_showing"
+            ? `Follow up with ${taskContact?.name ?? "contact"} — clicked Book Showing`
+            : linkType === "get_valuation" || linkType === "get_cma"
+            ? `Follow up with ${taskContact?.name ?? "contact"} — requested valuation`
+            : `Follow up with ${taskContact?.name ?? "contact"} — high-intent email click`
+
+          await taskSupabase.from("tasks").insert({
+            title: taskTitle,
+            description: `${taskContact?.name ?? "Contact"} clicked a high-intent link in a newsletter email. Link: ${linkUrl ?? "unknown"}. Score impact: +${scoreImpact} pts. Suggested action: reach out within 24 hours.`,
+            contact_id: contactId,
+            due_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            priority: "high",
+            status: "pending",
+            category: "follow_up",
+          })
+        } catch (e) {
+          console.warn("[webhook] Could not create follow-up task:", e)
+        }
+      }
+
       // Re-engage dormant contacts on any click
       if (eventType === "clicked") {
         const currentPhase = updatedIntel?.current_journey_phase ?? null;

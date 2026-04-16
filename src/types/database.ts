@@ -1632,6 +1632,7 @@ export interface Database {
           pause_reason: string | null;
           metadata: Json;
           agent_mode: "schedule" | "agent_driven";
+          next_email_type_override: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -1649,6 +1650,7 @@ export interface Database {
           pause_reason?: string | null;
           metadata?: Json;
           agent_mode?: "schedule" | "agent_driven";
+          next_email_type_override?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1666,6 +1668,7 @@ export interface Database {
           pause_reason?: string | null;
           metadata?: Json;
           agent_mode?: "schedule" | "agent_driven";
+          next_email_type_override?: string | null;
           created_at?: string;
           updated_at?: string;
         };
