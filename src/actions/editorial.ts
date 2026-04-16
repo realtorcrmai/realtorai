@@ -1577,3 +1577,152 @@ export async function createLibraryTip(data: {
     };
   }
 }
+
+// ── 21. getABTests ────────────────────────────────────────────────────────────
+/** Return all editorial editions that have A/B subjects configured. */
+export async function getABTests(): Promise<
+  ActionResult<
+    Array<{
+      id: string;
+      title: string;
+      edition_type: string;
+      status: string;
+      subject_a: string | null;
+      subject_b: string | null;
+      active_variant: string;
+      ab_winner: string | null;
+      ab_test_sent_at: string | null;
+      sent_at: string | null;
+      send_count: number;
+      created_at: string;
+    }>
+  >
+> {
+  try {
+    const tc = await getAuthenticatedTenantClient();
+    const { data, error } = await tc
+      .from('editorial_editions')
+      .select(
+        'id, title, edition_type, status, subject_a, subject_b, active_variant, ab_winner, ab_test_sent_at, sent_at, send_count, created_at',
+      )
+      .not('subject_b', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) return { data: null, error: error.message };
+    return { data: (data ?? []) as any, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : 'Failed to fetch A/B tests',
+    };
+  }
+}
+
+// ── 22. getDraftEditions ──────────────────────────────────────────────────────
+/** Return draft editions eligible for A/B test configuration. */
+export async function getDraftEditions(): Promise<
+  ActionResult<Array<{ id: string; title: string; edition_type: string; subject_a: string | null }>>
+> {
+  try {
+    const tc = await getAuthenticatedTenantClient();
+    const { data, error } = await tc
+      .from('editorial_editions')
+      .select('id, title, edition_type, subject_a')
+      .in('status', ['draft', 'ready'])
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) return { data: null, error: error.message };
+    return { data: (data ?? []) as any, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : 'Failed to fetch draft editions',
+    };
+  }
+}
+
+// ── 23. setEditionABSubjects ──────────────────────────────────────────────────
+/** Configure subject_a and subject_b on an edition to enable A/B testing. */
+export async function setEditionABSubjects(
+  editionId: string,
+  subjectA: string,
+  subjectB: string,
+): Promise<ActionResult<{ id: string }>> {
+  try {
+    const parsed = uuidSchema.safeParse(editionId);
+    if (!parsed.success) return { data: null, error: 'Invalid edition ID' };
+
+    const subjectSchema = z.string().min(1).max(500);
+    if (!subjectSchema.safeParse(subjectA).success)
+      return { data: null, error: 'Subject A is required (max 500 chars)' };
+    if (!subjectSchema.safeParse(subjectB).success)
+      return { data: null, error: 'Subject B is required (max 500 chars)' };
+    if (subjectA.trim() === subjectB.trim())
+      return { data: null, error: 'Subject A and B must be different' };
+
+    const tc = await getAuthenticatedTenantClient();
+    const { data, error } = await tc
+      .from('editorial_editions')
+      .update({
+        subject_a: subjectA.trim(),
+        subject_b: subjectB.trim(),
+        active_variant: 'a',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', editionId)
+      .select('id')
+      .single();
+
+    if (error) return { data: null, error: error.message };
+
+    revalidatePath('/newsletters/ab-testing');
+    revalidatePath('/newsletters/editorial');
+
+    return { data: { id: (data as { id: string }).id }, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : 'Failed to configure A/B test',
+    };
+  }
+}
+
+// ── 24. pickABWinner ─────────────────────────────────────────────────────────
+/** Manually pick a winner for an active A/B test. */
+export async function pickABWinner(
+  editionId: string,
+  winner: 'a' | 'b',
+): Promise<ActionResult<{ id: string }>> {
+  try {
+    const parsed = uuidSchema.safeParse(editionId);
+    if (!parsed.success) return { data: null, error: 'Invalid edition ID' };
+    if (winner !== 'a' && winner !== 'b')
+      return { data: null, error: 'Winner must be "a" or "b"' };
+
+    const tc = await getAuthenticatedTenantClient();
+    const { data, error } = await tc
+      .from('editorial_editions')
+      .update({
+        ab_winner: winner,
+        active_variant: winner,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', editionId)
+      .select('id')
+      .single();
+
+    if (error) return { data: null, error: error.message };
+
+    revalidatePath('/newsletters/ab-testing');
+    revalidatePath('/newsletters/editorial');
+
+    return { data: { id: (data as { id: string }).id }, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : 'Failed to pick A/B winner',
+    };
+  }
+}
