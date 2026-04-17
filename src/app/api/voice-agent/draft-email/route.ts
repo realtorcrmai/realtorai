@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   const typeLabel = typeLabels[email_type] || `a ${email_type.replace(/_/g, " ")}`;
 
   const message = await createWithRetry(anthropic, {
-    model: "claude-opus-4-6",
+    model: "claude-haiku-4-5-20251001",
     max_tokens: 600,
     system: `You are a professional real estate agent's email assistant. Write concise, warm, professional emails. Return ONLY valid JSON with "subject" and "body" keys. The body should be plain text (no HTML). Keep emails under 150 words.`,
     messages: [{

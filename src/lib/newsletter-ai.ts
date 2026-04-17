@@ -5,7 +5,7 @@ import { createWithRetry } from "@/lib/anthropic/retry";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 
-const MODEL = process.env.NEWSLETTER_AI_MODEL ?? 'claude-opus-4-6';
+const MODEL = process.env.NEWSLETTER_AI_MODEL ?? 'claude-haiku-4-5-20251001';
 
 function sanitizeForPrompt(value: string | null | undefined, maxLen = 200): string {
   if (!value) return ''
