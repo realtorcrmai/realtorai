@@ -68,7 +68,7 @@ export default function LoginPage() {
           {/* Brand text below logo */}
           <div className="text-center mt-6 space-y-3">
             <h1 className="text-3xl font-bold tracking-tight text-white">
-              Magnate360
+              Realtors360
             </h1>
             <p className="text-sm text-white/40 tracking-widest uppercase">
               AI-Powered Real Estate Platform
@@ -88,7 +88,7 @@ export default function LoginPage() {
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-2">
             <LogoIcon size={36} />
-            <span className="text-xl font-bold tracking-tight">Magnate360</span>
+            <span className="text-xl font-bold tracking-tight">Realtors360</span>
           </div>
 
           <div className="text-center lg:text-left">
