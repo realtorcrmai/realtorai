@@ -588,7 +588,7 @@ export default async function ContactDetailPage({
 
           {/* KPI Stat Cards — clickable, navigate to relevant tab */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Link href={`/contacts/${id}?tab=overview`}>
+            <Link href={`/contacts/${id}?tab=overview#section-engagement`}>
               <Card className="border-l-4 border-l-brand cursor-pointer hover:shadow-md transition-shadow">
                 <CardContent className="p-3 flex items-center gap-3">
                   <div className="h-9 w-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
@@ -601,7 +601,7 @@ export default async function ContactDetailPage({
                 </CardContent>
               </Card>
             </Link>
-            <Link href={`/contacts/${id}?tab=overview`}>
+            <Link href={`/contacts/${id}?tab=overview#section-network`}>
               <Card className="border-l-4 border-l-[#f5c26b] cursor-pointer hover:shadow-md transition-shadow">
                 <CardContent className="p-3 flex items-center gap-3">
                   <div className="h-9 w-9 rounded-lg bg-[#f5c26b]/10 flex items-center justify-center shrink-0">
@@ -758,7 +758,7 @@ export default async function ContactDetailPage({
     <>
       {/* Engagement — 1st section */}
       {intel && (
-        <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
+        <div id="section-engagement" className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0 scroll-mt-4">
           <IntelligencePanel
             intelligence={intel}
             totalEmails={newslettersWithEvents.length}

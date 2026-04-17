@@ -473,7 +473,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
                 {filledPanels}
 
                 {/* Referrals + Relationships — side by side (moved from sidebar) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div id="section-network" className="grid grid-cols-1 md:grid-cols-2 gap-3 scroll-mt-4">
                   <Card className="border-l-4 border-l-brand">
                     <CardContent className="p-4">
                       <ReferralsPanel
