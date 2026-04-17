@@ -11,7 +11,6 @@ import { MobileDetailSheet } from "@/components/layout/MobileDetailSheet";
 import { type ReferralRow } from "@/components/contacts/ReferralsPanel";
 import { NetworkStatsCard } from "@/components/contacts/NetworkStatsCard";
 import { HouseholdBanner } from "@/components/contacts/HouseholdBanner";
-import { QuickActionBar } from "@/components/contacts/QuickActionBar";
 import { TagEditor } from "@/components/contacts/TagEditor";
 import { StageBar, type StageData } from "@/components/contacts/StageBar";
 import EmailComposer from "@/components/contacts/EmailComposer";
@@ -582,6 +581,19 @@ export default async function ContactDetailPage({
                 {contact.notes && (
                   <p className="text-sm text-muted-foreground mt-2 italic">{contact.notes}</p>
                 )}
+
+                {/* Quick Actions — bottom right of name card */}
+                <div className="flex items-center justify-end gap-1.5 mt-3 pt-2 border-t border-border">
+                  <NotesDialog
+                    contactId={id}
+                    contactName={contact.name}
+                    communications={typedCommunications}
+                  />
+                  <EmailComposer
+                    contactId={id}
+                    contactEmail={contact.email}
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -737,26 +749,6 @@ export default async function ContactDetailPage({
   // Right panel inner content — shared between mobile collapsible and desktop aside
   const rightPanelContentJsx = (
     <>
-      {/* Quick Actions — Call, Log Note, Email */}
-      <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 shrink-0">
-        <div className="flex items-center gap-1.5 bg-card border border-border rounded-lg p-1">
-          <QuickActionBar
-            contactId={id}
-            contactPhone={contact.phone}
-            contactChannel={contact.pref_channel}
-          />
-          <NotesDialog
-            contactId={id}
-            contactName={contact.name}
-            communications={typedCommunications}
-          />
-          <EmailComposer
-            contactId={id}
-            contactEmail={contact.email}
-          />
-        </div>
-      </div>
-
       {/* Engagement */}
       {intel && (
         <div id="section-engagement" className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0 scroll-mt-4">
