@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const anthropic = new Anthropic();
-const HAIKU_MODEL = "claude-opus-4-6";
+const HAIKU_MODEL = "claude-haiku-4-5-20251001";
 
 // ═══ A1: AI Bio Generator ═══
 

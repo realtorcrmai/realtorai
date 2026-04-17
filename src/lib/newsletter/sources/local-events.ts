@@ -83,7 +83,7 @@ export async function fetchLocalEvents(city: string): Promise<LocalEventsResult>
     const prompt = `Search for upcoming community events, real estate development news, and neighbourhood news in ${city} in the next 30 days. Return a JSON array of 4-6 items with: title, date (human-readable, e.g. "May 15"), venue (or null if unknown), description (1-2 sentences), category (one of: community, arts, food, sports, development, market), source_url (or null). Focus on things relevant to homeowners and home buyers: new developments, rezoning approvals, infrastructure projects, community events, business openings, park improvements. Avoid generic national news. IMPORTANT: Do not mention area demographics, school ratings tied to any group, or any fair housing protected characteristics.`
 
     const response = await anthropic.messages.create({
-      model: 'claude-opus-4-6',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 2048,
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{ role: 'user', content: prompt }],

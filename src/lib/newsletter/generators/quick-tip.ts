@@ -5,7 +5,7 @@ import type { EditionContext } from '@/lib/editorial-ai'
 import { sanitizeBlockContent } from '../content-safety'
 
 const anthropic = new Anthropic()
-const MODEL_HAIKU = 'claude-opus-4-6'
+const MODEL_HAIKU = 'claude-haiku-4-5-20251001'
 
 // ── Season detection ──────────────────────────────────────────────────────────
 
