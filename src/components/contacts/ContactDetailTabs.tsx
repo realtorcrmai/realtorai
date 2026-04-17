@@ -467,53 +467,90 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
               />
             );
 
+            // Count populated sections to decide Quick Setup visibility
+            const networkHasData = relationships.length + referralsAsReferrer.length + referralsAsReferred.length > 0;
+            const familyHasData = familyMembers.length > 0;
+            const demographicsHasData = hasPreferenceData(demographics as Record<string, unknown> | null);
+            const populatedCount = [
+              networkHasData, prefsHasData, contextHasData, propertiesHasData,
+              docsHasData, familyHasData, demographicsHasData, hasEnrollments,
+            ].filter(Boolean).length;
+            const showQuickSetup = populatedCount <= 1 && emptyActions.length > 1;
+
             return (
               <>
-                {/* Panels with data — float to top */}
+                {/* 1. Network (Referrals + Relationships) — first if populated */}
+                {networkHasData && (
+                  <div id="section-network" className="grid grid-cols-1 md:grid-cols-2 gap-3 scroll-mt-4">
+                    <Card className="border-l-4 border-l-brand">
+                      <CardContent className="p-4">
+                        <ReferralsPanel
+                          contact={contact}
+                          referredByName={referredByName}
+                          referralsAsReferrer={referralsAsReferrer}
+                          referralsAsReferred={referralsAsReferred}
+                          allContacts={allContacts}
+                        />
+                      </CardContent>
+                    </Card>
+                    <Card className="border-l-4 border-l-brand">
+                      <CardContent className="p-4">
+                        <RelationshipManager
+                          contactId={contactId}
+                          relationships={relationships}
+                          allContacts={allContacts}
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* 2. Data panels (workflows, preferences, journey, context, properties, docs) */}
                 {filledPanels}
 
-                {/* Referrals + Relationships — side by side (moved from sidebar) */}
-                <div id="section-network" className="grid grid-cols-1 md:grid-cols-2 gap-3 scroll-mt-4">
-                  <Card className="border-l-4 border-l-brand">
-                    <CardContent className="p-4">
-                      <ReferralsPanel
-                        contact={contact}
-                        referredByName={referredByName}
-                        referralsAsReferrer={referralsAsReferrer}
-                        referralsAsReferred={referralsAsReferred}
-                        allContacts={allContacts}
-                      />
-                    </CardContent>
-                  </Card>
-                  <Card className="border-l-4 border-l-brand">
-                    <CardContent className="p-4">
-                      <RelationshipManager
-                        contactId={contactId}
-                        relationships={relationships}
-                        allContacts={allContacts}
-                      />
-                    </CardContent>
-                  </Card>
-                </div>
+                {/* 3. Network — show empty state if no data (still navigable) */}
+                {!networkHasData && (
+                  <div id="section-network" className="grid grid-cols-1 md:grid-cols-2 gap-3 scroll-mt-4">
+                    <Card className="border-l-4 border-l-brand">
+                      <CardContent className="p-4">
+                        <ReferralsPanel
+                          contact={contact}
+                          referredByName={referredByName}
+                          referralsAsReferrer={referralsAsReferrer}
+                          referralsAsReferred={referralsAsReferred}
+                          allContacts={allContacts}
+                        />
+                      </CardContent>
+                    </Card>
+                    <Card className="border-l-4 border-l-brand">
+                      <CardContent className="p-4">
+                        <RelationshipManager
+                          contactId={contactId}
+                          relationships={relationships}
+                          allContacts={allContacts}
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
 
-                {/* Family — moved from separate tab */}
+                {/* 4. Family Members */}
                 <Card className="border-l-4 border-l-rose-400">
                   <CardContent className="p-4">
                     <FamilyTabPanel contactId={contactId} initialMembers={familyMembers} />
                   </CardContent>
                 </Card>
 
-                {/* Demographics — moved from Intelligence tab */}
+                {/* 5. Demographics — always last content section */}
                 <Card className="border-l-4 border-l-violet-400">
                   <CardContent className="p-4">
                     <DemographicsPanel contactId={contactId} demographics={demographics} />
                   </CardContent>
                 </Card>
 
-                {/* Quick Setup — collapsed when ≤2 remaining, expanded when 3+ */}
-                {emptyActions.length > 1 && (
+                {/* Quick Setup — only show if ≤1 section is populated */}
+                {showQuickSetup && (
                   emptyActions.length <= 3 ? (
-                    /* Collapsed: progress bar that expands on click */
                     <details className="group">
                       <summary className="flex items-center gap-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                         <div className="w-1 h-5 rounded-full bg-gradient-to-b from-indigo-400 to-teal-400 shrink-0" />
@@ -532,7 +569,6 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
                       </div>
                     </details>
                   ) : (
-                    /* Expanded: full tiles visible (new contacts need guidance) */
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <div className="w-1 h-5 rounded-full bg-gradient-to-b from-indigo-400 to-teal-400" />
