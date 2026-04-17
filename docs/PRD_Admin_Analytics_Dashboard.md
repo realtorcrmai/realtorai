@@ -36,7 +36,7 @@ Without this, product and business decisions are made blind. Every SaaS at scale
 | 4 | **Operational health** -- crons, errors, API latency | Know about system issues before users report them |
 | 5 | **Feature adoption intelligence** -- what's used, what's not | Data-driven prioritization of engineering effort |
 | 6 | **Self-serve diagnostics** -- impersonation, event log, email history | Resolve 90% of support tickets without touching the database |
-| 7 | **Zero external dependencies** -- all in Supabase, no PostHog/Amplitude | No vendor lock-in, no additional cost, no data leaving the platform |
+| 7 | **Minimal external dependencies** -- business data in Supabase, no PostHog/Amplitude. Vercel Analytics + Speed Insights + Sentry for observability (free tier, already in stack) | No vendor lock-in, no additional cost |
 
 ---
 
@@ -126,15 +126,14 @@ All require `Bearer CRON_SECRET`. No UI to see last run, success/failure, or man
 The Super Admin Panel is a standalone section at `/admin` with its own sidebar navigation. It has **7 sections**, each a tab/page:
 
 ```
-/admin
-  /admin                     -- Overview (KPIs + quick actions)
-  /admin/users               -- User Management (current page, upgraded)
-  /admin/users/[id]          -- User Detail (drill-down)
-  /admin/analytics           -- Platform Analytics (funnel, adoption, retention)
-  /admin/revenue             -- Revenue & Plans (MRR, trials, plan distribution)
-  /admin/system              -- System Health (crons, errors, APIs)
-  /admin/emails              -- Email Operations (delivery, bounces, per-user)
-  /admin/settings            -- Platform Settings (feature defaults, plan config)
+/admin                     -- Overview (KPIs + quick actions + funnel + adoption inline)
+/admin/users               -- User Management (current page, upgraded)
+/admin/users/[id]          -- User Detail (drill-down, 5 tabs)
+/admin/revenue             -- Revenue & Plans (MRR, trials, plan distribution)
+/admin/system              -- System Health (crons + external links to Sentry/Vercel)
+/admin/emails              -- Email Operations (delivery, bounces, per-user)
+/admin/analytics           -- [v2] Standalone analytics (when overview becomes crowded)
+/admin/settings            -- [v2] Platform Settings (when plan changes become frequent)
 ```
 
 ### Navigation
@@ -173,19 +172,19 @@ The landing page. Answers "is everything OK?" in 5 seconds.
 | Active Today | Users with session in last 24h | `platform_analytics.session_start` |
 | Onboarding Rate | % completed onboarding (last 30d) | `users.onboarding_completed` / signups |
 | Trial Conversions | % of expired trials that upgraded (30d) | `users.trial_ends_at` + `users.plan` |
-| System Status | Green/Amber/Red | Composite: crons + error rate + API latency |
+| System Status | Green/Amber/Red | v1: cron health only. v2: adds error rate + API latency |
 
 Each card: big number, delta vs previous period (arrow + %), sparkline (last 14 data points).
 
 ### 5.2 Recent Activity Feed (left 60%)
 
-Real-time-ish feed of platform activity:
+Real-time-ish feed of platform activity (sourced from `platform_analytics`):
 - New signups (with plan)
 - Onboarding completions
 - Plan upgrades/downgrades
-- Trial expirations
-- Feature flag changes (by admin)
-- System errors
+- Trial starts
+- Admin actions (feature toggles, plan changes)
+- Cron failures (if any)
 
 ### 5.3 Quick Actions Panel (right 40%)
 
@@ -195,7 +194,7 @@ Real-time-ish feed of platform activity:
 | Extend Trial | Search user -> extend trial |
 | Toggle Feature | Search user -> toggle specific feature |
 | Trigger Cron | Run a cron job manually |
-| Send Announcement | Push notification to all users |
+| Set Announcement | Write text + type to `platform_config`. v1: also renders as banner in CRM dashboard (simple reader component). v2: full editor with date range, markdown, dismissibility |
 
 ---
 
@@ -227,7 +226,7 @@ Replace the current card grid with a proper DataTable:
 | Extend Trial | Modal: add days to existing trial |
 | Toggle Active | Activate/deactivate with confirmation |
 | Manage Features | Modal: toggle individual features (current RealtorCard UI) |
-| Impersonate | Open the dashboard as this user (read-only, banner shown) |
+| Impersonate | [v2] Open the dashboard as this user (read-only, banner shown) |
 | Reset Onboarding | Re-trigger onboarding wizard for user |
 | Delete User | Confirmation modal with data deletion warning |
 
@@ -246,14 +245,15 @@ Full-page drill-down for a single user. 5 tabs:
 - All user fields (name, email, phone, brokerage, license, plan, role, avatar)
 - Editable inline (admin can update any field)
 - Profile completeness score with breakdown
-- Account creation date, last login, total sessions
+- Account creation date, last active date, total sessions (derived from `COUNT session_start` events)
 - Plan history timeline
 
 #### Tab 2: Activity
 - Timeline of all `platform_analytics` events for this user
 - Filterable by event type
-- Shows: page views, feature usage, onboarding steps, errors
+- Shows: feature usage, onboarding steps, plan changes, checklist events, session starts
 - Date range selector
+- Note: page views are in Vercel Analytics (not in `platform_analytics`)
 
 #### Tab 3: Data
 - Summary counts: contacts, listings, showings, newsletters, tasks
@@ -274,7 +274,9 @@ Full-page drill-down for a single user. 5 tabs:
 
 ---
 
-## 7. Section 3: Platform Analytics (`/admin/analytics`)
+## 7. Section 3: Platform Analytics (`/admin/analytics`) — [v2] as standalone page
+
+> **v1 scope:** Onboarding funnel and feature adoption table are rendered as collapsible sections on the Overview page (`/admin`). This standalone analytics page with tabs is built in v2 when the overview becomes crowded. The specs below define the full v2 vision.
 
 ### 7.1 Date Range Control
 
@@ -410,8 +412,9 @@ Traffic light at top: **All Systems Operational** / **Degraded** / **Outage**
 
 Computed from:
 - All crons ran successfully in their expected interval
-- Error rate < 1% in last hour
-- No API route with p95 > 5s
+- No cron has been failing consecutively
+
+> **v1 note:** Error rate and API latency are monitored via Sentry and Vercel Speed Insights respectively. System status in v1 is cron-health-only. Links to external dashboards provided on the page.
 
 ### 9.2 Cron Job Monitor
 
@@ -500,7 +503,9 @@ Table of bounced/complained emails with:
 
 ---
 
-## 11. Section 7: Platform Settings (`/admin/settings`)
+## 11. Section 7: Platform Settings (`/admin/settings`) — [v2]
+
+> **Deferred to v2.** In v1, plans are configured in code (`plans.ts`), kill switches use env vars, and announcements are written via Quick Actions modal. This page is built when plan changes become frequent. Specs below define the full v2 vision.
 
 ### 11.1 Plan Configuration
 
@@ -574,7 +579,6 @@ CREATE POLICY "Service write" ON platform_analytics FOR INSERT WITH CHECK (true)
 CREATE TABLE IF NOT EXISTS platform_config (
   key TEXT PRIMARY KEY,
   value JSONB NOT NULL,
-  updated_by UUID REFERENCES users(id),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -582,18 +586,13 @@ ALTER TABLE platform_config ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admin only" ON platform_config FOR ALL
   USING (EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin'));
 
--- Seed defaults
+-- v1: seed announcement only. Kill switch keys added in v2 with settings page.
 INSERT INTO platform_config (key, value) VALUES
-  ('maintenance_mode', 'false'),
-  ('new_user_signup', 'true'),
-  ('ai_content_generation', 'true'),
-  ('email_sending', 'true'),
-  ('voice_agent', 'true'),
-  ('default_trial_days', '14'),
-  ('default_trial_plan', '"professional"'),
   ('announcement', 'null')
 ON CONFLICT (key) DO NOTHING;
 ```
+
+> **v1 note:** `updated_by` column removed (no settings UI in v1 — admin actions tracked in `platform_analytics` instead). Kill switch seeds (maintenance_mode, email_sending, etc.) deferred to v2 when settings page is built. Use env vars for kill switches in v1.
 
 ### 12.4 New Columns on `users`
 
@@ -763,7 +762,7 @@ export async function updateAdminUserFields(userId: string, fields: Partial<User
 |---|------------|-------|
 | 1.1 | Migration 104: `platform_analytics`, `platform_config` tables + `users` columns + `signup_events` bug fix | `supabase/migrations/104_platform_analytics.sql` |
 | 1.2 | Event tracking library (server-side only) | `src/lib/analytics.ts` |
-| 1.3 | Instrument existing code (all files in instrumentation map) | ~12 files modified |
+| 1.3 | Instrument existing code (8 action files + 5 cron routes + layout + package.json) | ~15 files modified |
 | 1.4 | Admin layout upgrade (sidebar nav, mobile tabs) | `src/app/(admin)/layout.tsx` |
 | 1.5 | Admin middleware guard | `src/middleware.ts` (add `/admin/*` role check) |
 
@@ -782,9 +781,9 @@ export async function updateAdminUserFields(userId: string, fields: Partial<User
 | # | Deliverable | Files |
 |---|------------|-------|
 | 3.1 | Overview dashboard (KPIs, activity feed, quick actions) | `src/app/(admin)/admin/page.tsx` |
-| 3.2 | Platform analytics page (funnel, adoption, retention) | `src/app/(admin)/admin/analytics/page.tsx`, 4 components |
-| 3.3 | Revenue page (MRR, plan distribution, trials, timeline) | `src/app/(admin)/admin/revenue/page.tsx`, 4 components |
-| 3.4 | Install Recharts, build chart components | `package.json`, `src/components/admin/charts/` |
+| 3.2 | Onboarding funnel + feature adoption (inline on overview, collapsible) | Part of `src/app/(admin)/admin/page.tsx` |
+| 3.3 | Revenue page (MRR, plan distribution, trials, change log) | `src/app/(admin)/admin/revenue/page.tsx`, `RevenueView.tsx` |
+| 3.4 | Recharts donut + area charts (Recharts already installed) | `RevenueView.tsx` |
 
 ### Phase 4: Operations
 
@@ -792,70 +791,74 @@ export async function updateAdminUserFields(userId: string, fields: Partial<User
 |---|------------|-------|
 | 4.1 | System health page (cron monitor, errors, API perf) | `src/app/(admin)/admin/system/page.tsx`, 3 components |
 | 4.2 | Email operations page (delivery stats, per-user, bounces) | `src/app/(admin)/admin/emails/page.tsx`, 3 components |
-| 4.3 | Platform settings page (config, feature flags, announcements) | `src/app/(admin)/admin/settings/page.tsx`, 3 components |
+| 4.3 | ~~Platform settings page~~ **[v2]** | Deferred — use env vars + code for plan config in v1 |
 | 4.4 | Move voice analytics under admin panel | Relocate from `(dashboard)/admin/` to `(admin)/admin/voice/` |
 
 ---
 
-## 16. Files to Create
+## 16. Files to Create / Modify
+
+> **Authoritative file list:** `IMPL_Admin_Panel.md` Section 5. Below is synced to match v1 scope.
+
+### v1 Files to Create (23)
 
 | File | Purpose |
 |------|---------|
 | `supabase/migrations/104_platform_analytics.sql` | Tables: platform_analytics, platform_config + users columns + signup_events fix |
 | `src/lib/analytics.ts` | Server-side event tracking (trackEvent) |
 | `src/actions/analytics.ts` | All admin analytics query actions |
-| `src/app/(admin)/admin/page.tsx` | Overview dashboard (replace current user list) |
-| `src/app/(admin)/admin/users/page.tsx` | User management table |
-| `src/app/(admin)/admin/users/[id]/page.tsx` | User detail page |
-| `src/app/(admin)/admin/analytics/page.tsx` | Platform analytics |
-| `src/app/(admin)/admin/revenue/page.tsx` | Revenue & plans |
-| `src/app/(admin)/admin/system/page.tsx` | System health |
-| `src/app/(admin)/admin/emails/page.tsx` | Email operations |
-| `src/app/(admin)/admin/settings/page.tsx` | Platform settings |
 | `src/components/admin/AdminSidebar.tsx` | Admin panel sidebar navigation |
-| `src/components/admin/OverviewKPIs.tsx` | 6 KPI cards with sparklines |
+| `src/app/(admin)/admin/page.tsx` | Overview dashboard |
+| `src/components/admin/OverviewKPIs.tsx` | 6 KPI cards with SVG sparklines |
+| `src/components/admin/NeedsAttention.tsx` | Users needing attention table |
 | `src/components/admin/RecentActivity.tsx` | Activity feed |
-| `src/components/admin/QuickActions.tsx` | Quick action panel |
+| `src/components/admin/QuickActions.tsx` | Quick action panel with modals |
+| `src/app/(admin)/admin/users/page.tsx` | User management table |
 | `src/components/admin/UserTable.tsx` | Searchable, filterable user DataTable |
+| `src/app/(admin)/admin/users/[id]/page.tsx` | User detail page (5 tabs) |
 | `src/components/admin/UserDetailProfile.tsx` | User detail: Profile tab |
 | `src/components/admin/UserDetailActivity.tsx` | User detail: Activity tab |
 | `src/components/admin/UserDetailData.tsx` | User detail: Data tab |
 | `src/components/admin/UserDetailEmails.tsx` | User detail: Emails tab |
 | `src/components/admin/UserDetailBilling.tsx` | User detail: Billing tab |
-| `src/components/admin/OnboardingFunnel.tsx` | Funnel visualization |
-| `src/components/admin/ChecklistStats.tsx` | Checklist donut chart |
-| `src/components/admin/FeatureAdoptionTable.tsx` | Feature usage table |
-| `src/components/admin/RetentionCohorts.tsx` | Retention heatmap |
-| `src/components/admin/RevenueKPIs.tsx` | Revenue cards |
-| `src/components/admin/PlanDistribution.tsx` | Plan donut + table |
-| `src/components/admin/TrialPipeline.tsx` | Trial status table |
-| `src/components/admin/CronMonitor.tsx` | Cron job status table |
-| `src/components/admin/ErrorLog.tsx` | Error log table |
-| `src/components/admin/APIPerformance.tsx` | API latency table |
-| `src/components/admin/EmailKPIs.tsx` | Email delivery stats |
-| `src/components/admin/EmailUserTable.tsx` | Per-user email stats |
-| `src/components/admin/PlatformConfigEditor.tsx` | Config key-value editor |
-| `src/components/admin/FeatureFlagPanel.tsx` | Global feature flag toggles |
-| `src/components/admin/AnnouncementEditor.tsx` | Banner message editor |
+| `src/app/(admin)/admin/revenue/page.tsx` | Revenue & plans |
+| `src/components/admin/RevenueView.tsx` | Revenue KPIs + donut + trial pipeline + change log |
+| `src/app/(admin)/admin/system/page.tsx` | System health |
+| `src/components/admin/SystemView.tsx` | Cron monitor + external links to Sentry/Vercel |
+| `src/app/(admin)/admin/emails/page.tsx` | Email operations |
+| `src/components/admin/EmailOpsView.tsx` | Email KPIs + per-user table + bounce log |
 
-### Files to Modify
+### v1 Files to Modify (10 + 5 cron routes)
 
 | File | Change |
 |------|--------|
 | `src/app/(admin)/layout.tsx` | Replace simple header with sidebar layout |
 | `src/middleware.ts` | Add `/admin/*` route protection (redirect non-admin) |
-| `src/actions/admin.ts` | Add 15+ new actions (search, plan mgmt, bulk ops, impersonation) |
-| `src/app/(auth)/onboarding/page.tsx` | Add trackEvent calls for step transitions |
-| `src/actions/onboarding.ts` | Track onboarding_completed |
-| `src/actions/checklist.ts` | Track checklist events |
+| `src/actions/admin.ts` | Add 12 new actions (search, plan mgmt, bulk ops) |
+| `src/lib/auth.ts` | Track signup, session_start, update last_active_at |
+| `src/actions/onboarding.ts` | Track onboarding_step |
+| `src/actions/checklist.ts` | Track checklist_event |
 | `src/actions/contacts.ts` | Track feature_used (create) |
 | `src/actions/listings.ts` | Track feature_used (create) |
 | `src/actions/newsletters.ts` | Track feature_used (send) |
 | `src/actions/showings.ts` | Track feature_used (create) |
-| `src/lib/auth.ts` | Track signup, session_start, update last_active_at |
-| `src/lib/resend.ts` | Track email_sent, email_bounced |
-| `src/app/api/cron/*/route.ts` | Wrap handlers with cron_run tracking |
-| `package.json` | Add recharts dependency |
+| `src/actions/personalization.ts` | Track personalization |
+| `src/app/layout.tsx` | Add `@vercel/analytics` + `@vercel/speed-insights` |
+| `src/app/api/cron/*/route.ts` (5 files) | Wrap handlers with cron_run tracking |
+| `package.json` | Add @vercel/analytics, @vercel/speed-insights |
+
+### [v2] Deferred Files (not built in v1)
+
+| File | Trigger to Build |
+|------|-----------------|
+| `src/app/(admin)/admin/analytics/page.tsx` | Overview becomes crowded |
+| `src/app/(admin)/admin/settings/page.tsx` | Plan changes become frequent |
+| `src/components/admin/RetentionCohorts.tsx` | 90 days of data accumulated |
+| `src/components/admin/ErrorLog.tsx` | Sentry free tier exceeded |
+| `src/components/admin/APIPerformance.tsx` | Vercel Speed Insights insufficient |
+| `src/components/admin/PlatformConfigEditor.tsx` | Settings page built |
+| `src/components/admin/FeatureFlagPanel.tsx` | Settings page built |
+| `src/components/admin/AnnouncementEditor.tsx` | Settings page built |
 
 ---
 
@@ -896,7 +899,9 @@ Impersonation allows the admin to view the CRM as a specific user without knowin
 - Max duration: 30 minutes, non-renewable
 - Cannot impersonate another admin
 
-## 17.6 Announcement Banner — Consumer Spec
+## 17.6 Announcement Banner — Consumer Spec [v2]
+
+> **Simplified in v1** to a Quick Action modal on Overview page writing to `platform_config`. Full consumer component deferred until user count exceeds 100. Spec preserved for v2.
 
 The announcement set by admin in `/admin/settings` must render for all users.
 
@@ -909,7 +914,9 @@ The announcement set by admin in `/admin/settings` must render for all users.
 - Dismissible: if enabled, dismiss state stored in `localStorage` keyed by announcement hash
 - Auto-remove: if `endDate` is past, component renders nothing
 
-## 17.7 Error & API Latency Capture
+## 17.7 Error & API Latency Capture [v2]
+
+> **Cut from v1.** Sentry (already configured) handles errors. Vercel Speed Insights (free, installed in v1) handles API latency. Build custom capture only if these tools prove insufficient. Spec preserved for v2.
 
 Events `error` and `api_slow` require instrumentation at the framework level, not per-file.
 
@@ -943,8 +950,7 @@ At no point should the admin panel be broken or empty during the rollout.
 - Retention calculation uses a CTE joining signup events with subsequent sessions
 - Event volume estimate: ~10 events/user/session, ~100 users = ~1,000 events/day = ~30K/month (well within Supabase limits)
 - No aggregation tables needed at this scale -- raw queries are fast enough
-- Client-side event tracking is fire-and-forget (sendBeacon fallback, never blocks UI)
-- Analytics page components use `Suspense` boundaries so sections load independently
+- Analytics components use `Suspense` boundaries so sections load independently
 - Consider adding `platform_analytics_monthly` materialized view if query times exceed 500ms
 
 ---
@@ -954,12 +960,10 @@ At no point should the admin panel be broken or empty during the rollout.
 - All admin routes protected by `requireAdmin()` + middleware redirect
 - No PII in `platform_analytics.metadata` (no names, emails, phones in JSONB)
 - `user_id` is a UUID reference, not an email
-- Admin audit log records every mutation with admin ID, target, before/after state
-- Impersonation creates a read-only session with visible "Viewing as [user]" banner
-- Impersonation sessions logged in audit trail (who, when, duration)
-- Platform config changes logged in audit trail
-- Event ingestion API validates event names against allowlist
-- Client event API rate-limited to 100/min per user
+- Admin actions logged to `platform_analytics` with admin ID, target, before/after state in metadata
+- [v2] Impersonation creates a read-only session with visible banner — deferred, use Supabase impersonate in v1
+- Platform config changes logged via `admin_action` events
+- Event tracking is server-side only (no client API to abuse)
 
 ---
 
@@ -985,14 +989,14 @@ At no point should the admin panel be broken or empty during the rollout.
 13. Onboarding funnel shows accurate step-by-step drop-off
 14. Feature adoption table shows real usage data sorted by adoption %
 15. Revenue page shows accurate MRR, plan distribution, trial pipeline
-16. Retention cohort heatmap renders with correct cell colors
+16. ~~Retention cohort heatmap renders with correct cell colors~~ **[v2]** — deferred until 90 days of data
 
 ### Phase 4: Operations
 17. Cron monitor shows real last-run data for all cron jobs
-18. Error log shows grouped errors with stack traces
-19. Email operations shows delivery rates from Resend webhook data
-20. Platform settings page can toggle kill switches and update config
-21. Announcement banner appears for all users when set
+18. ~~Error log shows grouped errors with stack traces~~ **[v2]** — using Sentry in v1
+19. Email operations shows delivery rates from existing `newsletter_events` data
+20. ~~Platform settings page can toggle kill switches and update config~~ **[v2]** — using env vars in v1
+21. ~~Announcement banner appears for all users when set~~ **[v2]** — simplified to Quick Action modal
 
 ---
 

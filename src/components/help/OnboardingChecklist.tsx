@@ -147,6 +147,32 @@ export function OnboardingChecklist() {
           <p className="text-xs text-muted-foreground">Great job completing your setup</p>
         </div>
       )}
+
+      {/* Level 2 — Badge Achievements */}
+      {allComplete && !minimized && (
+        <div className="px-3 pb-3">
+          <p className="text-xs font-semibold text-muted-foreground mb-2">Level 2 — Unlock Badges 🏆</p>
+          <div className="space-y-1">
+            <AchievementRow emoji="📇" label="Contact Pro" desc="Add 10 contacts" />
+            <AchievementRow emoji="🏠" label="Listing Expert" desc="Create 3 listings" />
+            <AchievementRow emoji="📧" label="Marketing Maven" desc="Send a newsletter" />
+            <AchievementRow emoji="🤖" label="AI Explorer" desc="Generate AI content" />
+            <AchievementRow emoji="📅" label="Calendar Connected" desc="Sync Google Calendar" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AchievementRow({ emoji, label, desc }: { emoji: string; label: string; desc: string }) {
+  return (
+    <div className="flex items-center gap-2.5 p-2 rounded-lg opacity-50">
+      <span className="text-base shrink-0">{emoji}</span>
+      <div className="min-w-0">
+        <p className="text-xs font-medium text-foreground">{label}</p>
+        <p className="text-[10px] text-muted-foreground">{desc}</p>
+      </div>
     </div>
   );
 }

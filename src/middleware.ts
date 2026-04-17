@@ -5,7 +5,12 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Public routes — always allow
+  // ── Public routes — no auth required ──────────────────────
+  // SECURITY: Every entry here is an intentional auth bypass.
+  // Adding a route here means ANYONE on the internet can hit it.
+  // Think carefully before adding. See pendingwork.md P0 audit.
   if (
+    // Auth pages (must be public for login/signup flow)
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname === "/verify" ||
@@ -13,36 +18,51 @@ export async function middleware(request: NextRequest) {
     pathname === "/onboarding" ||
     pathname === "/personalize" ||
     pathname.startsWith("/join/") ||
-    pathname.startsWith("/docs") ||
-    pathname.startsWith("/sdk/") ||
+
+    // Static assets
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/logo-") ||
     pathname === "/logo-animated.html" ||
+
+    // Auth API (NextAuth handles its own auth)
     pathname.startsWith("/api/auth") ||
+
+    // Health check (uptime monitors, load balancers)
     pathname.startsWith("/api/health") ||
+
+    // Webhooks (verified by signature, not session)
     pathname.startsWith("/api/webhooks") ||
+
+    // Crons (verified by Bearer CRON_SECRET, not session)
     pathname.startsWith("/api/cron") ||
+
+    // Editorial generation worker (CRON_SECRET auth, not session)
+    pathname === "/api/editorial/generate" ||
+
+    // Editorial unsubscribe (HMAC-signed token + expiry, not session)
+    pathname.startsWith("/api/editorial/unsubscribe") ||
+
+    // Editorial Resend webhook (Svix-signed, not session)
+    pathname.startsWith("/api/editorial/webhooks/resend") ||
+
+    // Unsubscribe (HMAC-signed token, not session)
     pathname.startsWith("/api/newsletters/unsubscribe") ||
-    pathname.startsWith("/api/newsletters/process") ||
-    pathname.startsWith("/api/voice-agent") ||
-    pathname.startsWith("/api/feedback") ||
-    pathname.startsWith("/api/contacts/log-interaction") ||
-    pathname.startsWith("/api/contacts/context") ||
-    pathname.startsWith("/api/contacts/instructions") ||
-    pathname.startsWith("/api/contacts/watchlist") ||
-    pathname.startsWith("/api/contacts/journey") ||
-    pathname.startsWith("/api/newsletters/edit") ||
-    pathname.startsWith("/api/newsletters/preview") ||
-    pathname.startsWith("/api/listings/blast") ||
-    pathname.startsWith("/api/templates/preview") ||
-    pathname.startsWith("/api/contacts/export") ||
-    pathname.startsWith("/api/contacts/import") ||
+
+    // Consent re-confirmation (link from email, rate-limited)
+    pathname.startsWith("/api/consent/reconfirm") ||
+
+    // Website SDK endpoints (API-key authenticated, not session)
     pathname.startsWith("/api/websites/") ||
+
+    // Voice agent (own auth via requireVoiceAgentAuth)
+    pathname.startsWith("/api/voice-agent") ||
+
+    // Social OAuth callback (external provider redirect)
     pathname.startsWith("/api/social/oauth") ||
-    pathname.startsWith("/api/agent/") ||
-    pathname.startsWith("/api/contacts/import-gmail") ||
-    pathname.startsWith("/api/contacts/import-vcard")
+
+    // Address autocomplete (public, rate-limited, no PII)
+    pathname.startsWith("/api/address-autocomplete")
   ) {
     return NextResponse.next();
   }
@@ -63,6 +83,15 @@ export async function middleware(request: NextRequest) {
   // Dashboard pages without session → redirect to login
   // (Dashboard layout also checks server-side as backup)
   if (!sessionToken && !pathname.startsWith("/api")) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // Admin routes — require session at minimum (role check in page/action).
+  // Edge middleware cannot decode NextAuth JWT without crypto overhead,
+  // so admin role enforcement is done server-side in page components
+  // via `auth()` + `session.user.role !== 'admin'` → redirect("/").
+  // This block ensures unauthenticated users never reach admin pages.
+  if (pathname.startsWith("/admin") && !sessionToken) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 

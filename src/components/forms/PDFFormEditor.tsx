@@ -206,7 +206,9 @@ export function PDFFormEditor({
       router.refresh();
     } catch (err) {
       console.error("[PDFFormEditor] Complete error:", err);
-      toast.error("Failed to complete form");
+      const msg = err instanceof Error ? err.message : "Failed to complete form";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setCompleting(false);
     }

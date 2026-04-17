@@ -61,10 +61,11 @@ export async function GET(request: Request) {
   // Check user is authenticated via NextAuth
   const session = await auth();
   if (!session?.user?.email) {
-    // Redirect to login with return URL
-    const returnUrl = encodeURIComponent(request.url);
+    // Redirect to login — use only the path+query to prevent open redirect
+    const requestUrl = new URL(request.url);
+    const returnPath = requestUrl.pathname + requestUrl.search;
     return NextResponse.redirect(
-      new URL(`/login?return_to=${returnUrl}`, request.url)
+      new URL(`/login?return_to=${encodeURIComponent(returnPath)}`, request.url)
     );
   }
 

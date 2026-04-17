@@ -16,6 +16,8 @@ export type EmailData = {
   contact: { name: string; firstName: string; type: string };
   agent: { name: string; brokerage: string; phone: string; initials?: string };
   content: { subject: string; intro: string; body: string; ctaText: string; ctaUrl?: string };
+  unsubscribeUrl?: string;
+  physicalAddress?: string;
   listing?: {
     address: string; area: string; price: string | number;
     beds?: number; baths?: number; sqft?: string; year?: number;
@@ -40,7 +42,8 @@ export type EmailData = {
   socialProof?: { headline?: string; text: string; stats?: { value: string; label: string }[] };
 };
 
-type BlockFn = (data: EmailData) => string;
+type Branding = { name: string; brokerage?: string; phone?: string; initials?: string };
+type BlockFn = (data: EmailData, branding?: Branding) => string;
 
 // ═══════════════════════════════════════════════
 // SHARED STYLES
@@ -54,10 +57,10 @@ const FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','I
 
 const blocks: Record<string, BlockFn> = {
 
-  header: (d) => `
+  header: (d, branding) => `
     <tr><td style="padding:20px 32px 16px;">
       <table width="100%"><tr>
-        <td><span style="font-size:15px;font-weight:700;color:#1d1d1f;letter-spacing:-0.3px;">ListingFlow</span></td>
+        <td><span style="font-size:15px;font-weight:700;color:#1d1d1f;letter-spacing:-0.3px;">${branding?.name ?? 'Your Agent'}</span></td>
         <td align="right"><span style="font-size:11px;color:#86868b;letter-spacing:0.5px;text-transform:uppercase;">${d.content.subject.includes("Welcome") ? "Welcome" : d.listing ? "New Listing" : "Update"}</span></td>
       </tr></table>
     </td></tr>`,
@@ -362,7 +365,7 @@ const blocks: Record<string, BlockFn> = {
 
   cta: (d) => `
     <tr><td style="padding:28px 32px 0;text-align:center;">
-      <a href="${d.content.ctaUrl || "#"}" style="display:inline-block;background:#1d1d1f;color:#fff;padding:16px 48px;border-radius:980px;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:-0.2px;">${d.content.ctaText}</a>
+      <a href="${d.content.ctaUrl || "#"}" class="email-cta-btn" style="display:inline-block;background:#1d1d1f;color:#ffffff;padding:16px 48px;border-radius:980px;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:-0.2px;">${d.content.ctaText}</a>
     </td></tr>`,
 
   agentCard: (d) => `
@@ -383,7 +386,10 @@ const blocks: Record<string, BlockFn> = {
     <tr><td style="padding:24px 32px 20px;text-align:center;">
       <p style="font-size:11px;color:#86868b;margin:0;line-height:1.6;">
         ${d.agent.name} · ${d.agent.brokerage}<br>
-        <a href="#" style="color:#86868b;text-decoration:underline;">Unsubscribe</a> · <a href="#" style="color:#86868b;text-decoration:underline;">Privacy</a>
+        <a href="${d.unsubscribeUrl ?? '#'}" style="color:#86868b;text-decoration:underline;">Unsubscribe</a> · <a href="#" style="color:#86868b;text-decoration:underline;">Privacy</a>
+      </p>
+      <p style="font-size:11px;color:#999;text-align:center;margin:4px 0 0">
+        ${d.physicalAddress ?? 'Please contact us for our mailing address'}
       </p>
     </td></tr>`,
 };
@@ -394,6 +400,11 @@ const blocks: Record<string, BlockFn> = {
 
 const TEMPLATE_BLOCKS: Record<string, string[]> = {
   listing_alert: ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "priceComparison", "mortgageCalc", "openHouse", "cta", "agentCard", "footer"],
+  // Fix 5: Welcome template — warm greeting (personalNote), value prop (heroGradient),
+  // optional matching properties (propertyGrid → returns "" when data.listings is absent),
+  // optional social proof (socialProof → returns "" when data.socialProof is absent),
+  // single CTA, agent card, footer.  All optional blocks degrade gracefully — no
+  // required fields beyond contact + agent + content.
   welcome: ["header", "heroGradient", "personalNote", "propertyGrid", "socialProof", "cta", "agentCard", "footer"],
   market_update: ["header", "heroGradient", "statsRow", "personalNote", "recentSales", "propertyGrid", "cta", "agentCard", "footer"],
   neighbourhood_guide: ["header", "heroGradient", "personalNote", "areaHighlights", "mapPreview", "cta", "agentCard", "footer"],
@@ -404,19 +415,47 @@ const TEMPLATE_BLOCKS: Record<string, string[]> = {
   cma_preview: ["header", "heroGradient", "personalNote", "priceComparison", "recentSales", "socialProof", "cta", "agentCard", "footer"],
   re_engagement: ["header", "heroGradient", "personalNote", "statsRow", "propertyGrid", "cta", "agentCard", "footer"],
   luxury_showcase: ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "videoThumbnail", "cta", "agentCard", "footer"],
+  // Transaction lifecycle templates
+  closing_checklist: ["header", "personalNote", "featureList", "cta", "agentCard", "footer"],
+  inspection_reminder: ["header", "personalNote", "featureList", "cta", "agentCard", "footer"],
+  closing_countdown: ["header", "heroGradient", "personalNote", "statsRow", "countdown", "cta", "agentCard", "footer"],
+  mortgage_renewal: ["header", "personalNote", "statsRow", "priceComparison", "featureList", "cta", "agentCard", "footer"],
+  referral: ["header", "personalNote", "socialProof", "cta", "agentCard", "footer"],
+  buyer_guide: ["header", "heroGradient", "personalNote", "featureList", "propertyGrid", "cta", "agentCard", "footer"],
+  seller_guide: ["header", "heroGradient", "personalNote", "featureList", "cta", "agentCard", "footer"],
 };
 
 // ═══════════════════════════════════════════════
 // ASSEMBLER — builds full email HTML from blocks
 // ═══════════════════════════════════════════════
 
-export function assembleEmail(emailType: string, data: EmailData): string {
+export function assembleEmail(
+  emailType: string,
+  data: EmailData,
+  unsubscribeUrl?: string,
+  physicalAddress?: string,
+): string {
   const blockList = TEMPLATE_BLOCKS[emailType] || TEMPLATE_BLOCKS.welcome;
+
+  // Merge CASL-required fields into data so footer block can access them
+  const enrichedData: EmailData = {
+    ...data,
+    unsubscribeUrl: unsubscribeUrl ?? data.unsubscribeUrl,
+    physicalAddress: physicalAddress ?? data.physicalAddress,
+  };
+
+  // Derive branding from agent field for blocks that need it (e.g. header)
+  const branding: Branding = {
+    name: data.agent.name,
+    brokerage: data.agent.brokerage,
+    phone: data.agent.phone,
+    initials: data.agent.initials,
+  };
 
   const renderedBlocks = blockList
     .map(blockName => {
       const fn = blocks[blockName];
-      return fn ? fn(data) : "";
+      return fn ? fn(enrichedData, branding) : "";
     })
     .filter(Boolean)
     .join("\n");
@@ -425,9 +464,10 @@ export function assembleEmail(emailType: string, data: EmailData): string {
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <meta name="color-scheme" content="light dark">
 <style>
-  @media(prefers-color-scheme:dark){
+  @media (prefers-color-scheme: dark) {
     .email-body{background:#111!important}
     .email-card{background:#1c1c1e!important}
+    .email-cta-btn{background:#ff5c3a!important;color:#ffffff!important}
   }
   @media(max-width:600px){
     .photo-grid td{display:block!important;width:100%!important;padding:2px 0!important}
@@ -446,33 +486,77 @@ ${renderedBlocks}
 </body></html>`;
 }
 
-// Default brand config — used when DB config not available
-const DEFAULT_BRAND = { name: "Kunal", brokerage: "RE/MAX City Realty", phone: "604-555-0123", initials: "K" };
+// Default brand config — used only as last-resort fallback
+const DEFAULT_BRAND = { name: "Your Realtor", brokerage: "", phone: "", initials: "R" };
 
 /**
- * Get brand config from DB or use defaults.
- * Caches for 5 minutes to avoid repeated DB calls.
+ * Get brand config from DB for the authenticated tenant.
+ * Queries realtor_agent_config.brand_config first, then users table as fallback.
+ * Caches for 5 minutes to avoid repeated DB calls per server request.
  */
 let brandCache: { data: typeof DEFAULT_BRAND; expires: number } | null = null;
 
 export async function getBrandConfig(): Promise<typeof DEFAULT_BRAND> {
   if (brandCache && Date.now() < brandCache.expires) return brandCache.data;
   try {
-    const { createAdminClient } = await import("@/lib/supabase/admin");
-    const supabase = createAdminClient();
-    const { data } = await supabase.from("realtor_agent_config").select("brand_config").eq("realtor_id", "demo").single();
-    if (data?.brand_config) {
-      const bc = data.brand_config as Record<string, string>;
+    const { getAuthenticatedTenantClient } = await import("@/lib/supabase/tenant");
+    const tc = await getAuthenticatedTenantClient();
+    const realtorId = tc.realtorId;
+    const supabase = tc.raw;
+
+    // 1. Try realtor_agent_config.brand_config
+    const { data: configRow } = await supabase
+      .from("realtor_agent_config")
+      .select("brand_config")
+      .eq("realtor_id", realtorId)
+      .maybeSingle();
+
+    if (configRow?.brand_config) {
+      const bc = configRow.brand_config as Record<string, string>;
+      if (bc.name) {
+        const initials = bc.name
+          .split(" ")
+          .map((w: string) => w[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2);
+        const brand = {
+          name: bc.name,
+          brokerage: bc.brokerage || DEFAULT_BRAND.brokerage,
+          phone: bc.phone || DEFAULT_BRAND.phone,
+          initials,
+        };
+        brandCache = { data: brand, expires: Date.now() + 300000 };
+        return brand;
+      }
+    }
+
+    // 2. Fallback: users table name + email
+    const { data: userRow } = await supabase
+      .from("users")
+      .select("name, email")
+      .eq("id", realtorId)
+      .maybeSingle();
+
+    if (userRow?.name) {
+      const initials = userRow.name
+        .split(" ")
+        .map((w: string) => w[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
       const brand = {
-        name: bc.name || DEFAULT_BRAND.name,
-        brokerage: bc.brokerage || DEFAULT_BRAND.brokerage,
-        phone: bc.phone || DEFAULT_BRAND.phone,
-        initials: (bc.name || DEFAULT_BRAND.name)[0],
+        name: userRow.name,
+        brokerage: DEFAULT_BRAND.brokerage,
+        phone: DEFAULT_BRAND.phone,
+        initials,
       };
       brandCache = { data: brand, expires: Date.now() + 300000 };
       return brand;
     }
-  } catch {}
+  } catch {
+    // Not authenticated or DB unavailable — fall through to DEFAULT_BRAND
+  }
   return DEFAULT_BRAND;
 }
 
@@ -480,17 +564,18 @@ export async function getBrandConfig(): Promise<typeof DEFAULT_BRAND> {
  * Quick helper — build email with minimal input.
  * Used by seed script and workflow engine.
  */
-export function buildEmailFromType(
+export async function buildEmailFromType(
   emailType: string,
   contactName: string,
   contactType: string,
   subject: string,
   bodyText: string,
   ctaText: string = "View Details",
-): string {
+): Promise<string> {
+  const brand = await getBrandConfig();
   return assembleEmail(emailType, {
     contact: { name: contactName, firstName: contactName.split(" ")[0], type: contactType },
-    agent: DEFAULT_BRAND,
+    agent: brand,
     content: { subject, intro: bodyText, body: "", ctaText },
   });
 }
@@ -553,6 +638,38 @@ export async function runPreSendChecks(
   } catch {}
 
   return { subject, body, warnings, qualityScore };
+}
+
+/**
+ * Fix #4: Phase-aware CTA helper.
+ * Returns the right call-to-action text and URL based on contact type and journey phase.
+ * Callers can override with a custom CTA by passing the `customCTA` parameter.
+ */
+export function getPhaseAwareCTA(
+  contactType: string,
+  journeyPhase: string,
+  customCTA?: { text: string; url: string }
+): { text: string; url: string } {
+  if (customCTA) return customCTA;
+
+  const ctaMap: Record<string, Record<string, { text: string; url: string }>> = {
+    buyer: {
+      lead: { text: "Get Your Free Market Report", url: "#market-report" },
+      active: { text: "Book a Private Showing", url: "#book-showing" },
+      under_contract: { text: "Track Your Closing Milestones", url: "#closing" },
+      past_client: { text: "See What Your Home Is Worth Now", url: "#valuation" },
+      dormant: { text: "See What's New in Your Area", url: "#new-listings" },
+    },
+    seller: {
+      lead: { text: "Get Your Free Home Valuation", url: "#valuation" },
+      active: { text: "Review Your Marketing Plan", url: "#marketing" },
+      under_contract: { text: "View Your Closing Checklist", url: "#closing" },
+      past_client: { text: "Track Your Home's Value", url: "#equity" },
+      dormant: { text: "See What Homes Are Selling For", url: "#market" },
+    },
+  };
+
+  return ctaMap[contactType]?.[journeyPhase] ?? { text: "Learn More", url: "#" };
 }
 
 /**

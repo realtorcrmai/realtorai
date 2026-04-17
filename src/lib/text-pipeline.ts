@@ -76,7 +76,7 @@ const LENGTH_TARGETS: Record<string, { min: number; max: number; label: string }
 // ═══════════════════════════════════════════════
 
 const COMPLIANCE_BLOCKLIST = [
-  { pattern: /guaranteed?\s+(to\s+)?appreceat/i, reason: "Cannot guarantee property appreciation" },
+  { pattern: /guaranteed?\s+(to\s+)?appreciate/i, reason: "Cannot guarantee property appreciation" },
   { pattern: /guaranteed?\s+(to\s+)?sell/i, reason: "Cannot guarantee a sale" },
   { pattern: /guaranteed?\s+return/i, reason: "Cannot guarantee investment returns" },
   { pattern: /will\s+(definitely|certainly|surely)\s+(increase|appreciate|go up)/i, reason: "Cannot make definitive predictions about property values" },
@@ -226,9 +226,9 @@ export async function runTextPipeline(input: PipelineInput): Promise<PipelineRes
       warnings.push(`Subject "${subject}" was sent to this contact in the last 14 days — consider changing`);
     }
 
-    // Check for very similar subjects (first 20 chars match)
-    const subjectPrefix = subject.toLowerCase().slice(0, 20);
-    const similar = recentSubjects.filter(s => s.slice(0, 20) === subjectPrefix);
+    // Check for very similar subjects (first 40 chars match)
+    const subjectPrefix = subject.toLowerCase().slice(0, 40);
+    const similar = recentSubjects.filter(s => s.slice(0, 40) === subjectPrefix);
     if (similar.length > 0 && !recentSubjects.includes(subject.toLowerCase())) {
       warnings.push(`Subject is very similar to recent email: "${similar[0]}"`);
     }

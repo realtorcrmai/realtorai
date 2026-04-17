@@ -3,7 +3,27 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { hash } from "bcryptjs";
 import { getUserFeatures } from "@/lib/features";
 
+// Rate limiter — in-memory Map, resets on server restart
+const rateMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(key: string, maxRequests: number, windowMs: number): boolean {
+  const now = Date.now();
+  const entry = rateMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateMap.set(key, { count: 1, resetAt: now + windowMs });
+    return true; // allowed
+  }
+  if (entry.count >= maxRequests) return false; // blocked
+  entry.count++;
+  return true; // allowed
+}
+
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown";
+  if (!checkRateLimit(`signup:${ip}`, 5, 15 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
+  }
+
   try {
     const body = await request.json();
     const { name, email, password } = body;

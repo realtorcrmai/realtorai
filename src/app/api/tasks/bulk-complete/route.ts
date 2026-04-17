@@ -9,9 +9,9 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { ids } = body as { ids?: string[] };
 
-  if (!Array.isArray(ids) || ids.length === 0) {
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 1000) {
     return NextResponse.json(
-      { error: "ids array is required and must not be empty" },
+      { error: "ids array must have 1-1000 items" },
       { status: 400 }
     );
   }

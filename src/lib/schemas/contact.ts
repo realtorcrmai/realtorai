@@ -12,6 +12,14 @@ export const contactSchema = z.object({
   pref_channel: z.enum(PREF_CHANNELS).default("sms"),
   notes: z.string().optional(),
   address: z.string().optional(),
+  postal_code: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .refine(
+      (v) => !v || /^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$/.test(v) || /^\d{5}(-\d{4})?$/.test(v),
+      { message: "Postal code must be Canadian (V5K 0A1) or US (12345)" }
+    ),
   referred_by_id: z.string().uuid().optional().or(z.literal("")),
   source: z.string().optional(),
   lead_status: z.enum(LEAD_STATUSES).optional(),

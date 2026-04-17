@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/resend";
 import { render } from "@react-email/components";
+import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 import { NewListingAlert } from "@/emails/NewListingAlert";
 import { MarketUpdate } from "@/emails/MarketUpdate";
 import { JustSold } from "@/emails/JustSold";
@@ -37,6 +38,13 @@ type EmailType = (typeof VALID_TYPES)[number];
 export async function POST(req: NextRequest) {
   if (process.env.NODE_ENV === "production") {
     return NextResponse.json({ error: "Not available in production" }, { status: 403 });
+  }
+
+  // Require cron secret even in dev to prevent unauthorized email sending
+  const authHeader = req.headers.get("authorization");
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await req.json();
@@ -87,7 +95,7 @@ export async function POST(req: NextRequest) {
     .order("created_at", { ascending: false })
     .limit(4);
 
-  const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/newsletters/unsubscribe?id=${contactId}`;
+  const unsubscribeUrl = buildUnsubscribeUrl(contactId);
   const firstName = contact.name.split(" ")[0];
 
   const typesToSend: EmailType[] =

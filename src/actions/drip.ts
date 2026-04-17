@@ -2,6 +2,8 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/resend";
+import { buildWelcomeDripHTML } from "@/emails/WelcomeDripHTML";
+import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 
 // Drip schedule: day → subject + skip check
 const DRIP_SCHEDULE = [
@@ -100,33 +102,19 @@ export async function sendDripEmail(
     return { skipped: true, reason: `action already done: ${schedule.skipCheck}` };
   }
 
-  // Build email content (simple text for now — React Email templates in Phase 2)
   const firstName = name?.split(" ")[0] || "there";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.realtors360.com";
-  const unsubscribeUrl = `${appUrl}/api/newsletters/unsubscribe?user=${userId}&type=drip`;
+  // HMAC-signed unsubscribe URL — userId is used as the identifier
+  const unsubscribeUrl = buildUnsubscribeUrl(userId);
 
-  const bodyMap: Record<number, string> = {
-    0: `Hi ${firstName},\n\nWelcome to Realtors360! Your 14-day Professional trial is active — all features unlocked.\n\nHere are 3 quick wins to get started:\n1. Import your contacts → ${appUrl}/contacts/new\n2. Add a listing → ${appUrl}/listings\n3. Connect your calendar → ${appUrl}/calendar\n\nLet me know if you need anything!\n\nRahul`,
-    1: `Hi ${firstName},\n\nDid you know? You can import your contacts in under 60 seconds.\n\nJust click here and follow the steps: ${appUrl}/contacts/new\n\nWe support Gmail, CSV, and Apple vCard imports.\n\nRahul`,
-    2: `Hi ${firstName},\n\nOne of Realtors360's most powerful features: AI-generated MLS remarks.\n\nAdd a listing, and our AI writes your public and REALTOR remarks instantly. Try it: ${appUrl}/listings\n\nRahul`,
-    3: `Hi ${firstName},\n\nReady to send your first newsletter? Our AI can write it for you.\n\nCreate a campaign in 3 minutes: ${appUrl}/newsletters\n\nRahul`,
-    5: `Hi ${firstName},\n\nNever miss a showing again. Connect your Google Calendar and we'll sync all your appointments.\n\nConnect now: ${appUrl}/calendar\n\nRahul`,
-    7: `Hi ${firstName},\n\nYou're halfway through your Professional trial — 7 days left!\n\nHere's what you've accomplished so far. Keep exploring!\n\nView your billing: ${appUrl}/settings/billing\n\nRahul`,
-    12: `Hi ${firstName},\n\nYour Professional trial ends in 2 days.\n\nAfter that, you'll be on the Free plan (contacts, calendar, tasks only). Upgrade to keep all your features: ${appUrl}/settings/billing\n\nRahul`,
-  };
-
-  const body = bodyMap[day] || bodyMap[0];
+  const html = buildWelcomeDripHTML({ firstName, day, appUrl, unsubscribeUrl });
 
   try {
-    // Convert text to simple HTML
-    const htmlBody = body.replace(/\n/g, "<br>").replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>');
-
     const result = await sendEmail({
       to: email,
       from: `${FOUNDER_FROM.name} <${FOUNDER_FROM.email}>`,
       subject: schedule.subject,
-      html: htmlBody,
-      text: body,
+      html,
       headers: {
         "List-Unsubscribe": `<${unsubscribeUrl}>`,
       },

@@ -25,7 +25,8 @@ interface UseVoiceAgentReturn {
   isMuted: boolean;
 }
 
-const VOICE_AGENT_URL = process.env.NEXT_PUBLIC_VOICE_AGENT_URL || "http://127.0.0.1:8768";
+// All external voice agent calls are proxied through /api/voice-agent/proxy (server-side key).
+// No client-side API key needed.
 
 export function useVoiceAgent(): UseVoiceAgentReturn {
   const [session, setSession] = useState<VoiceSession | null>(null);
@@ -45,13 +46,10 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
 
   const startSession = useCallback(async (agentEmail: string, focusType?: string | null, focusId?: string | null) => {
     try {
-      // Create session via CRM API
+      // Create session via CRM API — authenticated via session cookie, no NEXT_PUBLIC key needed
       const res = await fetch("/api/voice-agent/sessions", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_VOICE_AGENT_API_KEY || ""}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           agent_email: agentEmail,
           mode: "realtor",
@@ -79,18 +77,16 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
         addMessage("system", "Voice session started in text mode. Daily.co unavailable — type your messages.");
       }
 
-      // Start heartbeat — POST to dedicated heartbeat action
-      heartbeatRef.current = setInterval(async () => {
-        if (sessionIdRef.current) {
-          await fetch(`/api/voice-agent/sessions?session_id=${sessionIdRef.current}&action=heartbeat`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${process.env.NEXT_PUBLIC_VOICE_AGENT_API_KEY || ""}`,
-            },
-            body: JSON.stringify({ session_id: sessionIdRef.current, action: "heartbeat" }),
-          }).catch(() => {});
-        }
+      // Start heartbeat — POST to CRM route, authenticated via session cookie
+      heartbeatRef.current = setInterval(() => {
+        if (!sessionIdRef.current) return;
+        fetch(`/api/voice-agent/sessions?session_id=${sessionIdRef.current}&action=heartbeat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: sessionIdRef.current, action: "heartbeat" }),
+        }).catch((err) => {
+          console.warn("[useVoiceAgent] Heartbeat failed:", err instanceof Error ? err.message : err);
+        });
       }, 30_000);
     } catch (err) {
       addMessage("system", `Failed to start session: ${err instanceof Error ? err.message : "Unknown error"}`);
@@ -106,7 +102,6 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
     if (sessionIdRef.current) {
       await fetch(`/api/voice-agent/sessions?session_id=${sessionIdRef.current}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_VOICE_AGENT_API_KEY || ""}` },
       }).catch(() => {});
     }
 
@@ -124,16 +119,17 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
     addMessage("user", text);
 
     try {
-      const res = await fetch(`${VOICE_AGENT_URL}/api/chat/stream`, {
+      // Route through server-side proxy — no client API key needed
+      const res = await fetch("/api/voice-agent/proxy", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_VOICE_AGENT_API_KEY || ""}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          session_id: sessionIdRef.current,
-          message: text,
-          mode: session?.mode ?? "realtor",
+          path: "/api/chat/stream",
+          body: {
+            session_id: sessionIdRef.current,
+            message: text,
+            mode: session?.mode ?? "realtor",
+          },
         }),
       });
 
@@ -174,10 +170,10 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
         if (webrtc.state === "connected") {
           setIsSpeaking(true);
           try {
-            const ttsRes = await fetch(`${VOICE_AGENT_URL}/api/tts`, {
+            const ttsRes = await fetch("/api/voice-agent/proxy", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ text: fullResponse }),
+              body: JSON.stringify({ path: "/api/tts", body: { text: fullResponse } }),
             });
             if (ttsRes.ok) {
               const audioBlob = await ttsRes.blob();

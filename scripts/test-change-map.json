@@ -1,0 +1,65 @@
+{
+  "_comment": "Maps code changes to test plan documents that MUST be updated. Used by audit-test-plans.mjs and audit-docs-deep.mjs.",
+  "rules": [
+    {
+      "pattern": "src/app/api/*/route.ts",
+      "docs": ["docs/TEST_PLAN_1000.md"],
+      "section": "API endpoint tests",
+      "reason": "New API endpoint needs test cases (happy path, error, auth)"
+    },
+    {
+      "pattern": "src/app/(dashboard)/*/page.tsx",
+      "docs": ["docs/TEST_PLAN_UI_UX_Features.md", "docs/TESTPLAN_Browser_UX.md"],
+      "section": "Page load + interaction tests",
+      "reason": "New page needs navigation test + UI interaction test"
+    },
+    {
+      "pattern": "src/actions/*.ts",
+      "docs": ["docs/TEST_PLAN_1000.md"],
+      "section": "Server action CRUD tests",
+      "reason": "New action needs create/read/update/delete test cases"
+    },
+    {
+      "pattern": "src/emails/*.tsx",
+      "docs": ["docs/TEST_NEWSLETTER_INTEGRATION.md"],
+      "section": "Email template send tests",
+      "reason": "New email template needs render + send + tracking test"
+    },
+    {
+      "pattern": "src/components/*/",
+      "docs": ["docs/TEST_PLAN_UI_UX_Features.md"],
+      "section": "Component tests (render, interaction, a11y)",
+      "reason": "New component directory needs basic render + a11y test cases"
+    },
+    {
+      "pattern": "src/lib/compliance/*.ts",
+      "docs": ["docs/TEST_PLAN_1000.md"],
+      "section": "Compliance gate tests",
+      "reason": "Compliance changes need regression tests (CASL consent, FINTRAC gate)"
+    },
+    {
+      "pattern": "supabase/migrations/*.sql",
+      "docs": ["docs/TEST_PLAN_1000.md"],
+      "section": "Data integrity tests",
+      "reason": "New migration needs FK constraint + RLS + cascade delete tests"
+    },
+    {
+      "pattern": "src/lib/workflow-engine.ts",
+      "docs": ["docs/TEST_PLAN_Workflow_Trigger_Engine.md"],
+      "section": "Workflow execution tests",
+      "reason": "Workflow engine changes need step execution + trigger tests"
+    },
+    {
+      "pattern": "realtors360-newsletter/**",
+      "docs": ["docs/TEST_NEWSLETTER_INTEGRATION.md"],
+      "section": "Newsletter pipeline tests",
+      "reason": "Newsletter service changes need end-to-end pipeline tests"
+    },
+    {
+      "pattern": "voice_agent/**",
+      "docs": ["docs/TEST_PLAN_1000.md"],
+      "section": "Voice agent tests",
+      "reason": "Voice agent changes need API + conversation flow tests"
+    }
+  ]
+}

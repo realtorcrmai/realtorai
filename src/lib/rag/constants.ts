@@ -14,7 +14,7 @@ export const EMBEDDING_DIMS = 1024;
 export const MODELS = {
   TIER1_PLANNER: 'claude-haiku-4-5-20251001',
   TIER3_STANDARD: 'claude-sonnet-4-20250514',
-  TIER3_COMPLEX: 'claude-opus-4-6',
+  TIER3_COMPLEX: 'claude-haiku-4-5-20251001',
 } as const;
 
 /** Max tokens per tier */

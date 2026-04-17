@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Mail, Phone, Building2, Loader2 } from "lucide-react";
@@ -35,6 +35,13 @@ export function ContactImportPreview({ contacts, source, onImport, onBack, onSki
   });
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     return contacts
@@ -92,7 +99,7 @@ export function ContactImportPreview({ contacts, source, onImport, onBack, onSki
     setProgress(0);
 
     // Simulate progress updates
-    const interval = setInterval(() => {
+    intervalRef.current = setInterval(() => {
       setProgress((p) => Math.min(p + 10, 90));
     }, 200);
 
@@ -100,7 +107,10 @@ export function ContactImportPreview({ contacts, source, onImport, onBack, onSki
       await onImport(selectedContacts);
       setProgress(100);
     } finally {
-      clearInterval(interval);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
       setImporting(false);
     }
   };

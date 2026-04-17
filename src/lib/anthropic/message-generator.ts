@@ -52,7 +52,9 @@ Return ONLY valid JSON, no markdown.`;
       );
       if (retrieved.formatted) ragContext = `\n\nPAST INTERACTIONS:\n${retrieved.formatted}`;
     }
-  } catch { /* RAG not available */ }
+  } catch (err) {
+    console.warn("[message-generator] RAG context unavailable:", err instanceof Error ? err.message : "unknown");
+  }
 
   const message = await createWithRetry(anthropic, {
     model: process.env.AI_SCORING_MODEL || "claude-sonnet-4-20250514",
@@ -64,8 +66,8 @@ Return ONLY valid JSON, no markdown.`;
 
   try {
     return JSON.parse(text);
-  } catch {
-    // If JSON parsing fails, use the raw text as body
+  } catch (err) {
+    console.error("[message-generator] JSON parse failed:", text.slice(0, 200), err instanceof Error ? err.message : err);
     return { body: text };
   }
 }

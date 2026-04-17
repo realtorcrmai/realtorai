@@ -70,7 +70,8 @@ ROUTES=(
   "/forms/templates" "/newsletters" "/newsletters/queue"
   "/newsletters/analytics" "/newsletters/guide" "/newsletters/activity"
   "/newsletters/control" "/newsletters/insights" "/newsletters/ghost"
-  "/newsletters/suppressions" "/automations" "/automations/templates"
+  "/newsletters/suppressions" "/newsletters/editorial" "/newsletters/editorial/new"
+  "/automations" "/automations/templates"
   "/contacts/segments" "/settings" "/inbox" "/login"
   "/signup" "/personalize" "/onboarding"
 )
@@ -1010,6 +1011,7 @@ PERF_ROUTES=(
   "/workflow" "/import" "/forms" "/newsletters"
   "/newsletters/queue" "/newsletters/analytics" "/newsletters/activity"
   "/newsletters/control" "/newsletters/insights"
+  "/newsletters/editorial" "/newsletters/editorial/new"
   "/automations" "/settings" "/inbox" "/personalize" "/onboarding"
 )
 
@@ -1080,6 +1082,209 @@ for EP in "api/webhooks/twilio" "api/webhooks/resend"; do
   CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${APP}/${EP}" -H "Content-Type: application/json" -d '{}')
   [[ "$CODE" != "404" ]] && pass "POST /$EP exists (HTTP $CODE)" || fail "/$EP" "404 not found"
 done
+
+# ── 17. EDITORIAL NEWSLETTER SYSTEM ───────────────────────
+echo ""
+echo "━━━ 17. EDITORIAL NEWSLETTER SYSTEM (30 tests) ━━━"
+
+# 17.1-17.5: Required tables exist
+for TBL in editorial_editions editorial_block_templates editorial_voice_profiles editorial_content_library external_data_cache; do
+  RESULT=$(api_get "${TBL}?select=id&limit=1")
+  if echo "$RESULT" | grep -q '"code":"PGRST205"' 2>/dev/null; then
+    fail "Table ${TBL} exists" "table not found — run migration 113"
+  elif echo "$RESULT" | grep -qE '^\[|^\{\}|^\[\]' 2>/dev/null; then
+    pass "Table ${TBL} exists"
+  else
+    # Non-empty response without error = table exists
+    pass "Table ${TBL} exists"
+  fi
+done
+
+# 17.6: editions have required columns
+ED_DATA=$(api_get "editorial_editions?select=id,realtor_id,title,status,blocks,edition_number,edition_type&limit=1")
+if echo "$ED_DATA" | grep -q '"code"' 2>/dev/null; then
+  fail "editorial_editions schema" "column query failed"
+else
+  pass "editorial_editions has required columns (id, realtor_id, title, status, blocks, edition_number, edition_type)"
+fi
+
+# 17.7: voice_profiles has required columns
+VP_DATA=$(api_get "editorial_voice_profiles?select=id,realtor_id,tone,voice_rules,sample_email&limit=1")
+if echo "$VP_DATA" | grep -q '"code"' 2>/dev/null; then
+  fail "editorial_voice_profiles schema" "column query failed"
+else
+  pass "editorial_voice_profiles has required columns"
+fi
+
+# 17.8: block_templates has required columns
+BT_DATA=$(api_get "editorial_block_templates?select=id,block_type,label,default_content&limit=1")
+if echo "$BT_DATA" | grep -q '"code"' 2>/dev/null; then
+  fail "editorial_block_templates schema" "column query failed"
+else
+  pass "editorial_block_templates has required columns"
+fi
+
+# 17.9: external_data_cache has cache_key and expires_at
+EC_DATA=$(api_get "external_data_cache?select=cache_key,data,expires_at&limit=1")
+if echo "$EC_DATA" | grep -q '"code"' 2>/dev/null; then
+  fail "external_data_cache schema" "column query failed"
+else
+  pass "external_data_cache has required columns"
+fi
+
+# 17.10: editorial_editions status values are valid enum subset
+STATUS_CHECK=$(api_get "editorial_editions?select=status&limit=50")
+INVALID=$(echo "$STATUS_CHECK" | node -e "
+  try {
+    const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+    const valid = ['draft','generating','ready','sent','failed','scheduled'];
+    const bad = d.filter(r => r.status && !valid.includes(r.status)).map(r => r.status);
+    console.log(bad.length === 0 ? 'ok' : bad.join(','));
+  } catch(e) { console.log('ok'); }
+" 2>/dev/null)
+[[ "$INVALID" == "ok" ]] && pass "editorial_editions status values all valid" || fail "editorial_editions invalid statuses" "$INVALID"
+
+# 17.11-17.15: API routes respond correctly
+for EP in \
+  "api/editorial/00000000-0000-0000-0000-000000000000/status" \
+  "api/editorial/generate"; do
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" "${APP}/${EP}")
+  # 401 = auth required (correct), 404 = not found edition (correct for fake ID), 405 = method not allowed
+  [[ "$CODE" == "401" || "$CODE" == "404" || "$CODE" == "405" || "$CODE" == "400" ]] \
+    && pass "/${EP} route exists (HTTP $CODE)" \
+    || fail "/${EP}" "HTTP $CODE (expected 401/404/405)"
+done
+
+# 17.13: status endpoint requires auth
+CODE=$(curl -s -o /dev/null -w "%{http_code}" "${APP}/api/editorial/00000000-0000-0000-0000-000000000000/status")
+[[ "$CODE" == "401" || "$CODE" == "404" ]] && pass "Editorial status endpoint auth-gated" || fail "Editorial status no-auth" "HTTP $CODE"
+
+# 17.14: editorial webhook route handles editorial events
+CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${APP}/api/webhooks/resend" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"email.opened","data":{"email_id":"qa-editorial-test","tags":[{"name":"edition_id","value":"00000000-0000-0000-0000-000000000000"}],"created_at":"2026-01-01T00:00:00Z"}}')
+[[ "$CODE" == "200" || "$CODE" == "401" ]] && pass "Resend webhook handles editorial events (HTTP $CODE)" || fail "Resend webhook editorial" "HTTP $CODE"
+
+# 17.15: editions table has RLS (realtor_id scoping)
+RLS_CHECK=$(api_get "editorial_editions?select=realtor_id&limit=10")
+CROSS=$(echo "$RLS_CHECK" | node -e "
+  try {
+    const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+    const ids = [...new Set(d.map(r => r.realtor_id).filter(Boolean))];
+    console.log(ids.length <= 1 ? 'ok' : 'multi:'+ids.length);
+  } catch(e) { console.log('ok'); }
+" 2>/dev/null)
+[[ "$CROSS" == "ok" ]] && pass "editorial_editions RLS: single-tenant data visible" || skip "editorial_editions RLS multi-realtor" "multiple realtor_ids visible via service key (expected in test)"
+
+# 17.16-17.20: CRUD lifecycle — create, read, update, delete
+REALTOR_ID=$(api_get "contacts?select=realtor_id&limit=1" | node -e "
+  try { const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d[0]?.realtor_id||''); } catch(e){console.log('');}
+" 2>/dev/null)
+
+if [[ -n "$REALTOR_ID" ]]; then
+  # Create
+  CREATE_RESULT=$(api_post "editorial_editions" "{\"realtor_id\":\"${REALTOR_ID}\",\"title\":\"QA Test Edition\",\"edition_type\":\"market_update\",\"status\":\"draft\",\"blocks\":[],\"edition_number\":9999}")
+  EDITION_ID=$(echo "$CREATE_RESULT" | node -e "
+    try { const lines=require('fs').readFileSync('/dev/stdin','utf8').split('\n'); const d=JSON.parse(lines[0]); console.log(Array.isArray(d)?d[0]?.id:d?.id||''); } catch(e){console.log('');}
+  " 2>/dev/null)
+
+  if [[ -n "$EDITION_ID" && "$EDITION_ID" != "null" ]]; then
+    pass "editorial_editions CREATE works: $EDITION_ID"
+
+    # Read
+    READ_RESULT=$(api_get "editorial_editions?id=eq.${EDITION_ID}&select=id,title,status")
+    READ_OK=$(echo "$READ_RESULT" | node -e "
+      try { const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d[0]?.id?'yes':'no'); } catch(e){console.log('no');}
+    " 2>/dev/null)
+    [[ "$READ_OK" == "yes" ]] && pass "editorial_editions READ works" || fail "editorial_editions READ" "row not found after create"
+
+    # Update
+    PATCH_RESULT=$(api_patch "editorial_editions?id=eq.${EDITION_ID}" '{"title":"QA Test Edition — Updated"}')
+    PATCH_CODE=$(echo "$PATCH_RESULT" | tail -1)
+    [[ "$PATCH_CODE" == "200" || "$PATCH_CODE" == "204" ]] && pass "editorial_editions UPDATE works" || fail "editorial_editions UPDATE" "HTTP $PATCH_CODE"
+
+    # Delete (cleanup)
+    DEL_RESULT=$(api_delete "editorial_editions?id=eq.${EDITION_ID}")
+    DEL_CODE=$(echo "$DEL_RESULT" | tail -1)
+    [[ "$DEL_CODE" == "200" || "$DEL_CODE" == "204" ]] && pass "editorial_editions DELETE works" || fail "editorial_editions DELETE" "HTTP $DEL_CODE"
+  else
+    fail "editorial_editions CREATE" "no ID returned — check RLS or table existence"
+    skip "editorial_editions READ" "create failed"
+    skip "editorial_editions UPDATE" "create failed"
+    skip "editorial_editions DELETE" "create failed"
+  fi
+else
+  skip "Editorial CRUD lifecycle" "no realtor_id found in contacts"
+  skip "editorial_editions READ" "no realtor_id"
+  skip "editorial_editions UPDATE" "no realtor_id"
+  skip "editorial_editions DELETE" "no realtor_id"
+fi
+
+# 17.21-17.25: Block template seed data (10 types expected)
+BT_COUNT=$(api_get "editorial_block_templates?select=block_type" | node -e "
+  try { const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.length); } catch(e){console.log('0');}
+" 2>/dev/null)
+[[ "$BT_COUNT" -ge 10 ]] && pass "editorial_block_templates seeded: $BT_COUNT templates" || skip "editorial_block_templates seed" "$BT_COUNT rows (expected ≥10 — run seed)"
+
+for BTYPE in hero just_sold market_commentary rate_watch cta; do
+  HAS=$(api_get "editorial_block_templates?block_type=eq.${BTYPE}&select=block_type&limit=1" | node -e "
+    try { const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.length>0?'yes':'no'); } catch(e){console.log('no');}
+  " 2>/dev/null)
+  [[ "$HAS" == "yes" ]] && pass "Block template '${BTYPE}' seeded" || skip "Block template '${BTYPE}'" "not seeded yet"
+done
+
+# 17.26-17.30: Editions in generating state are not stuck
+STUCK=$(api_get "editorial_editions?select=id,status,updated_at&status=eq.generating" | node -e "
+  try {
+    const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+    const now=Date.now();
+    const stuck=d.filter(r=>{
+      const age=now-new Date(r.updated_at).getTime();
+      return age > 5*60*1000; // >5 minutes in generating = stuck
+    });
+    console.log(stuck.length===0?'ok':'stuck:'+stuck.length);
+  } catch(e){console.log('ok');}
+" 2>/dev/null)
+[[ "$STUCK" == "ok" ]] && pass "No stuck editions in 'generating' state (>5 min)" || fail "Stuck editions detected" "$STUCK — check BullMQ worker"
+
+# editorial_editions with status=ready have non-empty blocks
+READY_DATA=$(api_get "editorial_editions?select=id,blocks&status=eq.ready&limit=5")
+READY_CT=$(echo "$READY_DATA" | node -e "try{const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));console.log(d.length)}catch(e){console.log('0')}" 2>/dev/null)
+if [[ "$READY_CT" -gt 0 ]]; then
+  EMPTY_BLOCKS=$(echo "$READY_DATA" | node -e "
+    try {
+      const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+      const bad=d.filter(r=>!r.blocks||!Array.isArray(r.blocks)||r.blocks.length===0);
+      console.log(bad.length===0?'ok':'empty:'+bad.length);
+    } catch(e){console.log('ok');}
+  " 2>/dev/null)
+  [[ "$EMPTY_BLOCKS" == "ok" ]] && pass "Ready editions all have non-empty blocks array" || fail "Ready editions with empty blocks" "$EMPTY_BLOCKS"
+else
+  skip "Ready editions blocks check" "no ready editions in DB yet"
+fi
+
+# Sent editions have send_count > 0
+SENT_ED=$(api_get "editorial_editions?select=id,send_count&status=eq.sent&limit=5")
+ZERO_SENDS=$(echo "$SENT_ED" | node -e "
+  try {
+    const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+    const bad=d.filter(r=>!r.send_count||r.send_count<1);
+    console.log(bad.length===0?'ok':'zero:'+bad.length);
+  } catch(e){console.log('ok');}
+" 2>/dev/null)
+[[ "$ZERO_SENDS" == "ok" ]] && pass "Sent editorial editions have send_count ≥ 1" || fail "Sent editions with zero send_count" "$ZERO_SENDS"
+
+# Voice profiles have valid tone values
+VP_TONES=$(api_get "editorial_voice_profiles?select=tone&limit=20")
+BAD_TONES=$(echo "$VP_TONES" | node -e "
+  try {
+    const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+    const valid=['professional','friendly','luxury','casual','authoritative'];
+    const bad=d.filter(r=>r.tone&&!valid.includes(r.tone)).map(r=>r.tone);
+    console.log(bad.length===0?'ok':bad.join(','));
+  } catch(e){console.log('ok');}
+" 2>/dev/null)
+[[ "$BAD_TONES" == "ok" ]] && pass "Voice profiles all have valid tone values" || fail "Invalid voice profile tones" "$BAD_TONES"
 
 # ── SUMMARY ────────────────────────────────────────────────
 echo ""

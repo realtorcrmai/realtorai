@@ -108,6 +108,7 @@ export function NotificationDropdown() {
       startTransition(async () => {
         try {
           await markNotificationRead(id);
+          if (!mountedRef.current) return;
           setNotifications((prev) =>
             prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
           );
@@ -124,6 +125,7 @@ export function NotificationDropdown() {
     startTransition(async () => {
       try {
         await markAllNotificationsRead();
+        if (!mountedRef.current) return;
         setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
         setUnreadCount(0);
       } catch {

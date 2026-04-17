@@ -14,6 +14,13 @@ export async function POST(request: NextRequest) {
   const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
+  if (!auth.realtorId) {
+    return NextResponse.json(
+      { error: "Tenant context required", code: "MISSING_TENANT" },
+      { status: 401, headers: corsHeaders(request) }
+    );
+  }
+
   const body = await request.json();
   const { email, name, consent } = body;
 
@@ -37,6 +44,7 @@ export async function POST(request: NextRequest) {
   const { data: existing } = await supabase
     .from("contacts")
     .select("id, newsletter_unsubscribed")
+    .eq("realtor_id", auth.realtorId)
     .eq("email", email)
     .limit(1)
     .maybeSingle();
@@ -69,6 +77,7 @@ export async function POST(request: NextRequest) {
   const { data: contact, error } = await supabase
     .from("contacts")
     .insert({
+      realtor_id: auth.realtorId,
       name: name || email.split("@")[0],
       email,
       phone: "",

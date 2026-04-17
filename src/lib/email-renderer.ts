@@ -20,7 +20,7 @@ export async function renderTemplateToHTML(
   const contactName = variables["name"] || variables["firstName"] || "there";
   const contactType = variables["contactType"] || "buyer";
 
-  return buildEmailFromType(
+  return await buildEmailFromType(
     "welcome",
     contactName,
     contactType,

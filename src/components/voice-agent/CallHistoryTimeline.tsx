@@ -18,12 +18,7 @@ export function CallHistoryTimeline({ contactId }: { contactId: string }) {
     async function load() {
       try {
         const res = await fetch(
-          `/api/voice-agent/calls?contact_id=${contactId}&limit=10`,
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.NEXT_PUBLIC_VOICE_AGENT_API_KEY || ""}`,
-            },
-          }
+          `/api/voice-agent/calls?contact_id=${contactId}&limit=10`
         );
         if (res.ok) {
           const data = await res.json();

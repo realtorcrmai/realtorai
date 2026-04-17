@@ -11,6 +11,14 @@ export function createAdminClient() {
   const isPlaceholder =
     !serviceKey || serviceKey.startsWith("placeholder");
 
+  if (isPlaceholder && process.env.NODE_ENV === "production") {
+    throw new Error(
+      "[supabase/admin] SUPABASE_SERVICE_ROLE_KEY is missing or placeholder in production. " +
+        "This would silently fall back to the anon key, bypassing RLS. " +
+        "Set SUPABASE_SERVICE_ROLE_KEY in your environment variables."
+    );
+  }
+
   if (isPlaceholder) {
     console.warn(
       "[supabase/admin] Service role key missing or placeholder — falling back to anon key. " +

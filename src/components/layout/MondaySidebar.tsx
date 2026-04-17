@@ -6,13 +6,15 @@ import { useSession, signOut } from "next-auth/react";
 import {
   Home, ListTodo, Building2, Users, Clock, Calendar,
   Mail, Zap, Search, Upload, FileText,
-  Wand2, Settings, LogOut,
+  Wand2, Settings, LogOut, Newspaper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
+import { Plus } from "lucide-react";
 import type { FeatureKey } from "@/lib/features";
 import { useRecentItems } from "@/stores/recent-items";
 import { LogoVideo } from "@/components/brand/Logo";
+import { SmartListBuilder } from "@/components/smart-lists/SmartListBuilder";
 
 interface NavItem {
   href: string;
@@ -33,6 +35,8 @@ const TOOLS_NAV: NavItem[] = [
   { href: "/tasks", label: "Tasks", icon: ListTodo, featureKey: "tasks" },
   { href: "/content", label: "Content Engine", icon: Wand2, featureKey: "content" },
   { href: "/newsletters", label: "Email Marketing", icon: Mail, featureKey: "newsletters" },
+  { href: "/newsletters/editorial", label: "Editions", icon: Newspaper, featureKey: "newsletters" },
+  { href: "/newsletters/ab-testing", label: "A/B Testing", icon: Zap, featureKey: "newsletters" },
   { href: "/automations", label: "Automations", icon: Zap, featureKey: "automations" },
 ];
 
@@ -48,6 +52,7 @@ function SidebarNavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
+      data-tour={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
       className={cn(
         "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
         active
@@ -104,7 +109,9 @@ export function MondaySidebar() {
   // Recent items — hydration guard (Zustand persist rehydrates from localStorage after mount)
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const recentItems = useRecentItems((s) => s.items);
+  const storeItems = useRecentItems((s) => s.items);
+  // Only read Zustand-derived values after mount to prevent SSR/client mismatch
+  const recentItems = mounted ? storeItems : [];
 
   // Active section glow color
   const glowColor = getSectionColor(pathname);
@@ -124,6 +131,25 @@ export function MondaySidebar() {
     };
     check();
     const interval = setInterval(check, 30000);
+    return () => { active = false; clearInterval(interval); };
+  }, []);
+
+  // Smart Lists — poll for pinned list counts
+  const [smartLists, setSmartLists] = useState<{ id: string; name: string; icon: string; count: number; entity_type: string }[]>([]);
+  const [showSmartListBuilder, setShowSmartListBuilder] = useState(false);
+  useEffect(() => {
+    let active = true;
+    const fetchCounts = async () => {
+      try {
+        const res = await fetch("/api/smart-lists/counts");
+        if (res.ok) {
+          const data = await res.json();
+          if (active) setSmartLists(data.counts ?? []);
+        }
+      } catch { /* ignore */ }
+    };
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 60000);
     return () => { active = false; clearInterval(interval); };
   }, []);
 
@@ -170,6 +196,49 @@ export function MondaySidebar() {
       </div>
 
       {renderNavGroup("Main", MAIN_NAV)}
+
+      {/* Smart Lists — pinned dynamic filters */}
+      {smartLists.length > 0 && (
+        <>
+          <div className="flex items-center justify-between px-5 pt-4 pb-1">
+            <span className="text-[10px] uppercase tracking-wider text-sidebar-foreground/50 font-semibold">Smart Lists</span>
+            <button
+              onClick={() => setShowSmartListBuilder(true)}
+              className="text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors"
+              aria-label="Create smart list"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <div className="px-2 space-y-0.5">
+            {smartLists.map((sl) => {
+              const href = `/${sl.entity_type === "showings" ? "showings" : sl.entity_type}?smart_list=${sl.id}`;
+              const active = pathname.includes(`smart_list=${sl.id}`);
+              return (
+                <Link
+                  key={sl.id}
+                  href={href}
+                  className={cn(
+                    "flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm transition-colors",
+                    active
+                      ? "bg-sidebar-primary/15 text-white font-medium"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60"
+                  )}
+                >
+                  <span className="text-xs shrink-0">{sl.icon}</span>
+                  <span className="flex-1 truncate">{sl.name}</span>
+                  {sl.count > 0 && (
+                    <span className="text-[10px] bg-sidebar-primary/20 text-sidebar-primary px-1.5 py-0.5 rounded-full font-medium tabular-nums">
+                      {sl.count}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </>
+      )}
+
       {renderNavGroup("Tools", TOOLS_NAV)}
       {renderNavGroup("Admin", ADMIN_NAV)}
 
@@ -215,6 +284,14 @@ export function MondaySidebar() {
           </button>
         </div>
       </div>
+      <SmartListBuilder
+        open={showSmartListBuilder}
+        onOpenChange={setShowSmartListBuilder}
+        onSaved={() => {
+          // Refresh counts
+          fetch("/api/smart-lists/counts").then(r => r.json()).then(d => setSmartLists(d.counts ?? [])).catch(() => {});
+        }}
+      />
     </aside>
   );
 }

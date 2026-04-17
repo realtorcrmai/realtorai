@@ -3,7 +3,8 @@
 import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { stepsToFlow, flowToSteps } from "@/lib/flow-converter";
+import { stepsToFlow } from "@/lib/flow-converter";
+import { saveWorkflowCanvas } from "@/actions/workflow";
 import type { Node, Edge } from "@xyflow/react";
 
 const WorkflowCanvas = dynamic(
@@ -61,50 +62,33 @@ export function WorkflowEditorClient({
     };
   }, [flowJson, steps, triggerConfig]);
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const handleSave = (nodes: Node[], edges: Edge[]) => {
+    setSaveError(null);
     startTransition(async () => {
-      try {
-        const { createAdminClient } = await import("@/lib/supabase/admin");
-        const supabase = createAdminClient();
-
-        // Save flow JSON
-        await supabase
-          .from("workflows")
-          .update({ flow_json: { nodes, edges }, is_published: true })
-          .eq("id", workflowId);
-
-        // Convert to steps and save
-        const newSteps = flowToSteps(
-          nodes as any,
-          edges as any
-        );
-
-        // Delete old steps
-        await supabase
-          .from("workflow_steps")
-          .delete()
-          .eq("workflow_id", workflowId);
-
-        // Insert new steps
-        if (newSteps.length > 0) {
-          await supabase
-            .from("workflow_steps")
-            .insert(newSteps.map(s => ({ ...s, workflow_id: workflowId })));
-        }
-
+      const result = await saveWorkflowCanvas(workflowId, nodes, edges);
+      if (result.error) {
+        setSaveError(result.error);
+      } else {
         router.refresh();
-      } catch (e) {
-        console.error("Save failed:", e);
       }
     });
   };
 
   return (
-    <WorkflowCanvas
-      initialNodes={initialFlow.nodes as Node[]}
-      initialEdges={initialFlow.edges as Edge[]}
-      onSave={handleSave}
-      saving={pending}
-    />
+    <div className="flex flex-col h-full">
+      {saveError && (
+        <div className="px-4 py-2 text-sm text-destructive bg-destructive/10 border-b border-destructive/20">
+          Save failed: {saveError}
+        </div>
+      )}
+      <WorkflowCanvas
+        initialNodes={initialFlow.nodes as Node[]}
+        initialEdges={initialFlow.edges as Edge[]}
+        onSave={handleSave}
+        saving={pending}
+      />
+    </div>
   );
 }

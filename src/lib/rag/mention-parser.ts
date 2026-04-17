@@ -3,6 +3,7 @@
 // ============================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { escapeIlike } from '@/lib/escape-ilike';
 
 export interface Mention {
   type: 'contact' | 'listing';
@@ -49,12 +50,13 @@ export async function searchMentionCandidates(
 ): Promise<Mention[]> {
   if (!query || query.length < 2) return [];
   const results: Mention[] = [];
+  const escaped = escapeIlike(query);
 
   // Search contacts by name
   const { data: contacts } = await db
     .from('contacts')
     .select('id, name')
-    .ilike('name', `%${query}%`)
+    .ilike('name', `%${escaped}%`)
     .limit(limit);
 
   if (contacts) {
@@ -67,7 +69,7 @@ export async function searchMentionCandidates(
   const { data: listings } = await db
     .from('listings')
     .select('id, address')
-    .ilike('address', `%${query}%`)
+    .ilike('address', `%${escaped}%`)
     .limit(limit);
 
   if (listings) {

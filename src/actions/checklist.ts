@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { trackEvent } from "@/lib/analytics";
 
 export interface ChecklistItem {
   key: string;
@@ -111,6 +112,8 @@ export async function markChecklistItem(itemKey: string) {
     dismissed: false,
   }, { onConflict: "user_id,item_key" });
 
+  trackEvent("checklist_event", session.user.id, { action: "completed", item_key: itemKey });
+
   return { success: true };
 }
 
@@ -125,6 +128,8 @@ export async function dismissChecklist() {
     item_key: "__all__",
     dismissed: true,
   }, { onConflict: "user_id,item_key" });
+
+  trackEvent("checklist_event", session.user.id, { action: "dismissed" });
 
   return { success: true };
 }

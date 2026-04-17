@@ -10,11 +10,11 @@ import { NextResponse } from "next/server";
  * Security: Protected by CRON_SECRET header.
  */
 export async function POST(request: Request) {
-  // Verify cron secret (optional, for production security)
+  // Verify cron secret — required for all environments
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

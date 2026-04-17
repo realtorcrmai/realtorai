@@ -5,9 +5,10 @@ import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 import { contactSchema, type ContactFormData } from "@/lib/schemas";
 import type { Json } from "@/types/database";
-import { enforceConsistency } from "@/lib/contact-consistency";
+import { enforceConsistency, validateStageForType } from "@/lib/contact-consistency";
 import { triggerIngest } from "@/lib/rag/realtime-ingest";
 import { createNotification } from "@/lib/notifications";
+import { trackEvent } from "@/lib/analytics";
 
 export async function getContactCommunications(contactId: string, limit = 50) {
   const tc = await getAuthenticatedTenantClient();
@@ -73,6 +74,7 @@ export async function createContact(formData: ContactFormData, force = false) {
       pref_channel: parsed.data.pref_channel,
       notes: parsed.data.notes || null,
       address: parsed.data.address || null,
+      postal_code: parsed.data.postal_code || null,
       referred_by_id: parsed.data.referred_by_id || null,
       source: parsed.data.source || null,
       lead_status: parsed.data.lead_status || "new",
@@ -92,6 +94,8 @@ export async function createContact(formData: ContactFormData, force = false) {
   if (error) {
     return { error: "Failed to create contact" };
   }
+
+  trackEvent('feature_used', tc.realtorId, { feature: 'contacts', action: 'create' });
 
   // Notification: new lead added
   try {
@@ -189,6 +193,7 @@ export async function updateContact(
   if (formData.pref_channel !== undefined) updatePayload.pref_channel = formData.pref_channel;
   if (formData.notes !== undefined) updatePayload.notes = formData.notes || null;
   if (formData.address !== undefined) updatePayload.address = formData.address || null;
+  if (formData.postal_code !== undefined) updatePayload.postal_code = formData.postal_code || null;
   if (formData.referred_by_id !== undefined) updatePayload.referred_by_id = formData.referred_by_id || null;
   if (formData.family_members !== undefined) updatePayload.family_members = formData.family_members;
   if (formData.buyer_preferences !== undefined) updatePayload.buyer_preferences = formData.buyer_preferences;
@@ -927,20 +932,46 @@ export async function setLifecycleStage(
 
 // ── Bulk Operations ──────────────────────────────────────────────────────
 
+const VALID_STAGES = ["new", "qualified", "active_search", "active_listing", "under_contract", "closed", "cold"];
+
 export async function bulkUpdateContactStage(contactIds: string[], stage: string) {
+  if (!VALID_STAGES.includes(stage)) return { error: `Invalid stage: ${stage}` };
+  if (contactIds.length === 0) return { error: "No contacts selected" };
   const tc = await getAuthenticatedTenantClient();
+
+  // Validate stage is compatible with each contact's type
+  const { data: contacts } = await tc.raw
+    .from("contacts")
+    .select("id, type")
+    .eq("realtor_id", tc.realtorId)
+    .in("id", contactIds);
+
+  const validIds: string[] = [];
+  let skipped = 0;
+  for (const c of contacts ?? []) {
+    const validated = validateStageForType(c.type as Parameters<typeof validateStageForType>[0], stage);
+    if (validated === stage) {
+      validIds.push(c.id);
+    } else {
+      skipped++;
+    }
+  }
+
+  if (validIds.length === 0) return { error: `Stage "${stage}" is not valid for the selected contact types.` };
+
   const { error } = await tc.raw
     .from("contacts")
     .update({ stage_bar: stage, updated_at: new Date().toISOString() })
     .eq("realtor_id", tc.realtorId)
-    .in("id", contactIds);
+    .in("id", validIds);
 
   if (error) return { error: error.message };
   revalidatePath("/contacts");
-  return { error: null, updated: contactIds.length };
+  return { error: null, updated: validIds.length, skipped };
 }
 
 export async function bulkDeleteContacts(contactIds: string[]) {
+  if (contactIds.length === 0) return { error: "No contacts selected" };
   const tc = await getAuthenticatedTenantClient();
 
   // Check for active listings linked to any of these contacts
@@ -949,7 +980,7 @@ export async function bulkDeleteContacts(contactIds: string[]) {
     .select("id, seller_id")
     .eq("realtor_id", tc.realtorId)
     .in("seller_id", contactIds)
-    .in("status", ["active", "pending", "conditional"]);
+    .neq("status", "sold").neq("status", "expired").neq("status", "withdrawn");
 
   if (linkedListings && linkedListings.length > 0) {
     return { error: `Cannot delete: ${linkedListings.length} contact(s) have active listings.` };
@@ -967,6 +998,7 @@ export async function bulkDeleteContacts(contactIds: string[]) {
 }
 
 export async function bulkExportContacts(contactIds: string[]) {
+  if (contactIds.length === 0) return { error: "No contacts selected", csv: "" };
   const tc = await getAuthenticatedTenantClient();
   const { data } = await tc.raw
     .from("contacts")
@@ -990,4 +1022,101 @@ export async function bulkExportContacts(contactIds: string[]) {
   );
   const csv = [headers.join(","), ...rows].join("\n");
   return { error: null, csv };
+}
+
+// ── Unsubscribe / Re-subscribe (public — uses admin client, no auth required) ──
+
+/**
+ * Mark a contact as unsubscribed from newsletters.
+ * Validates the HMAC-signed token before touching the DB.
+ * Uses admin client because this route is public (no session).
+ */
+export async function unsubscribeContact(
+  token: string
+): Promise<{ success: boolean; contactId?: string; email?: string; agentName?: string; error?: string }> {
+  const { verifyUnsubscribeToken } = await import("@/lib/unsubscribe-token");
+  const contactId = verifyUnsubscribeToken(token);
+  if (!contactId) {
+    return { success: false, error: "Invalid or expired unsubscribe link." };
+  }
+
+  const supabase = createAdminClient();
+
+  const { data: contact, error: fetchErr } = await supabase
+    .from("contacts")
+    .select("id, email, realtor_id")
+    .eq("id", contactId)
+    .single();
+
+  if (fetchErr || !contact) {
+    return { success: false, error: "Contact not found." };
+  }
+
+  const { error: updateErr } = await supabase
+    .from("contacts")
+    .update({ newsletter_unsubscribed: true } as Record<string, unknown>)
+    .eq("id", contactId);
+
+  if (updateErr) {
+    return { success: false, error: "Failed to process unsubscribe request." };
+  }
+
+  // Pause all active journeys for this contact
+  await supabase
+    .from("contact_journeys")
+    .update({ is_paused: true, pause_reason: "unsubscribed" })
+    .eq("contact_id", contactId)
+    .eq("is_paused", false);
+
+  // Fetch realtor name for the confirmation page
+  let agentName: string | undefined;
+  if (contact.realtor_id) {
+    const { data: user } = await supabase
+      .from("users")
+      .select("name")
+      .eq("id", contact.realtor_id)
+      .single();
+    agentName = user?.name ?? undefined;
+  }
+
+  return {
+    success: true,
+    contactId: contact.id,
+    email: contact.email ?? undefined,
+    agentName,
+  };
+}
+
+/**
+ * Re-subscribe a contact to newsletters.
+ * Validates the same HMAC-signed token.
+ */
+export async function resubscribeContact(
+  token: string
+): Promise<{ success: boolean; error?: string }> {
+  const { verifyUnsubscribeToken } = await import("@/lib/unsubscribe-token");
+  const contactId = verifyUnsubscribeToken(token);
+  if (!contactId) {
+    return { success: false, error: "Invalid or expired link." };
+  }
+
+  const supabase = createAdminClient();
+
+  const { error: updateErr } = await supabase
+    .from("contacts")
+    .update({ newsletter_unsubscribed: false } as Record<string, unknown>)
+    .eq("id", contactId);
+
+  if (updateErr) {
+    return { success: false, error: "Failed to re-subscribe. Please try again." };
+  }
+
+  // Resume paused journeys that were paused due to unsubscribe
+  await supabase
+    .from("contact_journeys")
+    .update({ is_paused: false, pause_reason: null })
+    .eq("contact_id", contactId)
+    .eq("pause_reason", "unsubscribed");
+
+  return { success: true };
 }

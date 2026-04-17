@@ -85,7 +85,7 @@ export function CommunicationTimeline({
     [communications, filter]
   );
 
-  const filtered = allFiltered.slice(0, visibleCount);
+  const filtered = useMemo(() => allFiltered.slice(0, visibleCount), [allFiltered, visibleCount]);
   const hasMore = allFiltered.length > visibleCount;
 
   async function handleAddNote() {

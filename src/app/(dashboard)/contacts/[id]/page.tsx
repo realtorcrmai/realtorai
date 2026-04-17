@@ -1,17 +1,16 @@
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrackRecentView } from "@/components/shared/TrackRecentView";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Mail, MessageSquare, Edit } from "lucide-react";
+import { Phone, Mail, Edit, Building2, Clock, TrendingUp, Users } from "lucide-react";
 import { ContactForm } from "@/components/contacts/ContactForm";
 import { ContactContextPanel } from "@/components/contacts/ContactContextPanel";
 import { MobileDetailSheet } from "@/components/layout/MobileDetailSheet";
-import { ReferralsPanel, type ReferralRow } from "@/components/contacts/ReferralsPanel";
+import { type ReferralRow } from "@/components/contacts/ReferralsPanel";
 import { NetworkStatsCard } from "@/components/contacts/NetworkStatsCard";
 import { HouseholdBanner } from "@/components/contacts/HouseholdBanner";
-import { RelationshipManager } from "@/components/contacts/RelationshipManager";
-import { QuickActionBar } from "@/components/contacts/QuickActionBar";
 import { TagEditor } from "@/components/contacts/TagEditor";
 import { StageBar, type StageData } from "@/components/contacts/StageBar";
 import EmailComposer from "@/components/contacts/EmailComposer";
@@ -19,9 +18,11 @@ import { ContactDetailTabs } from "@/components/contacts/ContactDetailTabs";
 import { JourneyProgressBar } from "@/components/contacts/JourneyProgressBar";
 import { EmailHistoryTimeline } from "@/components/contacts/EmailHistoryTimeline";
 import { IntelligencePanel } from "@/components/contacts/IntelligencePanel";
+import { ActivitySparkline } from "@/components/contacts/ActivitySparkline";
 import { ContextLog } from "@/components/contacts/ContextLog";
 import { ProspectControls } from "@/components/contacts/ProspectControls";
-import { QuickLogForm } from "@/components/contacts/QuickLogForm";
+import { LogInteractionDialog } from "@/components/contacts/LogInteractionDialog";
+import { NotesDialog } from "@/components/contacts/NotesDialog";
 import { WebsiteActivityLoader } from "@/components/contacts/WebsiteActivityLoader";
 import { DeleteContactButton } from "@/components/contacts/DeleteContactButton";
 import { ContactDetailLayout } from "@/components/contacts/ContactDetailLayout";
@@ -37,6 +38,7 @@ import {
   type ContactType,
   type LeadStatus,
 } from "@/lib/constants";
+import { formatPhone } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -256,7 +258,7 @@ export default async function ContactDetailPage({
           sectionId: "section-contact-info",
           items: [
             { label: "Name", value: contact.name, filled: !!contact.name },
-            { label: "Phone", value: contact.phone, filled: !!contact.phone },
+            { label: "Phone", value: contact.phone ? formatPhone(contact.phone) : contact.phone, filled: !!contact.phone },
             { label: "Email", value: contact.email, filled: !!contact.email },
             { label: "Pref Channel", value: contact.pref_channel, filled: !!contact.pref_channel },
           ],
@@ -300,7 +302,7 @@ export default async function ContactDetailPage({
           sectionId: "section-contact-info",
           items: [
             { label: "Name", value: contact.name, filled: !!contact.name },
-            { label: "Phone", value: contact.phone, filled: !!contact.phone },
+            { label: "Phone", value: contact.phone ? formatPhone(contact.phone) : contact.phone, filled: !!contact.phone },
             { label: "Email", value: contact.email, filled: !!contact.email },
             { label: "Pref Channel", value: contact.pref_channel, filled: !!contact.pref_channel },
           ],
@@ -311,6 +313,7 @@ export default async function ContactDetailPage({
             { label: "Budget", value: buyerPreferences?.price_range_max ? `Up to ${fmt(buyerPreferences.price_range_max)}` : null, filled: !!buyerPreferences?.price_range_max },
             { label: "Areas", value: buyerPreferences?.preferred_areas?.join(", ") || null, filled: (buyerPreferences?.preferred_areas?.length ?? 0) > 0 },
             { label: "Property Type", value: buyerPreferences?.property_types?.join(", ") || null, filled: !!buyerPreferences?.property_types?.join(", ") },
+            { label: "Timeline", value: buyerPreferences?.timeline || buyerPreferences?.move_in_timeline || null, filled: !!(buyerPreferences?.timeline || buyerPreferences?.move_in_timeline) },
             { label: "Financing", value: buyerPreferences?.financing_status || null, filled: !!buyerPreferences?.financing_status },
             { label: "Pre-Approval", value: fmt(buyerPreferences?.pre_approval_amount as number), filled: !!buyerPreferences?.pre_approval_amount },
             { label: "Must-Haves", value: buyerPreferences?.must_haves?.join(", ") || null, filled: (buyerPreferences?.must_haves?.length ?? 0) > 0 },
@@ -449,9 +452,18 @@ export default async function ContactDetailPage({
   const scoreColor = engagementScore != null ? (engagementScore >= 60 ? "bg-destructive/15 text-destructive border-destructive/30" : engagementScore >= 30 ? "bg-[#f5c26b]/15 text-[#8a5a1e] border-[#f5c26b]/30" : "bg-muted text-muted-foreground") : "";
 
   const lastComm = typedCommunications.length > 0 ? typedCommunications[0] : null;
+  const lastContactedDaysAgo = lastComm
+    ? Math.floor((Date.now() - new Date(lastComm.created_at).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
   const lastContactedText = lastComm
-    ? `Last contact: ${new Date(lastComm.created_at).toLocaleDateString("en-CA", { month: "short", day: "numeric" })} via ${lastComm.channel}`
-    : "No contact history";
+    ? lastContactedDaysAgo === 0 ? "Today"
+      : lastContactedDaysAgo === 1 ? "Yesterday"
+      : `${lastContactedDaysAgo}d ago`
+    : "Never";
+  const lastContactUrgency = lastContactedDaysAgo === null ? "text-destructive"
+    : lastContactedDaysAgo <= 7 ? "text-success"
+    : lastContactedDaysAgo <= 30 ? "text-[#8a5a1e]"
+    : "text-destructive";
 
   const avatarColor = contact.type === "seller" ? "bg-brand" : contact.type === "buyer" ? "bg-primary" : "bg-[#516f90]";
 
@@ -471,7 +483,7 @@ export default async function ContactDetailPage({
               <CardContent className="p-4">
                 {/* Row 1: Avatar + Name + Badges + Meta */}
                 <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-full ${avatarColor} flex items-center justify-center text-white font-bold text-lg shrink-0`}>
+                  <div className={`w-12 h-12 rounded-full ${avatarColor} flex items-center justify-center text-white font-bold text-lg shrink-0 ring-2 ring-offset-2 ${engagementScore != null ? (engagementScore >= 60 ? "ring-success" : engagementScore >= 30 ? "ring-[#f5c26b]" : "ring-muted-foreground/30") : "ring-muted-foreground/20"}`}>
                     {contact.name.split(/\s+/).map((w: string) => w[0]).filter(Boolean).join("").substring(0, 2).toUpperCase() || "?"}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -493,7 +505,7 @@ export default async function ContactDetailPage({
                     <div className="flex items-center gap-4 text-sm mt-1.5 flex-wrap">
                       <a href={`tel:${contact.phone}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
                         <Phone className="h-3.5 w-3.5" />
-                        <span>{contact.phone}</span>
+                        <span>{formatPhone(contact.phone)}</span>
                       </a>
                       {contact.email && (
                         <a href={`mailto:${contact.email}`} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
@@ -501,15 +513,14 @@ export default async function ContactDetailPage({
                           <span>{contact.email}</span>
                         </a>
                       )}
-                      <span className="flex items-center gap-1.5 text-muted-foreground">
-                        <MessageSquare className="h-3.5 w-3.5" />
-                        <span className="capitalize">Prefers {contact.pref_channel}</span>
-                      </span>
+                      {/* Pref channel hidden — SMS/WhatsApp integrations not active yet */}
                     </div>
 
                     {/* Last contacted + social */}
                     <div className="flex items-center gap-4 mt-1 flex-wrap">
-                      <span className="text-xs text-muted-foreground">{lastContactedText}</span>
+                      <span className={`text-xs ${lastContactUrgency}`}>
+                        {lastComm ? `${lastContactedText} via ${lastComm.channel}` : lastContactedText}
+                      </span>
                       {contact.social_profiles && typeof contact.social_profiles === "object" && Object.keys(contact.social_profiles as Record<string, string>).length > 0 && (
                         <div className="flex items-center gap-1.5">
                           {Object.entries(contact.social_profiles as Record<string, string>).map(([platform, handle]) => {
@@ -527,14 +538,14 @@ export default async function ContactDetailPage({
                     </div>
                   </div>
 
-                  {/* Actions — Edit prominent, Delete in secondary position */}
+                  {/* Actions — Edit prominent, destructive actions in More menu */}
                   <div className="flex items-center gap-1.5 shrink-0">
                     <ContactForm
                       contact={contact}
                       allContacts={(allContacts ?? []) as { id: string; name: string }[]}
                       trigger={<Button variant="outline" size="sm"><Edit className="h-3.5 w-3.5 mr-1" />Edit</Button>}
                     />
-                    <DeleteContactButton contactId={id} contactName={contact.name} />
+                    <DeleteContactButton contactId={id} contactName={contact.name} variant="moreMenu" />
                   </div>
                 </div>
 
@@ -570,8 +581,77 @@ export default async function ContactDetailPage({
                 {contact.notes && (
                   <p className="text-sm text-muted-foreground mt-2 italic">{contact.notes}</p>
                 )}
+
+                {/* Quick Actions — bottom right of name card */}
+                <div className="flex items-center justify-end gap-1.5 mt-3 pt-2 border-t border-border">
+                  <NotesDialog
+                    contactId={id}
+                    contactName={contact.name}
+                    communications={typedCommunications}
+                  />
+                  <EmailComposer
+                    contactId={id}
+                    contactEmail={contact.email}
+                  />
+                </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* KPI Stat Cards — clickable, navigate to relevant tab */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <Link href={`/contacts/${id}?tab=overview#section-engagement`}>
+              <Card className="border-l-4 border-l-brand cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+                    <TrendingUp className="h-4 w-4 text-brand" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Lead Score</p>
+                    <p className="text-xl font-semibold text-foreground">{engagementScore ?? "—"}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href={`/contacts/${id}?tab=overview#section-network`}>
+              <Card className="border-l-4 border-l-[#f5c26b] cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-[#f5c26b]/10 flex items-center justify-center shrink-0">
+                    <Users className="h-4 w-4 text-[#8a5a1e]" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Network</p>
+                    <p className="text-xl font-semibold text-foreground">{relationships.length + allReferrals.length}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href={`/contacts/${id}?tab=deals`}>
+              <Card className="border-l-4 border-l-success cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+                    <Building2 className="h-4 w-4 text-success" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Portfolio</p>
+                    <p className="text-xl font-semibold text-foreground">{(portfolioData ?? []).length}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href={`/contacts/${id}?tab=activity`}>
+              <Card className="border-l-4 border-l-primary cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Clock className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Last Contact</p>
+                    <p className={`text-sm font-semibold ${lastContactUrgency}`}>{lastContactedText}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
 
           {/* Household Banner — only show when assigned */}
@@ -591,39 +671,23 @@ export default async function ContactDetailPage({
               communications={typedCommunications}
               contactDates={(contactDates ?? []) as ContactDate[]}
             />
-            <div className="border-t pt-5">
-              <RelationshipManager
-                contactId={contact.id}
-                relationships={relationships}
-                allContacts={allContacts?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })) ?? []}
-              />
-            </div>
           </MobileDetailSheet>
 
-          {/* Quick Action Bar — grouped: primary communication + secondary tools */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-1.5 bg-card border border-border rounded-lg p-1">
-              <QuickActionBar
-                contactId={id}
-                contactPhone={contact.phone}
-                contactChannel={contact.pref_channel}
-              />
-              <EmailComposer
-                contactId={id}
-                contactEmail={contact.email}
-              />
-            </div>
-          </div>
 
-          {/* Journey Progress Bar */}
+          {/* Journey Phase — compact inline subtitle (replaces separate JourneyProgressBar) */}
           {contactJourney && (
-            <JourneyProgressBar
-              contactType={contact.type}
-              currentPhase={contactJourney.current_phase}
-              engagementScore={(intel as Record<string, unknown> | null)?.engagement_score as number ?? 0}
-              phaseEnteredAt={contactJourney.phase_entered_at}
-              enrolledAt={contactJourney.created_at}
-            />
+            <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+              <span className="w-2 h-2 rounded-full bg-success shrink-0" />
+              <span>
+                Journey: <strong className="text-foreground capitalize">{contactJourney.current_phase?.replace(/_/g, " ") ?? "enrolled"}</strong>
+                {contactJourney.created_at && (
+                  <> &middot; since {new Date(contactJourney.created_at).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" })}</>
+                )}
+                {engagementScore != null && (
+                  <> &middot; Score: {engagementScore}</>
+                )}
+              </span>
+            </div>
           )}
 
           {/* Prospect 360 — Email History + Quick Log */}
@@ -673,22 +737,33 @@ export default async function ContactDetailPage({
             documents={typedDocuments}
             contextEntries={(contactContextEntries ?? []) as Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>}
             familyMembers={(familyMembersData ?? []) as import("@/types").ContactFamilyMember[]}
+            relationships={relationships}
             isBuyer={isBuyer}
             buyerJourneys={(buyerJourneysData ?? []) as BuyerJourney[]}
             recentJourneyProperties={(journeyPropertiesData ?? []) as BuyerJourneyProperty[]}
             portfolioItems={(portfolioData ?? []) as PortfolioItem[]}
+            newslettersWithEvents={(newslettersWithEvents ?? []) as any}
           />
   );
 
   // Right panel inner content — shared between mobile collapsible and desktop aside
   const rightPanelContentJsx = (
     <>
-      {/* Engagement — 1st section */}
+      {/* Engagement */}
       {intel && (
-        <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
+        <div id="section-engagement" className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0 scroll-mt-4">
           <IntelligencePanel
             intelligence={intel}
             totalEmails={newslettersWithEvents.length}
+          />
+        </div>
+      )}
+
+      {/* Activity Sparkline — 30-day communication pattern */}
+      {typedCommunications.length > 0 && (
+        <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-[#f5c26b] pl-4 rounded-sm shrink-0">
+          <ActivitySparkline
+            communicationDates={typedCommunications.map((c: { created_at: string }) => c.created_at)}
           />
         </div>
       )}
@@ -705,9 +780,9 @@ export default async function ContactDetailPage({
         </div>
       )}
 
-      {/* Quick Log — log calls, texts, meetings */}
+      {/* Quick Log — compact trigger that opens full form in dialog */}
       <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
-        <QuickLogForm
+        <LogInteractionDialog
           contactId={id}
           contactName={contact.name}
           recentEmails={(newslettersWithEvents ?? [])
@@ -734,58 +809,7 @@ export default async function ContactDetailPage({
         />
       </div>
 
-      {/* Referrals */}
-      <div className="border-b border-brand/20 dark:border-brand/10 pb-3 pt-3 border-l-4 border-l-brand pl-4 rounded-sm shrink-0">
-        <ReferralsPanel
-          contact={contact}
-          referredByName={referredByName}
-          referralsAsReferrer={(referralsAsReferrer ?? []) as ReferralRow[]}
-          referralsAsReferred={(referralsAsReferred ?? []) as ReferralRow[]}
-          allContacts={(allContacts ?? []) as { id: string; name: string }[]}
-        />
-      </div>
-
-      {/* Relationships — grows to fill remaining space */}
-      <div className="pt-3 border-l-4 border-l-brand pl-4 rounded-sm">
-        <RelationshipManager
-          contactId={contact.id}
-          relationships={relationships}
-          allContacts={allContacts?.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })) ?? []}
-        />
-
-        {/* Contextual Tips — fills remaining space when sections are empty */}
-        {(!intel || Object.keys(intel).length === 0) && relationships.length === 0 && allReferrals.length === 0 && (
-          <div className="mt-4 pt-4 border-t border-border/30">
-            <div className="rounded-xl bg-muted/50 dark:bg-muted/20 border border-border p-4">
-              <div className="flex items-start gap-2.5">
-                <span className="text-lg">💡</span>
-                <div>
-                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Build this profile</h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-                    The more you add here, the smarter the AI gets. Relationships help
-                    personalize emails. Referrals track your network value. Engagement
-                    data appears after sending the first email.
-                  </p>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">1</span>
-                      <span className="text-muted-foreground">Add a <strong className="text-foreground">relationship</strong></span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">2</span>
-                      <span className="text-muted-foreground">Set <strong className="text-foreground">preferences</strong></span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="w-5 h-5 rounded-full bg-brand-muted dark:bg-foreground/30 flex items-center justify-center text-xs font-medium shrink-0">3</span>
-                      <span className="text-muted-foreground">Send first <strong className="text-foreground">email</strong></span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Referrals + Relationships moved to Overview tab (ContactDetailTabs) */}
     </>
   );
 

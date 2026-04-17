@@ -57,6 +57,25 @@ export async function validatedSend(
 ): Promise<ValidatedSendResult> {
   const supabase = createAdminClient();
 
+  // H-10: Idempotency guard — only short-circuit if the email was actually successfully sent.
+  // If status is 'sending' (process crashed mid-send), do NOT return early — let the
+  // send proceed again to avoid a permanent 'sending' state (BUG-15).
+  const { data: existingNewsletter } = await supabase
+    .from("newsletters")
+    .select("resend_message_id, status")
+    .eq("id", input.newsletterId)
+    .maybeSingle();
+
+  if (existingNewsletter?.resend_message_id && existingNewsletter?.status === "sent") {
+    return {
+      sent: true,
+      action: "sent",
+      messageId: existingNewsletter.resend_message_id,
+      validationResult: {} as ValidatedSendResult["validationResult"],
+      error: null,
+    };
+  }
+
   // Run the full validation pipeline
   const validationResult = await runValidationPipeline({
     contactId: input.contactId,
@@ -147,6 +166,16 @@ export async function validatedSend(
           },
         }).eq("id", input.newsletterId);
 
+        // H-12: Log outcome event even on failure so attribution chain is complete
+        await supabase.from("newsletter_events").insert({
+          newsletter_id: input.newsletterId,
+          event_type: "failed",
+          metadata: {
+            error: sendError instanceof Error ? sendError.message : String(sendError),
+          },
+          created_at: new Date().toISOString(),
+        });
+
         return {
           sent: false,
           action: "blocked",
@@ -180,8 +209,9 @@ export async function validatedSend(
 
     case "defer": {
       // Frequency/timing issue — defer to later
+      // BUG-01: Set status to 'deferred' (not 'draft') so the recovery cron can find and retry these.
       await supabase.from("newsletters").update({
-        status: "draft",
+        status: "deferred",
         ai_context: {
           deferred: true,
           defer_reason: validationResult.complianceResult.reason,

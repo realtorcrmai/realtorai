@@ -139,3 +139,36 @@ Last updated: 2026-03-26
 | `as any` usage | 100+ |
 | Test coverage | Script-based only (no unit tests) |
 | Bundle size impact of dead deps | ~300KB (moment.js) |
+
+---
+
+## Resolved Tech Debt (2026-04-12 UI/UX Audit)
+
+| ID | Item | Resolution |
+|----|------|-----------|
+| TD-R01 | Mobile sidebars hidden (`hidden lg:block`) | Added `<details>` collapsible on mobile for all 3 detail pages |
+| TD-R02 | Bulk operations disabled ("Coming soon") | Implemented bulk stage change, CSV export, delete with validation |
+| TD-R03 | No loading skeletons on list pages | Added `loading.tsx` for listings + showings |
+| TD-R04 | Newsletter queue broken edit link | Changed to Preview button opening `/api/newsletters/preview/[id]` |
+| TD-R05 | Dashboard newLeadsToday hardcoded 0 | Real query counting contacts created today |
+| TD-R06 | Muted foreground contrast fails WCAG AA | Changed `#516f90` → `#476380` (5.2:1 ratio) |
+
+## New Tech Debt (2026-04-12)
+
+### TD-020: ListingWorkflow Monolith
+**File:** `src/components/listings/ListingWorkflow.tsx` (1,138 lines)
+**Issue:** Single component handles 9 phases x 4 substeps = 36 status permutations, all rendering + status logic + 200 lines of messages
+**Severity:** Medium
+**Fix:** Extract PhaseCard, SubstepList, StatusDerivation, ActivityMessage into separate files
+
+### TD-021: Duplicate Mobile Sidebar Rendering
+**Files:** `src/app/(dashboard)/listings/[id]/page.tsx`, `showings/[id]/page.tsx`
+**Issue:** SellerIdentitiesPanel, FormReadinessPanel, ShowingContextPanel rendered twice (mobile `<details>` + desktop `<aside>`). If components fetch on mount, double network requests.
+**Severity:** Low (most components receive data via props)
+**Fix:** Verify no components fetch on mount; if they do, extract shared data fetching to parent
+
+### TD-022: No Server-Side Pagination
+**Files:** `contacts/page.tsx`, `listings/page.tsx`, `showings/page.tsx`
+**Issue:** All list pages fetch with `.limit(200)` — power users lose data beyond 200 rows
+**Severity:** High
+**Fix:** Implement cursor-based pagination with URL params

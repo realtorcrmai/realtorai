@@ -18,6 +18,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
   }
 
+  if (file.size > 10 * 1024 * 1024) {
+    return NextResponse.json({ error: "File too large (10MB max)" }, { status: 413 });
+  }
+
   const text = await file.text();
 
   if (!text.toUpperCase().includes("BEGIN:VCARD")) {
@@ -32,6 +36,13 @@ export async function POST(request: NextRequest) {
   if (parsed.length === 0) {
     return NextResponse.json(
       { error: "No contacts found in vCard file" },
+      { status: 400 }
+    );
+  }
+
+  if (parsed.length > 1000) {
+    return NextResponse.json(
+      { error: `Too many contacts (${parsed.length}). Maximum 1000 per import.` },
       { status: 400 }
     );
   }

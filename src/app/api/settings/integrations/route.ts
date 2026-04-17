@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAuth } from "@/lib/api-auth";
 import { SECRET_FIELDS, maskSecret } from "@/lib/constants/integrations";
@@ -80,6 +81,7 @@ export async function POST(req: NextRequest) {
     if (error)
       return NextResponse.json({ error: error.message }, { status: 500 });
 
+    revalidatePath("/settings/integrations");
     return NextResponse.json({
       ...data,
       config: maskConfig(data.config as Record<string, string>),
@@ -100,6 +102,7 @@ export async function POST(req: NextRequest) {
     if (error)
       return NextResponse.json({ error: error.message }, { status: 500 });
 
+    revalidatePath("/settings/integrations");
     return NextResponse.json(
       { ...data, config: maskConfig(data.config as Record<string, string>) },
       { status: 201 }

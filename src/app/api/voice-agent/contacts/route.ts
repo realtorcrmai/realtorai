@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { requireVoiceAgentAuth } from "@/lib/voice-agent-auth";
+import { tenantClient } from "@/lib/supabase/tenant";
 import { z } from "zod";
+import { escapeIlike } from "@/lib/escape-ilike";
 
 const createContactSchema = z.object({
   name: z.string().min(1).max(200),
@@ -21,10 +22,10 @@ export async function GET(req: NextRequest) {
   const auth = await requireVoiceAgentAuth(req);
   if (!auth.authorized) return auth.error;
 
-  const supabase = createAdminClient();
+  const tc = tenantClient(auth.tenantId);
   const params = req.nextUrl.searchParams;
 
-  let query = supabase
+  let query = tc
     .from("contacts")
     .select("*")
     .order("created_at", { ascending: false });
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
   // Filter by ID
   const id = params.get("id");
   if (id) {
-    const { data, error } = await supabase
+    const { data, error } = await tc
       .from("contacts")
       .select("*")
       .eq("id", id)
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
   // Filter by name (partial match)
   const name = params.get("name");
   if (name) {
-    query = query.ilike("name", `%${name}%`);
+    query = query.ilike("name", `%${escapeIlike(name)}%`);
   }
 
   // Filter by type
@@ -88,9 +89,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const supabase = createAdminClient();
+  const tc = tenantClient(auth.tenantId);
 
-  const { data, error } = await supabase
+  const { data, error } = await tc
     .from("contacts")
     .insert({
       name: parsed.data.name,

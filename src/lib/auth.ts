@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { trackEvent } from "@/lib/analytics";
 import { ALL_FEATURES, getUserFeatures } from "@/lib/features";
 import {
   getClientIp,
@@ -44,8 +45,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!email || !password) return null;
 
-        // Demo password — works for all seeded users in dev/demo
-        if (password === DEMO_PASSWORD) {
+        // Demo password — works for seeded users in dev/demo.
+        // In production: only works if the email matches DEMO_EMAIL exactly.
+        // This prevents "any user + demo password" login in prod while still
+        // allowing easy testing in dev where DEMO_EMAIL may be set to a
+        // wildcard-like value.
+        const isDemoLogin = DEMO_PASSWORD && password === DEMO_PASSWORD;
+        const isProd = process.env.NODE_ENV === "production";
+        const demoAllowed = isDemoLogin && (!isProd || (DEMO_EMAIL && email.toLowerCase().trim() === DEMO_EMAIL.toLowerCase().trim()));
+
+        if (demoAllowed) {
           const supabase = createAdminClient();
           const { data: user, error: userErr } = await supabase
             .from("users")
@@ -163,6 +172,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
 
             if (existingUser) {
+              // Update last_active_at on every login
+              await supabase.from("users").update({ last_active_at: new Date().toISOString() }).eq("id", existingUser.id);
+              await trackEvent("session_start", existingUser.id, { user_agent: "" });
+
               token.role = existingUser.role;
               token.userId = existingUser.id;
               token.emailVerified = existingUser.email_verified ?? true;
@@ -186,21 +199,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             } else if (trigger === "signIn" || account) {
               const isAdmin = ADMIN_EMAIL && token.email === ADMIN_EMAIL;
               const defaultPlan = isAdmin ? "admin" : "free";
+              // Use upsert instead of insert to handle race conditions on simultaneous
+              // OAuth sign-ins (e.g. double-click, multi-tab) — ignoreDuplicates preserves
+              // existing user data when the row already exists.
               const { data: newUser, error: insertError } = await supabase
                 .from("users")
-                .insert({
-                  email: token.email,
-                  name: token.name as string | undefined,
-                  role: isAdmin ? "admin" : "realtor",
-                  plan: defaultPlan,
-                  personalization_completed: false,
-                  onboarding_completed: false,
-                })
+                .upsert(
+                  {
+                    email: token.email,
+                    name: token.name as string | undefined,
+                    role: isAdmin ? "admin" : "realtor",
+                    plan: defaultPlan,
+                    personalization_completed: false,
+                    onboarding_completed: false,
+                  },
+                  { onConflict: "email", ignoreDuplicates: true }
+                )
                 .select("id, role, plan, enabled_features, trial_ends_at, trial_plan")
                 .single();
 
               if (insertError) {
-                console.error("[auth] Error inserting user:", insertError.message);
+                console.error("[auth] Error upserting user:", insertError.message);
+              }
+
+              if (newUser?.id) {
+                await trackEvent("signup", newUser.id, { method: account?.provider ?? "credentials", source: "organic" });
               }
 
               const { getEffectivePlan } = await import("@/lib/plans");
@@ -238,12 +261,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.enabledFeatures = token.enabledFeatures as string[] | undefined;
       // Multi-tenancy: userId = realtorId (the tenant identifier)
       session.user.id = (token.userId as string) || (token.sub as string) || "";
-      (session.user as unknown as Record<string, unknown>).realtorId = (token.userId as string) || (token.sub as string) || "";
-      (session.user as unknown as Record<string, unknown>).emailVerified = token.emailVerified ?? true;
-      (session.user as unknown as Record<string, unknown>).phoneVerified = token.phoneVerified ?? false;
-      (session.user as unknown as Record<string, unknown>).onboardingCompleted = token.onboardingCompleted ?? true;
-      (session.user as unknown as Record<string, unknown>).personalizationCompleted = token.personalizationCompleted ?? false;
-      (session.user as unknown as Record<string, unknown>).trialEndsAt = token.trialEndsAt ?? null;
+      session.user.realtorId = (token.userId as string) || (token.sub as string) || "";
+      (session.user as unknown as Record<string, unknown>).emailVerified = (token.emailVerified as boolean) ?? true;
       return session;
     },
   },

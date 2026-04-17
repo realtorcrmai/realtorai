@@ -15,6 +15,13 @@ export async function POST(request: NextRequest) {
   const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
+  if (!auth.realtorId) {
+    return NextResponse.json(
+      { error: "Tenant context required", code: "MISSING_TENANT" },
+      { status: 401, headers: corsHeaders(request) }
+    );
+  }
+
   const body = await request.json();
   const { session_id, pages_visited, duration_seconds, is_converted, contact_id, device_type, referrer } = body;
 
@@ -29,6 +36,7 @@ export async function POST(request: NextRequest) {
 
   // Store session summary as a special analytics event
   await supabase.from("site_analytics_events").insert({
+    realtor_id: auth.realtorId,
     session_id,
     event_type: "session_summary",
     page_path: (pages_visited || []).join(" → "),
@@ -58,6 +66,13 @@ export async function GET(request: NextRequest) {
   const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
+  if (!auth.realtorId) {
+    return NextResponse.json(
+      { error: "Tenant context required", code: "MISSING_TENANT" },
+      { status: 401, headers: corsHeaders(request) }
+    );
+  }
+
   const supabase = createAdminClient();
   const url = new URL(request.url);
   const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 100);
@@ -67,6 +82,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("site_analytics_events")
     .select("session_id, device_type, referrer, metadata, created_at")
+    .eq("realtor_id", auth.realtorId)
     .eq("event_type", "session_summary")
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -78,6 +94,7 @@ export async function GET(request: NextRequest) {
     const { data: events } = await supabase
       .from("site_analytics_events")
       .select("session_id, event_type, page_path, device_type, referrer, created_at")
+      .eq("realtor_id", auth.realtorId)
       .order("created_at", { ascending: false })
       .limit(500);
 

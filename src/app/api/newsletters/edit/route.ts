@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { extractVoiceRules } from "@/lib/voice-learning";
 
 export async function POST(req: Request) {
   try {
+    // Authenticate and get tenant-scoped client
+    let tc;
+    try {
+      tc = await getAuthenticatedTenantClient();
+    } catch {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const body = await req.json();
     const {
       newsletterId,
@@ -11,15 +19,17 @@ export async function POST(req: Request) {
       editedBody,
       originalSubject,
       originalBody,
-      realtorId,
     } = body;
 
-    if (!newsletterId || !realtorId) {
+    if (!newsletterId) {
       return NextResponse.json(
-        { error: "newsletterId and realtorId are required" },
+        { error: "newsletterId is required" },
         { status: 400 }
       );
     }
+
+    // Use authenticated realtor ID — never accept from request body
+    const realtorId = tc.realtorId;
 
     // 1. Extract voice rules from the edit diff
     const newRules = await extractVoiceRules(
@@ -30,9 +40,8 @@ export async function POST(req: Request) {
       editedBody || ""
     );
 
-    // 2. Update the newsletter record with edited content
-    const supabase = createAdminClient();
-    const { error: updateError } = await supabase
+    // 2. Update the newsletter record with edited content (tenant-scoped)
+    const { error: updateError } = await tc
       .from("newsletters")
       .update({
         subject: editedSubject,

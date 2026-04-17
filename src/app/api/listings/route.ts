@@ -32,7 +32,8 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query;
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[listings GET]", error.message);
+    return NextResponse.json({ error: "Failed to fetch listings" }, { status: 500 });
   }
 
   return NextResponse.json(data ?? []);
@@ -43,7 +44,10 @@ export async function POST(req: NextRequest) {
   try { tc = await getAuthenticatedTenantClient(); }
   catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
-  const body = await req.json();
+  let body: unknown;
+  try { body = await req.json(); }
+  catch { return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 }); }
+
   const parsed = listingSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -67,7 +71,8 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[listings POST]", error.message);
+    return NextResponse.json({ error: "Failed to create listing" }, { status: 500 });
   }
 
   return NextResponse.json(data, { status: 201 });

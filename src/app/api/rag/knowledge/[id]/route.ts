@@ -23,12 +23,20 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
 
+    // Allowlist of fields that can be updated on knowledge_articles
+    const ALLOWED_FIELDS = [
+      'title', 'content', 'category', 'tags', 'status', 'is_published',
+      'source', 'source_url', 'metadata',
+    ];
+    const safeUpdate: Record<string, unknown> = {};
+    for (const key of ALLOWED_FIELDS) {
+      if (key in body) safeUpdate[key] = body[key];
+    }
+    safeUpdate.updated_at = new Date().toISOString();
+
     const { data, error } = await db
       .from('knowledge_articles')
-      .update({
-        ...body,
-        updated_at: new Date().toISOString(),
-      })
+      .update(safeUpdate)
       .eq('id', id)
       .select()
       .single();

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveTenantFromRequest, DEFAULT_TENANT_ID } from "@/lib/tenant-context";
+import { auth } from "@/lib/auth";
 
 export interface VoiceAuthResult {
   authorized: true;
@@ -35,18 +36,33 @@ function hashKey(key: string): string {
 export async function requireVoiceAgentAuth(
   request: Request
 ): Promise<VoiceAuthResult | VoiceAuthError> {
-  const auth = request.headers.get("Authorization");
-  if (!auth?.startsWith("Bearer ")) {
+  // 0. Check NextAuth session first — browser clients use cookie auth, no key needed
+  try {
+    const session = await auth();
+    if (session?.user?.id) {
+      return {
+        authorized: true as const,
+        error: null,
+        tenantId: session.user.id,
+        agentEmail: session.user.email ?? null,
+      };
+    }
+  } catch {
+    // auth() unavailable in this context — fall through to Bearer token check
+  }
+
+  const authHeader = request.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
     return {
       authorized: false as const,
       error: NextResponse.json(
-        { error: "Unauthorized — missing Bearer token" },
+        { error: "Unauthorized — missing session or Bearer token" },
         { status: 401 }
       ),
     };
   }
 
-  const token = auth.slice(7);
+  const token = authHeader.slice(7);
 
   // 1. Check per-tenant API keys first
   const tenantAuth = await checkTenantApiKey(token);

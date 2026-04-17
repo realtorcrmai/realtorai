@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createWithRetry } from "@/lib/anthropic/retry";
 import { validateApiKey, corsHeaders, handleCORS, normalizePhone, createAdminClient } from "@/lib/website-api";
+import { escapeIlike } from "@/lib/escape-ilike";
 
 export async function OPTIONS(request: NextRequest) {
   return handleCORS(request);
@@ -80,7 +81,7 @@ const tools: Anthropic.Tool[] = [
 ];
 
 // Tool execution
-async function executeTool(name: string, input: Record<string, unknown>): Promise<string> {
+async function executeTool(name: string, input: Record<string, unknown>, realtorId: string): Promise<string> {
   const supabase = createAdminClient();
 
   switch (name) {
@@ -88,11 +89,12 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       let query = supabase
         .from("listings")
         .select("id, address, list_price, prop_type, hero_image_url, mls_remarks, status")
+        .eq("realtor_id", realtorId)
         .eq("status", "active")
         .order("created_at", { ascending: false })
         .limit((input.limit as number) || 5);
 
-      if (input.area) query = query.ilike("address", `%${input.area}%`);
+      if (input.area) query = query.ilike("address", `%${escapeIlike(String(input.area))}%`);
       if (input.max_price) query = query.lte("list_price", input.max_price);
       if (input.min_price) query = query.gte("list_price", input.min_price);
       if (input.property_type) query = query.eq("prop_type", input.property_type);
@@ -114,6 +116,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       const { data } = await supabase
         .from("listings")
         .select("*")
+        .eq("realtor_id", realtorId)
         .eq("id", input.listing_id as string)
         .single();
 
@@ -133,6 +136,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       const { data: existing } = await supabase
         .from("contacts")
         .select("id")
+        .eq("realtor_id", realtorId)
         .eq("phone", phone)
         .limit(1)
         .maybeSingle();
@@ -144,6 +148,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       const { data: contact } = await supabase
         .from("contacts")
         .insert({
+          realtor_id: realtorId,
           name: input.name as string,
           phone,
           email: (input.email as string) || null,
@@ -178,6 +183,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       const { data: existing } = await supabase
         .from("contacts")
         .select("id")
+        .eq("realtor_id", realtorId)
         .eq("phone", phone)
         .limit(1)
         .maybeSingle();
@@ -187,7 +193,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       } else {
         const { data: c } = await supabase
           .from("contacts")
-          .insert({ name: input.name as string, phone, type: "buyer", source: "website_chat", pref_channel: "sms" })
+          .insert({ realtor_id: realtorId, name: input.name as string, phone, type: "buyer", source: "website_chat", pref_channel: "sms" })
           .select("id")
           .single();
         contactId = c?.id || "";
@@ -195,6 +201,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
       // Create task
       await supabase.from("tasks").insert({
+        realtor_id: realtorId,
         title: `Showing Request — ${input.name}`,
         description: `Property: ${input.listing_id || "TBD"}\nDate: ${input.preferred_date || "TBD"}\nTime: ${input.preferred_time || "TBD"}`,
         contact_id: contactId,
@@ -204,6 +211,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       });
 
       await supabase.from("agent_notifications").insert({
+        realtor_id: realtorId,
         title: "Showing Request via Chat",
         body: `${input.name} wants to see a property${input.preferred_date ? ` on ${input.preferred_date}` : ""}.`,
         type: "urgent",
@@ -220,16 +228,18 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       const { data: sold } = await supabase
         .from("listings")
         .select("list_price, sold_price, address, created_at")
+        .eq("realtor_id", realtorId)
         .eq("status", "sold")
-        .ilike("address", `%${area}%`)
+        .ilike("address", `%${escapeIlike(area)}%`)
         .order("created_at", { ascending: false })
         .limit(20);
 
       const { count: activeCount } = await supabase
         .from("listings")
         .select("id", { count: "exact", head: true })
+        .eq("realtor_id", realtorId)
         .eq("status", "active")
-        .ilike("address", `%${area}%`);
+        .ilike("address", `%${escapeIlike(area)}%`);
 
       const prices = (sold || []).map(s => s.sold_price || s.list_price).filter(Boolean) as number[];
       const avgPrice = prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : null;
@@ -257,6 +267,13 @@ export async function POST(request: NextRequest) {
   const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
+  if (!auth.realtorId) {
+    return NextResponse.json(
+      { error: "Tenant context required", code: "MISSING_TENANT" },
+      { status: 401, headers: corsHeaders(request) }
+    );
+  }
+
   const body = await request.json();
   const { messages, session_id } = body;
 
@@ -280,12 +297,14 @@ export async function POST(request: NextRequest) {
   const { data: config } = await supabase
     .from("realtor_agent_config")
     .select("brand_config")
+    .eq("realtor_id", auth.realtorId)
     .limit(1)
     .maybeSingle();
 
   const { data: site } = await supabase
     .from("realtor_sites")
     .select("agent_name, brokerage_name, phone, email, service_areas")
+    .eq("realtor_id", auth.realtorId)
     .limit(1)
     .maybeSingle();
 
@@ -352,7 +371,7 @@ Rules:
       // Execute tools and add results
       const toolResults: Anthropic.ToolResultBlockParam[] = [];
       for (const toolUse of toolUseBlocks) {
-        const result = await executeTool(toolUse.name, toolUse.input as Record<string, unknown>);
+        const result = await executeTool(toolUse.name, toolUse.input as Record<string, unknown>, auth.realtorId);
         toolResults.push({
           type: "tool_result",
           tool_use_id: toolUse.id,
@@ -392,6 +411,7 @@ Rules:
     // Track chat event
     try {
       await supabase.from("site_analytics_events").insert({
+        realtor_id: auth.realtorId,
         session_id: session_id || "chat",
         event_type: "chat_message",
         page_path: "/chat",

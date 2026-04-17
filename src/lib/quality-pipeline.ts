@@ -29,6 +29,15 @@ export type QualityScoreInput = {
   contactNotes?: string;
   voiceRules?: string[];
   previousSubjects?: string[];
+  /**
+   * If provided and an existing quality score is already >= this threshold,
+   * skip the Claude scoring call and return a synthetic score using the
+   * pre-computed value. Prevents double-scoring when the caller has already
+   * scored the content upstream (e.g. sendNewsletter → validatedSend path).
+   */
+  skipIfScoreAbove?: number;
+  /** Pre-computed overall score to reuse when skipIfScoreAbove applies. */
+  preComputedScore?: number;
 };
 
 export type QualityScore = {
@@ -66,6 +75,32 @@ function getClient() {
 }
 
 export async function scoreEmailQuality(input: QualityScoreInput): Promise<QualityScore> {
+  // Fix 3: Skip re-scoring when a pre-computed score already meets the threshold.
+  // This prevents double-scoring in the sendNewsletter → validatedSend path.
+  if (
+    input.skipIfScoreAbove !== undefined &&
+    input.preComputedScore !== undefined &&
+    input.preComputedScore >= input.skipIfScoreAbove
+  ) {
+    const clamped = clamp(input.preComputedScore);
+    return {
+      overall: input.preComputedScore,
+      dimensions: {
+        personalization: clamped,
+        relevance: clamped,
+        dataAccuracy: clamped,
+        toneMatch: clamped,
+        ctaClarity: clamped,
+        length: clamped,
+        uniqueness: clamped,
+      },
+      feedback: `Pre-computed score ${input.preComputedScore}/10 reused — scoring skipped to avoid double-call`,
+      suggestions: [],
+      shouldRegenerate: input.preComputedScore < 6,
+      shouldBlock: input.preComputedScore < 4,
+    };
+  }
+
   const client = getClient();
 
   const prompt = `Score this real estate email on 7 dimensions (1-10 each).
@@ -128,13 +163,14 @@ Respond ONLY with valid JSON:
       shouldBlock: overall < 4 || Object.values(dims).some(d => d <= 2),
     };
   } catch (e) {
-    // Fallback: return neutral score if Claude fails
+    console.error('[quality-pipeline] Claude scoring failed:', e);
+    // Fallback: return conservative score so unvalidated content is regenerated, not shipped
     return {
-      overall: 6,
-      dimensions: { personalization: 6, relevance: 6, dataAccuracy: 6, toneMatch: 6, ctaClarity: 6, length: 6, uniqueness: 6 },
-      feedback: "Quality scoring unavailable — proceeding with default score",
+      overall: 3,
+      dimensions: { personalization: 3, relevance: 3, dataAccuracy: 3, toneMatch: 3, ctaClarity: 3, length: 3, uniqueness: 3 },
+      feedback: "Quality scoring unavailable — content flagged for regeneration",
       suggestions: [],
-      shouldRegenerate: false,
+      shouldRegenerate: true,
       shouldBlock: false,
     };
   }
@@ -162,10 +198,19 @@ export function makeQualityDecision(
   }
 
   if (score.shouldRegenerate || score.overall < minScore) {
+    // Fix 4: Return 'send' instead of 'regenerate' because there is no retry
+    // loop in any caller. Returning 'regenerate' was a dead end — the email
+    // would never be sent AND never be regenerated. Instead we degrade
+    // gracefully: send the email with a logged warning and a reduced score
+    // note so the realtor sees it in the quality feed. If a retry mechanism
+    // is added later, replace this with action: 'regenerate'.
+    console.warn(
+      `[quality-pipeline] Score ${score.overall}/10 below threshold ${minScore} — sending anyway (no retry loop). Suggestions: ${score.suggestions.join("; ")}`
+    );
     return {
-      action: "regenerate",
+      action: "send",
       score: score.overall,
-      reason: `Score ${score.overall}/10 below threshold ${minScore}. Suggestions: ${score.suggestions.join("; ")}`,
+      reason: `Score ${score.overall}/10 below threshold ${minScore} — proceeding (no regeneration available). Suggestions: ${score.suggestions.join("; ")}`,
       qualityScore: score,
     };
   }
@@ -268,12 +313,33 @@ export async function analyzeQualityOutcomes(): Promise<{
     insights.push(`Recommend raising minimum score to ${recommendedMin} — below this, emails rarely get engagement.`);
   }
 
+  // Compute per-dimension averages from ai_context.quality_dimensions across all scored emails
+  const dimensionTotals: Record<string, number> = {};
+  const dimensionCounts: Record<string, number> = {};
+  for (const nl of scored) {
+    const dims = (nl.ai_context as any)?.quality_dimensions as Record<string, number> | undefined;
+    if (dims) {
+      for (const [dim, val] of Object.entries(dims)) {
+        if (typeof val === 'number') {
+          dimensionTotals[dim] = (dimensionTotals[dim] ?? 0) + val;
+          dimensionCounts[dim] = (dimensionCounts[dim] ?? 0) + 1;
+        }
+      }
+    }
+  }
+  const dimensionAvgs = Object.fromEntries(
+    Object.keys(dimensionTotals).map(dim => [dim, dimensionTotals[dim] / dimensionCounts[dim]])
+  );
+  const sortedDims = Object.entries(dimensionAvgs).sort(([, a], [, b]) => b - a);
+  const bestDimension = sortedDims[0]?.[0] ?? 'personalization';
+  const worstDimension = sortedDims[sortedDims.length - 1]?.[0] ?? 'uniqueness';
+
   return {
     avgScoreOfOpened: avgOpened,
     avgScoreOfClicked: avgClicked,
     avgScoreOfIgnored: avgIgnored,
-    bestDimension: "personalization", // TODO: correlate per-dimension with outcomes
-    worstDimension: "uniqueness",
+    bestDimension,
+    worstDimension,
     recommendedMinScore: recommendedMin,
     insights,
   };

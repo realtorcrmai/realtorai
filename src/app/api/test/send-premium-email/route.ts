@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/resend";
 import { render } from "@react-email/components";
+import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 import { PremiumListingShowcase } from "@/emails/PremiumListingShowcase";
 import type { RealtorBranding } from "@/emails/BaseLayout";
 import React from "react";
@@ -15,8 +16,16 @@ import React from "react";
  */
 
 export async function POST(req: NextRequest) {
+  // Block in production AND require auth in all environments
   if (process.env.NODE_ENV === "production") {
     return NextResponse.json({ error: "Not available in production" }, { status: 403 });
+  }
+
+  // Require cron secret even in dev to prevent unauthorized email sending
+  const authHeader = req.headers.get("authorization");
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await req.json();
@@ -40,7 +49,10 @@ export async function POST(req: NextRequest) {
   }
 
   // Get realtor branding
-  const rid = (contact as any).realtor_id || "7de22757-dd3a-4a4f-a088-c422746e88d4";
+  const rid = (contact as Record<string, unknown>).realtor_id as string | undefined;
+  if (!rid) {
+    return NextResponse.json({ error: "Contact has no realtor_id" }, { status: 400 });
+  }
   const { data: config } = await supabase
     .from("realtor_agent_config")
     .select("brand_config")
@@ -69,7 +81,7 @@ export async function POST(req: NextRequest) {
 
   const listing = listings?.[0];
   const firstName = contact.name.split(" ")[0];
-  const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/newsletters/unsubscribe?id=${contactId}`;
+  const unsubscribeUrl = buildUnsubscribeUrl(contactId);
 
   // Real estate stock photos from Unsplash (architecture/interiors)
   const heroPhoto = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&h=700&fit=crop";

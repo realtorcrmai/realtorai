@@ -1,0 +1,274 @@
+name: Nightly Regression + Test Plan Sync
+
+on:
+  schedule:
+    - cron: "0 9 * * *"  # 2 AM Pacific = 9 AM UTC
+  workflow_dispatch:
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  NODE_VERSION: "20"
+
+jobs:
+  regression:
+    name: Full Regression + Sync Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Static Analysis ──────────────────────────────────
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      # ── Build ────────────────────────────────────────────
+      - name: Production build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          DEMO_EMAIL: ${{ secrets.DEMO_EMAIL }}
+          DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+
+      # ── Start server ─────────────────────────────────────
+      - name: Start server
+        run: |
+          npm run start &
+          sleep 15
+          curl -sf http://localhost:3000/login > /dev/null
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXTAUTH_URL: http://localhost:3000
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          DEMO_EMAIL: ${{ secrets.DEMO_EMAIL }}
+          DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+
+      # ── Core CRM Suite ───────────────────────────────────
+      - name: Core CRM suite
+        run: bash scripts/test-suite.sh
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+      # ── Newsletter Integration ───────────────────────────
+      - name: Newsletter integration
+        run: bash scripts/integration-test-newsletter.sh
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+      # ── API Endpoints ────────────────────────────────────
+      - name: API endpoint coverage
+        run: bash scripts/test-endpoints.sh
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+      # ── Visual & Browser ─────────────────────────────────
+      - name: Visual & browser tests
+        run: bash scripts/test-visual-browser.sh
+
+      # ── Test Plan Freshness ──────────────────────────────
+      - name: Test plan freshness audit
+        run: node scripts/audit-test-plans.mjs
+        continue-on-error: true
+
+      # ── Test Plan ↔ Executable Sync ──────────────────────
+      - name: Test plan sync check
+        id: sync
+        run: node scripts/sync-test-plans.mjs --check
+        continue-on-error: true
+
+      # ── Generate missing test stubs if drifted ───────────
+      - name: Generate test stubs (if sync drifted)
+        if: steps.sync.outcome == 'failure'
+        run: |
+          node scripts/sync-test-plans.mjs --generate
+          echo "Generated test stubs saved to scripts/test-plan-generated.sh"
+          bash scripts/test-plan-generated.sh || true
+
+      # ── Upload results ───────────────────────────────────
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-${{ github.run_number }}
+          path: test-results/
+          retention-days: 30
+
+      # ── Open issue if sync drifted ───────────────────────
+      - name: Open issue on drift
+        if: steps.sync.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let report = '';
+            try {
+              report = fs.readFileSync('test-results/test-plan-sync.json', 'utf8');
+            } catch {}
+            const body = `## Nightly Test Plan Sync — Drift Detected
+
+            The test plan documents have test cases that are not covered by any executable test script.
+
+            **Report:** \`\`\`json\n${report}\n\`\`\`
+
+            **Action required:**
+            1. Run \`node scripts/sync-test-plans.mjs --generate\` to create stubs
+            2. Review and enhance the generated stubs in \`scripts/test-plan-generated.sh\`
+            3. Move finalized tests into the appropriate test suite (\`test-suite.sh\` or \`integration-test-newsletter.sh\`)
+            4. Commit and push
+
+            Generated by the nightly regression workflow.`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Nightly] Test plan drift detected — ${new Date().toISOString().slice(0, 10)}`,
+              body,
+              labels: ['testing', 'automated'],
+            });
+
+      # ── Pipeline crash detection ─────────────────────────
+      # Catches infrastructure failures: npm install, build, server start,
+      # script errors, timeouts — anything that prevents tests from running.
+      - name: Pipeline health check
+        id: health
+        if: always()
+        run: |
+          FAILED_STEPS=""
+
+          # Check each critical step
+          for STEP_NAME in "TypeScript check" "Production build" "Start server" \
+            "Core CRM suite" "Newsletter integration" "API endpoint coverage" \
+            "Visual & browser tests"; do
+            echo "Checking: $STEP_NAME"
+          done
+
+          # The real check: did we get test result files?
+          RESULTS_EXIST=false
+          if [ -f test-results/newsletter-integration-results.json ]; then
+            RESULTS_EXIST=true
+          fi
+
+          echo "results_exist=$RESULTS_EXIST" >> $GITHUB_OUTPUT
+
+      # ── Open issue on pipeline crash ─────────────────────
+      - name: Report pipeline crash
+        if: always() && failure() && steps.health.outputs.results_exist != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toISOString().slice(0, 10);
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            // Check for existing open pipeline issue
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'pipeline-failure',
+              state: 'open',
+            });
+
+            const body = [
+              `## Nightly Regression Pipeline Failed`,
+              ``,
+              `The regression pipeline itself crashed before tests could complete.`,
+              `This is an **infrastructure failure**, not a test failure.`,
+              ``,
+              `**Date:** ${date}`,
+              `**Commit:** ${context.sha}`,
+              `**Run:** ${runUrl}`,
+              ``,
+              `### Common Causes`,
+              ``,
+              `| Cause | Fix |`,
+              `|-------|-----|`,
+              `| npm install failed | Check package-lock.json, clear cache |`,
+              `| Build failed | Check TypeScript errors, missing env vars |`,
+              `| Server won't start | Check port conflicts, missing .env vars |`,
+              `| Script syntax error | Run \`bash -n scripts/test-suite.sh\` locally |`,
+              `| Timeout (>30 min) | Check for infinite loops or hanging API calls |`,
+              `| Supabase unreachable | Check Supabase status, verify secrets |`,
+              ``,
+              `### How to Debug`,
+              ``,
+              `1. Check the [workflow run logs](${runUrl}) — find the first red step`,
+              `2. Reproduce locally: \`bash scripts/run-all-tests.sh --no-build\``,
+              `3. If build failed: \`npm run build\` and check errors`,
+              `4. If server failed: \`npm run start\` and check console`,
+              `5. Open Claude Code: "The nightly regression pipeline crashed. Check the logs at ${runUrl} and fix the infrastructure issue."`,
+            ].join('\n');
+
+            if (existing.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body: `## Pipeline crashed again — ${date}\n\n[Run logs](${runUrl})\n\nSame or new infrastructure issue. Check the latest run.`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `[Pipeline] Nightly regression infrastructure failure — ${date}`,
+                body,
+                labels: ['pipeline-failure', 'bug', 'automated', 'P0'],
+              });
+            }
+
+      # ── Summary ──────────────────────────────────────────
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Nightly Regression Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Date:** $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** dev" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+          if ls test-results/*.json 1>/dev/null 2>&1; then
+            for f in test-results/*.json; do
+              echo "\`$(basename $f)\`:" >> $GITHUB_STEP_SUMMARY
+              echo '```json' >> $GITHUB_STEP_SUMMARY
+              cat "$f" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            done
+          else
+            echo "**No test results found — pipeline may have crashed before tests ran.**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Check the [workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})." >> $GITHUB_STEP_SUMMARY
+          fi

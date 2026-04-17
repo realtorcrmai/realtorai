@@ -99,6 +99,41 @@ export async function addPortfolioItem(
 
     if (error) return { item: null, error: error.message };
 
+    // Mirror: create portfolio entries for co-owners so the property
+    // appears on their contact pages too
+    const coOwners = parsed.data.co_owners ?? [];
+    const primaryContactId = parsed.data.contact_id;
+    for (const co of coOwners) {
+      if (!co.contact_id || co.contact_id === primaryContactId) continue;
+      // Build co_owners list from the perspective of this co-owner
+      const otherOwners = [
+        // The primary contact becomes a co-owner from this perspective
+        ...coOwners
+          .filter((o) => o.contact_id !== co.contact_id)
+          .map((o) => ({ name: o.name, role: o.role, ownership_pct: o.ownership_pct, contact_id: o.contact_id })),
+        { name: "", role: "individual" as const, ownership_pct: parsed.data.ownership_pct ?? 100, contact_id: primaryContactId },
+      ];
+      await tc.from("contact_portfolio").upsert({
+        contact_id: co.contact_id,
+        address: parsed.data.address,
+        unit_number: parsed.data.unit_number ?? null,
+        city: parsed.data.city ?? null,
+        province: parsed.data.province ?? "BC",
+        postal_code: parsed.data.postal_code ?? null,
+        property_type: parsed.data.property_type ?? null,
+        property_category: parsed.data.property_category ?? null,
+        ownership_pct: co.ownership_pct,
+        co_owners: otherOwners,
+        status: parsed.data.status ?? "owned",
+        purchase_price: parsed.data.purchase_price ?? null,
+        purchase_date: parsed.data.purchase_date ?? null,
+        estimated_value: parsed.data.estimated_value ?? null,
+        notes: parsed.data.notes ?? null,
+      }, { onConflict: "contact_id,address" }).then(() => {
+        revalidatePath(`/contacts/${co.contact_id}`);
+      });
+    }
+
     revalidatePath(`/contacts/${parsed.data.contact_id}`);
 
     return { item: item as PortfolioItem, error: null };

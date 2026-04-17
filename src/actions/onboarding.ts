@@ -2,6 +2,8 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { auth } from "@/lib/auth";
+import { trackEvent } from "@/lib/analytics";
+import { escapeIlike } from "@/lib/escape-ilike";
 
 // ── Onboarding Progress Resume ──
 
@@ -17,7 +19,7 @@ export async function getOnboardingProgress(): Promise<{ step: number; avatarUrl
     .single();
 
   return {
-    step: Math.max(1, Math.min(user?.onboarding_step || 1, 7)),
+    step: Math.max(1, Math.min(user?.onboarding_step || 1, 6)),
     avatarUrl: user?.avatar_url || null,
   };
 }
@@ -72,6 +74,7 @@ export async function advanceOnboardingStep(step: number) {
 
   const supabase = createAdminClient();
   await supabase.from("users").update({ onboarding_step: step }).eq("id", session.user.id);
+  trackEvent("onboarding_step", session.user.id, { step, action: "completed" });
 
   if (step >= 6) {
     await supabase.from("users").update({ onboarding_completed: true }).eq("id", session.user.id);
@@ -282,7 +285,7 @@ export async function searchBrokerages(query: string): Promise<string[]> {
   const { data } = await supabase
     .from("users")
     .select("brokerage")
-    .ilike("brokerage", `${query.trim()}%`)
+    .ilike("brokerage", `${escapeIlike(query.trim())}%`)
     .not("brokerage", "is", null)
     .limit(20);
 
@@ -320,7 +323,7 @@ export async function seedSampleData() {
   if ((count || 0) > 0) return { success: true, message: "Already has contacts" };
 
   // Seed 5 demo contacts with realistic data so the page looks populated
-  await supabase.from("contacts").insert([
+  const { data: contacts } = await supabase.from("contacts").insert([
     {
       realtor_id: session.user.id,
       name: "Sarah Chen",
@@ -329,6 +332,7 @@ export async function seedSampleData() {
       type: "buyer",
       source: "sample",
       is_sample: true,
+      pref_channel: "sms",
       notes: "Looking for a 2BR condo in Vancouver. Budget $650K-$800K.",
     },
     {
@@ -339,6 +343,7 @@ export async function seedSampleData() {
       type: "seller",
       source: "sample",
       is_sample: true,
+      pref_channel: "sms",
       notes: "Owns townhouse on Main St. Considering selling in spring.",
     },
     {
@@ -360,6 +365,7 @@ export async function seedSampleData() {
       type: "seller",
       source: "sample",
       is_sample: true,
+      pref_channel: "sms",
       notes: "Investment property owner. Has 3 units in Burnaby.",
     },
     {
@@ -373,7 +379,89 @@ export async function seedSampleData() {
       pref_channel: "email",
       notes: "Relocating from Toronto. Looking for family home with yard.",
     },
-  ]);
+  ]).select("id, name");
+
+  // Seed sample listings linked to seller contacts
+  const james = contacts?.find((c) => c.name === "James Patel");
+  const michael = contacts?.find((c) => c.name === "Michael Torres");
+  const sarah = contacts?.find((c) => c.name === "Sarah Chen");
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(14, 0, 0, 0);
+  const dayAfter = new Date();
+  dayAfter.setDate(dayAfter.getDate() + 2);
+  dayAfter.setHours(10, 0, 0, 0);
+
+  if (james || michael) {
+    const { data: listings } = await supabase.from("listings").insert([
+      {
+        realtor_id: session.user.id,
+        address: "2847 Main Street, Vancouver, BC V5T 3G1",
+        seller_id: james?.id || null,
+        status: "active",
+        list_price: 1250000,
+        property_type: "Townhouse",
+        is_sample: true,
+      },
+      {
+        realtor_id: session.user.id,
+        address: "6120 Hastings Street, Burnaby, BC V5B 1S2",
+        seller_id: michael?.id || null,
+        status: "active",
+        list_price: 889000,
+        property_type: "Condo",
+        is_sample: true,
+      },
+      {
+        realtor_id: session.user.id,
+        address: "4455 West 10th Avenue, Vancouver, BC V6R 2H8",
+        seller_id: michael?.id || null,
+        status: "pending",
+        list_price: 2150000,
+        property_type: "Detached",
+        is_sample: true,
+      },
+    ]).select("id");
+
+    // Seed sample showings linked to listings
+    if (listings && listings.length >= 2) {
+      await supabase.from("appointments").insert([
+        {
+          realtor_id: session.user.id,
+          listing_id: listings[0].id,
+          buyer_agent_name: "Rachel Kim",
+          buyer_agent_email: "rachel.kim@example.com",
+          buyer_agent_phone: "+16045550201",
+          start_time: tomorrow.toISOString(),
+          status: "confirmed",
+          is_sample: true,
+        },
+        {
+          realtor_id: session.user.id,
+          listing_id: listings[1].id,
+          buyer_agent_name: "David Huang",
+          buyer_agent_email: "david.huang@example.com",
+          buyer_agent_phone: "+16045550202",
+          start_time: dayAfter.toISOString(),
+          status: "pending",
+          is_sample: true,
+        },
+      ]);
+    }
+  }
+
+  // Seed a draft newsletter linked to Sarah Chen
+  if (sarah) {
+    await supabase.from("newsletters").insert({
+      realtor_id: session.user.id,
+      subject: "Spring Market Update — Vancouver Real Estate",
+      status: "draft",
+      email_type: "market_update",
+      contact_id: sarah.id,
+      is_sample: true,
+    });
+  }
 
   return { success: true };
 }
@@ -385,9 +473,27 @@ export async function clearSampleData() {
   if (!session?.user?.id) return { error: "Not authenticated" };
 
   const supabase = createAdminClient();
-  await supabase.from("contacts").delete().eq("realtor_id", session.user.id).eq("is_sample", true);
+
+  // Delete in dependency order (FK constraints)
+  // 1. Appointments (FK → listings)
+  const { data: sampleListings } = await supabase
+    .from("listings")
+    .select("id")
+    .eq("realtor_id", session.user.id)
+    .eq("is_sample", true);
+  if (sampleListings?.length) {
+    const listingIds = sampleListings.map((l) => l.id);
+    await supabase.from("appointments").delete().in("listing_id", listingIds);
+  }
+
+  // 2. Newsletters (FK → contacts)
+  await supabase.from("newsletters").delete().eq("realtor_id", session.user.id).eq("is_sample", true);
+
+  // 3. Listings (FK → contacts)
   await supabase.from("listings").delete().eq("realtor_id", session.user.id).eq("is_sample", true);
-  await supabase.from("tasks").delete().eq("realtor_id", session.user.id).eq("is_sample", true);
+
+  // 4. Contacts (leaf)
+  await supabase.from("contacts").delete().eq("realtor_id", session.user.id).eq("is_sample", true);
 
   return { success: true };
 }

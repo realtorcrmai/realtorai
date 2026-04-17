@@ -14,6 +14,13 @@ export async function POST(request: NextRequest) {
   const auth = await validateApiKey(request);
   if (!auth.valid) return auth.error!;
 
+  if (!auth.realtorId) {
+    return NextResponse.json(
+      { error: "Tenant context required", code: "MISSING_TENANT" },
+      { status: 401, headers: corsHeaders(request) }
+    );
+  }
+
   const body = await request.json();
   const { name, phone, email, date, time, appointment_type, notes, listing_id } = body;
 
@@ -32,6 +39,7 @@ export async function POST(request: NextRequest) {
   const { data: existing } = await supabase
     .from("contacts")
     .select("id")
+    .eq("realtor_id", auth.realtorId)
     .eq("phone", normalizedPhone)
     .limit(1)
     .maybeSingle();
@@ -45,6 +53,7 @@ export async function POST(request: NextRequest) {
     const { data: contact, error } = await supabase
       .from("contacts")
       .insert({
+        realtor_id: auth.realtorId,
         name,
         phone: normalizedPhone,
         email: email || null,
@@ -84,6 +93,7 @@ export async function POST(request: NextRequest) {
   ].filter(Boolean).join("\n");
 
   await supabase.from("tasks").insert({
+    realtor_id: auth.realtorId,
     title: taskTitle,
     description: taskNotes,
     contact_id: contactId,
@@ -94,6 +104,7 @@ export async function POST(request: NextRequest) {
 
   // Create notification for realtor
   await supabase.from("agent_notifications").insert({
+    realtor_id: auth.realtorId,
     title: "New Appointment Request",
     body: `${name} requested an appointment${date ? ` on ${date}` : ""}${time ? ` at ${time}` : ""} via your website.`,
     type: "urgent",

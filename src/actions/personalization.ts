@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { trackEvent } from "@/lib/analytics";
 
 /**
  * Save a single personalization step to the user's record (P10).
@@ -24,6 +25,8 @@ export async function savePersonalizationStep(
     console.error(`[personalization] Error saving ${field}:`, error.message);
     return { error: error.message };
   }
+
+  trackEvent("personalization", session.user.id, { field, value });
 
   return { success: true };
 }
