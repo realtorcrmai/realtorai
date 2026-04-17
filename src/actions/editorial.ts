@@ -590,27 +590,41 @@ export async function sendEdition(
       let testSent = 0;
       let testFailed = 0;
       try {
-        const testResponse = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${resendApiKey}`,
-          },
-          body: JSON.stringify({
-            from: fromEmail,
-            to: [options.test_email],
-            subject: `[TEST] ${subject}`,
-            html,
-            tags: [
-              { name: 'edition_id', value: editionId },
-              { name: 'send_type', value: 'test' },
-            ],
-          }),
-        });
-        if (testResponse.ok) {
-          testSent = 1;
+        // DEV_EMAIL_MODE=preview → capture to local file, skip Resend
+        if (process.env.DEV_EMAIL_MODE === 'preview') {
+          const { writeFile, mkdir } = await import('fs/promises')
+          const { join } = await import('path')
+          const dir = join(process.env.TMPDIR || '/tmp', 'dev-emails')
+          await mkdir(dir, { recursive: true })
+          const ts = Date.now()
+          const safe = subject.replace(/[^a-zA-Z0-9-_ ]/g, '').slice(0, 60).trim().replace(/ /g, '-')
+          const file = join(dir, `${ts}-TEST-${safe}.html`)
+          await writeFile(file, `<!-- DEV EMAIL PREVIEW\n  To: ${options.test_email}\n  Subject: [TEST] ${subject}\n  Captured: ${new Date().toISOString()}\n-->\n${html}`, 'utf-8')
+          console.log(`[DEV_EMAIL] Captured → ${file}`)
+          testSent = 1
         } else {
-          testFailed = 1;
+          const testResponse = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${resendApiKey}`,
+            },
+            body: JSON.stringify({
+              from: fromEmail,
+              to: [options.test_email],
+              subject: `[TEST] ${subject}`,
+              html,
+              tags: [
+                { name: 'edition_id', value: editionId },
+                { name: 'send_type', value: 'test' },
+              ],
+            }),
+          });
+          if (testResponse.ok) {
+            testSent = 1;
+          } else {
+            testFailed = 1;
+          }
         }
       } catch {
         testFailed = 1;
@@ -740,25 +754,39 @@ export async function sendEdition(
           tags.push({ name: 'ab_variant', value: abVariant });
         }
 
-        const response = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${resendApiKey}`,
-          },
-          body: JSON.stringify({
-            from: fromEmail,
-            to: [contact.email!],
-            subject: resolvedSubject,
-            html: personalizedHtml,
-            tags,
-          }),
-        });
-
-        if (response.ok) {
-          sent++;
+        if (process.env.DEV_EMAIL_MODE === 'preview') {
+          // DEV: capture to file instead of sending
+          const { writeFile, mkdir } = await import('fs/promises')
+          const { join } = await import('path')
+          const dir = join(process.env.TMPDIR || '/tmp', 'dev-emails')
+          await mkdir(dir, { recursive: true })
+          const ts = Date.now()
+          const safe = resolvedSubject.replace(/[^a-zA-Z0-9-_ ]/g, '').slice(0, 50).trim().replace(/ /g, '-')
+          const file = join(dir, `${ts}-${contact.id.slice(0, 8)}-${safe}.html`)
+          await writeFile(file, `<!-- DEV\n  To: ${contact.email}\n  Subject: ${resolvedSubject}\n-->\n${personalizedHtml}`, 'utf-8')
+          console.log(`[DEV_EMAIL] → ${file}`)
+          sent++
         } else {
-          failed++;
+          const response = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${resendApiKey}`,
+            },
+            body: JSON.stringify({
+              from: fromEmail,
+              to: [contact.email!],
+              subject: resolvedSubject,
+              html: personalizedHtml,
+              tags,
+            }),
+          });
+
+          if (response.ok) {
+            sent++;
+          } else {
+            failed++;
+          }
         }
       } catch {
         failed++;

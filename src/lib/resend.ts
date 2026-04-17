@@ -3,6 +3,32 @@
 import { Resend } from "resend";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 
+// ---------------------------------------------------------------------------
+// DEV_EMAIL_MODE — local email intercept
+// Set DEV_EMAIL_MODE=preview in .env.local to capture all outbound emails to
+// /tmp/dev-emails/ as HTML files instead of sending via Resend.
+// ---------------------------------------------------------------------------
+async function devCapture(params: SendEmailParams): Promise<{ messageId: string }> {
+  const { writeFile, mkdir } = await import("fs/promises")
+  const { join } = await import("path")
+  const dir = join(process.env.TMPDIR || "/tmp", "dev-emails")
+  await mkdir(dir, { recursive: true })
+  const ts = Date.now()
+  const safe = (params.subject || "email").replace(/[^a-zA-Z0-9-_ ]/g, "").slice(0, 60).trim().replace(/ /g, "-")
+  const file = join(dir, `${ts}-${safe}.html`)
+  const preview = `<!-- DEV EMAIL PREVIEW
+  From: ${params.from || process.env.RESEND_FROM_EMAIL || "newsletters@realtors360.ai"}
+  To: ${params.to}
+  Subject: ${params.subject}
+  Captured: ${new Date().toISOString()}
+-->
+${params.html}`
+  await writeFile(file, preview, "utf-8")
+  console.log(`[DEV_EMAIL] Captured → ${file}`)
+  console.log(`[DEV_EMAIL] Open: open "${file}"`)
+  return { messageId: `dev-${ts}` }
+}
+
 // H-14: Fail fast at import time in production if the API key is missing.
 // In development/test environments, this is a warning only so local dev still works.
 if (!process.env.RESEND_API_KEY && process.env.NODE_ENV === "production") {
@@ -70,6 +96,11 @@ export async function sendEmail(params: SendEmailParams) {
   // Basic email validation
   if (!params.to || !params.to.includes("@")) {
     throw new Error(`Invalid email address: ${params.to}`);
+  }
+
+  // DEV_EMAIL_MODE=preview → capture to local file, never hit Resend
+  if (process.env.DEV_EMAIL_MODE === "preview") {
+    return devCapture(params)
   }
 
   const resend = getResend();
