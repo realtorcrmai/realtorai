@@ -35,6 +35,9 @@ export const contactSchema = z.object({
   demographics: z.record(z.string(), z.unknown()).optional(),
   // Social media handles: { instagram: "handle", linkedin: "handle", ... }
   social_profiles: z.record(z.string(), z.string()).optional(),
+  // CASL consent
+  casl_consent_given: z.boolean().optional(),
+  casl_consent_date: z.string().optional(),
 });
 
 export type ContactFormData = z.infer<typeof contactSchema>;
