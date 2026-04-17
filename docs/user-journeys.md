@@ -553,11 +553,17 @@ flowchart TD
 ## 8. Contact Management
 
 1. Open `/contacts` — see paginated DataTable with avatars, lead scores, stages
-2. Search by name — table filters instantly via search input
-3. Hover row — call/email/preview icons appear (inline quick actions)
-4. Click eye icon — preview sheet slides open showing contact info + recent communications
-5. Select checkboxes on multiple rows — bulk action bar appears at bottom of screen
-6. Click "Change Stage" in bulk bar — update multiple contacts' stage in one action
+2. **Filter contacts** — use the filter bar above the table to narrow by Type (buyer/seller/agent), Stage (lead/active/past client), and Engagement level (hot/warm/cold). Filters combine with AND logic. Clear filters to reset.
+3. Search by name — table filters instantly via search input (works alongside active filters)
+4. Hover row — call/email/preview icons appear (inline quick actions)
+5. Click eye icon — preview sheet slides open showing contact info + recent communications
+6. **Communication timeline** — on contact detail (`/contacts/[id]`), initial view shows 10 most recent messages. Click "Load More" to fetch older communications in batches.
+7. Select checkboxes on multiple rows — bulk action bar appears at bottom of screen
+8. Click "Change Stage" in bulk bar — update multiple contacts' stage in one action (with type validation)
+9. **Export CSV** — select contacts and click "Export CSV" to download an injection-safe CSV file with name, email, phone, type, stage columns
+10. **Bulk delete** — select contacts and click "Delete" with confirmation dialog to remove multiple contacts at once
+11. **Mobile** — on viewport < 768px, contact detail sidebar collapses behind a toggle. Communication timeline and bulk actions remain accessible.
+12. **Print** — Cmd+P on contacts page prints the data table without sidebar, header, or action buttons
 
 ---
 
@@ -566,7 +572,118 @@ flowchart TD
 1. Schedule showing — notification fires to realtor (notification center bell shows unread count)
 2. Confirm showing — notification fires to buyer agent, calendar event updated
 3. Complete showing — feedback SMS sent to buyer agent via Twilio asking for 1-5 rating and comments
+4. **Mobile** — on showing detail (`/showings/[id]`), the context panel collapses behind a toggle on viewport < 768px. Main content (status actions, communication log) takes full width.
+5. **Loading** — showings list page shows skeleton placeholders during initial data fetch
 
 ---
 
-*Generated 2026-03-23, updated 2026-04-10 — Realtors360 CRM*
+## 10. Listing Workflow (8-Phase)
+
+1. Navigate to `/listings/[id]/workflow` to manage the 8-phase listing process
+2. **Auto-expand** — the first pending (incomplete) phase is automatically expanded on page load. Completed phases are collapsed. No manual click needed to see current work.
+3. Complete a phase to advance — the next pending phase auto-expands after refresh
+4. Manually collapse/expand any phase by clicking the phase header (auto-expand is initial state only)
+5. **Accessibility** — each phase card has `aria-describedby` for screen readers. Action buttons have descriptive `aria-label` (e.g., "Advance to Phase 2: Data Enrichment"). Color contrast on muted text meets WCAG AA.
+6. **Document uploads** — upload area shows maximum file size and accepted file types with `aria-describedby`
+7. **Mobile** — on listing detail (`/listings/[id]`), the sidebar collapses behind a toggle on viewport < 768px. Workflow forms use responsive grids (`grid-cols-1` on small screens, `sm:grid-cols-2` on larger).
+8. **Loading** — listings list page shows skeleton placeholders during initial data fetch
+9. **Print** — Cmd+P on listing detail prints property data and workflow status without UI chrome
+
+---
+
+## 11. Email Marketing — Newsletter Queue
+
+1. Navigate to `/newsletters/queue` to review AI-generated email drafts
+2. **Preview** — click the Preview button on any pending newsletter to view rendered HTML at `/api/newsletters/preview/[id]` (replaces the previous broken "edit" link)
+3. Approve, edit, or skip drafts from the queue
+4. Dashboard "New Leads Today" KPI now queries real contact creation data (not a placeholder value)
+
+---
+
+## 12. New User Onboarding Journey
+
+### Full Flow
+
+```mermaid
+flowchart TD
+    A[User signs up at /signup] --> B[Redirect to /personalize]
+
+    B --> C[Screen 1: Select persona]
+    C --> C1["new_agent / experienced / team_lead / brokerage"]
+    C1 --> D[Screen 2: Select market]
+    D --> D1["Vancouver / Surrey / Victoria / etc."]
+    D1 --> E[Screen 3: Team size]
+    E --> E1["Solo / 2-5 / 6-20 / 20+"]
+    E1 --> F[Screen 4: Years of experience]
+    F --> F1["0-1 / 2-5 / 5-10 / 10+"]
+    F1 --> G[Screen 5: Focus areas]
+    G --> G1["Residential / Commercial / Luxury / Investment / Land"]
+    G1 --> H[Screen 6: Loading — setting up your workspace]
+    H --> I[Redirect to /onboarding]
+
+    I --> J[Step 1: Profile — name, brokerage, photo, license]
+    J --> K[Step 2: Contacts — import or skip]
+    K --> L[Step 3: Details — phone, address, preferences]
+    L --> M[Step 4: MLS — board selection, MLS ID]
+    M --> N[Step 5: Complete — summary + seed sample data]
+
+    N --> O["Redirect to /?welcome=1"]
+
+    O --> P[Confetti animation plays]
+    P --> Q[Welcome tour starts — guided tooltip walkthrough]
+    Q --> Q1["Tour uses data-tour attributes on sidebar nav items"]
+    Q1 --> R[Onboarding banner appears at top of dashboard]
+    R --> S[Checklist widget shows 5 items]
+    S --> S1["1. Complete profile"]
+    S1 --> S2["2. Add first contact"]
+    S2 --> S3["3. Create first listing"]
+    S3 --> S4["4. Schedule a showing"]
+    S4 --> S5["5. Send first newsletter"]
+
+    S --> T{User completes all 5 items?}
+    T -->|Yes| U[NPS survey appears]
+    U --> V["How likely to recommend? 0-10 + comment"]
+    V --> W["POST /api/onboarding/nps → stored in onboarding_nps table"]
+
+    T -->|Not yet| X[Banner + checklist persist until complete]
+    X --> Y[Items auto-check as user performs actions]
+
+    N --> Z[Welcome drip emails begin]
+    Z --> Z1["Day 0: Welcome to Realtors360"]
+    Z1 --> Z2["Day 1: Getting started guide"]
+    Z2 --> Z3["Day 3: Import your contacts"]
+    Z3 --> Z4["Day 5: Create your first listing"]
+    Z4 --> Z5["Day 7: AI email marketing intro"]
+    Z5 --> Z6["Day 10: Advanced features"]
+    Z6 --> Z7["Day 12: You are all set — tips for power users"]
+```
+
+### Sample Data for New Users
+
+When onboarding completes (Step 5), the system seeds:
+- **5 contacts** — diverse types (buyer, seller, investor, referral, past client) with realistic BC data
+- **3 listings** — different statuses (active, pending, sold) and property types
+- **2 showings** — one upcoming, one completed with feedback
+- **1 newsletter** — draft with sample content ready to customize
+
+All sample records are marked with `is_sample = true` for easy identification and cleanup.
+
+### Persona-Specific Experience
+
+| Persona | Dashboard Guide | Focus |
+|---------|----------------|-------|
+| `new_agent` | Full guided walkthrough with contextual tips | Basics: contacts, listings, showings |
+| `experienced` | Quick overview of AI features | Email marketing, automation, analytics |
+| `team_lead` | Team management highlights | Multi-agent workflows, reporting |
+| `brokerage` | Admin overview | Compliance, team oversight, billing |
+
+### Key Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/onboarding/nps` | Store NPS survey response |
+| `POST /api/cron/welcome-drip` | Process scheduled welcome drip emails |
+
+---
+
+*Generated 2026-03-23, updated 2026-04-12 — Realtors360 CRM*

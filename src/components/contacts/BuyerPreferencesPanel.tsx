@@ -14,6 +14,7 @@ import { updateContact } from "@/actions/contacts";
 import type { BuyerPreferences } from "@/types";
 import type { Json } from "@/types/database";
 import { FINANCING_STATUSES, FINANCING_STATUS_LABELS } from "@/lib/constants/contacts";
+import { formatCurrency, unformatCurrency } from "@/lib/format";
 
 const PROPERTY_TYPES = ["Detached", "Townhouse", "Condo", "Duplex"];
 const TIMELINE_OPTIONS = [
@@ -210,13 +211,13 @@ export function BuyerPreferencesPanel({
               </p>
             </div>
           )}
-          {preferences?.move_in_timeline && (
+          {(preferences?.move_in_timeline || preferences?.timeline) && (
             <div className="p-3 rounded-lg bg-muted/30">
               <p className="text-xs text-muted-foreground uppercase font-medium">
                 Timeline
               </p>
               <p className="text-sm font-medium mt-1">
-                {preferences.move_in_timeline}
+                {preferences.move_in_timeline || preferences.timeline}
               </p>
             </div>
           )}
@@ -349,15 +350,17 @@ export function BuyerPreferencesPanel({
               Min Price
             </label>
             <input
-              type="number"
-              placeholder="e.g. 500000"
-              value={form.price_range_min ?? ""}
-              onChange={(e) =>
+              type="text"
+              inputMode="numeric"
+              placeholder="e.g. $500,000"
+              value={form.price_range_min != null ? formatCurrency(form.price_range_min) : ""}
+              onChange={(e) => {
+                const raw = unformatCurrency(e.target.value);
                 setForm((f) => ({
                   ...f,
-                  price_range_min: e.target.value ? Number(e.target.value) : undefined,
-                }))
-              }
+                  price_range_min: raw ? Number(raw) : undefined,
+                }));
+              }}
               className="w-full mt-1 px-2.5 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
               disabled={isPending}
             />
@@ -367,15 +370,17 @@ export function BuyerPreferencesPanel({
               Max Price
             </label>
             <input
-              type="number"
-              placeholder="e.g. 1000000"
-              value={form.price_range_max ?? ""}
-              onChange={(e) =>
+              type="text"
+              inputMode="numeric"
+              placeholder="e.g. $1,000,000"
+              value={form.price_range_max != null ? formatCurrency(form.price_range_max) : ""}
+              onChange={(e) => {
+                const raw = unformatCurrency(e.target.value);
                 setForm((f) => ({
                   ...f,
-                  price_range_max: e.target.value ? Number(e.target.value) : undefined,
-                }))
-              }
+                  price_range_max: raw ? Number(raw) : undefined,
+                }));
+              }}
               className="w-full mt-1 px-2.5 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
               disabled={isPending}
             />
@@ -388,15 +393,17 @@ export function BuyerPreferencesPanel({
             Pre-Approval Amount
           </label>
           <input
-            type="number"
-            placeholder="e.g. 800000"
-            value={form.pre_approval_amount ?? ""}
-            onChange={(e) =>
+            type="text"
+            inputMode="numeric"
+            placeholder="e.g. $800,000"
+            value={form.pre_approval_amount != null ? formatCurrency(form.pre_approval_amount) : ""}
+            onChange={(e) => {
+              const raw = unformatCurrency(e.target.value);
               setForm((f) => ({
                 ...f,
-                pre_approval_amount: e.target.value ? Number(e.target.value) : undefined,
-              }))
-            }
+                pre_approval_amount: raw ? Number(raw) : undefined,
+              }));
+            }}
             className="w-full mt-1 px-2.5 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
             disabled={isPending}
           />

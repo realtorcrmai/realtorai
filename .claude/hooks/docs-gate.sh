@@ -29,7 +29,11 @@ BASIC_EXIT=$?
 DEEP_OUTPUT=$(node scripts/audit-docs-deep.mjs 2>&1)
 DEEP_EXIT=$?
 
-if [[ $BASIC_EXIT -ne 0 || $DEEP_EXIT -ne 0 ]]; then
+# Run test plan audit
+TEST_OUTPUT=$(node scripts/audit-test-plans.mjs 2>&1)
+TEST_EXIT=$?
+
+if [[ $BASIC_EXIT -ne 0 || $DEEP_EXIT -ne 0 || $TEST_EXIT -ne 0 ]]; then
     ISSUES=""
     if [[ $BASIC_EXIT -ne 0 ]]; then
         STALE=$(echo "$BASIC_OUTPUT" | grep "⚠" | head -5 | sed 's/"/\\"/g' | tr '\n' '|')
@@ -39,11 +43,15 @@ if [[ $BASIC_EXIT -ne 0 || $DEEP_EXIT -ne 0 ]]; then
         DEEP_STALE=$(echo "$DEEP_OUTPUT" | grep "📄\|←" | head -8 | sed 's/"/\\"/g' | tr '\n' '|')
         ISSUES="$ISSUES Deep audit: $DEEP_STALE"
     fi
+    if [[ $TEST_EXIT -ne 0 ]]; then
+        TEST_STALE=$(echo "$TEST_OUTPUT" | grep "⚠" | head -5 | sed 's/"/\\"/g' | tr '\n' '|')
+        ISSUES="$ISSUES Test plan audit: $TEST_STALE"
+    fi
 
     cat <<EOF
 {
   "decision": "block",
-  "reason": "Cannot create PR — docs are stale.\\n\\n$ISSUES\\n\\nFix: update the listed docs to reflect your code changes, then retry.\\nRun locally:\\n  node scripts/audit-docs.mjs\\n  node scripts/audit-docs-deep.mjs"
+  "reason": "Cannot create PR — docs are stale.\\n\\n$ISSUES\\n\\nFix: update the listed docs and test plans, then retry.\\nRun locally:\\n  node scripts/audit-docs.mjs\\n  node scripts/audit-docs-deep.mjs\\n  node scripts/audit-test-plans.mjs"
 }
 EOF
     exit 0

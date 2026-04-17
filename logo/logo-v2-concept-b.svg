@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 80" fill="none">
+  <!-- CONCEPT B: "The Keystone" — Shield/arch shape with negative-space roofline -->
+
+  <g transform="translate(6, 6)">
+    <!-- Outer rounded rectangle (shield shape) -->
+    <rect x="4" y="4" width="56" height="60" rx="8" fill="#2D3E50"/>
+
+    <!-- Gold arch/keystone — negative space creates roofline -->
+    <path d="M18 52L32 22L46 52" stroke="#C9A96E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+    <!-- Two vertical pillar lines below roofline -->
+    <line x1="24" y1="42" x2="24" y2="52" stroke="#C9A96E" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="40" y1="42" x2="40" y2="52" stroke="#C9A96E" stroke-width="1.5" stroke-linecap="round"/>
+
+    <!-- Horizontal base -->
+    <line x1="18" y1="52" x2="46" y2="52" stroke="#C9A96E" stroke-width="1.5" stroke-linecap="round"/>
+
+    <!-- Subtle "360" small text inside shield -->
+    <text x="22" y="16" font-family="'Helvetica Neue', sans-serif" font-size="8" font-weight="700" fill="#C9A96E" letter-spacing="1" opacity="0.6">360</text>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(82, 0)">
+    <text x="0" y="38" font-family="'Georgia', 'Times New Roman', serif" font-size="28" font-weight="400" fill="#2D3E50" letter-spacing="2">REALTORS</text>
+    <text x="196" y="38" font-family="'Georgia', 'Times New Roman', serif" font-size="28" font-weight="700" fill="#C9A96E" letter-spacing="1.5">360</text>
+  </g>
+
+  <!-- Tagline below wordmark -->
+  <line x1="82" y1="48" x2="260" y2="48" stroke="#C9A96E" stroke-width="0.5" opacity="0.4"/>
+  <text x="82" y="63" font-family="'Helvetica Neue', 'Inter', sans-serif" font-size="9.5" font-weight="500" fill="#7C98B6" letter-spacing="4">AI POWERED PLATFORM</text>
+</svg>

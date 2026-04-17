@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/api-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadPdfFromUrl, flattenPdf } from "@/lib/forms/pdf-service";
@@ -16,7 +17,7 @@ import { getDocType } from "@/lib/forms/constants";
  * 5. Returns the PDF URL for download
  */
 export async function POST(req: NextRequest) {
-  const { unauthorized } = await requireAuth();
+  const { unauthorized, session } = await requireAuth();
   if (unauthorized) return unauthorized;
 
   try {
@@ -29,7 +30,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!/^[a-zA-Z0-9_-]+$/.test(formKey)) {
+      return NextResponse.json(
+        { error: "Invalid form key format" },
+        { status: 400 }
+      );
+    }
+
     const supabase = createAdminClient();
+
+    // Verify listing belongs to the authenticated user
+    const { data: listing, error: listingErr } = await supabase
+      .from("listings")
+      .select("id")
+      .eq("id", listingId)
+      .eq("realtor_id", session!.user.id)
+      .single();
+
+    if (listingErr || !listing) {
+      return NextResponse.json(
+        { error: "Listing not found or access denied" },
+        { status: 403 }
+      );
+    }
 
     // Fetch template
     const { data: template, error: tplErr } = await supabase
@@ -78,7 +101,7 @@ export async function POST(req: NextRequest) {
     } = supabase.storage.from("listing-documents").getPublicUrl(storagePath);
 
     // Upsert form_submissions as completed
-    await supabase
+    const { error: formError } = await supabase
       .from("form_submissions")
       .upsert(
         {
@@ -91,9 +114,17 @@ export async function POST(req: NextRequest) {
         { onConflict: "listing_id,form_key" }
       );
 
+    if (formError) {
+      console.error("[forms/complete] form_submissions upsert failed:", formError.message);
+      return NextResponse.json(
+        { error: "Failed to save form submission" },
+        { status: 500 }
+      );
+    }
+
     // Also upsert listing_documents for readiness tracking
     const docType = getDocType(formKey);
-    await supabase
+    const { error: docError } = await supabase
       .from("listing_documents")
       .upsert(
         {
@@ -105,11 +136,20 @@ export async function POST(req: NextRequest) {
         { onConflict: "listing_id,doc_type" }
       );
 
-    return NextResponse.json({
-      success: true,
-      pdfUrl: publicUrl,
-      fileName,
-    });
+    if (docError) {
+      // Form submission succeeded but document tracking failed — log but don't fail
+      console.error("[forms/complete] listing_documents upsert failed:", docError.message);
+    }
+
+    revalidatePath("/listings");
+    return NextResponse.json(
+      {
+        success: true,
+        pdfUrl: publicUrl,
+        fileName,
+      },
+      { status: 201 }
+    );
   } catch (err) {
     console.error("[/api/forms/complete]", err);
     return NextResponse.json(

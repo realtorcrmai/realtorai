@@ -23,7 +23,37 @@ export interface Tour {
   steps: TourStep[];
 }
 
+export const WELCOME_TOUR: Tour = {
+  id: "welcome",
+  title: "Welcome to Realtors360",
+  duration: "1 min",
+  feature: "onboarding",
+  steps: [
+    {
+      element: "[data-tour='nav-dashboard']",
+      popover: { title: "Your Dashboard", description: "This is your command center. See pipeline status, today's priorities, and AI recommendations at a glance.", side: "right" },
+    },
+    {
+      element: "[data-tour='nav-contacts']",
+      popover: { title: "Contacts", description: "Manage your buyers, sellers, and partners. Import from CSV, Gmail, or add manually.", side: "right" },
+    },
+    {
+      element: "[data-tour='nav-listings']",
+      popover: { title: "Listings", description: "Your 8-phase listing workflow — from seller intake through MLS submission, all guided step by step.", side: "right" },
+    },
+    {
+      element: "[data-tour='nav-showings']",
+      popover: { title: "Showings", description: "Manage showing requests with automated SMS notifications, calendar sync, and lockbox code delivery.", side: "right" },
+    },
+    {
+      element: "[data-tour='nav-email-marketing']",
+      popover: { title: "Email Marketing", description: "AI writes personalized emails for your contacts. You approve, we send. Market updates, listing alerts, and more.", side: "right" },
+    },
+  ],
+};
+
 export const ALL_TOURS: Tour[] = [
+  WELCOME_TOUR,
   {
     id: "create-first-listing",
     title: "Create Your First Listing",
@@ -97,7 +127,7 @@ export const ALL_TOURS: Tour[] = [
     feature: "email-marketing-engine",
     steps: [
       {
-        element: "[data-tour='nav-newsletters']",
+        element: "[data-tour='nav-email-marketing']",
         popover: { title: "Open Email Marketing", description: "Click here to access the AI email marketing dashboard.", side: "bottom" },
         navigateTo: "/",
       },

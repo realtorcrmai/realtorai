@@ -6,6 +6,7 @@ import { TrialBanner } from "@/components/layout/TrialBanner";
 import { OnboardingChecklist } from "@/components/help/OnboardingChecklist";
 import { CommandPalette } from "@/components/help/CommandPalette";
 import { FeatureDiscovery } from "@/components/help/FeatureDiscovery";
+import { OnboardingNPS } from "@/components/help/OnboardingNPS";
 import { VoiceAgentWidget } from "@/components/voice-agent/VoiceAgentWidget";
 import { LayoutProvider } from "@/components/layout/LayoutProvider";
 import { DashboardShellClient } from "@/components/layout/DashboardShellClient";
@@ -20,15 +21,15 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  // ── Admin redirect — admins go to /admin, not the realtor dashboard ──
+  if (session.user.role === "admin") {
+    redirect("/admin");
+  }
+
   // ── Onboarding gate — use JWT token (populated in auth.ts callbacks) ──
-  if (session.user.role !== "admin") {
-    const user = session.user as Record<string, unknown>;
-    if (user.personalizationCompleted === false && user.onboardingCompleted === false) {
-      redirect("/personalize");
-    }
-    if (user.onboardingCompleted === false) {
-      redirect("/onboarding");
-    }
+  const user = session.user as Record<string, unknown>;
+  if (user.onboardingCompleted === false) {
+    redirect("/onboarding");
   }
   return (
     <LayoutProvider>
@@ -42,6 +43,7 @@ export default async function DashboardLayout({
         <OnboardingChecklist />
         <CommandPalette />
         <FeatureDiscovery />
+        <OnboardingNPS />
         <Toaster />
       </div>
     </LayoutProvider>

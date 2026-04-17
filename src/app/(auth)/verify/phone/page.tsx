@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Home, Smartphone, AlertCircle } from "lucide-react";
 import { LogoSpinner } from "@/components/brand/Logo";
+import { formatPhone, normalizePhoneE164 } from "@/lib/format";
 
 export default function VerifyPhonePage() {
   const router = useRouter();
@@ -40,7 +41,7 @@ export default function VerifyPhonePage() {
       const res = await fetch("/api/auth/verify-phone/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ phone: normalizePhoneE164(phone) ?? phone }),
       });
 
       const data = await res.json();
@@ -212,9 +213,14 @@ export default function VerifyPhonePage() {
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="604-555-1234"
+                        placeholder="(604) 555-1234"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
+                        onBlur={(e) => {
+                          // Format without the +1 prefix since it's shown separately in the UI
+                          const formatted = formatPhone(e.target.value);
+                          setPhone(formatted.replace(/^\+1\s*/, ""));
+                        }}
                         className="h-11"
                         autoFocus
                       />

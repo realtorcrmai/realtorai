@@ -35,7 +35,10 @@ export async function POST(req: Request) {
       .single();
 
     if (listingErr || !listing) {
-      return NextResponse.json({ error: "Listing not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Listing not found or does not belong to you" },
+        { status: 404 }
+      );
     }
 
     // 2. Build recipient list

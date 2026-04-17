@@ -36,6 +36,8 @@ export default async function NewsletterDashboard() {
   const _now = Date.now();
   const sevenDaysFromNow = new Date(_now + 7 * 86400000).toISOString();
 
+  const thirtyDaysAgo = new Date(_now - 30 * 86400000).toISOString();
+
   const [
     { data: journeys },
     { data: workflows },
@@ -44,6 +46,9 @@ export default async function NewsletterDashboard() {
     { data: suppressedRaw },
     { data: sentRaw },
     { data: upcomingJourneys },
+    { count: unsubscribeCount },
+    { count: bounceCount },
+    { data: recentBlastsRaw },
   ] = await Promise.all([
     tc.from("contact_journeys").select("id, contact_id, journey_type, current_phase, is_paused, next_email_at, send_mode, contacts(name, type, email)").order("created_at", { ascending: false }),
     tc.from("workflows").select("id, name, slug, description, is_active, trigger_type, contact_type, workflow_steps(id)").order("name"),
@@ -52,6 +57,9 @@ export default async function NewsletterDashboard() {
     tc.from("newsletters").select("id, subject, email_type, status, ai_context, contact_id, created_at, contacts(name, type, email, phone)").eq("status", "suppressed").order("created_at", { ascending: false }).limit(10),
     tc.from("newsletters").select("id, subject, email_type, status, sent_at, contact_id, html_body, contacts(name, type), newsletter_events(event_type, metadata, created_at)").eq("status", "sent").order("sent_at", { ascending: false }).limit(20),
     tc.from("contact_journeys").select("id, contact_id, journey_type, current_phase, next_email_at, emails_sent_in_phase, contacts(name, type)").eq("is_paused", false).not("next_email_at", "is", null).lte("next_email_at", sevenDaysFromNow).order("next_email_at").limit(50),
+    tc.from("contacts").select("id", { count: "exact", head: true }).eq("newsletter_unsubscribed", true),
+    tc.from("newsletter_events").select("id", { count: "exact", head: true }).eq("event_type", "bounced").gte("created_at", thirtyDaysAgo),
+    tc.from("newsletters").select("id, subject, email_type, status, sent_at, contact_id, created_at, contacts(name, type), newsletter_events(event_type)").in("email_type", ["listing_blast", "campaign", "listing_alert"]).eq("status", "sent").order("created_at", { ascending: false }).limit(10),
   ]);
 
   // Filter hot leads: engagement score >= 60, split by type
@@ -63,6 +71,22 @@ export default async function NewsletterDashboard() {
   const hotSellers = hotLeads.filter((c: any) => c.type === "seller");
 
   const suppressedEmails = suppressedRaw || [];
+
+  // Build real blast history for CampaignsTab (Fix 3)
+  const realBlastHistory = (recentBlastsRaw || []).map((nl: any) => {
+    const events = nl.newsletter_events || [];
+    return {
+      id: nl.id,
+      listing_address: nl.subject?.replace(/^NEW LISTING:\s*/i, "").split("—")[0]?.trim() || nl.subject || "Campaign",
+      listing_price: null,
+      template: nl.email_type?.replace(/_/g, " ") || "Campaign",
+      recipients: 1,
+      sent_at: nl.sent_at || nl.created_at,
+      opens: events.filter((e: any) => e.event_type === "opened").length,
+      clicks: events.filter((e: any) => e.event_type === "clicked").length,
+      replies: 0,
+    };
+  });
 
   // Sent newsletters with events for AI Agent tab
   const sentNewsletters = (sentRaw || []).map((nl: any) => ({
@@ -392,7 +416,7 @@ export default async function NewsletterDashboard() {
 
           /* ═══ CAMPAIGNS (Templates + Blasts) ═══ */
           campaigns: (
-            <CampaignsTab listings={(listings || []) as any} onSendBlast={sendListingBlast} onSendCampaign={sendCampaign} />
+            <CampaignsTab listings={(listings || []) as any} blastHistory={realBlastHistory} onSendBlast={sendListingBlast} onSendCampaign={sendCampaign} />
           ),
 
 
@@ -468,21 +492,30 @@ export default async function NewsletterDashboard() {
           /* ═══ AUTOMATION ═══ */
           automation: (
             <div className="space-y-6">
-              <ListingBlastAutomation />
+              <ListingBlastAutomation enabled={(realtorConfig?.brand_config as any)?.listing_blast_enabled !== false} />
               <GreetingAutomations initialRules={greetingRules as any} />
             </div>
           ),
 
           /* ═══ SETTINGS ═══ */
           settings: (
-            <SettingsTab config={realtorConfig ? {
-              sending_enabled: realtorConfig.sending_enabled,
-              skip_weekends: realtorConfig.skip_weekends,
-              quiet_hours: realtorConfig.quiet_hours as any,
-              frequency_caps: realtorConfig.frequency_caps as any,
-              default_send_hour: realtorConfig.default_send_hour,
-              brand_config: realtorConfig.brand_config as any,
-            } : null} />
+            <SettingsTab
+              config={realtorConfig ? {
+                sending_enabled: realtorConfig.sending_enabled,
+                skip_weekends: realtorConfig.skip_weekends,
+                quiet_hours: realtorConfig.quiet_hours as any,
+                frequency_caps: realtorConfig.frequency_caps as any,
+                default_send_hour: realtorConfig.default_send_hour,
+                brand_config: realtorConfig.brand_config as any,
+                ai_quality_tier: realtorConfig.ai_quality_tier as string | undefined,
+                brand_name: (realtorConfig.brand_name as string) ?? "",
+                tone: (realtorConfig.tone as string) ?? "",
+                writing_style_rules: (realtorConfig.writing_style_rules as string[]) ?? [],
+                content_rankings: (realtorConfig.content_rankings as Array<{ type: string; effectiveness: number }>) ?? [],
+              } : null}
+              unsubscribeCount={unsubscribeCount ?? 0}
+              complaintCount={bounceCount ?? 0}
+            />
           ),
         }}
       </EmailMarketingTabs>

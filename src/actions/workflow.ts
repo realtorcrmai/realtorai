@@ -2,6 +2,64 @@
 
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
+import { flowToSteps } from "@/lib/flow-converter";
+import type { Node, Edge } from "@xyflow/react";
+
+/**
+ * Save workflow canvas (React Flow JSON + derived steps) for a given workflow.
+ * Uses the tenant client so RLS enforces ownership — no admin client bypass.
+ */
+export async function saveWorkflowCanvas(
+  workflowId: string,
+  nodes: Node[],
+  edges: Edge[]
+): Promise<{ error?: string }> {
+  try {
+    const tc = await getAuthenticatedTenantClient();
+
+    // Verify workflow belongs to this tenant before mutating
+    const { data: existing, error: fetchErr } = await tc
+      .from("workflows")
+      .select("id")
+      .eq("id", workflowId)
+      .maybeSingle();
+
+    if (fetchErr || !existing) {
+      return { error: "Workflow not found or access denied" };
+    }
+
+    // Save React Flow JSON
+    const { error: updateErr } = await tc
+      .from("workflows")
+      .update({ flow_json: { nodes, edges }, is_published: true })
+      .eq("id", workflowId);
+
+    if (updateErr) return { error: updateErr.message };
+
+    // Derive steps and replace atomically
+    const newSteps = flowToSteps(nodes as Parameters<typeof flowToSteps>[0], edges as Parameters<typeof flowToSteps>[1]);
+
+    const { error: deleteErr } = await tc
+      .from("workflow_steps")
+      .delete()
+      .eq("workflow_id", workflowId);
+
+    if (deleteErr) return { error: deleteErr.message };
+
+    if (newSteps.length > 0) {
+      const { error: insertErr } = await tc
+        .from("workflow_steps")
+        .insert(newSteps.map((s) => ({ ...s, workflow_id: workflowId })));
+      if (insertErr) return { error: insertErr.message };
+    }
+
+    revalidatePath(`/automations/${workflowId}`);
+    return {};
+  } catch (err) {
+    console.error("[saveWorkflowCanvas]", err);
+    return { error: "Failed to save workflow" };
+  }
+}
 
 // Step order for cascade reset — changing step N clears all steps after N
 const STEP_ORDER = [

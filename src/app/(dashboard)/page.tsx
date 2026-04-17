@@ -50,7 +50,7 @@ export default async function DashboardPage() {
     tc.from("tasks").select("id, title, status, priority, category, due_date").neq("status", "completed").order("created_at", { ascending: false }).limit(20),
     tc.from("contacts").select("id, stage_bar, type, newsletter_intelligence"),
     tc.from("listings").select("id, seller_id, buyer_id, list_price, sold_price, commission_rate, commission_amount, status"),
-    tc.from("listing_documents").select("listing_id, doc_type"),
+    tc.from("listing_documents").select("listing_id, doc_type").limit(2000),
     tc.from("communications").select("id, direction, channel, body, created_at, contact_id, contacts(name)").order("created_at", { ascending: false }).limit(6),
     tc.from("newsletter_events").select("id, event_type, created_at, newsletters(subject, contact_id, contacts(name))").order("created_at", { ascending: false }).limit(6),
     tc.from("property_deals").select("id, name, stage, value, contact_id, contacts(name)").in("status", ["active"]).order("updated_at", { ascending: false }).limit(12),

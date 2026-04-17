@@ -14,12 +14,12 @@ export async function GET() {
     { data: tasks },
     { data: communications },
   ] = await Promise.all([
-    tc.from("contacts").select("*"),
-    tc.from("listings").select("*"),
-    tc.from("deals").select("*"),
-    tc.from("appointments").select("*"),
-    tc.from("tasks").select("*"),
-    tc.from("communications").select("*"),
+    tc.from("contacts").select("id, type").limit(10000),
+    tc.from("listings").select("id, status").limit(10000),
+    tc.from("deals").select("id, stage, status, value, commission_amount, created_at").limit(10000),
+    tc.from("appointments").select("id, status").limit(10000),
+    tc.from("tasks").select("id, status, priority").limit(10000),
+    tc.from("communications").select("id, channel, direction").limit(10000),
   ]);
 
   const allContacts = contacts ?? [];

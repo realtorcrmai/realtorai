@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { CommunicationTimeline } from "@/components/contacts/CommunicationTimeline";
@@ -8,6 +9,7 @@ import { PropertyHistoryPanel } from "@/components/contacts/PropertyHistoryPanel
 import { ReferralsPanel, type ReferralRow } from "@/components/contacts/ReferralsPanel";
 import { DemographicsPanel } from "@/components/contacts/DemographicsPanel";
 import RelationshipGraph from "@/components/contacts/RelationshipGraph";
+import { RelationshipManager } from "@/components/contacts/RelationshipManager";
 import { NetworkStatsCard } from "@/components/contacts/NetworkStatsCard";
 import { UpcomingEventsCard } from "@/components/contacts/UpcomingEventsCard";
 import { SellerEarningsSummary } from "@/components/contacts/SellerEarningsSummary";
@@ -26,6 +28,7 @@ import ActivityTimeline from "@/components/contacts/ActivityTimeline";
 import { ContextLog } from "@/components/contacts/ContextLog";
 import { FamilyTabPanel } from "@/components/contacts/FamilyWizard";
 import { PropertyDealsTab } from "@/components/contacts/PropertyDealsTab";
+import { ContactEmailHistory } from "@/components/contacts/ContactEmailHistory";
 import type { ContactFamilyMember } from "@/types";
 import type {
   Contact,
@@ -147,8 +150,40 @@ export type ContactDetailTabsProps = {
   documents: ContactDocument[];
   contextEntries: Array<{ id: string; context_type: string; text: string; is_resolved: boolean; resolved_note: string | null; created_at: string }>;
 
+  // Relationships (moved from sidebar to Overview tab)
+  relationships: Array<{
+    id: string;
+    contact_a_id: string;
+    contact_b_id: string;
+    relationship_type: string;
+    relationship_label: string | null;
+    notes: string | null;
+    contact_a: { id: string; name: string; type: string };
+    contact_b: { id: string; name: string; type: string };
+  }>;
+
   // Family tab
   familyMembers: ContactFamilyMember[];
+
+  // Emails tab
+  newslettersWithEvents: Array<{
+    id: string;
+    subject: string;
+    email_type: string;
+    status: string;
+    html_body: string | null;
+    sent_at: string | null;
+    created_at: string;
+    quality_score: number | null;
+    ai_context: Record<string, unknown> | null;
+    events: Array<{
+      id: string;
+      event_type: string;
+      metadata: Record<string, unknown> | null;
+      created_at: string;
+    }>;
+  }>;
+
 };
 
 // Check if preferences object has any meaningful data set
@@ -203,17 +238,42 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
     allContacts,
     documents,
     contextEntries,
+    // Relationships (moved from sidebar)
+    relationships,
     // Family
     familyMembers,
+    // Emails
+    newslettersWithEvents,
   } = props;
 
-  const [currentTab, setCurrentTab] = useState("overview");
+  const searchParams = useSearchParams();
+  const validTabs = ["overview", "activity", "deals"];
+  const tabParam = searchParams.get("tab");
+  const [currentTab, setCurrentTab] = useState(
+    tabParam && validTabs.includes(tabParam) ? tabParam : "overview"
+  );
+
+  // Sync tab from URL when stat card is clicked (client-side navigation)
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t && validTabs.includes(t)) setCurrentTab(t);
+  }, [searchParams]);
 
   // ── Quick Setup tile triggers — open panels inline without tab switch ──
   const [triggerPrefs, setTriggerPrefs] = useState(false);
   const [triggerContext, setTriggerContext] = useState(false);
   const [triggerProperties, setTriggerProperties] = useState(false);
   const [triggerDocs, setTriggerDocs] = useState(false);
+
+  // ── Listen for tab switch events from action bar ──
+  useEffect(() => {
+    function handleTabSwitch(e: Event) {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.tab) setCurrentTab(detail.tab);
+    }
+    window.addEventListener("contact:switch-tab", handleTabSwitch);
+    return () => window.removeEventListener("contact:switch-tab", handleTabSwitch);
+  }, []);
 
   // ── Lazy-load activity log when Activity tab is selected ──
   const [lazyActivities, setLazyActivities] = useState<ActivityRow[] | null>(activities);
@@ -241,25 +301,16 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
         <TabsTrigger value="overview" className="rounded-lg">
           📋 Overview
         </TabsTrigger>
-        <TabsTrigger value="intelligence" className="rounded-lg">
-          🧠 Intelligence
-        </TabsTrigger>
         <TabsTrigger value="activity" className="rounded-lg">
           💬 Activity
-        </TabsTrigger>
-        <TabsTrigger value="deals" className="rounded-lg">
-          🏠 Deals
-        </TabsTrigger>
-        <TabsTrigger value="family" className="rounded-lg">
-          👨‍👩‍👧 Family
-          {familyMembers.length > 0 && (
+          {newslettersWithEvents.length > 0 && (
             <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-bold px-1">
-              {familyMembers.length}
+              {newslettersWithEvents.length}
             </span>
           )}
         </TabsTrigger>
-        <TabsTrigger value="portfolio" className="rounded-lg">
-          🏘️ Portfolio
+        <TabsTrigger value="deals" className="rounded-lg">
+          🏠 Deals
           {portfolioItems.length > 0 && (
             <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 text-primary text-[10px] font-bold px-1">
               {portfolioItems.length}
@@ -413,23 +464,129 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
               />
             );
 
+            // Count populated sections to decide Quick Setup visibility
+            const networkHasData = relationships.length + referralsAsReferrer.length + referralsAsReferred.length > 0;
+            const familyHasData = familyMembers.length > 0;
+            const demographicsHasData = hasPreferenceData(demographics as Record<string, unknown> | null);
+            const populatedCount = [
+              networkHasData, prefsHasData, contextHasData, propertiesHasData,
+              docsHasData, familyHasData, demographicsHasData, hasEnrollments,
+            ].filter(Boolean).length;
+            const showQuickSetup = populatedCount <= 1 && emptyActions.length > 1;
+
             return (
               <>
-                {/* Panels with data — float to top */}
+                {/* 1. Network (Referrals + Relationships + Graph) — first if populated */}
+                {networkHasData && (
+                  <>
+                    <div id="section-network" className="grid grid-cols-1 md:grid-cols-2 gap-3 scroll-mt-4">
+                      <Card className="border-l-4 border-l-brand">
+                        <CardContent className="p-4">
+                          <ReferralsPanel
+                            contact={contact}
+                            referredByName={referredByName}
+                            referralsAsReferrer={referralsAsReferrer}
+                            referralsAsReferred={referralsAsReferred}
+                            allContacts={allContacts}
+                          />
+                        </CardContent>
+                      </Card>
+                      <Card className="border-l-4 border-l-brand">
+                        <CardContent className="p-4">
+                          <RelationshipManager
+                            contactId={contactId}
+                            relationships={relationships}
+                            allContacts={allContacts}
+                          />
+                        </CardContent>
+                      </Card>
+                    </div>
+                    {graphNodes.length > 1 && (
+                      <Card className="border-l-4 border-l-indigo-400 bg-indigo-50/15 dark:bg-indigo-950/10">
+                        <CardContent className="p-4">
+                          <RelationshipGraph nodes={graphNodes as any} edges={graphEdges as any} />
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                )}
+
+                {/* 2. Data panels (workflows, preferences, journey, context, properties, docs) */}
                 {filledPanels}
 
-                {/* Quick Setup — animated tiles */}
-                {emptyActions.length > 1 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-1 h-5 rounded-full bg-gradient-to-b from-indigo-400 to-teal-400" />
-                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Quick Setup</h3>
-                      <span className="text-sm text-muted-foreground ml-auto">{emptyActions.length - 1} remaining</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      {emptyActions}
-                    </div>
+                {/* 3. Network — show empty state if no data (still navigable) */}
+                {!networkHasData && (
+                  <div id="section-network" className="grid grid-cols-1 md:grid-cols-2 gap-3 scroll-mt-4">
+                    <Card className="border-l-4 border-l-brand">
+                      <CardContent className="p-4">
+                        <ReferralsPanel
+                          contact={contact}
+                          referredByName={referredByName}
+                          referralsAsReferrer={referralsAsReferrer}
+                          referralsAsReferred={referralsAsReferred}
+                          allContacts={allContacts}
+                        />
+                      </CardContent>
+                    </Card>
+                    <Card className="border-l-4 border-l-brand">
+                      <CardContent className="p-4">
+                        <RelationshipManager
+                          contactId={contactId}
+                          relationships={relationships}
+                          allContacts={allContacts}
+                        />
+                      </CardContent>
+                    </Card>
                   </div>
+                )}
+
+
+                {/* 4. Family Members */}
+                <Card className="border-l-4 border-l-rose-400">
+                  <CardContent className="p-4">
+                    <FamilyTabPanel contactId={contactId} initialMembers={familyMembers} />
+                  </CardContent>
+                </Card>
+
+                {/* 5. Demographics — always last content section */}
+                <Card className="border-l-4 border-l-violet-400">
+                  <CardContent className="p-4">
+                    <DemographicsPanel contactId={contactId} demographics={demographics} />
+                  </CardContent>
+                </Card>
+
+                {/* Quick Setup — only show if ≤1 section is populated */}
+                {showQuickSetup && (
+                  emptyActions.length <= 3 ? (
+                    <details className="group">
+                      <summary className="flex items-center gap-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                        <div className="w-1 h-5 rounded-full bg-gradient-to-b from-indigo-400 to-teal-400 shrink-0" />
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Quick Setup</h3>
+                        <div className="flex-1 mx-2 h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-teal-400 transition-all duration-500"
+                            style={{ width: `${Math.round(((5 - (emptyActions.length - 1)) / 5) * 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-muted-foreground">{emptyActions.length - 1} remaining</span>
+                        <span className="text-xs text-muted-foreground group-open:rotate-180 transition-transform">▼</span>
+                      </summary>
+                      <div className="grid grid-cols-2 gap-3 mt-3">
+                        {emptyActions}
+                      </div>
+                    </details>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1 h-5 rounded-full bg-gradient-to-b from-indigo-400 to-teal-400" />
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Quick Setup</h3>
+                        <span className="text-sm text-muted-foreground ml-auto">{emptyActions.length - 1} remaining</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {emptyActions}
+                      </div>
+                    </div>
+                  )
                 )}
               </>
             );
@@ -437,34 +594,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
         </div>
       </TabsContent>
 
-      {/* ── INTELLIGENCE TAB ─────────────────────────────────── */}
-      <TabsContent value="intelligence" className="">
-        <div className="space-y-3">
-          {/* Relationship Network */}
-          {graphNodes.length > 1 && (
-            <Card className="border-l-4 border-l-indigo-400 bg-indigo-50/15 dark:bg-indigo-950/10">
-              <CardContent className="p-4">
-                <RelationshipGraph
-                  nodes={graphNodes as any}
-                  edges={graphEdges as any}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Demographics Panel */}
-          <Card className="border-l-4 border-l-violet-400 bg-violet-50/20 dark:bg-violet-950/10">
-            <CardContent className="p-4">
-              <DemographicsPanel
-                contactId={contactId}
-                demographics={demographics}
-              />
-            </CardContent>
-          </Card>
-        </div>
-      </TabsContent>
-
-      {/* ── ACTIVITY TAB ─────────────────────────────────────── */}
+      {/* ── ACTIVITY TAB (merged: Activity + Intelligence + Emails) ── */}
       <TabsContent value="activity" className="">
         <div className="space-y-3">
           {/* Tasks & Follow-ups */}
@@ -514,10 +644,28 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
               </CardContent>
             </Card>
           )}
+
+          {/* Email History — from Emails tab */}
+          {newslettersWithEvents.length > 0 && (
+            <Card className="border-l-4 border-l-sky-400 bg-sky-50/15 dark:bg-sky-950/10">
+              <CardContent className="p-4">
+                <ContactEmailHistory
+                  newsletters={newslettersWithEvents}
+                  stats={(() => {
+                    const sent = newslettersWithEvents.filter((n) => n.status === "sent").length;
+                    const opened = newslettersWithEvents.filter((n) => n.events.some((e) => e.event_type === "opened")).length;
+                    const clicked = newslettersWithEvents.filter((n) => n.events.some((e) => e.event_type === "clicked")).length;
+                    const bounced = newslettersWithEvents.filter((n) => n.events.some((e) => e.event_type === "bounced")).length;
+                    return { total: newslettersWithEvents.length, sent, opened, clicked, bounced, openRate: sent ? Math.round((opened / sent) * 100) : 0, clickRate: sent ? Math.round((clicked / sent) * 100) : 0 };
+                  })()}
+                />
+              </CardContent>
+            </Card>
+          )}
         </div>
       </TabsContent>
 
-      {/* ── DEALS TAB ────────────────────────────────────────── */}
+      {/* ── DEALS TAB (merged: Deals + Portfolio) ──────────── */}
       <TabsContent value="deals" className="">
         <div className="space-y-3">
           {/* Seller Earnings Summary */}
@@ -541,7 +689,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             </Card>
           )}
 
-          {/* Co-owned Properties / Business Partners */}
+          {/* Property Deals — owned, co-owned, and business partnerships */}
           <Card className="border-l-4 border-l-amber-400 bg-amber-50/15 dark:bg-amber-950/10">
             <CardContent className="p-4">
               <PropertyDealsTab
@@ -551,30 +699,24 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
               />
             </CardContent>
           </Card>
-        </div>
-      </TabsContent>
 
-      {/* ── FAMILY TAB ─────────────────────────────────────── */}
-      <TabsContent value="family" className="">
-        <div className="space-y-3">
-          <Card className="border-l-4 border-l-rose-400 bg-rose-50/15 dark:bg-rose-950/10">
-            <CardContent className="p-4">
-              <FamilyTabPanel contactId={contactId} initialMembers={familyMembers} />
-            </CardContent>
-          </Card>
-        </div>
-      </TabsContent>
-
-      {/* ── PORTFOLIO TAB ──────────────────────────────────── */}
-      <TabsContent value="portfolio" className="">
-        <div className="space-y-3">
+          {/* Portfolio — from Portfolio tab */}
           <Card className="border-l-4 border-l-indigo-400 bg-indigo-50/15 dark:bg-indigo-950/10">
             <CardContent className="p-4">
               <ContactPortfolioTab contactId={contactId} items={portfolioItems} />
             </CardContent>
           </Card>
+
+          {/* Documents */}
+          <Card className="border-l-4 border-l-teal-400 bg-teal-50/15 dark:bg-teal-950/10">
+            <CardContent className="p-4">
+              <ContactDocumentsPanel contactId={contactId} documents={documents} autoShowUpload={false} />
+            </CardContent>
+          </Card>
         </div>
       </TabsContent>
+
+      {/* ── CONFIG TAB — journey/AI settings ──────────────── */}
     </Tabs>
   );
 }

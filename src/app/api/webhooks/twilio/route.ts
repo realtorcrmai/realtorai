@@ -19,11 +19,11 @@ function validateTwilioRequest(req: NextRequest, body: string): boolean {
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
 
-  if (process.env.NODE_ENV === "production") {
-    const isValid = validateTwilioRequest(req, rawBody);
-    if (!isValid) {
-      return new NextResponse("Forbidden", { status: 403 });
-    }
+  // Always validate Twilio signature — never skip in any environment
+  const isValid = validateTwilioRequest(req, rawBody);
+  if (!isValid) {
+    console.warn("[twilio-webhook] Invalid signature from", req.headers.get("x-forwarded-for"));
+    return new NextResponse("Forbidden", { status: 403 });
   }
 
   const params = Object.fromEntries(new URLSearchParams(rawBody));
@@ -73,12 +73,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Type assertion for joined listing data
+  // Validate joined listing data
   const listing = (appointment as Record<string, unknown>).listings as {
     address: string;
     lockbox_code: string;
     seller_id: string;
-  };
+  } | null;
+
+  if (!listing?.address) {
+    console.error("[twilio-webhook] Missing listing data for appointment", appointment.id);
+    return new NextResponse(
+      "<?xml version='1.0'?><Response></Response>",
+      { headers: { "Content-Type": "text/xml" } }
+    );
+  }
 
   // Log inbound communication
   await supabase.from("communications").insert({
@@ -93,8 +101,8 @@ export async function POST(req: NextRequest) {
   try {
     const { checkExitOnReply } = await import("@/lib/workflow-engine");
     await checkExitOnReply(contact.id);
-  } catch {
-    // Don't fail webhook if exit check fails
+  } catch (err) {
+    console.error("[twilio-webhook] Exit-on-reply check failed:", err instanceof Error ? err.message : err);
   }
 
   // Handle STOP opt-out (CASL/TCPA compliance)
@@ -194,8 +202,8 @@ export async function POST(req: NextRequest) {
           data: { appointmentId: appointment.id, address: listing.address },
         });
       }
-    } catch {
-      // Don't fail if trigger lookup fails
+    } catch (err) {
+      console.error("[twilio-webhook] Workflow trigger failed:", err instanceof Error ? err.message : err);
     }
   } else if (inboundBody === "NO" || inboundBody === "N") {
     // Deny the showing

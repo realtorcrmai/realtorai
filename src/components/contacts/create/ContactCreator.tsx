@@ -310,6 +310,16 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
     setSubmitting(true);
     setError(null);
 
+    // Auto-add any unsaved draft family member or portfolio item
+    const allFamily = [...familyMembers];
+    if (familyForm.name.trim()) {
+      allFamily.push({ ...familyForm, name: familyForm.name.trim() });
+    }
+    const allPortfolio = [...portfolioItems];
+    if (portfolioForm.address.trim()) {
+      allPortfolio.push({ ...portfolioForm, address: portfolioForm.address.trim() });
+    }
+
     try {
       const payload: Record<string, unknown> = {
         name: name.trim(),
@@ -358,7 +368,7 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
       const contactId = (result as { id?: string })?.id;
       if (contactId) {
         const saves: Promise<unknown>[] = [];
-        for (const fm of familyMembers) {
+        for (const fm of allFamily) {
           saves.push(
             fetch(`/api/contacts/${contactId}/family`, {
               method: "POST",
@@ -367,7 +377,7 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
             }).catch(() => {})
           );
         }
-        for (const pi of portfolioItems) {
+        for (const pi of allPortfolio) {
           saves.push(
             fetch(`/api/contacts/${contactId}/portfolio`, {
               method: "POST",

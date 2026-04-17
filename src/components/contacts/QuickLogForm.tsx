@@ -17,6 +17,7 @@ type Props = {
   recentEmails?: RecentEmail[];
   onLog?: (data: LogData) => void;
   onClose?: () => void;
+  hideHeader?: boolean;
 };
 
 type LogData = {
@@ -60,6 +61,7 @@ export function QuickLogForm({
   recentEmails = [],
   onLog,
   onClose,
+  hideHeader = false,
 }: Props) {
   const [type, setType] = useState("call_inbound");
   const [triggeredBy, setTriggeredBy] = useState<string | null>(null);
@@ -96,18 +98,20 @@ export function QuickLogForm({
   }
 
   return (
-    <Card className="border-primary/20 shadow-lg">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold">
-            Log Interaction — {contactName.split(" ")[0]}
-          </h3>
-          {onClose && (
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onClose}>
-              <X className="w-3 h-3" />
-            </Button>
-          )}
-        </div>
+    <Card className={hideHeader ? "border-0 shadow-none" : "border-primary/20 shadow-lg"}>
+      <CardContent className={hideHeader ? "p-0" : "p-4"}>
+        {!hideHeader && (
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold">
+              Log Interaction — {contactName.split(" ")[0]}
+            </h3>
+            {onClose && (
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={onClose}>
+                <X className="w-3 h-3" />
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Type */}
         <div className="mb-3">

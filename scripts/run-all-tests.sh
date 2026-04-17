@@ -87,6 +87,11 @@ else
     if [[ -f "$PROJECT_DIR/playwright.config.ts" ]]; then
         run_suite "Playwright browser tests" "npx playwright test --reporter=line" "false"
     fi
+
+    # ── Layer 7: Test Plan ↔ Executable Sync ─────────────────
+    if [[ -f "$SCRIPT_DIR/sync-test-plans.mjs" ]]; then
+        run_suite "Test plan sync check" "node '$SCRIPT_DIR/sync-test-plans.mjs' --check" "false"
+    fi
 fi
 
 # ── Summary ───────────────────────────────────────────────

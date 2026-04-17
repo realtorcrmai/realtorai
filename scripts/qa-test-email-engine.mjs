@@ -606,6 +606,264 @@ async function testEmailTemplateRendering() {
   }
 }
 
+async function testEditorialNewsletterSystem() {
+  console.log("\n\x1b[1m📰 Test Suite 11: Editorial Newsletter System\x1b[0m");
+
+  // 11.1 — Required tables exist
+  const tables = [
+    "editorial_editions",
+    "editorial_block_templates",
+    "editorial_voice_profiles",
+    "editorial_content_library",
+    "external_data_cache",
+  ];
+  for (const tbl of tables) {
+    const exists = await tableExists(tbl);
+    if (exists) {
+      log("PASS", `Table ${tbl} exists`);
+    } else {
+      log("FAIL", `Table ${tbl} missing`, "Run migration 113_editorial_newsletter_system.sql");
+    }
+  }
+
+  // 11.6 — Edition dashboard page loads
+  try {
+    const res = await fetch(`${BASE_URL}/newsletters/editorial`, { redirect: "follow" });
+    if (res.status === 200 || res.status === 307 || res.status === 302) {
+      log("PASS", "/newsletters/editorial page loads", `HTTP ${res.status}`);
+    } else {
+      log("FAIL", "/newsletters/editorial page", `HTTP ${res.status}`);
+    }
+  } catch (e) {
+    log("FAIL", "/newsletters/editorial unreachable", e.message);
+  }
+
+  // 11.7 — New edition page loads
+  try {
+    const res = await fetch(`${BASE_URL}/newsletters/editorial/new`, { redirect: "follow" });
+    if (res.status === 200 || res.status === 307 || res.status === 302) {
+      log("PASS", "/newsletters/editorial/new page loads", `HTTP ${res.status}`);
+    } else {
+      log("FAIL", "/newsletters/editorial/new", `HTTP ${res.status}`);
+    }
+  } catch (e) {
+    log("FAIL", "/newsletters/editorial/new unreachable", e.message);
+  }
+
+  // 11.8 — Status API requires auth (no fake ID should return 200 without auth)
+  try {
+    const res = await fetch(`${BASE_URL}/api/editorial/00000000-0000-0000-0000-000000000000/status`);
+    if (res.status === 401 || res.status === 404) {
+      log("PASS", "Editorial status API is auth-gated", `HTTP ${res.status}`);
+    } else {
+      log("FAIL", "Editorial status API should require auth", `HTTP ${res.status}`);
+    }
+  } catch (e) {
+    log("FAIL", "Editorial status API unreachable", e.message);
+  }
+
+  // 11.9 — Block templates are seeded (expect ≥ 10 types)
+  if (await tableExists("editorial_block_templates")) {
+    try {
+      const templates = await supabase("GET", "editorial_block_templates", {
+        select: "block_type",
+        limit: "50",
+      });
+      const count = templates?.length ?? 0;
+      if (count >= 10) {
+        log("PASS", `editorial_block_templates seeded: ${count} templates`);
+      } else {
+        log("FAIL", "editorial_block_templates under-seeded", `${count} rows (expected ≥ 10)`);
+      }
+
+      // Verify the 5 critical block types exist
+      const types = new Set((templates || []).map((t) => t.block_type));
+      for (const required of ["hero", "just_sold", "market_commentary", "rate_watch", "cta"]) {
+        types.has(required)
+          ? log("PASS", `Block type '${required}' seeded`)
+          : log("FAIL", `Block type '${required}' missing from templates`);
+      }
+    } catch (e) {
+      log("FAIL", "editorial_block_templates query", e.message);
+    }
+  } else {
+    log("SKIP", "Block template seed check — table missing");
+  }
+
+  // 11.15 — CRUD lifecycle: create → read → update → delete
+  if (await tableExists("editorial_editions")) {
+    // Get a realtor_id to scope the insert
+    const contacts = await supabase("GET", "contacts", { select: "realtor_id", limit: "1" });
+    const realtorId = contacts?.[0]?.realtor_id;
+
+    if (realtorId) {
+      let editionId = null;
+      try {
+        const created = await supabase("POST", "editorial_editions", {
+          body: {
+            realtor_id: realtorId,
+            title: "QA Auto-Test Edition",
+            edition_type: "market_update",
+            status: "draft",
+            blocks: [],
+            edition_number: 9999,
+          },
+        });
+        editionId = created?.[0]?.id;
+        editionId
+          ? log("PASS", "editorial_editions CREATE", `id: ${editionId}`)
+          : log("FAIL", "editorial_editions CREATE", "no ID returned");
+      } catch (e) {
+        log("FAIL", "editorial_editions CREATE", e.message.slice(0, 100));
+      }
+
+      if (editionId) {
+        // Read
+        try {
+          const rows = await supabase("GET", "editorial_editions", {
+            query: { id: `eq.${editionId}` },
+            select: "id,title,status",
+          });
+          rows?.[0]?.id
+            ? log("PASS", "editorial_editions READ after create")
+            : log("FAIL", "editorial_editions READ", "row not found");
+        } catch (e) {
+          log("FAIL", "editorial_editions READ", e.message.slice(0, 100));
+        }
+
+        // Update
+        try {
+          const url = new URL(`/rest/v1/editorial_editions`, SUPABASE_URL);
+          url.searchParams.set("id", `eq.${editionId}`);
+          const patchRes = await fetch(url.toString(), {
+            method: "PATCH",
+            headers: {
+              apikey: SUPABASE_KEY,
+              Authorization: `Bearer ${SUPABASE_KEY}`,
+              "Content-Type": "application/json",
+              Prefer: "return=minimal",
+            },
+            body: JSON.stringify({ title: "QA Auto-Test Edition — Updated" }),
+          });
+          patchRes.ok
+            ? log("PASS", "editorial_editions UPDATE")
+            : log("FAIL", "editorial_editions UPDATE", `HTTP ${patchRes.status}`);
+        } catch (e) {
+          log("FAIL", "editorial_editions UPDATE", e.message.slice(0, 100));
+        }
+
+        // Delete (cleanup)
+        try {
+          const url = new URL(`/rest/v1/editorial_editions`, SUPABASE_URL);
+          url.searchParams.set("id", `eq.${editionId}`);
+          const delRes = await fetch(url.toString(), {
+            method: "DELETE",
+            headers: {
+              apikey: SUPABASE_KEY,
+              Authorization: `Bearer ${SUPABASE_KEY}`,
+            },
+          });
+          delRes.ok
+            ? log("PASS", "editorial_editions DELETE (cleanup)")
+            : log("FAIL", "editorial_editions DELETE", `HTTP ${delRes.status}`);
+        } catch (e) {
+          log("FAIL", "editorial_editions DELETE", e.message.slice(0, 100));
+        }
+      }
+    } else {
+      log("SKIP", "Editorial CRUD lifecycle", "no realtor_id found in contacts");
+    }
+  } else {
+    log("SKIP", "Editorial CRUD lifecycle", "editorial_editions table missing");
+  }
+
+  // 11.20 — No stuck editions (generating state > 5 min)
+  if (await tableExists("editorial_editions")) {
+    try {
+      const generating = await supabase("GET", "editorial_editions", {
+        query: { status: "eq.generating" },
+        select: "id,updated_at",
+        limit: "50",
+      });
+      const staleMs = 5 * 60 * 1000; // 5 minutes
+      const now = Date.now();
+      const stuck = (generating || []).filter(
+        (r) => now - new Date(r.updated_at).getTime() > staleMs
+      );
+      stuck.length === 0
+        ? log("PASS", "No stuck editions in 'generating' state")
+        : log(
+            "FAIL",
+            "Stuck editions detected",
+            `${stuck.length} editions stuck >5 min — check BullMQ worker`
+          );
+    } catch (e) {
+      log("FAIL", "Stuck editions check", e.message);
+    }
+  }
+
+  // 11.21 — Ready editions have non-empty blocks
+  if (await tableExists("editorial_editions")) {
+    try {
+      const ready = await supabase("GET", "editorial_editions", {
+        query: { status: "eq.ready" },
+        select: "id,blocks",
+        limit: "10",
+      });
+      if (ready?.length > 0) {
+        const empty = ready.filter((r) => !r.blocks || !Array.isArray(r.blocks) || r.blocks.length === 0);
+        empty.length === 0
+          ? log("PASS", `Ready editions all have blocks (${ready.length} checked)`)
+          : log("FAIL", "Ready editions with empty blocks", `${empty.length} found`);
+      } else {
+        log("SKIP", "Ready editions blocks check", "no ready editions in DB");
+      }
+    } catch (e) {
+      log("FAIL", "Ready editions blocks check", e.message);
+    }
+  }
+
+  // 11.22 — Resend webhook handles editorial edition_id tag
+  try {
+    const res = await apiPost("/api/webhooks/resend", {
+      type: "email.opened",
+      data: {
+        email_id: "qa-editorial-" + Date.now(),
+        tags: [{ name: "edition_id", value: "00000000-0000-0000-0000-000000000000" }],
+        created_at: new Date().toISOString(),
+      },
+    });
+    if (res.status === 200 || res.status === 401) {
+      res.status === 401
+        ? log("PASS", "Resend webhook sig verification active for editorial events", "401 returned")
+        : log("PASS", "Resend webhook processes editorial edition_id tag", `HTTP ${res.status}`);
+    } else {
+      log("FAIL", "Resend webhook editorial event", `HTTP ${res.status}`);
+    }
+  } catch (e) {
+    log("FAIL", "Resend webhook editorial test", e.message);
+  }
+
+  // 11.23 — Voice profiles have valid tone values
+  if (await tableExists("editorial_voice_profiles")) {
+    try {
+      const profiles = await supabase("GET", "editorial_voice_profiles", {
+        select: "id,tone",
+        limit: "20",
+      });
+      const validTones = new Set(["professional", "friendly", "luxury", "casual", "authoritative"]);
+      const invalid = (profiles || []).filter((p) => p.tone && !validTones.has(p.tone));
+      invalid.length === 0
+        ? log("PASS", `Voice profiles tone values valid (${(profiles || []).length} checked)`)
+        : log("FAIL", "Invalid voice profile tones", invalid.map((p) => p.tone).join(", "));
+    } catch (e) {
+      log("FAIL", "Voice profiles tone check", e.message);
+    }
+  } else {
+    log("SKIP", "Voice profiles tone check", "table missing");
+  }
+}
+
 // ═══════════════════════════════════════════════════
 // MAIN
 // ═══════════════════════════════════════════════════
@@ -638,6 +896,7 @@ async function main() {
   await testUnsubscribe();
   await testDashboardPages();
   await testEmailTemplateRendering();
+  await testEditorialNewsletterSystem();
 
   // Summary
   console.log("\n\x1b[1m════════════════════════════════════════════════\x1b[0m");

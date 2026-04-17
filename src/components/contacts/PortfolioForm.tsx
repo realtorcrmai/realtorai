@@ -8,6 +8,7 @@ import { AddressAutocompleteInput } from "@/components/shared/AddressAutocomplet
 import type { AddressSuggestion } from "@/components/shared/AddressAutocompleteInput";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { formatPhone, formatPostalCode, formatCurrency, unformatCurrency } from "@/lib/format";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -112,40 +113,6 @@ const PROPERTY_TYPES = [
   "Duplex", "Triplex", "Fourplex", "Multi-Family",
   "Commercial", "Industrial", "Land/Lot", "Mixed-Use", "Other",
 ];
-
-// ── Formatters ──────────────────────────────────────────────
-
-/** Format Canadian postal code: "v5k0a1" → "V5K 0A1" */
-function formatPostalCode(raw: string): string {
-  const cleaned = raw.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-  if (cleaned.length <= 3) return cleaned;
-  return cleaned.slice(0, 3) + " " + cleaned.slice(3, 6);
-}
-
-/** Format phone: strip non-digits, add +1 prefix and grouping: +1 (604) 555-0100 */
-function formatPhone(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
-  if (digits.length === 0) return "";
-  // If starts with 1 and has 11 digits, or 10 digits without leading 1
-  const national = digits.startsWith("1") && digits.length >= 11
-    ? digits.slice(1, 11)
-    : digits.slice(0, 10);
-  if (national.length <= 3) return national;
-  if (national.length <= 6) return `(${national.slice(0, 3)}) ${national.slice(3)}`;
-  return `+1 (${national.slice(0, 3)}) ${national.slice(3, 6)}-${national.slice(6, 10)}`;
-}
-
-/** Format currency input: "950000" → "950,000" (display only, strips commas for storage) */
-function formatCurrency(raw: string): string {
-  const digits = raw.replace(/[^0-9]/g, "");
-  if (!digits) return "";
-  return Number(digits).toLocaleString("en-CA");
-}
-
-/** Strip formatting to get raw number string */
-function unformatCurrency(formatted: string): string {
-  return formatted.replace(/[^0-9]/g, "");
-}
 
 // ── Sub-components ─────────────────────────────────────────
 
@@ -281,7 +248,7 @@ function SectionLabel({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#0F7694] to-[#0F7694] flex items-center justify-center text-white text-xs font-bold shadow-sm shrink-0">
+      <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold shadow-sm shrink-0">
         {number}
       </div>
       <h2 className="text-sm font-semibold">{label}</h2>
@@ -484,7 +451,7 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-6">
 
       {/* ── 1. Property Type ─────────────────────────────────── */}
       <div className="space-y-4">
@@ -629,12 +596,12 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
             <div className="flex items-center gap-1.5">
               <Input
                 type="number"
-                min={1}
+                min={0}
                 max={100}
                 className="h-9 w-20 text-right"
                 value={ownershipPct}
                 onChange={(e) => {
-                  const val = Math.max(1, Math.min(100 - coOwnerTotal, Number(e.target.value) || 1));
+                  const val = Math.max(0, Math.min(100 - coOwnerTotal, Number(e.target.value) || 0));
                   setOwnershipPct(String(val));
                 }}
                 disabled={saving || coOwners.length > 0}
@@ -747,7 +714,7 @@ export function PortfolioForm({ contactId, contactName, existing }: PortfolioFor
                 <label className="text-sm font-medium">Ownership %</label>
                 <Input
                   type="number"
-                  min={1}
+                  min={0}
                   max={maxNewCoOwnerPct}
                   className="h-10 w-24"
                   value={newCoOwner.ownership_pct}

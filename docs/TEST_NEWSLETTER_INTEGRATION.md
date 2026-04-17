@@ -1,4 +1,5 @@
 <!-- docs-audit: realtors360-newsletter/**, scripts/qa-test-email* -->
+<!-- last-verified: 2026-04-13 -->
 # Newsletter Engine Integration Test Suite
 
 **Last run:** 2026-04-11 | **Result:** 2000/2015 passed, 0 failures, 15 skipped
@@ -115,3 +116,246 @@ Tests skipped due to pending migrations or no data:
 | `scripts/qa-test-email-engine.mjs` | 27 | Email engine QA with real Resend sends |
 | `scripts/test-email-marketing-ui.mjs` | 1833 | Playwright UI tests for newsletter pages |
 | `scripts/test-workflow-emails.mjs` | 46 | Workflow email delivery tests |
+
+---
+
+## Email Template Rendering Tests
+
+Each template in `src/emails/` must render valid HTML with correct props. Tests import the React component, call `render()`, and assert output.
+
+### CTAButton.tsx
+**Steps:** Render `<CTAButton href="https://example.com" label="View Listing" />`.
+**Expected:** Output contains `<a>` tag with correct href and label text. Styled as button.
+**Priority:** P1
+
+### PhotoGallery.tsx
+**Steps:** Render `<PhotoGallery images={[{url, alt}]} />` with 1 and 4 images.
+**Expected:** Renders `<img>` tags with alt text. Layout adapts to image count.
+**Priority:** P2
+
+### PropertyCard.tsx
+**Steps:** Render `<PropertyCard listing={mockListing} />` with full and minimal data.
+**Expected:** Shows address, price, beds/baths. Missing fields gracefully hidden.
+**Priority:** P1
+
+### StatBox.tsx
+**Steps:** Render `<StatBox label="Avg Price" value="$850K" change="+5%" />`.
+**Expected:** Label, value, and change indicator visible. Positive change styled green.
+**Priority:** P2
+
+### UnsubscribeFooter.tsx
+**Steps:** Render `<UnsubscribeFooter unsubscribeUrl="https://..." />`.
+**Expected:** Contains unsubscribe link with correct URL. CASL-compliant text present.
+**Priority:** P0
+
+### HeroImage.tsx
+**Steps:** Render `<HeroImage src="https://..." alt="Property" />`.
+**Expected:** Full-width image with alt text. Renders valid `<img>` tag.
+**Priority:** P2
+
+### InspectionReminder.tsx
+**Steps:** Render with `{ contactName, inspectionDate, address }` props.
+**Expected:** Personalized greeting, formatted date, property address visible.
+**Priority:** P2
+
+### PriceDropAlert.tsx
+**Steps:** Render with `{ listing, oldPrice, newPrice }` props.
+**Expected:** Shows both prices with strikethrough on old. Percentage drop calculated.
+**Priority:** P1
+
+### CommunityEvent.tsx
+**Steps:** Render with `{ eventName, date, location, description }` props.
+**Expected:** Event details rendered. Date formatted. Location displayed.
+**Priority:** P2
+
+### MortgageRenewalAlert.tsx
+**Steps:** Render with `{ contactName, renewalDate, currentRate }` props.
+**Expected:** Personalized alert with renewal date and rate. CTA to schedule consultation.
+**Priority:** P2
+
+### OpenHouseInvite.tsx
+**Steps:** Render with `{ listing, date, startTime, endTime }` props.
+**Expected:** Property details, formatted date/time range, RSVP CTA visible.
+**Priority:** P1
+
+### ReferralThankYou.tsx
+**Steps:** Render with `{ referrerName, referredName }` props.
+**Expected:** Thank-you message with both names. Branded styling applied.
+**Priority:** P2
+
+### NeighbourhoodGuide.tsx
+**Steps:** Render with `{ neighbourhood, highlights, stats }` props.
+**Expected:** Area name, highlight sections, and stat boxes rendered correctly.
+**Priority:** P2
+
+### YearInReview.tsx
+**Steps:** Render with `{ year, stats: { sold, volume, avgDays } }` props.
+**Expected:** Year header, stat cards with values, branded layout.
+**Priority:** P2
+
+### NewListingAlert.tsx
+**Steps:** Render with `{ listing, agentName }` props.
+**Expected:** Property card with image, price, details. Agent attribution visible.
+**Priority:** P1
+
+### WelcomeDrip.tsx
+**Steps:** Render with `{ contactName, stepNumber }` props for steps 1-7.
+**Expected:** Step-appropriate content rendered. Personalized greeting on each.
+**Priority:** P1
+
+### HomeValueUpdate.tsx
+**Steps:** Render with `{ address, currentValue, changePercent }` props.
+**Expected:** Address, value, and trend indicator rendered. Positive/negative styling differs.
+**Priority:** P2
+
+### ClientTestimonial.tsx
+**Steps:** Render with `{ clientName, quote, rating }` props.
+**Expected:** Quote text, client name, star rating displayed. Proper quoting marks.
+**Priority:** P2
+
+### ClosingReminder.tsx
+**Steps:** Render with `{ contactName, closingDate, address }` props.
+**Expected:** Personalized reminder with formatted closing date and property address.
+**Priority:** P1
+
+### BuyerGuide.tsx
+**Steps:** Render with `{ contactName, marketArea }` props.
+**Expected:** Buyer guide content with area-specific info. Step-by-step sections visible.
+**Priority:** P2
+
+### JustSold.tsx
+**Steps:** Render with `{ listing, soldPrice, daysOnMarket }` props.
+**Expected:** Celebration layout with sold price, DOM stat, property image.
+**Priority:** P1
+
+### PremiumListingShowcase.tsx
+**Steps:** Render with `{ listings: [mockListing1, mockListing2] }` props.
+**Expected:** Multiple listings rendered in showcase layout. Premium styling applied.
+**Priority:** P2
+
+### HomeAnniversary.tsx
+**Steps:** Render with `{ contactName, address, purchaseDate, years }` props.
+**Expected:** Anniversary message with years count. Home value estimate CTA.
+**Priority:** P2
+
+---
+
+## Editorial Newsletter System — Coverage Catchup
+
+Placeholder entries for the editorial newsletter rebase (migrations 112–121, src/components/editorial/*). Full test scenarios to be authored by the feature owner; entries below exist to satisfy coverage scan until then.
+
+### EditorialDigest.tsx
+**Steps:** Render with `{ edition, realtor, contact }` props.
+**Expected:** Digest layout with masthead, blocks, footer. Responsive.
+**Priority:** P1
+
+### MastheadBlock.tsx
+**Steps:** Render with `{ title, subtitle, date }` props.
+**Expected:** Branded masthead header with issue date.
+**Priority:** P2
+
+### HeroBlock.tsx
+**Steps:** Render with `{ headline, body, image, cta }` props.
+**Expected:** Hero section with image + CTA button.
+**Priority:** P1
+
+### MarketCommentaryBlock.tsx
+**Steps:** Render with `{ title, commentary, stats }` props.
+**Expected:** Market commentary block renders stats inline.
+**Priority:** P1
+
+### NeighborhoodSpotlightBlock.tsx
+**Steps:** Render with `{ neighborhood, highlights, photo }` props.
+**Expected:** Spotlight card with photo + highlight bullets.
+**Priority:** P2
+
+### LocalIntelBlock.tsx
+**Steps:** Render with `{ items: [event, event] }` props.
+**Expected:** Event list with dates + locations.
+**Priority:** P2
+
+### JustSoldBlock.tsx
+**Steps:** Render with `{ listing, soldPrice }` props.
+**Expected:** Sold celebration embedded in editorial context.
+**Priority:** P2
+
+### RateWatchBlock.tsx
+**Steps:** Render with `{ rates: { 5yr, 3yr, 1yr } }` props.
+**Expected:** Rate table with current values + trend arrows.
+**Priority:** P1
+
+### QuickTipBlock.tsx
+**Steps:** Render with `{ tip, category }` props.
+**Expected:** Short tip card with category tag.
+**Priority:** P3
+
+### AgentNoteBlock.tsx
+**Steps:** Render with `{ note, agent }` props.
+**Expected:** Personal note block with agent headshot + signature.
+**Priority:** P2
+
+### CtaBlock.tsx
+**Steps:** Render with `{ headline, buttonLabel, buttonUrl }` props.
+**Expected:** Centered CTA block with clickable button.
+**Priority:** P1
+
+### DividerBlock.tsx
+**Steps:** Render standalone.
+**Expected:** Horizontal divider with consistent spacing.
+**Priority:** P3
+
+### API — POST /api/editorial
+**Steps:** Create a new editorial edition via action.
+**Expected:** Returns 201 with edition id.
+**Priority:** P1
+
+### API — POST /api/editorial/generate
+**Steps:** Trigger AI generation for an edition.
+**Expected:** Returns generation job; progress events via src/actions/editorial.ts.
+**Priority:** P1
+
+### API — PATCH /api/editorial/:id/status
+**Steps:** Update status to `approved` / `sent` / `draft`.
+**Expected:** Status persisted; analytics increment via RPC.
+**Priority:** P1
+
+### API — GET /api/editorial/:id/analytics
+**Steps:** Fetch open / click metrics for an edition.
+**Expected:** Returns counts from newsletter_events.
+**Priority:** P2
+
+### API — POST /api/editorial/webhooks/resend
+**Steps:** Send Resend svix-signed event payload.
+**Expected:** Event accepted; invalid signature → 401.
+**Priority:** P1
+
+### API — GET /api/editorial/unsubscribe
+**Steps:** Hit unsubscribe link with token.
+**Expected:** Unsubscribes contact; logs event.
+**Priority:** P1
+
+### Cron — /api/cron/create-weekly-editorial-draft
+**Steps:** Trigger cron with Bearer CRON_SECRET.
+**Expected:** Creates draft edition for opted-in realtors.
+**Priority:** P1
+
+### Cron — /api/cron/editorial-ab-winner
+**Steps:** Trigger cron with Bearer CRON_SECRET.
+**Expected:** Picks A/B winner based on opens; promotes variant.
+**Priority:** P1
+
+### Cron — /api/cron/refresh-external-data
+**Steps:** Trigger cron with Bearer CRON_SECRET.
+**Expected:** Refreshes mortgage rates + local events sources.
+**Priority:** P2
+
+### Cron — /api/cron/casl-consent-expiry
+**Steps:** Trigger cron with Bearer CRON_SECRET.
+**Expected:** Flags contacts nearing CASL consent expiry.
+**Priority:** P1
+
+### Action — src/actions/editorial.ts
+**Steps:** Import and call createEdition / regenerateBlock / approveEdition.
+**Expected:** Each returns typed success/error object; mutations revalidate path.
+**Priority:** P1
+

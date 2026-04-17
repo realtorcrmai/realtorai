@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRealtorConfig } from "@/actions/config";
 import type { GreetingRule } from "@/actions/config";
+import { trackEvent } from "@/lib/analytics";
 
 export const maxDuration = 120;
 
@@ -35,121 +36,144 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = createAdminClient();
-  const today = new Date();
-  const month = today.getMonth() + 1; // 1-12
-  const day = today.getDate();
+  const cronStart = Date.now();
+  try {
+    const supabase = createAdminClient();
+    const today = new Date();
+    const month = today.getMonth() + 1; // 1-12
+    const day = today.getDate();
 
-  // Load greeting rules
-  const config = await getRealtorConfig();
-  if (!config?.brand_config) {
-    return NextResponse.json({ ok: true, processed: 0, reason: "No config" });
-  }
-
-  const greetingRules: GreetingRule[] = (config.brand_config as any).greeting_rules || [];
-  const enabledRules = greetingRules.filter(r => r.enabled);
-
-  if (enabledRules.length === 0) {
-    return NextResponse.json({ ok: true, processed: 0, reason: "No enabled greetings" });
-  }
-
-  // Get brand info for emails
-  const brand = config.brand_config as any;
-  const agentName = brand.realtorName || "Your Realtor";
-  const brokerage = brand.brokerage || "";
-
-  const results: Array<{ occasion: string; queued: number; skipped: number }> = [];
-
-  for (const rule of enabledRules) {
-    const contactIds = await getContactsForOccasion(supabase, rule, month, day, today);
-
-    if (contactIds.length === 0) {
-      results.push({ occasion: rule.occasion, queued: 0, skipped: 0 });
-      continue;
+    // Load greeting rules
+    const config = await getRealtorConfig();
+    if (!config?.brand_config) {
+      await trackEvent('cron_run', null, { cron: 'greeting-automations', status: 'success', duration_ms: Date.now() - cronStart });
+      return NextResponse.json({ ok: true, processed: 0, reason: "No config" });
     }
 
-    // Fetch full contact data
-    const { data: contacts } = await supabase
-      .from("contacts")
-      .select("id, name, email, type, newsletter_unsubscribed, newsletter_intelligence")
-      .in("id", contactIds)
-      .eq("newsletter_unsubscribed", false);
+    const greetingRules: GreetingRule[] = (config.brand_config as any).greeting_rules || [];
+    const enabledRules = greetingRules.filter(r => r.enabled);
 
-    const validContacts = (contacts || []).filter(c => c.email);
-    let queued = 0;
-    let skipped = 0;
+    if (enabledRules.length === 0) {
+      await trackEvent('cron_run', null, { cron: 'greeting-automations', status: 'success', duration_ms: Date.now() - cronStart });
+      return NextResponse.json({ ok: true, processed: 0, reason: "No enabled greetings" });
+    }
 
-    for (const contact of validContacts) {
-      // Check if we already sent this greeting this year
-      const yearStart = new Date(today.getFullYear(), 0, 1).toISOString();
-      const { count } = await supabase
-        .from("newsletters")
-        .select("id", { count: "exact", head: true })
-        .eq("contact_id", contact.id)
-        .eq("email_type", `greeting_${rule.occasion}`)
-        .gte("created_at", yearStart);
+    // Get brand info for emails
+    const brand = config.brand_config as any;
+    const agentName = brand.realtorName || "Your Realtor";
+    const brokerage = brand.brokerage || "";
 
-      if ((count || 0) > 0) {
-        skipped++;
+    const results: Array<{ occasion: string; queued: number; skipped: number }> = [];
+
+    for (const rule of enabledRules) {
+      const contactIds = await getContactsForOccasion(supabase, rule, month, day, today);
+
+      if (contactIds.length === 0) {
+        results.push({ occasion: rule.occasion, queued: 0, skipped: 0 });
         continue;
       }
 
-      // Generate the greeting email
-      const { subject, html } = buildGreetingEmail(rule, contact, agentName, brokerage);
+      // Fetch full contact data
+      const { data: contacts } = await supabase
+        .from("contacts")
+        .select("id, name, email, type, newsletter_unsubscribed, newsletter_intelligence")
+        .in("id", contactIds)
+        .eq("newsletter_unsubscribed", false);
 
-      // Queue as newsletter
-      const { error } = await supabase.from("newsletters").insert({
-        contact_id: contact.id,
-        email_type: `greeting_${rule.occasion}`,
-        journey_phase: "greeting",
-        subject,
-        html_body: html,
-        status: rule.approval === "auto" ? "approved" : "draft",
-        send_mode: rule.approval,
-        ai_context: {
-          greeting: true,
-          occasion: rule.occasion,
-          personalNote: rule.personalNote || null,
-          year: today.getFullYear(),
-        },
-      });
+      const validContacts = (contacts || []).filter(c => c.email);
+      let queued = 0;
+      let skipped = 0;
 
-      if (!error) {
-        queued++;
+      for (const contact of validContacts) {
+        // Check if we already sent this greeting this year
+        const yearStart = new Date(today.getFullYear(), 0, 1).toISOString();
+        const { count } = await supabase
+          .from("newsletters")
+          .select("id", { count: "exact", head: true })
+          .eq("contact_id", contact.id)
+          .eq("email_type", `greeting_${rule.occasion}`)
+          .gte("created_at", yearStart);
 
-        // If auto-send, send immediately
-        if (rule.approval === "auto") {
-          try {
-            const { sendNewsletter } = await import("@/actions/newsletters");
-            // Get the newsletter we just inserted
-            const { data: nl } = await supabase
-              .from("newsletters")
-              .select("id")
-              .eq("contact_id", contact.id)
-              .eq("email_type", `greeting_${rule.occasion}`)
-              .gte("created_at", new Date(Date.now() - 60000).toISOString())
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .single();
-            if (nl) await sendNewsletter(nl.id);
-          } catch {
-            // Don't fail the cron if individual send fails
+        if ((count || 0) > 0) {
+          skipped++;
+          continue;
+        }
+
+        // Generate the greeting email
+        const { subject, html } = buildGreetingEmail(rule, contact, agentName, brokerage);
+
+        // Queue as newsletter
+        const { error } = await supabase.from("newsletters").insert({
+          contact_id: contact.id,
+          email_type: `greeting_${rule.occasion}`,
+          journey_phase: "greeting",
+          subject,
+          html_body: html,
+          status: rule.approval === "auto" ? "approved" : "draft",
+          send_mode: rule.approval,
+          ai_context: {
+            greeting: true,
+            occasion: rule.occasion,
+            personalNote: rule.personalNote || null,
+            year: today.getFullYear(),
+          },
+        });
+
+        if (!error) {
+          queued++;
+
+          // If auto-send, send immediately
+          if (rule.approval === "auto") {
+            try {
+              const { sendNewsletter } = await import("@/actions/newsletters");
+              // Get the newsletter we just inserted
+              const { data: nl } = await supabase
+                .from("newsletters")
+                .select("id")
+                .eq("contact_id", contact.id)
+                .eq("email_type", `greeting_${rule.occasion}`)
+                .gte("created_at", new Date(Date.now() - 60000).toISOString())
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .single();
+              if (nl) await sendNewsletter(nl.id);
+            } catch {
+              // Don't fail the cron if individual send fails
+            }
           }
         }
       }
+
+      results.push({ occasion: rule.occasion, queued, skipped });
     }
 
-    results.push({ occasion: rule.occasion, queued, skipped });
+    const totalQueued = results.reduce((s, r) => s + r.queued, 0);
+
+    await trackEvent('cron_run', null, {
+      cron: 'greeting-automations',
+      status: 'success',
+      duration_ms: Date.now() - cronStart,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      date: `${today.getFullYear()}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+      processed: totalQueued,
+      results,
+    });
+  } catch (err) {
+    await trackEvent('cron_run', null, {
+      cron: 'greeting-automations',
+      status: 'error',
+      duration_ms: Date.now() - cronStart,
+      error: err instanceof Error ? err.message : 'Unknown error',
+    });
+    console.error("Greeting automations cron error:", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Processing failed" },
+      { status: 500 }
+    );
   }
-
-  const totalQueued = results.reduce((s, r) => s + r.queued, 0);
-
-  return NextResponse.json({
-    ok: true,
-    date: `${today.getFullYear()}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
-    processed: totalQueued,
-    results,
-  });
 }
 
 // ── Find contacts matching this occasion for today ──────────

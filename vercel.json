@@ -15,6 +15,22 @@
     {
       "path": "/api/cron/agent-recommendations",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-external-data",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/create-weekly-editorial-draft",
+      "schedule": "0 7 * * 1"
+    },
+    {
+      "path": "/api/cron/editorial-ab-winner",
+      "schedule": "30 */4 * * *"
+    },
+    {
+      "path": "/api/cron/detect-dormant",
+      "schedule": "0 2 * * *"
     }
   ]
 }

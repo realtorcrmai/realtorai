@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { DataTable } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -111,14 +111,33 @@ const ENGAGEMENT_OPTIONS = [
 
 export function ContactsTableClient({ contacts }: { contacts: ContactRow[] }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<FilterState>({ type: "", stage: "", engagement: "" });
+
+  // Sync filters from URL search params (stat card clicks)
+  useEffect(() => {
+    const stage = searchParams.get("stage") ?? "";
+    const engagement = searchParams.get("engagement") ?? "";
+    if (stage || engagement) {
+      setFilters((f) => ({ ...f, stage, engagement }));
+    }
+  }, [searchParams]);
   const [previewContact, setPreviewContact] = useState<ContactRow | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const activeFilterCount = [filters.type, filters.stage, filters.engagement].filter(Boolean).length;
+  const weekAgo = searchParams.get("recent") === "week"
+    ? new Date(Date.now() - 7 * 86_400_000).toISOString()
+    : null;
+  const pipelineView = searchParams.get("view") === "pipeline";
+  const urlFilterCount = (weekAgo ? 1 : 0) + (pipelineView ? 1 : 0);
+  const activeFilterCount = [filters.type, filters.stage, filters.engagement].filter(Boolean).length + urlFilterCount;
 
   const filtered = contacts.filter((c) => {
+    // Recent filter (from stat card click)
+    if (weekAgo && c.created_at < weekAgo) return false;
+    // Pipeline view — show contacts with active pipeline stage (not closed/cold)
+    if (pipelineView && (!c.stage_bar || ["closed", "cold"].includes(c.stage_bar))) return false;
     // Text search
     if (search) {
       const q = search.toLowerCase();
@@ -190,7 +209,7 @@ export function ContactsTableClient({ contacts }: { contacts: ContactRow[] }) {
           </select>
           {activeFilterCount > 0 && (
             <button
-              onClick={() => setFilters({ type: "", stage: "", engagement: "" })}
+              onClick={() => { setFilters({ type: "", stage: "", engagement: "" }); router.push("/contacts"); }}
               className="h-9 px-3 text-xs font-medium rounded-md border border-border bg-background text-muted-foreground hover:bg-muted transition-colors"
             >
               Clear ({activeFilterCount})
@@ -209,7 +228,7 @@ export function ContactsTableClient({ contacts }: { contacts: ContactRow[] }) {
                 const stage = e.target.value;
                 if (!stage) return;
                 const result = await bulkUpdateContactStage(Array.from(ids), stage);
-                if (result.error) { toast.error(result.error); } else { toast.success(`Updated ${result.updated} contacts`); setSelectedIds(new Set()); }
+                if (result.error) { toast.error(result.error); } else { toast.success(`Updated ${result.updated} contacts${result.skipped ? ` (${result.skipped} skipped — incompatible type)` : ""}`); setSelectedIds(new Set()); }
                 e.target.value = "";
               }}
               className="h-8 rounded-md border border-border bg-background px-2 text-xs font-medium"

@@ -1,10 +1,23 @@
 "use server";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 
 export async function getContactRelationships(contactId: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
+
+  // Verify the contact belongs to this tenant
+  const { data: contact } = await tc
+    .from("contacts")
+    .select("id")
+    .eq("id", contactId)
+    .single();
+
+  if (!contact) {
+    return { error: "Contact not found" };
+  }
+
+  const supabase = tc.raw;
 
   const { data, error } = await supabase
     .from("contact_relationships")
@@ -28,10 +41,10 @@ export async function createRelationship(data: {
   relationship_label?: string;
   notes?: string;
 }) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  // Validate both contacts exist before inserting the relationship
-  const { data: foundContacts, error: contactsError } = await supabase
+  // Validate both contacts belong to this tenant
+  const { data: foundContacts, error: contactsError } = await tc
     .from("contacts")
     .select("id")
     .in("id", [data.contact_a_id, data.contact_b_id]);
@@ -40,12 +53,13 @@ export async function createRelationship(data: {
     return { error: "One or both contacts not found" };
   }
 
-  const { error } = await supabase.from("contact_relationships").insert({
+  const { error } = await tc.raw.from("contact_relationships").insert({
     contact_a_id: data.contact_a_id,
     contact_b_id: data.contact_b_id,
     relationship_type: data.relationship_type,
     relationship_label: data.relationship_label ?? null,
     notes: data.notes ?? null,
+    realtor_id: tc.realtorId,
   });
 
   if (error) {
@@ -67,7 +81,18 @@ export async function updateRelationship(
     notes: string | null;
   }>
 ) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
+
+  // Verify the contact belongs to this tenant
+  const { data: contact } = await tc
+    .from("contacts")
+    .select("id")
+    .eq("id", contactId)
+    .single();
+
+  if (!contact) {
+    return { error: "Contact not found" };
+  }
 
   const updatePayload: Record<string, unknown> = {};
   if (data.relationship_type !== undefined) updatePayload.relationship_type = data.relationship_type;
@@ -75,10 +100,11 @@ export async function updateRelationship(
   if (data.notes !== undefined) updatePayload.notes = data.notes;
   updatePayload.updated_at = new Date().toISOString();
 
-  const { error } = await supabase
+  const { error } = await tc.raw
     .from("contact_relationships")
     .update(updatePayload)
-    .eq("id", id);
+    .eq("id", id)
+    .or(`contact_a_id.eq.${contactId},contact_b_id.eq.${contactId}`);
 
   if (error) {
     return { error: "Failed to update relationship" };
@@ -90,12 +116,24 @@ export async function updateRelationship(
 }
 
 export async function deleteRelationship(id: string, contactId: string) {
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  const { error } = await supabase
+  // Verify the contact belongs to this tenant
+  const { data: contact } = await tc
+    .from("contacts")
+    .select("id")
+    .eq("id", contactId)
+    .single();
+
+  if (!contact) {
+    return { error: "Contact not found" };
+  }
+
+  const { error } = await tc.raw
     .from("contact_relationships")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .or(`contact_a_id.eq.${contactId},contact_b_id.eq.${contactId}`);
 
   if (error) {
     return { error: "Failed to delete relationship" };

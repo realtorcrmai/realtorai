@@ -1,0 +1,322 @@
+name: Nightly — Full Pipeline Test
+
+# Runs every night at 2am UTC. Also triggerable manually.
+# Tests the ENTIRE deployment pipeline + live services end-to-end.
+#
+# What it covers:
+#   Phase 1: Build verification (tsc, lint, build)
+#   Phase 2: Unit tests (vitest)
+#   Phase 3: Production health (realtors360.ai /api/health)
+#   Phase 4: Render newsletter service health
+#   Phase 5: Database consistency (dev vs prod table sync)
+#   Phase 6: Auth flow (demo login → session → pages)
+#   Phase 7: API endpoint sweep (all critical routes)
+#   Phase 8: Docs freshness (basic + deep audit)
+#   Phase 9: Playwright browser tests (login, navigate, screenshot)
+#
+# On failure: opens/updates a GitHub issue labeled 'nightly-failure'
+# with the specific phase that broke and full output.
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # Every night 2am UTC
+  workflow_dispatch: {}     # Manual trigger
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  NODE_VERSION: "20"
+
+jobs:
+  nightly:
+    name: Full pipeline test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      # ── Setup ──────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install chromium --with-deps
+
+      # ── Phase 1: Build verification ────────────────────────
+      - name: "Phase 1: TypeScript"
+        run: npx tsc --noEmit
+
+      - name: "Phase 1: ESLint"
+        run: npx eslint . --quiet
+
+      - name: "Phase 1: Production build"
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXTAUTH_URL: https://realtors360.ai
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          NEXT_PUBLIC_APP_URL: https://realtors360.ai
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          DEMO_EMAIL: ${{ secrets.DEMO_EMAIL }}
+          DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+
+      # ── Phase 2: Unit tests ────────────────────────────────
+      - name: "Phase 2: Vitest"
+        run: npx vitest run
+
+      # ── Phase 3: Production health ─────────────────────────
+      - name: "Phase 3: Production health check"
+        run: |
+          RESPONSE=$(curl -sS -w "\n%{http_code}" https://realtors360.ai/api/health)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          echo "$BODY" | python3 -m json.tool || true
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ Health check returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          STATUS=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','unknown'))" 2>/dev/null)
+          if [ "$STATUS" != "healthy" ]; then
+            echo "❌ Health status: $STATUS"
+            exit 1
+          fi
+          echo "✅ Production healthy"
+
+      # ── Phase 4: Render newsletter service ──────────────────
+      - name: "Phase 4: Newsletter service health"
+        run: |
+          RESPONSE=$(curl -sS -w "\n%{http_code}" https://realtors360-newsletter.onrender.com/health)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          echo "$BODY" | python3 -m json.tool 2>/dev/null || echo "$BODY"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ Render health returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+          echo "✅ Newsletter service healthy"
+
+      # ── Phase 5: Database consistency ───────────────────────
+      - name: "Phase 5: Dev vs Prod DB table sync"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          DEV_TABLES=$(curl -sS -X POST "https://api.supabase.com/v1/projects/qcohfohjihazivkforsj/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"query":"SELECT count(*) AS c FROM information_schema.tables WHERE table_schema='"'"'public'"'"'"}' \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['c'])")
+
+          PROD_TABLES=$(curl -sS -X POST "https://api.supabase.com/v1/projects/opbrqlmhhqvfomevvkon/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"query":"SELECT count(*) AS c FROM information_schema.tables WHERE table_schema='"'"'public'"'"'"}' \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['c'])")
+
+          echo "Dev tables: $DEV_TABLES"
+          echo "Prod tables: $PROD_TABLES"
+
+          DIFF=$((DEV_TABLES - PROD_TABLES))
+          if [ "$DIFF" -lt 0 ]; then DIFF=$((-DIFF)); fi
+
+          if [ "$DIFF" -gt 5 ]; then
+            echo "❌ Dev/Prod table count drift: $DIFF tables apart (dev=$DEV_TABLES, prod=$PROD_TABLES)"
+            exit 1
+          fi
+          echo "✅ DB sync OK (dev=$DEV_TABLES, prod=$PROD_TABLES, drift=$DIFF)"
+
+      # ── Phase 6: Auth flow ──────────────────────────────────
+      - name: "Phase 6: Production auth flow"
+        run: |
+          COOKIES=$(mktemp)
+
+          # Get CSRF
+          CSRF=$(curl -sS -c $COOKIES https://realtors360.ai/api/auth/csrf \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['csrfToken'])")
+
+          # Login
+          HTTP=$(curl -sS -b $COOKIES -c $COOKIES -X POST \
+            https://realtors360.ai/api/auth/callback/credentials \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            --data-urlencode "csrfToken=$CSRF" \
+            --data-urlencode "email=${{ secrets.DEMO_EMAIL }}" \
+            --data-urlencode "password=${{ secrets.DEMO_PASSWORD }}" \
+            -o /dev/null -w "%{http_code}")
+
+          if [ "$HTTP" != "302" ]; then
+            echo "❌ Login failed: HTTP $HTTP"
+            rm $COOKIES
+            exit 1
+          fi
+
+          # Check session
+          SESSION=$(curl -sS -b $COOKIES https://realtors360.ai/api/auth/session)
+          EMAIL=$(echo "$SESSION" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('user',{}).get('email','none'))" 2>/dev/null)
+
+          if [ "$EMAIL" = "none" ] || [ -z "$EMAIL" ]; then
+            echo "❌ No session after login"
+            rm $COOKIES
+            exit 1
+          fi
+          echo "✅ Logged in as $EMAIL"
+
+          # Test authenticated pages
+          for PAGE in / /contacts /listings /newsletters /tasks /settings; do
+            CODE=$(curl -sS -b $COOKIES -o /dev/null -w "%{http_code}" "https://realtors360.ai$PAGE")
+            if [ "$CODE" != "200" ]; then
+              echo "❌ $PAGE returned HTTP $CODE"
+              rm $COOKIES
+              exit 1
+            fi
+            echo "  ✓ $PAGE → 200"
+          done
+          echo "✅ All pages accessible"
+          rm $COOKIES
+
+      # ── Phase 7: API endpoint sweep ─────────────────────────
+      - name: "Phase 7: Critical API endpoints"
+        run: |
+          echo "Testing public endpoints..."
+          for EP in /api/health /api/auth/providers /api/auth/csrf; do
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" "https://realtors360.ai$EP")
+            if [ "$CODE" != "200" ]; then
+              echo "❌ $EP → HTTP $CODE"
+              exit 1
+            fi
+            echo "  ✓ $EP → 200"
+          done
+
+          echo "Testing cron auth rejection (should 401 without token)..."
+          for EP in /api/cron/weekly-learning /api/cron/process-workflows /api/cron/daily-digest; do
+            CODE=$(curl -sS -o /dev/null -w "%{http_code}" "https://realtors360.ai$EP")
+            if [ "$CODE" != "401" ]; then
+              echo "❌ $EP returned $CODE (expected 401)"
+              exit 1
+            fi
+            echo "  ✓ $EP → 401 (correctly rejected)"
+          done
+          echo "✅ All API endpoints behaving correctly"
+
+      # ── Phase 8: Docs freshness ─────────────────────────────
+      - name: "Phase 8: Docs audit"
+        run: node scripts/audit-docs.mjs
+
+      # ── Phase 9: Playwright browser tests ───────────────────
+      - name: "Phase 9: Playwright browser tests"
+        run: |
+          # Create a minimal Playwright test that hits production
+          cat > /tmp/nightly-browser.spec.ts << 'SPEC'
+          import { test, expect } from '@playwright/test';
+
+          const PROD = 'https://realtors360.ai';
+
+          test('login page loads', async ({ page }) => {
+            await page.goto(`${PROD}/login`);
+            await expect(page).toHaveTitle(/Realtors360/i);
+          });
+
+          test('demo login works', async ({ page }) => {
+            await page.goto(`${PROD}/login`);
+            await page.locator('input[type="email"]').first().fill(process.env.DEMO_EMAIL!);
+            await page.locator('input[type="password"]').first().fill(process.env.DEMO_PASSWORD!);
+            await page.locator('button[type="submit"]').first().click();
+            await page.waitForURL(url => !url.pathname.startsWith('/login'), { timeout: 15000 });
+            await expect(page.locator('body')).toBeVisible();
+          });
+
+          test('contacts page renders after login', async ({ page }) => {
+            await page.goto(`${PROD}/login`);
+            await page.locator('input[type="email"]').first().fill(process.env.DEMO_EMAIL!);
+            await page.locator('input[type="password"]').first().fill(process.env.DEMO_PASSWORD!);
+            await page.locator('button[type="submit"]').first().click();
+            await page.waitForURL(url => !url.pathname.startsWith('/login'), { timeout: 15000 });
+            await page.goto(`${PROD}/contacts`);
+            await expect(page).toHaveURL(/contacts/);
+          });
+
+          test('health endpoint returns healthy', async ({ request }) => {
+            const res = await request.get(`${PROD}/api/health`);
+            expect(res.ok()).toBeTruthy();
+            const body = await res.json();
+            expect(body.status).toBe('healthy');
+          });
+
+          test('mobile viewport loads', async ({ page }) => {
+            await page.setViewportSize({ width: 375, height: 812 });
+            await page.goto(`${PROD}/login`);
+            await expect(page).toHaveTitle(/Realtors360/i);
+          });
+          SPEC
+
+          npx playwright test /tmp/nightly-browser.spec.ts --reporter=list
+        env:
+          DEMO_EMAIL: ${{ secrets.DEMO_EMAIL }}
+          DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+
+      # ── Report ──────────────────────────────────────────────
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Open issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              labels: 'nightly-failure', state: 'open',
+            });
+
+            const body = [
+              `### Nightly pipeline test failed`,
+              '',
+              `**Date:** ${new Date().toISOString().slice(0, 10)}`,
+              `**Commit:** ${context.sha.slice(0, 7)}`,
+              `**Run:** [View](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              '',
+              'Check the workflow run for the specific phase that failed.',
+            ].join('\n');
+
+            if (existing.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.data[0].number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title: `Nightly pipeline test failed (${new Date().toISOString().slice(0, 10)})`,
+                labels: ['nightly-failure', 'bug'],
+                body,
+              });
+            }

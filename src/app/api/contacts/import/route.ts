@@ -41,6 +41,12 @@ async function handleJSONImport(_tc: any, request: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  // Guard against oversized payloads (10 MB limit)
+  const contentLength = parseInt(request.headers.get("content-length") || "0");
+  if (contentLength > 10 * 1024 * 1024) {
+    return NextResponse.json({ error: "Import payload too large (10 MB max)" }, { status: 413 });
+  }
+
   const { contacts, source } = await request.json();
   if (!Array.isArray(contacts) || contacts.length === 0) {
     return NextResponse.json({ error: "No contacts provided" }, { status: 400 });
@@ -151,11 +157,6 @@ async function handleJSONImport(_tc: any, request: NextRequest) {
     }
   }
 
-  // Auto-cleanup sample contacts if user now has 5+ real contacts
-  if (imported >= 5) {
-    supabase.from("contacts").delete().eq("realtor_id", session.user.id).eq("is_sample", true).then(() => {});
-  }
-
   return NextResponse.json({
     ok: true,
     imported,
@@ -177,6 +178,9 @@ async function handleFormDataImport(tc: any, request: NextRequest) {
   const lines = text.split(/\r?\n/).filter((l) => l.trim());
   if (lines.length < 2) {
     return NextResponse.json({ error: "CSV must have header + at least 1 row" }, { status: 400 });
+  }
+  if (lines.length > 10001) {
+    return NextResponse.json({ error: "CSV too large (max 10,000 rows)" }, { status: 422 });
   }
 
   // ── Header parsing ─────────────────────────────────────────

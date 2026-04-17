@@ -23,10 +23,7 @@ export function useVoiceNotifications(agentEmail: string | null): UseVoiceNotifi
     // Mark as read server-side
     fetch(`/api/voice-agent/notifications?action=read&notification_id=${id}`, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.NEXT_PUBLIC_VOICE_AGENT_API_KEY || ""}`,
-      },
+      headers: { "Content-Type": "application/json" },
     }).catch(() => {});
   }, []);
 
@@ -34,24 +31,21 @@ export function useVoiceNotifications(agentEmail: string | null): UseVoiceNotifi
     if (!agentEmail) return;
 
     let aborted = false;
+    const abortController = new AbortController();
 
     const email = agentEmail;
 
     function connect() {
       if (aborted || !email) return;
 
-      const apiKey = process.env.NEXT_PUBLIC_VOICE_AGENT_API_KEY || "";
+      // Session cookie is sent automatically — no API key needed
       let url = `/api/voice-agent/notifications/stream?agent_email=${encodeURIComponent(email)}`;
 
-      // EventSource doesn't support custom headers, so we pass auth via query param
-      if (apiKey) {
-        url += `&token=${encodeURIComponent(apiKey)}`;
-      }
       if (lastEventIdRef.current) {
         url += `&last_event_id=${encodeURIComponent(lastEventIdRef.current)}`;
       }
 
-      fetch(url, { signal: AbortSignal.timeout(300_000) })
+      fetch(url, { signal: abortController.signal })
         .then(async (res) => {
           if (!res.ok || !res.body) {
             throw new Error("SSE connection failed");
@@ -109,6 +103,7 @@ export function useVoiceNotifications(agentEmail: string | null): UseVoiceNotifi
 
     return () => {
       aborted = true;
+      abortController.abort();
       setConnected(false);
     };
   }, [agentEmail]);

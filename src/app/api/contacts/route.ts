@@ -30,7 +30,8 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query.limit(limit);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[contacts GET]", error.message);
+    return NextResponse.json({ error: "Failed to fetch contacts" }, { status: 500 });
   }
 
   return NextResponse.json(data ?? []);
@@ -40,7 +41,13 @@ export async function POST(req: NextRequest) {
   const { unauthorized } = await requireAuth();
   if (unauthorized) return unauthorized;
 
-  const body = await req.json();
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
+  }
+
   const parsed = contactSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -61,7 +68,8 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[contacts POST]", error.message);
+    return NextResponse.json({ error: "Failed to create contact" }, { status: 500 });
   }
 
   return NextResponse.json(data, { status: 201 });

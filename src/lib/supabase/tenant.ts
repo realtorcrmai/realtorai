@@ -119,20 +119,20 @@ class TenantQueryBuilder {
 // Global Tables (no tenant filtering needed)
 // ============================================================
 
-/** Tables that are shared across all tenants (system-level) */
+/** Tables that are shared across all tenants (system-level).
+ * Only include tables that actually exist and are intentionally global.
+ * Tables with realtor_id (e.g. competitive_insights post-migration-070) should NOT be here.
+ */
 const GLOBAL_TABLES = new Set([
-  "knowledge_articles",
-  "newsletter_templates",    // system templates (is_system=true)
-  "social_templates",        // system templates (is_system=true)
-  "form_templates",
-  "help_events",
-  "help_community_tips",
-  "platform_intelligence",
-  "competitive_insights",
-  "tenants",
-  "tenant_memberships",
-  "tenant_api_keys",
-  "tenant_audit_log",
+  "knowledge_articles",       // shared RAG knowledge base
+  "newsletter_templates",     // system email templates (is_system=true)
+  "email_template_registry",  // shared template registry
+  "form_templates",           // BCREA form templates
+  "neighbourhood_data",       // shared neighbourhood reference data
+  "market_stats_cache",       // shared market statistics
+  "help_events",              // help/onboarding events
+  "help_community_tips",      // community tips
+  "google_tokens",            // keyed by user_email, not realtor_id
 ]);
 
 /** Check if a table is global (no tenant filtering needed) */

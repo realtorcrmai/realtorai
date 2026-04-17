@@ -1,7 +1,7 @@
 <!-- docs-audit: src/** -->
 # Pending Work — Realtors360 CRM
 
-*Last updated: 2026-03-30*
+*Last updated: 2026-04-12*
 
 ## LAUNCH BLOCKER — Multi-Tenancy & Security (P0)
 
@@ -11,36 +11,34 @@ Pre-launch audit on 2026-03-30 found critical issues. The app is single-tenant �
 
 ### Critical Fixes (Block Launch)
 
-- [ ] **Add `realtor_id` column** to ALL core tables: contacts, listings, appointments, communications, listing_documents, newsletters, contact_journeys, newsletter_events, prompts, media_assets, tasks, deals
-- [ ] **New migration: rewrite ALL RLS policies** — change from `auth.role() = 'authenticated'` to `auth.uid() = realtor_id` on every table
-- [ ] **Remove anon access** — drop all policies from migration 003 (`anon full access`)
-- [ ] **Remove open `USING (true)` policies** on: agent_events, agent_decisions, contact_instructions, rag_embeddings, competitive_emails
-- [ ] **Fix middleware auth exemptions** — remove: `/api/contacts/log-interaction`, `/api/contacts/context`, `/api/contacts/instructions`, `/api/contacts/watchlist`, `/api/contacts/journey`, `/api/newsletters/process`
-- [ ] **Move CRON_SECRET** from `NEXT_PUBLIC_CRON_SECRET` to server-only `CRON_SECRET` — fix `DailyDigestCard.tsx` hardcoded fallback `"listingflow-cron-secret-2026"`
-- [ ] **Remove hardcoded demo credentials** from `src/lib/auth.ts` — require env vars, no fallback
-- [ ] **HMAC-signed unsubscribe tokens** — replace plain contact ID in unsubscribe links with signed tokens to prevent enumeration
+- [x] **Add `realtor_id` column** to ALL core tables — Done (migration 110 applied to dev+prod)
+- [x] **New migration: rewrite ALL RLS policies** — Done (migration 110: 93 tables locked with `realtor_id = auth.uid()`)
+- [x] **Remove anon access** — Done (migration 110 drops all existing policies before creating tenant-scoped ones)
+- [x] **Remove open `USING (true)` policies** — Done (migration 110 rewrites all to tenant isolation)
+- [x] **Fix middleware auth exemptions** — Done (13 exemptions removed, security comments added)
+- [x] **Move CRON_SECRET** — Already server-only. No client-side exposure found. DailyDigestCard hardcoded secret removed.
+- [x] **Remove hardcoded demo credentials** — Done (demo login guard: prod restricts to exact DEMO_EMAIL match)
+- [x] **HMAC-signed unsubscribe tokens** — Done (all 5 email send paths use `buildUnsubscribeUrl()` with HMAC-SHA256)
 
 ### High Priority (Pre-Launch)
 
-- [ ] **Cookie consent banner** — PIPEDA/CASL compliance
-- [ ] **Data deletion endpoint** — `DELETE /api/user/data` for PIPEDA right-to-erasure
-- [ ] **CASL consent expiry tracking** — cron exists but expiry logic incomplete
-- [ ] **Rate limiting** on sensitive endpoints (unsubscribe, lead capture, contact APIs)
-- [ ] **Audit trail** for unsubscribe actions (distinguish legitimate vs abuse)
+- [x] **Cookie consent banner** — Done (CookieConsent component in root layout, PIPEDA-compliant text)
+- [x] **Data deletion endpoint** — Done (`DELETE /api/user/data` with confirmation, rate-limited, audit trail)
+- [x] **CASL consent expiry tracking** — Done (cron sends re-confirmation emails 30 days before expiry, `/api/consent/reconfirm` extends by 2 years)
+- [x] **Rate limiting** — Done (unsubscribe 10/min, lead-capture 20/min, data-delete 3/hour, contact-api 60/min)
+- [x] **Audit trail** for unsubscribe — Already done (activity_log with full metadata)
 
-### Files to Fix
+### Files Fixed (P0 Complete)
 
-| File | Issue |
-|------|-------|
-| `supabase/migrations/001_initial_schema.sql` | RLS policies too permissive |
-| `supabase/migrations/003_allow_anon_role.sql` | Anon users full access — DROP these policies |
-| `src/middleware.ts` | 10+ auth exemptions need review |
-| `src/app/api/contacts/log-interaction/route.ts` | No auth check |
-| `src/app/api/contacts/context/route.ts` | No auth check |
-| `src/app/api/contacts/watchlist/route.ts` | No auth check |
-| `src/components/dashboard/DailyDigestCard.tsx` | Hardcoded CRON secret in client |
-| `src/lib/auth.ts` | Hardcoded demo credentials fallback |
-| `src/app/api/newsletters/unsubscribe/route.ts` | Contact enumeration vulnerability |
+| File | Fix Applied |
+|------|-------------|
+| `supabase/migrations/110_lock_rls_policies.sql` | Rewrites ALL 93 tenant tables to `realtor_id = auth.uid()` |
+| `src/middleware.ts` | 13 exemptions removed, security comments added |
+| `src/lib/auth.ts` | Demo login guard — prod restricts to exact DEMO_EMAIL |
+| `src/lib/unsubscribe-token.ts` | HMAC-SHA256 signed tokens for unsubscribe links |
+| `src/actions/newsletters.ts` | Uses `buildUnsubscribeUrl()` |
+| `src/lib/resend.ts` | List-Unsubscribe header uses HMAC tokens |
+| `src/actions/drip.ts` | Welcome drip uses signed tokens |
 
 ---
 

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
+import { formatPhone, titleCaseName } from "@/lib/format";
 
 // ── Types ─────────────────────────────────────────────────────
 interface PartnerContact {
@@ -96,8 +97,8 @@ export function PropertyDealsTab({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-semibold text-[var(--lf-text)]">Co-Owned Properties</h3>
-          <p className="text-xs text-[var(--lf-text)]/50">Properties {contactName} owns with others</p>
+          <h3 className="font-semibold text-[var(--lf-text)]">Property Deals</h3>
+          <p className="text-xs text-[var(--lf-text)]/50">Properties and deals involving {contactName}</p>
         </div>
         <button onClick={() => setShowWizard(true)} className="lf-btn text-xs px-4 py-1.5">
           + Add Property
@@ -405,15 +406,35 @@ function PropertyDealWizard({
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-xs text-[var(--lf-text)]/50 mb-1 block">Name *</label>
-                    <input value={p.name} onChange={(e) => updatePartner(i, "name", e.target.value)} placeholder="Full name" className="lf-input w-full text-sm" />
+                    <input
+                      value={p.name}
+                      onChange={(e) => updatePartner(i, "name", e.target.value)}
+                      onBlur={(e) => updatePartner(i, "name", titleCaseName(e.target.value))}
+                      placeholder="Full name"
+                      className="lf-input w-full text-sm"
+                    />
                   </div>
                   <div>
                     <label className="text-xs text-[var(--lf-text)]/50 mb-1 block">Phone</label>
-                    <input value={p.phone} onChange={(e) => updatePartner(i, "phone", e.target.value)} placeholder="+1 604 555 0000" className="lf-input w-full text-sm" />
+                    <input
+                      type="tel"
+                      value={p.phone}
+                      onChange={(e) => updatePartner(i, "phone", e.target.value)}
+                      onBlur={(e) => updatePartner(i, "phone", formatPhone(e.target.value))}
+                      placeholder="+1 (604) 555-0000"
+                      className="lf-input w-full text-sm"
+                    />
                   </div>
                   <div className="col-span-2">
                     <label className="text-xs text-[var(--lf-text)]/50 mb-1 block">Email</label>
-                    <input value={p.email} onChange={(e) => updatePartner(i, "email", e.target.value)} placeholder="email@example.com" className="lf-input w-full text-sm" />
+                    <input
+                      type="email"
+                      value={p.email}
+                      onChange={(e) => updatePartner(i, "email", e.target.value)}
+                      onBlur={(e) => updatePartner(i, "email", e.target.value.trim().toLowerCase())}
+                      placeholder="email@example.com"
+                      className="lf-input w-full text-sm"
+                    />
                   </div>
                 </div>
               )}

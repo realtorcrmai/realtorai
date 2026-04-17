@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
+import { titleCaseName } from "@/lib/format";
 
 /** Password strength: 0=empty, 1=weak, 2=medium, 3=strong (S12) */
 function getPasswordStrength(pw: string): { level: number; label: string; color: string } {
@@ -189,6 +190,7 @@ export default function SignupPage() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                onBlur={(e) => setName(titleCaseName(e.target.value))}
                 placeholder="Sarah Johnson"
                 required
                 autoFocus
@@ -202,6 +204,7 @@ export default function SignupPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onBlur={(e) => setEmail(e.target.value.trim().toLowerCase())}
                 placeholder="sarah@realty.ca"
                 required
                 className={`w-full px-4 py-2.5 rounded-lg border outline-none text-sm focus:ring-1 ${

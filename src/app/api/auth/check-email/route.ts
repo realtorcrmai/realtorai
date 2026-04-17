@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isDisposableEmail } from "@/lib/auth/disposable-check";
+import { checkApiRateLimit } from "@/lib/api-rate-limit";
 
 /**
  * Email availability check for inline signup validation.
  * Called with debounced 300ms from the signup form.
- * Returns: { available: true/false, signup_source?: string }
+ * Returns: { available: true/false }
  */
 export async function GET(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateCheck = checkApiRateLimit(ip, "check-email");
+  if (!rateCheck.allowed) {
+    return new NextResponse("Too many requests.", { status: 429 });
+  }
+
   const email = request.nextUrl.searchParams.get("email");
 
   if (!email || !email.includes("@")) {
@@ -28,15 +35,13 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient();
   const { data: existing } = await supabase
     .from("users")
-    .select("signup_source")
+    .select("id")
     .eq("email", normalizedEmail)
     .single();
 
   if (existing) {
     return NextResponse.json({
       available: false,
-      reason: "exists",
-      signup_source: existing.signup_source,
     });
   }
 

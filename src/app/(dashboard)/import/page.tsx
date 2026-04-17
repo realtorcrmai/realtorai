@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import * as XLSX from "xlsx";
+// xlsx loaded dynamically to reduce initial bundle (~400KB)
 
 type ImportedRow = {
   address: string;
@@ -34,7 +34,8 @@ export default function ImportPage() {
 
   function parseXlsx(file: File) {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
+      const XLSX = await import("xlsx");
       const data = new Uint8Array(e.target?.result as ArrayBuffer);
       const wb = XLSX.read(data, { type: "array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
@@ -233,7 +234,8 @@ export default function ImportPage() {
   );
 }
 
-function downloadTemplate() {
+async function downloadTemplate() {
+  const XLSX = await import("xlsx");
   const ws = XLSX.utils.aoa_to_sheet([
     ["Address", "List Price", "MLS #", "Lockbox", "Seller Name", "Seller Phone", "Seller Email", "Status", "Notes"],
     ["123 Main St, Surrey, BC V3S 1A1", 1250000, "R2900000", "1234", "John Smith", "604-555-0100", "john@email.com", "active", ""],

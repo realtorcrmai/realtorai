@@ -1,4 +1,5 @@
 <!-- docs-audit: scripts/test-suite.sh, src/** -->
+<!-- last-verified: 2026-04-13 -->
 # Realtors360 CRM — Production Test Plan (1000+ Test Cases)
 
 **Version:** 1.0
@@ -1397,3 +1398,1598 @@ node scripts/test-workflow-emails.mjs
 **Priority:** P2
 
 **Full test plan with all 50+ cases:** See `docs/TEST_PLAN_UI_UX_Features.md`
+
+---
+
+## CATEGORY 17: ONBOARDING & NEW USER EXPERIENCE (ONBOARD) — See External Plan
+
+Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. This covers:
+- Personalization wizard (6 screens at /personalize)
+- Onboarding wizard (5 steps at /onboarding)
+- Sample data seeding (5 contacts, 3 listings, 2 showings, 1 newsletter)
+- Post-onboarding experience (confetti, welcome tour, checklist, NPS survey)
+- Welcome drip email sequence (7 emails, day 0-12)
+- Empty states on listings, contacts, showings pages
+- New agent dashboard guide
+- data-tour attributes for guided tours
+- Migration 103 validation (is_sample columns, onboarding_nps table)
+
+---
+
+## CATEGORY 18: UI/UX AUDIT SPRINT ENHANCEMENTS (UXAUDIT) — 65 Tests
+
+> Added 2026-04-12 after 6 UI/UX audit sprints covering mobile, filters, accessibility, bulk ops, and print.
+
+### Sprint 1: Mobile & Core UX — 20 Tests
+
+#### UXAUDIT-001: Mobile collapsible sidebar on listing detail
+**Story:** As a realtor on mobile, I want the listing detail sidebar to collapse, so I can focus on the main content.
+**Steps:** Navigate to `/listings/[id]` on viewport < 768px. Observe context sidebar.
+**Expected:** Sidebar is collapsed by default behind a toggle button. Tapping the toggle reveals the sidebar as an overlay or collapsible panel. Main content takes full width when sidebar is collapsed.
+**Priority:** P1
+
+#### UXAUDIT-002: Mobile collapsible sidebar on showing detail
+**Story:** As a realtor on mobile, I want the showing detail sidebar to collapse for better readability.
+**Steps:** Navigate to `/showings/[id]` on viewport < 768px.
+**Expected:** Context sidebar collapsed by default. Toggle button present. Expanding shows showing details panel.
+**Priority:** P1
+
+#### UXAUDIT-003: Mobile collapsible sidebar on contact detail
+**Story:** As a realtor on mobile, I want the contact detail sidebar to collapse.
+**Steps:** Navigate to `/contacts/[id]` on viewport < 768px.
+**Expected:** Contact info sidebar collapsed by default. Toggle button present. Main communication timeline takes full width.
+**Priority:** P1
+
+#### UXAUDIT-004: Responsive form grid — ListingForm
+**Story:** As a realtor on mobile, I want listing form fields to stack vertically.
+**Steps:** Open listing create/edit form on viewport < 640px.
+**Expected:** Form fields use `grid-cols-1` on small screens and `sm:grid-cols-2` on larger screens. No horizontal overflow.
+**Priority:** P1
+
+#### UXAUDIT-005: Responsive form grid — ContactForm
+**Steps:** Open contact create/edit form on viewport < 640px.
+**Expected:** Fields stack to single column. Labels remain visible. Submit button is full width.
+**Priority:** P1
+
+#### UXAUDIT-006: Responsive form grid — ShowingRequestForm
+**Steps:** Open showing request form on viewport < 640px.
+**Expected:** Date, time, and agent fields stack vertically. No truncated labels.
+**Priority:** P1
+
+#### UXAUDIT-007: Responsive form grid — Phase1 Seller Intake
+**Steps:** Open workflow Phase 1 on viewport < 640px.
+**Expected:** FINTRAC fields, property details, and commission fields stack to single column on small screens.
+**Priority:** P1
+
+#### UXAUDIT-008: Loading skeleton on listings list page
+**Story:** As a realtor, I want to see loading skeletons while listings load, so the page doesn't feel broken.
+**Steps:** Navigate to `/listings`. Observe initial load state (throttle network to see skeleton).
+**Expected:** Animated skeleton placeholders (pulsing grey bars) appear in place of listing cards/rows during data fetch. Skeleton matches layout of real content.
+**Priority:** P2
+
+#### UXAUDIT-009: Loading skeleton on showings list page
+**Steps:** Navigate to `/showings`. Observe initial load.
+**Expected:** Skeleton placeholders appear matching showings table layout during fetch.
+**Priority:** P2
+
+#### UXAUDIT-010: Newsletter queue Preview button
+**Story:** As a realtor, I want to preview a newsletter from the approval queue, so I can see the rendered HTML before approving.
+**Steps:** Navigate to `/newsletters/queue`. Find a pending newsletter. Click the Preview button.
+**Expected:** Button navigates to `/api/newsletters/preview/[id]` which renders the newsletter HTML. No broken "edit" link. Preview opens in new tab or inline.
+**Priority:** P1
+
+#### UXAUDIT-011: Dashboard newLeadsToday real data
+**Story:** As a realtor, I want the dashboard "New Leads Today" count to reflect actual data.
+**Steps:** Log in. Observe dashboard "New Leads Today" KPI card.
+**Expected:** Count matches the number of contacts created today (WHERE created_at >= today midnight). Not a hardcoded placeholder value.
+**Priority:** P1
+
+#### UXAUDIT-012: Mobile sidebar toggle preserves scroll position
+**Steps:** Scroll down on listing detail on mobile. Toggle sidebar open then closed.
+**Expected:** Main content scroll position is preserved after toggling.
+**Priority:** P2
+
+#### UXAUDIT-013: Mobile sidebar overlay prevents background interaction
+**Steps:** Open collapsible sidebar on mobile listing detail.
+**Expected:** Background content is not interactive while sidebar is open (overlay or focus trap).
+**Priority:** P2
+
+#### UXAUDIT-014: Loading skeleton disappears after data loads
+**Steps:** Navigate to `/listings`. Wait for data to load.
+**Expected:** Skeleton is replaced by real listing data. No flash of skeleton after data is already rendered.
+**Priority:** P1
+
+#### UXAUDIT-015: Preview button only shown for drafts with content
+**Steps:** Check newsletter queue with a draft that has no HTML body.
+**Expected:** Preview button is disabled or hidden when no preview content exists.
+**Priority:** P2
+
+#### UXAUDIT-016: Responsive form labels remain aligned
+**Steps:** Resize viewport from desktop to mobile on any form page.
+**Expected:** Labels transition smoothly from side-by-side to stacked. No overlapping text.
+**Priority:** P2
+
+#### UXAUDIT-017: Listings skeleton matches card layout
+**Steps:** Navigate to `/listings` with throttled network.
+**Expected:** Skeleton elements match the expected card/row dimensions — height, width, spacing.
+**Priority:** P3
+
+#### UXAUDIT-018: Showings skeleton matches table layout
+**Steps:** Navigate to `/showings` with throttled network.
+**Expected:** Skeleton rows match column count and spacing of the real showings table.
+**Priority:** P3
+
+#### UXAUDIT-019: Mobile detail pages have no horizontal scroll
+**Steps:** Check `/listings/[id]`, `/showings/[id]`, `/contacts/[id]` on 375px viewport.
+**Expected:** No horizontal scroll bar. All content fits within viewport width.
+**Priority:** P1
+
+#### UXAUDIT-020: Dashboard KPI card newLeadsToday zero state
+**Steps:** Log in when no contacts were created today.
+**Expected:** New Leads Today shows "0" (not blank, not "N/A").
+**Priority:** P2
+
+### Sprint 2: Contact Filters & Timeline — 10 Tests
+
+#### UXAUDIT-021: Contact filter bar renders
+**Story:** As a realtor, I want to filter contacts by type, stage, and engagement level.
+**Steps:** Navigate to `/contacts`. Observe filter bar above the table.
+**Expected:** Filter bar shows dropdowns for Type (buyer, seller, agent, etc.), Stage (lead, active, etc.), and Engagement (hot, warm, cold). Filters are visible on both desktop and mobile.
+**Priority:** P1
+
+#### UXAUDIT-022: Filter by contact type
+**Steps:** Select "Buyer" from the Type filter.
+**Expected:** Table shows only contacts with type = "buyer". URL may update with query param. Count updates.
+**Priority:** P1
+
+#### UXAUDIT-023: Filter by contact stage
+**Steps:** Select "Active" from the Stage filter.
+**Expected:** Table shows only contacts in the active stage. Combinable with type filter.
+**Priority:** P1
+
+#### UXAUDIT-024: Filter by engagement level
+**Steps:** Select "Hot" from the Engagement filter.
+**Expected:** Table shows only contacts with engagement score >= threshold for "hot" classification.
+**Priority:** P1
+
+#### UXAUDIT-025: Clear all filters
+**Steps:** Apply type + stage filters. Click "Clear Filters" or reset button.
+**Expected:** All filters reset. Full contact list displayed.
+**Priority:** P2
+
+#### UXAUDIT-026: Filters combine correctly
+**Steps:** Select Type = "Buyer" AND Stage = "Lead".
+**Expected:** Only contacts matching BOTH criteria appear. AND logic, not OR.
+**Priority:** P1
+
+#### UXAUDIT-027: Filter state persists across pagination
+**Steps:** Apply a filter. Navigate to page 2 of results.
+**Expected:** Filter remains applied on page 2. Pagination reflects filtered count.
+**Priority:** P2
+
+#### UXAUDIT-028: Communication timeline Load More button
+**Story:** As a realtor, I want to load older communications without overwhelming the initial view.
+**Steps:** Navigate to `/contacts/[id]` for a contact with 20+ communications. Scroll to bottom of timeline.
+**Expected:** Initial load shows most recent 10 communications. "Load More" button appears at the bottom. Clicking loads the next batch.
+**Priority:** P1
+
+#### UXAUDIT-029: Load More appends without duplicates
+**Steps:** Click Load More on the communication timeline.
+**Expected:** Older messages append below existing ones. No duplicate entries. Loading spinner shown during fetch.
+**Priority:** P2
+
+#### UXAUDIT-030: Empty filter results show message
+**Steps:** Apply a filter combination that matches no contacts.
+**Expected:** Table shows "No contacts match your filters" or similar empty state. Not a blank table.
+**Priority:** P2
+
+### Sprint 3: Accessibility Enhancements — 10 Tests
+
+#### UXAUDIT-031: aria-describedby on workflow phases
+**Story:** As a screen reader user, I want workflow phases to be described for accessibility.
+**Steps:** Navigate to `/listings/[id]/workflow`. Inspect phase cards with screen reader or DOM inspector.
+**Expected:** Each phase card has `aria-describedby` linking to a description element. Phase status (complete, active, pending) is announced.
+**Priority:** P1
+
+#### UXAUDIT-032: aria-labels on workflow action buttons
+**Steps:** Inspect "Advance Phase" and other workflow action buttons.
+**Expected:** Buttons have descriptive `aria-label` (e.g., "Advance to Phase 2: Data Enrichment"). Not just "Next" or an icon.
+**Priority:** P1
+
+#### UXAUDIT-033: Color contrast fix for muted text
+**Steps:** Run Lighthouse accessibility audit on pages with muted text elements.
+**Expected:** All muted text meets WCAG AA 4.5:1 contrast ratio against its background. Previously failing low-contrast grey text has been corrected.
+**Priority:** P0
+
+#### UXAUDIT-034: Document upload limit indicator
+**Story:** As a realtor, I want to know file size limits before uploading documents.
+**Steps:** Navigate to document upload area on listing detail.
+**Expected:** Upload area shows maximum file size (e.g., "Max 10MB") and accepted file types. `aria-describedby` references the limit text.
+**Priority:** P2
+
+#### UXAUDIT-035: Form validation errors have aria-invalid
+**Steps:** Submit a form with invalid data (e.g., empty required field).
+**Expected:** Invalid input has `aria-invalid="true"`. Error message is linked via `aria-describedby`. Screen reader announces the error.
+**Priority:** P1
+
+#### UXAUDIT-036: Workflow phase status communicated via aria
+**Steps:** Inspect completed, active, and pending phase cards.
+**Expected:** Completed phases have visual checkmark AND aria status. Active phase announced as current. Pending phases announced as upcoming.
+**Priority:** P1
+
+#### UXAUDIT-037: Filter dropdowns are keyboard accessible
+**Steps:** Tab to contact filter dropdowns. Use arrow keys and Enter to select.
+**Expected:** Dropdowns open on Enter/Space. Arrow keys navigate options. Enter selects. Escape closes.
+**Priority:** P1
+
+#### UXAUDIT-038: Bulk action confirmation dialogs have focus trap
+**Steps:** Trigger a bulk delete action. Observe the confirmation dialog.
+**Expected:** Focus is trapped within the dialog. Tab cycles through dialog elements only. Escape closes the dialog.
+**Priority:** P1
+
+#### UXAUDIT-039: Loading skeletons have aria-busy
+**Steps:** Inspect skeleton loading states with DOM inspector.
+**Expected:** Container has `aria-busy="true"` during loading. Set to `false` when content loads. Screen readers announce loading state.
+**Priority:** P2
+
+#### UXAUDIT-040: Print stylesheet hides interactive elements
+**Steps:** Open print preview (Cmd+P) on any page.
+**Expected:** Sidebar, header, bottom nav, and action buttons are hidden. Only content area prints. See Sprint 6 for full print tests.
+**Priority:** P2
+
+### Sprint 4: Auto-Expand Workflow Phase — 5 Tests
+
+#### UXAUDIT-041: First pending phase auto-expands on page load
+**Story:** As a realtor, I want the next actionable workflow phase to be open when I visit the workflow page.
+**Steps:** Navigate to `/listings/[id]/workflow` where phases 1-3 are complete and phase 4 is pending.
+**Expected:** Phase 4 is automatically expanded/open. Phases 1-3 are collapsed showing completed status. No manual click needed to see current work.
+**Priority:** P1
+
+#### UXAUDIT-042: All phases complete shows Phase 8 expanded
+**Steps:** Navigate to a listing where all 8 phases are complete.
+**Expected:** Phase 8 (last phase) is expanded. Or a "Workflow Complete" summary is shown.
+**Priority:** P2
+
+#### UXAUDIT-043: No phases complete shows Phase 1 expanded
+**Steps:** Navigate to a newly created listing workflow.
+**Expected:** Phase 1 (Seller Intake) is auto-expanded as the first pending phase.
+**Priority:** P1
+
+#### UXAUDIT-044: Manual collapse/expand still works
+**Steps:** Click to collapse the auto-expanded phase. Click to expand a different phase.
+**Expected:** User can still manually toggle any phase. Auto-expand is only the initial state.
+**Priority:** P1
+
+#### UXAUDIT-045: Auto-expand works after phase advancement
+**Steps:** Complete Phase 3 from the workflow page. Observe the page after advancement.
+**Expected:** Phase 4 auto-expands as the new first pending phase after the page refreshes/re-renders.
+**Priority:** P2
+
+### Sprint 5: Bulk Operations — 15 Tests
+
+#### UXAUDIT-046: Bulk stage change available in contacts
+**Story:** As a realtor, I want to change the stage of multiple contacts at once.
+**Steps:** Select 5 contacts via checkboxes. Click "Change Stage" in the bulk action bar.
+**Expected:** A dropdown or dialog appears with stage options. Selecting a stage updates all 5 contacts. Success toast shows "5 contacts updated".
+**Priority:** P1
+
+#### UXAUDIT-047: Bulk stage change validates contact type
+**Steps:** Select contacts of mixed types (buyers + sellers). Attempt bulk stage change.
+**Expected:** Only stage values valid for the selected contacts' types are offered, OR a warning indicates that some contacts cannot be moved to the selected stage.
+**Priority:** P1
+
+#### UXAUDIT-048: Bulk stage change server action
+**Steps:** Trigger bulk stage change via the UI.
+**Expected:** Server action executes (not an API route). All updates happen in a single transaction. Paths are revalidated after mutation.
+**Priority:** P1
+
+#### UXAUDIT-049: CSV export from contacts
+**Story:** As a realtor, I want to export selected contacts to CSV for external use.
+**Steps:** Select 10 contacts. Click "Export CSV" in the bulk action bar.
+**Expected:** CSV file downloads with columns: name, email, phone, type, stage. File name includes date (e.g., `contacts-2026-04-12.csv`).
+**Priority:** P1
+
+#### UXAUDIT-050: CSV export is injection-safe
+**Steps:** Export contacts where a name contains `=SUM(A1:A10)` or `+cmd|' /C calc'!A0`.
+**Expected:** Values starting with `=`, `+`, `-`, `@`, `\t`, `\r` are prefixed with a single quote to prevent formula injection in Excel/Sheets.
+**Priority:** P0
+
+#### UXAUDIT-051: CSV export includes all selected rows
+**Steps:** Select 25 contacts across multiple pages. Export CSV.
+**Expected:** CSV contains exactly 25 rows (plus header). Not limited to current page.
+**Priority:** P1
+
+#### UXAUDIT-052: Bulk delete contacts
+**Story:** As a realtor, I want to delete multiple contacts at once.
+**Steps:** Select 3 contacts. Click "Delete" in the bulk action bar.
+**Expected:** Confirmation dialog appears ("Delete 3 contacts? This cannot be undone."). Confirming deletes all 3. Table refreshes. Toast confirms deletion.
+**Priority:** P1
+
+#### UXAUDIT-053: Bulk delete confirmation required
+**Steps:** Click bulk delete.
+**Expected:** A confirmation dialog prevents accidental deletion. Cancel button returns to the table without deleting.
+**Priority:** P0
+
+#### UXAUDIT-054: Bulk delete cascades correctly
+**Steps:** Delete contacts that have associated communications and journey enrollments.
+**Expected:** Associated records are cascade-deleted or orphaned gracefully. No foreign key constraint errors.
+**Priority:** P1
+
+#### UXAUDIT-055: Bulk action bar shows selection count
+**Steps:** Select contacts one by one.
+**Expected:** Bar updates count in real time: "1 selected", "2 selected", etc. Deselecting updates count down.
+**Priority:** P2
+
+#### UXAUDIT-056: Select all selects current page only
+**Steps:** Click "Select All" checkbox in table header.
+**Expected:** Only rows on the current page are selected (not all pages). A note may say "All 10 on this page selected".
+**Priority:** P2
+
+#### UXAUDIT-057: Bulk operations disabled with 0 selections
+**Steps:** Load contacts page without selecting any rows.
+**Expected:** Bulk action bar is not visible. Or buttons are disabled/greyed out.
+**Priority:** P2
+
+#### UXAUDIT-058: Bulk stage change error handling
+**Steps:** Simulate a server error during bulk stage change (e.g., network offline).
+**Expected:** Error toast displayed. No partial updates applied (atomic operation). Selection preserved for retry.
+**Priority:** P2
+
+#### UXAUDIT-059: CSV export handles special characters
+**Steps:** Export contacts with names containing commas, quotes, and Unicode characters.
+**Expected:** CSV properly escapes values with double quotes. Unicode preserved. File opens correctly in Excel.
+**Priority:** P2
+
+#### UXAUDIT-060: Bulk delete does not affect unselected contacts
+**Steps:** Select 3 of 20 contacts. Delete.
+**Expected:** Exactly 3 contacts removed. Remaining 17 untouched. Table refreshes to show 17.
+**Priority:** P1
+
+### Sprint 6: Print Styles — 5 Tests
+
+#### UXAUDIT-061: Print hides navigation elements
+**Story:** As a realtor, I want clean printouts of CRM data without UI chrome.
+**Steps:** Open print preview (Cmd+P) on `/contacts`.
+**Expected:** Sidebar, top header, bottom mobile nav, and bulk action bar are hidden via `@media print` rules. Only the data table content prints.
+**Priority:** P1
+
+#### UXAUDIT-062: Print hides interactive controls
+**Steps:** Open print preview on `/listings/[id]`.
+**Expected:** Action buttons, filter dropdowns, search inputs, and toggle switches are hidden. Static data (address, price, status, documents) remains visible.
+**Priority:** P1
+
+#### UXAUDIT-063: Print layout uses full page width
+**Steps:** Print preview any detail page.
+**Expected:** Content expands to full page width (no sidebar gap). Margins are reasonable for paper. Text is black on white.
+**Priority:** P2
+
+#### UXAUDIT-064: Print preserves data tables
+**Steps:** Print preview `/contacts` with data loaded.
+**Expected:** Contact table rows are visible and properly formatted. Column headers present. No truncated text. Pagination controls hidden but all visible-page data prints.
+**Priority:** P1
+
+#### UXAUDIT-065: Print adds page URL in footer
+**Steps:** Print any page.
+**Expected:** Browser default print footer shows the page URL. No custom print footer conflicts with data. Page breaks between major sections if content spans multiple pages.
+**Priority:** P3
+
+---
+
+## CATEGORY 19: SETTINGS & UTILITY API ENDPOINTS — 5 Tests
+
+> Added 2026-04-13 to cover settings integrations, bulk task operations, and calendar availability.
+
+#### API-SETTINGS-001: GET /api/settings/integrations returns integration list
+**Steps:** `GET /api/settings/integrations` with valid session.
+**Expected:** 200 with array of integration configs (Google Calendar, Twilio, etc.) and connection status.
+**Priority:** P2
+
+#### API-SETTINGS-002: POST /api/settings/integrations/:provider/test validates connection
+**Steps:** `POST /api/settings/integrations/google_calendar/test` with valid session.
+**Expected:** 200 with `{ connected: true/false }`. Returns 401 without session. Returns 404 for unknown provider.
+**Priority:** P2
+
+#### API-SETTINGS-003: PUT /api/settings/integrations/:provider saves config
+**Steps:** `PUT /api/settings/integrations/twilio` with `{ account_sid, auth_token }`.
+**Expected:** 200 on valid config. 422 on missing required fields. Credentials stored securely (not in response).
+**Priority:** P2
+
+#### API-TASKS-001: POST /api/tasks/bulk-complete marks multiple tasks done
+**Steps:** `POST /api/tasks/bulk-complete` with `{ task_ids: ["id1", "id2"] }`.
+**Expected:** 200 with `{ updated: 2 }`. Tasks status set to "completed". Returns 400 for empty array. Respects tenant isolation.
+**Priority:** P1
+
+#### API-CALENDAR-001: GET /api/calendar/busy returns busy slots
+**Steps:** `GET /api/calendar/busy?start=2026-04-13&end=2026-04-14` with valid session.
+**Expected:** 200 with array of `{ start, end }` busy time slots from connected calendar. Returns empty array if no calendar connected.
+**Priority:** P2
+
+---
+
+### Category 20: Calendar Events API
+
+#### API-CALEVT-001: GET /api/calendar/events returns calendar events
+**Steps:** `GET /api/calendar/events?start=2026-04-13&end=2026-04-20` with valid session and connected Google Calendar.
+**Expected:** 200 with array of calendar event objects. Returns 401 without session.
+**Priority:** P1
+
+---
+
+### Category 21: OAuth API
+
+#### API-OAUTH-001: POST /api/oauth/token exchanges auth code for tokens
+**Steps:** `POST /api/oauth/token` with `{ code, redirect_uri }`.
+**Expected:** 200 with `{ access_token, refresh_token }`. Returns 400 for invalid/missing code.
+**Priority:** P1
+
+#### API-OAUTH-002: POST /api/oauth/revoke revokes OAuth token
+**Steps:** `POST /api/oauth/revoke` with `{ token }` and valid session.
+**Expected:** 200 on successful revocation. Returns 400 for missing token.
+**Priority:** P2
+
+#### API-OAUTH-003: GET /api/oauth/authorize redirects to provider consent screen
+**Steps:** `GET /api/oauth/authorize?provider=google` with valid session.
+**Expected:** 302 redirect to Google OAuth consent URL with correct scopes and state parameter.
+**Priority:** P1
+
+---
+
+### Category 22: Forms API
+
+#### API-FORMS-001: POST /api/forms/complete marks form as complete
+**Steps:** `POST /api/forms/complete` with `{ listing_id, form_key }` and valid session.
+**Expected:** 200 with updated form status. Returns 404 for invalid listing_id.
+**Priority:** P1
+
+#### API-FORMS-002: POST /api/forms/fill fills form with listing data
+**Steps:** `POST /api/forms/fill` with `{ listing_id, form_key }` and valid session.
+**Expected:** 200 with pre-filled form HTML. Returns 400 for missing fields.
+**Priority:** P1
+
+#### API-FORMS-003: PUT /api/forms/templates/:formKey/mapping updates field mapping
+**Steps:** `PUT /api/forms/templates/DORTS/mapping` with `{ field_map: {...} }`.
+**Expected:** 200 with updated mapping. Returns 404 for unknown formKey.
+**Priority:** P2
+
+#### API-FORMS-004: GET /api/forms/templates returns available form templates
+**Steps:** `GET /api/forms/templates` with valid session.
+**Expected:** 200 with array of form template objects including formKey, name, and field count.
+**Priority:** P2
+
+#### API-FORMS-005: POST /api/forms/templates creates a new form template
+**Steps:** `POST /api/forms/templates` with `{ name, formKey, fields }`.
+**Expected:** 201 with created template. Returns 409 for duplicate formKey.
+**Priority:** P2
+
+#### API-FORMS-006: POST /api/forms/templates/sync syncs templates from form server
+**Steps:** `POST /api/forms/templates/sync` with valid session.
+**Expected:** 200 with `{ synced: N }` count. Returns 502 if form server unreachable.
+**Priority:** P3
+
+#### API-FORMS-007: POST /api/forms/save saves form draft
+**Steps:** `POST /api/forms/save` with `{ listing_id, form_key, data }`.
+**Expected:** 200 with saved draft confirmation. Returns 400 for missing listing_id.
+**Priority:** P1
+
+---
+
+### Category 23: Newsletter Edit/Preview API
+
+#### API-NLEDIT-001: POST /api/newsletters/edit updates newsletter content
+**Steps:** `POST /api/newsletters/edit` with `{ id, subject, body_html }` and valid session.
+**Expected:** 200 with updated newsletter. Returns 404 for invalid id. Respects tenant isolation.
+**Priority:** P1
+
+#### API-NLPREV-001: GET /api/newsletters/preview/:id returns rendered preview
+**Steps:** `GET /api/newsletters/preview/{valid_id}` with valid session.
+**Expected:** 200 with rendered HTML preview. Returns 404 for invalid id.
+**Priority:** P2
+
+---
+
+### Category 24: English Tutor API
+
+#### API-TUTOR-001: POST /api/english-tutor/auth/register registers a new tutor user
+**Steps:** `POST /api/english-tutor/auth/register` with `{ email, password, name }`.
+**Expected:** 201 with user profile. Returns 409 for duplicate email. Returns 400 for missing fields.
+**Priority:** P1
+
+#### API-TUTOR-002: GET /api/english-tutor/sessions lists tutor sessions
+**Steps:** `GET /api/english-tutor/sessions` with valid session.
+**Expected:** 200 with array of session objects sorted by created_at desc.
+**Priority:** P1
+
+#### API-TUTOR-003: POST /api/english-tutor/sessions creates a new session
+**Steps:** `POST /api/english-tutor/sessions` with `{ topic, level }`.
+**Expected:** 201 with new session object including id and initial prompt.
+**Priority:** P1
+
+#### API-TUTOR-004: POST /api/english-tutor/sessions/:id/message sends a message in session
+**Steps:** `POST /api/english-tutor/sessions/{id}/message` with `{ content }`.
+**Expected:** 200 with AI response message. Returns 404 for invalid session id.
+**Priority:** P1
+
+#### API-TUTOR-005: GET /api/english-tutor/sessions/:id returns session detail
+**Steps:** `GET /api/english-tutor/sessions/{id}` with valid session.
+**Expected:** 200 with session object and message history. Returns 404 for invalid id.
+**Priority:** P2
+
+#### API-TUTOR-006: PATCH /api/english-tutor/sessions/:id updates session metadata
+**Steps:** `PATCH /api/english-tutor/sessions/{id}` with `{ title }`.
+**Expected:** 200 with updated session. Returns 404 for invalid id.
+**Priority:** P3
+
+#### API-TUTOR-007: GET /api/english-tutor/sessions/:id/report returns session report
+**Steps:** `GET /api/english-tutor/sessions/{id}/report` with valid session.
+**Expected:** 200 with grammar/vocabulary analysis report. Returns 404 for invalid session.
+**Priority:** P2
+
+#### API-TUTOR-008: PATCH /api/english-tutor/sessions/:id/report updates session report
+**Steps:** `PATCH /api/english-tutor/sessions/{id}/report` with `{ feedback }`.
+**Expected:** 200 with updated report. Returns 404 for invalid session.
+**Priority:** P3
+
+#### API-TUTOR-009: GET /api/english-tutor/profile returns user profile
+**Steps:** `GET /api/english-tutor/profile` with valid session.
+**Expected:** 200 with user profile including level, streak, and preferences.
+**Priority:** P2
+
+#### API-TUTOR-010: PATCH /api/english-tutor/profile updates user profile
+**Steps:** `PATCH /api/english-tutor/profile` with `{ level: "intermediate" }`.
+**Expected:** 200 with updated profile. Returns 400 for invalid level value.
+**Priority:** P2
+
+#### API-TUTOR-011: GET /api/english-tutor/profile/history returns learning history
+**Steps:** `GET /api/english-tutor/profile/history` with valid session.
+**Expected:** 200 with array of past sessions and progress metrics.
+**Priority:** P3
+
+---
+
+### Category 25: Address Autocomplete API
+
+#### API-ADDR-001: GET /api/address-autocomplete returns address suggestions
+**Steps:** `GET /api/address-autocomplete?q=123+Main` with valid session.
+**Expected:** 200 with array of address suggestions. Returns empty array for no matches. Returns 400 for missing query.
+**Priority:** P1
+
+---
+
+### Category 26: Listings Extended API
+
+#### API-LSTEXT-001: GET /api/listings/previous-data returns previous listing data
+**Steps:** `GET /api/listings/previous-data?address=123+Main+St` with valid session.
+**Expected:** 200 with historical listing data for the address. Returns empty object if no history found.
+**Priority:** P2
+
+#### API-LSTEXT-002: GET /api/listings/:id/open-houses/visitors returns open house visitors
+**Steps:** `GET /api/listings/{id}/open-houses/visitors` with valid session.
+**Expected:** 200 with array of visitor records. Returns 404 for invalid listing id.
+**Priority:** P2
+
+#### API-LSTEXT-003: POST /api/listings/:id/open-houses/visitors adds a visitor
+**Steps:** `POST /api/listings/{id}/open-houses/visitors` with `{ name, email, phone }`.
+**Expected:** 201 with created visitor record. Returns 400 for missing name.
+**Priority:** P1
+
+#### API-LSTEXT-004: DELETE /api/listings/:id/open-houses/visitors removes a visitor
+**Steps:** `DELETE /api/listings/{id}/open-houses/visitors?visitor_id={vid}`.
+**Expected:** 200 on success. Returns 404 for invalid visitor_id.
+**Priority:** P3
+
+#### API-LSTEXT-005: GET /api/listings/:id/open-houses returns open houses for listing
+**Steps:** `GET /api/listings/{id}/open-houses` with valid session.
+**Expected:** 200 with array of open house events. Returns 404 for invalid listing id.
+**Priority:** P1
+
+#### API-LSTEXT-006: POST /api/listings/:id/open-houses creates an open house
+**Steps:** `POST /api/listings/{id}/open-houses` with `{ date, start_time, end_time }`.
+**Expected:** 201 with created open house. Returns 400 for missing date/time.
+**Priority:** P1
+
+#### API-LSTEXT-007: PATCH /api/listings/:id/open-houses updates an open house
+**Steps:** `PATCH /api/listings/{id}/open-houses` with `{ open_house_id, end_time }`.
+**Expected:** 200 with updated open house. Returns 404 for invalid open_house_id.
+**Priority:** P2
+
+#### API-LSTEXT-008: DELETE /api/listings/:id/open-houses deletes an open house
+**Steps:** `DELETE /api/listings/{id}/open-houses?open_house_id={ohid}`.
+**Expected:** 200 on success. Returns 404 for invalid open_house_id.
+**Priority:** P3
+
+#### API-LSTEXT-009: POST /api/listings/:id/enrich triggers data enrichment
+**Steps:** `POST /api/listings/{id}/enrich` with valid session.
+**Expected:** 200 with enrichment results (geo, parcel, assessment). Returns 404 for invalid listing id.
+**Priority:** P1
+
+#### API-LSTEXT-010: GET /api/listings/:id/mls-data returns MLS data
+**Steps:** `GET /api/listings/{id}/mls-data` with valid session.
+**Expected:** 200 with MLS fields (remarks, photos, status). Returns 404 for invalid listing id.
+**Priority:** P2
+
+#### API-LSTEXT-011: GET /api/listings/:id/stats returns listing statistics
+**Steps:** `GET /api/listings/{id}/stats` with valid session.
+**Expected:** 200 with stats (views, inquiries, showings count). Returns 404 for invalid listing id.
+**Priority:** P2
+
+#### API-LSTEXT-012: POST /api/listings/:id/stats records a stat event
+**Steps:** `POST /api/listings/{id}/stats` with `{ event_type: "view" }`.
+**Expected:** 200 with updated stats. Returns 400 for invalid event_type.
+**Priority:** P3
+
+#### API-LSTEXT-013: POST /api/listings/import imports listings from external source
+**Steps:** `POST /api/listings/import` with `{ source: "csv", data: [...] }`.
+**Expected:** 200 with `{ imported: N, errors: [] }`. Returns 400 for invalid format.
+**Priority:** P2
+
+---
+
+### Category 27: Contacts Extended API
+
+#### API-CTEXT-001: POST /api/contacts/instructions saves contact-specific instructions
+**Steps:** `POST /api/contacts/instructions` with `{ contact_id, instructions }`.
+**Expected:** 200 with saved instructions. Returns 404 for invalid contact_id.
+**Priority:** P2
+
+#### API-CTEXT-002: DELETE /api/contacts/instructions removes contact instructions
+**Steps:** `DELETE /api/contacts/instructions?contact_id={id}`.
+**Expected:** 200 on success. Returns 404 for invalid contact_id.
+**Priority:** P3
+
+#### API-CTEXT-003: POST /api/contacts/context adds context to a contact
+**Steps:** `POST /api/contacts/context` with `{ contact_id, context }`.
+**Expected:** 200 with updated context. Returns 404 for invalid contact_id.
+**Priority:** P2
+
+#### API-CTEXT-004: PATCH /api/contacts/context updates contact context
+**Steps:** `PATCH /api/contacts/context` with `{ contact_id, context }`.
+**Expected:** 200 with updated context. Returns 404 for invalid contact_id.
+**Priority:** P2
+
+#### API-CTEXT-005: POST /api/contacts/import-vcard imports contacts from vCard file
+**Steps:** `POST /api/contacts/import-vcard` with multipart vCard file upload.
+**Expected:** 200 with `{ imported: N, skipped: M }`. Returns 400 for invalid file format.
+**Priority:** P1
+
+#### API-CTEXT-006: POST /api/contacts/log-interaction logs a contact interaction
+**Steps:** `POST /api/contacts/log-interaction` with `{ contact_id, type, notes }`.
+**Expected:** 200 with created interaction record. Returns 404 for invalid contact_id.
+**Priority:** P1
+
+#### API-CTEXT-007: GET /api/contacts/import-gmail lists Gmail contacts for import
+**Steps:** `GET /api/contacts/import-gmail` with valid session and connected Google account.
+**Expected:** 200 with array of Gmail contacts. Returns 401 if Google not connected.
+**Priority:** P2
+
+#### API-CTEXT-008: POST /api/contacts/import-gmail imports selected Gmail contacts
+**Steps:** `POST /api/contacts/import-gmail` with `{ contact_ids: [...] }`.
+**Expected:** 200 with `{ imported: N }`. Skips duplicates by email.
+**Priority:** P2
+
+#### API-CTEXT-009: POST /api/contacts/import-native imports contacts from device
+**Steps:** `POST /api/contacts/import-native` with `{ contacts: [...] }`.
+**Expected:** 200 with `{ imported: N, skipped: M }`. Returns 400 for empty array.
+**Priority:** P2
+
+#### API-CTEXT-010: PATCH /api/contacts/journey updates contact journey phase
+**Steps:** `PATCH /api/contacts/journey` with `{ contact_id, journey_id, phase }`.
+**Expected:** 200 with updated journey state. Returns 404 for invalid contact_id.
+**Priority:** P1
+
+#### API-CTEXT-011: POST /api/contacts/sync/google syncs contacts with Google
+**Steps:** `POST /api/contacts/sync/google` with valid session.
+**Expected:** 200 with `{ synced: N, created: M, updated: K }`. Returns 401 if not connected.
+**Priority:** P2
+
+#### API-CTEXT-012: GET /api/contacts/sync/sources returns available sync sources
+**Steps:** `GET /api/contacts/sync/sources` with valid session.
+**Expected:** 200 with array of sources (google, fub) and their connection status.
+**Priority:** P2
+
+#### API-CTEXT-013: POST /api/contacts/sync/fub syncs contacts with Follow Up Boss
+**Steps:** `POST /api/contacts/sync/fub` with valid session and FUB API key configured.
+**Expected:** 200 with `{ synced: N }`. Returns 401 if FUB not configured.
+**Priority:** P2
+
+#### API-CTEXT-014: GET /api/contacts/export exports contacts as CSV
+**Steps:** `GET /api/contacts/export?format=csv` with valid session.
+**Expected:** 200 with CSV file download. Respects tenant isolation.
+**Priority:** P1
+
+#### API-CTEXT-015: POST /api/contacts/:id/upgrade-indirect upgrades indirect contact
+**Steps:** `POST /api/contacts/{id}/upgrade-indirect` with valid session.
+**Expected:** 200 with upgraded contact (type changed from indirect to direct). Returns 404 for invalid id.
+**Priority:** P2
+
+#### API-CTEXT-016: GET /api/contacts/:id/property-deals returns contact's property deals
+**Steps:** `GET /api/contacts/{id}/property-deals` with valid session.
+**Expected:** 200 with array of deal objects linked to the contact. Returns 404 for invalid id.
+**Priority:** P2
+
+#### API-CTEXT-017: POST /api/contacts/:id/property-deals creates a property deal for contact
+**Steps:** `POST /api/contacts/{id}/property-deals` with `{ address, type, status }`.
+**Expected:** 201 with created deal. Returns 400 for missing fields.
+**Priority:** P1
+
+#### API-CTEXT-018: PATCH /api/contacts/:id/property-deals updates a property deal
+**Steps:** `PATCH /api/contacts/{id}/property-deals` with `{ deal_id, status }`.
+**Expected:** 200 with updated deal. Returns 404 for invalid deal_id.
+**Priority:** P2
+
+#### API-CTEXT-019: DELETE /api/contacts/:id/property-deals removes a property deal
+**Steps:** `DELETE /api/contacts/{id}/property-deals?deal_id={did}`.
+**Expected:** 200 on success. Returns 404 for invalid deal_id.
+**Priority:** P3
+
+#### API-CTEXT-020: GET /api/contacts/:id/dates returns important dates for contact
+**Steps:** `GET /api/contacts/{id}/dates` with valid session.
+**Expected:** 200 with array of date objects (birthday, anniversary, etc.).
+**Priority:** P2
+
+#### API-CTEXT-021: POST /api/contacts/:id/dates adds an important date
+**Steps:** `POST /api/contacts/{id}/dates` with `{ type: "birthday", date: "1990-05-15" }`.
+**Expected:** 201 with created date record. Returns 400 for invalid date format.
+**Priority:** P1
+
+#### API-CTEXT-022: DELETE /api/contacts/:id/dates removes an important date
+**Steps:** `DELETE /api/contacts/{id}/dates?date_id={did}`.
+**Expected:** 200 on success. Returns 404 for invalid date_id.
+**Priority:** P3
+
+#### API-CTEXT-023: GET /api/contacts/:id/family returns family members
+**Steps:** `GET /api/contacts/{id}/family` with valid session.
+**Expected:** 200 with array of family member records.
+**Priority:** P2
+
+#### API-CTEXT-024: POST /api/contacts/:id/family adds a family member
+**Steps:** `POST /api/contacts/{id}/family` with `{ name, relationship }`.
+**Expected:** 201 with created family member. Returns 400 for missing name.
+**Priority:** P1
+
+#### API-CTEXT-025: PATCH /api/contacts/:id/family updates a family member
+**Steps:** `PATCH /api/contacts/{id}/family` with `{ member_id, name }`.
+**Expected:** 200 with updated member. Returns 404 for invalid member_id.
+**Priority:** P3
+
+#### API-CTEXT-026: DELETE /api/contacts/:id/family removes a family member
+**Steps:** `DELETE /api/contacts/{id}/family?member_id={mid}`.
+**Expected:** 200 on success. Returns 404 for invalid member_id.
+**Priority:** P3
+
+#### API-CTEXT-027: GET /api/contacts/:id/portfolio returns portfolio properties
+**Steps:** `GET /api/contacts/{id}/portfolio` with valid session.
+**Expected:** 200 with array of portfolio items (address, city, property_type, status). Returns 401 without session.
+**Priority:** P2
+
+#### API-CTEXT-028: POST /api/contacts/:id/portfolio adds a portfolio property
+**Steps:** `POST /api/contacts/{id}/portfolio` with `{ address: "123 Main St", city: "Vancouver", property_type: "detached", status: "owned" }`.
+**Expected:** 201 with created portfolio record. Returns 400 for missing address. Respects tenant isolation.
+**Priority:** P2
+
+#### API-CTEXT-029: DELETE /api/contacts/:id/portfolio removes a portfolio property
+**Steps:** `DELETE /api/contacts/{id}/portfolio?item_id={pid}`.
+**Expected:** 200 on success. Returns 400 for missing item_id. Returns 404 for invalid item_id.
+**Priority:** P3
+
+#### API-CTEXT-030: GET /api/contacts/:id/activities returns contact activity log
+**Steps:** `GET /api/contacts/{id}/activities` with valid session.
+**Expected:** 200 with array of activity records sorted by date desc. Returns 404 for invalid id.
+**Priority:** P2
+
+#### API-CTEXT-028: POST /api/contacts/import bulk imports contacts
+**Steps:** `POST /api/contacts/import` with `{ contacts: [{name, email, phone}...] }`.
+**Expected:** 200 with `{ imported: N, errors: [] }`. Skips duplicates by email.
+**Priority:** P1
+
+#### API-CTEXT-029: GET /api/contacts/upcoming-dates returns upcoming important dates
+**Steps:** `GET /api/contacts/upcoming-dates?days=30` with valid session.
+**Expected:** 200 with array of upcoming dates (birthdays, anniversaries) within range.
+**Priority:** P2
+
+#### API-CTEXT-030: POST /api/contacts/watchlist adds contact to watchlist
+**Steps:** `POST /api/contacts/watchlist` with `{ contact_id }`.
+**Expected:** 200 on success. Returns 409 if already on watchlist.
+**Priority:** P2
+
+#### API-CTEXT-031: DELETE /api/contacts/watchlist removes contact from watchlist
+**Steps:** `DELETE /api/contacts/watchlist?contact_id={id}`.
+**Expected:** 200 on success. Returns 404 if not on watchlist.
+**Priority:** P2
+
+---
+
+### Category 28: Kling AI API
+
+#### API-KLING-001: GET /api/kling/status polls Kling AI task status
+**Steps:** `GET /api/kling/status?task_id={tid}` with valid session.
+**Expected:** 200 with `{ status, output_url }`. Returns pending/processing/completed/failed. Returns 400 for missing task_id.
+**Priority:** P1
+
+---
+
+### Category 29: Workflows API
+
+#### API-WFLOW-001: GET /api/workflows/reengagement returns re-engagement campaigns
+**Steps:** `GET /api/workflows/reengagement` with valid session.
+**Expected:** 200 with array of re-engagement workflow objects.
+**Priority:** P2
+
+#### API-WFLOW-002: POST /api/workflows/reengagement creates a re-engagement workflow
+**Steps:** `POST /api/workflows/reengagement` with `{ name, trigger_days, template_id }`.
+**Expected:** 201 with created workflow. Returns 400 for missing fields.
+**Priority:** P2
+
+#### API-WFLOW-003: GET /api/workflows/process returns pending workflow steps
+**Steps:** `GET /api/workflows/process` with valid session.
+**Expected:** 200 with array of pending workflow steps to process.
+**Priority:** P2
+
+#### API-WFLOW-004: POST /api/workflows/process triggers workflow processing
+**Steps:** `POST /api/workflows/process` with valid session.
+**Expected:** 200 with `{ processed: N }`. Executes pending workflow steps.
+**Priority:** P1
+
+---
+
+### Category 30: Import Listing API
+
+#### API-IMPLST-001: POST /api/import-listing imports a listing from external data
+**Steps:** `POST /api/import-listing` with `{ mls_number, source }` and valid session.
+**Expected:** 200 with created listing. Returns 409 for duplicate mls_number. Returns 400 for missing fields.
+**Priority:** P1
+
+---
+
+### Category 31: Deals API
+
+#### API-DEALS-001: GET /api/deals/:id/mortgages returns deal mortgages
+**Steps:** `GET /api/deals/{id}/mortgages` with valid session.
+**Expected:** 200 with array of mortgage records. Returns 404 for invalid deal id.
+**Priority:** P2
+
+#### API-DEALS-002: POST /api/deals/:id/mortgages adds a mortgage to deal
+**Steps:** `POST /api/deals/{id}/mortgages` with `{ lender, amount, rate, term }`.
+**Expected:** 201 with created mortgage. Returns 400 for missing amount.
+**Priority:** P1
+
+#### API-DEALS-003: PATCH /api/deals/:id/mortgages updates a mortgage
+**Steps:** `PATCH /api/deals/{id}/mortgages` with `{ mortgage_id, rate }`.
+**Expected:** 200 with updated mortgage. Returns 404 for invalid mortgage_id.
+**Priority:** P2
+
+#### API-DEALS-004: DELETE /api/deals/:id/mortgages removes a mortgage
+**Steps:** `DELETE /api/deals/{id}/mortgages?mortgage_id={mid}`.
+**Expected:** 200 on success. Returns 404 for invalid mortgage_id.
+**Priority:** P3
+
+#### API-DEALS-005: GET /api/deals/:id returns deal detail
+**Steps:** `GET /api/deals/{id}` with valid session.
+**Expected:** 200 with deal object including parties, checklist, and mortgages. Returns 404 for invalid id.
+**Priority:** P1
+
+#### API-DEALS-006: PATCH /api/deals/:id updates deal
+**Steps:** `PATCH /api/deals/{id}` with `{ status: "conditional" }`.
+**Expected:** 200 with updated deal. Returns 404 for invalid id.
+**Priority:** P1
+
+#### API-DEALS-007: DELETE /api/deals/:id deletes a deal
+**Steps:** `DELETE /api/deals/{id}` with valid session.
+**Expected:** 200 on success. Cascades to parties, checklist, mortgages. Returns 404 for invalid id.
+**Priority:** P2
+
+#### API-DEALS-008: POST /api/deals/:id/parties adds a party to deal
+**Steps:** `POST /api/deals/{id}/parties` with `{ contact_id, role }`.
+**Expected:** 201 with created party. Returns 400 for missing role. Returns 409 for duplicate.
+**Priority:** P1
+
+#### API-DEALS-009: DELETE /api/deals/:id/parties removes a party from deal
+**Steps:** `DELETE /api/deals/{id}/parties?party_id={pid}`.
+**Expected:** 200 on success. Returns 404 for invalid party_id.
+**Priority:** P2
+
+#### API-DEALS-010: POST /api/deals/:id/checklist adds checklist item to deal
+**Steps:** `POST /api/deals/{id}/checklist` with `{ title, due_date }`.
+**Expected:** 201 with created checklist item. Returns 400 for missing title.
+**Priority:** P1
+
+#### API-DEALS-011: PATCH /api/deals/:id/checklist updates checklist item
+**Steps:** `PATCH /api/deals/{id}/checklist` with `{ item_id, completed: true }`.
+**Expected:** 200 with updated item. Returns 404 for invalid item_id.
+**Priority:** P1
+
+---
+
+### Category 32: User Data API
+
+#### API-USER-001: DELETE /api/user/data deletes user data (GDPR)
+**Steps:** `DELETE /api/user/data` with valid session and confirmation header.
+**Expected:** 200 with confirmation. Removes all user data across tables. Returns 401 without session.
+**Priority:** P1
+
+---
+
+### Category 33: RAG (Retrieval-Augmented Generation) API
+
+#### API-RAG-001: GET /api/rag/instant-search returns instant search results
+**Steps:** `GET /api/rag/instant-search?q=listing+downtown` with valid session.
+**Expected:** 200 with array of search results across all entity types. Returns empty array for no matches.
+**Priority:** P1
+
+#### API-RAG-002: POST /api/rag/chat sends a chat message to RAG
+**Steps:** `POST /api/rag/chat` with `{ message: "What listings are active?" }`.
+**Expected:** 200 with `{ response, sources }`. AI response with cited sources.
+**Priority:** P1
+
+#### API-RAG-003: POST /api/rag/ingest ingests documents into RAG index
+**Steps:** `POST /api/rag/ingest` with `{ type: "listing", id }`.
+**Expected:** 200 with `{ indexed: true }`. Returns 404 for invalid entity.
+**Priority:** P2
+
+#### API-RAG-004: GET /api/rag/compliance returns compliance audit data
+**Steps:** `GET /api/rag/compliance` with valid session.
+**Expected:** 200 with compliance status (data retention, consent tracking).
+**Priority:** P2
+
+#### API-RAG-005: DELETE /api/rag/compliance deletes compliance records
+**Steps:** `DELETE /api/rag/compliance?before=2025-01-01` with valid session.
+**Expected:** 200 with `{ deleted: N }`. Returns 400 for missing date parameter.
+**Priority:** P3
+
+#### API-RAG-006: POST /api/rag/feedback submits feedback on RAG response
+**Steps:** `POST /api/rag/feedback` with `{ chat_id, rating, comment }`.
+**Expected:** 200 on success. Returns 400 for missing chat_id.
+**Priority:** P2
+
+#### API-RAG-007: POST /api/rag/search performs semantic search
+**Steps:** `POST /api/rag/search` with `{ query, filters: { type: "contact" } }`.
+**Expected:** 200 with ranked search results. Returns empty array for no matches.
+**Priority:** P1
+
+#### API-RAG-008: GET /api/rag/knowledge lists knowledge articles
+**Steps:** `GET /api/rag/knowledge` with valid session.
+**Expected:** 200 with array of knowledge articles sorted by updated_at desc.
+**Priority:** P2
+
+#### API-RAG-009: POST /api/rag/knowledge creates a knowledge article
+**Steps:** `POST /api/rag/knowledge` with `{ title, content, category }`.
+**Expected:** 201 with created article. Returns 400 for missing title.
+**Priority:** P2
+
+#### API-RAG-010: PATCH /api/rag/knowledge/:id updates a knowledge article
+**Steps:** `PATCH /api/rag/knowledge/{id}` with `{ content }`.
+**Expected:** 200 with updated article. Returns 404 for invalid id.
+**Priority:** P2
+
+#### API-RAG-011: DELETE /api/rag/knowledge/:id deletes a knowledge article
+**Steps:** `DELETE /api/rag/knowledge/{id}` with valid session.
+**Expected:** 200 on success. Returns 404 for invalid id.
+**Priority:** P3
+
+#### API-RAG-012: DELETE /api/rag/delete-my-data removes user's RAG data
+**Steps:** `DELETE /api/rag/delete-my-data` with valid session.
+**Expected:** 200 with confirmation. Removes all indexed data for the user.
+**Priority:** P1
+
+#### API-RAG-013: POST /api/rag/delete-my-data requests data deletion (async)
+**Steps:** `POST /api/rag/delete-my-data` with valid session.
+**Expected:** 202 with `{ request_id }`. Queues deletion for background processing.
+**Priority:** P1
+
+#### API-RAG-014: POST /api/rag/chat-stream streams a RAG chat response
+**Steps:** `POST /api/rag/chat-stream` with `{ message }` and `Accept: text/event-stream`.
+**Expected:** 200 with SSE stream of response chunks. Returns 400 for missing message.
+**Priority:** P1
+
+#### API-RAG-015: GET /api/rag/export exports RAG data
+**Steps:** `GET /api/rag/export?format=json` with valid session.
+**Expected:** 200 with exported data file. Respects tenant isolation.
+**Priority:** P2
+
+#### API-RAG-016: GET /api/rag/stats returns RAG usage statistics
+**Steps:** `GET /api/rag/stats` with valid session.
+**Expected:** 200 with `{ total_queries, avg_response_time, top_topics }`.
+**Priority:** P3
+
+---
+
+### Category 34: Consent API
+
+#### API-CONSENT-001: GET /api/consent/reconfirm returns contacts needing consent reconfirmation
+**Steps:** `GET /api/consent/reconfirm` with valid session.
+**Expected:** 200 with array of contacts whose CASL consent is expiring or expired.
+**Priority:** P1
+
+---
+
+### Category 35: Mortgages API
+
+#### API-MORT-001: GET /api/mortgages/renewals returns upcoming mortgage renewals
+**Steps:** `GET /api/mortgages/renewals?days=90` with valid session.
+**Expected:** 200 with array of mortgages approaching renewal date. Sorted by renewal_date asc.
+**Priority:** P1
+
+---
+
+### Category 36: Voice Agent API
+
+#### API-VOICE-001: GET /api/voice-agent/calls returns voice call history
+**Steps:** `GET /api/voice-agent/calls` with valid session.
+**Expected:** 200 with array of call records sorted by created_at desc.
+**Priority:** P2
+
+#### API-VOICE-002: POST /api/voice-agent/calls initiates a voice call
+**Steps:** `POST /api/voice-agent/calls` with `{ contact_id, purpose }`.
+**Expected:** 201 with call record including call_id. Returns 404 for invalid contact_id.
+**Priority:** P1
+
+#### API-VOICE-003: GET /api/voice-agent/offers lists offers
+**Steps:** `GET /api/voice-agent/offers` with valid session.
+**Expected:** 200 with array of offer objects.
+**Priority:** P2
+
+#### API-VOICE-004: POST /api/voice-agent/offers creates an offer
+**Steps:** `POST /api/voice-agent/offers` with `{ listing_id, buyer_id, amount }`.
+**Expected:** 201 with created offer. Returns 400 for missing fields.
+**Priority:** P1
+
+#### API-VOICE-005: GET /api/voice-agent/offers/:id returns offer detail
+**Steps:** `GET /api/voice-agent/offers/{id}` with valid session.
+**Expected:** 200 with offer object. Returns 404 for invalid id.
+**Priority:** P2
+
+#### API-VOICE-006: PATCH /api/voice-agent/offers/:id updates offer
+**Steps:** `PATCH /api/voice-agent/offers/{id}` with `{ status: "accepted" }`.
+**Expected:** 200 with updated offer. Returns 404 for invalid id.
+**Priority:** P1
+
+#### API-VOICE-007: GET /api/voice-agent/tasks lists agent tasks
+**Steps:** `GET /api/voice-agent/tasks` with valid session.
+**Expected:** 200 with array of task objects.
+**Priority:** P2
+
+#### API-VOICE-008: POST /api/voice-agent/tasks creates an agent task
+**Steps:** `POST /api/voice-agent/tasks` with `{ title, due_date }`.
+**Expected:** 201 with created task. Returns 400 for missing title.
+**Priority:** P1
+
+#### API-VOICE-009: PATCH /api/voice-agent/tasks/:id updates a task
+**Steps:** `PATCH /api/voice-agent/tasks/{id}` with `{ status: "done" }`.
+**Expected:** 200 with updated task. Returns 404 for invalid id.
+**Priority:** P1
+
+#### API-VOICE-010: DELETE /api/voice-agent/tasks/:id deletes a task
+**Steps:** `DELETE /api/voice-agent/tasks/{id}` with valid session.
+**Expected:** 200 on success. Returns 404 for invalid id.
+**Priority:** P2
+
+#### API-VOICE-011: GET /api/voice-agent/enrollments returns journey enrollments
+**Steps:** `GET /api/voice-agent/enrollments` with valid session.
+**Expected:** 200 with array of enrollment objects.
+**Priority:** P2
+
+#### API-VOICE-012: PATCH /api/voice-agent/enrollments updates enrollment status
+**Steps:** `PATCH /api/voice-agent/enrollments` with `{ enrollment_id, status }`.
+**Expected:** 200 with updated enrollment. Returns 404 for invalid enrollment_id.
+**Priority:** P2
+
+#### API-VOICE-013: GET /api/voice-agent/newsletters returns newsletters
+**Steps:** `GET /api/voice-agent/newsletters` with valid session.
+**Expected:** 200 with array of newsletter objects.
+**Priority:** P2
+
+#### API-VOICE-014: PATCH /api/voice-agent/newsletters updates newsletter
+**Steps:** `PATCH /api/voice-agent/newsletters` with `{ id, status }`.
+**Expected:** 200 with updated newsletter. Returns 404 for invalid id.
+**Priority:** P2
+
+#### API-VOICE-015: POST /api/voice-agent/daily-webhook receives daily webhook
+**Steps:** `POST /api/voice-agent/daily-webhook` with webhook payload.
+**Expected:** 200 on success. Triggers daily voice agent tasks.
+**Priority:** P2
+
+#### API-VOICE-016: GET /api/voice-agent/listings returns listings for voice agent
+**Steps:** `GET /api/voice-agent/listings` with valid session.
+**Expected:** 200 with array of listing summaries optimized for voice.
+**Priority:** P2
+
+#### API-VOICE-017: GET /api/voice-agent/listings/:id returns listing detail
+**Steps:** `GET /api/voice-agent/listings/{id}` with valid session.
+**Expected:** 200 with listing detail. Returns 404 for invalid id.
+**Priority:** P2
+
+#### API-VOICE-018: PATCH /api/voice-agent/listings/:id updates listing via voice
+**Steps:** `PATCH /api/voice-agent/listings/{id}` with `{ list_price }`.
+**Expected:** 200 with updated listing. Returns 404 for invalid id.
+**Priority:** P2
+
+#### API-VOICE-019: DELETE /api/voice-agent/listings/:id deletes listing via voice
+**Steps:** `DELETE /api/voice-agent/listings/{id}` with valid session.
+**Expected:** 200 on success. Returns 404 for invalid id.
+**Priority:** P3
+
+#### API-VOICE-020: GET /api/voice-agent/contacts returns contacts for voice agent
+**Steps:** `GET /api/voice-agent/contacts` with valid session.
+**Expected:** 200 with array of contact summaries.
+**Priority:** P2
+
+#### API-VOICE-021: POST /api/voice-agent/contacts creates contact via voice
+**Steps:** `POST /api/voice-agent/contacts` with `{ name, phone }`.
+**Expected:** 201 with created contact. Returns 400 for missing name.
+**Priority:** P1
+
+#### API-VOICE-022: GET /api/voice-agent/contacts/:id returns contact detail
+**Steps:** `GET /api/voice-agent/contacts/{id}` with valid session.
+**Expected:** 200 with contact object. Returns 404 for invalid id.
+**Priority:** P2
+
+#### API-VOICE-023: PATCH /api/voice-agent/contacts/:id updates contact via voice
+**Steps:** `PATCH /api/voice-agent/contacts/{id}` with `{ phone }`.
+**Expected:** 200 with updated contact. Returns 404 for invalid id.
+**Priority:** P2
+
+#### API-VOICE-024: DELETE /api/voice-agent/contacts/:id deletes contact via voice
+**Steps:** `DELETE /api/voice-agent/contacts/{id}` with valid session.
+**Expected:** 200 on success. Returns 404 for invalid id.
+**Priority:** P3
+
+#### API-VOICE-025: GET /api/voice-agent/showings returns showings
+**Steps:** `GET /api/voice-agent/showings` with valid session.
+**Expected:** 200 with array of showing objects.
+**Priority:** P2
+
+#### API-VOICE-026: POST /api/voice-agent/showings creates a showing via voice
+**Steps:** `POST /api/voice-agent/showings` with `{ listing_id, buyer_agent_name, start_time }`.
+**Expected:** 201 with created showing. Returns 400 for missing fields.
+**Priority:** P1
+
+#### API-VOICE-027: PATCH /api/voice-agent/showings/:id updates showing status
+**Steps:** `PATCH /api/voice-agent/showings/{id}` with `{ status: "confirmed" }`.
+**Expected:** 200 with updated showing. Returns 404 for invalid id.
+**Priority:** P1
+
+#### API-VOICE-028: GET /api/voice-agent/workflows returns workflows
+**Steps:** `GET /api/voice-agent/workflows` with valid session.
+**Expected:** 200 with array of workflow objects.
+**Priority:** P2
+
+#### API-VOICE-029: POST /api/voice-agent/workflows creates a workflow via voice
+**Steps:** `POST /api/voice-agent/workflows` with `{ name, trigger }`.
+**Expected:** 201 with created workflow. Returns 400 for missing name.
+**Priority:** P2
+
+#### API-VOICE-030: POST /api/voice-agent/google-webhook receives Google webhook
+**Steps:** `POST /api/voice-agent/google-webhook` with Google push notification payload.
+**Expected:** 200 on success. Processes calendar change notifications.
+**Priority:** P2
+
+#### API-VOICE-031: GET /api/voice-agent/deals returns deals
+**Steps:** `GET /api/voice-agent/deals` with valid session.
+**Expected:** 200 with array of deal summaries.
+**Priority:** P2
+
+#### API-VOICE-032: POST /api/voice-agent/deals creates a deal via voice
+**Steps:** `POST /api/voice-agent/deals` with `{ listing_id, buyer_id }`.
+**Expected:** 201 with created deal. Returns 400 for missing fields.
+**Priority:** P1
+
+#### API-VOICE-033: GET /api/voice-agent/deals/:id returns deal detail
+**Steps:** `GET /api/voice-agent/deals/{id}` with valid session.
+**Expected:** 200 with deal object. Returns 404 for invalid id.
+**Priority:** P2
+
+#### API-VOICE-034: PATCH /api/voice-agent/deals/:id updates deal via voice
+**Steps:** `PATCH /api/voice-agent/deals/{id}` with `{ status }`.
+**Expected:** 200 with updated deal. Returns 404 for invalid id.
+**Priority:** P2
+
+#### API-VOICE-035: DELETE /api/voice-agent/deals/:id deletes deal via voice
+**Steps:** `DELETE /api/voice-agent/deals/{id}` with valid session.
+**Expected:** 200 on success. Returns 404 for invalid id.
+**Priority:** P3
+
+#### API-VOICE-036: POST /api/voice-agent/rag queries RAG via voice
+**Steps:** `POST /api/voice-agent/rag` with `{ query }`.
+**Expected:** 200 with `{ answer, sources }`. Returns 400 for missing query.
+**Priority:** P1
+
+#### API-VOICE-037: POST /api/voice-agent/feedback submits voice session feedback
+**Steps:** `POST /api/voice-agent/feedback` with `{ session_id, rating }`.
+**Expected:** 200 on success. Returns 400 for missing session_id.
+**Priority:** P2
+
+#### API-VOICE-038: GET /api/voice-agent/sessions returns voice sessions
+**Steps:** `GET /api/voice-agent/sessions` with valid session.
+**Expected:** 200 with array of session objects.
+**Priority:** P2
+
+#### API-VOICE-039: POST /api/voice-agent/sessions creates a voice session
+**Steps:** `POST /api/voice-agent/sessions` with `{ platform: "alexa" }`.
+**Expected:** 201 with session object including session_id.
+**Priority:** P1
+
+#### API-VOICE-040: DELETE /api/voice-agent/sessions ends a voice session
+**Steps:** `DELETE /api/voice-agent/sessions?session_id={sid}`.
+**Expected:** 200 on success. Returns 404 for invalid session_id.
+**Priority:** P2
+
+#### API-VOICE-041: POST /api/voice-agent/draft-email drafts email via voice
+**Steps:** `POST /api/voice-agent/draft-email` with `{ contact_id, subject, body }`.
+**Expected:** 200 with draft email object. Returns 404 for invalid contact_id.
+**Priority:** P1
+
+#### API-VOICE-042: GET /api/voice-agent/households returns households
+**Steps:** `GET /api/voice-agent/households` with valid session.
+**Expected:** 200 with array of household objects.
+**Priority:** P2
+
+#### API-VOICE-043: POST /api/voice-agent/households creates a household
+**Steps:** `POST /api/voice-agent/households` with `{ name, address }`.
+**Expected:** 201 with created household. Returns 400 for missing name.
+**Priority:** P2
+
+#### API-VOICE-044: GET /api/voice-agent/households/:id returns household detail
+**Steps:** `GET /api/voice-agent/households/{id}` with valid session.
+**Expected:** 200 with household object and members. Returns 404 for invalid id.
+**Priority:** P2
+
+#### API-VOICE-045: PATCH /api/voice-agent/households/:id updates household
+**Steps:** `PATCH /api/voice-agent/households/{id}` with `{ address }`.
+**Expected:** 200 with updated household. Returns 404 for invalid id.
+**Priority:** P3
+
+#### API-VOICE-046: DELETE /api/voice-agent/households/:id deletes household
+**Steps:** `DELETE /api/voice-agent/households/{id}` with valid session.
+**Expected:** 200 on success. Returns 404 for invalid id.
+**Priority:** P3
+
+#### API-VOICE-047: GET /api/voice-agent/activities returns activities
+**Steps:** `GET /api/voice-agent/activities` with valid session.
+**Expected:** 200 with array of recent activity records.
+**Priority:** P2
+
+#### API-VOICE-048: POST /api/voice-agent/activities logs an activity via voice
+**Steps:** `POST /api/voice-agent/activities` with `{ type, description }`.
+**Expected:** 201 with created activity. Returns 400 for missing type.
+**Priority:** P2
+
+#### API-VOICE-049: GET /api/voice-agent/keys returns API keys
+**Steps:** `GET /api/voice-agent/keys` with valid session.
+**Expected:** 200 with array of API key objects (masked values).
+**Priority:** P2
+
+#### API-VOICE-050: POST /api/voice-agent/keys creates an API key
+**Steps:** `POST /api/voice-agent/keys` with `{ name, scopes }`.
+**Expected:** 201 with key object including full key (shown once). Returns 400 for missing name.
+**Priority:** P1
+
+#### API-VOICE-051: DELETE /api/voice-agent/keys revokes an API key
+**Steps:** `DELETE /api/voice-agent/keys?key_id={kid}`.
+**Expected:** 200 on success. Returns 404 for invalid key_id.
+**Priority:** P2
+
+#### API-VOICE-052: POST /api/voice-agent/alexa-webhook receives Alexa skill webhook
+**Steps:** `POST /api/voice-agent/alexa-webhook` with Alexa request payload.
+**Expected:** 200 with Alexa response JSON. Validates request signature.
+**Priority:** P1
+
+#### API-VOICE-053: POST /api/voice-agent/cortana-webhook receives Cortana webhook
+**Steps:** `POST /api/voice-agent/cortana-webhook` with Cortana request payload.
+**Expected:** 200 with response JSON. Validates authentication.
+**Priority:** P2
+
+#### API-VOICE-054: GET /api/voice-agent/relationships returns relationships
+**Steps:** `GET /api/voice-agent/relationships` with valid session.
+**Expected:** 200 with array of contact relationship objects.
+**Priority:** P2
+
+#### API-VOICE-055: POST /api/voice-agent/relationships creates a relationship
+**Steps:** `POST /api/voice-agent/relationships` with `{ from_id, to_id, type }`.
+**Expected:** 201 with created relationship. Returns 400 for missing fields.
+**Priority:** P2
+
+#### API-VOICE-056: DELETE /api/voice-agent/relationships removes a relationship
+**Steps:** `DELETE /api/voice-agent/relationships?id={rid}`.
+**Expected:** 200 on success. Returns 404 for invalid id.
+**Priority:** P3
+
+#### API-VOICE-057: GET /api/voice-agent/openapi.json returns OpenAPI spec
+**Steps:** `GET /api/voice-agent/openapi.json`.
+**Expected:** 200 with valid OpenAPI 3.0 JSON schema describing all voice agent endpoints.
+**Priority:** P3
+
+#### API-VOICE-058: GET /api/voice-agent/notifications/stream returns SSE notification stream
+**Steps:** `GET /api/voice-agent/notifications/stream` with `Accept: text/event-stream`.
+**Expected:** 200 with SSE stream. Sends heartbeat every 30s. Delivers real-time notifications.
+**Priority:** P2
+
+#### API-VOICE-059: GET /api/voice-agent/notifications returns notifications
+**Steps:** `GET /api/voice-agent/notifications` with valid session.
+**Expected:** 200 with array of notification objects.
+**Priority:** P2
+
+#### API-VOICE-060: PATCH /api/voice-agent/notifications marks notifications read
+**Steps:** `PATCH /api/voice-agent/notifications` with `{ ids: [...], is_read: true }`.
+**Expected:** 200 with `{ updated: N }`. Returns 400 for empty ids array.
+**Priority:** P2
+
+#### API-VOICE-061: GET /api/voice-agent/communications returns communications
+**Steps:** `GET /api/voice-agent/communications?contact_id={id}` with valid session.
+**Expected:** 200 with array of communication records.
+**Priority:** P2
+
+#### API-VOICE-062: POST /api/voice-agent/communications sends a communication
+**Steps:** `POST /api/voice-agent/communications` with `{ contact_id, channel, body }`.
+**Expected:** 201 with created communication record. Returns 400 for missing body.
+**Priority:** P1
+
+---
+
+### Category 37: Extension Tasks API
+
+#### API-EXTTASK-001: GET /api/extension-tasks returns extension tasks
+**Steps:** `GET /api/extension-tasks` with valid session.
+**Expected:** 200 with array of extension task objects. Respects tenant isolation.
+**Priority:** P2
+
+#### API-EXTTASK-002: POST /api/extension-tasks creates an extension task
+**Steps:** `POST /api/extension-tasks` with `{ title, type, payload }`.
+**Expected:** 201 with created task. Returns 400 for missing title.
+**Priority:** P1
+
+#### API-EXTTASK-003: PATCH /api/extension-tasks/:id updates an extension task
+**Steps:** `PATCH /api/extension-tasks/{id}` with `{ status: "completed" }`.
+**Expected:** 200 with updated task. Returns 404 for invalid id.
+**Priority:** P1
+
+---
+
+### Category 38: Smart Lists API
+
+#### API-SMLST-001: GET /api/smart-lists/counts returns smart list counts
+**Steps:** `GET /api/smart-lists/counts` with valid session.
+**Expected:** 200 with object of `{ list_id: count }` pairs for all saved smart lists.
+**Priority:** P1
+
+---
+
+### Category 39: Webhooks API
+
+#### API-WHOOK-001: POST /api/webhooks/lead-capture captures inbound lead
+**Steps:** `POST /api/webhooks/lead-capture` with `{ name, email, source, listing_id }`.
+**Expected:** 200 with created contact. Triggers speed-to-lead notification. Returns 400 for missing email.
+**Priority:** P1
+
+#### API-WHOOK-002: POST /api/webhooks/competitor-email processes competitor email webhook
+**Steps:** `POST /api/webhooks/competitor-email` with email payload.
+**Expected:** 200 on success. Parses competitor listing data from email content.
+**Priority:** P2
+
+#### API-WHOOK-003: POST /api/webhooks/twilio processes inbound Twilio SMS/WhatsApp
+**Steps:** `POST /api/webhooks/twilio` with Twilio webhook payload including `From`, `Body`.
+**Expected:** 200 with TwiML response. Processes YES/NO for showing confirmations. Logs to communications.
+**Priority:** P1
+
+---
+
+### Category 40: DDF (Data Distribution Facility) API
+
+#### API-DDF-001: GET /api/ddf/search searches DDF listings
+**Steps:** `GET /api/ddf/search?city=Vancouver&type=residential` with valid session.
+**Expected:** 200 with array of DDF listing results. Returns empty array for no matches.
+**Priority:** P2
+
+#### API-DDF-002: POST /api/ddf/sync syncs DDF data
+**Steps:** `POST /api/ddf/sync` with valid session.
+**Expected:** 200 with `{ synced: N, updated: M }`. Returns 502 if DDF feed unavailable.
+**Priority:** P2
+
+#### API-DDF-003: POST /api/ddf/import imports DDF listings into CRM
+**Steps:** `POST /api/ddf/import` with `{ listing_ids: [...] }`.
+**Expected:** 200 with `{ imported: N }`. Creates listings from DDF data. Returns 400 for empty array.
+**Priority:** P1
+
+---
+
+### Category 41: Reminders API
+
+#### API-REMIND-001: GET /api/reminders/upcoming returns upcoming reminders
+**Steps:** `GET /api/reminders/upcoming?days=7` with valid session.
+**Expected:** 200 with array of reminder objects sorted by due_date asc. Respects tenant isolation.
+**Priority:** P1
+
+---
+
+### Category 42: Onboarding API
+
+#### API-ONBOARD-001: POST /api/onboarding/upload-avatar uploads user avatar
+**Steps:** `POST /api/onboarding/upload-avatar` with multipart image file.
+**Expected:** 200 with `{ url }` of uploaded avatar. Returns 400 for invalid file type. Max 5MB.
+**Priority:** P2
+
+#### API-ONBOARD-002: POST /api/onboarding/nps submits NPS survey response
+**Steps:** `POST /api/onboarding/nps` with `{ score: 9, feedback: "Great!" }`.
+**Expected:** 200 on success. Score must be 0-10. Returns 400 for out-of-range score.
+**Priority:** P2
+
+#### API-ONBOARD-003: GET /api/onboarding/checklist returns onboarding checklist status
+**Steps:** `GET /api/onboarding/checklist` with valid session.
+**Expected:** 200 with array of checklist items and completion status.
+**Priority:** P1
+
+#### API-ONBOARD-004: POST /api/onboarding/checklist marks checklist item complete
+**Steps:** `POST /api/onboarding/checklist` with `{ item_id, completed: true }`.
+**Expected:** 200 with updated checklist. Returns 404 for invalid item_id.
+**Priority:** P1
+
+---
+
+### Category 43: Websites API
+
+#### API-WEBSITE-001: GET /api/websites/session returns website session
+**Steps:** `GET /api/websites/session?site_id={sid}` with valid visitor cookie.
+**Expected:** 200 with session object including visitor_id and site config.
+**Priority:** P2
+
+#### API-WEBSITE-002: POST /api/websites/session creates a website session
+**Steps:** `POST /api/websites/session` with `{ site_id, referrer }`.
+**Expected:** 201 with new session object. Sets visitor cookie.
+**Priority:** P2
+
+---
+
+### Category 44: Help API
+
+#### API-HELP-001: POST /api/help/feedback submits help/support feedback
+**Steps:** `POST /api/help/feedback` with `{ type: "bug", message: "Page not loading", page: "/listings" }`.
+**Expected:** 200 on success. Returns 400 for missing message. Stores feedback for review.
+**Priority:** P2
+
+---
+
+### Category 45: Website Sessions Actions (website-sessions)
+
+#### ACT-WEBSESS-001: Create and retrieve website session
+**Steps:** Call `createWebsiteSession({ site_id, referrer })`, then `getWebsiteSession(id)`.
+**Expected:** Session created with visitor_id. Retrieve returns matching session object.
+**Priority:** P2
+
+---
+
+### Category 46: Buyer Journeys Actions (buyer-journeys)
+
+#### ACT-BUYJ-001: Create and advance buyer journey
+**Steps:** Call `createBuyerJourney({ contact_id, journey_type })`, then `advanceBuyerJourney(id)`.
+**Expected:** Journey created with initial phase. Advance moves to next phase with audit log.
+**Priority:** P1
+
+---
+
+### Category 47: Control Panel Actions (control-panel)
+
+#### ACT-CTRL-001: Get and update control panel settings
+**Steps:** Call `getControlPanelSettings()`, then `updateControlPanelSettings({ feature_flags })`.
+**Expected:** Returns current settings. Update persists new flag values.
+**Priority:** P2
+
+---
+
+### Category 48: AI Onboarding Actions (ai-onboarding)
+
+#### ACT-AIONB-001: Run AI onboarding flow
+**Steps:** Call `startAIOnboarding({ persona, preferences })`.
+**Expected:** Returns personalized onboarding steps. Saves preferences to user profile.
+**Priority:** P2
+
+---
+
+### Category 49: Voice Calls Actions (voice-calls)
+
+#### ACT-VOICE-001: Initiate and list voice calls
+**Steps:** Call `initiateVoiceCall({ contact_id, phone })`, then `listVoiceCalls()`.
+**Expected:** Call initiated with Twilio SID. List returns call history with status.
+**Priority:** P1
+
+---
+
+### Category 50: Buyer Journey Properties Actions (buyer-journey-properties)
+
+#### ACT-BJP-001: Add and remove properties from buyer journey
+**Steps:** Call `addJourneyProperty({ journey_id, listing_id })`, then `removeJourneyProperty(id)`.
+**Expected:** Property linked to journey. Remove deletes association without affecting listing.
+**Priority:** P2
+
+---
+
+### Category 51: Voice Notifications Actions (voice-notifications)
+
+#### ACT-VNOTIF-001: Create and dismiss voice notification
+**Steps:** Call `createVoiceNotification({ type, message })`, then `dismissVoiceNotification(id)`.
+**Expected:** Notification created. Dismiss marks as read without deleting.
+**Priority:** P2
+
+---
+
+### Category 52: Knowledge Base Actions (knowledge-base)
+
+#### ACT-KB-001: CRUD knowledge articles
+**Steps:** Call `createArticle({ title, body, category })`, `getArticles()`, `updateArticle(id, { body })`, `deleteArticle(id)`.
+**Expected:** Full CRUD lifecycle. Delete returns 404 on re-fetch.
+**Priority:** P2
+
+---
+
+### Category 53: Contact Portfolio Actions (contact-portfolio)
+
+#### ACT-PORT-001: Add and list portfolio properties for contact
+**Steps:** Call `addPortfolioProperty({ contact_id, address, value })`, then `getContactPortfolio(contact_id)`.
+**Expected:** Property added to contact portfolio. List returns all properties for contact.
+**Priority:** P2
+
+---
+
+### Category 54: Website Settings Actions (website-settings)
+
+#### ACT-WEBSET-001: Get and update website settings
+**Steps:** Call `getWebsiteSettings(site_id)`, then `updateWebsiteSettings(site_id, { theme })`.
+**Expected:** Returns current site settings. Update persists theme change.
+**Priority:** P2
+
+---
+
+### Category 55: Contact Merge Actions (contact-merge)
+
+#### ACT-MERGE-001: Merge duplicate contacts
+**Steps:** Call `mergeContacts({ primary_id, duplicate_id })`.
+**Expected:** Communications and relationships migrated to primary. Duplicate soft-deleted.
+**Priority:** P1
+
+---
+
+### Category 56: Agent Settings Actions (agent-settings)
+
+#### ACT-AGSET-001: Get and update agent settings
+**Steps:** Call `getAgentSettings()`, then `updateAgentSettings({ voice_style, response_mode })`.
+**Expected:** Returns current agent config. Update persists new settings.
+**Priority:** P2
+
+---
+
+### Category 57: Repliers MLS Integration
+
+#### API-REPLIERS-001: GET /api/repliers/listings
+**Steps:** Call `/api/repliers/listings?query=vancouver` with authenticated session.
+**Expected:** Returns proxied Repliers API results. Unauthorized requests rejected.
+**Priority:** P1
+
+#### API-REPLIERS-002: POST /api/repliers/import
+**Steps:** POST body `{ mlsNumber, address, listPrice, propertyType, description }` with authenticated session.
+**Expected:** Creates a listing row. Auto-creates placeholder seller contact. Returns 400 on address < 5 chars.
+**Priority:** P1
+
+---
+
+### Category 58: Voice Agent Proxy
+
+#### API-VOICE-001: POST /api/voice-agent/proxy
+**Steps:** Send authenticated request with voice payload.
+**Expected:** Proxies to voice agent backend. Unauthorized requests rejected.
+**Priority:** P1
+
+#### API-VOICE-002: POST /api/voice-agent/proxy/stt
+**Steps:** Send audio buffer for speech-to-text transcription.
+**Expected:** Returns transcription text. Rejects oversized payloads.
+**Priority:** P1
+
+---
+
+### Category 59: Journey & Dormant Crons
+
+#### CRON-JOURNEY-001: POST /api/cron/process-journeys
+**Steps:** Trigger with Bearer CRON_SECRET header.
+**Expected:** Advances eligible contact journeys to next phase. Rejects missing/invalid token.
+**Priority:** P1
+
+#### CRON-DORMANT-001: POST /api/cron/detect-dormant
+**Steps:** Trigger with Bearer CRON_SECRET header.
+**Expected:** Flags contacts with no activity past threshold as dormant. Creates notifications.
+**Priority:** P2

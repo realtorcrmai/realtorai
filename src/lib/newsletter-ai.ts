@@ -5,6 +5,16 @@ import { createWithRetry } from "@/lib/anthropic/retry";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 
+const MODEL = process.env.NEWSLETTER_AI_MODEL ?? 'claude-haiku-4-5-20251001';
+
+function sanitizeForPrompt(value: string | null | undefined, maxLen = 200): string {
+  if (!value) return ''
+  return String(value)
+    .replace(/[`<>]/g, '')
+    .replace(/ignore\s+previous|disregard|system\s+prompt|you\s+are\s+now/gi, '[redacted]')
+    .slice(0, maxLen)
+}
+
 const anthropic = new Anthropic();
 
 const GeneratedContentSchema = z.object({
@@ -35,11 +45,15 @@ const GeneratedContentSchema = z.object({
 });
 
 export interface NewsletterContext {
+  /** The database UUID of the contact — required for RAG context retrieval. */
+  contact_id?: string | null;
   contact: {
     name: string;
     firstName: string;
     type: "buyer" | "seller" | "customer" | "agent" | "partner" | "other";
     email: string;
+    /** Free-text realtor notes about this contact (e.g. "met at open house, husband hesitant") */
+    notes?: string;
     areas?: string[];
     preferences?: {
       price_range_min?: number;
@@ -53,6 +67,8 @@ export interface NewsletterContext {
       area?: string;
       date: string;
     }>;
+    /** Raw newsletter_intelligence JSONB from contacts table */
+    newsletter_intelligence?: Record<string, unknown> | null;
     aiHints?: {
       tone?: string;
       interests?: string[];
@@ -106,7 +122,9 @@ export async function generateNewsletterContent(
   let ragContext = '';
   try {
     const { retrieveContext } = await import('@/lib/rag/retriever');
-    const contactId = (context as any).contact?.id;
+    // Fix 8: use the top-level contact_id field (not contact.id which doesn't exist
+    // on the NewsletterContext type). Callers must populate context.contact_id.
+    const contactId = context.contact_id ?? undefined;
     const db = createAdminClient();
     const retrieved = await retrieveContext(
       db,
@@ -120,11 +138,11 @@ export async function generateNewsletterContent(
     if (retrieved.formatted) {
       ragContext = `\n\nRELEVANT CONTEXT FROM CRM (use to personalize):\n${retrieved.formatted}`;
     }
-  } catch {
-    // RAG not available — continue without
+  } catch (err) {
+    console.warn('[newsletter-ai] RAG query failed, proceeding without context:', err)
   }
 
-  const model = process.env.NEWSLETTER_AI_MODEL || "claude-sonnet-4-20250514";
+  const model = MODEL;
 
   const message = await createWithRetry(anthropic, {
     model,
@@ -177,7 +195,86 @@ ${hints.relationship_stage ? `- Relationship: ${hints.relationship_stage}` : ""}
 ${hints.note ? `- Note: ${hints.note}` : ""}
 Use these hints to personalize the content. They are based on the contact's actual click behavior and engagement patterns.` : "";
 
-  return `You are a real estate email copywriter for ${context.realtor.name}${context.realtor.brokerage ? ` at ${context.realtor.brokerage}` : ""}.
+  // Build contact intelligence block from newsletter_intelligence JSONB
+  let intelligenceBlock = "";
+  const intel = context.contact.newsletter_intelligence;
+  if (intel) {
+    const score = typeof intel.engagement_score === "number" ? intel.engagement_score : 0;
+    const clickHistory = Array.isArray(intel.click_history) ? intel.click_history as Array<{ topic?: string; link_type?: string; area?: string }> : [];
+    // Fix #3: read inferred_interests as object with .areas and .property_types (not flat array)
+    const inferredInterestsObj = (intel.inferred_interests && !Array.isArray(intel.inferred_interests))
+      ? (intel.inferred_interests as Record<string, unknown>)
+      : null;
+    const inferredAreas: string[] = inferredInterestsObj?.areas
+      ? (inferredInterestsObj.areas as string[])
+      : (Array.isArray(intel.inferred_interests) ? (intel.inferred_interests as string[]) : []);
+    const inferredPropertyTypes: string[] = inferredInterestsObj?.property_types
+      ? (inferredInterestsObj.property_types as string[])
+      : [];
+    const engagementScore = typeof intel.engagement_score === "number" ? intel.engagement_score : 0;
+
+    // Fix #6: fall back to both last_clicked_at and last_clicked field names
+    const lastClicked = typeof intel.last_clicked_at === "string"
+      ? intel.last_clicked_at
+      : (typeof intel.last_clicked === "string" ? intel.last_clicked : null);
+    const lastOpened = typeof intel.last_opened_at === "string"
+      ? intel.last_opened_at
+      : (typeof intel.last_opened === "string" ? intel.last_opened : null);
+
+    const hasMeaningfulData = score > 0 || clickHistory.length > 0 || inferredAreas.length > 0 || inferredPropertyTypes.length > 0;
+    if (hasMeaningfulData) {
+      const scoreLabel = engagementScore >= 70 ? "high" : engagementScore >= 40 ? "medium" : "low";
+      const recentTopics = clickHistory
+        .slice(-5)
+        .map((c) => c.topic || c.link_type || c.area)
+        .filter(Boolean)
+        .join(", ");
+
+      intelligenceBlock = `
+
+CONTACT INTELLIGENCE:
+- Engagement score: ${engagementScore}/100 (${scoreLabel})${lastClicked ? ` — last clicked ${lastClicked.split("T")[0]}` : ""}${lastOpened ? ` — last opened ${lastOpened.split("T")[0]}` : ""}
+${recentTopics ? `- Recent click interests: ${recentTopics}` : ""}
+${inferredAreas.length ? `- Inferred areas of interest: ${inferredAreas.join(", ")}` : ""}
+${inferredPropertyTypes.length ? `- Inferred property types: ${inferredPropertyTypes.join(", ")}` : ""}
+Use this to personalize the email angle — emphasize what this contact has shown interest in.`;
+    }
+  }
+
+  // Always surface realtor notes when present — even if no newsletter_intelligence data exists
+  const notesBlock = context.contact.notes
+    ? `\n\nREALTOR NOTES: "${sanitizeForPrompt(context.contact.notes, 400)}" — treat this as high-signal context about this specific person. Use it to inform tone, topic, and personalization.`
+    : "";
+
+  // Fix #1: Buyer vs seller differentiation
+  const contactTypeInstructions = context.contact.type === "seller"
+    ? `
+SELLER CONTEXT — This contact is a property seller. Your email must:
+- Lead with market positioning: days on market, list-to-sale ratios, competing inventory
+- Emphasize equity, proceeds, and timeline to close
+- Use authority language: "Your home is worth..." / "Sellers in your market are achieving..."
+- Primary CTA should be about pricing strategy, marketing plans, or listing timelines
+- Avoid buyer-centric language like "find your perfect home"
+- Create urgency around market windows and seasonal timing`
+    : `
+BUYER CONTEXT — This contact is a property buyer. Your email must:
+- Lead with opportunity: new listings, price reductions, interest rate changes
+- Emphasize value, lifestyle fit, and financial benefit of acting now
+- Use discovery language: "We found..." / "New to market..." / "Before it sells..."
+- Primary CTA should be about booking showings or getting pre-approved
+- Avoid seller-centric language like "list your home" or "your equity"
+- Create urgency around inventory scarcity and rate windows`;
+
+  const phaseInstructions: Record<string, string> = {
+    lead: "Tone: Educational and trust-building. They are just getting to know you. Focus on your expertise and the market.",
+    active: "Tone: Action-oriented. They are actively searching/listing. Focus on specific opportunities and next steps.",
+    under_contract: "Tone: Supportive and informative. They have an accepted deal. Focus on closing milestones and what to expect.",
+    past_client: "Tone: Warm and relationship-driven. They closed with you. Focus on referrals, home value updates, and anniversary milestones.",
+    dormant: "Tone: Re-engagement. They have gone quiet. Win them back with something genuinely valuable — not a generic check-in.",
+  };
+  const phaseInstruction = phaseInstructions[context.journeyPhase] ?? phaseInstructions.lead;
+
+  return `You are a real estate email copywriter for ${sanitizeForPrompt(context.realtor.name)}${context.realtor.brokerage ? ` at ${sanitizeForPrompt(context.realtor.brokerage) || 'your brokerage'}` : ""}.
 
 Write warm, professional, personal emails that feel like they're from a trusted advisor — NOT a marketing machine.
 
@@ -188,7 +285,11 @@ CONTENT BEST PRACTICES (BC real estate):
 - CTA: One clear action per email. "Book a Showing" not "Learn More"
 - Local flavor: Reference specific BC neighborhoods, schools, parks, transit by name
 - Length: 150-300 words for market updates, 100-200 for listing alerts
-${hintsBlock}
+${contactTypeInstructions}
+
+JOURNEY PHASE: ${context.journeyPhase}
+${phaseInstruction}
+${hintsBlock}${intelligenceBlock}${notesBlock}
 
 Rules:
 - Keep it concise (150-250 words for the body)
@@ -218,10 +319,10 @@ function buildUserPrompt(context: NewsletterContext): string {
 
   let prompt = `Generate a "${emailType}" email for:
 
-Contact: ${contact.name} (${contact.type}, ${journeyPhase} phase)`;
+Contact: ${sanitizeForPrompt(contact.name)} (${contact.type}, ${journeyPhase} phase)`;
 
   if (contact.areas?.length) {
-    prompt += `\nInterested areas: ${contact.areas.join(", ")}`;
+    prompt += `\nInterested areas: ${contact.areas.map(a => sanitizeForPrompt(a)).join(", ")}`;
   }
 
   if (contact.preferences) {
@@ -231,8 +332,43 @@ Contact: ${contact.name} (${contact.type}, ${journeyPhase} phase)`;
       parts.push(`budget: $${(prefs.price_range_min || 0).toLocaleString()}-$${(prefs.price_range_max || 0).toLocaleString()}`);
     }
     if (prefs.bedrooms) parts.push(`${prefs.bedrooms}+ bedrooms`);
-    if (prefs.property_types?.length) parts.push(`types: ${prefs.property_types.join(", ")}`);
-    if (parts.length) prompt += `\nPreferences: ${parts.join(", ")}`;
+    if (prefs.property_types?.length) parts.push(`types: ${prefs.property_types.map(t => sanitizeForPrompt(t)).join(", ")}`);
+    if (parts.length) prompt += `\nBUYER PREFERENCES: ${parts.join(", ")}`;
+  }
+
+  // Fix #2: seller_preferences context
+  const sellerPrefs = contact.type === "seller" ? (contact as any).seller_preferences : null;
+  if (sellerPrefs) {
+    const parts = [];
+    if (sellerPrefs.target_price) parts.push(`target sale price: ${sellerPrefs.target_price}`);
+    if (sellerPrefs.timeline) parts.push(`timeline: ${sellerPrefs.timeline}`);
+    if (sellerPrefs.motivation) parts.push(`motivation: ${sellerPrefs.motivation}`);
+    if (sellerPrefs.condition) parts.push(`property condition: ${sellerPrefs.condition}`);
+    if (parts.length) {
+      prompt += `\nSELLER PREFERENCES:\n${parts.map(p => `- ${p}`).join("\n")}`;
+    }
+  }
+
+  // Fix #3: inferred interests from newsletter_intelligence.inferred_interests (object shape)
+  const intel = (contact as any).newsletter_intelligence as Record<string, any> | null;
+  if (intel) {
+    const inferredInterestsObj = (intel.inferred_interests && !Array.isArray(intel.inferred_interests))
+      ? (intel.inferred_interests as Record<string, unknown>)
+      : null;
+    const inferredAreas: string[] = inferredInterestsObj?.areas
+      ? (inferredInterestsObj.areas as string[])
+      : (Array.isArray(intel.inferred_interests) ? (intel.inferred_interests as string[]) : []);
+    const inferredPropertyTypes: string[] = inferredInterestsObj?.property_types
+      ? (inferredInterestsObj.property_types as string[])
+      : [];
+
+    if (inferredAreas.length > 0 || inferredPropertyTypes.length > 0) {
+      prompt += `\nINFERRED INTERESTS FROM EMAIL CLICKS:`;
+      if (inferredAreas.length > 0) prompt += `\n- Areas of interest: ${inferredAreas.join(", ")}`;
+      if (inferredPropertyTypes.length > 0) prompt += `\n- Property types: ${inferredPropertyTypes.join(", ")}`;
+      const engScore = typeof intel.engagement_score === "number" ? intel.engagement_score : null;
+      if (engScore !== null) prompt += `\n- Engagement score: ${engScore}/100`;
+    }
   }
 
   if (contact.engagementScore !== undefined) {
@@ -253,8 +389,87 @@ Contact: ${contact.name} (${contact.type}, ${journeyPhase} phase)`;
   }
 
   if (additionalContext) {
-    prompt += `\n\nAdditional context: ${additionalContext}`;
+    prompt += `\n\nAdditional context: ${sanitizeForPrompt(additionalContext, 500)}`;
   }
 
   return prompt;
+}
+
+// ═══════════════════════════════════════════════
+// REALTOR BRANDING — Fix 7: per-realtor DB lookup
+// ═══════════════════════════════════════════════
+
+export type RealtorBranding = {
+  name: string;
+  email: string;
+  brokerage?: string;
+  phone?: string;
+};
+
+/**
+ * Get realtor branding for email generation.
+ *
+ * Fix 7 (GAP 1-E): In a multi-tenant context, env vars return the same agent
+ * for every contact. This function looks up the realtor's data from the DB
+ * first (by realtorId), then falls back to env vars. This ensures each
+ * contact's emails are attributed to the correct realtor.
+ *
+ * @param realtorId - The UUID of the realtor (from listings.realtor_id,
+ *                    contact_journeys, or the authenticated session).
+ *                    Pass null/undefined to get the env-var fallback only.
+ */
+export async function getRealtorBranding(
+  realtorId?: string | null
+): Promise<RealtorBranding> {
+  if (realtorId) {
+    try {
+      const supabase = createAdminClient();
+
+      // Try realtor_agent_config.brand_config first (richest data)
+      const { data: configRow } = await supabase
+        .from("realtor_agent_config")
+        .select("brand_config")
+        .eq("realtor_id", realtorId)
+        .maybeSingle();
+
+      if (configRow?.brand_config) {
+        const bc = configRow.brand_config as Record<string, string>;
+        if (bc.name) {
+          return {
+            name: bc.name,
+            email: bc.email ?? process.env.RESEND_FROM_EMAIL ?? '',
+            brokerage: bc.brokerage,
+            phone: bc.phone,
+          };
+        }
+      }
+
+      // Fallback: users table
+      const { data: user } = await supabase
+        .from("users")
+        .select("name, email, metadata")
+        .eq("id", realtorId)
+        .maybeSingle();
+
+      if (user?.name) {
+        const meta = user.metadata as Record<string, string> | null;
+        return {
+          name: user.name,
+          email: user.email ?? process.env.RESEND_FROM_EMAIL ?? '',
+          brokerage: meta?.brokerage,
+          phone: meta?.phone,
+        };
+      }
+    } catch (err) {
+      console.warn('[newsletter-ai] getRealtorBranding DB lookup failed, using env vars:', err);
+    }
+  }
+
+  // Env-var fallback (single-tenant / dev mode)
+  return {
+    name: process.env.AGENT_NAME ?? 'Your Agent',
+    email: process.env.RESEND_FROM_EMAIL ?? '',
+    brokerage: process.env.AGENT_BROKERAGE,
+    phone: process.env.AGENT_PHONE,
+  };
 }

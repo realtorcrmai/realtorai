@@ -46,7 +46,7 @@ export async function validateApiKey(
 
   // 1. System key — matches CRON_SECRET exactly
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && apiKey === cronSecret) {
+  if (cronSecret && cronSecret.length > 0 && apiKey === cronSecret) {
     return { valid: true, realtorId: null }; // System-level, no tenant scoping
   }
 

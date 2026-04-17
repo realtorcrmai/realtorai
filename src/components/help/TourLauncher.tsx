@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback } from "react";
-import { driver } from "driver.js";
-import "driver.js/dist/driver.css";
 import type { Tour } from "./TourDefinitions";
 
 interface TourLauncherProps {
@@ -16,12 +14,11 @@ interface TourLauncherProps {
  * Falls back gracefully if selectors are missing (skips broken steps).
  */
 export function TourLauncher({ tour, className, children }: TourLauncherProps) {
-  const startTour = useCallback(() => {
+  const startTour = useCallback(async () => {
     // Filter to steps where the element exists in the DOM
     const validSteps = tour.steps.filter((step) => {
       const el = document.querySelector(step.element);
       if (!el) {
-        console.warn(`[Tour] Skipping step: selector "${step.element}" not found`);
         return false;
       }
       return true;
@@ -33,6 +30,7 @@ export function TourLauncher({ tour, className, children }: TourLauncherProps) {
       return;
     }
 
+    const { driver } = await import("driver.js");
     const d = driver({
       showProgress: true,
       animate: true,

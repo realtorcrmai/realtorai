@@ -1,4 +1,5 @@
 <!-- docs-audit: tests/e2e/*, scripts/eval-browser* -->
+<!-- last-verified: 2026-04-13 -->
 # Browser & UX Test Plan — Realtors360 CRM
 
 ## Purpose
@@ -288,5 +289,17 @@ npx playwright test tests/browser/ --project=mobile
 
 ---
 
-*Total: 13 suites, 120+ test cases*
-*Last updated: 2026-03-22*
+---
+
+## Suite 14: MLS Browse Page (`/mls-browse`)
+
+| # | Test | Route | Assert |
+|---|------|-------|--------|
+| 14.1 | mls-browse page loads | `/mls-browse` | Status 200, search/filter controls visible |
+| 14.2 | mls-browse search filters listings | `/mls-browse` | Enter search term, results update |
+| 14.3 | mls-browse listing card click | `/mls-browse` | Click card opens listing detail |
+
+---
+
+*Total: 14 suites, 123+ test cases*
+*Last updated: 2026-04-13*

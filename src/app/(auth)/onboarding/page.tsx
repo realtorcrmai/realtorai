@@ -36,6 +36,7 @@ import {
   linkReferral,
 } from "@/actions/onboarding";
 import { LogoSpinner } from "@/components/brand/Logo";
+import { formatPhone, normalizePhoneE164, titleCaseName } from "@/lib/format";
 import { MLSConnectionStep } from "@/components/onboarding/MLSConnectionStep";
 import { CSVImportStep, type ReferralSuggestion } from "@/components/onboarding/CSVImportStep";
 import { CelebrationScreen } from "@/components/onboarding/CelebrationScreen";
@@ -175,7 +176,7 @@ export default function OnboardingPage() {
       formData.append("file", familyFile);
       await fetch("/api/contacts/import", { method: "POST", body: formData }).catch(() => {});
     }
-    goNext();
+    await goNext();
   };
 
   // ── Step 2: Google CSV upload (exported from contacts.google.com) ──
@@ -295,7 +296,7 @@ export default function OnboardingPage() {
       licenseNumber,
       bio,
       timezone,
-      phone,
+      phone: normalizePhoneE164(phone) ?? phone,
     });
     setLoading(false);
     goNext();
@@ -406,7 +407,8 @@ export default function OnboardingPage() {
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="Phone number (e.g. 604-555-1234)"
+                      onBlur={(e) => setPhone(formatPhone(e.target.value))}
+                      placeholder="Phone (e.g. +1 (604) 555-1234)"
                       className="w-full h-12 rounded-xl border-2 border-white/40 bg-white/30 backdrop-blur-sm px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors"
                     />
                     <select
@@ -425,6 +427,7 @@ export default function OnboardingPage() {
                     <input
                       value={spouseName}
                       onChange={(e) => setSpouseName(e.target.value)}
+                      onBlur={(e) => setSpouseName(titleCaseName(e.target.value))}
                       placeholder="Spouse / partner name (optional)"
                       className="w-full h-12 rounded-xl border-2 border-white/40 bg-white/30 backdrop-blur-sm px-4 text-sm focus:outline-none focus:border-[#4f35d2] transition-colors"
                     />

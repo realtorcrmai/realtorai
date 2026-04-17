@@ -1,7 +1,21 @@
 "use server";
 
+import { z } from "zod";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
+
+const segmentRuleSchema = z.object({
+  field: z.string().min(1),
+  operator: z.string().min(1),
+  value: z.string(),
+});
+
+const createSegmentSchema = z.object({
+  name: z.string().min(1, "Name is required").max(200),
+  description: z.string().max(500).optional(),
+  rules: z.array(segmentRuleSchema).min(1, "At least one rule is required"),
+  rule_operator: z.enum(["AND", "OR"]).optional(),
+});
 
 interface SegmentRule {
   field: string;
@@ -24,6 +38,11 @@ export async function createSegment(input: {
   rules: SegmentRule[];
   rule_operator?: string;
 }) {
+  const parsed = createSegmentSchema.safeParse(input);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message || "Invalid input" };
+  }
+
   const tc = await getAuthenticatedTenantClient();
 
   // Count matching contacts
@@ -81,18 +100,21 @@ export async function bulkEnroll(contactIds: string[], workflowId: string) {
   let failed = 0;
   const errors: string[] = [];
 
-  for (const contactId of contactIds) {
-    // Check if already enrolled
-    const { data: existing } = await tc
-      .from("workflow_enrollments")
-      .select("id")
-      .eq("contact_id", contactId)
-      .eq("workflow_id", workflowId)
-      .eq("status", "active")
-      .maybeSingle();
+  // Batch check: fetch all existing active enrollments in one query (fixes N+1)
+  const { data: existingEnrollments } = await tc
+    .from("workflow_enrollments")
+    .select("contact_id")
+    .eq("workflow_id", workflowId)
+    .eq("status", "active")
+    .in("contact_id", contactIds);
 
-    if (existing) continue;
+  const alreadyEnrolled = new Set(
+    (existingEnrollments || []).map((e: { contact_id: string }) => e.contact_id)
+  );
 
+  const toEnroll = contactIds.filter((id) => !alreadyEnrolled.has(id));
+
+  for (const contactId of toEnroll) {
     const { error: insertError } = await tc.from("workflow_enrollments").insert({
       contact_id: contactId,
       workflow_id: workflowId,
@@ -124,7 +146,7 @@ async function getMatchingContactIds(rules: SegmentRule[], operator: string): Pr
 
   if (rules.length === 0) {
     const { data } = await tc.from("contacts").select("id");
-    return (data || []).map((c: any) => c.id);
+    return (data || []).map((c: { id: string }) => c.id);
   }
 
   // For AND: intersect results. For OR: union results.
@@ -157,7 +179,7 @@ async function getMatchingContactIds(rules: SegmentRule[], operator: string): Pr
     }
 
     const { data } = await query;
-    ruleSets.push(new Set((data || []).map((c: any) => c.id)));
+    ruleSets.push(new Set((data || []).map((c: { id: string }) => c.id)));
   }
 
   if (ruleSets.length === 0) return [];

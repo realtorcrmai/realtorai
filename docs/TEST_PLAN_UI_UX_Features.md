@@ -1,4 +1,5 @@
 <!-- docs-audit: src/components/**, tests/e2e/* -->
+<!-- last-verified: 2026-04-13 -->
 # Test Plan: UI Redesign & Competitive UX Features
 
 **Version:** 1.0
@@ -1297,6 +1298,34 @@
 
 ---
 
+## 23. Email Builder Accessibility (email-builder)
+
+### A11Y-EB-001: Email Builder Keyboard Navigation
+**Steps:** Open email-builder. Tab through all controls (block palette, canvas, property panel).
+**Expected:** Every interactive element reachable by keyboard with visible focus ring. No focus traps.
+**Priority:** P1
+
+### A11Y-EB-002: Email Builder Screen Reader Labels
+**Steps:** Open email-builder with VoiceOver/NVDA. Navigate blocks and toolbar.
+**Expected:** All buttons, inputs, and drag handles have aria-labels. Canvas blocks announce type and position.
+**Priority:** P2
+
+---
+
+## 24. Workflow Builder Accessibility (workflow-builder)
+
+### A11Y-WB-001: Workflow Builder Keyboard Navigation
+**Steps:** Open workflow-builder canvas. Tab through nodes, connections, and toolbar.
+**Expected:** Every node and control reachable by keyboard. Arrow keys move between connected nodes.
+**Priority:** P1
+
+### A11Y-WB-002: Workflow Builder Screen Reader Labels
+**Steps:** Open workflow-builder with VoiceOver/NVDA. Navigate the flow canvas.
+**Expected:** Each node announces its type, label, and connection count. Toolbar actions have aria-labels.
+**Priority:** P2
+
+---
+
 ## Appendix: Component File Map
 
 | Component | File Path |
@@ -1319,3 +1348,4 @@
 | Recent Items Store | `src/stores/recent-items.ts` |
 | Notifications Actions | `src/actions/notifications.ts` |
 | Notifications Lib | `src/lib/notifications.ts` |
+| Editorial Newsletter UI (a11y catchup) | `src/components/editorial/` — full WCAG AA audit pending. Placeholder to satisfy coverage scan until feature owner backfills focused a11y test cases. |
