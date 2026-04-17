@@ -71,7 +71,7 @@ export default function LoginPage() {
               Magnate
             </h1>
             <p className="text-sm text-white/40 tracking-widest uppercase">
-              360 AI Platform for Realtors
+              360° AI Platform for Realtors
             </p>
           </div>
 
