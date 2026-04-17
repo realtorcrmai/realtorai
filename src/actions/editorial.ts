@@ -8,6 +8,12 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { renderEdition } from '@/lib/editorial-renderer';
 import { extractVoiceRules } from '@/lib/editorial-ai';
 import { checkEditorialTierLimit } from '@/lib/editorial-billing';
+import {
+  generatePersonalizedBlock,
+  injectPersonalizedBlock,
+  type ContactIntelligence,
+  type LeadScore,
+} from '@/lib/editorial-personalizer';
 
 // ── Unsubscribe URL helper ────────────────────────────────────────────────────
 
@@ -511,6 +517,63 @@ export async function triggerGeneration(
   }
 }
 
+// ── Subject personalization helper ───────────────────────────────────────────
+
+/**
+ * Pick the best subject line for a contact based on their newsletter_intelligence.
+ * Pure rule-based — no AI/Claude call. Falls back to subjects[0] when no rule matches.
+ *
+ * Rules (in priority order):
+ * 1. Investment/commercial interest → prefer subjects mentioning investment, ROI, returns, income
+ * 2. Cold/dormant (engagement_score < 30) → prefer shorter subjects (< 50 chars) or those with "?" or "you"
+ * 3. Has inferred areas → prefer subjects mentioning any of those areas
+ * 4. Default → return subjects[0]
+ */
+function pickPersonalizedSubject(
+  subjects: string[],
+  intelligence: ContactIntelligence | null,
+): string {
+  const validSubjects = subjects.filter((s) => s && s.trim().length > 0);
+  if (validSubjects.length === 0) return '';
+  if (validSubjects.length === 1) return validSubjects[0]!;
+
+  // No intelligence — use primary subject
+  if (!intelligence) return validSubjects[0]!;
+
+  const propertyTypes: string[] = intelligence.inferred_interests?.property_types ?? [];
+  const inferredAreas: string[] = intelligence.inferred_interests?.areas ?? [];
+  const engagementScore = intelligence.engagement_score ?? 50;
+
+  // Rule 1: Investment/commercial property type interest
+  const isInvestmentFocused = propertyTypes.some((t) =>
+    /investment|commercial|income|multi.?family|rental/i.test(t),
+  );
+  if (isInvestmentFocused) {
+    const investmentKeywords = /investment|roi|returns|income property|cash flow|cap rate|yield/i;
+    const match = validSubjects.find((s) => investmentKeywords.test(s));
+    if (match) return match;
+  }
+
+  // Rule 2: Cold/dormant contacts — prefer curiosity-gap subjects
+  if (engagementScore < 30) {
+    const coldMatch = validSubjects.find(
+      (s) => s.length < 50 || /\?/.test(s) || /\byou\b/i.test(s),
+    );
+    if (coldMatch) return coldMatch;
+  }
+
+  // Rule 3: Inferred area interest — prefer subjects mentioning a known area
+  if (inferredAreas.length > 0) {
+    const areaMatch = validSubjects.find((s) =>
+      inferredAreas.some((area) => s.toLowerCase().includes(area.toLowerCase())),
+    );
+    if (areaMatch) return areaMatch;
+  }
+
+  // Default: return primary subject
+  return validSubjects[0]!;
+}
+
 // ── 9. sendEdition ────────────────────────────────────────────────────────────
 
 export async function sendEdition(
@@ -637,7 +700,7 @@ export async function sendEdition(
     }
 
     // 4. Fetch eligible contacts
-    let contactQuery = tc.from('contacts').select('id, name, email, casl_consent_given');
+    let contactQuery = tc.from('contacts').select('id, name, email, casl_consent_given, notes, newsletter_intelligence, ai_lead_score');
 
     if (options?.segment_id) {
       // Fetch contact IDs from the segment first, then filter
@@ -694,7 +757,15 @@ export async function sendEdition(
       return { data: null, error: contactsError.message };
     }
 
-    type ContactRow = { id: string; name: string; email: string | null; casl_consent_given: boolean | null };
+    type ContactRow = {
+      id: string;
+      name: string;
+      email: string | null;
+      casl_consent_given: boolean | null;
+      notes: string | null;
+      newsletter_intelligence: Record<string, unknown> | null;
+      ai_lead_score: Record<string, unknown> | null;
+    };
     const allContacts: ContactRow[] = (contacts ?? []) as ContactRow[];
 
     // 5a. Fetch suppressed contact IDs (fail-safe: table may not exist yet)
@@ -729,22 +800,62 @@ export async function sendEdition(
       edition.subject_a !== edition.subject_b;
 
     // 7. Send to each contact
+    // Rate-limit Haiku personalization: max 50 contacts get AI blocks.
+    // Contacts beyond this cap receive the base HTML (no personalized block).
+    const PERSONALIZATION_CAP = 50;
     let sent = 0;
     let failed = 0;
+    let personalizedCount = 0;
 
     for (const contact of sendableContacts) {
       try {
         // Substitute placeholder with a per-recipient HMAC-signed unsubscribe URL
-        const personalizedHtml = html.replace(
+        const htmlWithUnsub = html.replace(
           UNSUBSCRIBE_PLACEHOLDER,
           buildUnsubscribeUrl(contact.email!, editionId),
         );
 
-        // A/B split: randomly assign each recipient to variant 'a' or 'b'
+        // ── Per-contact personalized block injection ─────────────────────────
+        // Only inject when the contact has intelligence signals and the cap
+        // has not been reached; otherwise fall back to the base HTML.
+        let finalHtml = htmlWithUnsub;
+        const hasSignals =
+          contact.newsletter_intelligence || contact.ai_lead_score || contact.notes;
+
+        if (hasSignals && personalizedCount < PERSONALIZATION_CAP) {
+          // 100ms inter-call delay to avoid Haiku burst rate limits
+          if (personalizedCount > 0) {
+            await new Promise((r) => setTimeout(r, 100));
+          }
+
+          const personalizedBlock = await generatePersonalizedBlock({
+            contactName: contact.name ?? null,
+            notes: (contact.notes as string | null) ?? null,
+            intelligence: (contact.newsletter_intelligence as ContactIntelligence | null) ?? null,
+            leadScore: (contact.ai_lead_score as LeadScore | null) ?? null,
+            editionType: (edition as { edition_type: string }).edition_type,
+          });
+
+          finalHtml = injectPersonalizedBlock(htmlWithUnsub, personalizedBlock);
+          personalizedCount++;
+        }
+        // ────────────────────────────────────────────────────────────────────
+
+        // Per-contact subject personalization (rule-based, no AI call).
+        // When A/B testing is active, the A/B variant is assigned first, then
+        // pickPersonalizedSubject can still swap to the other variant if the
+        // contact's intelligence signals make it a better fit.
         const abVariant: 'a' | 'b' = hasABTest && randomInt(0, 2) === 0 ? 'b' : 'a';
-        const resolvedSubject = hasABTest
-          ? (abVariant === 'b' ? edition.subject_b! : edition.subject_a!)
-          : subject;
+        const candidateSubjects = hasABTest
+          ? (abVariant === 'b'
+              ? [edition.subject_b!, edition.subject_a!]
+              : [edition.subject_a!, edition.subject_b!])
+          : [subject];
+        const resolvedSubject =
+          pickPersonalizedSubject(
+            candidateSubjects,
+            contact.newsletter_intelligence as ContactIntelligence | null,
+          ) || subject;
 
         const tags: Array<{ name: string; value: string }> = [
           { name: 'edition_id', value: editionId },
@@ -763,7 +874,7 @@ export async function sendEdition(
           const ts = Date.now()
           const safe = resolvedSubject.replace(/[^a-zA-Z0-9-_ ]/g, '').slice(0, 50).trim().replace(/ /g, '-')
           const file = join(dir, `${ts}-${contact.id.slice(0, 8)}-${safe}.html`)
-          await writeFile(file, `<!-- DEV\n  To: ${contact.email}\n  Subject: ${resolvedSubject}\n-->\n${personalizedHtml}`, 'utf-8')
+          await writeFile(file, `<!-- DEV\n  To: ${contact.email}\n  Subject: ${resolvedSubject}\n-->\n${finalHtml}`, 'utf-8')
           console.log(`[DEV_EMAIL] → ${file}`)
           sent++
         } else {
@@ -777,7 +888,7 @@ export async function sendEdition(
               from: fromEmail,
               to: [contact.email!],
               subject: resolvedSubject,
-              html: personalizedHtml,
+              html: finalHtml,
               tags,
             }),
           });
