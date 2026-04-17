@@ -1,4 +1,4 @@
-// Realtors360 Social — Type Definitions
+// Magnate Social — Type Definitions
 
 // ============================================================
 // Database Types

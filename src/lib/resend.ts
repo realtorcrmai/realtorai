@@ -124,7 +124,7 @@ export async function sendEmail(params: SendEmailParams) {
     ].filter(Boolean).join("");
 
     const banner = `<div style="background:#faf5ff;border:2px solid #d8b4fe;border-radius:8px;padding:12px;margin-bottom:16px;font-family:sans-serif;font-size:12px;color:#374151;">
-      <div style="font-weight:700;color:#6b21a8;margin-bottom:6px;font-size:13px;">Realtors360 Test Metadata</div>
+      <div style="font-weight:700;color:#6b21a8;margin-bottom:6px;font-size:13px;">Magnate Test Metadata</div>
       <table style="border-collapse:collapse;width:100%;">${rows}</table>
     </div>`;
 

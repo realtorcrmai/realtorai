@@ -304,7 +304,7 @@ export async function POST(request: NextRequest) {
       if (!tenantId) {
         return NextResponse.json(
           alexaResponse(
-            "Welcome to RealtorAI. Please link your account in the Alexa app to get started.",
+            "Welcome to Magnate. Please link your account in the Alexa app to get started.",
             {},
             true,
             "Account Linking Required"
@@ -315,10 +315,10 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(
         alexaResponse(
-          "Welcome to RealtorAI. You can check leads, schedule showings, get your pipeline, log notes, check your schedule, or get listing details. What would you like?",
+          "Welcome to Magnate. You can check leads, schedule showings, get your pipeline, log notes, check your schedule, or get listing details. What would you like?",
           { ...sessionAttrs, tenantId },
           false,
-          "RealtorAI"
+          "Magnate"
         ),
         { status: 200 }
       );
@@ -332,7 +332,7 @@ export async function POST(request: NextRequest) {
     if (!tenantId) {
       return NextResponse.json(
         alexaResponse(
-          "I couldn't verify your account. Please link your RealtorAI account in the Alexa app.",
+          "I couldn't verify your account. Please link your Magnate account in the Alexa app.",
           {},
           true,
           "Account Linking Required"
@@ -384,7 +384,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      alexaResponse(speech, updatedAttrs, shouldEnd, "RealtorAI"),
+      alexaResponse(speech, updatedAttrs, shouldEnd, "Magnate"),
       { status: 200 }
     );
   } catch (err) {

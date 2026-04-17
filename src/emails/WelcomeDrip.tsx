@@ -25,7 +25,7 @@ function getDripContent(day: number, firstName: string, appUrl: string) {
   switch (day) {
     case 0:
       return {
-        preview: "Welcome to Realtors360 — your AI-powered real estate CRM",
+        preview: "Welcome to Magnate — your AI-powered real estate CRM",
         heading: `Welcome, ${firstName}!`,
         body: "Your 14-day Professional trial is active — all features unlocked. Here are 3 quick wins to get started:",
         steps: [
@@ -47,7 +47,7 @@ function getDripContent(day: number, firstName: string, appUrl: string) {
       return {
         preview: "AI writes your MLS remarks instantly",
         heading: "Let AI write your MLS remarks",
-        body: `${firstName}, one of Realtors360's most powerful features: AI-generated MLS remarks. Add a listing, and our AI writes both your public remarks and REALTOR remarks instantly.`,
+        body: `${firstName}, one of Magnate's most powerful features: AI-generated MLS remarks. Add a listing, and our AI writes both your public remarks and REALTOR remarks instantly.`,
         steps: null,
         cta: { text: "Try It Now", href: `${appUrl}/listings/new` },
       };
@@ -89,9 +89,9 @@ function getDripContent(day: number, firstName: string, appUrl: string) {
       };
     default:
       return {
-        preview: "Update from Realtors360",
+        preview: "Update from Magnate",
         heading: `Hi ${firstName}`,
-        body: "Check out what's new in your Realtors360 dashboard.",
+        body: "Check out what's new in your Magnate dashboard.",
         steps: null,
         cta: { text: "Open Dashboard", href: appUrl },
       };
@@ -122,7 +122,7 @@ export function WelcomeDrip({ firstName, day, appUrl, unsubscribeUrl }: WelcomeD
         <Container style={container} className="drip-card">
           {/* Brand header */}
           <Section style={header}>
-            <Text style={brandName}>Realtors360</Text>
+            <Text style={brandName}>Magnate</Text>
           </Section>
 
           {/* Content */}
@@ -155,7 +155,7 @@ export function WelcomeDrip({ firstName, day, appUrl, unsubscribeUrl }: WelcomeD
           <Hr style={hr} />
           <Section style={footer}>
             <Text style={footerText} className="drip-muted">
-              Rahul from Realtors360
+              The Magnate Team
             </Text>
             <Text style={unsubText}>
               <Link href={unsubscribeUrl} style={unsubLink}>Unsubscribe</Link>

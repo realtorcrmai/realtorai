@@ -76,7 +76,7 @@ export function Sidebar() {
       <div className="flex h-16 items-center gap-3 px-6 border-b border-[var(--sidebar-border)]">
         <LogoIconDark size={32} />
         <div>
-          <span className="font-bold text-base tracking-tight">Realtors360</span>
+          <span className="font-bold text-base tracking-tight">Magnate</span>
           <span className="block text-[9px] text-[var(--sidebar-foreground)]/40 tracking-widest uppercase">AI Platform</span>
         </div>
       </div>

@@ -31,24 +31,31 @@ export async function POST(req: Request) {
     // Use authenticated realtor ID — never accept from request body
     const realtorId = tc.realtorId;
 
-    // 1. Extract voice rules from the edit diff
-    const newRules = await extractVoiceRules(
-      realtorId,
-      originalSubject || "",
-      originalBody || "",
-      editedSubject || "",
-      editedBody || ""
-    );
+    // H4: Verify ownership before updating — only the owning realtor can edit
+    const { data: existing, error: fetchError } = await tc
+      .from("newsletters")
+      .select("id")
+      .eq("id", newsletterId)
+      .eq("realtor_id", realtorId)
+      .maybeSingle();
 
-    // 2. Update the newsletter record with edited content (tenant-scoped)
+    if (fetchError || !existing) {
+      return NextResponse.json(
+        { error: "Newsletter not found or access denied" },
+        { status: 403 }
+      );
+    }
+
+    // H4 + H8: Update the newsletter record first, then run voice learning only on success
     const { error: updateError } = await tc
       .from("newsletters")
       .update({
         subject: editedSubject,
-        html_content: editedBody,
+        html_body: editedBody,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", newsletterId);
+      .eq("id", newsletterId)
+      .eq("realtor_id", realtorId);
 
     if (updateError) {
       return NextResponse.json(
@@ -57,11 +64,19 @@ export async function POST(req: Request) {
       );
     }
 
+    // H8: Extract voice rules AFTER confirmed successful DB update
+    const newRules = await extractVoiceRules(
+      realtorId,
+      originalSubject || "",
+      originalBody || "",
+      editedSubject || "",
+      editedBody || ""
+    );
+
     return NextResponse.json({
       success: true,
       newsletterId,
-      rulesExtracted: newRules.length,
-      newRules,
+      rulesExtracted: newRules?.length ?? 0,
     });
   } catch (error) {
     console.error("Newsletter edit error:", error);

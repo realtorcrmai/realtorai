@@ -91,7 +91,7 @@ export function OnboardingNPS() {
         ) : (
           <>
             <p className="text-xs text-muted-foreground mb-3">
-              How easy was it to get started with Realtors360?
+              How easy was it to get started with Magnate?
             </p>
             <div className="flex items-center gap-2">
               {[1, 2, 3, 4, 5].map((score) => (

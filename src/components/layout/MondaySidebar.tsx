@@ -190,7 +190,7 @@ export function MondaySidebar() {
       >
         <LogoVideo size={72} />
         <div className="text-center mt-1">
-          <span className="text-[15px] font-semibold text-sidebar-foreground tracking-tight">Realtors360</span>
+          <span className="text-[15px] font-semibold text-sidebar-foreground tracking-tight">Magnate</span>
           <span className="block text-[9px] text-sidebar-foreground/40 tracking-widest uppercase">AI Platform</span>
         </div>
       </div>

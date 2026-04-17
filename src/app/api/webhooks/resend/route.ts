@@ -56,10 +56,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
-    // Fix 5 (GAP 3-A): Handle unsubscribe AND complaint in this early block only.
-    // After processing, return early so the eventTypeMap block below never fires a
-    // duplicate update for "complained".
-    if (type === "email.unsubscribed" || type === "email.complained") {
+    // Handle voluntary unsubscribe
+    if (type === "email.unsubscribed") {
       const email = data.email?.to?.[0] || data.to;
       if (email) {
         await supabase
@@ -67,7 +65,7 @@ export async function POST(request: NextRequest) {
           .update({ newsletter_unsubscribed: true, updated_at: new Date().toISOString() })
           .eq("email", email);
 
-        // H-07: Pause ALL journeys for this contact on both unsubscribe and complaint
+        // H-07: Pause ALL journeys for this contact on unsubscribe
         const { data: contact } = await supabase
           .from("contacts")
           .select("id")
@@ -78,13 +76,87 @@ export async function POST(request: NextRequest) {
             .from("contact_journeys")
             .update({
               is_paused: true,
-              pause_reason: type === "email.complained" ? "complained" : "unsubscribed",
+              pause_reason: "unsubscribed",
               updated_at: new Date().toISOString(),
             })
             .eq("contact_id", contact.id);
         }
       }
-      // Return early — prevents the eventTypeMap block from firing a duplicate complained handler
+      return NextResponse.json({ ok: true });
+    }
+
+    // Handle spam complaint (more severe than unsubscribe)
+    if (type === "email.complained") {
+      const email = data.email?.to?.[0] || data.to;
+
+      // Prefer looking up the contact via newsletterId (reliable) over email (case-sensitive risk).
+      // newsletterId may be available in tags even for complaint events.
+      const complaintNewsletterId = data.tags?.find((t: { name: string; value: string }) => t.name === "newsletter_id")?.value;
+      let resolvedContactId: string | null = null;
+
+      if (complaintNewsletterId) {
+        const { data: complaintNewsletter } = await supabase
+          .from("newsletters")
+          .select("contact_id")
+          .eq("id", complaintNewsletterId)
+          .single();
+        resolvedContactId = complaintNewsletter?.contact_id ?? null;
+      }
+
+      // Fall back to email lookup if newsletter row lookup failed or was unavailable
+      if (!resolvedContactId && email) {
+        const { data: emailContact } = await supabase
+          .from("contacts")
+          .select("id")
+          .eq("email", email)
+          .maybeSingle();
+        resolvedContactId = emailContact?.id ?? null;
+      }
+
+      // Mark unsubscribed by email (broad catch) and by id (precise)
+      if (email) {
+        await supabase
+          .from("contacts")
+          .update({ newsletter_unsubscribed: true, updated_at: new Date().toISOString() })
+          .eq("email", email);
+      }
+
+      if (resolvedContactId) {
+        await supabase
+          .from("contacts")
+          .update({ newsletter_unsubscribed: true, updated_at: new Date().toISOString() })
+          .eq("id", resolvedContactId);
+
+        // H-07: Pause ALL journeys for this contact on complaint
+        await supabase
+          .from("contact_journeys")
+          .update({
+            is_paused: true,
+            pause_reason: "complained",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("contact_id", resolvedContactId);
+
+        // Additional: decay engagement score on spam complaint
+        try {
+          const { data: complaintContact } = await supabase
+            .from("contacts")
+            .select("newsletter_intelligence")
+            .eq("id", resolvedContactId)
+            .single();
+          const intel = (complaintContact?.newsletter_intelligence as Record<string, any>) || {};
+          intel.engagement_score = Math.max(0, (intel.engagement_score || 0) - 50);
+          intel.complaint_count = (intel.complaint_count || 0) + 1;
+          intel.last_complaint_at = new Date().toISOString();
+
+          await supabase
+            .from("contacts")
+            .update({ newsletter_intelligence: intel })
+            .eq("id", resolvedContactId);
+        } catch (err) {
+          console.error("[webhook] complaint intel update failed:", err);
+        }
+      }
       return NextResponse.json({ ok: true });
     }
 
@@ -139,15 +211,18 @@ export async function POST(request: NextRequest) {
       existingEvent = found;
     } else {
       const dedupeWindow = new Date(Date.now() - 60000).toISOString();
-      const { data: found } = await supabase
+      // Always filter by event_type so a 'delivered' and a 'bounced' event for the
+      // same newsletter within 60 seconds do not incorrectly deduplicate each other.
+      let dedupeQuery = supabase
         .from("newsletter_events")
         .select("id")
         .eq("newsletter_id", newsletterId)
         .eq("event_type", eventType)
-        .eq("link_url", data.click?.link || "")
-        .gte("created_at", dedupeWindow)
-        .limit(1)
-        .maybeSingle();
+        .gte("created_at", dedupeWindow);
+      if (eventType === "clicked") {
+        dedupeQuery = dedupeQuery.eq("link_url", data.click?.link || "");
+      }
+      const { data: found } = await dedupeQuery.limit(1).maybeSingle();
       existingEvent = found;
     }
 
@@ -217,7 +292,10 @@ export async function POST(request: NextRequest) {
         const currentPhase = updatedIntel.current_journey_phase ?? "lead";
         const nextPhase = phaseProgression[currentPhase];
         if (nextPhase && currentPhase !== nextPhase) {
-          const advanced = await advancePhaseFromWebhook(supabase, contactId, nextPhase);
+          const journeyTypeTag: string | undefined = data.tags?.find(
+            (t: { name: string; value: string }) => t.name === "journey_type"
+          )?.value;
+          const advanced = await advancePhaseFromWebhook(supabase, contactId, nextPhase, journeyTypeTag);
           if (advanced) {
             phaseWasAdvanced = true;
           }
@@ -309,6 +387,7 @@ export async function POST(request: NextRequest) {
               .update({
                 is_paused: false,
                 current_phase: "lead",
+                emails_sent_in_phase: 0,
                 next_email_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(), // 48h
                 updated_at: new Date().toISOString(),
               })
@@ -326,6 +405,38 @@ export async function POST(request: NextRequest) {
             console.warn("[webhook] Could not re-engage dormant contact:", e);
           }
         }
+      }
+
+      // G-N03: Emit newsletter events for open and click to the email_events table
+      // (used by the newsletter agent on Render to correlate engagement)
+      if (eventType === "opened") {
+        try {
+          await supabase.from("email_events").insert({
+            realtor_id: newsletter.realtor_id,
+            event_type: "email_opened",
+            contact_id: contactId,
+            event_data: {
+              newsletter_id: newsletterId,
+              opened_at: new Date().toISOString(),
+            },
+            status: "pending",
+          });
+        } catch { /* non-fatal */ }
+      }
+      if (eventType === "clicked") {
+        try {
+          await supabase.from("email_events").insert({
+            realtor_id: newsletter.realtor_id,
+            event_type: "email_clicked",
+            contact_id: contactId,
+            event_data: {
+              newsletter_id: newsletterId,
+              link_type: linkType,
+              score_impact: scoreImpact,
+            },
+            status: "pending",
+          });
+        } catch { /* non-fatal */ }
       }
 
       // Emit agent events for AI evaluation
@@ -365,6 +476,29 @@ export async function POST(request: NextRequest) {
         .from("contact_journeys")
         .update({ is_paused: true, pause_reason: "bounced", updated_at: new Date().toISOString() })
         .eq("contact_id", contactId);
+
+      // G-J05: Decay engagement score on hard bounce
+      try {
+        const { data: bounceContact } = await supabase
+          .from("contacts")
+          .select("newsletter_intelligence")
+          .eq("id", contactId)
+          .single();
+
+        if (bounceContact?.newsletter_intelligence) {
+          const intel = bounceContact.newsletter_intelligence as Record<string, any>;
+          intel.engagement_score = Math.max(0, (intel.engagement_score || 0) - 30);
+          intel.bounce_count = (intel.bounce_count || 0) + 1;
+          intel.last_bounced_at = new Date().toISOString();
+
+          await supabase
+            .from("contacts")
+            .update({ newsletter_intelligence: intel })
+            .eq("id", contactId);
+        }
+      } catch (bounceErr) {
+        console.error("[webhook] bounce intel decay failed:", bounceErr);
+      }
     }
 
     // Note: "complained" eventType no longer appears in eventTypeMap above — it is fully handled
@@ -389,8 +523,9 @@ async function advancePhaseFromWebhook(
   supabase: ReturnType<typeof createAdminClient>,
   contactId: string,
   newPhase: string,
+  journeyType?: string,
 ): Promise<boolean> {
-  const { error } = await supabase
+  let query = supabase
     .from("contact_journeys")
     .update({
       current_phase: newPhase,
@@ -400,6 +535,12 @@ async function advancePhaseFromWebhook(
     })
     .eq("contact_id", contactId)
     .eq("is_paused", false);
+
+  if (journeyType) {
+    query = query.eq("journey_type", journeyType);
+  }
+
+  const { error } = await query;
   if (error) {
     console.warn("[webhook] advancePhaseFromWebhook failed:", error);
     return false;
@@ -616,6 +757,17 @@ async function updateContactIntelligence(
         intel.total_opens = Math.max((intel.total_opens as number) || 0, (freshIntel.total_opens as number) || 0);
         intel.total_clicks = Math.max((intel.total_clicks as number) || 0, (freshIntel.total_clicks as number) || 0);
         intel.engagement_score = Math.max((intel.engagement_score as number) || 0, (freshIntel.engagement_score as number) || 0);
+        // Re-merge click_history to avoid overwriting concurrent entries.
+        // Deduplicate by clicked_at + link_url to avoid exact duplicates.
+        const currentHistory: Record<string, unknown>[] = (intel.click_history as Record<string, unknown>[]) || [];
+        const freshHistory: Record<string, unknown>[] = (freshIntel.click_history as Record<string, unknown>[]) || [];
+        const seen = new Set(currentHistory.map(e => `${e.clicked_at}|${e.link_url}`));
+        const merged = [...currentHistory];
+        for (const entry of freshHistory) {
+          const key = `${entry.clicked_at}|${entry.link_url}`;
+          if (!seen.has(key)) { seen.add(key); merged.push(entry); }
+        }
+        intel.click_history = merged.slice(-50);
       }
     }
   }

@@ -63,6 +63,10 @@ export async function POST(req: NextRequest) {
     .insert({
       ...parsed.data,
       email: parsed.data.email || null,
+      // Default CASL consent to true — realtor collected verbal/written consent at intake.
+      // Contacts can be opted-out individually via the contact detail page.
+      casl_consent_given: parsed.data.casl_consent_given ?? true,
+      casl_consent_date: parsed.data.casl_consent_date ?? new Date().toISOString(),
     })
     .select()
     .single();

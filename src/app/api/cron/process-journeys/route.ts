@@ -23,12 +23,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       processed: (result as { processed?: number }).processed ?? 0,
+      debug: result,
       timestamp: new Date().toISOString(),
     });
   } catch (err) {
     console.error("[cron/process-journeys] error:", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Unknown error" },
+      { error: err instanceof Error ? err.message : "Unknown error", stack: err instanceof Error ? err.stack : undefined },
       { status: 500 }
     );
   }

@@ -7,7 +7,7 @@ import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 
 // Drip schedule: day → subject + skip check
 const DRIP_SCHEDULE = [
-  { day: 0, subject: "Welcome to Realtors360 — here's your first win", skipCheck: null },
+  { day: 0, subject: "Welcome to Magnate — here's your first win", skipCheck: null },
   { day: 1, subject: "Import your contacts in 60 seconds", skipCheck: "contacts" },
   { day: 2, subject: "Did you know? AI writes your MLS remarks", skipCheck: "remarks" },
   { day: 3, subject: "Send your first newsletter in 3 minutes", skipCheck: "newsletter" },
@@ -17,7 +17,7 @@ const DRIP_SCHEDULE = [
 ];
 
 const FOUNDER_FROM = {
-  name: "Rahul from Realtors360",
+  name: "The Magnate Team",
   email: process.env.RESEND_FROM_EMAIL || "onboarding@realtors360.com",
 };
 

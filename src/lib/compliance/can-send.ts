@@ -39,6 +39,7 @@ export type ContactForConsentCheck = {
   newsletter_unsubscribed?: boolean | null;
   casl_consent_given?: boolean | null;
   casl_consent_date?: string | null;
+  casl_consent_expires_at?: string | null;
   casl_opt_out_date?: string | null;
 };
 
@@ -63,6 +64,7 @@ export type CanSendDenialCode =
   | 'no_email'
   | 'unsubscribed'
   | 'no_casl_consent'
+  | 'casl_expired'
   | 'no_contact';
 
 /**
@@ -102,6 +104,24 @@ export function canSendToContact(
       allowed: false,
       reason: 'Contact has not granted CASL consent for commercial email',
       code: 'no_casl_consent',
+    };
+  }
+
+  // G-N05: CASL consent expires after 2 years (Canadian law).
+  // Check the pre-computed expiry column if available; otherwise fall back to
+  // computing it from casl_consent_date directly so old rows without the column
+  // are still protected.
+  const expiresAt = contact.casl_consent_expires_at
+    ? new Date(contact.casl_consent_expires_at)
+    : contact.casl_consent_date
+      ? new Date(new Date(contact.casl_consent_date).getTime() + 2 * 365.25 * 24 * 60 * 60 * 1000)
+      : null;
+
+  if (expiresAt && expiresAt < new Date()) {
+    return {
+      allowed: false,
+      reason: 'CASL consent has expired (2-year limit) — request fresh consent before sending',
+      code: 'casl_expired',
     };
   }
 

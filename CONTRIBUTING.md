@@ -155,9 +155,9 @@ realestate-crm/                  ← You are here (repo root)
 
 | | Dev | Production |
 |---|---|---|
-| **URL** | Preview deploys from `dev` branch | https://realtors360.ai |
+| **URL** | Preview deploys from `dev` branch | https://magnate360.com |
 | **Supabase** | `qcohfohjihazivkforsj` | `opbrqlmhhqvfomevvkon` |
-| **Vercel project** | `realestate-crm` | `realtors360` |
+| **Vercel project** | `realestate-crm` | `realestate-crm` (amandhindsas-projects) |
 | **Git branch** | `dev` | `main` |
 | **Newsletter (Render)** | — | https://realtors360-newsletter.onrender.com |
 

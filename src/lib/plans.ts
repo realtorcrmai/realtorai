@@ -1,4 +1,4 @@
-// Realtors360 — Plan Definitions
+// Magnate — Plan Definitions
 // Single source of truth for what each pricing tier includes
 
 import type { FeatureKey } from "./features";

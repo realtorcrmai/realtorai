@@ -1,4 +1,4 @@
-// Realtors360 Social — Content Quality Scorer
+// Magnate Social — Content Quality Scorer
 // Uses Claude Haiku for fast, cheap content scoring (0-100)
 
 import Anthropic from "@anthropic-ai/sdk";

@@ -30,9 +30,9 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Realtors360 — AI-Powered Real Estate Platform",
+  title: "Magnate — 360 AI Platform for Realtors",
   description:
-    "AI-powered Real Estate Transaction & Showing Automation CRM for British Columbia",
+    "Magnate — the 360 AI Platform for Realtors. Automate listings, showings, emails, and client journeys.",
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.svg",
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Realtors360",
+    title: "Magnate",
   },
 };
 

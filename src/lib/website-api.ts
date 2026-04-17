@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  *
  * Authentication hierarchy:
  * 1. CRON_SECRET — admin/system access (for internal tooling)
- * 2. realtor_sites.api_key — per-site key set in the Realtors360 Sites
+ * 2. realtor_sites.api_key — per-site key set in the Magnate Sites
  *    admin panel when the realtor connects their website. Lookup returns
  *    the site's realtor_id for downstream tenant scoping.
  * 3. tenant_api_keys — future per-tenant key with hash verification,

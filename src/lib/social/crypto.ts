@@ -1,4 +1,4 @@
-// Realtors360 Social — Token Encryption
+// Magnate Social — Token Encryption
 // AES-256-GCM encryption for OAuth tokens stored in database
 
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";

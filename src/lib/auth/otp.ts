@@ -12,7 +12,7 @@ const client = twilio(
  */
 export async function sendOtpSms(phone: string, otp: string): Promise<string> {
   const message = await client.messages.create({
-    body: `Your Realtors360 verification code is: ${otp}. Expires in 10 minutes. If you didn't request this, ignore this message.`,
+    body: `Your Magnate verification code is: ${otp}. Expires in 10 minutes. If you didn't request this, ignore this message.`,
     from: process.env.TWILIO_PHONE_NUMBER!,
     to: phone, // E.164 format: +16045551234
   });
