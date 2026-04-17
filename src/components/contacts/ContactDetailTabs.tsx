@@ -247,7 +247,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
   } = props;
 
   const searchParams = useSearchParams();
-  const validTabs = ["overview", "activity", "deals", "config"];
+  const validTabs = ["overview", "activity", "deals"];
   const tabParam = searchParams.get("tab");
   const [currentTab, setCurrentTab] = useState(
     tabParam && validTabs.includes(tabParam) ? tabParam : "overview"
@@ -316,9 +316,6 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
               {portfolioItems.length}
             </span>
           )}
-        </TabsTrigger>
-        <TabsTrigger value="config" className="rounded-lg">
-          ⚙️ Config
         </TabsTrigger>
       </TabsList>
 
@@ -720,18 +717,6 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
       </TabsContent>
 
       {/* ── CONFIG TAB — journey/AI settings ──────────────── */}
-      <TabsContent value="config" className="">
-        <div className="space-y-3">
-          <Card className="border-l-4 border-l-slate-400">
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">
-                Journey controls, content types, frequency, and AI settings are managed in the sidebar panel on the right.
-                Use the Prospect Controls and Content Types sections to configure how the AI interacts with this contact.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </TabsContent>
     </Tabs>
   );
 }
