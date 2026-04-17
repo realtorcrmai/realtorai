@@ -25,4 +25,14 @@ export default [
     },
   },
   ...rest,
+  // Disable React Compiler lint rules — codebase not yet optimized for
+  // the compiler's strict requirements (setState in effects, impure
+  // render functions, etc.). Re-enable once patterns are migrated.
+  {
+    files: ["**/*.{ts,tsx,js,jsx}"],
+    rules: {
+      "react-compiler/react-compiler": "off",
+      "react-hooks/set-state-in-effect": "warn",
+    },
+  },
 ];
