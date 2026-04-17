@@ -479,30 +479,39 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
 
             return (
               <>
-                {/* 1. Network (Referrals + Relationships) — first if populated */}
+                {/* 1. Network (Referrals + Relationships + Graph) — first if populated */}
                 {networkHasData && (
-                  <div id="section-network" className="grid grid-cols-1 md:grid-cols-2 gap-3 scroll-mt-4">
-                    <Card className="border-l-4 border-l-brand">
-                      <CardContent className="p-4">
-                        <ReferralsPanel
-                          contact={contact}
-                          referredByName={referredByName}
-                          referralsAsReferrer={referralsAsReferrer}
-                          referralsAsReferred={referralsAsReferred}
-                          allContacts={allContacts}
-                        />
-                      </CardContent>
-                    </Card>
-                    <Card className="border-l-4 border-l-brand">
-                      <CardContent className="p-4">
-                        <RelationshipManager
-                          contactId={contactId}
-                          relationships={relationships}
-                          allContacts={allContacts}
-                        />
-                      </CardContent>
-                    </Card>
-                  </div>
+                  <>
+                    <div id="section-network" className="grid grid-cols-1 md:grid-cols-2 gap-3 scroll-mt-4">
+                      <Card className="border-l-4 border-l-brand">
+                        <CardContent className="p-4">
+                          <ReferralsPanel
+                            contact={contact}
+                            referredByName={referredByName}
+                            referralsAsReferrer={referralsAsReferrer}
+                            referralsAsReferred={referralsAsReferred}
+                            allContacts={allContacts}
+                          />
+                        </CardContent>
+                      </Card>
+                      <Card className="border-l-4 border-l-brand">
+                        <CardContent className="p-4">
+                          <RelationshipManager
+                            contactId={contactId}
+                            relationships={relationships}
+                            allContacts={allContacts}
+                          />
+                        </CardContent>
+                      </Card>
+                    </div>
+                    {graphNodes.length > 1 && (
+                      <Card className="border-l-4 border-l-indigo-400 bg-indigo-50/15 dark:bg-indigo-950/10">
+                        <CardContent className="p-4">
+                          <RelationshipGraph nodes={graphNodes as any} edges={graphEdges as any} />
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
                 )}
 
                 {/* 2. Data panels (workflows, preferences, journey, context, properties, docs) */}
@@ -533,6 +542,7 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
                     </Card>
                   </div>
                 )}
+
 
                 {/* 4. Family Members */}
                 <Card className="border-l-4 border-l-rose-400">
@@ -634,15 +644,6 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             <Card className="border-l-4 border-l-slate-400 bg-slate-50/15 dark:bg-slate-950/10">
               <CardContent className="p-4">
                 <ActivityTimeline activities={lazyActivities} />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Relationship Network — from Intelligence tab */}
-          {graphNodes.length > 1 && (
-            <Card className="border-l-4 border-l-indigo-400 bg-indigo-50/15 dark:bg-indigo-950/10">
-              <CardContent className="p-4">
-                <RelationshipGraph nodes={graphNodes as any} edges={graphEdges as any} />
               </CardContent>
             </Card>
           )}
