@@ -82,7 +82,7 @@ function VerifyEmailContent() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
               <Home className="h-5 w-5" />
             </div>
-            <span className="text-xl font-bold tracking-tight">RealtorAI</span>
+            <span className="text-xl font-bold tracking-tight">Magnate</span>
           </div>
           <div className="space-y-4">
             <h1 className="text-4xl font-bold leading-tight">
@@ -107,7 +107,7 @@ function VerifyEmailContent() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
               <Home className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold tracking-tight">RealtorAI</span>
+            <span className="text-xl font-bold tracking-tight">Magnate</span>
           </div>
 
           <div className="text-center">

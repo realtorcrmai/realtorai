@@ -25,7 +25,7 @@ export interface Tour {
 
 export const WELCOME_TOUR: Tour = {
   id: "welcome",
-  title: "Welcome to Realtors360",
+  title: "Welcome to Magnate",
   duration: "1 min",
   feature: "onboarding",
   steps: [

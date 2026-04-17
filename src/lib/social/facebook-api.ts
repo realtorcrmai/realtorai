@@ -1,4 +1,4 @@
-// Realtors360 Social — Facebook / Meta Graph API Integration
+// Magnate Social — Facebook / Meta Graph API Integration
 // Handles Facebook Page + Instagram Business publishing via Meta Graph API v21
 
 import type { MetaPageInfo, MetaPublishResult, MetaInsights } from "./types";

@@ -32,7 +32,7 @@ export function TopBar() {
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand">
             <Home className="h-3.5 w-3.5 text-primary-foreground" />
           </div>
-          <span className="font-bold text-sm">RealtorAI</span>
+          <span className="font-bold text-sm">Magnate</span>
         </div>
       </div>
       <div className="flex-1" />

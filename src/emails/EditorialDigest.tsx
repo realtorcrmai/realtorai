@@ -1,5 +1,5 @@
 /**
- * EditorialDigest.tsx — Master template for Realtors360 editorial newsletter editions.
+ * EditorialDigest.tsx — Master template for Magnate editorial newsletter editions.
  *
  * Composes all 10 block types into a production-quality HTML email using
  * React Email primitives. Outlook-compatible (no CSS Grid, no flexbox,

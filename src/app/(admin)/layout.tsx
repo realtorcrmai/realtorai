@@ -23,7 +23,7 @@ export default function AdminLayout({
               <Shield className="h-3.5 w-3.5 text-white" />
             </div>
             <span className="font-semibold text-base tracking-tight text-foreground">
-              Realtors360 Admin
+              Magnate Admin
             </span>
           </div>
 

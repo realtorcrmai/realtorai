@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { canSendToContact } from "@/lib/compliance/can-send";
+import { checkSendGovernor } from "@/lib/send-governor";
 import { revalidatePath } from "next/cache";
 
 type JourneyType = "buyer" | "seller" | "customer" | "agent";
@@ -267,7 +268,7 @@ export async function resumeJourney(contactId: string, journeyType: JourneyType)
     const currentIdx = PHASE_ORDER.indexOf(currentPhase);
     const nextPhase: JourneyPhase | undefined = PHASE_ORDER[currentIdx + 1];
 
-    if (!nextPhase || nextPhase === "dormant" && currentPhase === "past_client") {
+    if (!nextPhase) {
       // Already at past_client with no next meaningful phase — pause the journey.
       const { error } = await tc
         .from("contact_journeys")
@@ -392,34 +393,81 @@ export async function getJourneyDashboard() {
   };
 }
 
-export async function processJourneyQueue() {
+export async function processJourneyQueue(realtorId?: string) {
   // BUG-01 FIX: cron has no user session — use admin client so journeys actually process.
   // This function processes all realtors' journeys system-wide; admin client is correct here.
+  // When realtorId is provided (e.g. called from triggerNextEmail in user context),
+  // scope the query to only that realtor's journeys to avoid cross-tenant processing.
   const tc = createAdminClient();
 
   // Find journeys that need an email sent.
   // Fetch CASL fields so we can enforce canSendToContact() in-loop.
   // 5-D FIX: also select send_mode so we respect the realtor's review preference.
-  const { data: dueJourneys } = await tc
+  let journeyQuery = tc
     .from("contact_journeys")
-    .select("*, send_mode, next_email_type_override, contacts(id, name, email, type, newsletter_intelligence, newsletter_unsubscribed, casl_consent_given, casl_consent_date, buyer_preferences)")
+    .select("*, send_mode, next_email_type_override, contacts(id, name, email, type, newsletter_intelligence, newsletter_unsubscribed, casl_consent_given, casl_consent_date, casl_consent_expires_at, buyer_preferences)")
     .eq("is_paused", false)
     .not("next_email_at", "is", null)
     .lte("next_email_at", new Date().toISOString())
     .limit(50);
 
-  if (!dueJourneys?.length) return { processed: 0 };
+  if (realtorId) {
+    journeyQuery = journeyQuery.eq("realtor_id", realtorId);
+  }
+
+  const { data: dueJourneys, error: journeyQueryError } = await journeyQuery;
+
+  if (journeyQueryError) {
+    console.error("[processJourneyQueue] query error:", journeyQueryError);
+    return { processed: 0, queryError: journeyQueryError.message };
+  }
+
+  const foundCount = dueJourneys?.length ?? 0;
+  console.log(`[processJourneyQueue] found ${foundCount} due journeys`);
+  if (!foundCount) return { processed: 0, due_found: 0 };
 
   let processed = 0;
   let skippedCasl = 0;
+  const debugSkipped: Array<{ contactId: string; email: string; reason: string; code: string; casl_consent_given: boolean | null }> = [];
 
   for (const journey of dueJourneys) {
     const contact = journey.contacts as any;
     // Central CASL gate — see src/lib/compliance/can-send.ts
     const sendCheck = canSendToContact(contact);
     if (!sendCheck.allowed) {
+      console.log(`[processJourneyQueue] CASL block: contact=${contact?.id} email=${contact?.email} code=${sendCheck.code} casl=${contact?.casl_consent_given}`);
+      debugSkipped.push({ contactId: contact?.id, email: contact?.email, reason: sendCheck.reason, code: sendCheck.code, casl_consent_given: contact?.casl_consent_given });
       if (sendCheck.code === 'no_casl_consent' || sendCheck.code === 'unsubscribed') {
         skippedCasl++;
+      }
+      continue;
+    }
+
+    // G-J02: Send governor — frequency caps, engagement throttling, auto-sunset
+    const governorResult = await checkSendGovernor({
+      contactId: contact.id,
+      contactType: contact.type,
+      journeyPhase: journey.current_phase,
+      journeyType: journey.journey_type,
+      engagementScore: (contact as any).newsletter_intelligence?.engagement_score ?? 0,
+      engagementTrend: (contact as any).newsletter_intelligence?.engagement_trend ?? "stable",
+    });
+
+    if (!governorResult.allowed) {
+      // Auto-sunset: journey already paused by governor — nothing more needed
+      if (governorResult.reason?.startsWith("Auto-sunset")) {
+        console.log(`[journey:governor] Auto-sunset for contact ${contact.id}: ${governorResult.reason}`);
+        continue;
+      }
+      // Frequency cap: defer next_email_at by suggested delay
+      if (governorResult.suggestedDelay) {
+        await tc
+          .from("contact_journeys")
+          .update({
+            next_email_at: new Date(Date.now() + governorResult.suggestedDelay * 3600000).toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", journey.id);
       }
       continue;
     }
@@ -428,11 +476,41 @@ export async function processJourneyQueue() {
     const emailIndex = journey.emails_sent_in_phase;
 
     if (emailIndex >= schedule.length) {
-      // No more emails in this phase — wait for event to advance
+      const engagementScore = (contact as any).newsletter_intelligence?.engagement_score ?? 0;
+
+      // past_client loops annually — reset the phase and schedule one year out
+      if (journey.current_phase === "past_client") {
+        await tc
+          .from("contact_journeys")
+          .update({
+            emails_sent_in_phase: 0,
+            next_email_at: new Date(Date.now() + 365 * 24 * 3600000).toISOString(),
+          })
+          .eq("id", journey.id);
+        continue;
+      }
+
+      // Minimum engagement score (0-100) required to graduate a lead to the active phase.
+      // Contacts above this threshold showed enough interest to warrant active nurturing;
+      // those below are moved to dormant for lighter-touch re-engagement.
+      const PHASE_ADVANCE_SCORE_THRESHOLD = 40;
+
+      // Other phases: auto-advance based on engagement rather than freezing
+      const nextPhase = (engagementScore > PHASE_ADVANCE_SCORE_THRESHOLD && journey.current_phase === "lead") ? "active" : "dormant";
+
       await tc
         .from("contact_journeys")
-        .update({ next_email_at: null })
+        .update({
+          current_phase: nextPhase,
+          phase_entered_at: new Date().toISOString(),
+          emails_sent_in_phase: 0,
+          next_email_at: new Date().toISOString(),
+          pause_reason: null,
+          is_paused: false,
+        })
         .eq("id", journey.id);
+
+      console.log(`[journey] Phase exhausted: ${journey.current_phase} → ${nextPhase} (contact: ${journey.contact_id}, score: ${engagementScore})`);
       continue;
     }
 
@@ -443,30 +521,36 @@ export async function processJourneyQueue() {
     const emailType = nbaOverride ?? emailConfig.emailType;
 
     try {
-      // If an NBA override was used, clear it immediately before sending
-      if (nbaOverride) {
-        await tc
-          .from("contact_journeys")
-          .update({ next_email_type_override: null })
-          .eq("id", journey.id);
-      }
-
       // Import dynamically to avoid circular deps
       const { generateAndQueueNewsletter } = await import("@/actions/newsletters");
 
       // C-06: Separate try/catch for newsletter generation so a failure backs off
       // 6 hours rather than retrying immediately on every cron tick.
+      // H7: Clear NBA override AFTER generation succeeds — not before — so the
+      // override survives if generation fails and remains for the next queue run.
       try {
         await generateAndQueueNewsletter(
           contact.id,
           emailType,
           journey.current_phase,
           journey.id,
-          journey.send_mode ?? "auto"
+          journey.send_mode ?? "auto",
+          journey.realtor_id ?? undefined  // pass realtorId so cron can bypass session auth
         );
+
+        // H7: Only clear the override once generation has confirmed success
+        if (nbaOverride) {
+          await tc
+            .from("contact_journeys")
+            .update({ next_email_type_override: null })
+            .eq("id", journey.id);
+        }
       } catch (err) {
-        console.error('[journey:queue] Newsletter generation failed for journey', journey.id, err);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error('[journey:queue] Newsletter generation failed for journey', journey.id, errMsg);
+        debugSkipped.push({ contactId: contact?.id, email: contact?.email, reason: `generation_failed: ${errMsg}`, code: 'generation_failed' as any, casl_consent_given: contact?.casl_consent_given });
         // Back off 6 hours so we don't hammer the same contact on every cron tick
+        // NBA override is deliberately left intact so the next run retries with it
         await tc.from('contact_journeys').update({
           next_email_at: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
           updated_at: new Date().toISOString(),
@@ -496,7 +580,7 @@ export async function processJourneyQueue() {
     }
   }
 
-  return { processed, skipped_casl: skippedCasl };
+  return { processed, skipped_casl: skippedCasl, due_found: foundCount, debug_skipped: debugSkipped };
 }
 
 // L-03: Type predicate to narrow string → JourneyType without a redundant cast
@@ -522,8 +606,9 @@ export async function triggerNextEmail(journeyId: string) {
 
   if (error) return { error: error.message };
 
-  // Process the queue now so the email goes out immediately
-  await processJourneyQueue();
+  // Process the queue now so the email goes out immediately.
+  // Pass realtorId to scope processing to only this realtor's journeys.
+  await processJourneyQueue(tc.realtorId);
 
   revalidatePath("/newsletters/relationships");
   revalidatePath("/newsletters");

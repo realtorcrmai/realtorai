@@ -119,7 +119,7 @@ export function AssistantSetup() {
         steps={[
           "Open the Shortcuts app on your iOS device",
           "Tap + to create a new shortcut",
-          'Add a "Get Contents of URL" action pointing to your RealtorAI voice endpoint',
+          'Add a "Get Contents of URL" action pointing to your Magnate voice endpoint',
           "Set the method to POST and add your API key as a header",
           'Add to Siri with a phrase like "Hey Siri, check my listings"',
         ]}
@@ -132,13 +132,13 @@ export function AssistantSetup() {
       <AssistantCard
         emoji="🟢"
         name="Google Assistant"
-        description="Link your RealtorAI account to Google Assistant for voice access on Android, Google Home, and Nest devices."
+        description="Link your Magnate account to Google Assistant for voice access on Android, Google Home, and Nest devices."
         steps={[
           'Open the Google Home app and go to Settings > Works with Google',
-          'Search for "RealtorAI" and tap Link Account',
+          'Search for "Magnate" and tap Link Account',
           "Sign in with your CRM credentials",
           "Grant voice access permissions",
-          'Say "Hey Google, ask RealtorAI about my showings"',
+          'Say "Hey Google, ask Magnate about my showings"',
         ]}
         statusLabel="Not Linked"
         statusVariant="pending"
@@ -149,12 +149,12 @@ export function AssistantSetup() {
       <AssistantCard
         emoji="🔵"
         name="Amazon Alexa"
-        description="Enable the RealtorAI Alexa skill for voice access on Echo devices and the Alexa app."
+        description="Enable the Magnate Alexa skill for voice access on Echo devices and the Alexa app."
         steps={[
-          'Open the Alexa app and search Skills for "RealtorAI"',
+          'Open the Alexa app and search Skills for "Magnate"',
           "Tap Enable Skill and link your CRM account",
           "Complete the account linking flow",
-          'Say "Alexa, open RealtorAI" to start a session',
+          'Say "Alexa, open Magnate" to start a session',
         ]}
         statusLabel="Not Linked"
         statusVariant="pending"
@@ -165,11 +165,11 @@ export function AssistantSetup() {
       <AssistantCard
         emoji="🟣"
         name="Microsoft Cortana"
-        description="Connect RealtorAI to Cortana for voice commands on Windows devices and Microsoft 365."
+        description="Connect Magnate to Cortana for voice commands on Windows devices and Microsoft 365."
         steps={[
           "Open Windows Settings > Cortana",
           "Enable third-party skill connections",
-          'Search for "RealtorAI" in Connected Services',
+          'Search for "Magnate" in Connected Services',
           "Authorize the connection with your API key",
         ]}
         statusLabel="Not Linked"

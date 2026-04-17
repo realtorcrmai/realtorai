@@ -1,4 +1,4 @@
-// Realtors360 — Multi-Tenant Query Wrapper
+// Magnate — Multi-Tenant Query Wrapper
 // Auto-injects .eq('realtor_id', id) on every query to prevent cross-tenant data access
 // Use this instead of raw createAdminClient() for all user-initiated operations
 

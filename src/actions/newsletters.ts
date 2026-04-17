@@ -42,7 +42,9 @@ async function renderEmailTemplate(
   branding: RealtorBranding,
   contactName: string,
   contactId: string,
-  preferredArea?: string
+  preferredArea?: string,
+  journeyPhase?: string,
+  engagementScore?: number,
 ): Promise<string> {
   const firstName = contactName.split(" ")[0];
   const areaFallback = preferredArea || "your neighbourhood";
@@ -234,7 +236,7 @@ async function renderEmailTemplate(
     // (no-op: intro/ctaText from the base content object are sufficient)
   };
 
-  return assembleEmail(blockType, emailData);
+  return assembleEmail(blockType, emailData, undefined, journeyPhase, engagementScore);
 }
 
 export async function generateAndQueueNewsletter(
@@ -242,9 +244,19 @@ export async function generateAndQueueNewsletter(
   emailType: string,
   journeyPhase: string,
   journeyId?: string,
-  sendMode: string = "review"
+  sendMode: string = "review",
+  realtorId?: string
 ) {
-  const tc = await getAuthenticatedTenantClient();
+  // When called from the cron (no user session), realtorId is passed explicitly and we use
+  // tenantClient(realtorId) backed by the admin Supabase client to bypass session auth.
+  // When called in a user context (UI actions), we use getAuthenticatedTenantClient() as normal.
+  let tc: Awaited<ReturnType<typeof getAuthenticatedTenantClient>>;
+  if (realtorId) {
+    const { tenantClient } = await import("@/lib/supabase/tenant");
+    tc = tenantClient(realtorId);
+  } else {
+    tc = await getAuthenticatedTenantClient();
+  }
 
   // Frequency cap: max 1 email per 24 hours per contact
   const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
@@ -252,7 +264,7 @@ export async function generateAndQueueNewsletter(
     .from("newsletters")
     .select("id", { count: "exact", head: true })
     .eq("contact_id", contactId)
-    .in("status", ["sent", "sending", "draft", "approved"])
+    .in("status", ["sent", "sending"])
     .gte("created_at", oneDayAgo);
 
   if ((recentCount || 0) >= 2) {
@@ -267,7 +279,7 @@ export async function generateAndQueueNewsletter(
     .eq("contact_id", contactId)
     .eq("email_type", emailType)
     .eq("journey_phase", journeyPhase)
-    .in("status", ["sent", "sending", "draft", "approved"])
+    .in("status", ["sent", "sending"])
     .gte("created_at", sevenDaysAgo);
 
   if ((dupeCount || 0) > 0) {
@@ -282,9 +294,10 @@ export async function generateAndQueueNewsletter(
     .single();
 
   if (!contact) {
-    console.error('[newsletter] Contact not found for id:', contactId)
+    console.error('[newsletter] Contact not found for id:', contactId, '| realtorId:', realtorId ?? 'session');
     return { error: 'Contact not found' }
   }
+  console.log('[newsletter] Generating for:', contact.email, '| type:', emailType, '| phase:', journeyPhase);
 
   // Central CASL + unsubscribe gate — do NOT bypass.
   // See src/lib/compliance/can-send.ts for the rules.
@@ -344,13 +357,18 @@ export async function generateAndQueueNewsletter(
   const preferredArea = preferredAreas0?.[0]
     || (intelligenceInterests?.areas as string[] | undefined)?.[0]
     || undefined;
+  const engagementScore = typeof intelligence.engagement_score === "number"
+    ? intelligence.engagement_score
+    : 0;
   const html = await renderEmailTemplate(
     emailType,
     content,
     branding,
     contact.name,
     contactId,
-    preferredArea
+    preferredArea,
+    journeyPhase,
+    engagementScore,
   );
 
   // Save newsletter record
@@ -376,7 +394,29 @@ export async function generateAndQueueNewsletter(
   // Real-time RAG ingestion and optional auto-send
   if (newsletter) {
     triggerIngest("newsletters", newsletter.id);
-    if (sendMode === "auto") await sendNewsletter(newsletter.id);
+
+    // Non-fatal event emission
+    try {
+      const { emitNewsletterEvent } = await import("@/lib/newsletter-events");
+      await emitNewsletterEvent(tc, {
+        event_type: "newsletter_generated",
+        contact_id: contactId,
+        event_data: { email_type: emailType, journey_phase: journeyPhase, newsletter_id: newsletter.id },
+      });
+    } catch { /* non-fatal */ }
+
+    if (sendMode === "auto") {
+      try {
+        await sendNewsletter(newsletter.id);
+      } catch (sendErr) {
+        console.error("[newsletter] Auto-send failed for newsletter", newsletter.id, sendErr);
+        await tc.from("newsletters").update({
+          status: "failed",
+          error_message: sendErr instanceof Error ? sendErr.message : "Auto-send failed",
+          updated_at: new Date().toISOString(),
+        }).eq("id", newsletter.id);
+      }
+    }
   }
 
   revalidatePath("/newsletters");
@@ -389,7 +429,7 @@ export async function sendNewsletter(newsletterId: string) {
   // Fetch newsletter with full contact data (including buyer_preferences and type)
   const { data: newsletter } = await tc
     .from("newsletters")
-    .select("*, contacts(id, email, name, type, buyer_preferences, newsletter_intelligence, casl_consent_given, newsletter_unsubscribed)")
+    .select("*, contacts(id, email, name, type, buyer_preferences, newsletter_intelligence, casl_consent_given, casl_consent_date, casl_consent_expires_at, newsletter_unsubscribed)")
     .eq("id", newsletterId)
     .single();
 
@@ -404,6 +444,8 @@ export async function sendNewsletter(newsletterId: string) {
     buyer_preferences: Record<string, unknown> | null;
     newsletter_intelligence: Record<string, unknown> | null;
     casl_consent_given: boolean | null;
+    casl_consent_date: string | null;
+    casl_consent_expires_at: string | null;
     newsletter_unsubscribed: boolean | null;
   };
   const contact = newsletter.contacts as NewsletterContact;
@@ -419,6 +461,18 @@ export async function sendNewsletter(newsletterId: string) {
     console.warn('[newsletter] Skipping send — contact is unsubscribed:', contact.id);
     await tc.from('newsletters').update({ status: 'skipped', error_message: 'Contact unsubscribed' }).eq('id', newsletterId);
     return { error: 'Contact unsubscribed' };
+  }
+
+  // G-N05: CASL consent expiry check (2-year limit per Canadian law)
+  const caslExpiresAt = contact.casl_consent_expires_at
+    ? new Date(contact.casl_consent_expires_at)
+    : contact.casl_consent_date
+      ? new Date(new Date(contact.casl_consent_date).getTime() + 2 * 365.25 * 24 * 60 * 60 * 1000)
+      : null;
+  if (caslExpiresAt && caslExpiresAt < new Date()) {
+    console.warn('[newsletter] Skipping send — CASL consent expired for contact:', contact.id);
+    await tc.from('newsletters').update({ status: 'skipped', error_message: 'CASL consent expired' }).eq('id', newsletterId);
+    return { error: 'CASL consent expired' };
   }
 
   // Extract buyer preferences for validation pipeline
@@ -647,6 +701,16 @@ export async function sendNewsletter(newsletterId: string) {
         newsletter_id: newsletterId,
       });
 
+      // Non-fatal event emission
+      try {
+        const { emitNewsletterEvent } = await import("@/lib/newsletter-events");
+        await emitNewsletterEvent(tc, {
+          event_type: "newsletter_sent",
+          contact_id: newsletter.contact_id,
+          event_data: { resend_message_id: result.messageId, email_type: newsletter.email_type, newsletter_id: newsletterId },
+        });
+      } catch { /* non-fatal */ }
+
       revalidatePath("/newsletters");
       return { success: true, messageId: result.messageId };
     }
@@ -696,7 +760,7 @@ export async function editNewsletterDraft(
     const realtorId = tc.realtorId;
 
     // Update the newsletter with edited content
-    await tc
+    const { error: updateError } = await tc
       .from("newsletters")
       .update({
         subject: editedSubject,
@@ -704,6 +768,8 @@ export async function editNewsletterDraft(
         updated_at: new Date().toISOString(),
       })
       .eq("id", newsletterId);
+
+    if (updateError) return { success: false, error: updateError.message };
 
     // Run voice learning to extract writing preferences
     const { extractVoiceRules } = await import("@/lib/voice-learning");
@@ -737,16 +803,25 @@ export async function skipNewsletter(newsletterId: string) {
 export async function getApprovalQueue() {
   const tc = await getAuthenticatedTenantClient();
 
-  // BUG-01: Include 'deferred' newsletters so the cron can retry them.
-  // Deferred newsletters (blocked by send governor) are retriable once scheduling window re-opens.
   const { data } = await tc
     .from("newsletters")
     .select("*, contacts(id, name, email, type)")
-    .in("status", ["draft", "deferred"])
+    .eq("status", "draft")
     .eq("send_mode", "review")
     .order("created_at", { ascending: false });
 
   return data || [];
+}
+
+export async function getDeferredNewsletters() {
+  const tc = await getAuthenticatedTenantClient();
+  const { data } = await tc
+    .from("newsletters")
+    .select("id, subject, email_type, status, created_at, contacts(id, name, email)")
+    .eq("status", "deferred")
+    .order("created_at", { ascending: false })
+    .limit(50);
+  return data ?? [];
 }
 
 export async function getNewsletterAnalytics(days: number = 30) {
@@ -962,6 +1037,51 @@ export async function rejectDraft(draftId: string) {
 
   revalidatePath("/newsletters/queue");
   revalidatePath("/newsletters/agent");
+  return { success: true };
+}
+
+export async function regenerateNewsletter(newsletterId: string) {
+  "use server";
+  const tc = await getAuthenticatedTenantClient();
+
+  const { data: newsletter, error } = await tc
+    .from("newsletters")
+    .select("contact_id, email_type, journey_phase, journey_id, regeneration_count")
+    .eq("id", newsletterId)
+    .single();
+
+  if (error || !newsletter) return { error: "Newsletter not found" };
+  const oldRegenerationCount = newsletter.regeneration_count || 0;
+  if (oldRegenerationCount >= 3) {
+    return { error: "Max regenerations reached (3)" };
+  }
+
+  // C2: Generate first — only soft-delete the old record if generation succeeds
+  const genResult = await generateAndQueueNewsletter(
+    newsletter.contact_id,
+    newsletter.email_type,
+    newsletter.journey_phase || "lead",
+    newsletter.journey_id ?? undefined,
+    "review"
+  );
+
+  if (genResult.error || !genResult.data) {
+    return { error: genResult.error || "Generation failed" };
+  }
+
+  // C2: Soft-delete (supersede) old newsletter — never hard-delete
+  await tc
+    .from("newsletters")
+    .update({ status: "superseded", updated_at: new Date().toISOString() })
+    .eq("id", newsletterId);
+
+  // C3: Carry forward regeneration_count so the 3-attempt limit is preserved
+  await tc
+    .from("newsletters")
+    .update({ regeneration_count: oldRegenerationCount + 1, updated_at: new Date().toISOString() })
+    .eq("id", genResult.data.id);
+
+  revalidatePath("/newsletters/queue");
   return { success: true };
 }
 

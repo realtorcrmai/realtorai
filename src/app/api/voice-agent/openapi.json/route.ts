@@ -1,23 +1,23 @@
 import { NextResponse } from "next/server";
 
 /**
- * Serves the OpenAPI 3.1 specification for the RealtorAI Voice Agent API.
+ * Serves the OpenAPI 3.1 specification for the Magnate Voice Agent API.
  * Used by Gemini Extensions, Google Actions, and external integrations.
  */
 export async function GET() {
   const spec = {
     openapi: "3.1.0",
     info: {
-      title: "RealtorAI Voice Agent API",
+      title: "Magnate Voice Agent API",
       version: "1.0.0",
       description:
         "Multi-tenant voice agent API for real estate CRM. Supports contacts, listings, showings, deals, tasks, and voice session management. All endpoints require Bearer token authentication and are scoped to the authenticated tenant.",
-      contact: { name: "RealtorAI Engineering", url: "https://realtorai.com" },
+      contact: { name: "Magnate Engineering", url: "https://realtorai.com" },
     },
     servers: [
       {
         url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-        description: "RealtorAI API",
+        description: "Magnate API",
       },
     ],
     security: [{ bearerAuth: [] }],

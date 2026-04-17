@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Pause, Play, Square, AlertTriangle } from "lucide-react";
+import { enrollContactInJourney } from "@/actions/journeys";
 
 type Journey = {
   id: string;
@@ -51,6 +52,8 @@ export function ProspectControls({
   const [notesSaved, setNotesSaved] = useState(false);
   const [frequency, setFrequency] = useState<string>("ai");
   const [updating, setUpdating] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
+  const [enrollError, setEnrollError] = useState<string | null>(null);
 
   const saveNotes = useCallback(async () => {
     try {
@@ -83,15 +86,59 @@ export function ProspectControls({
     [journey, onUpdate]
   );
 
+  const handleEnroll = useCallback(
+    async (journeyType: "buyer" | "seller" | "customer") => {
+      setEnrolling(true);
+      setEnrollError(null);
+      try {
+        const result = await enrollContactInJourney(contactId, journeyType);
+        if (result?.alreadyEnrolled) {
+          setEnrollError("Already enrolled in this journey type.");
+        } else {
+          onUpdate?.();
+        }
+      } catch (e) {
+        setEnrollError(e instanceof Error ? e.message : "Enrollment failed.");
+      }
+      setEnrolling(false);
+    },
+    [contactId, onUpdate]
+  );
+
   if (!journey) {
     return (
       <Card>
         <CardContent className="p-4 text-center text-sm text-muted-foreground">
           Not enrolled in any journey. Contact will not receive automated emails.
-          <br />
-          <Button variant="outline" size="sm" className="mt-2">
-            Enroll in Journey
-          </Button>
+          {enrollError && (
+            <p className="text-red-500 text-xs mt-2">{enrollError}</p>
+          )}
+          <div className="flex gap-2 justify-center mt-3 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleEnroll("buyer")}
+              disabled={enrolling}
+            >
+              {enrolling ? "Enrolling…" : "Enroll as Buyer"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleEnroll("seller")}
+              disabled={enrolling}
+            >
+              {enrolling ? "Enrolling…" : "Enroll as Seller"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleEnroll("customer")}
+              disabled={enrolling}
+            >
+              {enrolling ? "Enrolling…" : "Enroll as Customer"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );

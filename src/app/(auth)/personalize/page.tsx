@@ -84,7 +84,7 @@ const SCREENS = [
 function getHeading(screen: number, firstName: string): string {
   const name = firstName || "there";
   switch (screen) {
-    case 0: return `Hey ${name}, what brings you to Realtors360?`;
+    case 0: return `Hey ${name}, what brings you to Magnate?`;
     case 1: return "Great! What's your primary focus?";
     case 2: return "How big is your team?";
     case 3: return "How long have you been in real estate?";

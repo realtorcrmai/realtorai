@@ -125,7 +125,7 @@ export function CelebrationScreen({ destination = "/" }: CelebrationScreenProps)
               WebkitTextFillColor: "transparent",
             }}
           >
-            Welcome to Realtors360{firstName ? `, ${firstName}` : ""}!
+            Welcome to Magnate{firstName ? `, ${firstName}` : ""}!
           </h1>
 
           {/* Feature counter (C5) */}

@@ -56,7 +56,7 @@ export default async function UnsubscribePage({
 
           {/* Footer */}
           <p className="mt-10 text-xs text-gray-300">
-            Realtors360 · Sent in compliance with CASL
+            Magnate · Sent in compliance with CASL
           </p>
         </div>
       </main>
@@ -100,7 +100,7 @@ export default async function UnsubscribePage({
 
         {/* Footer */}
         <p className="mt-10 text-xs text-gray-300">
-          Realtors360 · Sent in compliance with CASL
+          Magnate · Sent in compliance with CASL
         </p>
       </div>
     </main>

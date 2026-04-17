@@ -133,7 +133,7 @@ export default function SignupPage() {
             <div className="flex items-start gap-3 p-4 bg-white/60 backdrop-blur rounded-xl">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4f35d2] to-[#7c5cfc] flex items-center justify-center text-white text-sm font-bold shrink-0">SK</div>
               <div>
-                <p className="text-sm text-gray-700 italic">&ldquo;Realtors360 cut my listing prep time from 3 hours to 20 minutes. The AI remarks generator alone is worth it.&rdquo;</p>
+                <p className="text-sm text-gray-700 italic">&ldquo;Magnate cut my listing prep time from 3 hours to 20 minutes. The AI remarks generator alone is worth it.&rdquo;</p>
                 <p className="text-xs text-gray-500 mt-1 font-medium">Sarah K. — Top Producer, RE/MAX Vancouver</p>
               </div>
             </div>

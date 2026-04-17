@@ -24,7 +24,7 @@ function getDripContent(day: number, firstName: string, appUrl: string): DripCon
   switch (day) {
     case 0:
       return {
-        preview: "Welcome to Realtors360 — your AI-powered real estate CRM",
+        preview: "Welcome to Magnate — your AI-powered real estate CRM",
         heading: `Welcome, ${firstName}!`,
         body: "Your 14-day Professional trial is active — all features unlocked. Here are 3 quick wins to get started:",
         steps: [
@@ -46,7 +46,7 @@ function getDripContent(day: number, firstName: string, appUrl: string): DripCon
       return {
         preview: "AI writes your MLS remarks instantly",
         heading: "Let AI write your MLS remarks",
-        body: `${firstName}, one of Realtors360's most powerful features: AI-generated MLS remarks. Add a listing, and our AI writes both your public remarks and REALTOR remarks instantly.`,
+        body: `${firstName}, one of Magnate's most powerful features: AI-generated MLS remarks. Add a listing, and our AI writes both your public remarks and REALTOR remarks instantly.`,
         steps: null,
         cta: { text: "Try It Now", href: `${appUrl}/listings/new` },
       };
@@ -88,9 +88,9 @@ function getDripContent(day: number, firstName: string, appUrl: string): DripCon
       };
     default:
       return {
-        preview: "Update from Realtors360",
+        preview: "Update from Magnate",
         heading: `Hi ${firstName}`,
-        body: "Check out what's new in your Realtors360 dashboard.",
+        body: "Check out what's new in your Magnate dashboard.",
         steps: null,
         cta: { text: "Open Dashboard", href: appUrl },
       };
@@ -136,7 +136,7 @@ export function buildWelcomeDripHTML(props: {
   <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;" class="drip-card">
     <!-- Header -->
     <div style="padding:28px 32px 0;text-align:center;">
-      <p style="font-size:20px;font-weight:700;color:#2D3E50;margin:0;letter-spacing:-0.5px;">Realtors360</p>
+      <p style="font-size:20px;font-weight:700;color:#2D3E50;margin:0;letter-spacing:-0.5px;">Magnate</p>
     </div>
 
     <!-- Content -->
@@ -154,7 +154,7 @@ export function buildWelcomeDripHTML(props: {
     <!-- Footer -->
     <hr style="border:none;border-top:1px solid #e8e5f5;margin:0;">
     <div style="padding:20px 32px;text-align:center;">
-      <p style="font-size:13px;color:#6b6b8d;margin:0 0 8px;" class="drip-muted">Rahul from Realtors360</p>
+      <p style="font-size:13px;color:#6b6b8d;margin:0 0 8px;" class="drip-muted">The Magnate Team</p>
       <p style="font-size:11px;color:#a0a0b0;margin:0;">
         <a href="${props.unsubscribeUrl}" style="color:#a0a0b0;text-decoration:underline;">Unsubscribe</a> from onboarding emails
       </p>
