@@ -52,6 +52,8 @@ export interface NewsletterContext {
     firstName: string;
     type: "buyer" | "seller" | "customer" | "agent" | "partner" | "other";
     email: string;
+    /** Free-text realtor notes about this contact (e.g. "met at open house, husband hesitant") */
+    notes?: string;
     areas?: string[];
     preferences?: {
       price_range_min?: number;
@@ -239,6 +241,11 @@ Use this to personalize the email angle — emphasize what this contact has show
     }
   }
 
+  // Always surface realtor notes when present — even if no newsletter_intelligence data exists
+  const notesBlock = context.contact.notes
+    ? `\n\nREALTOR NOTES: "${sanitizeForPrompt(context.contact.notes, 400)}" — treat this as high-signal context about this specific person. Use it to inform tone, topic, and personalization.`
+    : "";
+
   // Fix #1: Buyer vs seller differentiation
   const contactTypeInstructions = context.contact.type === "seller"
     ? `
@@ -282,7 +289,7 @@ ${contactTypeInstructions}
 
 JOURNEY PHASE: ${context.journeyPhase}
 ${phaseInstruction}
-${hintsBlock}${intelligenceBlock}
+${hintsBlock}${intelligenceBlock}${notesBlock}
 
 Rules:
 - Keep it concise (150-250 words for the body)

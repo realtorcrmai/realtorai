@@ -313,6 +313,7 @@ export async function generateAndQueueNewsletter(
       firstName: contact.name.split(" ")[0],
       type: contact.type as any,
       email: contact.email,
+      notes: contact.notes as string | undefined ?? undefined,
       areas: intelligenceInterests?.areas as string[] | undefined,
       preferences: contact.buyer_preferences as NewsletterContext['contact']['preferences'],
       engagementScore: intelligence.engagement_score as number | undefined,
