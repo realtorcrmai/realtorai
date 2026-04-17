@@ -13,7 +13,8 @@ const TEXT_BODY = '#4a4a3a'
 const TEXT_MUTED = '#6b6b5a'
 const CARD_BG = '#f9f7f2'
 
-function formatPrice(cents: number): string {
+function formatPrice(cents: number | null | undefined): string {
+  if (cents == null) return '—'
   const dollars = cents / 100
   if (dollars >= 1_000_000) {
     return '$' + (dollars / 1_000_000).toFixed(2).replace(/\.?0+$/, '') + 'M'
@@ -21,8 +22,8 @@ function formatPrice(cents: number): string {
   return '$' + dollars.toLocaleString('en-CA')
 }
 
-function formatPct(pct: number | null): string | null {
-  if (pct === null) return null
+function formatPct(pct: number | null | undefined): string | null {
+  if (pct == null) return null
   const sign = pct >= 0 ? '+' : ''
   return `${sign}${pct.toFixed(1)}%`
 }

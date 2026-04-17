@@ -12,13 +12,13 @@ const TEXT_BODY = '#4a4a3a'
 const TEXT_MUTED = '#6b6b5a'
 const CARD_BG = '#f9f7f2'
 
-function formatScore(val: number | null, label: string): string | null {
-  if (val === null) return null
+function formatScore(val: number | null | undefined, label: string): string | null {
+  if (val == null) return null
   return `${label}: ${val}/100`
 }
 
-function formatAvgPrice(cents: number | null): string | null {
-  if (cents === null) return null
+function formatAvgPrice(cents: number | null | undefined): string | null {
+  if (cents == null) return null
   const dollars = cents / 100
   if (dollars >= 1_000_000) {
     return 'Avg. ' + '$' + (dollars / 1_000_000).toFixed(2).replace(/\.?0+$/, '') + 'M'
