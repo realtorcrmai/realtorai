@@ -661,25 +661,6 @@ export default async function ContactDetailPage({
             />
           </MobileDetailSheet>
 
-          {/* Quick Action Bar — each action opens focused dialog with history */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-1.5 bg-card border border-border rounded-lg p-1">
-              <QuickActionBar
-                contactId={id}
-                contactPhone={contact.phone}
-                contactChannel={contact.pref_channel}
-              />
-              <NotesDialog
-                contactId={id}
-                contactName={contact.name}
-                communications={typedCommunications}
-              />
-              <EmailComposer
-                contactId={id}
-                contactEmail={contact.email}
-              />
-            </div>
-          </div>
 
           {/* Journey Phase — compact inline subtitle (replaces separate JourneyProgressBar) */}
           {contactJourney && (
@@ -756,7 +737,27 @@ export default async function ContactDetailPage({
   // Right panel inner content — shared between mobile collapsible and desktop aside
   const rightPanelContentJsx = (
     <>
-      {/* Engagement — 1st section */}
+      {/* Quick Actions — Call, Log Note, Email */}
+      <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 shrink-0">
+        <div className="flex items-center gap-1.5 bg-card border border-border rounded-lg p-1">
+          <QuickActionBar
+            contactId={id}
+            contactPhone={contact.phone}
+            contactChannel={contact.pref_channel}
+          />
+          <NotesDialog
+            contactId={id}
+            contactName={contact.name}
+            communications={typedCommunications}
+          />
+          <EmailComposer
+            contactId={id}
+            contactEmail={contact.email}
+          />
+        </div>
+      </div>
+
+      {/* Engagement */}
       {intel && (
         <div id="section-engagement" className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0 scroll-mt-4">
           <IntelligencePanel
