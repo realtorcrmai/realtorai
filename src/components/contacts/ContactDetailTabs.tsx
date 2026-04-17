@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { CommunicationTimeline } from "@/components/contacts/CommunicationTimeline";
@@ -182,6 +183,7 @@ export type ContactDetailTabsProps = {
       created_at: string;
     }>;
   }>;
+
 };
 
 // Check if preferences object has any meaningful data set
@@ -244,7 +246,18 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
     newslettersWithEvents,
   } = props;
 
-  const [currentTab, setCurrentTab] = useState("overview");
+  const searchParams = useSearchParams();
+  const validTabs = ["overview", "activity", "deals", "config"];
+  const tabParam = searchParams.get("tab");
+  const [currentTab, setCurrentTab] = useState(
+    tabParam && validTabs.includes(tabParam) ? tabParam : "overview"
+  );
+
+  // Sync tab from URL when stat card is clicked (client-side navigation)
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t && validTabs.includes(t)) setCurrentTab(t);
+  }, [searchParams]);
 
   // ── Quick Setup tile triggers — open panels inline without tab switch ──
   const [triggerPrefs, setTriggerPrefs] = useState(false);

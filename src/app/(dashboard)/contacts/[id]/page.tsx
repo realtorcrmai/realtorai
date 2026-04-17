@@ -1,5 +1,6 @@
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrackRecentView } from "@/components/shared/TrackRecentView";
 import { Badge } from "@/components/ui/badge";
@@ -585,52 +586,60 @@ export default async function ContactDetailPage({
             </Card>
           </div>
 
-          {/* KPI Stat Cards — Dashboard style */}
+          {/* KPI Stat Cards — clickable, navigate to relevant tab */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Card className="border-l-4 border-l-brand">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
-                  <TrendingUp className="h-4 w-4 text-brand" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Lead Score</p>
-                  <p className="text-xl font-semibold text-foreground">{engagementScore ?? "—"}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-[#f5c26b]">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-[#f5c26b]/10 flex items-center justify-center shrink-0">
-                  <Users className="h-4 w-4 text-[#8a5a1e]" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Network</p>
-                  <p className="text-xl font-semibold text-foreground">{relationships.length + allReferrals.length}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-success">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
-                  <Building2 className="h-4 w-4 text-success" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Portfolio</p>
-                  <p className="text-xl font-semibold text-foreground">{(portfolioData ?? []).length}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-primary">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <Clock className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Last Contact</p>
-                  <p className={`text-sm font-semibold ${lastContactUrgency}`}>{lastContactedText}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <Link href={`/contacts/${id}?tab=overview`}>
+              <Card className="border-l-4 border-l-brand cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+                    <TrendingUp className="h-4 w-4 text-brand" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Lead Score</p>
+                    <p className="text-xl font-semibold text-foreground">{engagementScore ?? "—"}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href={`/contacts/${id}?tab=overview`}>
+              <Card className="border-l-4 border-l-[#f5c26b] cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-[#f5c26b]/10 flex items-center justify-center shrink-0">
+                    <Users className="h-4 w-4 text-[#8a5a1e]" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Network</p>
+                    <p className="text-xl font-semibold text-foreground">{relationships.length + allReferrals.length}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href={`/contacts/${id}?tab=deals`}>
+              <Card className="border-l-4 border-l-success cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+                    <Building2 className="h-4 w-4 text-success" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Portfolio</p>
+                    <p className="text-xl font-semibold text-foreground">{(portfolioData ?? []).length}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href={`/contacts/${id}?tab=activity`}>
+              <Card className="border-l-4 border-l-primary cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Clock className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Last Contact</p>
+                    <p className={`text-sm font-semibold ${lastContactUrgency}`}>{lastContactedText}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
 
           {/* Household Banner — only show when assigned */}
