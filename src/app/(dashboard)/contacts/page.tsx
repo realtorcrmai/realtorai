@@ -91,50 +91,58 @@ export default async function ContactsPage({
           return (
             <>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <Card className="border-l-4 border-l-brand">
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
-                      <TrendingUp className="h-4 w-4 text-brand" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider">New This Week</p>
-                      <p className="text-xl font-semibold text-foreground">{newThisWeek}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-l-4 border-l-destructive">
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
-                      <Flame className="h-4 w-4 text-destructive" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Hot Leads</p>
-                      <p className="text-xl font-semibold text-foreground">{hotLeads}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-l-4 border-l-[#f5c26b]">
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-[#f5c26b]/10 flex items-center justify-center shrink-0">
-                      <BarChart3 className="h-4 w-4 text-[#8a5a1e]" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider">In Pipeline</p>
-                      <p className="text-xl font-semibold text-foreground">{inPipeline}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-l-4 border-l-success">
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
-                      <CheckCircle2 className="h-4 w-4 text-success" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Closed This Mo</p>
-                      <p className="text-xl font-semibold text-foreground">{closedThisMonth}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <Link href="/contacts?recent=week">
+                  <Card className="border-l-4 border-l-brand cursor-pointer hover:shadow-md transition-shadow">
+                    <CardContent className="p-3 flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+                        <TrendingUp className="h-4 w-4 text-brand" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">New This Week</p>
+                        <p className="text-xl font-semibold text-foreground">{newThisWeek}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+                <Link href="/contacts?engagement=hot">
+                  <Card className="border-l-4 border-l-destructive cursor-pointer hover:shadow-md transition-shadow">
+                    <CardContent className="p-3 flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+                        <Flame className="h-4 w-4 text-destructive" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Hot Leads</p>
+                        <p className="text-xl font-semibold text-foreground">{hotLeads}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+                <Link href="/contacts?view=pipeline">
+                  <Card className="border-l-4 border-l-[#f5c26b] cursor-pointer hover:shadow-md transition-shadow">
+                    <CardContent className="p-3 flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-lg bg-[#f5c26b]/10 flex items-center justify-center shrink-0">
+                        <BarChart3 className="h-4 w-4 text-[#8a5a1e]" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">In Pipeline</p>
+                        <p className="text-xl font-semibold text-foreground">{inPipeline}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+                <Link href="/contacts?stage=closed">
+                  <Card className="border-l-4 border-l-success cursor-pointer hover:shadow-md transition-shadow">
+                    <CardContent className="p-3 flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+                        <CheckCircle2 className="h-4 w-4 text-success" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Closed This Mo</p>
+                        <p className="text-xl font-semibold text-foreground">{closedThisMonth}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
               </div>
               <PipelineSnapshot stages={pipelineStages} totalGCI={0} />
             </>

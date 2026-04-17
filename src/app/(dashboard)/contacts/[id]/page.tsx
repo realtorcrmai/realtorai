@@ -1,5 +1,6 @@
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrackRecentView } from "@/components/shared/TrackRecentView";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,6 @@ import { MobileDetailSheet } from "@/components/layout/MobileDetailSheet";
 import { type ReferralRow } from "@/components/contacts/ReferralsPanel";
 import { NetworkStatsCard } from "@/components/contacts/NetworkStatsCard";
 import { HouseholdBanner } from "@/components/contacts/HouseholdBanner";
-import { QuickActionBar } from "@/components/contacts/QuickActionBar";
 import { TagEditor } from "@/components/contacts/TagEditor";
 import { StageBar, type StageData } from "@/components/contacts/StageBar";
 import EmailComposer from "@/components/contacts/EmailComposer";
@@ -581,56 +581,77 @@ export default async function ContactDetailPage({
                 {contact.notes && (
                   <p className="text-sm text-muted-foreground mt-2 italic">{contact.notes}</p>
                 )}
+
+                {/* Quick Actions — bottom right of name card */}
+                <div className="flex items-center justify-end gap-1.5 mt-3 pt-2 border-t border-border">
+                  <NotesDialog
+                    contactId={id}
+                    contactName={contact.name}
+                    communications={typedCommunications}
+                  />
+                  <EmailComposer
+                    contactId={id}
+                    contactEmail={contact.email}
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* KPI Stat Cards — Dashboard style */}
+          {/* KPI Stat Cards — clickable, navigate to relevant tab */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Card className="border-l-4 border-l-brand">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
-                  <TrendingUp className="h-4 w-4 text-brand" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Lead Score</p>
-                  <p className="text-xl font-semibold text-foreground">{engagementScore ?? "—"}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-[#f5c26b]">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-[#f5c26b]/10 flex items-center justify-center shrink-0">
-                  <Users className="h-4 w-4 text-[#8a5a1e]" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Network</p>
-                  <p className="text-xl font-semibold text-foreground">{relationships.length + allReferrals.length}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-success">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
-                  <Building2 className="h-4 w-4 text-success" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Portfolio</p>
-                  <p className="text-xl font-semibold text-foreground">{(portfolioData ?? []).length}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-l-4 border-l-primary">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <Clock className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Last Contact</p>
-                  <p className={`text-sm font-semibold ${lastContactUrgency}`}>{lastContactedText}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <Link href={`/contacts/${id}?tab=overview#section-engagement`}>
+              <Card className="border-l-4 border-l-brand cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+                    <TrendingUp className="h-4 w-4 text-brand" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Lead Score</p>
+                    <p className="text-xl font-semibold text-foreground">{engagementScore ?? "—"}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href={`/contacts/${id}?tab=overview#section-network`}>
+              <Card className="border-l-4 border-l-[#f5c26b] cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-[#f5c26b]/10 flex items-center justify-center shrink-0">
+                    <Users className="h-4 w-4 text-[#8a5a1e]" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Network</p>
+                    <p className="text-xl font-semibold text-foreground">{relationships.length + allReferrals.length}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href={`/contacts/${id}?tab=deals`}>
+              <Card className="border-l-4 border-l-success cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+                    <Building2 className="h-4 w-4 text-success" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Portfolio</p>
+                    <p className="text-xl font-semibold text-foreground">{(portfolioData ?? []).length}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link href={`/contacts/${id}?tab=activity`}>
+              <Card className="border-l-4 border-l-primary cursor-pointer hover:shadow-md transition-shadow">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Clock className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Last Contact</p>
+                    <p className={`text-sm font-semibold ${lastContactUrgency}`}>{lastContactedText}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
 
           {/* Household Banner — only show when assigned */}
@@ -652,25 +673,6 @@ export default async function ContactDetailPage({
             />
           </MobileDetailSheet>
 
-          {/* Quick Action Bar — each action opens focused dialog with history */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-1.5 bg-card border border-border rounded-lg p-1">
-              <QuickActionBar
-                contactId={id}
-                contactPhone={contact.phone}
-                contactChannel={contact.pref_channel}
-              />
-              <NotesDialog
-                contactId={id}
-                contactName={contact.name}
-                communications={typedCommunications}
-              />
-              <EmailComposer
-                contactId={id}
-                contactEmail={contact.email}
-              />
-            </div>
-          </div>
 
           {/* Journey Phase — compact inline subtitle (replaces separate JourneyProgressBar) */}
           {contactJourney && (
@@ -747,9 +749,9 @@ export default async function ContactDetailPage({
   // Right panel inner content — shared between mobile collapsible and desktop aside
   const rightPanelContentJsx = (
     <>
-      {/* Engagement — 1st section */}
+      {/* Engagement */}
       {intel && (
-        <div className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0">
+        <div id="section-engagement" className="pb-3 border-b border-brand/15 dark:border-foreground/30 border-l-4 border-l-primary pl-4 rounded-sm shrink-0 scroll-mt-4">
           <IntelligencePanel
             intelligence={intel}
             totalEmails={newslettersWithEvents.length}

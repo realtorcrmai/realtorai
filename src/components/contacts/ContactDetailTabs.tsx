@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { CommunicationTimeline } from "@/components/contacts/CommunicationTimeline";
@@ -182,6 +183,7 @@ export type ContactDetailTabsProps = {
       created_at: string;
     }>;
   }>;
+
 };
 
 // Check if preferences object has any meaningful data set
@@ -244,7 +246,18 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
     newslettersWithEvents,
   } = props;
 
-  const [currentTab, setCurrentTab] = useState("overview");
+  const searchParams = useSearchParams();
+  const validTabs = ["overview", "activity", "deals"];
+  const tabParam = searchParams.get("tab");
+  const [currentTab, setCurrentTab] = useState(
+    tabParam && validTabs.includes(tabParam) ? tabParam : "overview"
+  );
+
+  // Sync tab from URL when stat card is clicked (client-side navigation)
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t && validTabs.includes(t)) setCurrentTab(t);
+  }, [searchParams]);
 
   // ── Quick Setup tile triggers — open panels inline without tab switch ──
   const [triggerPrefs, setTriggerPrefs] = useState(false);
@@ -303,9 +316,6 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
               {portfolioItems.length}
             </span>
           )}
-        </TabsTrigger>
-        <TabsTrigger value="config" className="rounded-lg">
-          ⚙️ Config
         </TabsTrigger>
       </TabsList>
 
@@ -454,53 +464,100 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
               />
             );
 
+            // Count populated sections to decide Quick Setup visibility
+            const networkHasData = relationships.length + referralsAsReferrer.length + referralsAsReferred.length > 0;
+            const familyHasData = familyMembers.length > 0;
+            const demographicsHasData = hasPreferenceData(demographics as Record<string, unknown> | null);
+            const populatedCount = [
+              networkHasData, prefsHasData, contextHasData, propertiesHasData,
+              docsHasData, familyHasData, demographicsHasData, hasEnrollments,
+            ].filter(Boolean).length;
+            const showQuickSetup = populatedCount <= 1 && emptyActions.length > 1;
+
             return (
               <>
-                {/* Panels with data — float to top */}
+                {/* 1. Network (Referrals + Relationships + Graph) — first if populated */}
+                {networkHasData && (
+                  <>
+                    <div id="section-network" className="grid grid-cols-1 md:grid-cols-2 gap-3 scroll-mt-4">
+                      <Card className="border-l-4 border-l-brand">
+                        <CardContent className="p-4">
+                          <ReferralsPanel
+                            contact={contact}
+                            referredByName={referredByName}
+                            referralsAsReferrer={referralsAsReferrer}
+                            referralsAsReferred={referralsAsReferred}
+                            allContacts={allContacts}
+                          />
+                        </CardContent>
+                      </Card>
+                      <Card className="border-l-4 border-l-brand">
+                        <CardContent className="p-4">
+                          <RelationshipManager
+                            contactId={contactId}
+                            relationships={relationships}
+                            allContacts={allContacts}
+                          />
+                        </CardContent>
+                      </Card>
+                    </div>
+                    {graphNodes.length > 1 && (
+                      <Card className="border-l-4 border-l-indigo-400 bg-indigo-50/15 dark:bg-indigo-950/10">
+                        <CardContent className="p-4">
+                          <RelationshipGraph nodes={graphNodes as any} edges={graphEdges as any} />
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                )}
+
+                {/* 2. Data panels (workflows, preferences, journey, context, properties, docs) */}
                 {filledPanels}
 
-                {/* Referrals + Relationships — side by side (moved from sidebar) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Card className="border-l-4 border-l-brand">
-                    <CardContent className="p-4">
-                      <ReferralsPanel
-                        contact={contact}
-                        referredByName={referredByName}
-                        referralsAsReferrer={referralsAsReferrer}
-                        referralsAsReferred={referralsAsReferred}
-                        allContacts={allContacts}
-                      />
-                    </CardContent>
-                  </Card>
-                  <Card className="border-l-4 border-l-brand">
-                    <CardContent className="p-4">
-                      <RelationshipManager
-                        contactId={contactId}
-                        relationships={relationships}
-                        allContacts={allContacts}
-                      />
-                    </CardContent>
-                  </Card>
-                </div>
+                {/* 3. Network — show empty state if no data (still navigable) */}
+                {!networkHasData && (
+                  <div id="section-network" className="grid grid-cols-1 md:grid-cols-2 gap-3 scroll-mt-4">
+                    <Card className="border-l-4 border-l-brand">
+                      <CardContent className="p-4">
+                        <ReferralsPanel
+                          contact={contact}
+                          referredByName={referredByName}
+                          referralsAsReferrer={referralsAsReferrer}
+                          referralsAsReferred={referralsAsReferred}
+                          allContacts={allContacts}
+                        />
+                      </CardContent>
+                    </Card>
+                    <Card className="border-l-4 border-l-brand">
+                      <CardContent className="p-4">
+                        <RelationshipManager
+                          contactId={contactId}
+                          relationships={relationships}
+                          allContacts={allContacts}
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
 
-                {/* Family — moved from separate tab */}
+
+                {/* 4. Family Members */}
                 <Card className="border-l-4 border-l-rose-400">
                   <CardContent className="p-4">
                     <FamilyTabPanel contactId={contactId} initialMembers={familyMembers} />
                   </CardContent>
                 </Card>
 
-                {/* Demographics — moved from Intelligence tab */}
+                {/* 5. Demographics — always last content section */}
                 <Card className="border-l-4 border-l-violet-400">
                   <CardContent className="p-4">
                     <DemographicsPanel contactId={contactId} demographics={demographics} />
                   </CardContent>
                 </Card>
 
-                {/* Quick Setup — collapsed when ≤2 remaining, expanded when 3+ */}
-                {emptyActions.length > 1 && (
+                {/* Quick Setup — only show if ≤1 section is populated */}
+                {showQuickSetup && (
                   emptyActions.length <= 3 ? (
-                    /* Collapsed: progress bar that expands on click */
                     <details className="group">
                       <summary className="flex items-center gap-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                         <div className="w-1 h-5 rounded-full bg-gradient-to-b from-indigo-400 to-teal-400 shrink-0" />
@@ -519,7 +576,6 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
                       </div>
                     </details>
                   ) : (
-                    /* Expanded: full tiles visible (new contacts need guidance) */
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <div className="w-1 h-5 rounded-full bg-gradient-to-b from-indigo-400 to-teal-400" />
@@ -585,15 +641,6 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
             <Card className="border-l-4 border-l-slate-400 bg-slate-50/15 dark:bg-slate-950/10">
               <CardContent className="p-4">
                 <ActivityTimeline activities={lazyActivities} />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Relationship Network — from Intelligence tab */}
-          {graphNodes.length > 1 && (
-            <Card className="border-l-4 border-l-indigo-400 bg-indigo-50/15 dark:bg-indigo-950/10">
-              <CardContent className="p-4">
-                <RelationshipGraph nodes={graphNodes as any} edges={graphEdges as any} />
               </CardContent>
             </Card>
           )}
@@ -670,18 +717,6 @@ function ContactDetailTabsInner(props: ContactDetailTabsProps) {
       </TabsContent>
 
       {/* ── CONFIG TAB — journey/AI settings ──────────────── */}
-      <TabsContent value="config" className="">
-        <div className="space-y-3">
-          <Card className="border-l-4 border-l-slate-400">
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">
-                Journey controls, content types, frequency, and AI settings are managed in the sidebar panel on the right.
-                Use the Prospect Controls and Content Types sections to configure how the AI interacts with this contact.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </TabsContent>
     </Tabs>
   );
 }
