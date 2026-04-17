@@ -10,9 +10,148 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
-import { triggerGeneration, deleteEdition } from '@/actions/editorial'
+import { triggerGeneration, deleteEdition, sendEdition } from '@/actions/editorial'
 import { TransactionManager } from '@/components/editorial/TransactionManager'
 import type { EditorialEdition, EditionStatus, EditionType } from '@/types/editorial'
+
+// ─── Send dialog ─────────────────────────────────────────────────────────────
+
+interface SendDialogProps {
+  edition: EditorialEdition
+  onClose: () => void
+  onSuccess: () => void
+}
+
+function SendDialog({ edition, onClose, onSuccess }: SendDialogProps) {
+  const [mode, setMode] = useState<'test' | 'full'>('test')
+  const [testEmail, setTestEmail] = useState('')
+  const [sending, setSending] = useState(false)
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null)
+
+  async function handleSend() {
+    setSending(true)
+    setResult(null)
+    try {
+      const res = await sendEdition(
+        edition.id,
+        mode === 'test' ? { test_email: testEmail } : undefined,
+      )
+      if (res.error === null) {
+        setResult({
+          ok: true,
+          message:
+            mode === 'test'
+              ? `✅ Test email sent to ${testEmail}`
+              : `✅ Sent to ${res.data?.sent ?? 0} contacts (${res.data?.skipped ?? 0} skipped)`,
+        })
+        if (mode === 'full') {
+          setTimeout(() => { onSuccess(); onClose() }, 1500)
+        }
+      } else {
+        setResult({ ok: false, message: `❌ ${res.error}` })
+      }
+    } catch (err) {
+      setResult({ ok: false, message: `❌ ${(err as Error).message}` })
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Send edition"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      onClick={(e) => { e.stopPropagation(); if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="bg-card border border-border rounded-xl shadow-lg w-full max-w-md p-6">
+        <h2 className="text-lg font-semibold text-foreground mb-1">📤 Send Edition</h2>
+        <p className="text-sm text-muted-foreground mb-4 line-clamp-1">
+          {edition.title}
+        </p>
+
+        {/* Mode toggle */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setMode('test')}
+            className={[
+              'flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
+              mode === 'test'
+                ? 'bg-[#FF7A59] text-white border-[#FF7A59]'
+                : 'bg-transparent text-muted-foreground border-border hover:text-foreground',
+            ].join(' ')}
+          >
+            🧪 Test Send
+          </button>
+          <button
+            onClick={() => setMode('full')}
+            className={[
+              'flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
+              mode === 'full'
+                ? 'bg-[#FF7A59] text-white border-[#FF7A59]'
+                : 'bg-transparent text-muted-foreground border-border hover:text-foreground',
+            ].join(' ')}
+          >
+            🚀 Send to All
+          </button>
+        </div>
+
+        {mode === 'test' && (
+          <div className="mb-4">
+            <label htmlFor="send-test-email" className="block text-sm font-medium text-foreground mb-1">
+              Test email address
+            </label>
+            <input
+              id="send-test-email"
+              type="email"
+              placeholder="you@example.com"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              className="w-full h-9 px-3 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FF7A59]/40 focus:border-[#FF7A59]"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Sends with [TEST] prefix — does not mark edition as sent
+            </p>
+          </div>
+        )}
+
+        {mode === 'full' && (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+            ⚠️ This will send to all CASL-consented contacts and mark the edition as <strong>Sent</strong>. This cannot be undone.
+          </div>
+        )}
+
+        {result && (
+          <div
+            className={[
+              'mb-4 p-3 rounded-lg text-sm',
+              result.ok
+                ? 'bg-green-50 border border-green-200 text-green-800'
+                : 'bg-red-50 border border-red-200 text-red-800',
+            ].join(' ')}
+          >
+            {result.message}
+          </div>
+        )}
+
+        <div className="flex gap-2 justify-end">
+          <Button variant="ghost" size="sm" onClick={onClose} disabled={sending}>
+            Cancel
+          </Button>
+          <Button
+            variant="brand"
+            size="sm"
+            disabled={sending || (mode === 'test' && !testEmail.includes('@'))}
+            onClick={handleSend}
+          >
+            {sending ? '⏳ Sending...' : mode === 'test' ? '📧 Send Test' : '🚀 Send Now'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ─── Edition type label map ──────────────────────────────────────────────────
 
@@ -101,6 +240,7 @@ interface EditionCardProps {
 function EditionCard({ edition, onActionComplete }: EditionCardProps) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
+  const [showSendDialog, setShowSendDialog] = useState(false)
 
   function navigate() {
     router.push(`/newsletters/editorial/${edition.id}/edit`)
@@ -181,7 +321,7 @@ function EditionCard({ edition, onActionComplete }: EditionCardProps) {
             <Button
               variant="brand"
               size="sm"
-              onClick={() => router.push(`/newsletters/editorial/${edition.id}/send`)}
+              onClick={(e) => { e.stopPropagation(); setShowSendDialog(true) }}
             >
               📤 Send
             </Button>
@@ -243,6 +383,14 @@ function EditionCard({ edition, onActionComplete }: EditionCardProps) {
           </DropdownMenu>
         </div>
       </div>
+
+      {showSendDialog && (
+        <SendDialog
+          edition={edition}
+          onClose={() => setShowSendDialog(false)}
+          onSuccess={onActionComplete}
+        />
+      )}
     </div>
   )
 }

@@ -380,7 +380,7 @@ function ABTestCard({
             <span className="text-xl shrink-0">{icon}</span>
             <div className="min-w-0">
               <a
-                href={`/newsletters/editorial/${test.id}`}
+                href={`/newsletters/editorial/${test.id}/edit`}
                 className="text-sm font-semibold text-foreground hover:text-primary transition-colors truncate block"
               >
                 {test.title}
@@ -483,7 +483,7 @@ function ABTestCard({
           )}
           {!hasWinner && !isRunning && (
             <a
-              href={`/newsletters/editorial/${test.id}`}
+              href={`/newsletters/editorial/${test.id}/edit`}
               className="text-[11px] text-primary font-medium hover:underline"
             >
               Edit &amp; Send →

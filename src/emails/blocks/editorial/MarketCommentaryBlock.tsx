@@ -13,8 +13,8 @@ const TEXT_MUTED = '#6b6b5a'
 const CARD_BG = '#f9f7f2'
 const SUCCESS_GREEN = '#1a6e3c'
 
-function formatAvgPrice(cents: number | null): string {
-  if (cents === null) return '—'
+function formatAvgPrice(cents: number | null | undefined): string {
+  if (cents == null) return '—'
   const dollars = cents / 100
   if (dollars >= 1_000_000) {
     return '$' + (dollars / 1_000_000).toFixed(2).replace(/\.?0+$/, '') + 'M'
@@ -25,13 +25,13 @@ function formatAvgPrice(cents: number | null): string {
   return '$' + dollars.toLocaleString('en-CA')
 }
 
-function formatDom(dom: number | null): string {
-  if (dom === null) return '—'
+function formatDom(dom: number | null | undefined): string {
+  if (dom == null) return '—'
   return `${dom} days`
 }
 
-function formatYoy(pct: number | null): { text: string; color: string } {
-  if (pct === null) return { text: '—', color: TEXT_MUTED }
+function formatYoy(pct: number | null | undefined): { text: string; color: string } {
+  if (pct == null) return { text: '—', color: TEXT_MUTED }
   const sign = pct >= 0 ? '+' : ''
   return {
     text: `${sign}${pct.toFixed(1)}%`,

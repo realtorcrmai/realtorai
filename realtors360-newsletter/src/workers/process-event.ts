@@ -57,10 +57,15 @@ export async function processEvent(eventId: string): Promise<void> {
 
   const result = await pipeline(event);
 
+  // Frequency-cap blocks (rule:too_soon, rule:cap_reached, etc.) are
+  // expected behaviour, not failures. Write them as 'ignored' so they
+  // don't inflate the failure count or get picked up by the retry cron.
+  const isRuleBlock = !result.ok && result.reason?.startsWith('rule:');
+
   await supabase
     .from('email_events')
     .update({
-      status: result.ok ? 'processed' : 'failed',
+      status: result.ok ? 'processed' : isRuleBlock ? 'ignored' : 'failed',
       processed_at: new Date().toISOString(),
       error_message: result.ok ? null : result.reason ?? 'unknown',
     })

@@ -10,7 +10,6 @@
  */
 
 import * as React from 'react'
-import { render } from '@react-email/components'
 import type { RealtorBranding } from '@/emails/BaseLayout'
 import { EditorialDigest } from '@/emails/EditorialDigest'
 import type { EditorBlock } from '@/types/editorial'
@@ -52,17 +51,21 @@ export async function renderEdition(edition: RenderEditionInput): Promise<string
   const { title, edition_type, blocks, branding, unsubscribe_url, edition_number, preview_mode = false } =
     edition
 
-  const element = (
-    <EditorialDigest
-      edition={{ title, edition_type, blocks, subject: title }}
-      branding={branding}
-      unsubscribe_url={unsubscribe_url}
-      edition_number={edition_number}
-      preview_mode={preview_mode}
-    />
-  )
+  const element = React.createElement(EditorialDigest, {
+    edition: { title, edition_type, blocks, subject: title },
+    branding,
+    unsubscribe_url,
+    edition_number,
+    preview_mode,
+  })
 
-  return await render(element)
+  // Dynamic import avoids Next.js 15 static-analysis block on react-dom/server.
+  // renderToStaticMarkup is synchronous (no streams, no Suspense) so it does NOT
+  // deadlock inside an RSC server action the way @react-email/render's
+  // renderToPipeableStream/renderToReadableStream paths do.
+  const { renderToStaticMarkup } = await import('react-dom/server')
+  const html = renderToStaticMarkup(element)
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">${html}`
 }
 
 // ---------------------------------------------------------------------------

@@ -20,15 +20,15 @@ interface RateRow {
   key: keyof RateWatchBlockContent
 }
 
-function formatRate(val: number | null): string {
-  if (val === null) return '—'
+function formatRate(val: number | null | undefined): string {
+  if (val == null) return '—'
   return `${val.toFixed(2)}%`
 }
 
 function changeBpsDisplay(
-  bps: number | null
+  bps: number | null | undefined
 ): { symbol: string; text: string; color: string } | null {
-  if (bps === null) return null
+  if (bps == null) return null
   if (bps > 0) return { symbol: '▲', text: `+${bps}bps`, color: '#b91c1c' }
   if (bps < 0) return { symbol: '▼', text: `${bps}bps`, color: '#1a6e3c' }
   return { symbol: '—', text: 'unchanged', color: TEXT_MUTED }
