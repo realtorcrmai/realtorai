@@ -66,7 +66,7 @@ Edition type: ${ctx.editionType}
 Write one paragraph (no HTML tags, plain text only) that feels personally relevant to this reader based on their profile. If no useful signals exist, return exactly: SKIP`
 
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-opus-4-6',
       max_tokens: 200,
       messages: [{ role: 'user', content: prompt }]
     })

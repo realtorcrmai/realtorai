@@ -94,7 +94,7 @@ export interface EditionContext {
 const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY from env
 
 const MODEL_SONNET = 'claude-sonnet-4-6';
-const MODEL_HAIKU = 'claude-haiku-4-5-20251001';
+const MODEL_HAIKU = 'claude-opus-4-6';
 
 // ---------------------------------------------------------------------------
 // Safe JSON parser — never throws

@@ -17,7 +17,7 @@ export async function scoreContent(
     return { overall: 30, relevance: 3, creativity: 3, cta_clarity: 3, brand_match: 3, engagement_potential: 3, compliance: 3 };
   }
 
-  const model = process.env.SOCIAL_SCORING_MODEL || "claude-haiku-4-5-20251001";
+  const model = process.env.SOCIAL_SCORING_MODEL || "claude-opus-4-6";
 
   try {
     const message = await createWithRetry(anthropic, {

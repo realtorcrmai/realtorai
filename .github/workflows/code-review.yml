@@ -1,0 +1,63 @@
+name: Code Review Gate
+
+on:
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  review:
+    name: Automated Code Review
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run code review
+        id: review
+        run: |
+          node scripts/review-pr.mjs --ci > /tmp/review.txt 2>&1
+          echo "exit=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: Post review comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const review = fs.readFileSync('/tmp/review.txt', 'utf8');
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const botComment = comments.data.find(c => c.body.includes('PR Code Review'));
+            const body = `## 🤖 PR Code Review\n\n\`\`\`\n${review}\n\`\`\``;
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Block on errors
+        if: steps.review.outcome == 'failure'
+        run: |
+          echo "Code review found errors — see PR comment for details."
+          exit 1

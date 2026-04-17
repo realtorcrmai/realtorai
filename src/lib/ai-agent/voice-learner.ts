@@ -28,7 +28,7 @@ export async function extractVoiceRules(limit: number = 20): Promise<VoiceRule[]
 
   const anthropic = new Anthropic();
   const msg = await createWithRetry(anthropic, {
-    model: process.env.AI_EVAL_MODEL || "claude-haiku-4-5-20251001",
+    model: process.env.AI_EVAL_MODEL || "claude-opus-4-6",
     max_tokens: 800,
     messages: [{
       role: "user",
