@@ -71,7 +71,7 @@ DIMENSIONS:
 Return JSON: {"personalization":N,"relevance":N,"tone":N,"value":N,"cta_clarity":N,"length":N,"uniqueness":N,"issues":["issue1"]}`;
 
     const response = await createWithRetry(client, {
-      model: "claude-haiku-4-5-20251001",
+      model: "claude-opus-4-6",
       max_tokens: 300,
       messages: [{ role: "user", content: prompt }],
     });

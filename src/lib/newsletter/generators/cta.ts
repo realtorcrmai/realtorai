@@ -5,7 +5,7 @@ import type { EditionContext } from '@/lib/editorial-ai'
 import { sanitizeBlockContent } from '../content-safety'
 
 const anthropic = new Anthropic()
-const MODEL_HAIKU = 'claude-haiku-4-5-20251001'
+const MODEL_HAIKU = 'claude-opus-4-6'
 
 const CTA_GUIDE: Record<string, { guidance: string; cta_type: CtaBlockContent['cta_type'] }> = {
   market_update:           { guidance: 'Request a free market evaluation or book a consultation', cta_type: 'get_cma' },
