@@ -2965,3 +2965,31 @@ Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. Thi
 **Steps:** POST body `{ mlsNumber, address, listPrice, propertyType, description }` with authenticated session.
 **Expected:** Creates a listing row. Auto-creates placeholder seller contact. Returns 400 on address < 5 chars.
 **Priority:** P1
+
+---
+
+### Category 58: Voice Agent Proxy
+
+#### API-VOICE-001: POST /api/voice-agent/proxy
+**Steps:** Send authenticated request with voice payload.
+**Expected:** Proxies to voice agent backend. Unauthorized requests rejected.
+**Priority:** P1
+
+#### API-VOICE-002: POST /api/voice-agent/proxy/stt
+**Steps:** Send audio buffer for speech-to-text transcription.
+**Expected:** Returns transcription text. Rejects oversized payloads.
+**Priority:** P1
+
+---
+
+### Category 59: Journey & Dormant Crons
+
+#### CRON-JOURNEY-001: POST /api/cron/process-journeys
+**Steps:** Trigger with Bearer CRON_SECRET header.
+**Expected:** Advances eligible contact journeys to next phase. Rejects missing/invalid token.
+**Priority:** P1
+
+#### CRON-DORMANT-001: POST /api/cron/detect-dormant
+**Steps:** Trigger with Bearer CRON_SECRET header.
+**Expected:** Flags contacts with no activity past threshold as dormant. Creates notifications.
+**Priority:** P2
