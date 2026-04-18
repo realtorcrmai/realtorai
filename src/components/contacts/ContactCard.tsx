@@ -20,12 +20,20 @@ export function ContactCard({ contact }: { contact: Contact }) {
       <Card className="hover:shadow-md transition-all cursor-pointer group">
         <CardContent className="p-5">
           <div className="flex items-start gap-3">
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold shrink-0"
-              style={{ backgroundColor: avatarStyle.bg, color: avatarStyle.text }}
-            >
-              {initials}
-            </div>
+            {(contact as any).photo_url ? (
+              <img
+                src={(contact as any).photo_url}
+                alt={contact.name}
+                className="h-10 w-10 rounded-full object-cover shrink-0"
+              />
+            ) : (
+              <div
+                className="flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold shrink-0"
+                style={{ backgroundColor: avatarStyle.bg, color: avatarStyle.text }}
+              >
+                {initials}
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
                 <h3 className="font-semibold text-sm group-hover:text-primary transition-colors truncate">

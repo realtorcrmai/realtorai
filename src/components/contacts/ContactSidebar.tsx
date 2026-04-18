@@ -403,13 +403,19 @@ export function ContactSidebar({ contacts }: { contacts: Contact[] }) {
                   >
                     <div className="flex items-center gap-3">
                       {/* Avatar */}
-                      <div
-                        className="relative h-9 w-9 rounded-full flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: avatarStyle.bg, color: avatarStyle.text }}
-                      >
-                        <span className="text-xs font-semibold">
-                          {initials}
-                        </span>
+                      <div className="relative shrink-0">
+                        {(contact as any).photo_url ? (
+                          <img src={(contact as any).photo_url} alt="" className="h-9 w-9 rounded-full object-cover" />
+                        ) : (
+                          <div
+                            className="h-9 w-9 rounded-full flex items-center justify-center"
+                            style={{ backgroundColor: avatarStyle.bg, color: avatarStyle.text }}
+                          >
+                            <span className="text-xs font-semibold">
+                              {initials}
+                            </span>
+                          </div>
+                        )}
                         {sorted.indexOf(contact) < 3 && (
                           <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                         )}

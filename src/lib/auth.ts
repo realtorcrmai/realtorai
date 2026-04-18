@@ -148,12 +148,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // Skip DB lookup if role/features are already cached in the token
         // Fetch on sign-in, update (session refresh), or if data is missing
-        const needsUserFetch = !token.role || !token.enabledFeatures || trigger === "signIn" || trigger === "update" || account;
+        const needsUserFetch = !token.role || !token.enabledFeatures || !("avatarUrl" in token) || trigger === "signIn" || trigger === "update" || account;
 
         if (token.email && needsUserFetch && usersTableExists !== false) {
           const { data: existingUser, error: fetchError } = await supabase
             .from("users")
-            .select("id, role, plan, enabled_features, is_active, email_verified, phone_verified, onboarding_completed, trial_ends_at, trial_plan, personalization_completed")
+            .select("id, role, plan, enabled_features, is_active, email_verified, phone_verified, onboarding_completed, trial_ends_at, trial_plan, personalization_completed, avatar_url")
             .eq("email", token.email)
             .single();
 
@@ -173,7 +173,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
             if (existingUser) {
               // Update last_active_at on every login
-              await supabase.from("users").update({ last_active_at: new Date().toISOString() }).eq("id", existingUser.id);
+              const { error: updateError } = await supabase.from("users").update({ last_active_at: new Date().toISOString() }).eq("id", existingUser.id);
+              if (updateError) console.error("[auth] Error updating last_active_at:", updateError.message);
               await trackEvent("session_start", existingUser.id, { user_agent: "" });
 
               token.role = existingUser.role;
@@ -184,6 +185,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               // Default to true for pre-existing users (column didn't exist before migration 095)
               token.personalizationCompleted = existingUser.personalization_completed ?? (existingUser.onboarding_completed ? true : false);
               token.trialEndsAt = existingUser.trial_ends_at ?? null;
+              token.avatarUrl = existingUser.avatar_url ?? null;
               // Resolve effective plan: trial plan if active, otherwise base plan
               const { getEffectivePlan } = await import("@/lib/plans");
               const effectivePlan = getEffectivePlan(
@@ -263,6 +265,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.id = (token.userId as string) || (token.sub as string) || "";
       session.user.realtorId = (token.userId as string) || (token.sub as string) || "";
       (session.user as unknown as Record<string, unknown>).emailVerified = (token.emailVerified as boolean) ?? true;
+      (session.user as unknown as Record<string, unknown>).avatarUrl = (token.avatarUrl as string) ?? null;
       return session;
     },
   },

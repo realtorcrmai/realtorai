@@ -30,7 +30,7 @@ export default async function ContactsPage({
   } else {
     const { data } = await supabase
       .from("contacts")
-      .select("id, name, email, phone, type, stage_bar, lead_status, last_activity_date, created_at, newsletter_intelligence")
+      .select("id, name, email, phone, type, photo_url, stage_bar, lead_status, last_activity_date, created_at, newsletter_intelligence")
       .order("created_at", { ascending: false })
       .limit(200);
     contacts = data;

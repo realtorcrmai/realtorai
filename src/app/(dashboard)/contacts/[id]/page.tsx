@@ -141,7 +141,7 @@ export default async function ContactDetailPage({
   const intel = contact.newsletter_intelligence as Record<string, unknown> | null;
 
   // Extract workflow steps from enrollment data (already nested by the RPC)
-  const workflowSteps = workflowEnrollments.flatMap((e: any) => e.steps ?? []);
+  const workflowSteps = workflowEnrollments.flatMap((e: Record<string, unknown>) => (e.steps as Record<string, unknown>[]) ?? []);
 
   // Group steps by workflow_id
   type WorkflowStepRow = {
@@ -365,8 +365,8 @@ export default async function ContactDetailPage({
     color: typeColors[contact.type] || "#4f35d2",
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const relationships = (relationshipsData ?? []) as any[];
+   
+  const relationships = (relationshipsData ?? []) as Record<string, unknown>[];
   const seenIds = new Set<string>([contact.id]);
 
   for (const rel of relationships) {
@@ -391,7 +391,7 @@ export default async function ContactDetailPage({
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const allReferrals = [...(referralsAsReferrer ?? []), ...(referralsAsReferred ?? [])] as any[];
   for (const ref of allReferrals) {
     const otherId = ref.referred_by_contact_id === id ? ref.referred_client_contact_id : ref.referred_by_contact_id;
@@ -483,9 +483,17 @@ export default async function ContactDetailPage({
               <CardContent className="p-4">
                 {/* Row 1: Avatar + Name + Badges + Meta */}
                 <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-full ${avatarColor} flex items-center justify-center text-white font-bold text-lg shrink-0 ring-2 ring-offset-2 ${engagementScore != null ? (engagementScore >= 60 ? "ring-success" : engagementScore >= 30 ? "ring-[#f5c26b]" : "ring-muted-foreground/30") : "ring-muted-foreground/20"}`}>
-                    {contact.name.split(/\s+/).map((w: string) => w[0]).filter(Boolean).join("").substring(0, 2).toUpperCase() || "?"}
-                  </div>
+                  {contact.photo_url ? (
+                    <img
+                      src={contact.photo_url}
+                      alt={contact.name}
+                      className={`w-12 h-12 rounded-full object-cover shrink-0 ring-2 ring-offset-2 ${engagementScore != null ? (engagementScore >= 60 ? "ring-success" : engagementScore >= 30 ? "ring-[#f5c26b]" : "ring-muted-foreground/30") : "ring-muted-foreground/20"}`}
+                    />
+                  ) : (
+                    <div className={`w-12 h-12 rounded-full ${avatarColor} flex items-center justify-center text-white font-bold text-lg shrink-0 ring-2 ring-offset-2 ${engagementScore != null ? (engagementScore >= 60 ? "ring-success" : engagementScore >= 30 ? "ring-[#f5c26b]" : "ring-muted-foreground/30") : "ring-muted-foreground/20"}`}>
+                      {contact.name.split(/\s+/).map((w: string) => w[0]).filter(Boolean).join("").substring(0, 2).toUpperCase() || "?"}
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h1 className="text-xl font-bold tracking-tight">{contact.name}</h1>
