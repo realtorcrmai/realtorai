@@ -141,7 +141,7 @@ export default async function ContactDetailPage({
   const intel = contact.newsletter_intelligence as Record<string, unknown> | null;
 
   // Extract workflow steps from enrollment data (already nested by the RPC)
-  const workflowSteps = workflowEnrollments.flatMap((e: any) => e.steps ?? []);
+  const workflowSteps = workflowEnrollments.flatMap((e: Record<string, unknown>) => (e.steps as Record<string, unknown>[]) ?? []);
 
   // Group steps by workflow_id
   type WorkflowStepRow = {
@@ -366,7 +366,7 @@ export default async function ContactDetailPage({
   });
 
    
-  const relationships = (relationshipsData ?? []) as any[];
+  const relationships = (relationshipsData ?? []) as Record<string, unknown>[];
   const seenIds = new Set<string>([contact.id]);
 
   for (const rel of relationships) {

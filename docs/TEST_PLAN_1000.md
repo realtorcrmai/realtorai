@@ -1794,6 +1794,11 @@ Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. Thi
 **Expected:** 200 on valid config. 422 on missing required fields. Credentials stored securely (not in response).
 **Priority:** P2
 
+#### API-SETTINGS-004: PUT /api/settings/profile updates realtor profile
+**Steps:** `PUT /api/settings/profile` with `{ name: "Jane Smith", phone: "+16045551234", brokerage: "RE/MAX", license_number: "R-12345", bio: "Top agent", timezone: "America/Vancouver" }`.
+**Expected:** 200 with `{ success: true }`. User record updated in `users` table. Returns 401 without session. Returns 400 if name missing or < 2 chars. Uses tenant client (not admin client) for tenant isolation.
+**Priority:** P1
+
 #### API-TASKS-001: POST /api/tasks/bulk-complete marks multiple tasks done
 **Steps:** `POST /api/tasks/bulk-complete` with `{ task_ids: ["id1", "id2"] }`.
 **Expected:** 200 with `{ updated: 2 }`. Tasks status set to "completed". Returns 400 for empty array. Respects tenant isolation.

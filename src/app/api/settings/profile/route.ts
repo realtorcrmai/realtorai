@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 
 export async function PUT(request: Request) {
   const session = await auth();
@@ -15,8 +15,8 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
-  const supabase = createAdminClient();
-  const { error } = await supabase
+  const tc = await getAuthenticatedTenantClient();
+  const { error } = await tc.raw
     .from("users")
     .update({
       name,

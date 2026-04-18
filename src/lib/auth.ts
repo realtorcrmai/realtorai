@@ -173,7 +173,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
             if (existingUser) {
               // Update last_active_at on every login
-              await supabase.from("users").update({ last_active_at: new Date().toISOString() }).eq("id", existingUser.id);
+              const { error: updateError } = await supabase.from("users").update({ last_active_at: new Date().toISOString() }).eq("id", existingUser.id);
+              if (updateError) console.error("[auth] Error updating last_active_at:", updateError.message);
               await trackEvent("session_start", existingUser.id, { user_agent: "" });
 
               token.role = existingUser.role;
