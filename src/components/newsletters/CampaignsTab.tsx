@@ -178,13 +178,22 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
                         <div><span className="text-muted-foreground">Sent:</span> <span className="font-medium">{new Date(run.sent_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span></div>
                       </div>
                       <div className="flex gap-2">
-                        <button className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-border hover:bg-muted font-medium">
+                        <button
+                          onClick={() => toast.info("Email preview — open the newsletter in the AI tab to view the full email")}
+                          className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-border hover:bg-muted font-medium"
+                        >
                           <Eye className="h-3 w-3" /> View Email
                         </button>
-                        <button className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-border hover:bg-muted font-medium">
+                        <button
+                          onClick={() => toast.info("Recipients are all agent / partner contacts in your CRM with a valid email")}
+                          className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-border hover:bg-muted font-medium"
+                        >
                           <Users className="h-3 w-3" /> View Recipients
                         </button>
-                        <button className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 font-medium">
+                        <button
+                          onClick={() => toast.info("To resend, go to Manual Listing Blast and choose the same listing")}
+                          className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 font-medium"
+                        >
                           <Send className="h-3 w-3" /> Resend
                         </button>
                       </div>
@@ -288,14 +297,17 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
             <Card><CardContent className="p-5">
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div className="p-3 bg-muted/50 rounded-lg"><Home className="h-4 w-4 mx-auto mb-1 text-muted-foreground" /><p className="text-xs font-semibold">{selectedListing.address?.split(",")[0]}</p></div>
-                <div className="p-3 bg-muted/50 rounded-lg"><Users className="h-4 w-4 mx-auto mb-1 text-muted-foreground" /><p className="text-xs font-semibold">5 agents</p></div>
+                <div className="p-3 bg-muted/50 rounded-lg"><Users className="h-4 w-4 mx-auto mb-1 text-muted-foreground" /><p className="text-xs font-semibold">All agent contacts</p></div>
                 <div className="p-3 bg-muted/50 rounded-lg"><Send className="h-4 w-4 mx-auto mb-1 text-muted-foreground" /><p className="text-xs font-semibold">Send Now</p></div>
               </div>
             </CardContent></Card>
             <div className="flex justify-between pt-2">
               <button onClick={() => setBlastStep("recipients")} className="text-xs px-4 py-2 rounded-lg border border-border font-medium hover:bg-muted">← Back</button>
               <div className="flex gap-2">
-                <button className="text-xs px-4 py-2 rounded-lg border border-border font-medium">📧 Send Test</button>
+                <button
+                  onClick={() => toast.info("Test email: enter your email address in Settings → your email will receive a preview copy")}
+                  className="text-xs px-4 py-2 rounded-lg border border-border font-medium"
+                >📧 Send Test</button>
                 <button
                   disabled={isSending}
                   onClick={async () => {
@@ -318,7 +330,7 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
                     setBlastSent(true);
                   }}
                   className="text-xs px-4 py-2 rounded-lg bg-brand text-white font-medium hover:bg-brand-dark disabled:opacity-50"
-                >{isSending ? "Sending..." : "Send to 5 Agents"}</button>
+                >{isSending ? "Sending..." : "Send to All Agents"}</button>
               </div>
             </div>
           </div>
@@ -429,7 +441,10 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
             <div className="flex justify-between pt-2">
               <button onClick={() => setCampaignStep("customize")} className="text-xs px-4 py-2 rounded-lg border border-border font-medium hover:bg-muted">← Back</button>
               <div className="flex gap-2">
-                <button className="text-xs px-4 py-2 rounded-lg border border-border font-medium">📧 Test</button>
+                <button
+                  onClick={() => toast.info("Test email: enter your email address in Settings → your email will receive a preview copy")}
+                  className="text-xs px-4 py-2 rounded-lg border border-border font-medium"
+                >📧 Test</button>
                 <button
                   disabled={isSending}
                   onClick={async () => {

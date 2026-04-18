@@ -170,27 +170,25 @@ export async function sendBatchEmails(
   let failed = 0;
   const errors: string[] = [];
 
-  const batchSize = 10;
-  for (let i = 0; i < emails.length; i += batchSize) {
-    const batch = emails.slice(i, i + batchSize);
-    const results = await Promise.allSettled(
-      batch.map((email) => sendEmail(email))
-    );
-
-    for (const result of results) {
-      if (result.status === "fulfilled") {
-        sent++;
-      } else {
-        failed++;
-        const msg = result.reason?.message || "Unknown error";
-        errors.push(msg);
-        console.error("Batch email send error:", msg);
-      }
+  // Resend enforces 5 req/s. Sending concurrently in batches of 10 hits
+  // the rate limit reliably when blasting to large agent lists. Fix: send
+  // sequentially with a 220ms gap between each email (≈4.5 emails/sec —
+  // safely under the 5/sec ceiling with headroom for retries).
+  for (let i = 0; i < emails.length; i++) {
+    try {
+      await sendEmail(emails[i]);
+      sent++;
+    } catch (err: unknown) {
+      failed++;
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      errors.push(msg);
+      console.error("Batch email send error:", msg);
     }
 
-    // Rate limit between batches
-    if (i + batchSize < emails.length) {
-      await new Promise((r) => setTimeout(r, 500));
+    // 220ms gap → ≈4.5 sends/sec, safely under Resend's 5 req/s limit.
+    // Skip gap after the last email.
+    if (i < emails.length - 1) {
+      await new Promise((r) => setTimeout(r, 220));
     }
   }
 
