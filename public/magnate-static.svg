@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 240" role="img" aria-label="Magnate">
+  <defs>
+    <!-- Diagonal gold gradient matching the animated face -->
+    <linearGradient id="magnateGold" x1="0%" y1="-5%" x2="12%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="2%" stop-color="#FFF8D8"/>
+      <stop offset="6%" stop-color="#FFF3C7"/>
+      <stop offset="18%" stop-color="#F5E0A0"/>
+      <stop offset="32%" stop-color="#F0D890"/>
+      <stop offset="52%" stop-color="#E4C378"/>
+      <stop offset="78%" stop-color="#C69A4A"/>
+      <stop offset="100%" stop-color="#8A6A2E"/>
+    </linearGradient>
+
+    <!-- Bronze extrusion gradient for depth -->
+    <linearGradient id="magnateBronze" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6a4f1a"/>
+      <stop offset="50%" stop-color="#4a350a"/>
+      <stop offset="100%" stop-color="#2a1e04"/>
+    </linearGradient>
+
+    <!-- Soft outer glow for dark backgrounds -->
+    <filter id="magnateGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Extruded depth (6 stacked offsets simulating 3D) -->
+  <g fill="url(#magnateBronze)" opacity="0.95">
+    <text x="360" y="152" transform="translate(1,1)" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="142" letter-spacing="-5.68">MAGNATE</text>
+    <text x="360" y="152" transform="translate(2,2)" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="142" letter-spacing="-5.68">MAGNATE</text>
+    <text x="360" y="152" transform="translate(3,3)" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="142" letter-spacing="-5.68">MAGNATE</text>
+    <text x="360" y="152" transform="translate(4,4)" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="142" letter-spacing="-5.68">MAGNATE</text>
+    <text x="360" y="152" transform="translate(5,5)" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="142" letter-spacing="-5.68">MAGNATE</text>
+    <text x="360" y="152" transform="translate(6,6)" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="142" letter-spacing="-5.68">MAGNATE</text>
+  </g>
+
+  <!-- Gold face (top layer) -->
+  <text x="360" y="152" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="142" letter-spacing="-5.68" fill="url(#magnateGold)">MAGNATE</text>
+</svg>

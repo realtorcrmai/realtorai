@@ -403,9 +403,13 @@ export async function processJourneyQueue(realtorId?: string) {
   // Find journeys that need an email sent.
   // Fetch CASL fields so we can enforce canSendToContact() in-loop.
   // 5-D FIX: also select send_mode so we respect the realtor's review preference.
+  // Only process consumer journeys (buyer/seller/customer).
+  // Agent contacts (other realtors/buyer agents stored as CRM contacts) are B2B — they
+  // require explicit opt-in and should not run through the consumer nurture pipeline.
   let journeyQuery = tc
     .from("contact_journeys")
     .select("*, send_mode, next_email_type_override, contacts(id, name, email, type, newsletter_intelligence, newsletter_unsubscribed, casl_consent_given, casl_consent_date, casl_consent_expires_at, buyer_preferences)")
+    .in("journey_type", ["buyer", "seller", "customer"])
     .eq("is_paused", false)
     .not("next_email_at", "is", null)
     .lte("next_email_at", new Date().toISOString())
@@ -589,6 +593,11 @@ function isJourneyType(value: string): value is JourneyType {
 }
 
 export async function autoEnrollNewContact(contactId: string, contactType: string) {
+  // Agent contacts (other realtors/buyer agents) are B2B and must never be auto-enrolled.
+  // They have their own journey schedule but require explicit opt-in via enrollContactInJourney().
+  if (contactType === "agent") {
+    return { skipped: true, reason: "agent contacts require explicit enrollment" };
+  }
   if (isJourneyType(contactType)) {
     return enrollContactInJourney(contactId, contactType);
   }
@@ -618,13 +627,16 @@ export async function triggerNextEmail(journeyId: string) {
 export async function getJourneysForRelationshipsPage(limit = 50, offset = 0) {
   const tc = await getAuthenticatedTenantClient();
 
+  // Consumer journeys only — buyer/seller/customer are AI-nurtured automatically.
+  // Agent journeys (other realtors) are excluded here; they run on a separate opt-in path.
   const { data: journeys } = await tc
     .from("contact_journeys")
     .select("id, contact_id, journey_type, current_phase, is_paused, pause_reason, next_email_at, emails_sent_in_phase, contacts(id, name, email, type)")
+    .in("journey_type", ["buyer", "seller", "customer"])
     .order("updated_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  // Contacts not enrolled in any journey
+  // Contacts not enrolled in any journey (buyer/seller/customer only)
   const enrolledContactIds = new Set((journeys || []).map((j: any) => j.contact_id));
 
   const { data: allContacts } = await tc

@@ -17,7 +17,7 @@ async function devCapture(params: SendEmailParams): Promise<{ messageId: string 
   const safe = (params.subject || "email").replace(/[^a-zA-Z0-9-_ ]/g, "").slice(0, 60).trim().replace(/ /g, "-")
   const file = join(dir, `${ts}-${safe}.html`)
   const preview = `<!-- DEV EMAIL PREVIEW
-  From: ${params.from || process.env.RESEND_FROM_EMAIL || "newsletters@realtors360.ai"}
+  From: ${params.from || process.env.RESEND_FROM_EMAIL || "newsletters@magnate360.com"}
   To: ${params.to}
   Subject: ${params.subject}
   Captured: ${new Date().toISOString()}
@@ -104,7 +104,7 @@ export async function sendEmail(params: SendEmailParams) {
   }
 
   const resend = getResend();
-  const fromEmail = params.from || process.env.RESEND_FROM_EMAIL || "newsletters@realtors360.ai";
+  const fromEmail = params.from || process.env.RESEND_FROM_EMAIL || "newsletters@magnate360.com";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const monitorEmail = process.env.EMAIL_MONITOR_BCC || "";
 

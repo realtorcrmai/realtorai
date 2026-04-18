@@ -35,6 +35,8 @@ type ValidatedSendInput = {
   lastSubjects?: string[];
   journeyPhase?: string;
   skipQualityScore?: boolean;
+  /** Skip compliance frequency/gap/quiet-hours checks (realtor explicitly approved) */
+  skipCompliance?: boolean;
   /** Workflow/trigger metadata for BCC monitoring */
   workflowName?: string;
   stepName?: string;
@@ -93,6 +95,7 @@ export async function validatedSend(
     lastSubjects: input.lastSubjects,
     journeyPhase: input.journeyPhase,
     skipQualityScore: input.skipQualityScore,
+    skipCompliance: input.skipCompliance,
   });
 
   // Update newsletter with quality score if available

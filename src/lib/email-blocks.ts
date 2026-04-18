@@ -554,51 +554,51 @@ const TEMPLATE_BLOCKS: Record<string, Record<string, string[]>> = {
     default:     ["header", "heroGradient", "personalNote", "anniversaryComparison", "areaHighlights", "cta", "agentCard", "footer"],
   },
 
-  // All other templates — block list preserved exactly as before under "default"
+  // All templates — comprehensive block lists for rich visual emails
   welcome: {
-    default: ["header", "heroGradient", "personalNote", "propertyGrid", "socialProof", "cta", "agentCard", "footer"],
+    default: ["header", "heroGradient", "personalNote", "propertyGrid", "statsRow", "testimonial", "socialProof", "cta", "agentCard", "footer"],
   },
   neighbourhood_guide: {
-    default: ["header", "heroGradient", "personalNote", "areaHighlights", "mapPreview", "cta", "agentCard", "footer"],
+    default: ["header", "heroGradient", "heroImage", "personalNote", "areaHighlights", "propertyGrid", "statsRow", "testimonial", "mapPreview", "cta", "agentCard", "footer"],
   },
   just_sold: {
-    default: ["header", "heroImage", "priceBar", "personalNote", "testimonial", "socialProof", "cta", "agentCard", "footer"],
+    default: ["header", "heroImage", "priceBar", "personalNote", "priceComparison", "recentSales", "testimonial", "socialProof", "cta", "agentCard", "footer"],
   },
   open_house: {
-    default: ["header", "heroGradient", "heroImage", "priceBar", "personalNote", "featureList", "mapPreview", "openHouse", "cta", "agentCard", "footer"],
+    default: ["header", "heroGradient", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "mapPreview", "openHouse", "mortgageCalc", "cta", "agentCard", "footer"],
   },
   seller_report: {
-    default: ["header", "heroGradient", "statsRow", "personalNote", "recentSales", "countdown", "cta", "agentCard", "footer"],
+    default: ["header", "heroGradient", "statsRow", "personalNote", "recentSales", "priceComparison", "countdown", "testimonial", "cta", "agentCard", "footer"],
   },
   cma_preview: {
-    default: ["header", "heroGradient", "personalNote", "priceComparison", "recentSales", "socialProof", "cta", "agentCard", "footer"],
+    default: ["header", "heroGradient", "personalNote", "priceComparison", "statsRow", "recentSales", "socialProof", "cta", "agentCard", "footer"],
   },
   re_engagement: {
-    default: ["header", "heroGradient", "personalNote", "statsRow", "propertyGrid", "cta", "agentCard", "footer"],
+    default: ["header", "heroGradient", "heroImage", "personalNote", "statsRow", "recentSales", "propertyGrid", "mortgageCalc", "testimonial", "cta", "agentCard", "footer"],
   },
   luxury_showcase: {
-    default: ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "videoThumbnail", "cta", "agentCard", "footer"],
+    default: ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "videoThumbnail", "mortgageCalc", "testimonial", "cta", "agentCard", "footer"],
   },
   closing_checklist: {
-    default: ["header", "personalNote", "featureList", "cta", "agentCard", "footer"],
+    default: ["header", "heroGradient", "personalNote", "featureList", "countdown", "testimonial", "cta", "agentCard", "footer"],
   },
   inspection_reminder: {
-    default: ["header", "personalNote", "featureList", "cta", "agentCard", "footer"],
+    default: ["header", "heroGradient", "personalNote", "featureList", "countdown", "cta", "agentCard", "footer"],
   },
   closing_countdown: {
-    default: ["header", "heroGradient", "personalNote", "statsRow", "countdown", "cta", "agentCard", "footer"],
+    default: ["header", "heroGradient", "personalNote", "countdown", "statsRow", "featureList", "testimonial", "cta", "agentCard", "footer"],
   },
   mortgage_renewal: {
-    default: ["header", "personalNote", "statsRow", "priceComparison", "featureList", "cta", "agentCard", "footer"],
+    default: ["header", "heroGradient", "personalNote", "statsRow", "priceComparison", "mortgageCalc", "featureList", "cta", "agentCard", "footer"],
   },
   referral: {
-    default: ["header", "personalNote", "socialProof", "cta", "agentCard", "footer"],
+    default: ["header", "heroGradient", "personalNote", "testimonial", "socialProof", "propertyGrid", "cta", "agentCard", "footer"],
   },
   buyer_guide: {
-    default: ["header", "heroGradient", "personalNote", "featureList", "propertyGrid", "cta", "agentCard", "footer"],
+    default: ["header", "heroGradient", "heroImage", "personalNote", "featureList", "propertyGrid", "mortgageCalc", "statsRow", "testimonial", "cta", "agentCard", "footer"],
   },
   seller_guide: {
-    default: ["header", "heroGradient", "personalNote", "featureList", "cta", "agentCard", "footer"],
+    default: ["header", "heroGradient", "personalNote", "statsRow", "recentSales", "priceComparison", "featureList", "testimonial", "cta", "agentCard", "footer"],
   },
 };
 

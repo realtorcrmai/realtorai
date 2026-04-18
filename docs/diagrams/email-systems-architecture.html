@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magnate 360 — 6 Email Systems Architecture</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0a0e1a;
+    color: #e0e0e0;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .page-header {
+    text-align: center;
+    padding: 48px 24px 32px;
+    background: linear-gradient(180deg, #111827 0%, #0a0e1a 100%);
+    border-bottom: 1px solid #1e293b;
+  }
+  .page-header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #FF7A59, #f0d890);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .page-header p {
+    color: #94a3b8;
+    font-size: 14px;
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .legend {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    padding: 16px 24px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #94a3b8;
+  }
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+
+  .diagram-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #64748b;
+    margin-bottom: 16px;
+    padding-left: 4px;
+  }
+
+  .system-num {
+    display: inline-flex;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  /* ═══ DETAILED FLOW DIAGRAMS ═══ */
+  .flow-section { margin-bottom: 48px; }
+
+  .flow-card {
+    background: #111827;
+    border: 1px solid #1e293b;
+    border-radius: 16px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .flow-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .flow-card.fc-journey::before { background: #3b82f6; }
+  .flow-card.fc-event::before { background: #f59e0b; }
+  .flow-card.fc-editorial::before { background: #8b5cf6; }
+  .flow-card.fc-workflow::before { background: #10b981; }
+  .flow-card.fc-drip::before { background: #ec4899; }
+  .flow-card.fc-agent::before { background: #ef4444; }
+
+  .flow-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .flow-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .flow-header h2 { font-size: 20px; font-weight: 700; }
+  .flow-header .runtime {
+    font-size: 11px; padding: 4px 10px; border-radius: 6px;
+    background: #1e293b; color: #94a3b8; font-weight: 600;
+  }
+  .flow-header .sends-to {
+    font-size: 12px; padding: 6px 14px; border-radius: 8px;
+    background: #1e293b; border: 1px solid #334155; color: #e2e8f0;
+  }
+  .flow-header .sends-to strong { color: #f0d890; }
+
+  /* Detail info boxes (Triggers / When / Recipients) */
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .detail-box {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .detail-box .detail-label {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .detail-box .detail-label .d-icon { font-size: 14px; }
+  .detail-box ul {
+    list-style: none;
+    padding: 0;
+  }
+  .detail-box ul li {
+    font-size: 11px;
+    color: #cbd5e1;
+    line-height: 1.7;
+    padding-left: 14px;
+    position: relative;
+  }
+  .detail-box ul li::before {
+    content: '>';
+    position: absolute;
+    left: 0;
+    color: #475569;
+    font-weight: 700;
+    font-size: 10px;
+  }
+
+  /* Flow steps */
+  .flow-steps {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .flow-step {
+    flex: 1;
+    min-width: 160px;
+    position: relative;
+  }
+  .step-box {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 14px;
+    height: 100%;
+    position: relative;
+    z-index: 1;
+  }
+  .step-box .step-num {
+    font-size: 10px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 6px; opacity: 0.5;
+  }
+  .step-box .step-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .step-box .step-detail { font-size: 11px; color: #94a3b8; line-height: 1.5; }
+  .step-box code {
+    font-size: 10px; background: #0f172a; padding: 1px 5px;
+    border-radius: 3px; color: #f0d890; font-family: 'JetBrains Mono', monospace;
+  }
+  .step-arrow {
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; min-width: 36px; font-size: 18px; color: #475569; align-self: center;
+  }
+
+  /* Rate limiter boxes */
+  .gate-box {
+    background: #7c2d1210; border: 1px solid #dc262620;
+    border-radius: 8px; padding: 10px 14px; margin-top: 16px;
+  }
+  .gate-box .gate-title { font-size: 11px; font-weight: 700; color: #fca5a5; margin-bottom: 4px; }
+  .gate-box .gate-detail { font-size: 10px; color: #94a3b8; line-height: 1.5; }
+  .gate-ok { background: #05966910; border: 1px solid #05966930; }
+  .gate-ok .gate-title { color: #6ee7b7; }
+  .gate-partial { background: #f59e0b10; border: 1px solid #f59e0b30; }
+  .gate-partial .gate-title { color: #fbbf24; }
+  .no-gate { background: #7c2d1220; border: 1px solid #ef444440; }
+  .no-gate .gate-title { color: #ef4444; }
+
+  /* Problem callouts */
+  .problem-banner {
+    background: linear-gradient(135deg, #7c2d12 0%, #991b1b 100%);
+    border-radius: 12px; padding: 24px 32px; margin: 40px 0;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;
+  }
+  .problem-item h4 {
+    font-size: 14px; font-weight: 700; color: #fecaca;
+    margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
+  }
+  .problem-item p { font-size: 12px; color: #fca5a5; line-height: 1.6; }
+
+  /* Day 1 scenario */
+  .scenario-card {
+    background: #111827; border: 2px solid #dc262640;
+    border-radius: 16px; padding: 32px; margin: 40px 0;
+  }
+  .scenario-card h3 { font-size: 18px; font-weight: 700; color: #fecaca; margin-bottom: 4px; }
+  .scenario-card .scenario-sub { font-size: 13px; color: #94a3b8; margin-bottom: 20px; }
+  .timeline { position: relative; padding-left: 32px; }
+  .timeline::before {
+    content: ''; position: absolute; left: 11px; top: 8px; bottom: 8px;
+    width: 2px; background: #334155;
+  }
+  .timeline-item {
+    position: relative; padding: 10px 0 10px 16px;
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .timeline-dot {
+    position: absolute; left: -25px; top: 14px;
+    width: 12px; height: 12px; border-radius: 50%; border: 2px solid; z-index: 1;
+  }
+  .timeline-time { font-size: 11px; font-weight: 700; color: #64748b; min-width: 60px; margin-top: 2px; }
+  .timeline-source {
+    font-size: 10px; font-weight: 700; padding: 2px 8px;
+    border-radius: 4px; min-width: 80px; text-align: center; margin-top: 2px;
+  }
+  .timeline-content { flex: 1; }
+  .timeline-desc { font-size: 12px; color: #e2e8f0; }
+  .timeline-recipient { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+
+  /* Storage tables */
+  .tables-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px; margin: 24px 0;
+  }
+  .db-table-card {
+    background: #0f172a; border: 1px solid #1e293b;
+    border-radius: 8px; padding: 14px;
+  }
+  .db-table-card .tname {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 700; color: #f0d890; margin-bottom: 6px;
+  }
+  .db-table-card .tdesc { font-size: 11px; color: #64748b; line-height: 1.5; }
+  .db-table-card .tsystems { margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap; }
+  .sys-tag { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; }
+
+  /* Target architecture */
+  .target-card {
+    background: #111827; border: 2px solid #05966940;
+    border-radius: 16px; padding: 32px; margin: 40px 0;
+  }
+  .target-card h3 { font-size: 18px; font-weight: 700; color: #6ee7b7; margin-bottom: 4px; }
+  .target-card .target-sub { font-size: 13px; color: #94a3b8; margin-bottom: 24px; }
+  .target-flow {
+    display: flex; align-items: center; gap: 0; justify-content: center; flex-wrap: wrap;
+  }
+  .target-col { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .target-box {
+    padding: 10px 16px; border-radius: 8px; font-size: 12px;
+    font-weight: 600; text-align: center; min-width: 140px;
+  }
+  .target-arrow { font-size: 24px; color: #475569; padding: 0 12px; align-self: center; }
+  .target-gateway {
+    background: linear-gradient(135deg, #059669, #047857);
+    border: 2px solid #34d399; border-radius: 12px;
+    padding: 20px 28px; text-align: center; color: white;
+  }
+  .target-gateway h4 { font-size: 16px; font-weight: 800; margin-bottom: 8px; }
+  .target-gateway .checks { font-size: 11px; text-align: left; line-height: 2; opacity: 0.9; }
+
+  .footer-note {
+    text-align: center; padding: 40px 24px; font-size: 11px;
+    color: #475569; border-top: 1px solid #1e293b; margin-top: 48px;
+  }
+
+  /* ═══ UI MAP ═══ */
+  .ui-map-section {
+    margin-bottom: 64px;
+  }
+  .ui-system-block {
+    background: #111827;
+    border: 1px solid #1e293b;
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .ui-system-block::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 4px;
+  }
+  .ui-sb-1::before { background: #3b82f6; }
+  .ui-sb-2::before { background: #f59e0b; }
+  .ui-sb-3::before { background: #8b5cf6; }
+  .ui-sb-4::before { background: #10b981; }
+  .ui-sb-5::before { background: #ec4899; }
+  .ui-sb-6::before { background: #ef4444; }
+
+  .ui-system-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+    padding-left: 8px;
+  }
+  .ui-system-header h3 {
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .ui-system-header .ui-runtime {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #64748b;
+    background: #1e293b;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+
+  .ui-components-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px;
+    padding-left: 8px;
+  }
+  .ui-component-card {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 12px 14px;
+    position: relative;
+  }
+  .ui-component-card.nav-linked {
+    border-color: #334155;
+  }
+  .ui-component-card.orphaned {
+    border-color: #ef444430;
+    opacity: 0.75;
+  }
+  .ui-component-card .ucc-path {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #f0d890;
+    margin-bottom: 4px;
+    word-break: break-all;
+  }
+  .ui-component-card .ucc-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin-bottom: 4px;
+  }
+  .ui-component-card .ucc-desc {
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.5;
+  }
+  .ucc-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .ucc-tag {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .tag-nav { background: #05966930; color: #6ee7b7; }
+  .tag-orphan { background: #ef444420; color: #f87171; }
+  .tag-tab { background: #3b82f620; color: #60a5fa; }
+  .tag-component { background: #8b5cf620; color: #a78bfa; }
+  .tag-action { background: #f59e0b20; color: #fbbf24; }
+
+  @media (max-width: 768px) {
+    .detail-grid { grid-template-columns: 1fr; }
+    .flow-steps { flex-direction: column; }
+    .step-arrow { transform: rotate(90deg); width: auto; height: 36px; }
+    .problem-banner { grid-template-columns: 1fr; }
+    .ui-components-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════ HEADER ═══ -->
+<div class="page-header">
+  <h1>Magnate 360 — Email Systems Architecture</h1>
+  <p>6 independent email-sending systems with no shared frequency caps, 4 different send history tables, and no priority resolution. A new contact can receive 5+ emails on day one.</p>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>System 1: Journey Pipeline</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>System 2: Event Pipeline</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div>System 3: Editorial</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>System 4: Workflow Engine</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ec4899"></div>System 5: Drip Sequence</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>System 6: AI Agent</div>
+</div>
+
+<div class="diagram-container">
+
+<!-- ═══════════════════════════════ SYSTEM 1: JOURNEY ═══ -->
+<div class="flow-section">
+  <div class="section-title">System 1 — Journey Pipeline</div>
+  <div class="flow-card fc-journey">
+    <div class="flow-header">
+      <div class="flow-header-left">
+        <span class="system-num" style="background:#3b82f6; width:28px; height:28px; font-size:14px;">1</span>
+        <div>
+          <h2 style="color:#60a5fa">Journey Pipeline</h2>
+          <span class="runtime">CRM (Vercel) + Render cron</span>
+        </div>
+      </div>
+      <div class="sends-to">Sends to: <strong>All enrolled contacts</strong> (buyers, sellers, customers)</div>
+    </div>
+
+    <!-- TRIGGER / WHEN / RECIPIENT detail boxes -->
+    <div class="detail-grid">
+      <div class="detail-box">
+        <div class="detail-label" style="color:#60a5fa"><span class="d-icon">&#9889;</span> TRIGGERS</div>
+        <ul>
+          <li>New contact added to CRM (any type)</li>
+          <li><code>autoEnrollNewContact()</code> fires on insert</li>
+          <li>Buyer → buyer_lead journey</li>
+          <li>Seller → seller_lead journey</li>
+          <li>Manual enrollment via UI also possible</li>
+        </ul>
+      </div>
+      <div class="detail-box">
+        <div class="detail-label" style="color:#60a5fa"><span class="d-icon">&#9200;</span> WHEN EMAILS SEND</div>
+        <ul>
+          <li><strong>Lead phase:</strong> 0h (welcome), 72h (guide), 168h (alert), 336h (market)</li>
+          <li><strong>Active phase:</strong> 0h, 168h, 504h</li>
+          <li><strong>Past Client:</strong> 0h, 720h, 2160h</li>
+          <li>Cron checks every 2 minutes for due emails</li>
+          <li>Phase exhaustion → auto-advance (engagement score &gt;40 → active, else dormant)</li>
+        </ul>
+      </div>
+      <div class="detail-box">
+        <div class="detail-label" style="color:#60a5fa"><span class="d-icon">&#128101;</span> RECIPIENTS</div>
+        <ul>
+          <li><strong>Buyer leads:</strong> neighbourhood_guide, new_listing_alert, market_update</li>
+          <li><strong>Seller leads:</strong> market_update, home_anniversary, neighbourhood_guide</li>
+          <li><strong>Active buyers:</strong> new_listing_alert, open_house_invite</li>
+          <li><strong>Past clients:</strong> home_anniversary, market_update</li>
+          <li>Each contact gets 1 journey at a time</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#3b82f6">Step 1</div>
+          <div class="step-title">Contact Created</div>
+          <div class="step-detail"><code>autoEnrollNewContact()</code><br>Auto-enrolls into buyer or seller journey based on contact type</div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#3b82f6">Step 2</div>
+          <div class="step-title">JOURNEY_SCHEDULES</div>
+          <div class="step-detail">Hardcoded drip timing per phase<br><code>contact_journeys.next_email_at</code></div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#3b82f6">Step 3</div>
+          <div class="step-title">processJourneyQueue()</div>
+          <div class="step-detail">Cron every 2 min<br>Finds <code>next_email_at &lt;= now</code><br>Checks CASL + send governor</div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#3b82f6">Step 4</div>
+          <div class="step-title">generateAndQueueNewsletter()</div>
+          <div class="step-detail">Claude AI generates content<br>Hydrates visual blocks<br><code>newsletters.ts</code></div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#3b82f6">Step 5</div>
+          <div class="step-title">Resend API</div>
+          <div class="step-detail">Writes to <code>newsletters</code> table<br>Status: draft &#8594; sent<br>Or pending_review if review mode</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gate-box gate-partial">
+      <div class="gate-title">Rate Limiter: checkSendGovernor() &#x1F7E1;</div>
+      <div class="gate-detail">Per-phase frequency caps + engagement throttling + auto-sunset for disengaged contacts. Only sees Journey's own sends in <code>newsletters</code> table &#8212; blind to Events, Editorial, Workflow, and Agent sends.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ SYSTEM 2: EVENTS ═══ -->
+<div class="flow-section">
+  <div class="section-title">System 2 — Event Pipeline</div>
+  <div class="flow-card fc-event">
+    <div class="flow-header">
+      <div class="flow-header-left">
+        <span class="system-num" style="background:#f59e0b; width:28px; height:28px; font-size:14px;">2</span>
+        <div>
+          <h2 style="color:#fbbf24">Event Pipeline</h2>
+          <span class="runtime">CRM emits &#8594; Render processes</span>
+        </div>
+      </div>
+      <div class="sends-to">Sends to: <strong>Affected contacts</strong> (context-dependent per event)</div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-box">
+        <div class="detail-label" style="color:#fbbf24"><span class="d-icon">&#9889;</span> TRIGGERS (5 wired)</div>
+        <ul>
+          <li><strong>listing_price_dropped:</strong> Realtor changes list price downward</li>
+          <li><strong>listing_sold:</strong> Listing status changed to "sold"</li>
+          <li><strong>showing_confirmed:</strong> Seller confirms showing via SMS YES</li>
+          <li><strong>contact_birthday:</strong> Daily 8AM cron checks <code>contact_important_dates</code></li>
+          <li><strong>listing_matched_search:</strong> New listing matches buyer saved search prefs</li>
+          <li><em>~12 more event types defined but not wired to pipelines</em></li>
+        </ul>
+      </div>
+      <div class="detail-box">
+        <div class="detail-label" style="color:#fbbf24"><span class="d-icon">&#9200;</span> WHEN EMAILS SEND</div>
+        <ul>
+          <li><strong>Real-time events:</strong> Within 10 seconds (poll interval) of CRM action</li>
+          <li><strong>Birthday:</strong> Daily at 8:00 AM Vancouver time</li>
+          <li><strong>Saved search:</strong> Within 10s of new listing matching criteria</li>
+          <li><strong>Rule caps:</strong> Min 24h between same event type (configurable per rule)</li>
+          <li><strong>Weekly cap:</strong> Max 3 emails/week of same type per contact</li>
+          <li><strong>Send mode:</strong> "auto" (instant) or "review" (queued for approval)</li>
+        </ul>
+      </div>
+      <div class="detail-box">
+        <div class="detail-label" style="color:#fbbf24"><span class="d-icon">&#128101;</span> RECIPIENTS</div>
+        <ul>
+          <li><strong>listing_price_dropped:</strong> All buyers who viewed/saved that listing</li>
+          <li><strong>listing_sold:</strong> Seller + interested buyers (just_sold celebration)</li>
+          <li><strong>showing_confirmed:</strong> Buyer agent who requested the showing</li>
+          <li><strong>contact_birthday:</strong> The birthday contact (personal greeting)</li>
+          <li><strong>listing_matched_search:</strong> Buyer whose saved search criteria match</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#f59e0b">Step 1</div>
+          <div class="step-title">CRM Action or Cron</div>
+          <div class="step-detail"><code>emitNewsletterEvent()</code><br>Inserts into <code>email_events</code> table<br>status: pending</div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#f59e0b">Step 2</div>
+          <div class="step-title">processEvent()</div>
+          <div class="step-detail">Polls every 10s<br>Routes to pipeline by event_type<br>5 of ~17 types wired</div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#f59e0b">Step 3</div>
+          <div class="step-title">resolveRuleForEvent()</div>
+          <div class="step-detail">Looks up <code>email_event_rules</code><br>Weekly cap + min hours<br>Priority ranking + send mode</div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#f59e0b">Step 4</div>
+          <div class="step-title">runPipeline() &#8212; 7 phases</div>
+          <div class="step-detail">Recipient &#8594; Rule &#8594; CASL &#8594; Prompt &#8594; Claude AI &#8594; Render HTML &#8594; Send<br>Crash-safe: INSERT before Resend<br>Idempotency key dedup</div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#f59e0b">Step 5</div>
+          <div class="step-title">Resend &#8594; newsletters</div>
+          <div class="step-detail">Writes to <code>newsletters</code> table<br>Resend webhook tracks opens/clicks<br>Most mature pipeline</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gate-box gate-ok">
+      <div class="gate-title">Rate Limiter: resolveRuleForEvent() &#x1F7E2;</div>
+      <div class="gate-detail">Per-event-type rules with weekly cap + min hours. Idempotency keys prevent duplicate sends. CASL checks included. Best-implemented system &#8212; but only sees Event Pipeline's own sends in <code>newsletters</code> table.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ SYSTEM 3: EDITORIAL ═══ -->
+<div class="flow-section">
+  <div class="section-title">System 3 — Editorial System</div>
+  <div class="flow-card fc-editorial">
+    <div class="flow-header">
+      <div class="flow-header-left">
+        <span class="system-num" style="background:#8b5cf6; width:28px; height:28px; font-size:14px;">3</span>
+        <div>
+          <h2 style="color:#a78bfa">Editorial Newsletters</h2>
+          <span class="runtime">CRM (Vercel)</span>
+        </div>
+      </div>
+      <div class="sends-to">Sends to: <strong>Contact segments or all contacts</strong> (broadcast)</div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-box">
+        <div class="detail-label" style="color:#a78bfa"><span class="d-icon">&#9889;</span> TRIGGERS</div>
+        <ul>
+          <li><strong>Manual:</strong> Realtor clicks "New Edition" in <code>/editorial/new</code></li>
+          <li><strong>Auto-draft:</strong> Weekly cron generates AI draft edition</li>
+          <li><strong>AI-assisted:</strong> Claude generates blocks using voice profile</li>
+          <li>Realtor edits, approves, and manually clicks "Send"</li>
+        </ul>
+      </div>
+      <div class="detail-box">
+        <div class="detail-label" style="color:#a78bfa"><span class="d-icon">&#9200;</span> WHEN EMAILS SEND</div>
+        <ul>
+          <li><strong>Entirely manual:</strong> Sends when realtor clicks "Send Edition"</li>
+          <li><strong>Auto-draft:</strong> Weekly cron creates draft (does NOT auto-send)</li>
+          <li><strong>No scheduling:</strong> No future-send or drip capability</li>
+          <li>Broadcast &#8212; all recipients get it simultaneously</li>
+          <li>Optional A/B subject line testing (split send)</li>
+        </ul>
+      </div>
+      <div class="detail-box">
+        <div class="detail-label" style="color:#a78bfa"><span class="d-icon">&#128101;</span> RECIPIENTS</div>
+        <ul>
+          <li><strong>All contacts:</strong> Default segment = everyone with email</li>
+          <li><strong>Custom segments:</strong> Filtered by type, stage, tags, location</li>
+          <li><strong>No individual targeting:</strong> Always segment-based broadcast</li>
+          <li>CASL consent checked inline per contact</li>
+          <li>No dedup against other systems &#8212; if Journey sent today, Editorial still sends</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#8b5cf6">Step 1</div>
+          <div class="step-title">Create Edition</div>
+          <div class="step-detail">Manual or weekly auto-draft<br>Voice profile guides AI tone</div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#8b5cf6">Step 2</div>
+          <div class="step-title">Block Editor</div>
+          <div class="step-detail">10 editorial React Email blocks<br>Market, rate watch, just sold, agent note, etc.</div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#8b5cf6">Step 3</div>
+          <div class="step-title">Segment Selection</div>
+          <div class="step-detail">Pick recipient segment or "All"<br>Optional A/B subject testing</div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#8b5cf6">Step 4</div>
+          <div class="step-title">sendEdition()</div>
+          <div class="step-detail">Loops over contacts in segment<br>Sends each via Resend<br>Writes to <code>editorial_editions</code><br><strong>NOT to newsletters table</strong></div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#8b5cf6">Step 5</div>
+          <div class="step-title">Own Webhook</div>
+          <div class="step-detail"><code>/api/editorial/webhooks/resend</code><br>Separate from main webhook<br>Own analytics pages</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gate-box no-gate">
+      <div class="gate-title">No Rate Limiter &#x1F534;</div>
+      <div class="gate-detail">Only checks casl_consent_given inline. No frequency cap &#8212; a broadcast goes to everyone in the segment regardless of what other systems sent that day. Writes to <code>editorial_editions</code> (invisible to all other systems).</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ SYSTEM 4: WORKFLOW ═══ -->
+<div class="flow-section">
+  <div class="section-title">System 4 — Workflow Engine</div>
+  <div class="flow-card fc-workflow">
+    <div class="flow-header">
+      <div class="flow-header-left">
+        <span class="system-num" style="background:#10b981; width:28px; height:28px; font-size:14px;">4</span>
+        <div>
+          <h2 style="color:#34d399">Workflow Engine</h2>
+          <span class="runtime">CRM (Vercel) + Render cron</span>
+        </div>
+      </div>
+      <div class="sends-to">Sends to: <strong>Enrolled contacts</strong> (multi-channel: email + SMS + WhatsApp)</div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-box">
+        <div class="detail-label" style="color:#34d399"><span class="d-icon">&#9889;</span> TRIGGERS</div>
+        <ul>
+          <li><strong>contact_created:</strong> New contact matches workflow trigger</li>
+          <li><strong>tag_added:</strong> Specific tag applied to contact</li>
+          <li><strong>stage_changed:</strong> Contact stage transition (e.g., lead &#8594; active)</li>
+          <li><strong>manual:</strong> Realtor enrolls contact via UI</li>
+          <li>Visual React Flow builder defines trigger + steps</li>
+        </ul>
+      </div>
+      <div class="detail-box">
+        <div class="detail-label" style="color:#34d399"><span class="d-icon">&#9200;</span> WHEN EMAILS SEND</div>
+        <ul>
+          <li><strong>Step delays:</strong> Configurable per step (minutes to days)</li>
+          <li><strong>Cron:</strong> processWorkflowQueue() runs every 2 minutes</li>
+          <li><strong>Immediate:</strong> Steps with 0 delay fire on next cron tick (~2 min)</li>
+          <li><strong>Conditional:</strong> If/then branching can skip steps</li>
+          <li>Multi-channel: same workflow can mix email + SMS + WhatsApp</li>
+        </ul>
+      </div>
+      <div class="detail-box">
+        <div class="detail-label" style="color:#34d399"><span class="d-icon">&#128101;</span> RECIPIENTS</div>
+        <ul>
+          <li><strong>Individual contacts:</strong> One enrollment per contact per workflow</li>
+          <li><strong>Template variables:</strong> {{contact_name}}, {{listing_price}}, {{agent_name}}</li>
+          <li>Greeting automations: birthday, holiday, anniversary</li>
+          <li>Showing follow-ups: post-showing feedback request</li>
+          <li>Re-engagement: dormant contacts re-activation</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#10b981">Step 1</div>
+          <div class="step-title">Workflow Enrollment</div>
+          <div class="step-detail">Visual builder triggers<br><code>workflow_enrollments</code></div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#10b981">Step 2</div>
+          <div class="step-title">workflow_steps</div>
+          <div class="step-detail">Sequential steps with delays:<br>email, sms, whatsapp, task, tag, condition</div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#10b981">Step 3</div>
+          <div class="step-title">processWorkflowQueue()</div>
+          <div class="step-detail">Cron every 2 min<br>Finds <code>next_run_at &lt;= now</code></div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#10b981">Step 4</div>
+          <div class="step-title">executeAutoMessage()</div>
+          <div class="step-detail">Template variable resolution<br>Routes to email/SMS/WhatsApp<br>Checks CASL + sendGovernor</div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#10b981">Step 5</div>
+          <div class="step-title">Resend / Twilio</div>
+          <div class="step-detail">Email &#8594; Resend API<br>SMS/WhatsApp &#8594; Twilio<br>Writes to <code>communications</code><br><strong>NOT to newsletters table</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gate-box no-gate">
+      <div class="gate-title">Rate Limiter: BROKEN &#x1F534;</div>
+      <div class="gate-detail">Uses checkSendGovernor() which checks <code>newsletters</code> table &#8212; but Workflow writes to <code>communications</code> table. Its own sends are invisible to its own rate limiter. Circular blind spot: cap never increments.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ SYSTEM 5: DRIP ═══ -->
+<div class="flow-section">
+  <div class="section-title">System 5 — Drip Sequence Engine (DUPLICATE)</div>
+  <div class="flow-card fc-drip">
+    <div class="flow-header">
+      <div class="flow-header-left">
+        <span class="system-num" style="background:#ec4899; width:28px; height:28px; font-size:14px;">5</span>
+        <div>
+          <h2 style="color:#f472b6">Drip Sequence Engine</h2>
+          <span class="runtime">Render (Newsletter Service)</span>
+        </div>
+      </div>
+      <div class="sends-to">Sends to: <strong>Newly added contacts</strong> (BUYER_WELCOME / SELLER_ONBOARD)</div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-box">
+        <div class="detail-label" style="color:#f472b6"><span class="d-icon">&#9889;</span> TRIGGERS</div>
+        <ul>
+          <li><strong>Contact creation:</strong> Same trigger as System 1 Journey</li>
+          <li>Buyer &#8594; BUYER_WELCOME sequence</li>
+          <li>Seller &#8594; SELLER_ONBOARD sequence</li>
+          <li>Fires independently of Journey enrollment</li>
+          <li><strong>100% duplicate trigger</strong> with System 1</li>
+        </ul>
+      </div>
+      <div class="detail-box">
+        <div class="detail-label" style="color:#f472b6"><span class="d-icon">&#9200;</span> WHEN EMAILS SEND</div>
+        <ul>
+          <li><strong>BUYER:</strong> welcome(0d) &#8594; guide(3d) &#8594; alert(7d) &#8594; market(14d) &#8594; re-engage(30d)</li>
+          <li><strong>SELLER:</strong> welcome(0d) &#8594; report(3d) &#8594; CMA(7d)</li>
+          <li>Inserts into <code>email_events</code> with scheduled_at</li>
+          <li>System 2's cron picks up scheduled rows</li>
+          <li><strong>Near-identical timing</strong> to System 1 lead phase</li>
+        </ul>
+      </div>
+      <div class="detail-box">
+        <div class="detail-label" style="color:#f472b6"><span class="d-icon">&#128101;</span> RECIPIENTS</div>
+        <ul>
+          <li>Same contacts as System 1 Journey lead phase</li>
+          <li>Same email types (welcome, guide, alert, market)</li>
+          <li>Contact receives welcome from BOTH systems on day 0</li>
+          <li>Then gets guide from both on day 3</li>
+          <li><strong>Result: 2x emails at every drip point</strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#ec4899">Step 1</div>
+          <div class="step-title">Contact Enrolled</div>
+          <div class="step-detail">BUYER_WELCOME or SELLER_ONBOARD<br>Same trigger as Journey System 1</div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#ec4899">Step 2</div>
+          <div class="step-title">SEQUENCES constant</div>
+          <div class="step-detail">Hardcoded day offsets<br>Near-identical to JOURNEY_SCHEDULES</div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#ec4899">Step 3</div>
+          <div class="step-title">email_events (scheduled)</div>
+          <div class="step-detail">Inserts rows with <code>status: 'scheduled'</code><br>Into System 2's queue table</div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box" style="border-color: #f59e0b; border-style: dashed;">
+          <div class="step-num" style="color:#f59e0b">Handoff</div>
+          <div class="step-title">&#8594; Event Pipeline (System 2)</div>
+          <div class="step-detail"><code>process-scheduled-sends</code> cron picks up scheduled rows, flips to pending, System 2 takes over</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gate-box no-gate">
+      <div class="gate-title">DUPLICATE &#8212; Should Be Removed &#x1F534;</div>
+      <div class="gate-detail">BUYER_WELCOME = Journey buyer/lead phase. SELLER_ONBOARD = Journey seller/lead phase. Both fire on contact creation. Contact gets welcome email from BOTH systems on day 0, guide from both on day 3, etc. This entire system should be absorbed into System 1.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ SYSTEM 6: AI AGENT ═══ -->
+<div class="flow-section">
+  <div class="section-title">System 6 — AI Agent Direct Send</div>
+  <div class="flow-card fc-agent">
+    <div class="flow-header">
+      <div class="flow-header-left">
+        <span class="system-num" style="background:#ef4444; width:28px; height:28px; font-size:14px;">6</span>
+        <div>
+          <h2 style="color:#f87171">AI Agent Direct Send</h2>
+          <span class="runtime">Render (Newsletter Service)</span>
+        </div>
+      </div>
+      <div class="sends-to">Sends to: <strong>AI-selected contacts</strong> (scoring + trust gated)</div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-box">
+        <div class="detail-label" style="color:#f87171"><span class="d-icon">&#9889;</span> TRIGGERS</div>
+        <ul>
+          <li><strong>Autonomous:</strong> Agent orchestrator runs on schedule</li>
+          <li>AI evaluates all contacts via lead scoring</li>
+          <li>next-best-action engine picks optimal outreach</li>
+          <li>No human trigger required at L1+ trust</li>
+          <li>Weekly digest to realtor (performance summary)</li>
+        </ul>
+      </div>
+      <div class="detail-box">
+        <div class="detail-label" style="color:#f87171"><span class="d-icon">&#9200;</span> WHEN EMAILS SEND</div>
+        <ul>
+          <li><strong>Agent run cycle:</strong> Configurable schedule (every few hours)</li>
+          <li><strong>L0 trust:</strong> Draft queued for realtor approval (manual gate)</li>
+          <li><strong>L1 trust:</strong> Auto-send routine emails immediately</li>
+          <li><strong>L2 trust:</strong> Auto-send + custom content</li>
+          <li><strong>L3 trust:</strong> Full autonomy &#8212; sends immediately</li>
+          <li><strong>Hard caps:</strong> 2/day and 5/week per contact</li>
+        </ul>
+      </div>
+      <div class="detail-box">
+        <div class="detail-label" style="color:#f87171"><span class="d-icon">&#128101;</span> RECIPIENTS</div>
+        <ul>
+          <li><strong>Hot leads:</strong> High engagement score, recent activity</li>
+          <li><strong>Re-engagement:</strong> Dormant contacts needing a nudge</li>
+          <li><strong>Opportunity-driven:</strong> New listing matching buyer prefs</li>
+          <li><strong>Relationship:</strong> Milestone acknowledgments, check-ins</li>
+          <li>AI decides who + what + when autonomously</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#ef4444">Step 1</div>
+          <div class="step-title">Agent Orchestrator</div>
+          <div class="step-detail">AI autonomously decides who needs email<br>Lead scoring + engagement data<br><code>next-best-action.ts</code></div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#ef4444">Step 2</div>
+          <div class="step-title">generate-copy tool</div>
+          <div class="step-detail">Claude generates email content<br>Stored in <code>agent_drafts</code><br>Trust-gated approval</div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#ef4444">Step 3</div>
+          <div class="step-title">Trust Level Check</div>
+          <div class="step-detail">L0: always needs approval<br>L1: auto-send routine<br>L2: auto-send + custom<br>L3: full autonomy</div>
+        </div>
+      </div>
+      <div class="step-arrow">&#8594;</div>
+      <div class="flow-step">
+        <div class="step-box">
+          <div class="step-num" style="color:#ef4444">Step 4</div>
+          <div class="step-title">send_email tool</div>
+          <div class="step-detail">Loads from <code>agent_drafts</code><br>CASL check inline<br>Sends via Resend<br>Updates draft status</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gate-box gate-partial">
+      <div class="gate-title">Rate Limiter: check-frequency-cap &#x1F7E1;</div>
+      <div class="gate-detail">Agent's own frequency check: daily=2, weekly=5 hard caps. Checks <code>agent_drafts</code> table &#8212; separate from newsletters. Trust levels gate autonomy but don't coordinate with other 5 systems.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ STORAGE FRAGMENTATION ═══ -->
+<div class="flow-section">
+  <div class="section-title">Send History &#8212; 4 Separate Tables (No Global View)</div>
+  <div class="tables-grid">
+    <div class="db-table-card">
+      <div class="tname">newsletters</div>
+      <div class="tdesc">Main email ledger. Subject, html_body, status, sent_at, contact_id, email_type, resend_id</div>
+      <div class="tsystems">
+        <span class="sys-tag" style="background:#3b82f630; color:#60a5fa">Journey</span>
+        <span class="sys-tag" style="background:#f59e0b30; color:#fbbf24">Events</span>
+      </div>
+    </div>
+    <div class="db-table-card">
+      <div class="tname">editorial_editions</div>
+      <div class="tdesc">Edition-level (not per-recipient). Blocks, segment, A/B variants, sent status.</div>
+      <div class="tsystems">
+        <span class="sys-tag" style="background:#8b5cf630; color:#a78bfa">Editorial</span>
+      </div>
+    </div>
+    <div class="db-table-card">
+      <div class="tname">communications</div>
+      <div class="tdesc">Unified message log. All channels: email, SMS, WhatsApp, internal. direction + channel + body.</div>
+      <div class="tsystems">
+        <span class="sys-tag" style="background:#10b98130; color:#34d399">Workflow</span>
+      </div>
+    </div>
+    <div class="db-table-card">
+      <div class="tname">agent_drafts</div>
+      <div class="tdesc">AI agent workspace. Generated copy, trust level, approval status, resend_message_id.</div>
+      <div class="tsystems">
+        <span class="sys-tag" style="background:#ef444430; color:#f87171">AI Agent</span>
+      </div>
+    </div>
+  </div>
+  <div style="text-align: center; font-size: 12px; color: #64748b; margin-top: 8px;">
+    No system queries all 4 tables. Each rate limiter only sees its own table. A global "what did we send this contact today?" query is impossible.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ DAY 1 SCENARIO ═══ -->
+<div class="scenario-card">
+  <h3>Worst Case: New Buyer Contact "Sarah Chen" Added</h3>
+  <p class="scenario-sub">All 6 systems independently targeting the same contact on day one &#8212; with specific recipients and content</p>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="timeline-dot" style="background:#3b82f6; border-color:#3b82f6"></div>
+      <div class="timeline-time">+0 min</div>
+      <div class="timeline-source" style="background:#3b82f630; color:#60a5fa">JOURNEY</div>
+      <div class="timeline-content">
+        <div class="timeline-desc">Auto-enrolled in buyer journey &#8594; welcome email queued (delayHours: 0)</div>
+        <div class="timeline-recipient">To: sarah.chen@email.com &#8226; Type: neighbourhood_guide &#8226; AI-generated &#8226; Stores in: newsletters</div>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot" style="background:#ec4899; border-color:#ec4899"></div>
+      <div class="timeline-time">+0 min</div>
+      <div class="timeline-source" style="background:#ec489930; color:#f472b6">DRIP</div>
+      <div class="timeline-content">
+        <div class="timeline-desc">BUYER_WELCOME enrolled &#8594; welcome email inserted into email_events (immediate)</div>
+        <div class="timeline-recipient">To: sarah.chen@email.com &#8226; Type: welcome &#8226; Nearly identical content &#8226; Stores in: newsletters (via System 2)</div>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot" style="background:#10b981; border-color:#10b981"></div>
+      <div class="timeline-time">+0 min</div>
+      <div class="timeline-source" style="background:#10b98130; color:#34d399">WORKFLOW</div>
+      <div class="timeline-content">
+        <div class="timeline-desc">If "new contact" workflow exists &#8594; first step fires (email or SMS)</div>
+        <div class="timeline-recipient">To: sarah.chen@email.com OR +16045551234 &#8226; Template-based &#8226; Stores in: communications</div>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot" style="background:#f59e0b; border-color:#f59e0b"></div>
+      <div class="timeline-time">+10 sec</div>
+      <div class="timeline-source" style="background:#f59e0b30; color:#fbbf24">EVENT</div>
+      <div class="timeline-content">
+        <div class="timeline-desc">If buyer matches saved search &#8594; listing_matched_search fires &#8594; listing alert</div>
+        <div class="timeline-recipient">To: sarah.chen@email.com &#8226; Type: new_listing_alert &#8226; AI-generated with property details &#8226; Stores in: newsletters</div>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot" style="background:#ef4444; border-color:#ef4444"></div>
+      <div class="timeline-time">+2 min</div>
+      <div class="timeline-source" style="background:#ef444430; color:#f87171">AI AGENT</div>
+      <div class="timeline-content">
+        <div class="timeline-desc">Agent run detects new hot lead &#8594; autonomously drafts + sends personalized welcome</div>
+        <div class="timeline-recipient">To: sarah.chen@email.com &#8226; Type: agent-generated welcome &#8226; Stores in: agent_drafts</div>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot" style="background:#8b5cf6; border-color:#8b5cf6"></div>
+      <div class="timeline-time">+1 day</div>
+      <div class="timeline-source" style="background:#8b5cf630; color:#a78bfa">EDITORIAL</div>
+      <div class="timeline-content">
+        <div class="timeline-desc">Realtor sends weekly broadcast &#8594; Sarah is in "All" segment &#8594; gets it too</div>
+        <div class="timeline-recipient">To: sarah.chen@email.com &#8226; Type: editorial broadcast &#8226; Stores in: editorial_editions</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 20px; padding: 14px 20px; background: #7c2d1220; border: 1px solid #ef444440; border-radius: 8px; text-align: center;">
+    <span style="font-size: 14px; font-weight: 700; color: #fecaca;">Result: 5 emails in 2 minutes, 6th email within 24 hours</span>
+    <p style="font-size: 11px; color: #fca5a5; margin-top: 4px;">Each system's rate limiter says "I only sent 1 email" &#8212; none sees the other 4-5. Sarah's inbox: 3 welcome emails + 1 listing alert + 1 agent message + 1 editorial.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ PROBLEMS ═══ -->
+<div class="problem-banner">
+  <div class="problem-item">
+    <h4>No Shared Frequency Cap</h4>
+    <p>3 independent rate limiters (sendGovernor, resolveRuleForEvent, agent cap) each query different tables. No single query counts all sends to a contact.</p>
+  </div>
+  <div class="problem-item">
+    <h4>4 Send History Tables</h4>
+    <p>newsletters, editorial_editions, communications, agent_drafts. A global "what did we send this contact today?" query is impossible.</p>
+  </div>
+  <div class="problem-item">
+    <h4>Welcome Email x3</h4>
+    <p>Journey (System 1), Drip (System 5), and optionally Workflow (System 4) all send welcome emails on contact creation. Same content, 3 separate code paths.</p>
+  </div>
+  <div class="problem-item">
+    <h4>No Priority Resolution</h4>
+    <p>When 3 systems want to email the same contact, first-to-fire wins. No concept of "this listing alert is more important than a drip nurture."</p>
+  </div>
+  <div class="problem-item">
+    <h4>Events Don't Drive Journeys</h4>
+    <p>A showing_confirmed event doesn't advance buyer from lead &#8594; active. listing_sold doesn't move seller to past_client. Phase changes are time-based or manual only.</p>
+  </div>
+  <div class="problem-item">
+    <h4>Workflow Writes to Wrong Table</h4>
+    <p>Workflow emails write to communications, but its own rate limiter (sendGovernor) checks newsletters. Its sends are invisible to its own cap.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ TARGET ═══ -->
+<div class="target-card">
+  <h3>Target: Unified Send Gateway</h3>
+  <p class="target-sub">All 4 surviving producers &#8594; 1 gateway &#8594; Resend. System 5 (Drip) absorbed into System 1 (Journey).</p>
+
+  <div class="target-flow">
+    <div class="target-col">
+      <div class="target-box" style="background:#3b82f620; border:1px solid #3b82f6; color:#60a5fa">Journey Pipeline</div>
+      <div class="target-box" style="background:#f59e0b20; border:1px solid #f59e0b; color:#fbbf24">Event Pipeline</div>
+      <div class="target-box" style="background:#8b5cf620; border:1px solid #8b5cf6; color:#a78bfa">Editorial</div>
+      <div class="target-box" style="background:#10b98120; border:1px solid #10b981; color:#34d399">Workflow Engine</div>
+      <div class="target-box" style="background:#ef444420; border:1px solid #ef4444; color:#f87171">AI Agent</div>
+    </div>
+    <div class="target-arrow">&#8594;</div>
+    <div class="target-gateway">
+      <h4>Send Gateway</h4>
+      <div class="checks">
+        1. CASL compliance check<br>
+        2. Global frequency cap (1 query, ALL sends)<br>
+        3. Priority arbitration (P1-P5)<br>
+        4. Idempotency dedup<br>
+        5. Send + track &#8594; <strong>newsletters</strong> table
+      </div>
+    </div>
+    <div class="target-arrow">&#8594;</div>
+    <div class="target-col">
+      <div class="target-box" style="background:#05966920; border:1px solid #059669; color:#6ee7b7">Resend API</div>
+      <div style="font-size: 11px; color: #64748b; text-align: center; margin-top: 8px;">
+        Single table: <code style="color:#f0d890">newsletters</code><br>
+        with <code style="color:#f0d890">source_system</code> column
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 24px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; text-align: center;">
+    <div style="background:#1e293b; padding:8px; border-radius:6px; font-size:11px;">
+      <div style="color:#fecaca; font-weight:700;">P1</div>
+      <div style="color:#94a3b8;">Transactional</div>
+      <div style="color:#64748b; font-size:10px;">Always send</div>
+    </div>
+    <div style="background:#1e293b; padding:8px; border-radius:6px; font-size:11px;">
+      <div style="color:#fbbf24; font-weight:700;">P2</div>
+      <div style="color:#94a3b8;">Event-triggered</div>
+      <div style="color:#64748b; font-size:10px;">Time-sensitive</div>
+    </div>
+    <div style="background:#1e293b; padding:8px; border-radius:6px; font-size:11px;">
+      <div style="color:#f87171; font-weight:700;">P3</div>
+      <div style="color:#94a3b8;">AI Agent</div>
+      <div style="color:#64748b; font-size:10px;">Trust-gated</div>
+    </div>
+    <div style="background:#1e293b; padding:8px; border-radius:6px; font-size:11px;">
+      <div style="color:#a78bfa; font-weight:700;">P4</div>
+      <div style="color:#94a3b8;">Editorial</div>
+      <div style="color:#64748b; font-size:10px;">Deferrable</div>
+    </div>
+    <div style="background:#1e293b; padding:8px; border-radius:6px; font-size:11px;">
+      <div style="color:#60a5fa; font-weight:700;">P5</div>
+      <div style="color:#94a3b8;">Journey nurture</div>
+      <div style="color:#64748b; font-size:10px;">Lowest priority</div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- ═══════════════════════════════ UI MAP ═══ -->
+<div class="ui-map-section">
+  <div class="section-title">UI Components Mapped to Each Engine</div>
+
+  <!-- LEGEND -->
+  <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:24px; padding:14px 18px; background:#111827; border:1px solid #1e293b; border-radius:10px;">
+    <span style="font-size:11px; color:#94a3b8; font-weight:600;">Legend:</span>
+    <span class="ucc-tag tag-nav">Nav-linked</span>
+    <span style="font-size:11px; color:#6ee7b7;">= reachable from sidebar/tab</span>
+    <span class="ucc-tag tag-orphan">Orphaned</span>
+    <span style="font-size:11px; color:#f87171;">= no navigation link</span>
+    <span class="ucc-tag tag-tab">Tab</span>
+    <span style="font-size:11px; color:#60a5fa;">= rendered inside main page tab</span>
+    <span class="ucc-tag tag-component">Component</span>
+    <span style="font-size:11px; color:#a78bfa;">= React component only</span>
+    <span class="ucc-tag tag-action">Server Action</span>
+    <span style="font-size:11px; color:#fbbf24;">= data mutation</span>
+  </div>
+
+  <!-- SYSTEM 1: JOURNEY -->
+  <div class="ui-system-block ui-sb-1">
+    <div class="ui-system-header">
+      <span class="system-num" style="background:#3b82f6; width:28px; height:28px; font-size:14px;">1</span>
+      <h3 style="color:#60a5fa">Journey Pipeline</h3>
+      <span class="ui-runtime">Lifecycle drip to contacts</span>
+    </div>
+    <div class="ui-components-grid">
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters → "Overview" tab</div>
+        <div class="ucc-name">Journey Dashboard Overview</div>
+        <div class="ucc-desc">PipelineCard shows enrolled contacts, phase distribution (lead/active/past_client/dormant), upcoming emails in next 7 days. Reads <code>contact_journeys</code>.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span><span class="ucc-tag tag-tab">Tab</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters/relationships</div>
+        <div class="ucc-name">Relationships Page</div>
+        <div class="ucc-desc">Lists all contact journey enrollments. Shows current phase, next email date, pause/resume controls. Bulk enroll modal. Reads <code>contact_journeys</code>.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span><span class="ucc-tag tag-action">Server Action</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters → "Overview" tab</div>
+        <div class="ucc-name">SentByAIList</div>
+        <div class="ucc-desc">Shows last 20 emails sent via Journey + Events pipelines. Click to preview HTML. Reads <code>newsletters</code> table (status=sent).</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-tab">Tab</span><span class="ucc-tag tag-component">Component</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters → "Overview" tab</div>
+        <div class="ucc-name">AIWorkingForYou</div>
+        <div class="ucc-desc">Live widget showing pipeline status: contacts in journey, emails due this week, send mode toggle (auto/review). Action buttons: pause all, bulk approve.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-tab">Tab</span><span class="ucc-tag tag-component">Component</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters/queue</div>
+        <div class="ucc-name">Approval Queue</div>
+        <div class="ucc-desc">Review AI-drafted Journey + Event emails before send. Approve or skip each draft. Reads <code>newsletters</code> (status=draft, send_mode=review).</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span><span class="ucc-tag tag-action">Server Action</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters → "AI Workflows" tab</div>
+        <div class="ucc-name">JourneyControls</div>
+        <div class="ucc-desc">Per-journey phase badge, next-email label, pause/resume button, phase advancement. Reads <code>contact_journeys</code> with contact details.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-tab">Tab</span><span class="ucc-tag tag-component">Component</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SYSTEM 2: EVENTS -->
+  <div class="ui-system-block ui-sb-2">
+    <div class="ui-system-header">
+      <span class="system-num" style="background:#f59e0b; width:28px; height:28px; font-size:14px;">2</span>
+      <h3 style="color:#fbbf24">Event Pipeline</h3>
+      <span class="ui-runtime">CRM action → email within 10s</span>
+    </div>
+    <div class="ui-components-grid">
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters/engine</div>
+        <div class="ucc-name">Engine Observability Page</div>
+        <div class="ucc-desc">Read-only viewer for the event pipeline. Shows <code>email_event_rules</code> table (caps, send mode, priority per event type) and last 50 <code>email_events</code> with status.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters/engine → EngineRulesTable</div>
+        <div class="ucc-name">EngineRulesTable</div>
+        <div class="ucc-desc">Renders the 9 seeded rules: event_type, email_type, weekly_cap, min_hours_between, priority, send_mode. Read-only, no editing from UI.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-component">Component</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters/engine → EngineEventsQueue</div>
+        <div class="ucc-name">EngineEventsQueue</div>
+        <div class="ucc-desc">Last 50 email_events rows with status (pending/processing/done/ignored/failed), event_type, contact_id, relative timestamp.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-component">Component</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters/analytics</div>
+        <div class="ucc-name">Analytics Dashboard</div>
+        <div class="ucc-desc">Cross-system email performance. Open rates, click rates, bounce rates by email_type (covers Journey + Event sends). Reads <code>newsletters</code> + <code>newsletter_events</code>.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span></div>
+      </div>
+      <div class="ui-component-card orphaned">
+        <div class="ucc-path">/newsletters/analytics/[emailId]</div>
+        <div class="ucc-name">Single Email Analytics</div>
+        <div class="ucc-desc">Deep-dive per-email: opens, clicks by link, device breakdown. Orphaned — no link from analytics dashboard to individual email records.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-orphan">Orphaned</span></div>
+      </div>
+      <div class="ui-component-card orphaned">
+        <div class="ucc-path">/newsletters/analytics/contacts</div>
+        <div class="ucc-name">Contact-Level Analytics</div>
+        <div class="ucc-desc">Per-contact email history, engagement score trend, click interests. No navigation link from analytics page.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-orphan">Orphaned</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters → "Overview" tab</div>
+        <div class="ucc-name">ListingBlastAutomation</div>
+        <div class="ucc-desc">Trigger listing_matched_search events manually: pick a listing → send to matching buyers. Emits event into System 2's queue. Reads <code>listings</code> + <code>contacts</code>.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-tab">Tab</span><span class="ucc-tag tag-action">Server Action</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SYSTEM 3: EDITORIAL -->
+  <div class="ui-system-block ui-sb-3">
+    <div class="ui-system-header">
+      <span class="system-num" style="background:#8b5cf6; width:28px; height:28px; font-size:14px;">3</span>
+      <h3 style="color:#a78bfa">Editorial System</h3>
+      <span class="ui-runtime">Broadcast newsletters to segments</span>
+    </div>
+    <div class="ui-components-grid">
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters/editorial</div>
+        <div class="ucc-name">Editorial Dashboard</div>
+        <div class="ucc-desc">Lists all editorial editions (draft/ready/sent). Create new, open stats, send. Reads <code>editorial_editions</code>. Entry point for System 3.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters/editorial/new</div>
+        <div class="ucc-name">New Edition Creator</div>
+        <div class="ucc-desc">Pick edition type, generate AI blocks (market commentary, rate watch, just sold, neighbourhood spotlight, agent note). Claude generates content using voice profile.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span><span class="ucc-tag tag-action">Server Action</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters/editorial/[id]/edit</div>
+        <div class="ucc-name">Edition Block Editor</div>
+        <div class="ucc-desc">Edit individual blocks, reorder, preview full email. Select segment, set subject A/B variants. Send or schedule. Uses EmailEditorClient.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span><span class="ucc-tag tag-action">Server Action</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters/editorial/[id]/analytics</div>
+        <div class="ucc-name">Edition Analytics</div>
+        <div class="ucc-desc">Per-edition: open rate, click rate, unsubscribes, top-clicked links. Reads <code>editorial_editions</code> + its own webhook events.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters/ab-testing</div>
+        <div class="ucc-name">A/B Testing Dashboard</div>
+        <div class="ucc-desc">Active and completed A/B subject line tests. Winner selection (open rate). Reads <code>editorial_editions</code> filtered by ab_testing status. Calls <code>getABTests()</code>.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span></div>
+      </div>
+      <div class="ui-component-card orphaned">
+        <div class="ucc-path">/newsletters/editorial/setup</div>
+        <div class="ucc-name">Editorial Setup</div>
+        <div class="ucc-desc">First-time setup: brand voice, publication name, preferred send day. Orphaned — no link from editorial dashboard.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-orphan">Orphaned</span></div>
+      </div>
+      <div class="ui-component-card orphaned">
+        <div class="ucc-path">/newsletters/editorial/upgrade</div>
+        <div class="ucc-name">Editorial Upgrade Gate</div>
+        <div class="ucc-desc">Paywall / plan upgrade prompt for editorial features. Orphaned — not linked from any visible UI path.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-orphan">Orphaned</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters/library</div>
+        <div class="ucc-name">Template Library</div>
+        <div class="ucc-desc">Browse and duplicate email templates (newsletter_templates table). Used by Editorial + Journey to pick starting templates for new editions.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">EmailEditorClient</div>
+        <div class="ucc-name">Email Block Editor Component</div>
+        <div class="ucc-desc">Visual drag-and-drop block editor used inside /editorial/[id]/edit. Saves <code>builder_json</code> to <code>editorial_editions</code>. Renders preview.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-component">Component</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SYSTEM 4: WORKFLOW -->
+  <div class="ui-system-block ui-sb-4">
+    <div class="ui-system-header">
+      <span class="system-num" style="background:#10b981; width:28px; height:28px; font-size:14px;">4</span>
+      <h3 style="color:#34d399">Workflow Engine</h3>
+      <span class="ui-runtime">Visual automations — email + SMS + WhatsApp</span>
+    </div>
+    <div class="ui-components-grid">
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/automations</div>
+        <div class="ucc-name">Automations Dashboard</div>
+        <div class="ucc-desc">Lists all workflow blueprints (greeting automations, onboarding, re-engagement). Shows active/inactive, enrolled count, step count. Entry point for System 4.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/automations/workflows/[id]</div>
+        <div class="ucc-name">Workflow Detail View</div>
+        <div class="ucc-desc">Read-only view of a workflow: trigger, steps, enrolled contacts, recent executions. Link to edit in visual builder.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/automations/workflows/[id]/edit</div>
+        <div class="ucc-name">Visual Workflow Builder</div>
+        <div class="ucc-desc">React Flow canvas to build/edit workflow steps. Drag nodes (email, SMS, WhatsApp, wait, condition, tag). Uses WorkflowEditorClient + WorkflowCanvas. Saves <code>flow_json</code> to <code>workflows</code>.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span><span class="ucc-tag tag-component">Component</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/automations/templates</div>
+        <div class="ucc-name">Workflow Templates Library</div>
+        <div class="ucc-desc">Pre-built workflow templates: buyer welcome, seller onboarding, showing follow-up, re-engagement. One-click clone to create from template.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/automations/templates/[id]/edit</div>
+        <div class="ucc-name">Template Editor</div>
+        <div class="ucc-desc">Edit a workflow template before cloning. Uses same WorkflowEditorClient. Saves back to <code>workflow_blueprints</code>.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/automations/notifications</div>
+        <div class="ucc-name">Notification Automations</div>
+        <div class="ucc-desc">Configure in-app notification triggers (speed-to-lead alerts, showing confirmations, CASL consent warnings). Reads <code>notifications</code> table.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters → "Automation" tab</div>
+        <div class="ucc-name">GreetingAutomations</div>
+        <div class="ucc-desc">Toggle birthday, home anniversary, holiday greetings. Sets greeting rules that fire via Workflow Engine. Reads/writes <code>realtor_agent_config</code>.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-tab">Tab</span><span class="ucc-tag tag-component">Component</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">WorkflowCanvas + WorkflowEditorClient</div>
+        <div class="ucc-name">React Flow Components</div>
+        <div class="ucc-desc">WorkflowCanvas: visual React Flow renderer for nodes + edges. WorkflowEditorClient: toolbar, save/publish, step config panels. Both used inside builder page.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-component">Component</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SYSTEM 5: DRIP -->
+  <div class="ui-system-block ui-sb-5">
+    <div class="ui-system-header">
+      <span class="system-num" style="background:#ec4899; width:28px; height:28px; font-size:14px;">5</span>
+      <h3 style="color:#f472b6">Drip Sequence Engine</h3>
+      <span class="ui-runtime">Welcome sequences (duplicate of System 1 — no dedicated UI)</span>
+    </div>
+    <div class="ui-components-grid">
+      <div class="ui-component-card orphaned">
+        <div class="ucc-path">No dedicated pages or components</div>
+        <div class="ucc-name">Fully Headless System</div>
+        <div class="ucc-desc">System 5 runs entirely in the Render service with no UI. Sequences are hardcoded in <code>sequence-engine.ts</code> — no way for realtor to view, edit, or manage them from any page.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-orphan">No UI</span></div>
+      </div>
+      <div class="ui-component-card orphaned">
+        <div class="ucc-path">/newsletters/engine (indirect)</div>
+        <div class="ucc-name">Visible Only via Engine Queue</div>
+        <div class="ucc-desc">Drip-inserted email_events appear in the Engine Observability page's event queue — labelled by event_type (buyer_welcome_d0, seller_onboard_d0). No separate drip section.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-orphan">Indirect</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SYSTEM 6: AI AGENT -->
+  <div class="ui-system-block ui-sb-6">
+    <div class="ui-system-header">
+      <span class="system-num" style="background:#ef4444; width:28px; height:28px; font-size:14px;">6</span>
+      <h3 style="color:#f87171">AI Agent Direct Send</h3>
+      <span class="ui-runtime">Autonomous AI outreach — trust-gated</span>
+    </div>
+    <div class="ui-components-grid">
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters/agent</div>
+        <div class="ucc-name">AI Agent Dashboard</div>
+        <div class="ucc-desc">Agent run history: today's runs, 7-day runs, decisions made, cost per run. Trust level per contact. Reads <code>agent_runs</code> + <code>agent_drafts</code> tables.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters/control</div>
+        <div class="ucc-name">Agent Control Panel</div>
+        <div class="ucc-desc">Master on/off for AI autonomy. Trust level configuration per contact. Set daily/weekly caps. Manual trigger agent run. Reads <code>realtor_agent_config</code>.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span></div>
+      </div>
+      <div class="ui-component-card orphaned">
+        <div class="ucc-path">/newsletters/ghost</div>
+        <div class="ucc-name">Ghost Mode (What AI Would Send)</div>
+        <div class="ucc-desc">Shows what the AI would have sent vs what was actually sent (14-day window). Match rate metric. Reads <code>agent_decisions</code>. Orphaned — accessible from /control only via direct link, not nav.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-orphan">Orphaned</span></div>
+      </div>
+      <div class="ui-component-card orphaned">
+        <div class="ucc-path">/newsletters/suppressions</div>
+        <div class="ucc-name">What AI Held Back</div>
+        <div class="ucc-desc">Emails the agent decided NOT to send — realtor can review and override. Reads <code>agent_decisions</code> (suppressed). Orphaned — linked from /control back button only.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-orphan">Orphaned</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters → "Overview" tab</div>
+        <div class="ucc-name">AIAgentQueue</div>
+        <div class="ucc-desc">Shows agent-drafted emails awaiting trust-gate approval. Approve/reject buttons. Reads <code>agent_drafts</code> (status=pending_approval). Wraps AgentActivityClient.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-tab">Tab</span><span class="ucc-tag tag-component">Component</span></div>
+      </div>
+      <div class="ui-component-card orphaned">
+        <div class="ucc-path">/newsletters/learning</div>
+        <div class="ucc-name">Voice Learning Log</div>
+        <div class="ucc-desc">AI-extracted writing rules from realtor edits. Approve/reject each rule. Reads <code>agent_learning_log</code>. Orphaned — no sidebar link, accessible only if you know the URL.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-orphan">Orphaned</span></div>
+      </div>
+      <div class="ui-component-card orphaned">
+        <div class="ucc-path">/newsletters/insights</div>
+        <div class="ucc-name">AI Insights</div>
+        <div class="ucc-desc">Aggregate intelligence from contact behavior: top-performing email types, best send times, segment trends. Orphaned — no navigation link.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-orphan">Orphaned</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters/settings</div>
+        <div class="ucc-name">Settings Page</div>
+        <div class="ucc-desc">Global email settings: from name, reply-to, unsubscribe footer, CASL defaults, send window (e.g. no emails before 8AM). Affects all 6 systems.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span></div>
+      </div>
+      <div class="ui-component-card orphaned">
+        <div class="ucc-path">/newsletters/settings/sources</div>
+        <div class="ucc-name">Data Sources Settings</div>
+        <div class="ucc-desc">Configure what data the AI agent uses (MLS listings, market stats, neighbourhood data). Orphaned — not linked from main settings page.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-orphan">Orphaned</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters → "AI Workflows" tab</div>
+        <div class="ucc-name">VoiceProfileEditor</div>
+        <div class="ucc-desc">Edit the AI's writing voice: tone (warm/professional/casual), style traits, example phrases. Claude reads this before generating any email. Saves to <code>realtor_agent_config</code>.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-tab">Tab</span><span class="ucc-tag tag-component">Component</span></div>
+      </div>
+      <div class="ui-component-card nav-linked">
+        <div class="ucc-path">/newsletters/activity</div>
+        <div class="ucc-name">Activity Log</div>
+        <div class="ucc-desc">Full chronological log of all agent decisions, runs, and sends. Reads <code>agent_runs</code> + <code>agent_decisions</code>. Renders AgentActivityClient.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-nav">Nav-linked</span></div>
+      </div>
+      <div class="ui-component-card orphaned">
+        <div class="ucc-path">/newsletters/guide</div>
+        <div class="ucc-name">Email Marketing Guide</div>
+        <div class="ucc-desc">In-app user guide explaining how the email systems work. Static content. Orphaned — not linked from any nav or tab.</div>
+        <div class="ucc-tags"><span class="ucc-tag tag-orphan">Orphaned</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ORPHAN SUMMARY -->
+  <div style="background:#111827; border:2px solid #ef444430; border-radius:12px; padding:24px 28px; margin-top:8px;">
+    <div style="font-size:14px; font-weight:700; color:#fecaca; margin-bottom:12px;">Orphaned Pages Summary — 10 of 25 pages have no navigation link</div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:8px;">
+      <div style="font-size:11px; color:#f87171; padding:6px 10px; background:#ef444410; border-radius:6px;">/newsletters/analytics/[emailId] — single email deep-dive</div>
+      <div style="font-size:11px; color:#f87171; padding:6px 10px; background:#ef444410; border-radius:6px;">/newsletters/analytics/contacts — contact-level analytics</div>
+      <div style="font-size:11px; color:#f87171; padding:6px 10px; background:#ef444410; border-radius:6px;">/newsletters/editorial/setup — editorial brand setup</div>
+      <div style="font-size:11px; color:#f87171; padding:6px 10px; background:#ef444410; border-radius:6px;">/newsletters/editorial/upgrade — plan upgrade gate</div>
+      <div style="font-size:11px; color:#f87171; padding:6px 10px; background:#ef444410; border-radius:6px;">/newsletters/ghost — AI ghost mode comparison</div>
+      <div style="font-size:11px; color:#f87171; padding:6px 10px; background:#ef444410; border-radius:6px;">/newsletters/suppressions — emails AI held back</div>
+      <div style="font-size:11px; color:#f87171; padding:6px 10px; background:#ef444410; border-radius:6px;">/newsletters/learning — voice learning log</div>
+      <div style="font-size:11px; color:#f87171; padding:6px 10px; background:#ef444410; border-radius:6px;">/newsletters/insights — AI aggregate insights</div>
+      <div style="font-size:11px; color:#f87171; padding:6px 10px; background:#ef444410; border-radius:6px;">/newsletters/settings/sources — data sources config</div>
+      <div style="font-size:11px; color:#f87171; padding:6px 10px; background:#ef444410; border-radius:6px;">/newsletters/guide — in-app documentation</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer-note">
+  Magnate 360 &#8212; Email Systems Architecture &#8212; Generated 2026-04-18<br>
+  6 systems &#8226; 25 pages &#8226; 21 components &#8226; 10 orphaned pages &#8226; 4 tables &#8226; 3 rate limiters &#8226; 0 coordination
+</div>
+
+</body>
+</html>

@@ -2,68 +2,47 @@
 
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import {
-  LayoutDashboard,
-  Bot,
-  Megaphone,
-  Workflow,
-  Zap,
-  Settings2,
-} from "lucide-react";
-
-type Tab = {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  badge?: number;
-};
 
 type Props = {
   queueCount: number;
+  hasAutomations: boolean;
   children: {
-    overview: React.ReactNode;
-    queue: React.ReactNode;
+    ai: React.ReactNode;
     campaigns: React.ReactNode;
-    workflows: React.ReactNode;
-    automation: React.ReactNode;
-    settings: React.ReactNode;
+    automations: React.ReactNode;
   };
 };
 
-export function EmailMarketingTabs({ queueCount, children }: Props) {
-  const [activeTab, setActiveTab] = useState("overview");
+export function EmailMarketingTabs({ queueCount, hasAutomations, children }: Props) {
+  const [activeTab, setActiveTab] = useState("ai");
 
-  const tabs: Tab[] = [
-    { id: "overview", label: "Overview", icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: "workflows", label: "AI Workflows", icon: <Workflow className="w-4 h-4" /> },
-    { id: "queue", label: "Performance", icon: <Bot className="w-4 h-4" />, badge: queueCount > 0 ? queueCount : undefined },
-    { id: "campaigns", label: "Campaigns", icon: <Megaphone className="w-4 h-4" /> },
-    { id: "automation", label: "Automation", icon: <Zap className="w-4 h-4" /> },
-    { id: "settings", label: "Settings", icon: <Settings2 className="w-4 h-4" /> },
+  const tabs = [
+    { id: "ai", label: "AI", badge: queueCount > 0 ? queueCount : undefined, locked: false },
+    { id: "campaigns", label: "Campaigns", locked: false },
+    { id: "automations", label: "Automations", locked: !hasAutomations },
   ];
 
   return (
     <div className="space-y-4">
-      {/* Tab Bar */}
-      <div className="flex items-center gap-1 overflow-x-auto pb-1 border-b border-border">
+      <div className="flex items-center gap-1 border-b border-border">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap border-b-2 -mb-px ${
               activeTab === tab.id
-                ? "bg-brand text-white"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            {tab.icon}
             {tab.label}
+            {tab.locked && (
+              <span className="text-[10px] ml-0.5">🔒</span>
+            )}
             {tab.badge !== undefined && (
               <Badge
-                variant={activeTab === tab.id ? "outline" : "secondary"}
-                className={`text-[10px] px-1.5 py-0 ml-0.5 ${
-                  activeTab === tab.id ? "border-white/50 text-white" : ""
-                }`}
+                variant={activeTab === tab.id ? "default" : "secondary"}
+                className="text-[10px] px-1.5 py-0"
               >
                 {tab.badge}
               </Badge>
@@ -72,15 +51,35 @@ export function EmailMarketingTabs({ queueCount, children }: Props) {
         ))}
       </div>
 
-      {/* Tab Content */}
       <div className="min-h-[400px]">
-        {activeTab === "overview" && children.overview}
-        {activeTab === "queue" && children.queue}
+        {activeTab === "ai" && children.ai}
         {activeTab === "campaigns" && children.campaigns}
-        {activeTab === "workflows" && children.workflows}
-        {activeTab === "automation" && children.automation}
-        {activeTab === "settings" && children.settings}
+        {activeTab === "automations" && (
+          hasAutomations ? children.automations : <LockedTab featureName="Automations" />
+        )}
       </div>
+    </div>
+  );
+}
+
+function LockedTab({ featureName }: { featureName: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
+      <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-2xl">
+        🔒
+      </div>
+      <div>
+        <p className="text-base font-semibold text-foreground">{featureName} not enabled</p>
+        <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+          This feature is not active on your account. Contact your administrator to enable it.
+        </p>
+      </div>
+      <a
+        href="mailto:support@realtors360.ai"
+        className="text-xs text-primary hover:underline"
+      >
+        Contact support →
+      </a>
     </div>
   );
 }

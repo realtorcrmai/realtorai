@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Magnate</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #0a1628;
+      overflow: hidden;
+    }
+
+    /* ── Star-field ── */
+    .starfield {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: #fff;
+      border-radius: 50%;
+      opacity: 0;
+      animation: twinkle var(--dur) ease-in-out var(--delay) infinite;
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0; }
+      50% { opacity: var(--brightness); }
+    }
+
+    /* ── Ambient background ── */
+    .ambient {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+    .ambient::before {
+      content: '';
+      position: absolute;
+      top: 25%; left: 35%;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(228,195,120,0.08) 0%, transparent 60%);
+      animation: pulse-glow 5s ease-in-out infinite;
+    }
+    .ambient::after {
+      content: '';
+      position: absolute;
+      bottom: 20%; right: 30%;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(45,62,80,0.12) 0%, transparent 60%);
+      animation: pulse-glow 7s ease-in-out infinite reverse;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.3); opacity: 1; }
+    }
+
+    /* ── Scene ── */
+    .scene {
+      position: relative;
+      z-index: 1;
+      width: 720px;
+      height: 360px; /* extra room for reflection */
+      perspective: 1200px;
+    }
+
+    /* ── 3D floating wordmark ── */
+    .word-3d {
+      position: relative;
+      width: 100%;
+      height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-style: preserve-3d;
+      animation:
+        entrance 1.8s cubic-bezier(0.16, 1, 0.3, 1) both,
+        float 6s ease-in-out 1.8s infinite;
+    }
+
+    @keyframes entrance {
+      from { opacity: 0; transform: translateY(80px) rotateX(30deg) rotateY(-10deg) scale(0.6); }
+      to   { opacity: 1; transform: translateY(0) rotateX(0deg) rotateY(0deg) scale(1); }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotateX(2deg) rotateY(0deg) rotateZ(0deg); }
+      25%  { transform: translateY(-10px) rotateX(0deg) rotateY(3deg) rotateZ(0.4deg); }
+      50%  { transform: translateY(-6px) rotateX(-2deg) rotateY(0deg) rotateZ(0deg); }
+      75%  { transform: translateY(-12px) rotateX(0deg) rotateY(-3deg) rotateZ(-0.4deg); }
+    }
+
+    /* ── Wordmark container — holds three stacked text layers ── */
+    .wordmark {
+      position: relative;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Helvetica Neue", Arial, sans-serif;
+      font-weight: 800;
+      font-size: 142px;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      text-transform: uppercase;
+      transform-style: preserve-3d;
+    }
+
+    /* Layer 1 — dark extruded backdrop (depth illusion via text-shadow stack) */
+    .word-back {
+      position: absolute;
+      inset: 0;
+      color: #3a2806;
+      text-shadow:
+        1px 1px 0 #4a350a,
+        2px 2px 0 #5e4615,
+        3px 3px 0 #6a4f1a,
+        4px 4px 0 #755820,
+        5px 5px 0 #7d5f24,
+        6px 6px 0 #6a4f1a,
+        7px 7px 0 #5e4615,
+        8px 8px 0 #4a350a,
+        9px 9px 0 #3a2806,
+        10px 10px 0 #2a1e04,
+        11px 11px 0 #1a1303,
+        12px 12px 24px rgba(0, 0, 0, 0.65),
+        0 0 40px rgba(228, 195, 120, 0.15);
+      z-index: 1;
+    }
+
+    /* Layer 2 — gold gilt face (diagonal gradient + top specular highlight) */
+    .word-face {
+      position: relative;
+      background: linear-gradient(
+        168deg,
+        #FFFFFF 0%,
+        #FFF8D8 2%,
+        #FFF3C7 6%,
+        #F5E0A0 18%,
+        #F0D890 32%,
+        #E4C378 52%,
+        #C69A4A 78%,
+        #8A6A2E 100%
+      );
+      -webkit-background-clip: text;
+              background-clip: text;
+      -webkit-text-fill-color: transparent;
+              color: transparent;
+      z-index: 2;
+      transition: filter 0.5s ease;
+      /* Subtle top highlight + base glow */
+      filter:
+        drop-shadow(0 1px 0 rgba(255, 250, 220, 0.4))
+        drop-shadow(0 0 18px rgba(228, 195, 120, 0.25));
+    }
+
+    /* Layer 3 — dual-band brightness/glare sweep (L → R) */
+    .word-shine {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(
+          105deg,
+          transparent 18%,
+          rgba(255, 252, 230, 0.22) 26%,   /* trailing dim band */
+          rgba(255, 250, 220, 0.32) 30%,
+          rgba(255, 252, 230, 0.22) 34%,
+          transparent 40%,
+          transparent 44%,
+          rgba(255, 252, 230, 0.42) 48%,   /* leading bright band */
+          rgba(255, 255, 255, 0.96) 50%,
+          rgba(255, 252, 230, 0.52) 52%,
+          transparent 62%
+        );
+      background-size: 240% 100%;
+      background-position: -130% 0;
+      background-repeat: no-repeat;
+      -webkit-background-clip: text;
+              background-clip: text;
+      -webkit-text-fill-color: transparent;
+              color: transparent;
+      animation: glare-sweep 5.5s cubic-bezier(0.65, 0, 0.35, 1) 2.5s infinite;
+      z-index: 3;
+      pointer-events: none;
+      transition: animation-duration 0.3s ease;
+    }
+
+    @keyframes glare-sweep {
+      0%, 10%   { background-position: -130% 0; }
+      55%       { background-position: 55% 0; }
+      100%      { background-position: 250% 0; }
+    }
+
+    /* ── Hover: brighten face + fire faster glare ── */
+    .word-3d:hover .word-shine {
+      animation-duration: 1.8s;
+    }
+    .word-3d:hover .word-face {
+      filter:
+        drop-shadow(0 1px 0 rgba(255, 250, 220, 0.6))
+        drop-shadow(0 0 30px rgba(240, 216, 144, 0.55));
+    }
+
+    /* Layer 4 — soft glow halo behind the word (breathing) */
+    .word-halo {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 120%;
+      height: 180%;
+      background: radial-gradient(
+        ellipse at center,
+        rgba(240, 216, 144, 0.22) 0%,
+        rgba(228, 195, 120, 0.10) 30%,
+        transparent 65%
+      );
+      filter: blur(30px);
+      animation: halo-breathe 5s ease-in-out 2s infinite;
+      z-index: 0;
+      pointer-events: none;
+    }
+    @keyframes halo-breathe {
+      0%, 100% { opacity: 0.55; transform: translate(-50%, -50%) scale(1); }
+      50%      { opacity: 0.95; transform: translate(-50%, -50%) scale(1.08); }
+    }
+
+    /* ── Sparkles — four drifting gold specks above the word ── */
+    .sparkle {
+      position: absolute; z-index: 4;
+      width: 5px; height: 5px;
+      background: #F5E0A0;
+      border-radius: 50%;
+      opacity: 0;
+      filter: blur(0.5px);
+      box-shadow: 0 0 10px rgba(240, 216, 144, 0.9);
+      animation: sparkle 4s ease-in-out infinite;
+    }
+    .sparkle:nth-child(1) { top: 18%; left: 14%; animation-delay: 1.5s; }
+    .sparkle:nth-child(2) { top: 28%; right: 12%; animation-delay: 3s; }
+    .sparkle:nth-child(3) { top: 70%; left: 22%; animation-delay: 5s; width: 3px; height: 3px; }
+    .sparkle:nth-child(4) { top: 66%; right: 20%; animation-delay: 7s; width: 4px; height: 4px; }
+    @keyframes sparkle {
+      0%, 100% { opacity: 0; transform: scale(0); }
+      40%      { opacity: 1; transform: scale(2); }
+      60%      { opacity: 0.6; transform: scale(1); }
+    }
+
+    /* ── Reflection below wordmark ── */
+    .reflection {
+      position: absolute;
+      bottom: -80px;
+      left: 0; right: 0;
+      height: 120px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      overflow: hidden;
+      transform: scaleY(-1);
+      opacity: 0.2;
+      filter: blur(3px);
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent 80%);
+      -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent 80%);
+      pointer-events: none;
+      animation: entrance 1.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .reflection .wordmark-reflect {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Helvetica Neue", Arial, sans-serif;
+      font-weight: 800;
+      font-size: 142px;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      text-transform: uppercase;
+      background: linear-gradient(168deg, #E4C378 0%, #8A6A2E 100%);
+      -webkit-background-clip: text;
+              background-clip: text;
+      -webkit-text-fill-color: transparent;
+              color: transparent;
+    }
+
+    /* ── Floor glow (under reflection) ── */
+    .floor-glow {
+      position: absolute;
+      bottom: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 560px;
+      height: 48px;
+      background: radial-gradient(ellipse, rgba(228,195,120,0.18) 0%, transparent 70%);
+      border-radius: 50%;
+      animation:
+        shadow-entrance 1.8s cubic-bezier(0.16, 1, 0.3, 1) both,
+        shadow-pulse 6s ease-in-out 1.8s infinite;
+    }
+    @keyframes shadow-entrance {
+      from { opacity: 0; transform: translateX(-50%) scaleX(0.3); }
+      to   { opacity: 1; transform: translateX(-50%) scaleX(1); }
+    }
+    @keyframes shadow-pulse {
+      0%, 100% { transform: translateX(-50%) scaleX(1); opacity: 0.55; }
+      50%      { transform: translateX(-50%) scaleX(0.85); opacity: 0.35; }
+    }
+
+    /* ── Floating particles (parallax-ready) ── */
+    .particles {
+      position: fixed; inset: 0; z-index: 0;
+      pointer-events: none;
+      transition: transform 0.3s ease-out;
+    }
+    .particle {
+      position: absolute;
+      background: #E4C378;
+      border-radius: 50%;
+      opacity: 0;
+      animation: particle-float 10s ease-in-out infinite;
+    }
+    .particle:nth-child(1)  { width: 3px; height: 3px; left: 12%; top: 25%; animation-delay: 0s; }
+    .particle:nth-child(2)  { width: 2px; height: 2px; left: 78%; top: 18%; animation-delay: 2s; }
+    .particle:nth-child(3)  { width: 3px; height: 3px; left: 22%; top: 72%; animation-delay: 4s; }
+    .particle:nth-child(4)  { width: 2px; height: 2px; left: 82%; top: 65%; animation-delay: 6s; }
+    .particle:nth-child(5)  { width: 4px; height: 4px; left: 45%; top: 10%; animation-delay: 1s; }
+    .particle:nth-child(6)  { width: 2px; height: 2px; left: 60%; top: 85%; animation-delay: 3.5s; }
+    .particle:nth-child(7)  { width: 3px; height: 3px; left: 8%;  top: 55%; animation-delay: 5.5s; }
+    .particle:nth-child(8)  { width: 2px; height: 2px; left: 90%; top: 40%; animation-delay: 7.5s; }
+    .particle:nth-child(9)  { width: 3px; height: 3px; left: 55%; top: 90%; animation-delay: 8.5s; }
+    .particle:nth-child(10) { width: 2px; height: 2px; left: 30%; top: 8%;  animation-delay: 9s; }
+    @keyframes particle-float {
+      0%   { opacity: 0; transform: translateY(0) scale(0); }
+      15%  { opacity: 0.4; transform: translateY(-15px) scale(1); }
+      70%  { opacity: 0.2; transform: translateY(-90px) scale(0.4); }
+      100% { opacity: 0; transform: translateY(-130px) scale(0); }
+    }
+
+    /* ── Responsive scaling for smaller previews ── */
+    @media (max-width: 760px) {
+      .scene { transform: scale(0.55); }
+    }
+
+    /* ── Reduced-motion: honor user preference, keep static gold wordmark ── */
+    @media (prefers-reduced-motion: reduce) {
+      .word-3d,
+      .word-halo,
+      .word-shine,
+      .star,
+      .particle,
+      .sparkle,
+      .floor-glow,
+      .reflection,
+      .ambient::before,
+      .ambient::after {
+        animation: none !important;
+      }
+      .word-3d { transform: none !important; }
+      .word-shine { opacity: 0 !important; }
+      .particle { opacity: 0 !important; }
+      .sparkle { opacity: 0 !important; }
+      .star { opacity: 0.4 !important; }
+      .word-halo { opacity: 0.7 !important; }
+      .floor-glow { opacity: 0.4 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Star-field -->
+  <div class="starfield" id="starfield"></div>
+
+  <div class="ambient"></div>
+
+  <div class="particles" id="particles">
+    <div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div><div class="particle"></div>
+    <div class="particle"></div><div class="particle"></div>
+  </div>
+
+  <div class="scene">
+    <div class="word-3d" id="word3d">
+
+      <div class="wordmark">
+        <div class="word-halo"></div>
+
+        <!-- Layer 1: extruded depth -->
+        <span class="word-back" aria-hidden="true">Magnate</span>
+        <!-- Layer 2: gold face -->
+        <span class="word-face">Magnate</span>
+        <!-- Layer 3: L→R glare sweep -->
+        <span class="word-shine" aria-hidden="true">Magnate</span>
+
+        <!-- Sparkles drifting around the word -->
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+        <div class="sparkle"></div>
+      </div>
+
+      <!-- Reflection -->
+      <div class="reflection">
+        <span class="wordmark-reflect">Magnate</span>
+      </div>
+
+      <div class="floor-glow"></div>
+    </div>
+  </div>
+
+  <script>
+    // ── Generate star-field ──
+    const starfield = document.getElementById('starfield');
+    for (let i = 0; i < 60; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      star.style.left = Math.random() * 100 + '%';
+      star.style.top = Math.random() * 100 + '%';
+      star.style.setProperty('--dur', (3 + Math.random() * 5) + 's');
+      star.style.setProperty('--delay', (Math.random() * 6) + 's');
+      star.style.setProperty('--brightness', (0.15 + Math.random() * 0.4));
+      if (Math.random() > 0.7) {
+        star.style.width = '3px';
+        star.style.height = '3px';
+      }
+      starfield.appendChild(star);
+    }
+
+    // ── Mouse tilt (wordmark) + parallax (particles) ──
+    const word = document.getElementById('word3d');
+    const particles = document.getElementById('particles');
+    let tiltX = 0, tiltY = 0, targetX = 0, targetY = 0;
+    let pX = 0, pY = 0, pTargetX = 0, pTargetY = 0;
+    let entered = false;
+
+    setTimeout(() => { entered = true; }, 2000);
+
+    document.addEventListener('mousemove', (e) => {
+      if (!entered) return;
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+      targetX = ((e.clientY - cy) / cy) * -10;
+      targetY = ((e.clientX - cx) / cx) * 10;
+      // Particles move at 30% rate for depth
+      pTargetX = ((e.clientX - cx) / cx) * -15;
+      pTargetY = ((e.clientY - cy) / cy) * -10;
+    });
+
+    document.addEventListener('mouseleave', () => {
+      targetX = 0; targetY = 0;
+      pTargetX = 0; pTargetY = 0;
+    });
+
+    function animate() {
+      tiltX += (targetX - tiltX) * 0.06;
+      tiltY += (targetY - tiltY) * 0.06;
+      pX += (pTargetX - pX) * 0.04;
+      pY += (pTargetY - pY) * 0.04;
+      if (entered) {
+        word.style.setProperty('--tiltX', tiltX + 'deg');
+        word.style.setProperty('--tiltY', tiltY + 'deg');
+        particles.style.transform = `translate(${pX}px, ${pY}px)`;
+      }
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // Inject tilt-aware float
+    const s = document.createElement('style');
+    s.textContent = `
+      .word-3d {
+        animation:
+          entrance 1.8s cubic-bezier(0.16, 1, 0.3, 1) both,
+          float-tilt 6s ease-in-out 1.8s infinite !important;
+      }
+      @keyframes float-tilt {
+        0%, 100% { transform: translateY(0) rotateX(calc(2deg + var(--tiltX, 0deg))) rotateY(var(--tiltY, 0deg)) rotateZ(0deg); }
+        25%  { transform: translateY(-10px) rotateX(var(--tiltX, 0deg)) rotateY(calc(3deg + var(--tiltY, 0deg))) rotateZ(0.4deg); }
+        50%  { transform: translateY(-6px) rotateX(calc(-2deg + var(--tiltX, 0deg))) rotateY(var(--tiltY, 0deg)) rotateZ(0deg); }
+        75%  { transform: translateY(-12px) rotateX(var(--tiltX, 0deg)) rotateY(calc(-3deg + var(--tiltY, 0deg))) rotateZ(-0.4deg); }
+      }
+    `;
+    document.head.appendChild(s);
+  </script>
+</body>
+</html>

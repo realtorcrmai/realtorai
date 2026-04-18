@@ -28,8 +28,9 @@ dotenv.config({ path: '.env.local' })
 const ARGS = process.argv.slice(2)
 const LIVE_MODE = ARGS.includes('--live')
 const CLEANUP_MODE = ARGS.includes('--cleanup')
+const emailFlagIdx = ARGS.indexOf('--email')
 const EMAIL_OVERRIDE = ARGS.find(a => a.startsWith('--email='))?.split('=')[1]
-  || ARGS[ARGS.indexOf('--email') + 1]
+  || (emailFlagIdx !== -1 && ARGS[emailFlagIdx + 1] && !ARGS[emailFlagIdx + 1].startsWith('--') ? ARGS[emailFlagIdx + 1] : null)
 
 const TEST_EMAIL = EMAIL_OVERRIDE || 'er.amndeep@gmail.com'
 const TEST_PREFIX = '[E2E-TEST]'
@@ -42,7 +43,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-// ── Buyer Journey Phases & Expected Emails ───────────────────────────────────
+// ── Journey Phases & Expected Emails ─────────────────────────────────────────
 
 const BUYER_JOURNEY = [
   {
@@ -52,7 +53,6 @@ const BUYER_JOURNEY = [
       { type: 'neighbourhood_guide', delayHours: 72 },
       { type: 'new_listing_alert', delayHours: 168 },
       { type: 'market_update', delayHours: 336 },
-      { type: 'new_listing_alert', delayHours: 504 },
     ]
   },
   {
@@ -85,6 +85,47 @@ const BUYER_JOURNEY = [
     ]
   }
 ]
+
+const SELLER_JOURNEY = [
+  {
+    phase: 'lead',
+    emails: [
+      { type: 'welcome', delayHours: 0 },
+      { type: 'market_update', delayHours: 72 },
+      { type: 'neighbourhood_guide', delayHours: 168 },
+    ]
+  },
+  {
+    phase: 'active',
+    emails: [
+      { type: 'market_update', delayHours: 168 },
+    ]
+  },
+  {
+    phase: 'under_contract',
+    emails: [
+      { type: 'closing_checklist', delayHours: 0 },
+      { type: 'inspection_reminder', delayHours: 72 },
+      { type: 'closing_countdown', delayHours: 168 },
+    ]
+  },
+  {
+    phase: 'past_client',
+    emails: [
+      { type: 'market_update', delayHours: 720 },
+      { type: 'referral_ask', delayHours: 720 },
+    ]
+  },
+  {
+    phase: 'dormant',
+    emails: [
+      { type: 'reengagement', delayHours: 0 },
+      { type: 'market_update', delayHours: 120 },
+    ]
+  }
+]
+
+const SEND_ALL_EMAILS = ARGS.includes('--all')  // send every email in every phase
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -142,6 +183,12 @@ async function cleanup() {
   const contactIds = contacts.map(c => c.id)
   log('📋', `Found ${contactIds.length} test contacts`)
 
+  // Also clean up test listings
+  const { error: listingErr, count: listingCount } = await supabase.from('listings')
+    .delete({ count: 'exact' })
+    .like('address', `${TEST_PREFIX}%`)
+  log(listingErr ? '⚠️' : '🗑️', `listings: deleted ${listingCount ?? 0} test rows${listingErr ? ' — ' + listingErr.message : ''}`)
+
   // Delete in dependency order
   const tables = [
     'newsletter_events',
@@ -164,43 +211,116 @@ async function cleanup() {
 
 // ── Step 1: Create Test Contact ─────────────────────────────────────────────
 
-async function createTestContact() {
-  console.log('\n━━━ Step 1: Create Test Contact ━━━\n')
-
-  const name = `${TEST_PREFIX} Buyer ${Date.now().toString(36)}`
-
-  // Get a realtor_id from existing data (needed for multi-tenant)
+async function getRealtorId() {
   const { data: existingContact } = await supabase.from('contacts')
     .select('realtor_id')
     .not('realtor_id', 'is', null)
     .limit(1)
     .single()
+  return existingContact?.realtor_id
+}
 
-  const realtorId = existingContact?.realtor_id
+async function createTestContact(contactType = 'buyer') {
+  console.log(`\n━━━ Create ${contactType.toUpperCase()} Test Contact ━━━\n`)
 
-  const { data: contact, error } = await supabase.from('contacts').insert({
+  const name = `${TEST_PREFIX} ${contactType === 'seller' ? 'Seller' : 'Buyer'} ${Date.now().toString(36)}`
+  const realtorId = await getRealtorId()
+
+  const buyerIntelligence = {
+    engagement_score: 42,
+    total_opens: 3,
+    total_clicks: 1,
+    inferred_interests: {
+      areas: ['South Vancouver', 'Burnaby', 'East Vancouver'],
+      property_types: ['Residential', 'Townhouse'],
+      price_range: '$1.2M-$1.5M',
+    },
+    click_history: [
+      { link_type: 'listing', area: 'South Vancouver', topic: 'New listing 3BR', date: new Date(Date.now() - 86400000 * 3).toISOString() },
+      { link_type: 'market_report', area: 'Burnaby', topic: 'Market Update', date: new Date(Date.now() - 86400000 * 7).toISOString() },
+    ],
+    last_opened: new Date(Date.now() - 86400000 * 2).toISOString(),
+    last_clicked: new Date(Date.now() - 86400000 * 3).toISOString(),
+    engagement_trend: 'rising',
+    preferred_areas: ['South Vancouver', 'Burnaby'],
+  }
+
+  const sellerIntelligence = {
+    engagement_score: 55,
+    total_opens: 5,
+    total_clicks: 2,
+    inferred_interests: {
+      areas: ['Kitsilano', 'Point Grey', 'West Side'],
+      property_types: ['Residential'],
+      price_range: '$2M+',
+    },
+    click_history: [
+      { link_type: 'market_report', area: 'Kitsilano', topic: 'Spring market outlook', date: new Date(Date.now() - 86400000 * 5).toISOString() },
+      { link_type: 'cma', area: 'Point Grey', topic: 'Home value estimate', date: new Date(Date.now() - 86400000 * 10).toISOString() },
+    ],
+    last_opened: new Date(Date.now() - 86400000 * 1).toISOString(),
+    last_clicked: new Date(Date.now() - 86400000 * 5).toISOString(),
+    engagement_trend: 'stable',
+    preferred_areas: ['Kitsilano', 'Point Grey'],
+  }
+
+  const baseFields = {
     name,
     email: TEST_EMAIL,
     phone: '+16045559999',
-    type: 'buyer',
+    type: contactType,
     pref_channel: 'email',
-    notes: 'Looking for a 3BR detached home in South Vancouver or Burnaby. Budget $1.2-1.5M. Family with 2 kids, prioritizes school districts and parks. Pre-approved with TD.',
     casl_consent_given: true,
     casl_consent_date: new Date().toISOString(),
     newsletter_unsubscribed: false,
     ...(realtorId ? { realtor_id: realtorId } : {}),
-    newsletter_intelligence: {
-      engagement_score: 0,
-      total_opens: 0,
-      total_clicks: 0,
-      inferred_interests: {},
-      click_history: [],
-      engagement_trend: 'stable'
-    },
-    ai_lead_score: {}
-  }).select('*').single()
+    newsletter_intelligence: contactType === 'buyer' ? buyerIntelligence : sellerIntelligence,
+    ai_lead_score: contactType === 'buyer'
+      ? {
+          score: 65,
+          tier: 'warm',
+          personalization_hints: {
+            tone: 'friendly and informative',
+            interests: ['family-friendly neighbourhoods', 'school catchments', 'parks'],
+            price_anchor: '$1.35M',
+            hot_topic: 'new listings under $1.5M in South Vancouver',
+            relationship_stage: 'early — building trust',
+          }
+        }
+      : {
+          score: 72,
+          tier: 'hot',
+          personalization_hints: {
+            tone: 'confident and data-driven',
+            interests: ['market timing', 'pricing strategy', 'comparable sales'],
+            price_anchor: '$2.1M',
+            hot_topic: 'spring market conditions for Kitsilano sellers',
+            avoid: 'pressure tactics — they are deliberate decision-makers',
+            relationship_stage: 'active — ready to list',
+          }
+        },
+  }
 
-  assert(!error && contact, `Contact created: ${name}`)
+  const typeSpecific = contactType === 'buyer'
+    ? {
+        notes: 'Met at Burnaby open house. Family of 4, kids ages 6 and 9. Looking for a 3BR detached home near David Thompson Secondary or Marlborough Elementary. Budget $1.2-1.5M, pre-approved with TD at 4.89%. Husband works in downtown, wants under 40min transit commute. Wife prioritizes backyard space and proximity to parks (Confederation Park, Central Park). Currently renting in Metrotown, lease ends August.',
+        buyer_preferences: {
+          price_range_min: 1200000,
+          price_range_max: 1500000,
+          bedrooms: 3,
+          property_types: ['Residential', 'Townhouse'],
+          preferred_areas: ['South Vancouver', 'Burnaby'],
+        },
+      }
+    : {
+        notes: 'Selling family home at 3456 W 2nd Ave, Kitsilano. 4BR/3BA, 2,400 sqft, corner lot, fully renovated kitchen and bathrooms 2023. New roof 2024. Kids moved to Toronto for university, couple downsizing to a condo in Coal Harbour. Target sale price $2.1M based on recent comps (neighbour sold at $2.05M in Feb). Flexible on timeline but prefers to list before May long weekend for spring market peak. Concerned about interest rate impact on buyer demand. Husband is a UBC professor, wife is a retired nurse.',
+      }
+
+  const { data: contact, error } = await supabase.from('contacts')
+    .insert({ ...baseFields, ...typeSpecific })
+    .select('*').single()
+
+  assert(!error && contact, `${contactType} contact created: ${name}`)
   if (error) {
     console.error('  Error:', error.message)
     process.exit(1)
@@ -212,12 +332,180 @@ async function createTestContact() {
   return contact
 }
 
+// ── Step 1b: Ensure Realtor Profile ────────────────────────────────────────
+
+async function ensureRealtorProfile(realtorId) {
+  if (!realtorId) {
+    log('⚠️', 'No realtor_id — skipping profile setup')
+    return
+  }
+
+  console.log('\n━━━ Ensure Realtor Profile ━━━\n')
+
+  // Check if realtor_agent_config already has brand_config
+  const { data: existing } = await supabase.from('realtor_agent_config')
+    .select('id, brand_config')
+    .eq('realtor_id', realtorId)
+    .maybeSingle()
+
+  const brandConfig = {
+    name: 'Aman Dhindsa',
+    brokerage: 'Realtors360 Realty',
+    phone: '+1 (604) 555-0199',
+    email: process.env.RESEND_FROM_EMAIL || 'hello@realtors360.ai',
+    title: 'Licensed Realtor — Greater Vancouver',
+    website: 'https://realtors360.ai',
+    tagline: 'Your trusted real estate advisor in Vancouver',
+    areas_served: ['South Vancouver', 'Burnaby', 'Kitsilano', 'Point Grey', 'East Vancouver', 'Metrotown'],
+    designations: ['Licensed Realtor (BC)', 'Certified Negotiation Expert'],
+    years_experience: 12,
+    theme_preset: 'professional',
+    color_mode: 'light',
+  }
+
+  if (existing?.brand_config?.name) {
+    log('✅', `Realtor profile exists: ${existing.brand_config.name} (${existing.brand_config.brokerage || 'no brokerage'})`)
+    // Update with richer data if current config is sparse
+    const currentConfig = existing.brand_config
+    if (!currentConfig.phone || !currentConfig.areas_served) {
+      const merged = { ...brandConfig, ...currentConfig }
+      await supabase.from('realtor_agent_config')
+        .update({ brand_config: merged })
+        .eq('id', existing.id)
+      log('📝', 'Enriched existing profile with phone, areas, designations')
+    }
+    return
+  }
+
+  // Upsert realtor_agent_config with full brand_config
+  const { error } = await supabase.from('realtor_agent_config').upsert({
+    realtor_id: realtorId,
+    brand_config: brandConfig,
+  }, { onConflict: 'realtor_id' })
+
+  if (error) {
+    log('⚠️', `Profile setup failed: ${error.message}`)
+    // Fallback: set env vars for the session
+    process.env.AGENT_NAME = brandConfig.name
+    process.env.AGENT_BROKERAGE = brandConfig.brokerage
+    process.env.AGENT_PHONE = brandConfig.phone
+    log('🔧', 'Set AGENT_NAME/BROKERAGE/PHONE env vars as fallback')
+  } else {
+    log('✅', `Realtor profile created: ${brandConfig.name} at ${brandConfig.brokerage}`)
+    log('📍', `Areas: ${brandConfig.areas_served.join(', ')}`)
+    log('📞', `Phone: ${brandConfig.phone}`)
+  }
+
+  // Also update the users table if the realtor exists there
+  const { data: user } = await supabase.from('users')
+    .select('id, name')
+    .eq('id', realtorId)
+    .maybeSingle()
+
+  if (user && (!user.name || user.name === 'System Admin')) {
+    await supabase.from('users')
+      .update({
+        name: brandConfig.name,
+        metadata: {
+          brokerage: brandConfig.brokerage,
+          phone: brandConfig.phone,
+          title: brandConfig.title,
+        }
+      })
+      .eq('id', realtorId)
+    log('👤', 'Updated users table with realtor name and metadata')
+  }
+}
+
+// ── Step 1c: Seed Active Listings ──────────────────────────────────────────
+
+async function seedListings(realtorId) {
+  console.log('\n━━━ Step 1b: Seed Active Listings (for email blocks) ━━━\n')
+
+  const testListings = [
+    {
+      address: `${TEST_PREFIX} 3456 East 41st Ave, South Vancouver, BC V5R 2W4`,
+      list_price: 1350000,
+      property_type: 'Residential',
+      status: 'active',
+      hero_image_url: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=500&fit=crop',
+      lockbox_code: 'E2E1',
+      notes: '3BR/2BA detached, 1,850 sqft, recently renovated kitchen with quartz counters, hardwood floors throughout, large south-facing backyard, 2-car garage. Walking distance to David Thompson Secondary.',
+    },
+    {
+      address: `${TEST_PREFIX} 7821 Meadow Ave, Burnaby, BC V5J 3H9`,
+      list_price: 1275000,
+      property_type: 'Residential',
+      status: 'active',
+      hero_image_url: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=500&fit=crop',
+      lockbox_code: 'E2E2',
+      notes: '4BR/3BA two-storey, 2,200 sqft, open concept main floor, near Confederation Park, new roof 2024, updated electrical. 8 min walk to Gilmore SkyTrain.',
+    },
+    {
+      address: `${TEST_PREFIX} 4512 Kingsway, Burnaby, BC V5H 2B1`,
+      list_price: 899000,
+      property_type: 'Townhouse',
+      status: 'active',
+      hero_image_url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&h=500&fit=crop',
+      lockbox_code: 'E2E3',
+      notes: '3BR/2.5BA end-unit townhouse, 1,450 sqft, private patio, in-unit laundry, walk to Metrotown and Crystal Mall. Strata fee $350/mo includes gym and rooftop deck.',
+    },
+    {
+      address: `${TEST_PREFIX} 3456 W 2nd Ave, Kitsilano, BC V6K 1K8`,
+      list_price: 2100000,
+      property_type: 'Residential',
+      status: 'active',
+      hero_image_url: 'https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=800&h=500&fit=crop',
+      lockbox_code: 'E2E4',
+      notes: '4BR/3BA corner lot, 2,400 sqft, fully renovated 2023, chef kitchen, spa bathrooms, new roof 2024. Steps to Kits Beach, Arbutus Greenway, and West 4th shopping. Seller downsizing.',
+    },
+    {
+      address: `${TEST_PREFIX} 1988 Point Grey Rd, Point Grey, BC V6K 1A2`,
+      list_price: 2850000,
+      property_type: 'Residential',
+      status: 'active',
+      hero_image_url: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=800&h=500&fit=crop',
+      lockbox_code: 'E2E5',
+      notes: '5BR/4BA ocean-view heritage character home, 3,100 sqft, original fir floors, modern addition 2021, detached laneway house generating $2,800/mo rental income. Walk to Jericho Beach and UBC.',
+    },
+  ]
+
+  // Need a seller_id — use the contact we just created or find an existing one
+  const { data: anySeller } = await supabase.from('contacts')
+    .select('id')
+    .limit(1)
+    .single()
+
+  const sellerId = anySeller?.id || randomUUID()
+
+  const listingsToInsert = testListings.map(l => ({
+    ...l,
+    seller_id: sellerId,
+    ...(realtorId ? { realtor_id: realtorId } : {}),
+  }))
+
+  const { data: inserted, error } = await supabase.from('listings')
+    .insert(listingsToInsert)
+    .select('id, address, list_price')
+
+  if (error) {
+    log('⚠️', `Listing seed failed: ${error.message}`)
+    return []
+  }
+
+  assert(inserted?.length === testListings.length, `Seeded ${inserted?.length} active listings for email blocks`)
+  for (const l of inserted || []) {
+    log('🏠', `${l.address.replace(TEST_PREFIX + ' ', '')} — $${l.list_price?.toLocaleString()}`)
+  }
+
+  return inserted
+}
+
 // ── Step 2: Enroll in Buyer Journey ─────────────────────────────────────────
 
-async function enrollInJourney(contactId) {
-  console.log('\n━━━ Step 2: Enroll in Buyer Journey ━━━\n')
+async function enrollInJourney(contactId, journeyType = 'buyer') {
+  console.log(`\n━━━ Enroll in ${journeyType.toUpperCase()} Journey ━━━\n`)
 
-  const schedule = BUYER_JOURNEY[0] // lead phase
   const nextEmailAt = new Date(Date.now() - 60000).toISOString() // 1 min ago (immediately due)
 
   // Get realtor_id from contact
@@ -226,7 +514,7 @@ async function enrollInJourney(contactId) {
 
   const { data: journey, error } = await supabase.from('contact_journeys').insert({
     contact_id: contactId,
-    journey_type: 'buyer',
+    journey_type: journeyType,
     current_phase: 'lead',
     next_email_at: nextEmailAt,
     emails_sent_in_phase: 0,
@@ -234,7 +522,7 @@ async function enrollInJourney(contactId) {
     ...(contactRow?.realtor_id ? { realtor_id: contactRow.realtor_id } : {})
   }).select('*').single()
 
-  assert(!error && journey, 'Enrolled in buyer journey (lead phase)')
+  assert(!error && journey, `Enrolled in ${journeyType} journey (lead phase)`)
   if (error) {
     console.error('  Error:', error.message)
     return null
@@ -637,92 +925,114 @@ async function listCapturedEmails() {
 
 // ── Main ────────────────────────────────────────────────────────────────────
 
-async function main() {
-  console.log('╔══════════════════════════════════════════════════╗')
-  console.log('║   E2E Buyer Journey Test                        ║')
-  console.log('║   Realtors360 Newsletter System                 ║')
-  console.log('╚══════════════════════════════════════════════════╝')
-  console.log()
-  console.log(`  Mode:  ${LIVE_MODE ? '🔴 LIVE (sending real emails)' : '🟢 DEV (file capture)'}`)
-  console.log(`  Email: ${TEST_EMAIL}`)
-  console.log(`  Time:  ${new Date().toISOString()}`)
+// ── Run a single journey (buyer or seller) ─────────────────────────────────
 
-  if (CLEANUP_MODE) {
-    await cleanup()
-    if (ARGS.length === 1) process.exit(0) // --cleanup only
-  }
+async function runJourney(contactType, journeyDef, realtorId) {
+  const contact = await createTestContact(contactType)
 
-  // ── Create contact ──────────────────────────────────────────
-  const contact = await createTestContact()
+  const journey = await enrollInJourney(contact.id, contactType)
+  if (!journey) return { contact, totalSent: 0, newsletters: [] }
 
-  // ── Enroll in journey ───────────────────────────────────────
-  const journey = await enrollInJourney(contact.id)
-  if (!journey) process.exit(1)
+  let totalSent = 0
+  const nlIds = []
 
-  // ── Walk through each phase ─────────────────────────────────
-  let totalEmailsSent = 0
-  let newsletterIds = []
-
-  for (let phaseIdx = 0; phaseIdx < BUYER_JOURNEY.length; phaseIdx++) {
-    const phaseConfig = BUYER_JOURNEY[phaseIdx]
+  for (let phaseIdx = 0; phaseIdx < journeyDef.length; phaseIdx++) {
+    const phaseConfig = journeyDef[phaseIdx]
 
     if (phaseIdx > 0) {
       await advancePhase(contact.id, journey.id, phaseConfig.phase)
     }
 
-    console.log(`\n━━━ Phase: ${phaseConfig.phase.toUpperCase()} — Sending ${phaseConfig.emails.length} email(s) ━━━\n`)
+    const emailsToSend = SEND_ALL_EMAILS ? phaseConfig.emails : [phaseConfig.emails[0]]
+    console.log(`\n━━━ ${contactType.toUpperCase()} — Phase: ${phaseConfig.phase.toUpperCase()} — ${emailsToSend.length} email(s) ━━━\n`)
 
-    // Send first email for each phase (to keep the test manageable)
-    const emailConfig = phaseConfig.emails[0]
+    for (const emailConfig of emailsToSend) {
+      const nl = await generateAndSendEmail(
+        contact.id,
+        emailConfig.type,
+        phaseConfig.phase,
+        journey.id
+      )
 
-    const nl = await generateAndSendEmail(
-      contact.id,
-      emailConfig.type,
-      phaseConfig.phase,
-      journey.id
-    )
+      if (nl) {
+        totalSent++
+        nlIds.push(nl.id)
+        assert(true, `${contactType}/${phaseConfig.phase}/${emailConfig.type} — sent`)
 
-    if (nl) {
-      totalEmailsSent++
-      newsletterIds.push(nl.id)
-      assert(true, `${phaseConfig.phase}/${emailConfig.type} — sent`)
-
-      // Simulate engagement on some emails
-      if (['lead', 'active', 'under_contract'].includes(phaseConfig.phase)) {
-        await sleep(500)
-        await simulateWebhookEvent(contact.id, nl.id, 'opened')
-
-        // Simulate a click on lead phase to build intelligence
-        if (phaseConfig.phase === 'lead') {
-          await sleep(300)
-          await simulateWebhookEvent(contact.id, nl.id, 'clicked')
+        // Simulate engagement on early phases
+        if (['lead', 'active', 'under_contract'].includes(phaseConfig.phase)) {
+          await sleep(500)
+          await simulateWebhookEvent(contact.id, nl.id, 'opened')
+          if (phaseConfig.phase === 'lead') {
+            await sleep(300)
+            await simulateWebhookEvent(contact.id, nl.id, 'clicked')
+          }
         }
+      } else {
+        assert(false, `${contactType}/${phaseConfig.phase}/${emailConfig.type} — failed`)
       }
-    } else {
-      assert(false, `${phaseConfig.phase}/${emailConfig.type} — failed to generate`)
+
+      // Pace between emails to avoid frequency cap
+      await sleep(1500)
     }
 
-    await sleep(1000) // pace between phases
+    await sleep(1000)
   }
-
-  // ── Verify ──────────────────────────────────────────────────
-  console.log(`\n${'═'.repeat(50)}`)
 
   const intel = await verifyIntelligence(contact.id)
   const newsletters = await verifyNewsletters(contact.id)
+
+  return { contact, journey, totalSent, newsletters, intel }
+}
+
+async function main() {
+  console.log('╔══════════════════════════════════════════════════╗')
+  console.log('║   E2E Journey Test — Buyer + Seller              ║')
+  console.log('║   Realtors360 Newsletter System                 ║')
+  console.log('╚══════════════════════════════════════════════════╝')
+  console.log()
+  console.log(`  Mode:     ${LIVE_MODE ? '🔴 LIVE (sending real emails)' : '🟢 DEV (file capture)'}`)
+  console.log(`  Email:    ${TEST_EMAIL}`)
+  console.log(`  All:      ${SEND_ALL_EMAILS ? 'YES — every email at every phase' : 'NO — first email per phase (use --all for full)'}`)
+  console.log(`  Time:     ${new Date().toISOString()}`)
+
+  if (CLEANUP_MODE) {
+    await cleanup()
+    if (ARGS.filter(a => a.startsWith('--')).length === 1) process.exit(0)
+  }
+
+  // ── Setup realtor profile + seed listings ────────────────
+  const realtorId = await getRealtorId()
+  await ensureRealtorProfile(realtorId)
+  const seededListings = await seedListings(realtorId)
+
+  // ── Run buyer journey ──────────────────────────────────────
+  console.log('\n' + '█'.repeat(50))
+  console.log('█  BUYER JOURNEY                                 █')
+  console.log('█'.repeat(50))
+  const buyerResult = await runJourney('buyer', BUYER_JOURNEY, realtorId)
+
+  // ── Run seller journey ─────────────────────────────────────
+  console.log('\n' + '█'.repeat(50))
+  console.log('█  SELLER JOURNEY                                █')
+  console.log('█'.repeat(50))
+  const sellerResult = await runJourney('seller', SELLER_JOURNEY, realtorId)
+
+  // ── Captured emails (dev mode) ─────────────────────────────
   await listCapturedEmails()
 
   // ── Summary ─────────────────────────────────────────────────
+  const totalSent = buyerResult.totalSent + sellerResult.totalSent
+  const totalNL = (buyerResult.newsletters?.length ?? 0) + (sellerResult.newsletters?.length ?? 0)
+
   console.log('\n╔══════════════════════════════════════════════════╗')
   console.log('║   RESULTS                                       ║')
   console.log('╠══════════════════════════════════════════════════╣')
-  console.log(`║  Phases walked:     ${BUYER_JOURNEY.length}/5                          ║`)
-  console.log(`║  Emails generated:  ${totalEmailsSent}                              ║`)
-  console.log(`║  Newsletters in DB: ${newsletters?.length ?? 0}                              ║`)
-  console.log(`║  Engagement score:  ${intel.engagement_score ?? 0}/100                         ║`)
-  console.log(`║  Opens tracked:     ${intel.total_opens ?? 0}                              ║`)
-  console.log(`║  Clicks tracked:    ${intel.total_clicks ?? 0}                              ║`)
-  console.log(`║  Tests passed:      ${passed}/${passed + failed}                            ║`)
+  console.log(`║  Buyer emails sent:  ${String(buyerResult.totalSent).padEnd(28)}║`)
+  console.log(`║  Seller emails sent: ${String(sellerResult.totalSent).padEnd(28)}║`)
+  console.log(`║  Total emails:       ${String(totalSent).padEnd(28)}║`)
+  console.log(`║  Newsletters in DB:  ${String(totalNL).padEnd(28)}║`)
+  console.log(`║  Tests passed:       ${String(`${passed}/${passed + failed}`).padEnd(28)}║`)
   console.log('╚══════════════════════════════════════════════════╝')
 
   if (failed > 0) {
@@ -730,9 +1040,10 @@ async function main() {
     results.filter(r => r.status === 'FAIL').forEach(r => console.log(`   - ${r.label}`))
   }
 
-  console.log(`\n  Contact ID: ${contact.id}`)
-  console.log(`  Journey ID: ${journey.id}`)
-  console.log(`  To clean up: node scripts/e2e-buyer-journey.mjs --cleanup\n`)
+  console.log(`\n  Buyer contact:  ${buyerResult.contact?.id}`)
+  console.log(`  Seller contact: ${sellerResult.contact?.id}`)
+  console.log(`  Listings:       ${seededListings?.length || 0} test listings seeded`)
+  console.log(`  To clean up:    node scripts/e2e-buyer-journey.mjs --cleanup\n`)
 }
 
 main().catch(e => {

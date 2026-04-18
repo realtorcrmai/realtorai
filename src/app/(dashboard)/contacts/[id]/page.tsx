@@ -366,11 +366,20 @@ export default async function ContactDetailPage({
   });
 
    
-  const relationships = (relationshipsData ?? []) as Record<string, unknown>[];
+  const relationships = (relationshipsData ?? []) as Array<{
+    id: string;
+    contact_a_id: string;
+    contact_b_id: string;
+    contact_a: { id: string; name: string; type: string };
+    contact_b: { id: string; name: string; type: string };
+    relationship_type: string;
+    relationship_label: string | null;
+    notes: string | null;
+  }>;
   const seenIds = new Set<string>([contact.id]);
 
   for (const rel of relationships) {
-    const otherId = rel.contact_a_id === id ? rel.contact_b_id : rel.contact_a_id;
+    const otherId = (rel.contact_a_id === id ? rel.contact_b_id : rel.contact_a_id) as string;
     const other = rel.contact_a_id === id ? rel.contact_b : rel.contact_a;
     if (!seenIds.has(otherId) && other) {
       seenIds.add(otherId);

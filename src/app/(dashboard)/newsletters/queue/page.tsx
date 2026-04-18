@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
-import { approveDraft, rejectDraft } from "@/actions/newsletters";
+import { approveNewsletter, skipNewsletter } from "@/actions/newsletters";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 
@@ -9,9 +9,10 @@ export default async function ApprovalQueuePage() {
   const tc = await getAuthenticatedTenantClient();
 
   const { data: drafts } = await tc
-    .from("agent_drafts")
-    .select("id, contact_id, email_type, subject, body_html, body_text, status, created_at, contacts(name, email)")
-    .eq("status", "pending_review")
+    .from("newsletters")
+    .select("id, contact_id, email_type, journey_phase, subject, html_body, status, send_mode, created_at, contacts(name, email)")
+    .eq("status", "draft")
+    .eq("send_mode", "review")
     .order("created_at", { ascending: false });
 
   const queue = drafts ?? [];
@@ -53,7 +54,7 @@ export default async function ApprovalQueuePage() {
             const contact = Array.isArray(draft.contacts) ? draft.contacts[0] : draft.contacts;
             const contactName = contact?.name ?? "Unknown";
             const contactEmail = contact?.email ?? "";
-            const bodyPreview = getBodyPreview(draft.body_text, draft.body_html);
+            const bodyPreview = getBodyPreview(draft.html_body);
             const createdDate = new Date(draft.created_at).toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
@@ -77,6 +78,11 @@ export default async function ApprovalQueuePage() {
                         <span className="text-xs text-muted-foreground">{contactEmail}</span>
                       )}
                       <EmailTypeBadge type={draft.email_type} />
+                      {draft.journey_phase && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-[10px] font-semibold text-blue-600">
+                          {draft.journey_phase}
+                        </span>
+                      )}
                     </div>
                     <h3 className="text-base font-semibold text-foreground mt-1">{draft.subject}</h3>
                   </div>
@@ -94,26 +100,26 @@ export default async function ApprovalQueuePage() {
                 <div className="flex items-center gap-2">
                   <form action={async () => {
                     "use server";
-                    await approveDraft(draft.id);
+                    await approveNewsletter(draft.id);
                   }}>
                     <button
                       type="submit"
                       className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
                       aria-label={`Approve email to ${contactName}`}
                     >
-                      ✓ Approve
+                      ✓ Approve & Send
                     </button>
                   </form>
                   <form action={async () => {
                     "use server";
-                    await rejectDraft(draft.id);
+                    await skipNewsletter(draft.id);
                   }}>
                     <button
                       type="submit"
-                      className="inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-red-700 transition-colors"
+                      className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
                       aria-label={`Reject email to ${contactName}`}
                     >
-                      ✕ Reject
+                      ✕ Discard
                     </button>
                   </form>
                   <a
@@ -154,14 +160,11 @@ function EmailTypeBadge({ type }: { type: string }) {
   );
 }
 
-function getBodyPreview(bodyText: string | null, bodyHtml: string | null): string {
-  if (bodyText) {
-    return bodyText.length > 200 ? bodyText.slice(0, 197) + "..." : bodyText;
-  }
-  if (bodyHtml) {
-    // Strip HTML tags for preview
-    const stripped = bodyHtml.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-    return stripped.length > 200 ? stripped.slice(0, 197) + "..." : stripped;
-  }
-  return "No preview available";
+function getBodyPreview(html: string | null): string {
+  if (!html) return "No preview available";
+  // Remove <style>...</style> and <script>...</script> blocks first
+  const noStyles = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+                       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
+  const stripped = noStyles.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return stripped.length > 200 ? stripped.slice(0, 197) + "..." : stripped;
 }
