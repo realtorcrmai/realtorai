@@ -267,7 +267,7 @@ echo ""
 echo "━━━ 5B. EXTENDED CRON AUTH ━━━"
 
 # Test every cron endpoint rejects requests without valid token
-CRON_ENDPOINTS="agent-evaluate agent-recommendations consent-expiry daily-digest greeting-automations social-publish voice-session-cleanup weekly-learning welcome-drip trial-expiry"
+CRON_ENDPOINTS="agent-evaluate agent-recommendations consent-expiry daily-digest greeting-automations score-contacts social-publish voice-session-cleanup weekly-learning welcome-drip trial-expiry"
 for ENDPOINT in $CRON_ENDPOINTS; do
   CODE=$(curl -s -o /dev/null -w "%{http_code}" "${APP}/api/cron/${ENDPOINT}")
   [[ "$CODE" == "401" ]] && pass "Cron ${ENDPOINT} (no token) → 401" || fail "Cron ${ENDPOINT} no-auth" "HTTP $CODE (expected 401)"

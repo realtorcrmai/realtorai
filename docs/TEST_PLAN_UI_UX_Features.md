@@ -1284,7 +1284,7 @@
   1. Send `GET /api/cron/daily-digest` without Authorization header
   2. Send `GET /api/cron/daily-digest` with `Authorization: Bearer wrong-secret`
   3. Send `GET /api/cron/daily-digest` with `Authorization: Bearer $CRON_SECRET`
-- **Expected:** Request 1: 401 Unauthorized. Request 2: 401 Unauthorized. Request 3: 200 OK. Same pattern applies to: `/api/cron/consent-expiry`, `/api/cron/process-workflows`, `/api/cron/agent-evaluate`, `/api/cron/agent-scoring`, `/api/cron/agent-recommendations`, `/api/cron/greeting-automations`, `/api/cron/social-publish`, `/api/cron/voice-session-cleanup`, `/api/cron/trial-expiry`, `/api/cron/welcome-drip`, `/api/cron/weekly-learning`, `/api/cron/rag-backfill`.
+- **Expected:** Request 1: 401 Unauthorized. Request 2: 401 Unauthorized. Request 3: 200 OK. Same pattern applies to: `/api/cron/consent-expiry`, `/api/cron/process-workflows`, `/api/cron/agent-evaluate`, `/api/cron/agent-scoring`, `/api/cron/agent-recommendations`, `/api/cron/greeting-automations`, `/api/cron/score-contacts`, `/api/cron/social-publish`, `/api/cron/voice-session-cleanup`, `/api/cron/trial-expiry`, `/api/cron/welcome-drip`, `/api/cron/weekly-learning`, `/api/cron/rag-backfill`.
 - **Automated:** Yes
 
 ### TC-124: API search sanitizes special characters
