@@ -27,20 +27,24 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ── Target realtor (Kunal — demo account) ──────────────
-const DEMO_EMAIL = "demo@realestatecrm.com";
+// ── All demo accounts ──────────────
+const DEMO_EMAILS = [
+  "demo@realestatecrm.com",      // Kunal (Pro)
+  "sarah@realtors360.com",       // Sarah (Studio)
+  "mike@realtors360.com",        // Mike (Pro)
+  "priya@realtors360.com",       // Priya (Free)
+];
 
-async function getRealtorId() {
+async function getDemoRealtors() {
   const { data } = await supabase
     .from("users")
-    .select("id")
-    .eq("email", DEMO_EMAIL)
-    .single();
-  if (!data) {
-    console.error(`❌ No user found with email ${DEMO_EMAIL}`);
+    .select("id, email, name")
+    .in("email", DEMO_EMAILS);
+  if (!data?.length) {
+    console.error("❌ No demo users found");
     process.exit(1);
   }
-  return data.id;
+  return data;
 }
 
 // ── Seller contacts for the listings ──────────────
@@ -372,15 +376,11 @@ const ROLE_CAPTIONS = {
   outdoor: "Outdoor Living",
 };
 
-// ── Main seed function ──────────────
-async function seed() {
-  const realtorId = await getRealtorId();
-  console.log(`\n🏠 Seeding luxury listings for realtor ${realtorId}\n`);
+// ── Seed one realtor ──────────────
+async function seedForRealtor(realtorId, realtorName) {
+  console.log(`\n━━━ ${realtorName} (${realtorId.slice(0,8)}…) ━━━`);
 
-  // ── Step 1: Clean up previous luxury seed data ──
-  console.log("🧹 Cleaning previous luxury seed data...");
-
-  // Delete listings by MLS number pattern (our luxury listings)
+  // Clean up previous data
   const luxuryMlsNumbers = LISTINGS.map((l) => l.mls_number);
   const { data: existingListings } = await supabase
     .from("listings")
@@ -390,26 +390,15 @@ async function seed() {
 
   if (existingListings?.length) {
     const listingIds = existingListings.map((l) => l.id);
-    // Delete photos first (FK)
     await supabase.from("listing_photos").delete().in("listing_id", listingIds);
-    // Delete appointments (FK)
     await supabase.from("appointments").delete().in("listing_id", listingIds);
-    // Delete listings
     await supabase.from("listings").delete().in("id", listingIds);
-    console.log(`   Removed ${existingListings.length} existing luxury listings + photos`);
   }
 
-  // Delete luxury seller contacts by phone pattern
   const luxuryPhones = SELLERS.map((s) => s.phone);
-  await supabase
-    .from("contacts")
-    .delete()
-    .eq("realtor_id", realtorId)
-    .in("phone", luxuryPhones);
-  console.log("   Removed existing luxury seller contacts");
+  await supabase.from("contacts").delete().eq("realtor_id", realtorId).in("phone", luxuryPhones);
 
-  // ── Step 2: Create seller contacts ──
-  console.log("\n👤 Creating 20 seller contacts...");
+  // Create seller contacts
   const contactInserts = SELLERS.map((s) => ({
     realtor_id: realtorId,
     name: s.name,
@@ -429,13 +418,11 @@ async function seed() {
     .select("id, name");
 
   if (contactError) {
-    console.error("❌ Failed to create contacts:", contactError.message);
-    process.exit(1);
+    console.error(`   ❌ Contacts failed: ${contactError.message}`);
+    return;
   }
-  console.log(`   ✅ Created ${contacts.length} seller contacts`);
 
-  // ── Step 3: Create listings ──
-  console.log("\n🏡 Creating 20 luxury listings...");
+  // Create listings
   const listingInserts = LISTINGS.map((l, i) => ({
     realtor_id: realtorId,
     seller_id: contacts[i].id,
@@ -457,18 +444,16 @@ async function seed() {
     .select("id, address, list_price, status");
 
   if (listingError) {
-    console.error("❌ Failed to create listings:", listingError.message);
-    process.exit(1);
+    console.error(`   ❌ Listings failed: ${listingError.message}`);
+    return;
   }
 
-  // ── Step 4: Seed listing photos (5 per listing) ──
-  console.log("\n📸 Creating photo galleries (5 per listing)...");
+  // Seed photos (5 per listing)
   const photoInserts = [];
   for (let i = 0; i < listings.length; i++) {
     const listing = listings[i];
     const heroUrl = LISTINGS[i].hero_image_url;
 
-    // Photo 1: exterior (hero image)
     photoInserts.push({
       listing_id: listing.id,
       realtor_id: realtorId,
@@ -478,7 +463,6 @@ async function seed() {
       caption: ROLE_CAPTIONS.exterior,
     });
 
-    // Photos 2-5: interior/outdoor
     const interiorPhotos = PHOTOS[i];
     for (let j = 0; j < interiorPhotos.length; j++) {
       const p = interiorPhotos[j];
@@ -498,36 +482,24 @@ async function seed() {
     .insert(photoInserts);
 
   if (photoError) {
-    console.error("❌ Failed to create photos:", photoError.message);
-    console.error("   (Run migration 133_listing_photos.sql first)");
-    process.exit(1);
-  }
-  console.log(`   ✅ Created ${photoInserts.length} photos (${listings.length} listings × 5)`);
-
-  // ── Summary ──
-  console.log(`\n   ✅ Created ${listings.length} luxury listings\n`);
-
-  const bcListings = listings.slice(0, 10);
-  const seattleListings = listings.slice(10);
-
-  console.log("━━━ BC Canada (10) ━━━");
-  for (const l of bcListings) {
-    const price = `$${(l.list_price / 1000000).toFixed(1)}M`;
-    console.log(`  ${l.status === "sold" ? "🔴" : l.status === "pending" ? "🟡" : "🟢"} ${price.padEnd(7)} ${l.address}`);
-  }
-
-  console.log("\n━━━ Seattle US (10) ━━━");
-  for (const l of seattleListings) {
-    const price = `$${(l.list_price / 1000000).toFixed(1)}M`;
-    console.log(`  ${l.status === "sold" ? "🔴" : l.status === "pending" ? "🟡" : "🟢"} ${price.padEnd(7)} ${l.address}`);
+    console.error(`   ❌ Photos failed: ${photoError.message}`);
+    return;
   }
 
   const totalValue = listings.reduce((sum, l) => sum + Number(l.list_price), 0);
-  console.log(`\n📊 Total portfolio value: $${(totalValue / 1000000).toFixed(1)}M`);
-  console.log(`   Active: ${listings.filter((l) => l.status === "active").length}`);
-  console.log(`   Pending: ${listings.filter((l) => l.status === "pending").length}`);
-  console.log(`   Sold: ${listings.filter((l) => l.status === "sold").length}`);
-  console.log("\n✅ Luxury listings seeded successfully!\n");
+  console.log(`   ✅ ${contacts.length} contacts · ${listings.length} listings · ${photoInserts.length} photos · $${(totalValue / 1000000).toFixed(1)}M`);
+}
+
+// ── Main ──────────────
+async function seed() {
+  const realtors = await getDemoRealtors();
+  console.log(`\n🏠 Seeding luxury listings for ${realtors.length} demo accounts\n`);
+
+  for (const r of realtors) {
+    await seedForRealtor(r.id, r.name);
+  }
+
+  console.log(`\n✅ All ${realtors.length} demo accounts seeded with luxury listings!\n`);
 }
 
 seed().catch((err) => {
