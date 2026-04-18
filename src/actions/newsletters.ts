@@ -1153,19 +1153,80 @@ export async function sendCampaign(emailType: string, recipients: string, subjec
 }
 
 export async function sendListingBlast(listingId: string, _template: string) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.NODE_ENV === 'production'
-    ? (() => { console.error('[newsletter] NEXT_PUBLIC_APP_URL not set in production!'); return 'https://magnate360.com'; })()
-    : 'http://localhost:3000');
   try {
-    const res = await fetch(`${appUrl}/api/listings/blast`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ listingId, sendToAllAgents: true }),
+    const tc = await getAuthenticatedTenantClient();
+
+    // 1. Get listing
+    const { data: listing, error: listingErr } = await tc
+      .from("listings")
+      .select("*")
+      .eq("id", listingId)
+      .single();
+    if (listingErr || !listing) return { error: "Listing not found or does not belong to you" };
+
+    // 2. Build recipient list — all agent/partner contacts
+    const { data: agents } = await tc
+      .from("contacts")
+      .select("email")
+      .in("type", ["agent", "partner"])
+      .not("email", "is", null);
+    const emails = (agents || [])
+      .map((a: { email: string | null }) => a.email)
+      .filter((e: string | null): e is string => !!e && e.includes("@"));
+    if (emails.length === 0) return { error: "No agent contacts with valid emails found" };
+
+    // 3. Get brand config
+    const { data: config } = await tc
+      .from("realtor_agent_config")
+      .select("brand_config")
+      .limit(1)
+      .single();
+    const brand = (config?.brand_config as Record<string, string>) || {};
+
+    // 4. Build email
+    const address = listing.address || "New Listing";
+    const price = listing.list_price ? `$${Number(listing.list_price).toLocaleString()}` : "Price on Request";
+    const subject = `NEW LISTING: ${address} — ${price}`;
+    const intro = `I'm pleased to present my new listing at ${address}. This property is now available at ${price}. Please share with any interested buyers.`;
+    const heroImage = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&h=600&fit=crop";
+
+    const { assembleEmail, runPreSendChecks } = await import("@/lib/email-blocks");
+    const checks = await runPreSendChecks(subject, intro, "blast", "Fellow Agent", "agent", "listing_alert");
+    const html = assembleEmail("listing_alert", {
+      contact: { name: "Fellow Agent", firstName: "Fellow Agent", type: "agent" },
+      agent: {
+        name: brand.realtorName || "Kunal",
+        brokerage: brand.brokerage || "RE/MAX City Realty",
+        phone: brand.phone || "604-555-0123",
+        initials: (brand.realtorName || "K")[0],
+      },
+      content: { subject: checks.subject || subject, intro: checks.body || intro, body: "", ctaText: "Schedule a Showing" },
+      listing: {
+        address, area: listing.city || "Vancouver", price,
+        beds: listing.bedrooms, baths: listing.bathrooms,
+        sqft: listing.square_feet ? String(listing.square_feet) : undefined,
+        photos: [heroImage],
+      },
     });
-    const data = await res.json();
-    if (!res.ok) return { error: data.error || "Blast failed" };
+
+    // 5. Send batch
+    const { sendBatchEmails } = await import("@/lib/resend");
+    const emailPayloads = emails.map((to: string) => ({
+      to, subject, html,
+      from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
+      tags: [{ name: "type", value: "listing_blast" }, { name: "listing_id", value: listingId }],
+    }));
+    const result = await sendBatchEmails(emailPayloads);
+
+    // 6. Log blast
+    await tc.from("newsletters").insert({
+      subject, email_type: "listing_blast", status: "sent",
+      sent_at: new Date().toISOString(), html_body: html,
+      ai_context: { blast: true, listing_id: listingId, recipient_count: emails.length, sent: result.sent, failed: result.failed },
+    });
+
     revalidatePath("/newsletters");
-    return { success: true, sent: data.sent, failed: data.failed };
+    return { success: true, sent: result.sent, failed: result.failed };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Blast failed" };
   }

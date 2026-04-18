@@ -15,6 +15,8 @@ type Props = {
 
 export function EmailMarketingTabs({ queueCount, hasAutomations, children }: Props) {
   const [activeTab, setActiveTab] = useState("ai");
+  // Bug fix #5: allow dismissing the "Automations not enabled" overlay
+  const [automationsBannerDismissed, setAutomationsBannerDismissed] = useState(false);
 
   const tabs = [
     { id: "ai", label: "AI", badge: queueCount > 0 ? queueCount : undefined, locked: false },
@@ -63,16 +65,24 @@ export function EmailMarketingTabs({ queueCount, hasAutomations, children }: Pro
                 <div className="pointer-events-none select-none opacity-40">
                   {children.automations}
                 </div>
-                {/* Upgrade banner pinned over the content */}
-                <div className="absolute inset-0 flex items-start justify-center pt-16">
-                  <div className="bg-background border border-border rounded-xl shadow-lg px-6 py-5 text-center max-w-sm">
-                    <p className="text-2xl mb-2">🔒</p>
-                    <p className="text-sm font-semibold text-foreground">Automations not enabled</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Contact your administrator to unlock this feature.
-                    </p>
+                {/* Bug fix #5: overlay is now dismissible via "Got it" button */}
+                {!automationsBannerDismissed && (
+                  <div className="absolute inset-0 flex items-start justify-center pt-16">
+                    <div className="bg-background border border-border rounded-xl shadow-lg px-6 py-5 text-center max-w-sm">
+                      <p className="text-2xl mb-2">🔒</p>
+                      <p className="text-sm font-semibold text-foreground">Automations not enabled</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Contact your administrator to unlock this feature.
+                      </p>
+                      <button
+                        onClick={() => setAutomationsBannerDismissed(true)}
+                        className="mt-4 text-xs px-4 py-1.5 rounded-lg border border-border font-medium hover:bg-muted transition-colors"
+                      >
+                        Got it
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )
         )}
