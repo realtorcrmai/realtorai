@@ -13,6 +13,7 @@ import { ShowingStatusBadge } from "@/components/showings/ShowingStatusBadge";
 import { AlertBanner } from "@/components/shared/AlertBanner";
 import { ClickToVoiceButton } from "@/components/voice-agent/ClickToVoiceButton";
 import { NeighborhoodButton } from "@/components/listings/NeighborhoodButton";
+import { PhotoGallery } from "@/components/listings/PhotoGallery";
 import { DDFSyncButton } from "@/components/listings/DDFSyncButton";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
@@ -52,6 +53,7 @@ export default async function ListingDetailPage({
     { data: formSubmissions },
     { data: buyerMatches },
     { data: sellerIdentities },
+    { data: listingPhotos },
   ] = await Promise.all([
     supabase
       .from("listing_documents")
@@ -84,6 +86,11 @@ export default async function ListingDetailPage({
     supabase
       .from("seller_identities")
       .select("*")
+      .eq("listing_id", id)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("listing_photos")
+      .select("id, photo_url, role, caption, sort_order")
       .eq("listing_id", id)
       .order("sort_order", { ascending: true }),
   ]);
@@ -135,9 +142,23 @@ export default async function ListingDetailPage({
             </div>
           )}
 
+          {/* Photo Gallery with Lightbox */}
+          <PhotoGallery photos={(listingPhotos ?? []) as any} address={listing.address} />
+
           {/* Listing Header — compact */}
           <Card className="animate-float-in overflow-hidden border-0 shadow-md">
-            <div className="h-1.5 bg-brand" />
+            {!(listingPhotos ?? []).length && listing.hero_image_url ? (
+              <div className="relative h-48 md:h-64 w-full overflow-hidden">
+                <img
+                  src={`${listing.hero_image_url}&w=1200&h=400&fit=crop`}
+                  alt={listing.address}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+              </div>
+            ) : (
+              <div className="h-1.5 bg-brand" />
+            )}
             <CardContent className="p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1.5 min-w-0">

@@ -28,7 +28,7 @@ export default async function ListingsPage({
   } else {
     const { data } = await supabase
       .from("listings")
-      .select("id, address, status, mls_number, list_price, property_type, created_at, contacts!listings_seller_id_fkey(name)")
+      .select("id, address, status, mls_number, list_price, property_type, hero_image_url, created_at, contacts!listings_seller_id_fkey(name)")
       .order("created_at", { ascending: false })
       .limit(200);
     listings = data;

@@ -103,6 +103,7 @@ export function MondaySidebar() {
   const userName = session?.user?.name || "User";
   const userEmail = session?.user?.email || "";
   const initials = userName.split(" ").map((w: string) => w[0]).filter(Boolean).join("").toUpperCase().slice(0, 2) || "U";
+  const avatarUrl = (session?.user as Record<string, unknown> | undefined)?.avatarUrl as string | null;
 
   const enabledFeatures: string[] = (session?.user as Record<string, unknown>)?.enabledFeatures as string[] || [];
 
@@ -265,9 +266,13 @@ export function MondaySidebar() {
       {/* User section */}
       <div className="p-3 border-t border-sidebar-accent shrink-0">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 text-sidebar-primary flex items-center justify-center text-xs font-semibold shrink-0">
-            {initials}
-          </div>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={userName} className="h-8 w-8 rounded-full object-cover shrink-0" />
+          ) : (
+            <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 text-sidebar-primary flex items-center justify-center text-xs font-semibold shrink-0">
+              {initials}
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-sidebar-foreground truncate">{userName}</p>
             <p className="text-xs text-sidebar-foreground/50 truncate">{userEmail}</p>
