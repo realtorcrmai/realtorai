@@ -55,31 +55,28 @@ export function EmailMarketingTabs({ queueCount, hasAutomations, children }: Pro
         {activeTab === "ai" && children.ai}
         {activeTab === "campaigns" && children.campaigns}
         {activeTab === "automations" && (
-          hasAutomations ? children.automations : <LockedTab featureName="Automations" />
+          hasAutomations
+            ? children.automations
+            : (
+              <div className="relative">
+                {/* Content visible but non-interactive */}
+                <div className="pointer-events-none select-none opacity-40">
+                  {children.automations}
+                </div>
+                {/* Upgrade banner pinned over the content */}
+                <div className="absolute inset-0 flex items-start justify-center pt-16">
+                  <div className="bg-background border border-border rounded-xl shadow-lg px-6 py-5 text-center max-w-sm">
+                    <p className="text-2xl mb-2">🔒</p>
+                    <p className="text-sm font-semibold text-foreground">Automations not enabled</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Contact your administrator to unlock this feature.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )
         )}
       </div>
-    </div>
-  );
-}
-
-function LockedTab({ featureName }: { featureName: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
-      <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-2xl">
-        🔒
-      </div>
-      <div>
-        <p className="text-base font-semibold text-foreground">{featureName} not enabled</p>
-        <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-          This feature is not active on your account. Contact your administrator to enable it.
-        </p>
-      </div>
-      <a
-        href="mailto:support@realtors360.ai"
-        className="text-xs text-primary hover:underline"
-      >
-        Contact support →
-      </a>
     </div>
   );
 }
