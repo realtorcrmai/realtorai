@@ -13,6 +13,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isFeatureEnabled } from "@/lib/feature-gate";
 import { generateMessageContent } from "@/lib/anthropic/message-generator";
 import {
   validateStageForType,
@@ -451,11 +452,31 @@ export async function executeStep(
   // CASL fields for the compliance gate in executeAutoMessage).
   const { data: contact } = await supabase
     .from("contacts")
-    .select("id, name, phone, email, type, pref_channel, lead_status, tags, stage_bar, newsletter_intelligence, newsletter_unsubscribed, casl_consent_given, casl_consent_date")
+    .select("id, name, phone, email, type, pref_channel, lead_status, tags, stage_bar, newsletter_intelligence, newsletter_unsubscribed, casl_consent_given, casl_consent_date, realtor_id")
     .eq("id", enrollment.contact_id)
     .single();
 
   if (!contact) return { success: false, error: "Contact not found" };
+
+  // Gate: block message-sending steps if automations is disabled for this realtor.
+  // Non-message steps (manual_task, auto_alert, system_action, wait) still run —
+  // they don't send emails and are not blocked by the flag.
+  // Fail-closed: if realtor_id is missing we cannot verify the flag, so block the send.
+  if (["auto_sms", "auto_whatsapp", "auto_email"].includes(step.action_type)) {
+    if (!contact.realtor_id) {
+      console.warn(
+        `[workflow-engine] Contact ${contact.id} has no realtor_id — cannot verify automations flag. Blocking ${step.action_type}.`
+      );
+      return { success: false, error: "automations_disabled: no realtor_id on contact" };
+    }
+    const automationsEnabled = await isFeatureEnabled(contact.realtor_id, "automations");
+    if (!automationsEnabled) {
+      console.log(
+        `[workflow-engine] automations disabled for realtor ${contact.realtor_id} — skipping ${step.action_type}`
+      );
+      return { success: false, error: "automations_disabled" };
+    }
+  }
 
   // Fetch listing context if available
   let listing = null;

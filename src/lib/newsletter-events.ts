@@ -26,6 +26,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isFeatureEnabled } from "@/lib/feature-gate";
 
 /**
  * Minimal shape we need from `getAuthenticatedTenantClient()` — just the
@@ -56,6 +57,18 @@ export async function emitNewsletterEvent(
   tc: TenantClient,
   input: NewsletterEventInput
 ): Promise<EmitResult> {
+  // Gate: automations feature flag must be ON to emit trigger events.
+  // Open/click tracking (email_opened, email_clicked) bypasses this gate —
+  // those events are written directly by the Resend webhook handler, not here.
+  const automationsEnabled = await isFeatureEnabled(tc.realtorId, "automations");
+  if (!automationsEnabled) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `[newsletter-events] automations disabled for ${tc.realtorId} — skipping ${input.event_type}`
+    );
+    return { ok: false, reason: "automations_disabled" };
+  }
+
   try {
     const { data, error } = await tc.raw
       .from('email_events')
