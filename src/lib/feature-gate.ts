@@ -6,7 +6,9 @@
  * paths to enforce admin-controlled feature toggles at runtime.
  *
  * Results are cached for 60 seconds per realtor+feature pair to avoid
- * a DB hit on every workflow step execution.
+ * a DB hit on every workflow step execution within a warm container.
+ * In Vercel's serverless environment this cache resets on cold start — the
+ * gate is still enforced on cold start, just with an extra DB round-trip.
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
