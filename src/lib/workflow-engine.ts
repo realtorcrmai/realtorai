@@ -345,7 +345,7 @@ async function executeManualTask(
       priority: (config?.priority as string) || "medium",
       category: (config?.category as string) || "follow_up",
       status: "pending",
-      notes: `Auto-created by workflow. Enrollment: ${enrollmentId}`,
+      description: `Auto-created by workflow. Enrollment: ${enrollmentId}`,
     })
     .select("id")
     .single();
