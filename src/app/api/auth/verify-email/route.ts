@@ -68,6 +68,16 @@ export async function GET(request: NextRequest) {
     event: "email_verified",
   });
 
+  // Now that email is confirmed, send Day 0 welcome drip
+  const { data: verifiedUser } = await supabase
+    .from("users")
+    .select("name")
+    .eq("id", user.id)
+    .single();
+  import("@/actions/drip").then(({ sendDripEmail }) => {
+    sendDripEmail(user.id, normalizedEmail, verifiedUser?.name || "", 0).catch(console.error);
+  });
+
   // Redirect to phone verification
   return NextResponse.redirect(`${appUrl}/verify/phone`);
 }

@@ -143,12 +143,13 @@ export async function sendDripEmail(
 export async function processWelcomeDrip(): Promise<{ processed: number; sent: number; skipped: number }> {
   const supabase = createAdminClient();
 
-  // Get users within 14-day signup window
+  // Get users within 14-day signup window — only those who verified their email
   const { data: users } = await supabase
     .from("users")
     .select("id, email, name, created_at, drip_unsubscribed")
     .gte("created_at", new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString())
     .eq("is_active", true)
+    .eq("email_verified", true)
     .eq("drip_unsubscribed", false);
 
   if (!users?.length) return { processed: 0, sent: 0, skipped: 0 };
