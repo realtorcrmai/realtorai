@@ -2,12 +2,17 @@ export const dynamic = "force-dynamic";
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import { SettingsTab } from "@/components/newsletters/SettingsTab";
+import { BrandProfileForm } from "@/components/newsletters/BrandProfileForm";
 import { getRealtorConfig } from "@/actions/config";
+import { getBrandProfile } from "@/actions/brand-profile";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 
 export default async function NewsletterSettingsPage() {
   const tc = await getAuthenticatedTenantClient();
-  const realtorConfig = await getRealtorConfig();
+  const [realtorConfig, brandProfile] = await Promise.all([
+    getRealtorConfig(),
+    getBrandProfile(),
+  ]);
 
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000).toISOString();
@@ -44,8 +49,31 @@ export default async function NewsletterSettingsPage() {
         }
       />
 
-      <div className="p-6 max-w-3xl">
-        <SettingsTab
+      <div className="p-6 max-w-3xl space-y-10">
+
+        {/* ── Brand Profile ─────────────────────────────── */}
+        <section>
+          <div className="mb-4">
+            <h2 className="text-base font-semibold text-foreground">Brand Profile</h2>
+            <p className="text-sm text-muted-foreground">
+              Your logo, contact details, and branding used in every email you send.
+              The physical address is legally required by CASL.
+            </p>
+          </div>
+          <BrandProfileForm profile={brandProfile} />
+        </section>
+
+        <hr className="border-border" />
+
+        {/* ── AI & Send Settings ────────────────────────── */}
+        <section>
+          <div className="mb-4">
+            <h2 className="text-base font-semibold text-foreground">AI &amp; Send Settings</h2>
+            <p className="text-sm text-muted-foreground">
+              Voice profile, frequency caps, quiet hours, and send mode.
+            </p>
+          </div>
+          <SettingsTab
           config={
             realtorConfig
               ? {
@@ -80,6 +108,8 @@ export default async function NewsletterSettingsPage() {
           unsubscribeCount={unsubscribeCount ?? 0}
           complaintCount={bounceCount ?? 0}
         />
+        </section>
+
       </div>
     </div>
   );

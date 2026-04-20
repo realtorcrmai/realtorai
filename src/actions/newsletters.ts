@@ -14,17 +14,44 @@ import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 // Apple-quality block-based email system (SF Pro Display / Inter font stack)
 import { assembleEmail, getBrandConfig, type EmailData } from "@/lib/email-blocks";
 import type { RealtorBranding } from "@/emails/BaseLayout";
+import { getBrandProfile } from "@/actions/brand-profile";
 
 async function getRealtorBranding(): Promise<RealtorBranding> {
-  // TODO: fetch from realtor profile when multi-tenant
-  return {
-    name: process.env.AGENT_NAME || "Your Realtor",
-    title: "REALTOR\u00AE",
-    brokerage: process.env.AGENT_BROKERAGE || "",
-    phone: process.env.AGENT_PHONE || "",
-    email: process.env.AGENT_EMAIL || "",
-    accentColor: "#4f35d2",
-  };
+  try {
+    const tc = await getAuthenticatedTenantClient();
+
+    // Fetch brand profile and user record in parallel
+    const [brandProfile, { data: user }] = await Promise.all([
+      getBrandProfile(),
+      tc.raw
+        .from("users")
+        .select("name, email, phone, brokerage")
+        .eq("id", tc.realtorId)
+        .single(),
+    ]);
+
+    return {
+      name: brandProfile?.display_name || user?.name || "Your Realtor",
+      title: brandProfile?.title || "REALTOR®",
+      brokerage: brandProfile?.brokerage_name || user?.brokerage || "",
+      phone: brandProfile?.phone || user?.phone || "",
+      email: brandProfile?.email || user?.email || "",
+      headshotUrl: brandProfile?.headshot_url || undefined,
+      logoUrl: brandProfile?.logo_url || undefined,
+      accentColor: brandProfile?.brand_color || "#4f35d2",
+      physicalAddress: brandProfile?.physical_address || undefined,
+    };
+  } catch {
+    // Fallback to env vars if DB read fails (e.g. during seeding / testing)
+    return {
+      name: process.env.AGENT_NAME || "Your Realtor",
+      title: "REALTOR®",
+      brokerage: process.env.AGENT_BROKERAGE || "",
+      phone: process.env.AGENT_PHONE || "",
+      email: process.env.AGENT_EMAIL || "",
+      accentColor: "#4f35d2",
+    };
+  }
 }
 
 function getUnsubscribeUrl(contactId: string): string {

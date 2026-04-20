@@ -2059,6 +2059,77 @@ export interface Database {
         };
       };
       // ── Realtor Agent Config ───────────────────────────────────
+      realtor_brand_profiles: {
+        Row: {
+          id: string;
+          realtor_id: string;
+          display_name: string | null;
+          title: string | null;
+          headshot_url: string | null;
+          logo_url: string | null;
+          brokerage_logo_url: string | null;
+          website_url: string | null;
+          phone: string | null;
+          email: string | null;
+          physical_address: string | null;
+          brand_color: string;
+          instagram_url: string | null;
+          facebook_url: string | null;
+          linkedin_url: string | null;
+          twitter_url: string | null;
+          tagline: string | null;
+          service_areas: string[];
+          brokerage_name: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          realtor_id: string;
+          display_name?: string | null;
+          title?: string | null;
+          headshot_url?: string | null;
+          logo_url?: string | null;
+          brokerage_logo_url?: string | null;
+          website_url?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          physical_address?: string | null;
+          brand_color?: string;
+          instagram_url?: string | null;
+          facebook_url?: string | null;
+          linkedin_url?: string | null;
+          twitter_url?: string | null;
+          tagline?: string | null;
+          service_areas?: string[];
+          brokerage_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          realtor_id?: string;
+          display_name?: string | null;
+          title?: string | null;
+          headshot_url?: string | null;
+          logo_url?: string | null;
+          brokerage_logo_url?: string | null;
+          website_url?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          physical_address?: string | null;
+          brand_color?: string;
+          instagram_url?: string | null;
+          facebook_url?: string | null;
+          linkedin_url?: string | null;
+          twitter_url?: string | null;
+          tagline?: string | null;
+          service_areas?: string[];
+          brokerage_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       realtor_agent_config: {
         Row: {
           id: string;
