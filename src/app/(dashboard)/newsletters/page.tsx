@@ -19,6 +19,9 @@ import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { WORKFLOW_BLUEPRINTS } from "@/lib/constants";
 import { getRealtorConfig, getAutomationRules, getGreetingRules } from "@/actions/config";
 import { AIAgentQueue } from "@/components/newsletters/AIAgentQueue";
+import { BrandProfileForm } from "@/components/newsletters/BrandProfileForm";
+import { SettingsTab } from "@/components/newsletters/SettingsTab";
+import { getBrandProfile } from "@/actions/brand-profile";
 
 export default async function NewsletterDashboard() {
   const session = await auth();
@@ -36,12 +39,13 @@ export default async function NewsletterDashboard() {
     freshUser?.enabled_features as string[] | null,
   );
   const hasAutomations = enabledFeatures.includes("automations");
-  const [dashboard, queue, realtorConfig, automationRules, greetingRules] = await Promise.all([
+  const [dashboard, queue, realtorConfig, automationRules, greetingRules, brandProfile] = await Promise.all([
     getJourneyDashboard(),
     getApprovalQueue(),
     getRealtorConfig(),
     getAutomationRules(),
     getGreetingRules(),
+    getBrandProfile(),
   ]);
 
   const _now = Date.now();
@@ -366,6 +370,57 @@ export default async function NewsletterDashboard() {
                     </div>
                   )}
                 </div>
+              </div>
+            ),
+
+            /* ══════════════════════════════
+               SETTINGS TAB
+               Brand profile + AI & send settings
+            ══════════════════════════════ */
+            settings: (
+              <div className="max-w-3xl space-y-10">
+                <section>
+                  <div className="mb-4">
+                    <h2 className="text-base font-semibold text-foreground">Brand Profile</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Your logo, contact details, and branding used in every email you send.
+                      The physical address is legally required by CASL.
+                    </p>
+                  </div>
+                  <BrandProfileForm profile={brandProfile} />
+                </section>
+
+                <hr className="border-border" />
+
+                <section>
+                  <div className="mb-4">
+                    <h2 className="text-base font-semibold text-foreground">AI &amp; Send Settings</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Voice profile, frequency caps, quiet hours, and send mode.
+                    </p>
+                  </div>
+                  <SettingsTab
+                    config={
+                      realtorConfig
+                        ? {
+                            sending_enabled: realtorConfig.sending_enabled,
+                            skip_weekends: realtorConfig.skip_weekends,
+                            quiet_hours: realtorConfig.quiet_hours as { start: string; end: string },
+                            frequency_caps: realtorConfig.frequency_caps as Record<string, unknown>,
+                            default_send_hour: realtorConfig.default_send_hour,
+                            brand_config: realtorConfig.brand_config as { default_send_mode?: string },
+                            ai_quality_tier: (realtorConfig.ai_quality_tier as string) ?? undefined,
+                            brand_name: (realtorConfig.brand_name as string) ?? "",
+                            tone: (realtorConfig.tone as string) ?? "",
+                            writing_style_rules: (realtorConfig.writing_style_rules as string[]) ?? [],
+                            content_rankings: (realtorConfig.content_rankings as Array<{ type: string; effectiveness: number }>) ?? [],
+                          }
+                        : null
+                    }
+                    unsubscribeCount={0}
+                    complaintCount={bounceCount ?? 0}
+                  />
+                </section>
               </div>
             ),
           }}
