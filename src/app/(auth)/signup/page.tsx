@@ -142,10 +142,10 @@ export default function SignupPage() {
       });
 
       if (signInResult?.ok) {
-        router.push("/verify");
+        router.push("/onboarding");
       } else {
-        // Account created but auto-sign-in failed — send to verify anyway
-        router.push("/verify");
+        // Account created but auto-sign-in failed — send to login
+        router.push("/login");
       }
     } catch {
       setError("Something went wrong. Please try again.");

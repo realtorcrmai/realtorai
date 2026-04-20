@@ -99,12 +99,16 @@ export async function POST(request: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const { token, tokenHash } = generateMagicLinkToken();
 
-    await supabase.from("verification_tokens").insert({
+    const { error: tokenInsertError } = await supabase.from("verification_tokens").insert({
       user_id: newUser.id,
       type: "email",
       token_hash: tokenHash,
       expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 min
     });
+
+    if (tokenInsertError) {
+      console.error("[signup] Failed to insert verification token:", tokenInsertError.message);
+    }
 
     const verifyUrl = `${appUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(normalizedEmail)}`;
     const html = renderVerifyEmail({ name: name.trim(), verifyUrl });

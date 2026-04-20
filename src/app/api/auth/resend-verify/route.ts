@@ -47,12 +47,17 @@ export async function POST() {
 
   // Generate new token (invalidates previous by using latest)
   const { token, tokenHash } = generateMagicLinkToken();
-  await supabase.from("verification_tokens").insert({
+  const { error: tokenInsertError } = await supabase.from("verification_tokens").insert({
     user_id: userId,
     type: "email",
     token_hash: tokenHash,
     expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
   });
+
+  if (tokenInsertError) {
+    console.error("[resend-verify] Failed to insert token:", tokenInsertError.message);
+    return NextResponse.json({ error: "Failed to generate verification link" }, { status: 500 });
+  }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const verifyUrl = `${appUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;

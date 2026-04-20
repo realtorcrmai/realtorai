@@ -31,17 +31,32 @@ export async function GET(request: NextRequest) {
   }
 
   // Find valid (non-expired) token
-  const { data: tokenRecord } = await supabase
+  const now = new Date().toISOString();
+  const { data: tokenRecord, error: tokenError } = await supabase
     .from("verification_tokens")
     .select("*")
     .eq("user_id", user.id)
     .eq("type", "email")
-    .gt("expires_at", new Date().toISOString())
+    .gt("expires_at", now)
     .order("created_at", { ascending: false })
     .limit(1)
     .single();
 
   if (!tokenRecord) {
+    // Debug: check if ANY tokens exist for this user (even expired)
+    const { data: allTokens } = await supabase
+      .from("verification_tokens")
+      .select("id, expires_at, created_at")
+      .eq("user_id", user.id)
+      .eq("type", "email")
+      .order("created_at", { ascending: false })
+      .limit(3);
+    console.error("[verify-email] No valid token found.", {
+      userId: user.id,
+      now,
+      tokenError: tokenError?.message,
+      allTokensForUser: allTokens,
+    });
     return NextResponse.redirect(`${appUrl}/verify?error=expired`);
   }
 

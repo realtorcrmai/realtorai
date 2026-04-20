@@ -179,7 +179,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
               token.role = existingUser.role;
               token.userId = existingUser.id;
-              token.emailVerified = existingUser.email_verified ?? true;
+              token.emailVerified = existingUser.email_verified ?? false;
               token.phoneVerified = existingUser.phone_verified ?? false;
               token.onboardingCompleted = existingUser.onboarding_completed ?? true;
               // Default to true for pre-existing users (column didn't exist before migration 095)
@@ -212,6 +212,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     name: token.name as string | undefined,
                     role: isAdmin ? "admin" : "realtor",
                     plan: defaultPlan,
+                    email_verified: !!account && ["google", "apple", "facebook"].includes(account.provider),
                     personalization_completed: false,
                     onboarding_completed: false,
                   },
@@ -264,7 +265,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Multi-tenancy: userId = realtorId (the tenant identifier)
       session.user.id = (token.userId as string) || (token.sub as string) || "";
       session.user.realtorId = (token.userId as string) || (token.sub as string) || "";
-      (session.user as unknown as Record<string, unknown>).emailVerified = (token.emailVerified as boolean) ?? true;
+      (session.user as unknown as Record<string, unknown>).emailVerified = (token.emailVerified as boolean) ?? false;
       (session.user as unknown as Record<string, unknown>).avatarUrl = (token.avatarUrl as string) ?? null;
       return session;
     },

@@ -26,13 +26,8 @@ export default async function DashboardLayout({
     redirect("/admin");
   }
 
-  // ── Email verification gate — must verify before accessing dashboard ──
-  const user = session.user as Record<string, unknown>;
-  if (user.emailVerified === false) {
-    redirect("/verify");
-  }
-
   // ── Onboarding gate — use JWT token (populated in auth.ts callbacks) ──
+  const user = session.user as Record<string, unknown>;
   if (user.onboardingCompleted === false) {
     redirect("/onboarding");
   }
