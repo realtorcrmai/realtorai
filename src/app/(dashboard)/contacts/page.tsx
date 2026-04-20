@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Users, TrendingUp, Flame, BarChart3, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { ContactImportButton } from "@/components/contacts/ContactImportButton";
 
 export const dynamic = "force-dynamic";
 
@@ -44,9 +45,12 @@ export default async function ContactsPage({
         title={activeSmartList ? `${activeSmartList.icon} ${activeSmartList.name}` : "Contacts"}
         subtitle={`${contacts?.length ?? 0} contacts`}
         actions={
-          <Link href="/contacts/new">
-            <Button className="bg-brand text-white hover:bg-brand-dark">Create Contact</Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <ContactImportButton />
+            <Link href="/contacts/new">
+              <Button className="bg-brand text-white hover:bg-brand-dark">Create Contact</Button>
+            </Link>
+          </div>
         }
       />
       <div className="p-6 space-y-6">

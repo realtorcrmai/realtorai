@@ -95,42 +95,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to create account. Please try again." }, { status: 500 });
     }
 
-    // Send verification email
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const { token, tokenHash } = generateMagicLinkToken();
+    // Send verification email (non-blocking — don't fail signup if email fails)
+    let emailSent = false;
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const { token, tokenHash } = generateMagicLinkToken();
 
-    const { error: tokenInsertError } = await supabase.from("verification_tokens").insert({
-      user_id: newUser.id,
-      type: "email",
-      token_hash: tokenHash,
-      expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 min
-    });
+      const { error: tokenInsertError } = await supabase.from("verification_tokens").insert({
+        user_id: newUser.id,
+        identifier: normalizedEmail,
+        type: "email",
+        token_hash: tokenHash,
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 min
+      });
 
-    if (tokenInsertError) {
-      console.error("[signup] Failed to insert verification token:", tokenInsertError.message);
+      if (tokenInsertError) {
+        console.error("[signup] Failed to insert verification token:", tokenInsertError.message);
+      }
+
+      const verifyUrl = `${appUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(normalizedEmail)}`;
+      const html = renderVerifyEmail({ name: name.trim(), verifyUrl });
+      const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@realtors360.com";
+
+      await sendEmail({
+        to: normalizedEmail,
+        from: `Magnate <${fromEmail}>`,
+        subject: "Verify your email — Magnate",
+        html,
+      });
+      emailSent = true;
+    } catch (emailErr) {
+      console.error("[signup] Verification email failed (non-blocking):", emailErr instanceof Error ? emailErr.message : emailErr);
     }
-
-    const verifyUrl = `${appUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(normalizedEmail)}`;
-    const html = renderVerifyEmail({ name: name.trim(), verifyUrl });
-    const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@realtors360.com";
-
-    await sendEmail({
-      to: normalizedEmail,
-      from: `Magnate <${fromEmail}>`,
-      subject: "Verify your email — Magnate",
-      html,
-    });
 
     return NextResponse.json({
       success: true,
-      requiresVerification: true,
+      requiresVerification: emailSent,
       user: {
         id: newUser.id,
         email: newUser.email,
         name: newUser.name,
         plan: "free",
       },
-      message: "Account created. Please check your email to verify.",
+      message: emailSent
+        ? "Account created. Please check your email to verify."
+        : "Account created. You can verify your email later from settings.",
     }, { status: 201 });
 
   } catch (err) {
