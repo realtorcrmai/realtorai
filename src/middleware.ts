@@ -24,6 +24,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/logo-") ||
     pathname === "/logo-animated.html" ||
+    pathname === "/white-rock-digital-twin.html" ||
+    pathname === "/three.min.js" ||
+    pathname === "/OrbitControls.js" ||
 
     // Auth API (NextAuth handles its own auth)
     pathname.startsWith("/api/auth") ||

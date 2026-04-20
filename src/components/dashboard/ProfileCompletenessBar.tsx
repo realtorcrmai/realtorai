@@ -10,7 +10,7 @@ interface Props {
   missing: string[]; // field keys that are incomplete
 }
 
-const FIELD_CONFIG: Record<string, { label: string; href: string; icon: React.ElementType }> = {
+const FIELD_CONFIG: Record<string, { label: string; href: string; icon: React.FC<{ className?: string }> }> = {
   name: { label: "Add your name", href: "/settings", icon: User },
   email_verified: { label: "Verify your email", href: "/verify", icon: Shield },
   phone_verified: { label: "Verify your phone", href: "/verify/phone", icon: Phone },

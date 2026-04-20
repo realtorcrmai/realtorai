@@ -11,7 +11,7 @@ type Relationship = "spouse" | "child" | "parent" | "sibling" | "other";
 const RELATIONSHIPS: {
   value: Relationship;
   label: string;
-  icon: React.ElementType;
+  icon: React.FC<{ className?: string }>;
   color: string;
   bg: string;
 }[] = [
@@ -22,7 +22,7 @@ const RELATIONSHIPS: {
   { value: "other",   label: "Other",             icon: User,   color: "text-slate-600",  bg: "bg-slate-50 border-slate-200" },
 ];
 
-const REL_STYLE: Record<Relationship, { icon: React.ElementType }> = {
+const REL_STYLE: Record<Relationship, { icon: React.FC<{ className?: string }> }> = {
   spouse:  { icon: Heart },
   child:   { icon: Baby },
   parent:  { icon: User },
