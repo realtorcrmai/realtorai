@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { titleCaseName } from "@/lib/format";
 
 /** Password strength: 0=empty, 1=weak, 2=medium, 3=strong (S12) */
@@ -16,18 +17,55 @@ function getPasswordStrength(pw: string): { level: number; label: string; color:
   return { level: 1, label: "Weak", color: "bg-red-500" };
 }
 
+// Cloudflare Turnstile site key — falls back gracefully if not set
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
+
 export default function SignupPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "taken" | "disposable">("idle");
   const emailCheckTimer = useRef<NodeJS.Timeout>(undefined);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const turnstileWidgetId = useRef<string | null>(null);
 
   const strength = useMemo(() => getPasswordStrength(password), [password]);
+
+  // Load Turnstile script
+  useEffect(() => {
+    if (!TURNSTILE_SITE_KEY) return;
+    if (document.getElementById("cf-turnstile-script")) return;
+
+    const script = document.createElement("script");
+    script.id = "cf-turnstile-script";
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad&render=explicit";
+    script.async = true;
+    document.head.appendChild(script);
+
+    (window as unknown as Record<string, unknown>).onTurnstileLoad = () => {
+      if (turnstileRef.current && (window as unknown as Record<string, { render: (el: HTMLElement, opts: Record<string, unknown>) => string }>).turnstile) {
+        turnstileWidgetId.current = (window as unknown as Record<string, { render: (el: HTMLElement, opts: Record<string, unknown>) => string }>).turnstile.render(turnstileRef.current, {
+          sitekey: TURNSTILE_SITE_KEY,
+          callback: (token: string) => setTurnstileToken(token),
+          "expired-callback": () => setTurnstileToken(null),
+          theme: "light",
+        });
+      }
+    };
+  }, []);
+
+  // Reset Turnstile after failed attempt
+  const resetTurnstile = useCallback(() => {
+    if (turnstileWidgetId.current && (window as unknown as Record<string, { reset: (id: string) => void }>).turnstile) {
+      (window as unknown as Record<string, { reset: (id: string) => void }>).turnstile.reset(turnstileWidgetId.current);
+      setTurnstileToken(null);
+    }
+  }, []);
 
   // Real-time email availability check with 500ms debounce (S10)
   useEffect(() => {
@@ -68,12 +106,23 @@ export default function SignupPage() {
       return;
     }
 
+    // Require Turnstile if configured
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      setError("Please complete the CAPTCHA verification");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          turnstileToken: turnstileToken || undefined,
+        }),
       });
 
       const data = await res.json();
@@ -81,37 +130,29 @@ export default function SignupPage() {
       if (!res.ok) {
         setError(data.error || "Signup failed");
         setLoading(false);
+        resetTurnstile();
         return;
       }
 
-      setSuccess(true);
+      // Sign in (creates session) then redirect to verify page
+      const signInResult = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-      // Auto sign in → redirect to personalization wizard
-      setTimeout(async () => {
-        await signIn("credentials", {
-          email,
-          password,
-          callbackUrl: "/personalize",
-        });
-      }, 1500);
+      if (signInResult?.ok) {
+        router.push("/verify");
+      } else {
+        // Account created but auto-sign-in failed — send to verify anyway
+        router.push("/verify");
+      }
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);
+      resetTurnstile();
     }
   };
-
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f4f2ff] to-[#e8e4ff]">
-        <div className="w-full max-w-md p-8 bg-white/90 backdrop-blur rounded-2xl shadow-lg text-center animate-float-in">
-          <div className="text-5xl mb-4">🎉</div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">Welcome, {name.split(" ")[0]}!</h1>
-          <p className="text-sm text-gray-600 mb-2">Your account is ready.</p>
-          <div className="animate-pulse text-primary text-sm">Setting up your workspace...</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-[#f4f2ff] to-[#e8e4ff]">
@@ -119,7 +160,7 @@ export default function SignupPage() {
       <div className="hidden lg:flex lg:w-[45%] flex-col justify-center px-12 py-16">
         <div className="max-w-md mx-auto">
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#4f35d2] to-[#ff5c3a] mb-6">
-            <span className="text-white text-xl font-bold">R</span>
+            <span className="text-white text-xl font-bold">M</span>
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-3">
             The AI-powered CRM built for BC realtors
@@ -166,7 +207,7 @@ export default function SignupPage() {
           {/* Mobile header */}
           <div className="lg:hidden text-center mb-6">
             <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#4f35d2] to-[#ff5c3a] mb-3">
-              <span className="text-white text-xl font-bold">R</span>
+              <span className="text-white text-xl font-bold">M</span>
             </div>
             <h1 className="text-2xl font-bold text-foreground">Get started free</h1>
             <p className="text-sm text-gray-500 mt-1">Free forever — upgrade anytime</p>
@@ -257,9 +298,16 @@ export default function SignupPage() {
               )}
             </div>
 
+            {/* Cloudflare Turnstile CAPTCHA */}
+            {TURNSTILE_SITE_KEY && (
+              <div className="flex justify-center">
+                <div ref={turnstileRef} />
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
               className="w-full py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-[#3d28a8] transition-colors disabled:opacity-50"
             >
               {loading ? "Creating account..." : "Create free account"}

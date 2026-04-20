@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hash } from "bcryptjs";
 import { getUserFeatures } from "@/lib/features";
+import { generateMagicLinkToken } from "@/lib/auth/verification";
+import { renderVerifyEmail } from "@/lib/auth/verify-email-template";
+import { verifyTurnstile } from "@/lib/auth/turnstile";
+import { sendEmail } from "@/lib/resend";
 
 // Rate limiter — in-memory Map, resets on server restart
 const rateMap = new Map<string, { count: number; resetAt: number }>();
@@ -26,7 +30,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, email, password } = body;
+    const { name, email, password, turnstileToken } = body;
 
     // Validation — only 3 required fields (S1)
     if (!name || typeof name !== "string" || name.trim().length < 2) {
@@ -37,6 +41,17 @@ export async function POST(request: NextRequest) {
     }
     if (!password || typeof password !== "string" || password.length < 8) {
       return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 422 });
+    }
+
+    // Turnstile CAPTCHA verification (fails open if not configured)
+    if (turnstileToken) {
+      const turnstileValid = await verifyTurnstile(turnstileToken, ip);
+      if (!turnstileValid) {
+        return NextResponse.json({ error: "CAPTCHA verification failed. Please try again." }, { status: 422 });
+      }
+    } else if (process.env.TURNSTILE_SECRET_KEY) {
+      // If Turnstile is configured but no token was sent, reject
+      return NextResponse.json({ error: "CAPTCHA verification required." }, { status: 422 });
     }
 
     const supabase = createAdminClient();
@@ -80,17 +95,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to create account. Please try again." }, { status: 500 });
     }
 
-    // Drip emails start AFTER email verification — see /api/auth/verify-email
+    // Send verification email
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const { token, tokenHash } = generateMagicLinkToken();
+
+    await supabase.from("verification_tokens").insert({
+      user_id: newUser.id,
+      type: "email",
+      token_hash: tokenHash,
+      expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 min
+    });
+
+    const verifyUrl = `${appUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(normalizedEmail)}`;
+    const html = renderVerifyEmail({ name: name.trim(), verifyUrl });
+    const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@realtors360.com";
+
+    await sendEmail({
+      to: normalizedEmail,
+      from: `Magnate <${fromEmail}>`,
+      subject: "Verify your email — Magnate",
+      html,
+    });
 
     return NextResponse.json({
       success: true,
+      requiresVerification: true,
       user: {
         id: newUser.id,
         email: newUser.email,
         name: newUser.name,
         plan: "free",
       },
-      message: "Account created successfully.",
+      message: "Account created. Please check your email to verify.",
     }, { status: 201 });
 
   } catch (err) {
