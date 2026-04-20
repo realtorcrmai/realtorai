@@ -31,6 +31,7 @@ export default function SignupPage() {
   const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "taken" | "disposable">("idle");
   const emailCheckTimer = useRef<NodeJS.Timeout>(undefined);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileReady, setTurnstileReady] = useState(false);
   const turnstileRef = useRef<HTMLDivElement>(null);
   const turnstileWidgetId = useRef<string | null>(null);
 
@@ -47,7 +48,14 @@ export default function SignupPage() {
     script.async = true;
     document.head.appendChild(script);
 
+    // If Turnstile script fails to load within 5s, allow form submission without it
+    const fallbackTimer = setTimeout(() => {
+      if (!turnstileWidgetId.current) setTurnstileReady(false);
+    }, 5000);
+
     (window as unknown as Record<string, unknown>).onTurnstileLoad = () => {
+      clearTimeout(fallbackTimer);
+      setTurnstileReady(true);
       if (turnstileRef.current && (window as unknown as Record<string, { render: (el: HTMLElement, opts: Record<string, unknown>) => string }>).turnstile) {
         turnstileWidgetId.current = (window as unknown as Record<string, { render: (el: HTMLElement, opts: Record<string, unknown>) => string }>).turnstile.render(turnstileRef.current, {
           sitekey: TURNSTILE_SITE_KEY,
@@ -57,6 +65,13 @@ export default function SignupPage() {
         });
       }
     };
+
+    script.onerror = () => {
+      clearTimeout(fallbackTimer);
+      setTurnstileReady(false);
+    };
+
+    return () => clearTimeout(fallbackTimer);
   }, []);
 
   // Reset Turnstile after failed attempt
@@ -106,8 +121,8 @@ export default function SignupPage() {
       return;
     }
 
-    // Require Turnstile if configured
-    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+    // Require Turnstile only if widget loaded successfully
+    if (turnstileReady && !turnstileToken) {
       setError("Please complete the CAPTCHA verification");
       return;
     }
@@ -298,16 +313,16 @@ export default function SignupPage() {
               )}
             </div>
 
-            {/* Cloudflare Turnstile CAPTCHA */}
+            {/* Cloudflare Turnstile CAPTCHA — hidden if script fails to load */}
             {TURNSTILE_SITE_KEY && (
-              <div className="flex justify-center">
+              <div className={`flex justify-center ${turnstileReady ? "" : "hidden"}`}>
                 <div ref={turnstileRef} />
               </div>
             )}
 
             <button
               type="submit"
-              disabled={loading || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
+              disabled={loading || (turnstileReady && !turnstileToken)}
               className="w-full py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-[#3d28a8] transition-colors disabled:opacity-50"
             >
               {loading ? "Creating account..." : "Create free account"}
