@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 // GET /api/tasks/[id]/activity — task activity log
 export async function GET(
@@ -19,8 +18,7 @@ export async function GET(
   const limit = Math.min(100, parseInt(req.nextUrl.searchParams.get("limit") || "50") || 50);
   const offset = parseInt(req.nextUrl.searchParams.get("offset") || "0") || 0;
 
-  const admin = createAdminClient();
-  const { data, error } = await admin
+  const { data, error } = await tc.raw
     .from("task_activity")
     .select("id, user_id, action, field_name, old_value, new_value, metadata, created_at")
     .eq("task_id", taskId)
@@ -33,7 +31,7 @@ export async function GET(
   const userIds = [...new Set((data ?? []).map((a) => a.user_id))];
   let nameMap = new Map<string, string>();
   if (userIds.length > 0) {
-    const { data: users } = await admin.from("users").select("id, name").in("id", userIds);
+    const { data: users } = await tc.raw.from("users").select("id, name").in("id", userIds);
     nameMap = new Map((users ?? []).map((u) => [u.id, u.name ?? "Unknown"]));
   }
 

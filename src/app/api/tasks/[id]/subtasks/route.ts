@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 // GET /api/tasks/[id]/subtasks
 export async function GET(
@@ -60,8 +59,7 @@ export async function POST(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const admin = createAdminClient();
-  await admin.from("task_activity").insert({
+  await tc.raw.from("task_activity").insert({
     task_id: parentId, user_id: tc.realtorId, action: "subtask_added",
     new_value: data.id, metadata: { subtask_title: title.trim() },
   });

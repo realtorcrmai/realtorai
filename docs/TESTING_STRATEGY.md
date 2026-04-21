@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 -->
 <!-- docs-audit: tests/**, scripts/test-*, vitest.config.ts -->
 <!-- last-verified: 2026-04-13 -->
 # Testing Strategy — Realtors360 CRM

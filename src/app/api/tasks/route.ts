@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
-import { createAdminClient } from "@/lib/supabase/admin";
+
 import { taskSchema } from "@/lib/schemas";
 import { PRIORITY_SORT_WEIGHT } from "@/lib/constants/tasks";
 import type { TaskPriority } from "@/lib/constants/tasks";
@@ -119,8 +119,7 @@ export async function GET(req: NextRequest) {
   const assigneeIds = [...new Set((data ?? []).map((t: Record<string, unknown>) => t.assigned_to as string).filter(Boolean))];
   let assigneeMap = new Map<string, { name: string; email: string }>();
   if (assigneeIds.length > 0) {
-    const admin = createAdminClient();
-    const { data: users } = await admin.from("users").select("id, name, email").in("id", assigneeIds);
+    const { data: users } = await tc.raw.from("users").select("id, name, email").in("id", assigneeIds);
     assigneeMap = new Map((users ?? []).map((u) => [u.id, { name: u.name ?? "", email: u.email }]));
   }
 
@@ -194,11 +193,10 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Activity log + notifications
-  const admin = createAdminClient();
-  await admin.from("task_activity").insert({ task_id: taskData.id, user_id: tc.realtorId, action: "created" });
+  await tc.raw.from("task_activity").insert({ task_id: taskData.id, user_id: tc.realtorId, action: "created" });
 
   if (parsed.data.assigned_to && parsed.data.assigned_to !== tc.realtorId) {
-    await admin.from("notifications").insert({
+    await tc.raw.from("notifications").insert({
       realtor_id: parsed.data.assigned_to,
       type: "task_assigned",
       title: "New task assigned to you",
@@ -254,7 +252,6 @@ export async function PATCH(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Log activity
-  const admin = createAdminClient();
   const activities: { task_id: string; user_id: string; action: string; field_name: string; old_value: string | null; new_value: string | null }[] = [];
   for (const [key, value] of Object.entries(updates)) {
     const oldVal = (current as Record<string, unknown>)[key];
@@ -271,11 +268,11 @@ export async function PATCH(req: NextRequest) {
       });
     }
   }
-  if (activities.length > 0) await admin.from("task_activity").insert(activities);
+  if (activities.length > 0) await tc.raw.from("task_activity").insert(activities);
 
   // Notify on reassignment
   if (updates.assigned_to && updates.assigned_to !== tc.realtorId && updates.assigned_to !== current.assigned_to) {
-    await admin.from("notifications").insert({
+    await tc.raw.from("notifications").insert({
       realtor_id: updates.assigned_to as string,
       type: "task_assigned",
       title: "Task assigned to you",

@@ -158,6 +158,11 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 │   │   │   ├── neighborhood/      # Mock neighbourhood comps
 │   │   │   ├── kling/status/      # Kling AI task polling
 │   │   │   ├── onboarding/nps/    # NPS survey submission endpoint
+│   │   │   ├── tasks/             # Task CRUD, bulk, export, templates, saved-filters
+│   │   │   ├── tasks/[id]/        # Single task detail, duplicate
+│   │   │   ├── tasks/[id]/activity/ # Task activity log
+│   │   │   ├── tasks/[id]/subtasks/ # Subtask CRUD
+│   │   │   ├── team-members/      # Team member listing
 │   │   │   └── webhooks/twilio/   # Inbound SMS/WhatsApp handler
 │   │   ├── globals.css            # Design system + Tailwind config
 │   │   └── layout.tsx             # Root layout (fonts, providers)

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 // GET /api/tasks/[id] — single task detail with subtasks, watchers, dependencies, activity
 export async function GET(
@@ -23,21 +22,19 @@ export async function GET(
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
-  const admin = createAdminClient();
-
   // Fetch subtasks, watchers, dependencies, activity, assignee in parallel
   const [subtasksRes, watchersRes, blockersRes, blockedByRes, activityRes, assigneeRes] = await Promise.all([
     tc.from("tasks").select("id, title, status, priority, due_date, assigned_to, position")
       .eq("parent_id", id).order("position").order("created_at"),
-    admin.from("task_watchers").select("user_id, users(name, email)").eq("task_id", id),
-    admin.from("task_dependencies").select("blocked_id, tasks!task_dependencies_blocked_id_fkey(id, title, status)")
+    tc.raw.from("task_watchers").select("user_id, users(name, email)").eq("task_id", id),
+    tc.raw.from("task_dependencies").select("blocked_id, tasks!task_dependencies_blocked_id_fkey(id, title, status)")
       .eq("blocker_id", id),
-    admin.from("task_dependencies").select("blocker_id, tasks!task_dependencies_blocker_id_fkey(id, title, status)")
+    tc.raw.from("task_dependencies").select("blocker_id, tasks!task_dependencies_blocker_id_fkey(id, title, status)")
       .eq("blocked_id", id),
-    admin.from("task_activity").select("id, user_id, action, field_name, old_value, new_value, metadata, created_at, users(name)")
+    tc.raw.from("task_activity").select("id, user_id, action, field_name, old_value, new_value, metadata, created_at, users(name)")
       .eq("task_id", id).order("created_at", { ascending: false }).limit(50),
     task.assigned_to
-      ? admin.from("users").select("id, name, email").eq("id", task.assigned_to).single()
+      ? tc.raw.from("users").select("id, name, email").eq("id", task.assigned_to).single()
       : Promise.resolve({ data: null }),
   ]);
 
@@ -86,8 +83,7 @@ export async function POST(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const admin = createAdminClient();
-  await admin.from("task_activity").insert({
+  await tc.raw.from("task_activity").insert({
     task_id: newTask.id, user_id: tc.realtorId, action: "duplicated",
     metadata: { source_id: id },
   });

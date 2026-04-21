@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 -->
 <!-- docs-audit: CONTRIBUTING.md, .env.local.example -->
 # Developer Sync — Post-Consolidation (2026-04-09)
 

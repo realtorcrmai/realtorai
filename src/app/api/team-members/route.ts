@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 // GET /api/team-members — list active team members for assignment pickers
 export async function GET() {
@@ -8,10 +7,8 @@ export async function GET() {
   try { tc = await getAuthenticatedTenantClient(); }
   catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
-  const admin = createAdminClient();
-
   // Get current user's team_id
-  const { data: currentUser } = await admin
+  const { data: currentUser } = await tc.raw
     .from("users")
     .select("id, name, email, team_id")
     .eq("id", tc.realtorId)
@@ -23,7 +20,7 @@ export async function GET() {
 
   // If user has a team, fetch all active team members
   if (currentUser.team_id) {
-    const { data: memberships } = await admin
+    const { data: memberships } = await tc.raw
       .from("tenant_memberships")
       .select("user_id, role, users(id, name, email)")
       .eq("tenant_id", currentUser.team_id)

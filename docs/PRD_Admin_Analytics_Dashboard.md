@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 -->
 <!-- docs-audit: src/app/(dashboard)/settings/*, src/app/api/admin/* -->
 # PRD: Super Admin Panel — Realtors360 Platform Administration
 

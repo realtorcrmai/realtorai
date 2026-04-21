@@ -123,7 +123,9 @@ realestate-crm/                  ← You are here (repo root)
 │   ├── app/                     # Next.js App Router pages + API routes
 │   │   ├── (auth)/login/        # Login page
 │   │   ├── (dashboard)/         # All authenticated pages
+│   │   │   └── settings/team/   # Team management page
 │   │   └── api/                 # API routes (webhooks, crons, REST)
+│   │       └── tasks/           # Task CRUD, templates, filters, export
 │   ├── actions/                 # Server actions (mutations)
 │   ├── components/              # React components
 │   │   ├── brand/               # Logo components (LogoIcon, LogoAnimated, etc.)
@@ -146,6 +148,7 @@ realestate-crm/                  ← You are here (repo root)
 ├── scripts/                     # Utility scripts (test, seed, eval)
 ├── tests/                       # Integration tests
 ├── docs/                        # Documentation
+├── .github/workflows/           # CI workflows (g1-pr.yml, g2-review.yml, g3-merge.yml)
 └── .vscode/                     # VS Code workspace settings
 ```
 
@@ -189,6 +192,9 @@ feature branch → PR → dev → PR → main (production)
 | Lint | `npx eslint .` | ✅ |
 | Build | `npm run build` | ✅ |
 | Python Syntax | Compiles voice agent files | ✅ |
+| G1 PR Gate (`g1-pr.yml`) | TypeScript + Lint + Build on PR open | ✅ |
+| G2 Review Gate (`g2-review.yml`) | Docs audit + test plan validation on review | ✅ |
+| G3 Merge Gate (`g3-merge.yml`) | Full test suite before merge to `dev`/`main` | ✅ |
 
 ---
 
