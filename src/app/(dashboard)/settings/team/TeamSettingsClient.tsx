@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
 import {
   inviteMember,
   updateMemberRole,
@@ -43,7 +42,7 @@ export default function TeamSettingsClient({
   currentRole,
 }: Props) {
   const router = useRouter();
-  const { update: updateSession } = useSession();
+
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<TeamRole>("agent");
   const [inviting, setInviting] = useState(false);
@@ -111,9 +110,8 @@ export default function TeamSettingsClient({
       setMessage({ type: "error", text: result.error });
       setLeaving(false);
     } else {
-      // Refresh JWT to clear team context, then hard-navigate to force full re-render.
-      // router.push to same URL may use cached RSC payload, so use window.location.
-      await updateSession();
+      // Hard-navigate to force full re-render. The JWT callback auto-detects
+      // membership changes when teamId is null, so the next request picks it up.
       window.location.href = "/settings/team";
     }
   };

@@ -255,9 +255,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // ============================================================
         // Team context: fetch membership if user has one
         // ============================================================
-        const shouldFetchTeam = token.userId && (
-          !("teamId" in token) || trigger === "signIn" || trigger === "update"
-        );
+        // Always re-check team membership — covers create, leave, kicked,
+        // and role changes without relying on updateSession(). Single indexed
+        // query on (agent_email, removed_at) so negligible cost.
+        const shouldFetchTeam = !!token.userId;
 
         if (shouldFetchTeam && token.email) {
           try {

@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
 import { createTeam } from "@/actions/team";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 export default function CreateTeamClient() {
-  const { update: updateSession } = useSession();
   const [teamName, setTeamName] = useState("");
   const [brokerageName, setBrokerageName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -29,10 +27,9 @@ export default function CreateTeamClient() {
       return;
     }
 
-    // Refresh the NextAuth JWT so teamId/teamRole are picked up,
-    // then hard-navigate to force a full server re-render with the new cookie.
-    // router.push to the same URL may use cached RSC payload, so use window.location.
-    await updateSession();
+    // Hard-navigate to force a full server re-render. The JWT callback
+    // auto-detects the new membership when teamId is null, so no session
+    // update call is needed — the next server request picks it up.
     window.location.href = "/settings/team";
   };
 
