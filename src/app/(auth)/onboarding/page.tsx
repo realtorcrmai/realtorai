@@ -77,6 +77,24 @@ export default function OnboardingPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Team creation flag from signup
+  const [wantsTeam] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("create_team") === "true";
+  });
+  const [teamName, setTeamName] = useState(() => {
+    // Default team name: "[User's Name]'s Team"
+    return "";
+  });
+  const [teamCreated, setTeamCreated] = useState(false);
+
+  // Auto-set team name from session name when available
+  useEffect(() => {
+    if (wantsTeam && session?.user?.name && !teamName) {
+      setTeamName(`${session.user.name}'s Team`);
+    }
+  }, [wantsTeam, session?.user?.name, teamName]);
+
   // Step 1: Headshot
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
@@ -302,15 +320,46 @@ export default function OnboardingPage() {
     goNext();
   };
 
-  // ── Step 7: Send team invites ──
-  const handleSendInvites = async () => {
-    const validEmails = inviteEmails.filter((e) => e.trim() && e.includes("@"));
-    if (validEmails.length === 0) return;
+  // ── Step 7: Create team (if opted in) + Send team invites ──
+  const handleCreateTeamAndInvite = async () => {
     setInviteSending(true);
-    await sendTeamInvite(validEmails);
+
+    // Create team first if user opted in and hasn't created yet
+    if (wantsTeam && !teamCreated && teamName.trim()) {
+      const { createTeam } = await import("@/actions/team");
+      const result = await createTeam({
+        name: teamName.trim(),
+        brokerage_name: brokerage || undefined,
+      });
+      if (result.error) {
+        setError(result.error);
+        setInviteSending(false);
+        return;
+      }
+      setTeamCreated(true);
+      await updateSession(); // Refresh session with new teamId
+    }
+
+    // Send invites
+    const validEmails = inviteEmails.filter((e) => e.trim() && e.includes("@"));
+    if (validEmails.length > 0) {
+      // Use the new team invite system if team was created
+      if (teamCreated || wantsTeam) {
+        const { inviteMember } = await import("@/actions/team");
+        for (const email of validEmails) {
+          await inviteMember({ email, role: "agent" });
+        }
+      } else {
+        await sendTeamInvite(validEmails);
+      }
+    }
+
     setInviteSending(false);
     setInviteSent(true);
   };
+
+  // Legacy alias for backward compat
+  const handleSendInvites = handleCreateTeamAndInvite;
 
   // ── Complete onboarding → go straight to dashboard with fireworks ──
   const completeOnboarding = async (destination: string) => {

@@ -224,8 +224,36 @@ export async function inviteMember(input: InviteMemberInput) {
     return { error: `Failed to create invite: ${inviteErr.message}` };
   }
 
-  // TODO: Send invite email via Resend (TeamInvite.tsx template)
-  // For now, log the token for testing
+  // Send invite email via Resend
+  try {
+    const { sendEmail } = await import("@/lib/resend");
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const inviteUrl = `${appUrl}/invite/accept?token=${token}`;
+    const teamName = team?.name || "a team";
+
+    await sendEmail({
+      to: input.email,
+      subject: `${session.name} invited you to join ${teamName} on Realtors360`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 40px 20px;">
+          <h1 style="color: #2D3E50; font-size: 24px; margin-bottom: 8px;">You're invited!</h1>
+          <p style="color: #555; font-size: 16px; line-height: 1.5;">
+            <strong>${session.name}</strong> has invited you to join <strong>${teamName}</strong> as a <strong>${input.role}</strong> on Realtors360.
+          </p>
+          <a href="${inviteUrl}" style="display: inline-block; background: #FF7A59; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; margin: 24px 0;">
+            Accept Invite
+          </a>
+          <p style="color: #999; font-size: 13px; margin-top: 24px;">
+            This invite expires in 30 days. If you didn't expect this, you can ignore it.
+          </p>
+        </div>
+      `,
+    });
+  } catch (emailErr) {
+    // Don't fail the invite if email fails — invite is still created
+    console.error("[team] Failed to send invite email:", emailErr);
+  }
+
   await logActivity(session.teamId, session.id, "member_invited", "invite", null, {
     email: input.email,
     role: input.role,
