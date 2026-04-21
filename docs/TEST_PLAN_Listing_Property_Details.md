@@ -1,3 +1,5 @@
+<!-- last-verified: 2026-04-20 -->
+<!-- test-count: 47 -->
 # Test Plan: Listing Property Details, Pagination, Soft Delete, Buyer FINTRAC & CMA
 
 ## Overview
