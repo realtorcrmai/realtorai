@@ -35,9 +35,9 @@ export default function TeamSettingsClient({ overview, currentUserId }: Props) {
     } else {
       setMessage({ type: "success", text: `Invite sent to ${inviteEmail}` });
       setInviteEmail("");
+      router.refresh();
     }
     setInviting(false);
-    router.refresh();
   };
 
   const handleRoleChange = async (membershipId: string, newRole: TeamRole) => {
