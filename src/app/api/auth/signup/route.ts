@@ -6,6 +6,7 @@ import { generateMagicLinkToken } from "@/lib/auth/verification";
 import { renderVerifyEmail } from "@/lib/auth/verify-email-template";
 import { verifyTurnstile } from "@/lib/auth/turnstile";
 import { sendEmail } from "@/lib/resend";
+import { isDisposableEmail } from "@/lib/auth/disposable-check";
 
 // Rate limiter — in-memory Map, resets on server restart
 const rateMap = new Map<string, { count: number; resetAt: number }>();
@@ -41,6 +42,11 @@ export async function POST(request: NextRequest) {
     }
     if (!password || typeof password !== "string" || password.length < 8) {
       return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 422 });
+    }
+
+    // Reject disposable/temporary email domains
+    if (isDisposableEmail(email)) {
+      return NextResponse.json({ error: "Temporary email services are not supported. Please use a permanent email." }, { status: 422 });
     }
 
     // Turnstile CAPTCHA verification (fails open if not configured)
