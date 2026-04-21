@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 --task-mgmt -->
 <!-- docs-audit: src/components/contacts/**, src/components/listings/**, src/components/showings/**, src/app/(dashboard)/** -->
 # Test Plan: UI/UX Sprint Changes
 
@@ -1152,3 +1153,6 @@
 ### Automation Coverage
 - **Automated (Playwright + Server Actions):** 81 of 101 test cases (80%)
 - **Manual only:** 20 of 101 test cases (20%) — screen reader tests, visual alignment checks, performance edge cases
+
+<!-- Last reviewed: 2026-04-21 -->
+

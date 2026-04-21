@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 --task-mgmt -->
 <!-- docs-audit: src/app/(dashboard)/settings/*, src/app/api/admin/* -->
 # Implementation Plan: Super Admin Panel
 
@@ -801,3 +802,4 @@ Phase 3:
 - [ ] Email KPIs match Resend dashboard numbers
 - [ ] Per-user email table shows bounce rate with red/amber/green status
 - [ ] System page links to Sentry and Vercel dashboard open correctly
+

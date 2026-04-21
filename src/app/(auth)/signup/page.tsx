@@ -225,7 +225,7 @@ export default function SignupPage() {
             <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#4f35d2] to-[#ff5c3a] mb-3">
               <span className="text-white text-xl font-bold">M</span>
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Get started free</h1>
+            <h2 className="text-2xl font-bold text-foreground">Get started free</h2>
             <p className="text-sm text-gray-500 mt-1">Free forever — upgrade anytime</p>
           </div>
 
@@ -242,8 +242,9 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+              <label htmlFor="signup-name" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
               <input
+                id="signup-name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -251,19 +252,22 @@ export default function SignupPage() {
                 placeholder="Sarah Johnson"
                 required
                 autoFocus
+                aria-describedby={error && error.includes("Name") ? "signup-error" : undefined}
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label htmlFor="signup-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input
+                id="signup-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onBlur={(e) => setEmail(e.target.value.trim().toLowerCase())}
                 placeholder="sarah@realty.ca"
                 required
+                aria-describedby={emailStatus === "disposable" || emailStatus === "taken" ? "email-status" : undefined}
                 className={`w-full px-4 py-2.5 rounded-lg border outline-none text-sm focus:ring-1 ${
                   emailStatus === "disposable" || emailStatus === "taken"
                     ? "border-red-300 focus:border-red-500 focus:ring-red-500"
@@ -271,10 +275,10 @@ export default function SignupPage() {
                 }`}
               />
               {emailStatus === "disposable" && (
-                <p className="text-xs text-red-500 mt-1">Please use a non-disposable email</p>
+                <p id="email-status" className="text-xs text-red-500 mt-1" role="alert">Please use a non-disposable email</p>
               )}
               {emailStatus === "taken" && (
-                <p className="text-xs text-red-500 mt-1">
+                <p id="email-status" className="text-xs text-red-500 mt-1" role="alert">
                   This email is already registered.{" "}
                   <Link href="/login" className="text-primary font-medium hover:underline">Sign in instead</Link>
                 </p>
@@ -285,19 +289,21 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <label htmlFor="signup-password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
               <input
+                id="signup-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Min 8 characters"
                 required
                 minLength={8}
+                aria-describedby={password.length > 0 ? "password-strength" : undefined}
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-sm"
               />
               {/* Password strength meter (S12) */}
               {password.length > 0 && (
-                <div className="mt-1.5 flex items-center gap-2">
+                <div id="password-strength" className="mt-1.5 flex items-center gap-2">
                   <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-300 ${strength.color}`}
@@ -341,7 +347,7 @@ export default function SignupPage() {
             </button>
 
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              <div id="signup-error" role="alert" aria-live="polite" className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
                 {error}
                 {error.includes("already exists") && (
                   <Link href="/login" className="block mt-1 text-primary font-medium hover:underline">

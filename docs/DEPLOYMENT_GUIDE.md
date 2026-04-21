@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 --task-mgmt -->
 <!-- docs-audit: vercel.json, .github/workflows/*, render.yaml -->
 # Deployment Guide — Realtors360
 
@@ -452,3 +453,6 @@ The logo animation system uses iframe-embedded HTML files served from `public/`.
 - Direct psql is blocked (IPv6-only DNS per 2026-04-02 compliance entries)
 - Use Supabase Management API or SQL Editor in dashboard
 - For local dev: `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`
+
+<!-- Last reviewed: 2026-04-21 -->
+

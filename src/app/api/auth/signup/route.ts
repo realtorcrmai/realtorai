@@ -6,6 +6,7 @@ import { generateMagicLinkToken } from "@/lib/auth/verification";
 import { renderVerifyEmail } from "@/lib/auth/verify-email-template";
 import { verifyTurnstile } from "@/lib/auth/turnstile";
 import { sendEmail } from "@/lib/resend";
+import { isDisposableEmail } from "@/lib/auth/disposable-check";
 
 // Rate limiter — in-memory Map, resets on server restart
 const rateMap = new Map<string, { count: number; resetAt: number }>();
@@ -43,6 +44,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 422 });
     }
 
+    // Reject disposable/temporary email domains
+    if (isDisposableEmail(email)) {
+      return NextResponse.json({ error: "Temporary email services are not supported. Please use a permanent email." }, { status: 422 });
+    }
+
     // Turnstile CAPTCHA verification (fails open if not configured)
     if (turnstileToken) {
       const turnstileValid = await verifyTurnstile(turnstileToken, ip);
@@ -54,7 +60,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "CAPTCHA verification required." }, { status: 422 });
     }
 
-    const supabase = createAdminClient();
+    // Admin client required — no authenticated session exists during signup
+    const supabase = createAdminClient();  
     const normalizedEmail = email.toLowerCase().trim();
 
     // Check if email already exists
@@ -101,16 +108,16 @@ export async function POST(request: NextRequest) {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
       const { token, tokenHash } = generateMagicLinkToken();
 
-      const { error: tokenInsertError } = await supabase.from("verification_tokens").insert({
+      const tokenPayload = {
         user_id: newUser.id,
         identifier: normalizedEmail,
         type: "email",
         token_hash: tokenHash,
         expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 min
-      });
-
-      if (tokenInsertError) {
-        console.error("[signup] Failed to insert verification token:", tokenInsertError.message);
+      };
+      const { error } = await supabase.from("verification_tokens").insert(tokenPayload);
+      if (error) {
+        console.error("[signup] Failed to insert verification token:", error.message);
       }
 
       const verifyUrl = `${appUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(normalizedEmail)}`;

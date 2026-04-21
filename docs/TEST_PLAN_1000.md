@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 -->
 <!-- docs-audit: scripts/test-suite.sh, src/** -->
 <!-- last-verified: 2026-04-13 -->
 # Realtors360 CRM — Production Test Plan (1000+ Test Cases)
@@ -1809,6 +1810,81 @@ Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. Thi
 **Expected:** POST returns 201 with comment object. GET returns array of comments for that task. Requires auth session. Respects tenant isolation.
 **Priority:** P2
 
+#### API-TASKS-003: GET /api/tasks/saved-filters returns saved filter presets
+**Steps:** `GET /api/tasks/saved-filters` with valid session.
+**Expected:** 200 with array of saved filter objects (each with id, name, filter criteria). Returns 401 without session. Respects tenant isolation.
+**Priority:** P2
+
+#### API-TASKS-004: GET /api/tasks/saved-filters requires auth
+**Steps:** `GET /api/tasks/saved-filters` without session.
+**Expected:** 401 Unauthorized.
+**Priority:** P1
+
+#### API-TASKS-005: GET /api/tasks/saved-filters handles empty state
+**Steps:** `GET /api/tasks/saved-filters` with valid session and no saved filters.
+**Expected:** 200 with empty array `[]`.
+**Priority:** P2
+
+#### API-TASKS-006: GET /api/tasks/templates returns task templates
+**Steps:** `GET /api/tasks/templates` with valid session.
+**Expected:** 200 with array of task template objects (id, name, default_status, default_priority, checklist). Returns 401 without session.
+**Priority:** P2
+
+#### API-TASKS-007: POST /api/tasks/templates creates a task template
+**Steps:** `POST /api/tasks/templates` with `{ name: "Follow-up Call", default_priority: "high", checklist: ["Call client", "Update notes"] }` and valid session.
+**Expected:** 201 with created template object. Returns 400 for missing name. Returns 401 without session.
+**Priority:** P2
+
+#### API-TASKS-008: POST /api/tasks/templates rejects invalid payload
+**Steps:** `POST /api/tasks/templates` with `{}` (missing name) and valid session.
+**Expected:** 400 with validation error. Template not created.
+**Priority:** P2
+
+#### API-TASKS-009: GET /api/tasks/export returns CSV export
+**Steps:** `GET /api/tasks/export` with valid session.
+**Expected:** 200 with CSV content (Content-Type: text/csv). Includes all tasks for tenant. Returns 401 without session.
+**Priority:** P2
+
+#### API-TASKS-010: GET /api/tasks/export requires auth
+**Steps:** `GET /api/tasks/export` without session.
+**Expected:** 401 Unauthorized.
+**Priority:** P1
+
+#### API-TASKS-011: GET /api/tasks/export handles no tasks
+**Steps:** `GET /api/tasks/export` with valid session and no tasks in DB.
+**Expected:** 200 with CSV header row only (no data rows).
+**Priority:** P3
+
+#### API-TASKS-012: GET /api/tasks/:id/activity returns task activity log
+**Steps:** `GET /api/tasks/{valid_task_id}/activity` with valid session.
+**Expected:** 200 with array of activity entries (created, status changes, comments, assignments) sorted by timestamp desc. Returns 401 without session. Returns 404 for invalid task id.
+**Priority:** P1
+
+#### API-TASKS-013: GET /api/tasks/:id/activity requires auth
+**Steps:** `GET /api/tasks/{valid_task_id}/activity` without session.
+**Expected:** 401 Unauthorized.
+**Priority:** P1
+
+#### API-TASKS-014: GET /api/tasks/:id/activity returns 404 for missing task
+**Steps:** `GET /api/tasks/00000000-0000-0000-0000-000000000000/activity` with valid session.
+**Expected:** 404 Not Found.
+**Priority:** P2
+
+#### API-TASKS-015: GET /api/tasks/:id/subtasks returns subtasks
+**Steps:** `GET /api/tasks/{valid_task_id}/subtasks` with valid session.
+**Expected:** 200 with array of subtask objects (id, title, status, parent_id). Returns 401 without session. Returns 404 for invalid parent task id.
+**Priority:** P1
+
+#### API-TASKS-016: POST /api/tasks/:id/subtasks creates a subtask
+**Steps:** `POST /api/tasks/{valid_task_id}/subtasks` with `{ title: "Sub item", status: "todo" }` and valid session.
+**Expected:** 201 with created subtask linked to parent. Returns 400 for missing title. Returns 404 for invalid parent task id. Returns 401 without session.
+**Priority:** P1
+
+#### API-TASKS-017: POST /api/tasks/:id/subtasks rejects invalid parent
+**Steps:** `POST /api/tasks/00000000-0000-0000-0000-000000000000/subtasks` with `{ title: "Sub item" }` and valid session.
+**Expected:** 404 Not Found — parent task does not exist.
+**Priority:** P2
+
 #### API-BRAND-001: GET/PUT /api/settings/brand-profile manages brand settings
 **Steps:** `GET /api/settings/brand-profile` with valid session. `PUT /api/settings/brand-profile` with brand data.
 **Expected:** GET returns current brand profile or empty. PUT updates and returns 200. Requires auth session.
@@ -3008,3 +3084,4 @@ Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. Thi
 **Steps:** Trigger with Bearer CRON_SECRET header.
 **Expected:** Flags contacts with no activity past threshold as dormant. Creates notifications.
 **Priority:** P2
+

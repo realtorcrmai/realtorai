@@ -6,7 +6,7 @@ import { OnboardingBanner } from "@/components/dashboard/OnboardingBanner";
 import { WelcomeConfetti } from "@/components/dashboard/WelcomeConfetti";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import type { FeedItem } from "@/components/dashboard/ActivityFeed";
-import TodaysPriorities from "@/components/dashboard/TodaysPriorities";
+
 import DashboardPipelineWidget from "@/components/dashboard/DashboardPipelineWidget";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -253,7 +253,7 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        <WelcomeConfetti />
+        <WelcomeConfetti userName={userName} />
         <OnboardingBanner />
 
         {/* New agent guidance — shows for new_agent persona or < 1 year experience */}
@@ -283,13 +283,18 @@ export default async function DashboardPage() {
         {/* Pipeline */}
         <PipelineSnapshot stages={pipelineStages} totalGCI={totalGCI} />
 
-        {/* Priorities */}
-        <TodaysPriorities
-          overdueTasks={overdueTasks}
-          hotLeads={hotLeadsCount}
+        {/* Calendar, Schedule & AI Brief (includes priorities) */}
+        <DashboardShell
+          initialTasks={clientTasks}
           pendingShowings={pendingShowings ?? 0}
-          missingDocs={listingsWithMissing.length}
-          confirmedThisWeek={confirmedThisWeek?.length ?? 0}
+          activeListings={activeListings ?? 0}
+          priorities={[
+            { icon: "\uD83D\uDD34", label: "overdue", count: overdueTasks, href: "/tasks" },
+            { icon: "\uD83D\uDFE1", label: "pending showings", count: pendingShowings ?? 0, href: "/showings" },
+            { icon: "\uD83D\uDD25", label: "hot leads", count: hotLeadsCount, href: "/contacts" },
+            { icon: "\uD83D\uDCCB", label: "missing docs", count: listingsWithMissing.length, href: "/listings" },
+            { icon: "\u2705", label: "confirmed this week", count: confirmedThisWeek?.length ?? 0, href: "/showings?status=confirmed" },
+          ]}
         />
 
         {/* Activity Feed + Deal Pipeline */}
@@ -297,13 +302,6 @@ export default async function DashboardPage() {
           <ActivityFeed items={feedItems} />
           <DashboardPipelineWidget deals={pipelineDeals} />
         </div>
-
-        {/* Command Center */}
-        <DashboardShell
-          initialTasks={clientTasks}
-          pendingShowings={pendingShowings ?? 0}
-          activeListings={activeListings ?? 0}
-        />
       </div>
     </>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,242 +8,263 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+
 } from "@/components/ui/dialog";
-import { Plus, Clock, ListTodo, CheckCheck } from "lucide-react";
+import {
+  Plus, ListTodo, CheckCheck, LayoutGrid, CalendarDays,
+  List, Download, Archive, UserPlus, Flag,
+  Search, SlidersHorizontal, X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { TaskForm } from "@/components/tasks/TaskForm";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { TaskPipeline } from "@/components/tasks/TaskPipeline";
+import { TaskKanbanBoard } from "@/components/tasks/TaskKanbanBoard";
+import { TaskCalendarView } from "@/components/tasks/TaskCalendarView";
+import { TaskFiltersBar } from "@/components/tasks/TaskFiltersBar";
 import { PageHeader } from "@/components/layout/PageHeader";
-
-type Task = {
-  id: string;
-  title: string;
-  description: string | null;
-  status: "pending" | "in_progress" | "completed";
-  priority: "low" | "medium" | "high" | "urgent";
-  category: string;
-  due_date: string | null;
-  contact_id: string | null;
-  listing_id: string | null;
-  created_at: string;
-  completed_at: string | null;
-  contacts: { name: string } | null;
-  listings: { address: string } | null;
-};
+import { useTasks, useTeamMembers } from "@/hooks/useTasks";
+import { Input } from "@/components/ui/input";
+import type { TaskViewMode } from "@/lib/constants/tasks";
 
 export default function TasksPage() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { tasks, pagination, loading, filters, updateFilters, refresh } = useTasks({ parent_id: "null" });
+  const { members } = useTeamMembers();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<TaskViewMode>("list");
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
 
-  const fetchTasks = useCallback(async () => {
-    try {
-      const resp = await fetch("/api/tasks");
-      const data = await resp.json();
-      setTasks(Array.isArray(data) ? data : []);
-    } catch {
-      setTasks([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // Debounced search
   useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    const timeout = setTimeout(() => updateFilters({ search: searchValue || undefined }), 300);
+    return () => clearTimeout(timeout);
+  }, [searchValue, updateFilters]);
 
-  // Clear selection whenever tasks reload
-  useEffect(() => {
-    setSelectedIds(new Set());
-  }, [tasks]);
+  // Clear selection on data change
+  useEffect(() => { setSelectedIds(new Set()); }, [tasks]);
 
-  // Sort: overdue first, then by priority, then by due date
-  const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
-  const sortedTasks = [...tasks].sort((a, b) => {
-    // Completed always last
-    if (a.status === "completed" && b.status !== "completed") return 1;
-    if (a.status !== "completed" && b.status === "completed") return -1;
-
-    // Overdue first
-    const today = new Date().toISOString().split("T")[0];
-    const aOverdue = a.due_date && a.due_date < today && a.status !== "completed";
-    const bOverdue = b.due_date && b.due_date < today && b.status !== "completed";
-    if (aOverdue && !bOverdue) return -1;
-    if (!aOverdue && bOverdue) return 1;
-
-    // By priority
-    const aPri = priorityOrder[a.priority] ?? 2;
-    const bPri = priorityOrder[b.priority] ?? 2;
-    if (aPri !== bPri) return aPri - bPri;
-
-    // By due date
-    if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
-    if (a.due_date) return -1;
-    if (b.due_date) return 1;
-
-    return 0;
-  });
-
-  // Only non-completed tasks are selectable
-  const selectableTasks = sortedTasks.filter((t) => t.status !== "completed");
-  const allSelected =
-    selectableTasks.length > 0 && selectedIds.size === selectableTasks.length;
+  const selectableTasks = tasks.filter((t) => t.status !== "completed");
+  const allSelected = selectableTasks.length > 0 && selectedIds.size === selectableTasks.length;
   const someSelected = selectedIds.size > 0;
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
   }
 
-  function toggleSelectAll() {
-    if (allSelected) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(selectableTasks.map((t) => t.id)));
-    }
-  }
-
-  async function bulkComplete() {
+  const handleBulkAction = useCallback(async (action: string, value?: string) => {
     if (selectedIds.size === 0) return;
     setBulkLoading(true);
     try {
       const resp = await fetch("/api/tasks/bulk-complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+        body: JSON.stringify({ ids: Array.from(selectedIds), action, value }),
       });
-      if (!resp.ok) throw new Error("Failed to bulk complete");
+      if (!resp.ok) throw new Error("Failed");
       const result = await resp.json();
-      toast.success(
-        `${result.updated ?? selectedIds.size} task${selectedIds.size !== 1 ? "s" : ""} marked complete`
-      );
+      toast.success(`${result.updated ?? selectedIds.size} task(s) updated`);
       setSelectedIds(new Set());
-      fetchTasks();
+      refresh();
     } catch {
-      toast.error("Failed to mark tasks complete");
+      toast.error("Bulk action failed");
     } finally {
       setBulkLoading(false);
     }
+  }, [selectedIds, refresh]);
+
+  function exportCSV() {
+    const params = new URLSearchParams();
+    if (filters.status) params.set("status", filters.status);
+    window.open(`/api/tasks/export?${params}`, "_blank");
   }
+
+  const activeFilterCount = [
+    filters.status, filters.priority, filters.category,
+    filters.assigned_to, filters.scope, filters.labels,
+    filters.due_date_from, filters.due_date_to,
+  ].filter(Boolean).length;
 
   return (
     <>
-    <PageHeader
-      title="Tasks"
-      subtitle={loading ? "Loading..." : `${tasks.length} tasks`}
-      actions={
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger
-            render={
-              <Button className="bg-brand text-white hover:bg-brand-dark">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Task
-              </Button>
-            }
-          />
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Create New Task</DialogTitle>
-            </DialogHeader>
-            <TaskForm
-              onSuccess={() => {
-                setDialogOpen(false);
-                fetchTasks();
-              }}
-              onCancel={() => setDialogOpen(false)}
+      <PageHeader
+        title="Tasks"
+        subtitle={loading ? "Loading..." : `${pagination.total} tasks`}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={exportCSV} title="Export CSV">
+              <Download className="h-4 w-4" />
+            </Button>
+
+            {/* View toggle */}
+            <div className="flex items-center border rounded-lg overflow-hidden">
+              {(["list", "board", "calendar"] as TaskViewMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className={`p-2 transition-colors ${viewMode === mode ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                  title={`${mode.charAt(0).toUpperCase() + mode.slice(1)} view`}
+                >
+                  {mode === "list" ? <List className="h-4 w-4" /> :
+                   mode === "board" ? <LayoutGrid className="h-4 w-4" /> :
+                   <CalendarDays className="h-4 w-4" />}
+                </button>
+              ))}
+            </div>
+
+            <Button className="bg-brand text-white hover:bg-brand/90" onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Task
+            </Button>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogContent className="sm:max-w-[560px]">
+                <DialogHeader>
+                  <DialogTitle>Create New Task</DialogTitle>
+                </DialogHeader>
+                <TaskForm
+                  teamMembers={members}
+                  onSuccess={() => { setDialogOpen(false); refresh(); }}
+                  onCancel={() => setDialogOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
+        }
+      />
+
+      <div className="p-6 space-y-4">
+        {/* Search + Filter bar */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search tasks..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              className="pl-9 h-9"
+              aria-label="Search tasks"
             />
-          </DialogContent>
-        </Dialog>
-      }
-    />
-    <div className="p-6 space-y-6">
-      {/* Pipeline overview */}
-      <TaskPipeline tasks={tasks} />
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <ListTodo className="h-4 w-4" />
-            All Tasks
-            <span className="text-muted-foreground font-normal text-sm">
-              ({sortedTasks.length})
-            </span>
-            {!loading && selectableTasks.length > 0 && (
-              <button
-                onClick={toggleSelectAll}
-                className="ml-auto text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {allSelected ? "Deselect all" : "Select all"}
+            {searchValue && (
+              <button onClick={() => setSearchValue("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2">
+                <X className="h-4 w-4 text-muted-foreground" />
               </button>
             )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {loading && (
-            <div className="text-center py-8">
-              <Clock className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2 animate-spin" />
-              <p className="text-sm text-muted-foreground">Loading tasks...</p>
-            </div>
-          )}
+          </div>
 
-          {!loading && sortedTasks.length === 0 && (
-            <div className="text-center py-8">
-              <ListTodo className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No tasks yet</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">
-                Create a task to start organizing your day
-              </p>
-            </div>
-          )}
-
-          {sortedTasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onUpdate={fetchTasks}
-              isSelected={selectedIds.has(task.id)}
-              onToggleSelect={task.status !== "completed" ? toggleSelect : undefined}
-            />
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* Floating bulk action bar */}
-      {someSelected && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-4 py-2 rounded-xl shadow-xl bg-card border border-border">
-          <span className="text-sm font-medium text-muted-foreground">
-            {selectedIds.size} selected
-          </span>
           <Button
+            variant={showFilters ? "default" : "outline"}
             size="sm"
-            variant="outline"
-            onClick={() => setSelectedIds(new Set())}
-            disabled={bulkLoading}
+            onClick={() => setShowFilters(!showFilters)}
           >
-            Clear
+            <SlidersHorizontal className="h-4 w-4 mr-1.5" />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-brand text-white rounded-full">
+                {activeFilterCount}
+              </span>
+            )}
           </Button>
-          <Button
-            size="sm"
-            onClick={bulkComplete}
-            disabled={bulkLoading}
-            className="bg-brand hover:bg-brand-dark text-white"
-          >
-            <CheckCheck className="h-4 w-4 mr-1.5" />
-            {bulkLoading ? "Completing..." : "Mark Complete"}
-          </Button>
+
+          {selectableTasks.length > 0 && viewMode === "list" && (
+            <button
+              onClick={() => setSelectedIds(allSelected ? new Set() : new Set(selectableTasks.map((t) => t.id)))}
+              className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {allSelected ? "Deselect all" : "Select all"}
+            </button>
+          )}
         </div>
-      )}
-    </div>
+
+        {showFilters && (
+          <TaskFiltersBar filters={filters} onUpdate={updateFilters} teamMembers={members} />
+        )}
+
+        <TaskPipeline tasks={tasks} />
+
+        {/* View content */}
+        {viewMode === "list" && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <ListTodo className="h-4 w-4" />
+                All Tasks
+                <span className="text-muted-foreground font-normal text-sm">({pagination.total})</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {loading && (
+                <div className="text-center py-8">
+                  <div className="h-8 w-8 mx-auto mb-2 rounded-full border-2 border-muted-foreground/30 border-t-brand animate-spin" />
+                  <p className="text-sm text-muted-foreground">Loading tasks...</p>
+                </div>
+              )}
+              {!loading && tasks.length === 0 && (
+                <div className="text-center py-8">
+                  <ListTodo className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No tasks found</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">
+                    {activeFilterCount > 0 ? "Try adjusting your filters" : "Create a task to get started"}
+                  </p>
+                </div>
+              )}
+              {tasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onUpdate={refresh}
+                  isSelected={selectedIds.has(task.id)}
+                  onToggleSelect={task.status !== "completed" ? toggleSelect : undefined}
+                  teamMembers={members}
+                />
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {viewMode === "board" && <TaskKanbanBoard tasks={tasks} onUpdate={refresh} teamMembers={members} />}
+        {viewMode === "calendar" && <TaskCalendarView tasks={tasks} onUpdate={refresh} />}
+
+        {/* Pagination */}
+        {pagination.total_pages > 1 && (
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <Button variant="outline" size="sm" disabled={pagination.page <= 1}
+              onClick={() => updateFilters({ page: pagination.page - 1 })}>
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {pagination.page} of {pagination.total_pages}
+            </span>
+            <Button variant="outline" size="sm" disabled={pagination.page >= pagination.total_pages}
+              onClick={() => updateFilters({ page: pagination.page + 1 })}>
+              Next
+            </Button>
+          </div>
+        )}
+
+        {/* Bulk action bar */}
+        {someSelected && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 rounded-xl shadow-xl bg-card border border-border">
+            <span className="text-sm font-medium text-muted-foreground">{selectedIds.size} selected</span>
+            <Button size="sm" variant="outline" onClick={() => setSelectedIds(new Set())} disabled={bulkLoading}>Clear</Button>
+            <Button size="sm" onClick={() => handleBulkAction("complete")} disabled={bulkLoading} className="bg-brand hover:bg-brand/90 text-white">
+              <CheckCheck className="h-4 w-4 mr-1.5" />Complete
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => handleBulkAction("archive")} disabled={bulkLoading}>
+              <Archive className="h-4 w-4 mr-1.5" />Archive
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => handleBulkAction("delete")} disabled={bulkLoading} className="text-destructive hover:text-destructive">
+              Delete
+            </Button>
+          </div>
+        )}
+      </div>
     </>
   );
 }

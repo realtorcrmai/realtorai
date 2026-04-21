@@ -70,6 +70,7 @@ const TEST_PLANS = [
   "docs/TESTPLAN_Browser_UX.md",
   "docs/TEST_NEWSLETTER_INTEGRATION.md",
   "docs/TESTING_STRATEGY.md",
+  "docs/TEST_PLAN_Listing_Property_Details.md",
 ].filter(p => exists(p));
 
 const planContents = {};

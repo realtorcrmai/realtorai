@@ -43,10 +43,20 @@ interface BrandProfile {
   headshot_url: string | null;
 }
 
+const TABS = [
+  { id: "personal", label: "Personal", icon: "👤" },
+  { id: "professional", label: "Professional", icon: "💼" },
+  { id: "online", label: "Online & Social", icon: "🌐" },
+  { id: "compliance", label: "Compliance", icon: "📋" },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
+
 export function ProfileForm({ user, brandProfile }: { user: UserProfile; brandProfile: BrandProfile | null }) {
   const router = useRouter();
   const { update: updateSession } = useSession();
   const fileRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState<TabId>("personal");
 
   // Personal info
   const [name, setName] = useState(user.name || "");
@@ -134,7 +144,6 @@ export function ProfileForm({ user, brandProfile }: { user: UserProfile; brandPr
     setMessage(null);
 
     try {
-      // Save user profile
       const profileRes = await fetch("/api/settings/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -159,7 +168,6 @@ export function ProfileForm({ user, brandProfile }: { user: UserProfile; brandPr
         return;
       }
 
-      // Save brand profile
       const brandRes = await fetch("/api/settings/brand-profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -197,272 +205,311 @@ export function ProfileForm({ user, brandProfile }: { user: UserProfile; brandPr
 
   return (
     <div className="space-y-6">
-      {/* Avatar section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Profile Photo</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-6">
-            <div className="relative group">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt={name} className="h-24 w-24 rounded-full object-cover ring-2 ring-border" />
-              ) : (
-                <div className="h-24 w-24 rounded-full bg-primary/15 text-primary flex items-center justify-center text-2xl font-bold ring-2 ring-border">
-                  {initials}
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
-                className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-              >
-                {uploading ? (
-                  <Loader2 className="h-6 w-6 text-white animate-spin" />
-                ) : (
-                  <Camera className="h-6 w-6 text-white" />
-                )}
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handleAvatarUpload}
-                className="hidden"
-              />
-            </div>
-            <div>
-              <p className="text-sm font-medium">Upload a new photo</p>
-              <p className="text-xs text-muted-foreground mt-1">JPG, PNG, or WebP. Max 5MB.</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-2"
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
-              >
-                {uploading ? "Uploading..." : "Choose File"}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Personal info */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Personal Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="name">Full Name</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" value={user.email} disabled className="bg-muted/50" />
-              <p className="text-[11px] text-muted-foreground mt-1">Email cannot be changed</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 (604) 555-0123" />
-            </div>
-            <div>
-              <Label htmlFor="timezone">Timezone</Label>
-              <select
-                id="timezone"
-                value={timezone}
-                onChange={(e) => setTimezone(e.target.value)}
-                className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm"
-              >
-                <option value="America/Vancouver">Pacific (Vancouver)</option>
-                <option value="America/Edmonton">Mountain (Edmonton)</option>
-                <option value="America/Winnipeg">Central (Winnipeg)</option>
-                <option value="America/Toronto">Eastern (Toronto)</option>
-                <option value="America/Halifax">Atlantic (Halifax)</option>
-                <option value="America/Los_Angeles">Pacific (Los Angeles)</option>
-                <option value="America/New_York">Eastern (New York)</option>
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="spouse">Spouse / Partner</Label>
-              <Input id="spouse" value={spouseName} onChange={(e) => setSpouseName(e.target.value)} placeholder="Optional" />
-            </div>
-            <div>
-              <Label htmlFor="kids">Number of Kids</Label>
-              <select
-                id="kids"
-                value={kidsCount}
-                onChange={(e) => setKidsCount(e.target.value)}
-                className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm"
-              >
-                <option value="">Not specified</option>
-                <option value="0">No kids</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4+</option>
-              </select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Professional info */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Professional Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="brokerage">Brokerage</Label>
-              <Input id="brokerage" value={brokerage} onChange={(e) => setBrokerage(e.target.value)} placeholder="RE/MAX City Realty" />
-            </div>
-            <div>
-              <Label htmlFor="license">License Number</Label>
-              <Input id="license" value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} placeholder="PREC #12345" />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="displayName">Display Name</Label>
-              <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Jazz Grewal, PREC*" />
-              <p className="text-[11px] text-muted-foreground mt-1">Shown in emails and newsletters</p>
-            </div>
-            <div>
-              <Label htmlFor="title">Title</Label>
-              <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="REALTOR®" />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="bio">Bio</Label>
-            <Textarea
-              id="bio"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Tell clients about your experience, specialties, and what makes you different..."
-              rows={4}
-            />
-            <p className="text-[11px] text-muted-foreground mt-1">Shown on your client-facing profiles and newsletters</p>
-          </div>
-          <div>
-            <Label htmlFor="tagline">Tagline</Label>
-            <Input id="tagline" value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="Your trusted Vancouver REALTOR" />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Service Areas */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Service Areas</CardTitle>
-          <CardDescription>Where you work — shown in newsletters and on your website</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {serviceAreas.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {serviceAreas.map((area) => (
-                <span key={area} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-sm rounded-full">
-                  {area}
-                  <button onClick={() => removeServiceArea(area)} className="hover:text-destructive" aria-label={`Remove ${area}`}>
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
+      {/* Profile Header — Avatar + Name + Email (always visible) */}
+      <div className="flex items-center gap-5">
+        <div className="relative group shrink-0">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={name} className="h-20 w-20 rounded-full object-cover ring-2 ring-border" />
+          ) : (
+            <div className="h-20 w-20 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xl font-bold ring-2 ring-border">
+              {initials}
             </div>
           )}
-          <div className="flex gap-2">
-            <Input
-              value={newArea}
-              onChange={(e) => setNewArea(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addServiceArea(); } }}
-              placeholder="Add area (e.g. South Surrey)"
-              className="flex-1"
-            />
-            <Button variant="outline" size="sm" onClick={addServiceArea} disabled={!newArea.trim()}>
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+          >
+            {uploading ? (
+              <Loader2 className="h-5 w-5 text-white animate-spin" />
+            ) : (
+              <Camera className="h-5 w-5 text-white" />
+            )}
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleAvatarUpload}
+            className="hidden"
+          />
+        </div>
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold text-foreground truncate">{name || "Your Name"}</h2>
+          <p className="text-sm text-muted-foreground">{user.email}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-1 h-7 px-2 text-xs"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? "Uploading..." : "Change Photo"}
+          </Button>
+        </div>
+      </div>
 
-      {/* Online Presence */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Online Presence</CardTitle>
-          <CardDescription>Your website and social media links</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="website">Website</Label>
-            <Input id="website" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://yoursite.ca" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="instagram">Instagram</Label>
-              <Input id="instagram" value={instagramUrl} onChange={(e) => setInstagramUrl(e.target.value)} placeholder="https://instagram.com/yourhandle" />
-            </div>
-            <div>
-              <Label htmlFor="facebook">Facebook</Label>
-              <Input id="facebook" value={facebookUrl} onChange={(e) => setFacebookUrl(e.target.value)} placeholder="https://facebook.com/yourpage" />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="linkedin">LinkedIn</Label>
-              <Input id="linkedin" value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="https://linkedin.com/in/you" />
-            </div>
-            <div>
-              <Label htmlFor="twitter">X (Twitter)</Label>
-              <Input id="twitter" value={twitterUrl} onChange={(e) => setTwitterUrl(e.target.value)} placeholder="https://x.com/yourhandle" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Tab Navigation */}
+      <div className="border-b border-border" role="tablist" aria-label="Profile sections">
+        <div className="flex gap-0 -mb-px overflow-x-auto">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === tab.id
+                  ? "border-brand text-brand"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+              }`}
+            >
+              <span>{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {/* CASL / Email Compliance */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Email Compliance (CASL)</CardTitle>
-          <CardDescription>Required for sending newsletters and marketing emails</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="address">Physical Address</Label>
-            <Input id="address" value={physicalAddress} onChange={(e) => setPhysicalAddress(e.target.value)} placeholder="123 Main St, Vancouver BC V6B 1A1" />
-            <p className="text-[11px] text-muted-foreground mt-1">Required by CASL in every commercial email footer</p>
-          </div>
-          <div>
-            <Label htmlFor="brandColor">Brand Color</Label>
-            <div className="flex items-center gap-3">
-              <input
-                id="brandColor"
-                type="color"
-                value={brandColor}
-                onChange={(e) => setBrandColor(e.target.value)}
-                className="h-10 w-14 rounded border border-border cursor-pointer"
-              />
-              <Input
-                value={brandColor}
-                onChange={(e) => setBrandColor(e.target.value)}
-                className="w-32 font-mono text-sm"
-                placeholder="#4f35d2"
-              />
-              <p className="text-xs text-muted-foreground">Used in email templates</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Tab Content */}
+      <div className="min-h-[400px]">
 
-      {/* Save button + status message */}
-      <div className="flex items-center justify-between pb-8">
+        {/* ── Personal Tab ────────────────────────────── */}
+        {activeTab === "personal" && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Personal Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">Full Name</Label>
+                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" value={user.email} disabled className="bg-muted/50" />
+                    <p className="text-[11px] text-muted-foreground mt-1">Email cannot be changed</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 (604) 555-0123" />
+                  </div>
+                  <div>
+                    <Label htmlFor="timezone">Timezone</Label>
+                    <select
+                      id="timezone"
+                      value={timezone}
+                      onChange={(e) => setTimezone(e.target.value)}
+                      className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm"
+                    >
+                      <option value="America/Vancouver">Pacific (Vancouver)</option>
+                      <option value="America/Edmonton">Mountain (Edmonton)</option>
+                      <option value="America/Winnipeg">Central (Winnipeg)</option>
+                      <option value="America/Toronto">Eastern (Toronto)</option>
+                      <option value="America/Halifax">Atlantic (Halifax)</option>
+                      <option value="America/Los_Angeles">Pacific (Los Angeles)</option>
+                      <option value="America/New_York">Eastern (New York)</option>
+                    </select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Family</CardTitle>
+                <CardDescription>Optional — helps personalize your communications</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="spouse">Spouse / Partner</Label>
+                    <Input id="spouse" value={spouseName} onChange={(e) => setSpouseName(e.target.value)} placeholder="Optional" />
+                  </div>
+                  <div>
+                    <Label htmlFor="kids">Number of Kids</Label>
+                    <select
+                      id="kids"
+                      value={kidsCount}
+                      onChange={(e) => setKidsCount(e.target.value)}
+                      className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm"
+                    >
+                      <option value="">Not specified</option>
+                      <option value="0">No kids</option>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4+</option>
+                    </select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* ── Professional Tab ────────────────────────── */}
+        {activeTab === "professional" && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Professional Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="brokerage">Brokerage</Label>
+                    <Input id="brokerage" value={brokerage} onChange={(e) => setBrokerage(e.target.value)} placeholder="RE/MAX City Realty" />
+                  </div>
+                  <div>
+                    <Label htmlFor="license">License Number</Label>
+                    <Input id="license" value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} placeholder="PREC #12345" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="displayName">Display Name</Label>
+                    <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Jazz Grewal, PREC*" />
+                    <p className="text-[11px] text-muted-foreground mt-1">Shown in emails and newsletters</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="title">Title</Label>
+                    <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="REALTOR®" />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="bio">Bio</Label>
+                  <Textarea
+                    id="bio"
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Tell clients about your experience, specialties, and what makes you different..."
+                    rows={4}
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">Shown on your client-facing profiles and newsletters</p>
+                </div>
+                <div>
+                  <Label htmlFor="tagline">Tagline</Label>
+                  <Input id="tagline" value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="Your trusted Vancouver REALTOR" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Service Areas</CardTitle>
+                <CardDescription>Where you work — shown in newsletters and on your website</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {serviceAreas.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {serviceAreas.map((area) => (
+                      <span key={area} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-sm rounded-full">
+                        {area}
+                        <button onClick={() => removeServiceArea(area)} className="hover:text-destructive" aria-label={`Remove ${area}`}>
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Input
+                    value={newArea}
+                    onChange={(e) => setNewArea(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addServiceArea(); } }}
+                    placeholder="Add area (e.g. South Surrey)"
+                    className="flex-1"
+                  />
+                  <Button variant="outline" size="sm" onClick={addServiceArea} disabled={!newArea.trim()}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* ── Online & Social Tab ─────────────────────── */}
+        {activeTab === "online" && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Website & Social Media</CardTitle>
+              <CardDescription>Your online presence — linked from emails and your website</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="website">Website</Label>
+                <Input id="website" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://yoursite.ca" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="instagram">Instagram</Label>
+                  <Input id="instagram" value={instagramUrl} onChange={(e) => setInstagramUrl(e.target.value)} placeholder="https://instagram.com/yourhandle" />
+                </div>
+                <div>
+                  <Label htmlFor="facebook">Facebook</Label>
+                  <Input id="facebook" value={facebookUrl} onChange={(e) => setFacebookUrl(e.target.value)} placeholder="https://facebook.com/yourpage" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="linkedin">LinkedIn</Label>
+                  <Input id="linkedin" value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="https://linkedin.com/in/you" />
+                </div>
+                <div>
+                  <Label htmlFor="twitter">X (Twitter)</Label>
+                  <Input id="twitter" value={twitterUrl} onChange={(e) => setTwitterUrl(e.target.value)} placeholder="https://x.com/yourhandle" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ── Compliance Tab ──────────────────────────── */}
+        {activeTab === "compliance" && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Email Compliance (CASL)</CardTitle>
+              <CardDescription>Required for sending newsletters and marketing emails</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="address">Physical Address</Label>
+                <Input id="address" value={physicalAddress} onChange={(e) => setPhysicalAddress(e.target.value)} placeholder="123 Main St, Vancouver BC V6B 1A1" />
+                <p className="text-[11px] text-muted-foreground mt-1">Required by CASL in every commercial email footer</p>
+              </div>
+              <div>
+                <Label htmlFor="brandColor">Brand Color</Label>
+                <div className="flex items-center gap-3">
+                  <input
+                    id="brandColor"
+                    type="color"
+                    value={brandColor}
+                    onChange={(e) => setBrandColor(e.target.value)}
+                    className="h-10 w-14 rounded border border-border cursor-pointer"
+                  />
+                  <Input
+                    value={brandColor}
+                    onChange={(e) => setBrandColor(e.target.value)}
+                    className="w-32 font-mono text-sm"
+                    placeholder="#4f35d2"
+                  />
+                  <p className="text-xs text-muted-foreground">Used in email templates</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Save button + status message (always visible) */}
+      <div className="flex items-center justify-between pb-8 border-t border-border pt-4">
         <div>
           {message && (
             <p className={`text-sm ${message.type === "success" ? "text-success" : "text-destructive"}`}>

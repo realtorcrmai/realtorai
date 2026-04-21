@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 --task-mgmt -->
 <!-- docs-audit: CONTRIBUTING.md, .env.local.example -->
 # Developer Sync — Post-Consolidation (2026-04-09)
 
@@ -355,3 +356,6 @@ These are tracked in `docs/ENVIRONMENTS.md` §"Open follow-ups" — none of them
 8. Check `realtors360-sites/.env.local` for old project references
 9. Consider moving Supabase to us-east-2 or ca-central-1 for latency
 10. Add `VERCEL_TOKEN` to GitHub Actions secrets for CI-triggered deploys
+
+<!-- Last reviewed: 2026-04-21 -->
+

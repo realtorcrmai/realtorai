@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 -->
 <!-- docs-audit: docs/SPEC_*, docs/PLAN_*, src/actions/*, src/components/*, src/lib/* -->
 # Competitive Differentiators — Complete Specification
 
@@ -1806,3 +1807,7 @@ ALTER TABLE deal_coordinator ENABLE ROW LEVEL SECURITY;
 *Version 1.1 — 2026-04-20*
 
 <!-- changelog: added team-permissions.ts (RBAC for team collaboration), MondaySidebar team nav -->
+
+<!-- Last reviewed: 2026-04-21 -->
+
+

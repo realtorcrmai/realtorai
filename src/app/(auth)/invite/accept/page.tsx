@@ -20,7 +20,7 @@ export default function InviteAcceptPage() {
 function InviteAcceptContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session, status, update: updateSession } = useSession();
   const token = searchParams.get("token");
 
   const [state, setState] = useState<"loading" | "not_logged_in" | "accepting" | "success" | "error">( "loading");
@@ -43,16 +43,18 @@ function InviteAcceptContent() {
 
     // User is authenticated — attempt to accept
     setState("accepting");
-    acceptInvite(token).then((result) => {
+    acceptInvite(token).then(async (result) => {
       if (result.error) {
         setState("error");
         setError(result.error);
       } else if (result.data) {
+        // Refresh session so JWT picks up new teamId/teamRole
+        await updateSession();
         setState("success");
         setTeamInfo(result.data);
       }
     });
-  }, [token, status]);
+  }, [token, status, updateSession]);
 
   if (state === "loading") {
     return (

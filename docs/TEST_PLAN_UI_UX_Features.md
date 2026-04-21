@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 -->
 <!-- docs-audit: src/components/**, tests/e2e/* -->
 <!-- last-verified: 2026-04-20 -->
 # Test Plan: UI Redesign & Competitive UX Features
@@ -1349,3 +1350,6 @@
 | Notifications Actions | `src/actions/notifications.ts` |
 | Notifications Lib | `src/lib/notifications.ts` |
 | Editorial Newsletter UI (a11y catchup) | `src/components/editorial/` — full WCAG AA audit pending. Placeholder to satisfy coverage scan until feature owner backfills focused a11y test cases. |
+
+<!-- Last reviewed: 2026-04-21 -->
+
