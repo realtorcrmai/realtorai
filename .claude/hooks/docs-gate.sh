@@ -25,8 +25,8 @@ cd "$PROJECT_DIR" 2>/dev/null || exit 0
 BASIC_OUTPUT=$(node scripts/audit-docs.mjs 2>&1)
 BASIC_EXIT=$?
 
-# Run deep audit (changed files → doc mapping)
-DEEP_OUTPUT=$(node scripts/audit-docs-deep.mjs 2>&1)
+# Run deep audit in CI mode (compares branch vs dev, not just working tree)
+DEEP_OUTPUT=$(node scripts/audit-docs-deep.mjs --ci 2>&1)
 DEEP_EXIT=$?
 
 # Run test plan audit

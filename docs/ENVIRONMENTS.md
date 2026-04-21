@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 -->
 <!-- docs-audit: vercel.json, .env.local.example, supabase/migrations/* -->
 # Environments — Realtors360 CRM
 

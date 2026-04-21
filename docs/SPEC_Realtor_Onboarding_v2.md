@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 -->
 <!-- docs-audit: src/app/(auth)/*, src/app/(dashboard)/onboarding/* -->
 # SPEC: Realtor Signup & Onboarding v2
 
