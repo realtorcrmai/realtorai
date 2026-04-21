@@ -1,8 +1,8 @@
 <!-- docs-audit: src/components/**, tests/e2e/* -->
-<!-- last-verified: 2026-04-13 -->
+<!-- last-verified: 2026-04-20 -->
 # Test Plan: UI Redesign & Competitive UX Features
 
-**Version:** 1.0
+**Version:** 1.1
 **Date:** 2026-04-10
 **Scope:** All features built in the UI redesign (HubSpot-inspired layout shell, DataTable, PageHeader) and competitive UX features sprint (Cmd+K, Notifications, Recent Items, Lead Scores, Contact Preview, Dashboard Widgets, Post-Showing Feedback, Accessibility, Mobile, Dark Mode).
 **Total Test Cases:** 102

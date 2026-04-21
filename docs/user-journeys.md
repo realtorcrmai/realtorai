@@ -1,4 +1,5 @@
 <!-- docs-audit: src/actions/*, src/components/* -->
+<!-- last-verified: 2026-04-20 -->
 # Realtors360 — User Journey Maps
 
 ## 5 Personas

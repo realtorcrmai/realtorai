@@ -1,8 +1,8 @@
 <!-- docs-audit: docs/SPEC_*, docs/PLAN_*, src/actions/*, src/components/*, src/lib/* -->
 # Competitive Differentiators — Complete Specification
 
-**Version:** 1.0
-**Date:** 2026-04-13
+**Version:** 1.1
+**Date:** 2026-04-20
 **Status:** Draft — Design Document
 **Author:** Rahul Mittal + Claude
 

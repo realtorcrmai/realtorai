@@ -106,6 +106,9 @@ export function MondaySidebar() {
   const avatarUrl = (session?.user as Record<string, unknown> | undefined)?.avatarUrl as string | null;
 
   const enabledFeatures: string[] = (session?.user as Record<string, unknown>)?.enabledFeatures as string[] || [];
+  const teamId = (session?.user as Record<string, unknown> | undefined)?.teamId as string | null;
+  const teamRole = (session?.user as Record<string, unknown> | undefined)?.teamRole as string | null;
+  const showTeamNav = teamId && (teamRole === "owner" || teamRole === "admin");
 
   // Recent items — hydration guard (Zustand persist rehydrates from localStorage after mount)
   const [mounted, setMounted] = useState(false);
@@ -242,6 +245,25 @@ export function MondaySidebar() {
 
       {renderNavGroup("Tools", TOOLS_NAV)}
       {renderNavGroup("Admin", ADMIN_NAV)}
+
+      {/* Team Settings — only visible to Owner/Admin */}
+      {showTeamNav && (
+        <div className="px-2 pt-1">
+          <Link
+            href="/settings/team"
+            data-tour="nav-team"
+            className={cn(
+              "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+              pathname === "/settings/team"
+                ? "bg-sidebar-primary/15 text-white border-l-[3px] border-sidebar-primary font-medium"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-white"
+            )}
+          >
+            <Users className="h-4 w-4" />
+            Team
+          </Link>
+        </div>
+      )}
 
       {/* Recent Items */}
       {mounted && recentItems.length > 0 && (

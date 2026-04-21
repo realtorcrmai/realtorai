@@ -665,13 +665,14 @@ export async function backfillWorkflowEnrollments(): Promise<{
     activeEnrollmentSet.add(key);
 
     // Log activity
-    await supabase.from("activity_log").insert({
+    const { error: actErr } = await supabase.from("activity_log").insert({
       contact_id: contactId,
       listing_id: listingId || null,
       activity_type: "workflow_auto_enrolled",
       description: `Backfill: auto-enrolled in ${workflowSlug}`,
       metadata: { workflow_id: workflowId, backfill: true },
     });
+    if (actErr) console.error("[workflows] backfill log failed:", actErr.message);
 
     return "enrolled";
   }
@@ -851,12 +852,13 @@ export async function backfillWorkflowEnrollments(): Promise<{
 
   // Create summary notification
   if (totalEnrolled > 0) {
-    await supabase.from("agent_notifications").insert({
+    const { error: notifErr } = await supabase.from("agent_notifications").insert({
       title: "Workflow Backfill Complete",
       body: `Enrolled ${totalEnrolled} contacts across ${results.filter((r) => r.enrolled.length > 0).length} workflows`,
       type: "workflow",
       action_url: "/automations",
     });
+    if (notifErr) console.error("[workflows] notification insert failed:", notifErr.message);
   }
 
   revalidatePath("/automations");
