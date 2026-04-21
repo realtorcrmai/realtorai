@@ -274,6 +274,20 @@ npm run test:e2e:ui           # interactive UI mode
 npm run test:e2e:debug        # debug mode
 npm run test:e2e:p0           # P0 critical tests only
 npm run test:e2e:desktop      # desktop viewport only
+npm run test:e2e:mobile       # mobile viewport only
+npm run test:contract         # contract tests (API shape validation)
+
+# Specialized test suites
+npm run test:api              # API endpoint tests
+npm run test:a11y             # accessibility audit
+npm run test:rtm              # requirements traceability matrix
+npm run test:rtm:strict       # RTM strict mode (fail on gaps)
+npm run test:rtm:json         # RTM output as JSON
+
+# Code quality & security
+npm run format:check          # check Prettier formatting
+npm run scan-secrets          # detect leaked secrets (gitleaks)
+npm run size-check            # bundle size limits
 
 # Docs freshness audit
 node scripts/audit-docs.mjs
