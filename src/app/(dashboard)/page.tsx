@@ -25,7 +25,7 @@ function getGreeting(): string {
 export default async function DashboardPage() {
   const session = await auth();
   const userName = session?.user?.name ?? "there";
-  // eslint-disable-next-line react-hooks/purity -- server component, Date.now() is safe
+   
   const now = Date.now();
 
   const tc = await getAuthenticatedTenantClient();
@@ -47,7 +47,7 @@ export default async function DashboardPage() {
     tc.raw.from("listings").select("*", { count: "exact", head: true }).eq("realtor_id", tc.realtorId).eq("status", "active"),
     tc.raw.from("appointments").select("*", { count: "exact", head: true }).eq("realtor_id", tc.realtorId).eq("status", "requested"),
     tc.from("appointments").select("id").eq("status", "confirmed").gte("start_time", new Date(now - new Date().getDay() * 24 * 60 * 60 * 1000).toISOString()),
-    tc.from("tasks").select("id, title, status, priority, category, due_date").neq("status", "completed").order("created_at", { ascending: false }).limit(20),
+    tc.from("tasks").select("id, title, status, priority, category, due_date").neq("status", "completed").order("due_date", { ascending: true, nullsFirst: false }),
     tc.from("contacts").select("id, stage_bar, type, newsletter_intelligence"),
     tc.from("listings").select("id, seller_id, buyer_id, list_price, sold_price, commission_rate, commission_amount, status"),
     tc.from("listing_documents").select("listing_id, doc_type").limit(2000),

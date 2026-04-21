@@ -18,19 +18,32 @@ import { toast } from "sonner";
 type Contact = { id: string; name: string; type: string };
 type Listing = { id: string; address: string };
 
+type TaskData = {
+  id: string;
+  title: string;
+  description: string | null;
+  priority: string;
+  category: string;
+  due_date: string | null;
+  contact_id: string | null;
+  listing_id: string | null;
+};
+
 interface TaskFormProps {
+  task?: TaskData;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState("medium");
-  const [category, setCategory] = useState("general");
-  const [dueDate, setDueDate] = useState("");
-  const [contactId, setContactId] = useState("");
-  const [listingId, setListingId] = useState("");
+export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
+  const isEdit = !!task;
+  const [title, setTitle] = useState(task?.title || "");
+  const [description, setDescription] = useState(task?.description || "");
+  const [priority, setPriority] = useState(task?.priority || "medium");
+  const [category, setCategory] = useState(task?.category || "general");
+  const [dueDate, setDueDate] = useState(task?.due_date?.slice(0, 10) || "");
+  const [contactId, setContactId] = useState(task?.contact_id || "");
+  const [listingId, setListingId] = useState(task?.listing_id || "");
   const [saving, setSaving] = useState(false);
 
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -56,26 +69,34 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
     setSaving(true);
     try {
-      const resp = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim() || undefined,
-          priority,
-          category,
-          due_date: dueDate || undefined,
-          contact_id: contactId && contactId !== "none" ? contactId : undefined,
-          listing_id: listingId && listingId !== "none" ? listingId : undefined,
-        }),
-      });
+      const payload = {
+        title: title.trim(),
+        description: description.trim() || null,
+        priority,
+        category,
+        due_date: dueDate || null,
+        contact_id: contactId && contactId !== "none" ? contactId : null,
+        listing_id: listingId && listingId !== "none" ? listingId : null,
+      };
+
+      const resp = isEdit
+        ? await fetch("/api/tasks", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: task.id, ...payload }),
+          })
+        : await fetch("/api/tasks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
 
       if (!resp.ok) {
         const err = await resp.json();
-        throw new Error(err.error || "Failed to create task");
+        throw new Error(err.error || `Failed to ${isEdit ? "update" : "create"} task`);
       }
 
-      toast.success("Task created");
+      toast.success(isEdit ? "Task updated" : "Task created");
       onSuccess();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Unknown error";
@@ -158,7 +179,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label>Related Contact</Label>
-          <Select value={contactId} onValueChange={(val) => setContactId(val ?? "")}>
+          <Select value={contactId || "none"} onValueChange={(val) => setContactId(val === "none" ? "" : (val ?? ""))}>
             <SelectTrigger>
               <SelectValue placeholder="None" />
             </SelectTrigger>
@@ -175,7 +196,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
 
         <div className="space-y-2">
           <Label>Related Listing</Label>
-          <Select value={listingId} onValueChange={(val) => setListingId(val ?? "")}>
+          <Select value={listingId || "none"} onValueChange={(val) => setListingId(val === "none" ? "" : (val ?? ""))}>
             <SelectTrigger>
               <SelectValue placeholder="None" />
             </SelectTrigger>
@@ -197,7 +218,7 @@ export function TaskForm({ onSuccess, onCancel }: TaskFormProps) {
         </Button>
         <Button type="submit" disabled={saving}>
           {saving && <LogoSpinner size={16} />}
-          Create Task
+          {isEdit ? "Save Changes" : "Create Task"}
         </Button>
       </div>
     </form>

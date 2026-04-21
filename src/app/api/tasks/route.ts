@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   let query = tc
     .from("tasks")
-    .select("*, contacts(name), listings(address)")
+    .select("*, contacts(name), listings(address), task_comments(count)")
     .order("created_at", { ascending: false });
 
   if (status && ["pending", "in_progress", "completed"].includes(status)) {
@@ -30,7 +30,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data ?? []);
+  // Map task_comments aggregate into comment_count (cast to number — Supabase returns string)
+  const tasks = (data ?? []).map((t: Record<string, unknown>) => {
+    const commentAgg = t.task_comments as { count: number }[] | undefined;
+    const comment_count = Number(commentAgg?.[0]?.count ?? 0);
+    const { task_comments: _, ...rest } = t;
+    return { ...rest, comment_count };
+  });
+
+  return NextResponse.json(tasks);
 }
 
 export async function POST(req: NextRequest) {
@@ -64,8 +72,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  revalidatePath("/tasks");
+  revalidatePath("/");
   return NextResponse.json(data, { status: 201 });
 }
+
+// Allowlisted fields for PATCH — prevents overwriting realtor_id, created_at, etc.
+const PATCH_ALLOWED = new Set([
+  "title", "description", "status", "priority", "category",
+  "due_date", "contact_id", "listing_id",
+]);
 
 export async function PATCH(req: NextRequest) {
   let tc;
@@ -73,15 +89,37 @@ export async function PATCH(req: NextRequest) {
   catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   const body = await req.json();
-  const { id, ...updates } = body;
+  const { id, ...rawUpdates } = body;
 
   if (!id) {
     return NextResponse.json({ error: "Task ID required" }, { status: 400 });
   }
 
+  // Only allow known fields
+  const updates: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(rawUpdates)) {
+    if (PATCH_ALLOWED.has(key)) updates[key] = value;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+  }
+
+  // Validate status/priority/category if provided
+  if (updates.status && !["pending", "in_progress", "completed"].includes(updates.status as string)) {
+    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  }
+  if (updates.priority && !["low", "medium", "high", "urgent"].includes(updates.priority as string)) {
+    return NextResponse.json({ error: "Invalid priority" }, { status: 400 });
+  }
+
   // If completing, set completed_at
   if (updates.status === "completed") {
     updates.completed_at = new Date().toISOString();
+  }
+  // If reopening, clear completed_at
+  if (updates.status && updates.status !== "completed") {
+    updates.completed_at = null;
   }
 
   const { data, error } = await tc
@@ -96,6 +134,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   revalidatePath("/tasks");
+  revalidatePath("/");
   return NextResponse.json(data);
 }
 
@@ -118,5 +157,6 @@ export async function DELETE(req: NextRequest) {
   }
 
   revalidatePath("/tasks");
+  revalidatePath("/");
   return NextResponse.json({ success: true });
 }

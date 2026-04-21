@@ -329,7 +329,7 @@ export async function enrollContact(
 ) {
   const supabase = createAdminClient();
 
-  // Check if already enrolled in this workflow
+  // Check if already enrolled in this workflow (same user)
   const { data: existing } = await supabase
     .from("workflow_enrollments")
     .select("id")
@@ -340,6 +340,20 @@ export async function enrollContact(
 
   if (existing) {
     return { error: "Contact is already enrolled in this workflow" };
+  }
+
+  // Team dedup: check if any team member already enrolled this contact
+  // in the same workflow (prevents duplicate sends within a team)
+  const { data: teamDedup } = await supabase
+    .from("workflow_enrollments")
+    .select("id, realtor_id")
+    .eq("workflow_id", workflowId)
+    .eq("contact_id", contactId)
+    .eq("status", "active")
+    .limit(1);
+
+  if (teamDedup && teamDedup.length > 0) {
+    return { error: "Contact is already enrolled in this workflow by another team member" };
   }
 
   // Enforce max_enrollments concurrency limit

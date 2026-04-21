@@ -1,4 +1,5 @@
-import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
+import { getAuthenticatedTenantClient, getScopedTenantClient } from "@/lib/supabase/tenant";
+import type { DataScope } from "@/types/team";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ShowingsTableClient } from "@/components/showings/ShowingsTableClient";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -8,8 +9,14 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-export default async function ShowingsPage() {
-  const supabase = await getAuthenticatedTenantClient();
+export default async function ShowingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ scope?: string }>;
+}) {
+  const params = await searchParams;
+  const scope = (params.scope === "team" ? "team" : "personal") as DataScope;
+  const supabase = await getScopedTenantClient(scope);
 
   const { data: showings } = await supabase
     .from("appointments")

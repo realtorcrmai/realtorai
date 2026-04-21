@@ -252,6 +252,47 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.plan = "free";
           token.enabledFeatures = getUserFeatures("free");
         }
+        // ============================================================
+        // Team context: fetch membership if user has one
+        // ============================================================
+        const shouldFetchTeam = token.userId && (
+          !("teamId" in token) || trigger === "signIn" || trigger === "update"
+        );
+
+        if (shouldFetchTeam && token.email) {
+          try {
+            const { data: membership } = await supabase
+              .from("tenant_memberships")
+              .select("tenant_id, role, permissions, user_id")
+              .eq("agent_email", token.email as string)
+              .is("removed_at", null)
+              .single();
+
+            if (membership) {
+              token.teamId = membership.tenant_id;
+              token.teamRole = membership.role;
+              token.teamPermissions = membership.permissions || {};
+
+              // Link user_id on membership if not yet set
+              if (!membership.user_id && token.userId) {
+                await supabase
+                  .from("tenant_memberships")
+                  .update({ user_id: token.userId as string })
+                  .eq("agent_email", token.email as string)
+                  .is("removed_at", null);
+              }
+            } else {
+              token.teamId = null;
+              token.teamRole = null;
+              token.teamPermissions = {};
+            }
+          } catch {
+            // Team tables may not exist yet — graceful fallback
+            token.teamId = token.teamId ?? null;
+            token.teamRole = token.teamRole ?? null;
+            token.teamPermissions = token.teamPermissions ?? {};
+          }
+        }
       } catch (err) {
         console.error("[auth] JWT callback error:", err);
       }
@@ -267,6 +308,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.realtorId = (token.userId as string) || (token.sub as string) || "";
       (session.user as unknown as Record<string, unknown>).emailVerified = (token.emailVerified as boolean) ?? false;
       (session.user as unknown as Record<string, unknown>).avatarUrl = (token.avatarUrl as string) ?? null;
+      // Team context
+      (session.user as unknown as Record<string, unknown>).teamId = (token.teamId as string) ?? null;
+      (session.user as unknown as Record<string, unknown>).teamRole = (token.teamRole as string) ?? null;
+      (session.user as unknown as Record<string, unknown>).teamPermissions = (token.teamPermissions as Record<string, boolean>) ?? {};
       return session;
     },
   },

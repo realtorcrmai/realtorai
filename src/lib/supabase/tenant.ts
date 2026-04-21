@@ -50,7 +50,7 @@ class TenantQueryBuilder {
   }
 
   /** SELECT with automatic tenant filter */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   select(columns = "*", options?: Record<string, unknown>): any {
     if (options) {
       return this.supabase
@@ -65,7 +65,7 @@ class TenantQueryBuilder {
   }
 
   /** INSERT with automatic realtor_id injection */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   insert(data: Record<string, unknown> | Record<string, unknown>[]): any {
     const withTenant = Array.isArray(data)
       ? data.map((row) => ({ ...row, realtor_id: this.realtorId }))
@@ -84,7 +84,7 @@ class TenantQueryBuilder {
   }
 
   /** UPDATE with automatic tenant filter — only updates rows belonging to this tenant */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   update(data: Record<string, unknown>): any {
     return this.supabase
       .from(this.table)
@@ -93,7 +93,7 @@ class TenantQueryBuilder {
   }
 
   /** DELETE with automatic tenant filter — only deletes rows belonging to this tenant */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   delete(): any {
     return this.supabase
       .from(this.table)
@@ -186,3 +186,352 @@ export const getAuthenticatedTenantClient = cache(async () => {
   const realtorId = await getRealtorId();
   return tenantClient(realtorId);
 });
+
+// ============================================================
+// Team-Aware Tenant Client
+// ============================================================
+
+import type { DataScope, TeamRole } from "@/types/team";
+
+interface TeamSessionInfo {
+  userId: string;
+  teamId: string | null;
+  teamRole: TeamRole | null;
+}
+
+/**
+ * Get a tenant-scoped client that respects team visibility.
+ *
+ * - scope="personal" → same as getAuthenticatedTenantClient() (default, unchanged)
+ * - scope="team" → queries filtered by role:
+ *   - Owner/Admin: sees all team members' data
+ *   - Agent: sees own + visibility='team' + assigned_to=self
+ *   - Assistant: sees only assigned_to=self
+ *
+ * Solo users (no teamId): always returns personal scope regardless of param.
+ *
+ * Usage:
+ *   const tc = await getScopedTenantClient("team");
+ *   const { data } = await tc.from("contacts").select("*");
+ */
+export async function getScopedTenantClient(scope: DataScope = "personal") {
+  const { auth } = await import("@/lib/auth");
+  const session = await auth();
+
+  if (!session?.user) {
+    throw new Error("Not authenticated — no session found");
+  }
+
+  const user = session.user as Record<string, unknown>;
+  const userId = (user.id as string) || (user.userId as string) || "";
+  const teamId = (user.teamId as string) || null;
+  const teamRole = (user.teamRole as TeamRole) || null;
+
+  if (!userId) throw new Error("No user ID found in session");
+
+  // Solo user or personal scope: standard single-user client
+  if (scope === "personal" || !teamId) {
+    return tenantClient(userId);
+  }
+
+  // Team scope: get team member IDs and return appropriate client
+  const teamInfo: TeamSessionInfo = { userId, teamId, teamRole };
+  return createTeamScopedClient(teamInfo);
+}
+
+/**
+ * Internal: creates a team-scoped client based on the user's role.
+ */
+async function createTeamScopedClient(info: TeamSessionInfo) {
+  const { userId, teamId, teamRole } = info;
+  const memberIds = await getTeamMemberIds(teamId!);
+
+  if (teamRole === "owner" || teamRole === "admin") {
+    // Owner/Admin see ALL team data
+    return teamTenantClient(memberIds, userId);
+  }
+
+  if (teamRole === "agent") {
+    // Agent sees: own + team-visible from teammates + assigned to self
+    return agentTeamClient(userId, memberIds);
+  }
+
+  // Assistant: sees only assigned records
+  return assistantClient(userId);
+}
+
+/**
+ * Fetch all user_ids for a given team. Cached per request.
+ */
+const getTeamMemberIds = cache(async (teamId: string): Promise<string[]> => {
+  const supabase = createAdminClient();
+
+  // Try materialized view first (fast), fall back to direct query
+  const { data: viewData } = await supabase
+    .from("team_members_active")
+    .select("user_id")
+    .eq("team_id", teamId);
+
+  if (viewData && viewData.length > 0) {
+    return viewData.map((r: { user_id: string }) => r.user_id);
+  }
+
+  // Fallback: query tenant_memberships + users directly
+  const { data: memberships } = await supabase
+    .from("tenant_memberships")
+    .select("agent_email, user_id")
+    .eq("tenant_id", teamId)
+    .is("removed_at", null);
+
+  if (!memberships || memberships.length === 0) return [];
+
+  // Get user IDs from emails where user_id is not set
+  const emailsWithoutId = memberships
+    .filter((m: { user_id: string | null }) => !m.user_id)
+    .map((m: { agent_email: string }) => m.agent_email);
+
+  let additionalIds: string[] = [];
+  if (emailsWithoutId.length > 0) {
+    const { data: users } = await supabase
+      .from("users")
+      .select("id")
+      .in("email", emailsWithoutId);
+    additionalIds = users?.map((u: { id: string }) => u.id) || [];
+  }
+
+  const directIds = memberships
+    .filter((m: { user_id: string | null }) => m.user_id)
+    .map((m: { user_id: string }) => m.user_id);
+
+  return [...new Set([...directIds, ...additionalIds])];
+});
+
+/**
+ * Team client for Owner/Admin: queries filter by all team member IDs.
+ * INSERT still uses the current user's ID as realtor_id.
+ * DELETE restricted to current user's records (safety).
+ */
+function teamTenantClient(memberIds: string[], currentUserId: string) {
+  const supabase = createAdminClient();
+
+  return {
+    raw: supabase,
+    realtorId: currentUserId,
+    from(table: string) {
+      return new TeamQueryBuilder(supabase, table, memberIds, currentUserId);
+    },
+  };
+}
+
+/**
+ * Team client for Agent role: sees own + team-visible + assigned.
+ * Uses OR filter: realtor_id=self OR (visibility=team AND in team) OR assigned_to=self
+ */
+function agentTeamClient(userId: string, memberIds: string[]) {
+  const supabase = createAdminClient();
+
+  return {
+    raw: supabase,
+    realtorId: userId,
+    from(table: string) {
+      return new AgentTeamQueryBuilder(supabase, table, userId, memberIds);
+    },
+  };
+}
+
+/**
+ * Assistant client: only sees records assigned to them.
+ */
+function assistantClient(userId: string) {
+  const supabase = createAdminClient();
+
+  return {
+    raw: supabase,
+    realtorId: userId,
+    from(table: string) {
+      return new AssistantQueryBuilder(supabase, table, userId);
+    },
+  };
+}
+
+// ============================================================
+// Team Query Builders
+// ============================================================
+
+/** Owner/Admin: queries filtered by all team member IDs */
+class TeamQueryBuilder {
+  private supabase: SupabaseClient;
+  private table: string;
+  private memberIds: string[];
+  private currentUserId: string;
+
+  constructor(supabase: SupabaseClient, table: string, memberIds: string[], currentUserId: string) {
+    this.supabase = supabase;
+    this.table = table;
+    this.memberIds = memberIds;
+    this.currentUserId = currentUserId;
+  }
+
+   
+  select(columns = "*", options?: Record<string, unknown>): any {
+    const base = options
+      ? this.supabase.from(this.table).select(columns, options)
+      : this.supabase.from(this.table).select(columns);
+    return base.in("realtor_id", this.memberIds);
+  }
+
+   
+  insert(data: Record<string, unknown> | Record<string, unknown>[]): any {
+    const withTenant = Array.isArray(data)
+      ? data.map((row) => ({ ...row, realtor_id: this.currentUserId }))
+      : { ...data, realtor_id: this.currentUserId };
+    return this.supabase.from(this.table).insert(withTenant);
+  }
+
+  insertAndSelect(data: Record<string, unknown> | Record<string, unknown>[]) {
+    const withTenant = Array.isArray(data)
+      ? data.map((row) => ({ ...row, realtor_id: this.currentUserId }))
+      : { ...data, realtor_id: this.currentUserId };
+    return this.supabase.from(this.table).insert(withTenant).select();
+  }
+
+   
+  update(data: Record<string, unknown>): any {
+    return this.supabase.from(this.table).update(data).in("realtor_id", this.memberIds);
+  }
+
+   
+  delete(): any {
+    // Safety: Owner/Admin DELETE restricted to own records to prevent accidental mass delete
+    return this.supabase.from(this.table).delete().eq("realtor_id", this.currentUserId);
+  }
+
+   
+  upsert(data: Record<string, unknown> | Record<string, unknown>[], options?: Record<string, unknown>): any {
+    const withTenant = Array.isArray(data)
+      ? data.map((row) => ({ ...row, realtor_id: this.currentUserId }))
+      : { ...data, realtor_id: this.currentUserId };
+    return this.supabase.from(this.table).upsert(withTenant, options as any);
+  }
+}
+
+/** Agent: sees own + shared team data + assigned records */
+class AgentTeamQueryBuilder {
+  private supabase: SupabaseClient;
+  private table: string;
+  private userId: string;
+  private memberIds: string[];
+
+  constructor(supabase: SupabaseClient, table: string, userId: string, memberIds: string[]) {
+    this.supabase = supabase;
+    this.table = table;
+    this.userId = userId;
+    this.memberIds = memberIds;
+  }
+
+   
+  select(columns = "*", options?: Record<string, unknown>): any {
+    // Use Supabase OR filter: own records + team-visible + assigned
+    const base = options
+      ? this.supabase.from(this.table).select(columns, options)
+      : this.supabase.from(this.table).select(columns);
+
+    return base.or(
+      `realtor_id.eq.${this.userId},` +
+      `and(visibility.eq.team,realtor_id.in.(${this.memberIds.join(",")})),` +
+      `assigned_to.eq.${this.userId}`
+    );
+  }
+
+   
+  insert(data: Record<string, unknown> | Record<string, unknown>[]): any {
+    const withTenant = Array.isArray(data)
+      ? data.map((row) => ({ ...row, realtor_id: this.userId }))
+      : { ...data, realtor_id: this.userId };
+    return this.supabase.from(this.table).insert(withTenant);
+  }
+
+  insertAndSelect(data: Record<string, unknown> | Record<string, unknown>[]) {
+    const withTenant = Array.isArray(data)
+      ? data.map((row) => ({ ...row, realtor_id: this.userId }))
+      : { ...data, realtor_id: this.userId };
+    return this.supabase.from(this.table).insert(withTenant).select();
+  }
+
+   
+  update(data: Record<string, unknown>): any {
+    // Agent can only update own records
+    return this.supabase.from(this.table).update(data).eq("realtor_id", this.userId);
+  }
+
+   
+  delete(): any {
+    // Agent can only delete own records
+    return this.supabase.from(this.table).delete().eq("realtor_id", this.userId);
+  }
+
+   
+  upsert(data: Record<string, unknown> | Record<string, unknown>[], options?: Record<string, unknown>): any {
+    const withTenant = Array.isArray(data)
+      ? data.map((row) => ({ ...row, realtor_id: this.userId }))
+      : { ...data, realtor_id: this.userId };
+    return this.supabase.from(this.table).upsert(withTenant, options as any);
+  }
+}
+
+/** Assistant: only sees records where assigned_to = self */
+class AssistantQueryBuilder {
+  private supabase: SupabaseClient;
+  private table: string;
+  private userId: string;
+
+  constructor(supabase: SupabaseClient, table: string, userId: string) {
+    this.supabase = supabase;
+    this.table = table;
+    this.userId = userId;
+  }
+
+   
+  select(columns = "*", options?: Record<string, unknown>): any {
+    const base = options
+      ? this.supabase.from(this.table).select(columns, options)
+      : this.supabase.from(this.table).select(columns);
+    // Assistant sees: own records OR assigned to them
+    return base.or(`realtor_id.eq.${this.userId},assigned_to.eq.${this.userId}`);
+  }
+
+   
+  insert(data: Record<string, unknown> | Record<string, unknown>[]): any {
+    const withTenant = Array.isArray(data)
+      ? data.map((row) => ({ ...row, realtor_id: this.userId }))
+      : { ...data, realtor_id: this.userId };
+    return this.supabase.from(this.table).insert(withTenant);
+  }
+
+  insertAndSelect(data: Record<string, unknown> | Record<string, unknown>[]) {
+    const withTenant = Array.isArray(data)
+      ? data.map((row) => ({ ...row, realtor_id: this.userId }))
+      : { ...data, realtor_id: this.userId };
+    return this.supabase.from(this.table).insert(withTenant).select();
+  }
+
+   
+  update(data: Record<string, unknown>): any {
+    // Assistant cannot update (enforced at permission level, but defense-in-depth)
+    return this.supabase.from(this.table).update(data).eq("assigned_to", this.userId);
+  }
+
+   
+  delete(): any {
+    // Assistant cannot delete
+    throw new Error("FORBIDDEN: Assistant role cannot delete records");
+  }
+
+   
+  upsert(data: Record<string, unknown> | Record<string, unknown>[], options?: Record<string, unknown>): any {
+    const withTenant = Array.isArray(data)
+      ? data.map((row) => ({ ...row, realtor_id: this.userId }))
+      : { ...data, realtor_id: this.userId };
+    return this.supabase.from(this.table).upsert(withTenant, options as any);
+  }
+}

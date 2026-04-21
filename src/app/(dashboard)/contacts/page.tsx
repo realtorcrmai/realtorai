@@ -1,4 +1,5 @@
-import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
+import { getAuthenticatedTenantClient, getScopedTenantClient } from "@/lib/supabase/tenant";
+import type { DataScope } from "@/types/team";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ContactsTableClient } from "@/components/contacts/ContactsTableClient";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -16,10 +17,11 @@ export const dynamic = "force-dynamic";
 export default async function ContactsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ smart_list?: string }>;
+  searchParams: Promise<{ smart_list?: string; scope?: string }>;
 }) {
   const params = await searchParams;
-  const supabase = await getAuthenticatedTenantClient();
+  const scope = (params.scope === "team" ? "team" : "personal") as DataScope;
+  const supabase = await getScopedTenantClient(scope);
 
   let contacts;
   let activeSmartList = null;

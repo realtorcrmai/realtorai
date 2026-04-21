@@ -5,6 +5,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Search, Menu, User, Settings, LogOut } from "lucide-react";
 import { NotificationDropdown } from "@/components/layout/NotificationDropdown";
+import { TeamScopeToggle } from "@/components/team/TeamScopeToggle";
 
 export function MondayHeader() {
   const { data: session } = useSession();
@@ -16,6 +17,8 @@ export function MondayHeader() {
   const userEmail = session?.user?.email || "";
   const initials = userName.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
   const avatarUrl = (session?.user as Record<string, unknown> | undefined)?.avatarUrl as string | null;
+  const teamId = (session?.user as Record<string, unknown> | undefined)?.teamId as string | null;
+  const teamRole = (session?.user as Record<string, unknown> | undefined)?.teamRole as string | null;
 
   // Close menu on outside click
   useEffect(() => {
@@ -30,11 +33,14 @@ export function MondayHeader() {
 
   return (
     <header className="h-14 border-b border-border bg-card flex items-center justify-between px-6 shrink-0">
-      {/* Left: Mobile hamburger */}
+      {/* Left: Mobile hamburger + Team Scope Toggle */}
       <div className="flex items-center gap-3">
         <button className="md:hidden p-2 rounded-lg hover:bg-muted" aria-label="Open navigation menu">
           <Menu className="h-5 w-5 text-muted-foreground" />
         </button>
+        {teamId && teamRole && session?.user?.id && (
+          <TeamScopeToggle userId={session.user.id} teamRole={teamRole} />
+        )}
       </div>
 
       {/* Right: Search + Notifications + User avatar */}
