@@ -111,9 +111,10 @@ export default function TeamSettingsClient({
       setMessage({ type: "error", text: result.error });
       setLeaving(false);
     } else {
-      // Refresh JWT to clear team context, then navigate to force server re-render
+      // Refresh JWT to clear team context, then hard-navigate to force full re-render.
+      // router.push to same URL may use cached RSC payload, so use window.location.
       await updateSession();
-      router.push("/settings/team");
+      window.location.href = "/settings/team";
     }
   };
 

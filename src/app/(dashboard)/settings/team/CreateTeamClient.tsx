@@ -3,11 +3,9 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { createTeam } from "@/actions/team";
-import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 export default function CreateTeamClient() {
-  const router = useRouter();
   const { update: updateSession } = useSession();
   const [teamName, setTeamName] = useState("");
   const [brokerageName, setBrokerageName] = useState("");
@@ -32,9 +30,10 @@ export default function CreateTeamClient() {
     }
 
     // Refresh the NextAuth JWT so teamId/teamRole are picked up,
-    // then navigate to force a full server re-render with the new session
+    // then hard-navigate to force a full server re-render with the new cookie.
+    // router.push to the same URL may use cached RSC payload, so use window.location.
     await updateSession();
-    router.push("/settings/team");
+    window.location.href = "/settings/team";
   };
 
   return (
