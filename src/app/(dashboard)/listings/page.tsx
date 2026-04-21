@@ -11,38 +11,54 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 50;
+
 export default async function ListingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ smart_list?: string; scope?: string }>;
+  searchParams: Promise<{ smart_list?: string; scope?: string; page?: string }>;
 }) {
   const params = await searchParams;
   const scope = (params.scope === "team" ? "team" : "personal") as DataScope;
   const supabase = await getScopedTenantClient(scope);
+  const page = Math.max(1, parseInt(params.page || "1", 10) || 1);
 
   let listings;
   let activeSmartList = null;
+  let totalCount = 0;
 
   if (params.smart_list) {
     const result = await executeSmartList(params.smart_list);
     listings = result.rows;
     activeSmartList = result.smartList;
+    totalCount = listings?.length ?? 0;
   } else {
-    const { data } = await supabase
-      .from("listings")
-      .select("id, address, status, mls_number, list_price, property_type, hero_image_url, created_at, contacts!listings_seller_id_fkey(name)")
-      .order("created_at", { ascending: false })
-      .limit(200);
+    const from = (page - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
+    const [{ count }, { data }] = await Promise.all([
+      supabase
+        .from("listings")
+        .select("id", { count: "exact", head: true }),
+      supabase
+        .from("listings")
+        .select("id, address, status, mls_number, list_price, property_type, hero_image_url, created_at, contacts!listings_seller_id_fkey(name)")
+        .order("created_at", { ascending: false })
+        .range(from, to),
+    ]);
+
     listings = data;
+    totalCount = count ?? 0;
   }
 
   const isEmpty = !listings || listings.length === 0;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
     <>
       <PageHeader
         title={activeSmartList ? `${activeSmartList.icon} ${activeSmartList.name}` : "Listings"}
-        subtitle={`${listings?.length ?? 0} listings`}
+        subtitle={`${totalCount} listing${totalCount !== 1 ? "s" : ""}`}
         actions={
           <Link href="/listings/new">
             <Button className="bg-brand text-white hover:bg-brand-dark">Create Listing</Button>
@@ -53,7 +69,7 @@ export default async function ListingsPage({
         {activeSmartList && (
           <SmartListBanner smartList={activeSmartList} count={listings?.length ?? 0} />
         )}
-        {isEmpty ? (
+        {isEmpty && page === 1 ? (
           <EmptyState
             icon={Building2}
             title="No listings yet"
@@ -65,7 +81,12 @@ export default async function ListingsPage({
             }
           />
         ) : (
-          <ListingsTableClient listings={(listings ?? []) as any} />
+          <ListingsTableClient
+            listings={(listings ?? []) as any}
+            currentPage={page}
+            totalPages={totalPages}
+            totalCount={totalCount}
+          />
         )}
       </div>
     </>

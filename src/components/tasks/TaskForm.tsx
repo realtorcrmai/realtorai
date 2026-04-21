@@ -56,7 +56,7 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
       .catch(() => {});
     fetch("/api/listings")
       .then((r) => r.json())
-      .then((data) => setListings(Array.isArray(data) ? data : []))
+      .then((json) => { const data = json.data ?? json; setListings(Array.isArray(data) ? data : []); })
       .catch(() => {});
   }, []);
 

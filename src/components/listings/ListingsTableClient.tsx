@@ -121,7 +121,17 @@ function ListingCard({ listing, onClick }: { listing: ListingRow; onClick: () =>
 }
 
 // ── Main Component ──────────────────────────
-export function ListingsTableClient({ listings }: { listings: ListingRow[] }) {
+export function ListingsTableClient({
+  listings,
+  currentPage = 1,
+  totalPages = 1,
+  totalCount,
+}: {
+  listings: ListingRow[];
+  currentPage?: number;
+  totalPages?: number;
+  totalCount?: number;
+}) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"grid" | "table">("grid");
@@ -255,6 +265,35 @@ export function ListingsTableClient({ listings }: { listings: ListingRow[] }) {
           emptyMessage="No listings found."
           ariaLabel="Listings list"
         />
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-4 border-t border-border/50">
+          <span className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages} ({totalCount} total)
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => router.push(`/listings?page=${currentPage - 1}`)}
+              disabled={currentPage <= 1}
+              className="px-3 py-1.5 text-sm rounded-md border border-border bg-card hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              aria-label="Previous page"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push(`/listings?page=${currentPage + 1}`)}
+              disabled={currentPage >= totalPages}
+              className="px-3 py-1.5 text-sm rounded-md border border-border bg-card hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              aria-label="Next page"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

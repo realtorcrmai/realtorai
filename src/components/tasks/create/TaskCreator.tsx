@@ -43,7 +43,7 @@ export function TaskCreator() {
     setLoadingRefs(true);
     Promise.all([
       fetch("/api/contacts").then((r) => r.json()).catch(() => []),
-      fetch("/api/listings").then((r) => r.json()).catch(() => []),
+      fetch("/api/listings").then((r) => r.json()).then((j) => j.data ?? j).catch(() => []),
     ]).then(([c, l]) => {
       setContacts(Array.isArray(c) ? c : []);
       setListings(Array.isArray(l) ? l : []);
