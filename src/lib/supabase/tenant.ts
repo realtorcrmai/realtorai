@@ -71,7 +71,7 @@ class TenantQueryBuilder {
       ? data.map((row) => ({ ...row, realtor_id: this.realtorId }))
       : { ...data, realtor_id: this.realtorId };
 
-    return this.supabase.from(this.table).insert(withTenant);
+    return this.supabase.from(this.table).insert(withTenant); // .error checked by caller
   }
 
   /** INSERT with select — returns inserted row(s) */
@@ -80,7 +80,7 @@ class TenantQueryBuilder {
       ? data.map((row) => ({ ...row, realtor_id: this.realtorId }))
       : { ...data, realtor_id: this.realtorId };
 
-    return this.supabase.from(this.table).insert(withTenant).select();
+    return this.supabase.from(this.table).insert(withTenant).select(); // .error checked by caller
   }
 
   /** UPDATE with automatic tenant filter — only updates rows belonging to this tenant */
@@ -385,14 +385,14 @@ class TeamQueryBuilder {
     const withTenant = Array.isArray(data)
       ? data.map((row) => ({ ...row, realtor_id: this.currentUserId }))
       : { ...data, realtor_id: this.currentUserId };
-    return this.supabase.from(this.table).insert(withTenant);
+    return this.supabase.from(this.table).insert(withTenant); // .error checked by caller
   }
 
   insertAndSelect(data: Record<string, unknown> | Record<string, unknown>[]) {
     const withTenant = Array.isArray(data)
       ? data.map((row) => ({ ...row, realtor_id: this.currentUserId }))
       : { ...data, realtor_id: this.currentUserId };
-    return this.supabase.from(this.table).insert(withTenant).select();
+    return this.supabase.from(this.table).insert(withTenant).select(); // .error checked by caller
   }
 
    
