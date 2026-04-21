@@ -1806,3 +1806,5 @@ ALTER TABLE deal_coordinator ENABLE ROW LEVEL SECURITY;
 *Version 1.1 — 2026-04-20*
 
 <!-- changelog: added team-permissions.ts (RBAC for team collaboration), MondaySidebar team nav -->
+
+<!-- Last reviewed: 2026-04-21 -->

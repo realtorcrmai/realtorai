@@ -1152,3 +1152,5 @@
 ### Automation Coverage
 - **Automated (Playwright + Server Actions):** 81 of 101 test cases (80%)
 - **Manual only:** 20 of 101 test cases (20%) — screen reader tests, visual alignment checks, performance edge cases
+
+<!-- Last reviewed: 2026-04-21 -->

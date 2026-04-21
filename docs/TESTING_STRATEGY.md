@@ -256,3 +256,5 @@ Without those vars, the RLS suite skips automatically (`describe.skipIf`).
 - `realestate-crm/docs/TECH_DEBT.md` — open testing gaps tracked here
 - `realestate-crm/realtors360-newsletter/vitest.config.ts` — reference vitest setup (newsletter service)
 - `~/.claude/CLAUDE.md` — global Auto Browser Testing standing instruction
+
+<!-- Last reviewed: 2026-04-21 -->

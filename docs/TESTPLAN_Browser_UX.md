@@ -303,3 +303,5 @@ npx playwright test tests/browser/ --project=mobile
 
 *Total: 14 suites, 123+ test cases*
 *Last updated: 2026-04-13*
+
+<!-- Last reviewed: 2026-04-21 -->

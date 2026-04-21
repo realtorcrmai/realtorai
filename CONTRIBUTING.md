@@ -358,3 +358,5 @@ if (!check.allowed) return { error: check.reason };
 - `CLAUDE.md` — AI agent instructions (read by Claude Code automatically)
 - `.claude/agent-playbook.md` — mandatory task execution protocol
 - Issues: https://github.com/realtorcrmai/realtorai/issues
+
+<!-- Last reviewed: 2026-04-21 -->

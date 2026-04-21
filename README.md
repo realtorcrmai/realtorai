@@ -208,3 +208,5 @@ realtors360-sites/                # Pre-built website components
 ## License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
+<!-- Last reviewed: 2026-04-21 -->
