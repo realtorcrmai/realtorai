@@ -269,7 +269,11 @@ npm run test:rls
 npm run test:watch
 
 # Browser tests (Playwright)
-npx playwright test
+npm run test:e2e              # all E2E tests
+npm run test:e2e:ui           # interactive UI mode
+npm run test:e2e:debug        # debug mode
+npm run test:e2e:p0           # P0 critical tests only
+npm run test:e2e:desktop      # desktop viewport only
 
 # Docs freshness audit
 node scripts/audit-docs.mjs
