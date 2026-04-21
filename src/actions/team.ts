@@ -44,7 +44,7 @@ async function logActivity(
   metadata: Record<string, unknown> = {}
 ) {
   const supabase = createAdminClient();
-  await supabase.from("team_activity_log").insert({
+  const { error } = await supabase.from("team_activity_log").insert({
     team_id: teamId,
     user_id: userId,
     action,
@@ -52,6 +52,7 @@ async function logActivity(
     entity_id: entityId,
     metadata,
   });
+  if (error) console.error("[team] activity log insert failed:", error.message);
 }
 
 async function logAudit(
@@ -63,7 +64,7 @@ async function logAudit(
   details: Record<string, unknown> = {}
 ) {
   const supabase = createAdminClient();
-  await supabase.from("audit_log").insert({
+  const { error } = await supabase.from("audit_log").insert({
     team_id: teamId,
     user_id: userId,
     action,
@@ -71,6 +72,7 @@ async function logAudit(
     resource_id: resourceId,
     details,
   });
+  if (error) console.error("[team] audit log insert failed:", error.message);
 }
 
 // ============================================================

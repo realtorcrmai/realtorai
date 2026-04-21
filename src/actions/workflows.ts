@@ -246,7 +246,8 @@ export async function seedWorkflowSteps(workflowId: string, slug: string) {
   const supabase = createAdminClient();
 
   // Delete existing steps first
-  await supabase.from("workflow_steps").delete().eq("workflow_id", workflowId);
+  const { error: delError } = await supabase.from("workflow_steps").delete().eq("workflow_id", workflowId);
+  if (delError) return { error: "Failed to clear existing steps" };
 
   // Insert steps from blueprint
   const steps = blueprint.steps.map((step, idx) => {
@@ -388,6 +389,17 @@ export async function enrollContact(
   const now = new Date();
   const nextRun = new Date(now.getTime() + (firstStep?.delay_minutes || 0) * 60000);
 
+  // Generate team dedup key if user is on a team
+  let teamDedupKey: string | null = null;
+  try {
+    const { auth } = await import("@/lib/auth");
+    const session = await auth();
+    const teamId = (session?.user as Record<string, unknown> | undefined)?.teamId as string | null;
+    if (teamId) {
+      teamDedupKey = `${teamId}:${contactId}:${workflowId}`;
+    }
+  } catch { /* solo user or auth unavailable */ }
+
   const { data: enrollment, error } = await supabase
     .from("workflow_enrollments")
     .upsert(
@@ -398,6 +410,7 @@ export async function enrollContact(
         status: "active",
         current_step: 1,
         next_run_at: nextRun.toISOString(),
+        team_dedup_key: teamDedupKey,
       },
       { onConflict: "workflow_id,contact_id", ignoreDuplicates: true }
     )
@@ -408,13 +421,14 @@ export async function enrollContact(
   if (error) return { error: "Failed to enroll contact: " + error.message };
 
   // Log activity
-  await supabase.from("activity_log").insert({
+  const { error: logError } = await supabase.from("activity_log").insert({
     contact_id: contactId,
     listing_id: listingId || null,
     activity_type: "workflow_enrolled",
     description: `Enrolled in workflow`,
     metadata: { workflow_id: workflowId, enrollment_id: enrollment.id },
   });
+  if (logError) console.error("[workflows] activity log failed:", logError.message);
 
   revalidatePath(`/contacts/${contactId}`);
   revalidatePath("/automations");
