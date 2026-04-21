@@ -63,7 +63,7 @@ describe('runLearningCycle — cross-tenant isolation', () => {
     calls.length = 0;
   });
 
-  it('filters the newsletters query by realtor_id (regression: HC-12)', async () => {
+  it('REQ-TENANT-001 TC-LE-001: filters the newsletters query by realtor_id (regression: HC-12) @p0', async () => {
     const REALTOR_A = 'realtor-uuid-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
     await runLearningCycle(REALTOR_A);
@@ -89,7 +89,7 @@ describe('runLearningCycle — cross-tenant isolation', () => {
     ).toBeDefined();
   });
 
-  it('passes a different realtor_id when called for a different tenant', async () => {
+  it('REQ-TENANT-001 TC-LE-002: passes a different realtor_id when called for a different tenant @p0', async () => {
     const REALTOR_B = 'realtor-uuid-bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 
     await runLearningCycle(REALTOR_B);

@@ -52,12 +52,12 @@ function makeListingData(overrides: Partial<EmailData> = {}): EmailData {
 // ═══════════════════════════════════════════════
 
 describe('assembleEmail', () => {
-  it('returns a string containing DOCTYPE declaration', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-001: returns a string containing DOCTYPE declaration @p0', () => {
     const html = assembleEmail('welcome', makeData());
     expect(html).toContain('<!DOCTYPE html>');
   });
 
-  it('returns valid HTML with opening and closing tags', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-002: returns valid HTML with opening and closing tags @p0', () => {
     const html = assembleEmail('welcome', makeData());
     expect(html).toContain('<html>');
     expect(html).toContain('</html>');
@@ -65,39 +65,39 @@ describe('assembleEmail', () => {
     expect(html).toContain('</body>');
   });
 
-  it('includes meta charset and viewport', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-003: includes meta charset and viewport @p0', () => {
     const html = assembleEmail('welcome', makeData());
     expect(html).toContain('charset="utf-8"');
     expect(html).toContain('viewport');
   });
 
-  it('includes the email subject in preheader text', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-004: includes the email subject in preheader text @p0', () => {
     const data = makeData({ content: { ...makeData().content, subject: 'Special Offer Inside' } });
     const html = assembleEmail('welcome', data);
     expect(html).toContain('Special Offer Inside');
   });
 
-  it('includes the contact first name in personal note', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-005: includes the contact first name in personal note @p0', () => {
     const html = assembleEmail('welcome', makeData());
     expect(html).toContain('Alice');
   });
 
-  it('includes the agent name in agent card', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-006: includes the agent name in agent card @p0', () => {
     const html = assembleEmail('welcome', makeData());
     expect(html).toContain('Agent Bob');
   });
 
-  it('includes the brokerage in agent card', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-007: includes the brokerage in agent card @p0', () => {
     const html = assembleEmail('welcome', makeData());
     expect(html).toContain('RE/MAX');
   });
 
-  it('includes CTA text', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-008: includes CTA text @p0', () => {
     const html = assembleEmail('welcome', makeData());
     expect(html).toContain('View Listing');
   });
 
-  it('includes unsubscribe link in footer', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-009: includes unsubscribe link in footer @p0', () => {
     const html = assembleEmail('welcome', makeData());
     expect(html).toContain('Unsubscribe');
   });
@@ -108,23 +108,23 @@ describe('assembleEmail', () => {
 // ═══════════════════════════════════════════════
 
 describe('assembleEmail email types', () => {
-  it('listing_alert includes listing address', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-010: listing_alert includes listing address @p0', () => {
     const html = assembleEmail('listing_alert', makeListingData());
     expect(html).toContain('123 Main St, Vancouver');
   });
 
-  it('listing_alert includes formatted price', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-011: listing_alert includes formatted price @p0', () => {
     const html = assembleEmail('listing_alert', makeListingData());
     expect(html).toContain('899');
   });
 
-  it('listing_alert includes bed/bath counts', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-012: listing_alert includes bed/bath counts @p0', () => {
     const html = assembleEmail('listing_alert', makeListingData());
     expect(html).toContain('3');
     expect(html).toContain('2');
   });
 
-  it('market_update renders stats when market data present', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-013: market_update renders stats when market data present @p0', () => {
     const data = makeData({
       market: { avgPrice: '$1.2M', avgDom: 18, inventoryChange: '+12%' },
     });
@@ -133,7 +133,7 @@ describe('assembleEmail email types', () => {
     expect(html).toContain('18');
   });
 
-  it('home_anniversary renders anniversary comparison when data present', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-014: home_anniversary renders anniversary comparison when data present @p0', () => {
     const data = makeData({
       anniversary: {
         purchasePrice: '$650,000',
@@ -147,7 +147,7 @@ describe('assembleEmail email types', () => {
     expect(html).toContain('$820,000');
   });
 
-  it('falls back to welcome template for unknown email types', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-015: falls back to welcome template for unknown email types @p1', () => {
     const html = assembleEmail('nonexistent_type', makeData());
     // Should still produce valid HTML (uses welcome blocks)
     expect(html).toContain('<!DOCTYPE html>');
@@ -160,12 +160,12 @@ describe('assembleEmail email types', () => {
 // ═══════════════════════════════════════════════
 
 describe('assembleEmail dark mode', () => {
-  it('includes dark mode media query', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-016: includes dark mode media query @p0', () => {
     const html = assembleEmail('welcome', makeData());
     expect(html).toContain('prefers-color-scheme: dark');
   });
 
-  it('includes email-body class for dark mode targeting', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-017: includes email-body class for dark mode targeting @p0', () => {
     const html = assembleEmail('welcome', makeData());
     expect(html).toContain('email-body');
   });
@@ -182,7 +182,7 @@ describe('email-blocks property tests', () => {
     'cma_preview', 're_engagement', 'luxury_showcase',
   ];
 
-  it('assembleEmail always returns a string starting with DOCTYPE', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-018: assembleEmail always returns a string starting with DOCTYPE @p2', () => {
     fc.assert(
       fc.property(
         fc.constantFrom(...emailTypes),
@@ -195,7 +195,7 @@ describe('email-blocks property tests', () => {
     );
   });
 
-  it('assembleEmail always contains html/body tags for any email type', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-019: assembleEmail always contains html/body tags for any email type @p2', () => {
     fc.assert(
       fc.property(
         fc.constantFrom(...emailTypes),
@@ -210,7 +210,7 @@ describe('email-blocks property tests', () => {
     );
   });
 
-  it('random content strings in subject/intro/body do not break output', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-020: random content strings in subject/intro/body do not break output @p2', () => {
     fc.assert(
       fc.property(
         fc.string({ maxLength: 200 }),
@@ -229,7 +229,7 @@ describe('email-blocks property tests', () => {
     );
   });
 
-  it('random contact names do not break output', () => {
+  it('REQ-NEWSLETTER-002 TC-EB-021: random contact names do not break output @p2', () => {
     fc.assert(
       fc.property(
         fc.string({ minLength: 1, maxLength: 100 }),

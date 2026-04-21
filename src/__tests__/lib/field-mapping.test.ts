@@ -41,7 +41,7 @@ function makeContext(overrides: Partial<CrmContext> = {}): CrmContext {
 // ═══════════════════════════════════════════════
 
 describe('applyFieldMapping', () => {
-  it('resolves simple listing fields', () => {
+  it('REQ-WORKFLOW-003 TC-FM-001: resolves simple listing fields @p0', () => {
     const ctx = makeContext();
     const result = applyFieldMapping(
       { propertyAddress: 'listing.address' },
@@ -50,7 +50,7 @@ describe('applyFieldMapping', () => {
     expect(result.propertyAddress).toBe('123 Main St, Vancouver, BC');
   });
 
-  it('resolves seller fields', () => {
+  it('REQ-WORKFLOW-003 TC-FM-002: resolves seller fields @p0', () => {
     const ctx = makeContext();
     const result = applyFieldMapping(
       { clientName: 'seller.name', clientPhone: 'seller.phone' },
@@ -60,7 +60,7 @@ describe('applyFieldMapping', () => {
     expect(result.clientPhone).toBe('+16045551234');
   });
 
-  it('resolves user (agent) fields', () => {
+  it('REQ-WORKFLOW-003 TC-FM-003: resolves user (agent) fields @p0', () => {
     const ctx = makeContext();
     const result = applyFieldMapping(
       { agentName: 'user.name', agentEmail: 'user.email' },
@@ -70,13 +70,13 @@ describe('applyFieldMapping', () => {
     expect(result.agentEmail).toBe('bob@brokerage.com');
   });
 
-  it('resolves the special _today path to a date string', () => {
+  it('REQ-WORKFLOW-003 TC-FM-004: resolves the special _today path to a date string @p0', () => {
     const result = applyFieldMapping({ date: '_today' }, makeContext());
     // Should be in YYYY-MM-DD format
     expect(result.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it('formats price fields as Canadian currency', () => {
+  it('REQ-WORKFLOW-003 TC-FM-005: formats price fields as Canadian currency @p0', () => {
     const result = applyFieldMapping(
       { price: 'listing.list_price' },
       makeContext(),
@@ -86,7 +86,7 @@ describe('applyFieldMapping', () => {
     expect(result.price).toContain('$');
   });
 
-  it('converts numeric non-price fields to string', () => {
+  it('REQ-WORKFLOW-003 TC-FM-006: converts numeric non-price fields to string @p0', () => {
     const result = applyFieldMapping(
       { bedrooms: 'listing.beds' },
       makeContext(),
@@ -94,7 +94,7 @@ describe('applyFieldMapping', () => {
     expect(result.bedrooms).toBe('3');
   });
 
-  it('omits fields that resolve to empty string', () => {
+  it('REQ-WORKFLOW-003 TC-FM-007: omits fields that resolve to empty string @p1', () => {
     const ctx = makeContext({ listing: { address: '123 Main' } });
     const result = applyFieldMapping(
       {
@@ -107,7 +107,7 @@ describe('applyFieldMapping', () => {
     expect(result).not.toHaveProperty('missingField');
   });
 
-  it('handles null seller email gracefully', () => {
+  it('REQ-WORKFLOW-003 TC-FM-008: handles null seller email gracefully @p1', () => {
     const ctx = makeContext({ seller: { name: 'Test', phone: '555', email: null } });
     const result = applyFieldMapping(
       { email: 'seller.email' },
@@ -117,7 +117,7 @@ describe('applyFieldMapping', () => {
     expect(result).not.toHaveProperty('email');
   });
 
-  it('handles null user fields gracefully', () => {
+  it('REQ-WORKFLOW-003 TC-FM-009: handles null user fields gracefully @p1', () => {
     const ctx = makeContext({ user: { name: null, email: null } });
     const result = applyFieldMapping(
       { agentName: 'user.name' },
@@ -126,12 +126,12 @@ describe('applyFieldMapping', () => {
     expect(result).not.toHaveProperty('agentName');
   });
 
-  it('returns empty object for empty mapping', () => {
+  it('REQ-WORKFLOW-003 TC-FM-010: returns empty object for empty mapping @p1', () => {
     const result = applyFieldMapping({}, makeContext());
     expect(result).toEqual({});
   });
 
-  it('handles deeply nested paths that do not exist', () => {
+  it('REQ-WORKFLOW-003 TC-FM-011: handles deeply nested paths that do not exist @p1', () => {
     const result = applyFieldMapping(
       { deep: 'listing.a.b.c.d' },
       makeContext(),
@@ -139,7 +139,7 @@ describe('applyFieldMapping', () => {
     expect(result).not.toHaveProperty('deep');
   });
 
-  it('maps multiple fields at once', () => {
+  it('REQ-WORKFLOW-003 TC-FM-012: maps multiple fields at once @p0', () => {
     const ctx = makeContext();
     const mapping = {
       address: 'listing.address',
@@ -157,7 +157,7 @@ describe('applyFieldMapping', () => {
 // ═══════════════════════════════════════════════
 
 describe('field-mapping property tests', () => {
-  it('never throws on arbitrary field mappings', () => {
+  it('REQ-WORKFLOW-003 TC-FM-013: never throws on arbitrary field mappings @p2', () => {
     const ctx = makeContext();
     fc.assert(
       fc.property(
@@ -172,7 +172,7 @@ describe('field-mapping property tests', () => {
     );
   });
 
-  it('result keys are always a subset of mapping keys', () => {
+  it('REQ-WORKFLOW-003 TC-FM-014: result keys are always a subset of mapping keys @p2', () => {
     const ctx = makeContext();
     fc.assert(
       fc.property(
@@ -191,7 +191,7 @@ describe('field-mapping property tests', () => {
     );
   });
 
-  it('result values are always non-empty strings', () => {
+  it('REQ-WORKFLOW-003 TC-FM-015: result values are always non-empty strings @p2', () => {
     const ctx = makeContext();
     const validPaths = ['listing.address', 'seller.name', 'seller.phone', 'user.name', 'user.email', '_today'];
     fc.assert(
@@ -212,7 +212,7 @@ describe('field-mapping property tests', () => {
     );
   });
 
-  it('_today always produces a valid ISO date', () => {
+  it('REQ-WORKFLOW-003 TC-FM-016: _today always produces a valid ISO date @p2', () => {
     fc.assert(
       fc.property(
         fc.string({ minLength: 1, maxLength: 10 }),

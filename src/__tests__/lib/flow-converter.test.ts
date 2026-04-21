@@ -34,17 +34,17 @@ function edge(source: string, target: string) {
 // ═══════════════════════════════════════════════
 
 describe('flowToSteps', () => {
-  it('returns empty array when no trigger node exists', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-001: returns empty array when no trigger node exists @p1', () => {
     const nodes = [{ id: 'x', type: 'email', position: { x: 0, y: 0 }, data: {} }];
     expect(flowToSteps(nodes, [])).toEqual([]);
   });
 
-  it('returns empty array when only trigger node with no successors', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-002: returns empty array when only trigger node with no successors @p1', () => {
     const steps = flowToSteps([triggerNode()], []);
     expect(steps).toEqual([]);
   });
 
-  it('converts a single email node to one step', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-003: converts a single email node to one step @p0', () => {
     const nodes = [triggerNode(), emailNode()];
     const edges = [edge('trigger-1', 'email-1')];
     const steps = flowToSteps(nodes, edges);
@@ -53,7 +53,7 @@ describe('flowToSteps', () => {
     expect(steps[0].step_order).toBe(1);
   });
 
-  it('converts multiple sequential nodes to ordered steps', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-004: converts multiple sequential nodes to ordered steps @p0', () => {
     const waitNode = { id: 'wait-1', type: 'wait', position: { x: 0, y: 280 }, data: { label: 'Wait', delay_value: 2, delay_unit: 'days' } };
     const nodes = [triggerNode(), emailNode(), waitNode];
     const edges = [edge('trigger-1', 'email-1'), edge('email-1', 'wait-1')];
@@ -64,26 +64,26 @@ describe('flowToSteps', () => {
     expect(steps[1].action_type).toBe('wait');
   });
 
-  it('calculates delay_minutes correctly for hours', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-005: calculates delay_minutes correctly for hours @p0', () => {
     const node = emailNode('e1', { delay_value: 3, delay_unit: 'hours' });
     const steps = flowToSteps([triggerNode(), node], [edge('trigger-1', 'e1')]);
     expect(steps[0].delay_minutes).toBe(180);
   });
 
-  it('calculates delay_minutes correctly for days', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-006: calculates delay_minutes correctly for days @p0', () => {
     const node = emailNode('e1', { delay_value: 2, delay_unit: 'days' });
     const steps = flowToSteps([triggerNode(), node], [edge('trigger-1', 'e1')]);
     expect(steps[0].delay_minutes).toBe(2880);
   });
 
-  it('defaults delay to 0 minutes when no delay data', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-007: defaults delay to 0 minutes when no delay data @p1', () => {
     const node = { id: 'n1', type: 'email', position: { x: 0, y: 0 }, data: { label: 'Send' } };
     const steps = flowToSteps([triggerNode(), node], [edge('trigger-1', 'n1')]);
     expect(steps[0].delay_minutes).toBe(0);
     expect(steps[0].delay_value).toBe(0);
   });
 
-  it('maps node types to correct action types', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-008: maps node types to correct action types @p0', () => {
     const types = [
       { nodeType: 'email', expected: 'auto_email' },
       { nodeType: 'aiEmail', expected: 'ai_email' },
@@ -100,19 +100,19 @@ describe('flowToSteps', () => {
     }
   });
 
-  it('preserves template_id from node data', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-009: preserves template_id from node data @p0', () => {
     const node = emailNode('e1', { template_id: 'tmpl-abc-123' });
     const steps = flowToSteps([triggerNode(), node], [edge('trigger-1', 'e1')]);
     expect(steps[0].template_id).toBe('tmpl-abc-123');
   });
 
-  it('sets template_id to null when not provided', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-010: sets template_id to null when not provided @p1', () => {
     const node = emailNode('e1');
     const steps = flowToSteps([triggerNode(), node], [edge('trigger-1', 'e1')]);
     expect(steps[0].template_id).toBeNull();
   });
 
-  it('preserves action_config fields', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-011: preserves action_config fields @p0', () => {
     const node = emailNode('e1', { email_type: 'listing_alert', send_mode: 'auto' });
     const steps = flowToSteps([triggerNode(), node], [edge('trigger-1', 'e1')]);
     expect(steps[0].action_config).toMatchObject({
@@ -127,14 +127,14 @@ describe('flowToSteps', () => {
 // ═══════════════════════════════════════════════
 
 describe('stepsToFlow', () => {
-  it('returns a trigger node even with empty steps', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-012: returns a trigger node even with empty steps @p1', () => {
     const { nodes, edges } = stepsToFlow([]);
     expect(nodes).toHaveLength(1);
     expect(nodes[0].type).toBe('trigger');
     expect(edges).toHaveLength(0);
   });
 
-  it('creates nodes and edges for each step', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-013: creates nodes and edges for each step @p0', () => {
     const steps = [
       { id: 'a', step_order: 1, name: 'Email', action_type: 'auto_email', delay_value: 0, delay_unit: 'minutes', template_id: null, action_config: {}, task_config: {}, condition_config: {} },
       { id: 'b', step_order: 2, name: 'Wait', action_type: 'wait', delay_value: 1, delay_unit: 'days', template_id: null, action_config: {}, task_config: {}, condition_config: {} },
@@ -146,7 +146,7 @@ describe('stepsToFlow', () => {
     expect(edges).toHaveLength(2);
   });
 
-  it('maps action_type back to correct node type', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-014: maps action_type back to correct node type @p0', () => {
     const steps = [
       { id: 'x', step_order: 1, name: 'AI Email', action_type: 'ai_email', delay_value: 0, delay_unit: 'minutes', template_id: null, action_config: {}, task_config: {}, condition_config: {} },
     ];
@@ -155,7 +155,7 @@ describe('stepsToFlow', () => {
     expect(stepNode?.type).toBe('aiEmail');
   });
 
-  it('uses trigger config when provided', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-015: uses trigger config when provided @p0', () => {
     const { nodes } = stepsToFlow([], { trigger_type: 'journey_enroll', contact_type: 'buyer' });
     expect(nodes[0].data).toMatchObject({
       trigger_type: 'journey_enroll',
@@ -163,7 +163,7 @@ describe('stepsToFlow', () => {
     });
   });
 
-  it('sorts steps by step_order regardless of input order', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-016: sorts steps by step_order regardless of input order @p0', () => {
     const steps = [
       { id: 'b', step_order: 2, name: 'Second', action_type: 'auto_email', delay_value: 0, delay_unit: 'minutes', template_id: null, action_config: {}, task_config: {}, condition_config: {} },
       { id: 'a', step_order: 1, name: 'First', action_type: 'auto_sms', delay_value: 0, delay_unit: 'minutes', template_id: null, action_config: {}, task_config: {}, condition_config: {} },
@@ -195,7 +195,7 @@ describe('flow-converter property tests', () => {
     condition_config: fc.constant({}),
   });
 
-  it('stepsToFlow never throws on arbitrary valid steps', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-017: stepsToFlow never throws on arbitrary valid steps @p2', () => {
     fc.assert(
       fc.property(fc.array(arbStep, { maxLength: 20 }), (steps) => {
         // Deduplicate step_order
@@ -208,7 +208,7 @@ describe('flow-converter property tests', () => {
     );
   });
 
-  it('stepsToFlow always produces trigger node as first node', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-018: stepsToFlow always produces trigger node as first node @p2', () => {
     fc.assert(
       fc.property(fc.array(arbStep, { maxLength: 10 }), (steps) => {
         const deduped = steps.map((s, i) => ({ ...s, step_order: i + 1 }));
@@ -219,7 +219,7 @@ describe('flow-converter property tests', () => {
     );
   });
 
-  it('stepsToFlow node count equals steps + 1 (trigger)', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-019: stepsToFlow node count equals steps + 1 (trigger) @p2', () => {
     fc.assert(
       fc.property(fc.array(arbStep, { maxLength: 10 }), (steps) => {
         const deduped = steps.map((s, i) => ({ ...s, step_order: i + 1 }));
@@ -230,7 +230,7 @@ describe('flow-converter property tests', () => {
     );
   });
 
-  it('stepsToFlow edge count equals number of steps', () => {
+  it('REQ-NEWSLETTER-006 TC-FC-020: stepsToFlow edge count equals number of steps @p2', () => {
     fc.assert(
       fc.property(fc.array(arbStep, { maxLength: 10 }), (steps) => {
         const deduped = steps.map((s, i) => ({ ...s, step_order: i + 1 }));

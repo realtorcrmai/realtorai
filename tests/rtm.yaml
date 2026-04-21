@@ -78,7 +78,9 @@ areas:
         description: Duplicate detection on email match
         priority: P1
         acceptance: Warning shown when creating contact with existing email
-        tests: []
+        tests:
+          - { id: TC-CD-001, file: tests/integration/contacts-advanced.test.ts, layer: L4 }
+          - { id: TC-CD-002, file: tests/integration/contacts-advanced.test.ts, layer: L4 }
       - id: REQ-CONTACT-006
         description: Phone numbers stored in E.164 format
         priority: P0
@@ -98,7 +100,9 @@ areas:
         description: Bulk delete multiple contacts
         priority: P1
         acceptance: Selected contacts removed in single operation
-        tests: []
+        tests:
+          - { id: TC-BD-001, file: tests/integration/contacts-advanced.test.ts, layer: L4 }
+          - { id: TC-BD-002, file: tests/integration/contacts-advanced.test.ts, layer: L4 }
       - id: REQ-CONTACT-009
         description: Search contacts by name or email
         priority: P0
@@ -226,7 +230,8 @@ areas:
         description: MLS number unique when provided
         priority: P1
         acceptance: Duplicate MLS number rejected at DB level
-        tests: []
+        tests:
+          - { id: TC-DI-002, file: tests/integration/listings.test.ts, layer: L4 }
       - id: REQ-LISTING-010
         description: Listings scoped to authenticated realtor (tenant isolation)
         priority: P0
@@ -246,7 +251,9 @@ areas:
         description: Photos uploadable and linked to listing
         priority: P1
         acceptance: Uploaded photos appear in listing gallery
-        tests: []
+        tests:
+          - { id: TC-PH-001, file: tests/integration/enrichment-photos.test.ts, layer: L4 }
+          - { id: TC-PH-002, file: tests/integration/enrichment-photos.test.ts, layer: L4 }
 
   - id: SHOWING
     name: Showing Management
@@ -294,7 +301,8 @@ areas:
         description: Post-showing feedback requested after completion
         priority: P1
         acceptance: SMS feedback request sent, response logged to communications
-        tests: []
+        tests:
+          - { id: TC-FB-001, file: tests/integration/newsletter-analytics.test.ts, layer: L4 }
       - id: REQ-SHOWING-008
         description: Showing status lifecycle (pending/confirmed/completed/denied/cancelled)
         priority: P0
@@ -326,7 +334,9 @@ areas:
         description: Phase validation before advancement
         priority: P0
         acceptance: Cannot advance to phase N+1 without completing phase N requirements
-        tests: []
+        tests:
+          - { id: TC-WP-001, file: tests/integration/workflow-phases.test.ts, layer: L4 }
+          - { id: TC-WP-002, file: tests/integration/workflow-phases.test.ts, layer: L4 }
       - id: REQ-WORKFLOW-003
         description: Phase 5 form generation via Python server
         priority: P0
@@ -338,22 +348,32 @@ areas:
         description: Phase 2 data enrichment (Geocoder, ParcelMap)
         priority: P0
         acceptance: Enrichment data populated in listing_enrichment table
-        tests: []
+        tests:
+          - { id: TC-WP-030, file: tests/integration/workflow-phases.test.ts, layer: L4 }
+          - { id: TC-WP-031, file: tests/integration/workflow-phases.test.ts, layer: L4 }
+          - { id: TC-EN-001, file: tests/integration/enrichment-photos.test.ts, layer: L4 }
       - id: REQ-WORKFLOW-005
         description: Phase 7 MLS remarks generation via Claude AI
         priority: P0
         acceptance: Public and realtor remarks generated (max 500 chars each)
-        tests: []
+        tests:
+          - { id: TC-MR-001, file: src/__tests__/lib/creative-director.test.ts, layer: L1 }
+          - { id: TC-MR-002, file: src/__tests__/lib/creative-director.test.ts, layer: L1 }
+          - { id: TC-MR-003, file: src/__tests__/lib/creative-director.test.ts, layer: L1 }
+          - { id: TC-MR-DB-001, file: tests/integration/enrichment-photos.test.ts, layer: L4 }
       - id: REQ-WORKFLOW-006
         description: Audit trail logged for phase transitions
         priority: P0
         acceptance: Phase change timestamp and actor recorded
-        tests: []
+        tests:
+          - { id: TC-WP-010, file: tests/integration/workflow-phases.test.ts, layer: L4 }
       - id: REQ-WORKFLOW-007
         description: Phase 1 FINTRAC identity collection
         priority: P0
         acceptance: Seller identity fields stored in seller_identities table
-        tests: []
+        tests:
+          - { id: TC-WP-020, file: tests/integration/workflow-phases.test.ts, layer: L4 }
+          - { id: TC-WP-021, file: tests/integration/workflow-phases.test.ts, layer: L4 }
 
   - id: NEWSLETTER
     name: Newsletter & Email Marketing
@@ -396,7 +416,13 @@ areas:
         description: Analytics tracked (opens, clicks, bounces)
         priority: P0
         acceptance: newsletter_events table populated via webhooks
-        tests: []
+        tests:
+          - { id: TC-NA-001, file: tests/integration/newsletter-analytics.test.ts, layer: L4 }
+          - { id: TC-NA-002, file: tests/integration/newsletter-analytics.test.ts, layer: L4 }
+          - { id: TC-NA-003, file: tests/integration/newsletter-analytics.test.ts, layer: L4 }
+          - { id: TC-NW-001, file: tests/integration/newsletter-webhook.test.ts, layer: L4 }
+          - { id: TC-NW-002, file: tests/integration/newsletter-webhook.test.ts, layer: L4 }
+          - { id: TC-NW-003, file: tests/integration/newsletter-webhook.test.ts, layer: L4 }
       - id: REQ-NEWSLETTER-006
         description: Journey enrollment for drip sequences
         priority: P1
@@ -508,7 +534,11 @@ areas:
         description: Resend email delivery with retry on failure
         priority: P0
         acceptance: Email sent, retry on 5xx, failure logged
-        tests: []
+        tests:
+          - { id: TC-RE-001, file: src/__tests__/lib/resend.test.ts, layer: L1 }
+          - { id: TC-RE-002, file: src/__tests__/lib/resend.test.ts, layer: L1 }
+          - { id: TC-RE-004, file: src/__tests__/lib/resend.test.ts, layer: L1 }
+          - { id: TC-RE-005, file: src/__tests__/lib/resend.test.ts, layer: L1 }
       - id: REQ-INTEGRATION-004
         description: Google Calendar event creation with token refresh
         priority: P1
@@ -519,12 +549,19 @@ areas:
         description: Claude AI generates text within token limits
         priority: P0
         acceptance: Response returned within 30s, under max_tokens
-        tests: []
+        tests:
+          - { id: TC-MR-001, file: src/__tests__/lib/creative-director.test.ts, layer: L1 }
+          - { id: TC-MR-005, file: src/__tests__/lib/creative-director.test.ts, layer: L1 }
       - id: REQ-INTEGRATION-006
         description: Kling AI task submission and polling
         priority: P1
         acceptance: Task ID returned, status polled until complete/failed
-        tests: []
+        tests:
+          - { id: TC-KL-001, file: src/__tests__/lib/kling-client.test.ts, layer: L1 }
+          - { id: TC-KL-002, file: src/__tests__/lib/kling-client.test.ts, layer: L1 }
+          - { id: TC-KL-003, file: src/__tests__/lib/kling-client.test.ts, layer: L1 }
+          - { id: TC-KL-004, file: src/__tests__/lib/kling-client.test.ts, layer: L1 }
+          - { id: TC-KL-005, file: src/__tests__/lib/kling-client.test.ts, layer: L1 }
       - id: REQ-INTEGRATION-007
         description: Twilio webhook processes inbound SMS correctly
         priority: P0
@@ -555,3 +592,32 @@ areas:
         acceptance: MLS remarks generation returns fallback on timeout
         tests:
           - { id: TC-RS-003, file: tests/resilience/external-services.test.ts, layer: L7, status: skipped }
+
+  - id: TASK
+    name: Task Management
+    requirements:
+      - id: REQ-TASK-001
+        description: Create a task with required fields (title, status, realtor_id)
+        priority: P0
+        acceptance: Task persisted in database with correct field values
+        tests:
+          - { id: TC-TK-001, file: tests/integration/tasks-api.test.ts, layer: L4 }
+          - { id: TC-TK-002, file: tests/integration/tasks-api.test.ts, layer: L4 }
+      - id: REQ-TASK-002
+        description: Update task status (pending, in_progress, completed)
+        priority: P0
+        acceptance: Status change persisted and completed_at set on completion
+        tests:
+          - { id: TC-TK-003, file: tests/integration/tasks-api.test.ts, layer: L4 }
+      - id: REQ-TASK-003
+        description: Delete a task removes record from database
+        priority: P1
+        acceptance: Task no longer queryable after deletion
+        tests:
+          - { id: TC-TK-004, file: tests/integration/tasks-api.test.ts, layer: L4 }
+      - id: REQ-TASK-004
+        description: Tasks scoped to realtor_id (tenant isolation)
+        priority: P0
+        acceptance: User A cannot read or update User B tasks
+        tests:
+          - { id: TC-TK-005, file: tests/integration/tasks-api.test.ts, layer: L4 }

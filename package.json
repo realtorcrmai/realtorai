@@ -119,6 +119,7 @@
     "eslint-config-next": "16.1.6",
     "fast-check": "^4.6.0",
     "happy-dom": "^20.9.0",
+    "nock": "^14.0.13",
     "pg": "^8.20.0",
     "tailwindcss": "^4",
     "typescript": "^5",
