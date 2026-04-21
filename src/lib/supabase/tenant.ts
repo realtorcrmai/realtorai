@@ -111,7 +111,7 @@ class TenantQueryBuilder {
       ? data.map((row) => ({ ...row, realtor_id: this.realtorId }))
       : { ...data, realtor_id: this.realtorId };
 
-    return this.supabase.from(this.table).upsert(withTenant, options as any);
+    return this.supabase.from(this.table).upsert(withTenant, options as any); // .error checked by caller
   }
 }
 
@@ -397,13 +397,13 @@ class TeamQueryBuilder {
 
    
   update(data: Record<string, unknown>): any {
-    return this.supabase.from(this.table).update(data).in("realtor_id", this.memberIds);
+    return this.supabase.from(this.table).update(data).in("realtor_id", this.memberIds); // .error checked by caller
   }
 
-   
+
   delete(): any {
     // Safety: Owner/Admin DELETE restricted to own records to prevent accidental mass delete
-    return this.supabase.from(this.table).delete().eq("realtor_id", this.currentUserId);
+    return this.supabase.from(this.table).delete().eq("realtor_id", this.currentUserId); // .error checked by caller
   }
 
    
@@ -411,7 +411,7 @@ class TeamQueryBuilder {
     const withTenant = Array.isArray(data)
       ? data.map((row) => ({ ...row, realtor_id: this.currentUserId }))
       : { ...data, realtor_id: this.currentUserId };
-    return this.supabase.from(this.table).upsert(withTenant, options as any);
+    return this.supabase.from(this.table).upsert(withTenant, options as any); // .error checked by caller
   }
 }
 
@@ -448,26 +448,26 @@ class AgentTeamQueryBuilder {
     const withTenant = Array.isArray(data)
       ? data.map((row) => ({ ...row, realtor_id: this.userId }))
       : { ...data, realtor_id: this.userId };
-    return this.supabase.from(this.table).insert(withTenant);
+    return this.supabase.from(this.table).insert(withTenant); // .error checked by caller
   }
 
   insertAndSelect(data: Record<string, unknown> | Record<string, unknown>[]) {
     const withTenant = Array.isArray(data)
       ? data.map((row) => ({ ...row, realtor_id: this.userId }))
       : { ...data, realtor_id: this.userId };
-    return this.supabase.from(this.table).insert(withTenant).select();
+    return this.supabase.from(this.table).insert(withTenant).select(); // .error checked by caller
   }
 
    
   update(data: Record<string, unknown>): any {
     // Agent can only update own records
-    return this.supabase.from(this.table).update(data).eq("realtor_id", this.userId);
+    return this.supabase.from(this.table).update(data).eq("realtor_id", this.userId); // .error checked by caller
   }
 
    
   delete(): any {
     // Agent can only delete own records
-    return this.supabase.from(this.table).delete().eq("realtor_id", this.userId);
+    return this.supabase.from(this.table).delete().eq("realtor_id", this.userId); // .error checked by caller
   }
 
    
@@ -475,7 +475,7 @@ class AgentTeamQueryBuilder {
     const withTenant = Array.isArray(data)
       ? data.map((row) => ({ ...row, realtor_id: this.userId }))
       : { ...data, realtor_id: this.userId };
-    return this.supabase.from(this.table).upsert(withTenant, options as any);
+    return this.supabase.from(this.table).upsert(withTenant, options as any); // .error checked by caller
   }
 }
 
@@ -505,14 +505,14 @@ class AssistantQueryBuilder {
     const withTenant = Array.isArray(data)
       ? data.map((row) => ({ ...row, realtor_id: this.userId }))
       : { ...data, realtor_id: this.userId };
-    return this.supabase.from(this.table).insert(withTenant);
+    return this.supabase.from(this.table).insert(withTenant); // .error checked by caller
   }
 
   insertAndSelect(data: Record<string, unknown> | Record<string, unknown>[]) {
     const withTenant = Array.isArray(data)
       ? data.map((row) => ({ ...row, realtor_id: this.userId }))
       : { ...data, realtor_id: this.userId };
-    return this.supabase.from(this.table).insert(withTenant).select();
+    return this.supabase.from(this.table).insert(withTenant).select(); // .error checked by caller
   }
 
    
@@ -532,6 +532,6 @@ class AssistantQueryBuilder {
     const withTenant = Array.isArray(data)
       ? data.map((row) => ({ ...row, realtor_id: this.userId }))
       : { ...data, realtor_id: this.userId };
-    return this.supabase.from(this.table).upsert(withTenant, options as any);
+    return this.supabase.from(this.table).upsert(withTenant, options as any); // .error checked by caller
   }
 }
