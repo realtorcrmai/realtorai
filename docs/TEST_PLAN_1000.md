@@ -1804,6 +1804,16 @@ Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. Thi
 **Expected:** 200 with `{ updated: 2 }`. Tasks status set to "completed". Returns 400 for empty array. Respects tenant isolation.
 **Priority:** P1
 
+#### API-TASKS-002: GET/POST /api/tasks/:id/comments manages task comments
+**Steps:** `POST /api/tasks/:id/comments` with `{ content: "Test comment" }`. Then `GET /api/tasks/:id/comments`.
+**Expected:** POST returns 201 with comment object. GET returns array of comments for that task. Requires auth session. Respects tenant isolation.
+**Priority:** P2
+
+#### API-BRAND-001: GET/PUT /api/settings/brand-profile manages brand settings
+**Steps:** `GET /api/settings/brand-profile` with valid session. `PUT /api/settings/brand-profile` with brand data.
+**Expected:** GET returns current brand profile or empty. PUT updates and returns 200. Requires auth session.
+**Priority:** P3
+
 #### API-CALENDAR-001: GET /api/calendar/busy returns busy slots
 **Steps:** `GET /api/calendar/busy?start=2026-04-13&end=2026-04-14` with valid session.
 **Expected:** 200 with array of `{ start, end }` busy time slots from connected calendar. Returns empty array if no calendar connected.

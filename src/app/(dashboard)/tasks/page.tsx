@@ -141,7 +141,7 @@ export default function TasksPage() {
     <>
     <PageHeader
       title="Tasks"
-      subtitle={`${tasks.length} tasks`}
+      subtitle={loading ? "Loading..." : `${tasks.length} tasks`}
       actions={
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger
@@ -173,22 +173,19 @@ export default function TasksPage() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
-            {/* Select All checkbox — only shown when there are selectable tasks */}
-            {!loading && selectableTasks.length > 0 && (
-              <input
-                type="checkbox"
-                checked={allSelected}
-                onChange={toggleSelectAll}
-                className="h-4 w-4 cursor-pointer accent-brand"
-                aria-label="Select all incomplete tasks"
-                title={allSelected ? "Deselect all" : "Select all incomplete tasks"}
-              />
-            )}
             <ListTodo className="h-4 w-4" />
             All Tasks
             <span className="text-muted-foreground font-normal text-sm">
               ({sortedTasks.length})
             </span>
+            {!loading && selectableTasks.length > 0 && (
+              <button
+                onClick={toggleSelectAll}
+                className="ml-auto text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {allSelected ? "Deselect all" : "Select all"}
+              </button>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">

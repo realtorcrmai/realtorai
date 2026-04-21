@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowRight } from "lucide-react";
 import { LogoSpinner, LogoVideo, LogoIcon } from "@/components/brand/Logo";
 import { loginAsDemo } from "@/actions/auth";
+import Link from "next/link";
 
 const DEMO_SLOTS = [
   { label: "Kunal (Pro)", slot: 0, color: "bg-brand-muted text-brand-dark hover:bg-brand/20" },
@@ -114,7 +115,15 @@ export default function LoginPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    <Link
+                      href="/forgot-password"
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
                   <Input
                     id="password"
                     type="password"

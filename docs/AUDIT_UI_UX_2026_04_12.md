@@ -386,7 +386,7 @@ Update listings → Send messages → Review AI emails → End of day
 ### Dashboard & Navigation
 - `src/app/(dashboard)/page.tsx` (283 lines) — 10 parallel queries, 12+ widgets
 - `src/app/(dashboard)/layout.tsx` (49 lines) — onboarding gate, 9 providers
-- `src/components/layout/MondaySidebar.tsx` (220 lines) — 3 nav groups, recent items, logo glow
+- `src/components/layout/MondaySidebar.tsx` (270 lines) — 3 nav groups + team nav (owner/admin only), recent items, logo glow
 - `src/components/layout/MondayHeader.tsx` (40 lines) — search, notifications, avatar
 - `src/components/layout/MobileNav.tsx` (84 lines) — 5 items + QuickAdd FAB
 - `src/components/layout/DashboardShellClient.tsx` (32 lines) — skip link, flex layout

@@ -13,11 +13,14 @@ export async function middleware(request: NextRequest) {
     // Auth pages (must be public for login/signup flow)
     pathname === "/login" ||
     pathname === "/signup" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password" ||
     pathname === "/verify" ||
     pathname.startsWith("/verify/") ||
     pathname === "/onboarding" ||
     pathname === "/personalize" ||
     pathname.startsWith("/join/") ||
+    pathname.startsWith("/invite/accept") ||
 
     // Static assets
     pathname.startsWith("/_next/") ||

@@ -28,6 +28,7 @@ export function DashboardShell({ initialTasks, pendingShowings, activeListings }
       const calEvents: CalendarEvent[] = [
         ...(data.googleEvents ?? []).map((e: any) => ({ id: e.id, title: e.title, start: new Date(e.start), end: new Date(e.end), type: "google" as const })),
         ...(data.showingEvents ?? []).map((e: any) => ({ id: e.id, title: e.title, start: new Date(e.start), end: new Date(e.end), type: "showing" as const, status: e.status })),
+        ...(data.taskEvents ?? []).map((e: any) => ({ id: `task-${e.id}`, title: e.title, start: new Date(e.start), end: new Date(e.end), type: "task" as const, status: e.status })),
       ];
       setEvents(calEvents);
     } catch { /* silent */ }

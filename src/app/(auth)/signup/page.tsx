@@ -28,6 +28,7 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [hasTeam, setHasTeam] = useState(false);
   const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "taken" | "disposable">("idle");
   const emailCheckTimer = useRef<NodeJS.Timeout>(undefined);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -157,7 +158,7 @@ export default function SignupPage() {
       });
 
       if (signInResult?.ok) {
-        router.push("/onboarding");
+        router.push(hasTeam ? "/onboarding?create_team=true" : "/onboarding");
       } else {
         // Account created but auto-sign-in failed — send to login
         router.push("/login");
@@ -312,6 +313,17 @@ export default function SignupPage() {
                 </div>
               )}
             </div>
+
+            {/* Team option */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hasTeam}
+                onChange={(e) => setHasTeam(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <span className="text-sm text-gray-600">I have a team (I&apos;ll invite members after setup)</span>
+            </label>
 
             {/* Cloudflare Turnstile CAPTCHA — hidden if script fails to load */}
             {TURNSTILE_SITE_KEY && (

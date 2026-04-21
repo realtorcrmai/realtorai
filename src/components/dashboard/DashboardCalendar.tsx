@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useMemo } from "react";
 import {
   format,
   startOfMonth,
@@ -77,7 +77,7 @@ export function DashboardCalendar({
     weeks.push(week);
   }
 
-  const eventsByDate = useCallback(() => {
+  const eventsByDate = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
     for (const ev of events) {
       const key = format(ev.start, "yyyy-MM-dd");
@@ -85,7 +85,7 @@ export function DashboardCalendar({
       map.get(key)!.push(ev);
     }
     return map;
-  }, [events])();
+  }, [events]);
 
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));

@@ -8,10 +8,11 @@ export async function getCalendarEvents(start: string, end: string) {
   const tc = await getAuthenticatedTenantClient();
   const adminSupabase = createAdminClient();
 
-  // Get Google Calendar events (google_tokens uses user_email, keep admin)
+  // Get Google Calendar events scoped to current user
   const { data: tokenData } = await adminSupabase
     .from("google_tokens")
     .select("*")
+    .eq("realtor_id", tc.realtorId)
     .limit(1);
 
   const tokenRow = tokenData?.[0] ?? null;
@@ -53,14 +54,14 @@ export async function getCalendarEvents(start: string, end: string) {
     .lte("end_time", end);
 
   // Fetch listing addresses
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const showingsArr = (showings ?? []) as any[];
   const listingIds = [...new Set(showingsArr.map((s) => s.listing_id as string))];
   const { data: listingsData } = listingIds.length > 0
     ? await tc.from("listings").select("id, address").in("id", listingIds)
     : { data: [] as any[] };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const listingMap = new Map((listingsData ?? []).map((l: any) => [l.id, l.address]));
 
   const showingEvents = showingsArr.map((s) => ({
@@ -75,5 +76,24 @@ export async function getCalendarEvents(start: string, end: string) {
     listingId: s.listing_id,
   }));
 
-  return { googleEvents, showingEvents };
+  // Get tasks with due dates in range
+  const { data: tasksData } = await tc
+    .from("tasks")
+    .select("id, title, due_date, priority, status, category")
+    .not("due_date", "is", null)
+    .gte("due_date", start.split("T")[0])
+    .lte("due_date", end.split("T")[0]);
+
+  const taskEvents = (tasksData ?? []).map((t: Record<string, string>) => ({
+    id: t.id,
+    title: `${t.status === "completed" ? "\u2713 " : ""}${t.title}`,
+    start: `${t.due_date}T09:00:00`,
+    end: `${t.due_date}T09:30:00`,
+    type: "task" as const,
+    status: t.status,
+    priority: t.priority,
+    category: t.category,
+  }));
+
+  return { googleEvents, showingEvents, taskEvents };
 }

@@ -1,8 +1,8 @@
 <!-- docs-audit: docs/SPEC_*, docs/PLAN_*, src/actions/*, src/components/*, src/lib/* -->
 # Competitive Differentiators — Complete Specification
 
-**Version:** 1.0
-**Date:** 2026-04-13
+**Version:** 1.1
+**Date:** 2026-04-20
 **Status:** Draft — Design Document
 **Author:** Rahul Mittal + Claude
 
@@ -1803,4 +1803,6 @@ ALTER TABLE deal_coordinator ENABLE ROW LEVEL SECURITY;
 
 ---
 
-*Version 1.0 — 2026-04-13*
+*Version 1.1 — 2026-04-20*
+
+<!-- changelog: added team-permissions.ts (RBAC for team collaboration), MondaySidebar team nav -->
