@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-21 -->
+<!-- docs-audit-reviewed: 2026-04-21 --task-mgmt -->
 <!-- docs-audit: src/app/(dashboard)/settings/*, src/app/api/admin/* -->
 # Implementation Plan: Super Admin Panel
 
