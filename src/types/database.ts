@@ -209,6 +209,22 @@ export interface Database {
           closing_date: string | null;
           commission_rate: number | null;
           commission_amount: number | null;
+          // Property details (migration 141)
+          bedrooms: number | null;
+          bathrooms: number | null;
+          total_sqft: number | null;
+          finished_sqft: number | null;
+          lot_sqft: number | null;
+          year_built: number | null;
+          parking_spaces: number | null;
+          stories: number | null;
+          basement_type: string | null;
+          heating_type: string | null;
+          cooling_type: string | null;
+          roof_type: string | null;
+          exterior_type: string | null;
+          flooring: string[];
+          features: string[];
           created_at: string;
           updated_at: string;
         };
@@ -231,6 +247,22 @@ export interface Database {
           closing_date?: string | null;
           commission_rate?: number | null;
           commission_amount?: number | null;
+          // Property details (migration 141)
+          bedrooms?: number | null;
+          bathrooms?: number | null;
+          total_sqft?: number | null;
+          finished_sqft?: number | null;
+          lot_sqft?: number | null;
+          year_built?: number | null;
+          parking_spaces?: number | null;
+          stories?: number | null;
+          basement_type?: string | null;
+          heating_type?: string | null;
+          cooling_type?: string | null;
+          roof_type?: string | null;
+          exterior_type?: string | null;
+          flooring?: string[];
+          features?: string[];
           created_at?: string;
           updated_at?: string;
         };
@@ -253,6 +285,22 @@ export interface Database {
           closing_date?: string | null;
           commission_rate?: number | null;
           commission_amount?: number | null;
+          // Property details (migration 141)
+          bedrooms?: number | null;
+          bathrooms?: number | null;
+          total_sqft?: number | null;
+          finished_sqft?: number | null;
+          lot_sqft?: number | null;
+          year_built?: number | null;
+          parking_spaces?: number | null;
+          stories?: number | null;
+          basement_type?: string | null;
+          heating_type?: string | null;
+          cooling_type?: string | null;
+          roof_type?: string | null;
+          exterior_type?: string | null;
+          flooring?: string[];
+          features?: string[];
           created_at?: string;
           updated_at?: string;
         };

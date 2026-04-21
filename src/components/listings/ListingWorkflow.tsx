@@ -25,11 +25,12 @@ const WORKFLOW_STEPS: WorkflowStep[] = [
   {
     id: "seller-intake",
     name: "Seller Intake",
-    desc: "Seller identity, property address, pricing & disclosures",
+    desc: "Seller identity, property details, pricing & disclosures",
     icon: "👤",
     substeps: [
       { id: "verify-seller-id", name: "Verify seller identity" },
       { id: "confirm-address", name: "Confirm property address" },
+      { id: "property-details", name: "Enter property details" },
       { id: "pricing-expectations", name: "Discuss pricing expectations" },
       { id: "sign-dorts-intake", name: "Sign DORTS" },
     ],
@@ -265,6 +266,7 @@ function deriveSubstepStatuses(
   // Seller Intake — always completed
   sub["verify-seller-id"] = "completed";
   sub["confirm-address"] = "completed";
+  sub["property-details"] = "completed";
   sub["pricing-expectations"] = "completed";
   sub["sign-dorts-intake"] = "completed";
 
@@ -401,6 +403,11 @@ function getSubstepMessage(
       completed: `Address confirmed — ${addr}`,
       "in-progress": "Confirming property address...",
       pending: "Will confirm property address",
+    },
+    "property-details": {
+      completed: "Property details entered",
+      "in-progress": "Entering property details...",
+      pending: "Will enter property details",
     },
     "pricing-expectations": {
       completed: `Pricing discussed with ${seller}`,
@@ -602,7 +609,7 @@ type FieldItem = {
   value: string;
   editKey?: string;
   editTarget?: "listing" | "contact";
-  inputType?: "text" | "number" | "time";
+  inputType?: "text" | "number" | "time" | "array";
 };
 type DataSection = { title: string; fields: FieldItem[] };
 
@@ -618,6 +625,22 @@ type StepDataContext = {
     showing_window_start?: string | null;
     showing_window_end?: string | null;
     created_at?: string;
+    // Property details
+    bedrooms?: number | null;
+    bathrooms?: number | null;
+    total_sqft?: number | null;
+    finished_sqft?: number | null;
+    lot_sqft?: number | null;
+    year_built?: number | null;
+    parking_spaces?: number | null;
+    stories?: number | null;
+    basement_type?: string | null;
+    heating_type?: string | null;
+    cooling_type?: string | null;
+    roof_type?: string | null;
+    exterior_type?: string | null;
+    flooring?: string[];
+    features?: string[];
   };
   documents: ListingDocument[];
   formStatuses: Record<string, "draft" | "completed">;
@@ -647,6 +670,31 @@ function getStepDataSections(stepId: string, ctx: StepDataContext): DataSection[
           fields: [
             { label: "Address", value: listing.address ?? "—", editKey: "address", editTarget: "listing" },
             { label: "Lockbox Code", value: listing.lockbox_code ?? "—", editKey: "lockbox_code", editTarget: "listing" },
+          ],
+        },
+        {
+          title: "Property Details",
+          fields: [
+            { label: "Bedrooms", value: listing.bedrooms != null ? String(listing.bedrooms) : "—", editKey: "bedrooms", editTarget: "listing", inputType: "number" },
+            { label: "Bathrooms", value: listing.bathrooms != null ? String(listing.bathrooms) : "—", editKey: "bathrooms", editTarget: "listing", inputType: "number" },
+            { label: "Total Sqft", value: listing.total_sqft != null ? listing.total_sqft.toLocaleString() : "—", editKey: "total_sqft", editTarget: "listing", inputType: "number" },
+            { label: "Finished Sqft", value: listing.finished_sqft != null ? listing.finished_sqft.toLocaleString() : "—", editKey: "finished_sqft", editTarget: "listing", inputType: "number" },
+            { label: "Lot Size (sqft)", value: listing.lot_sqft != null ? listing.lot_sqft.toLocaleString() : "—", editKey: "lot_sqft", editTarget: "listing", inputType: "number" },
+            { label: "Year Built", value: listing.year_built != null ? String(listing.year_built) : "—", editKey: "year_built", editTarget: "listing", inputType: "number" },
+            { label: "Parking Spaces", value: listing.parking_spaces != null ? String(listing.parking_spaces) : "—", editKey: "parking_spaces", editTarget: "listing", inputType: "number" },
+            { label: "Stories", value: listing.stories != null ? String(listing.stories) : "—", editKey: "stories", editTarget: "listing", inputType: "number" },
+          ],
+        },
+        {
+          title: "Construction & Systems",
+          fields: [
+            { label: "Basement", value: listing.basement_type ?? "—", editKey: "basement_type", editTarget: "listing" },
+            { label: "Heating", value: listing.heating_type ?? "—", editKey: "heating_type", editTarget: "listing" },
+            { label: "Cooling", value: listing.cooling_type ?? "—", editKey: "cooling_type", editTarget: "listing" },
+            { label: "Roof", value: listing.roof_type ?? "—", editKey: "roof_type", editTarget: "listing" },
+            { label: "Exterior", value: listing.exterior_type ?? "—", editKey: "exterior_type", editTarget: "listing" },
+            { label: "Flooring", value: listing.flooring?.length ? listing.flooring.join(", ") : "—", editKey: "flooring", editTarget: "listing", inputType: "array" },
+            { label: "Features", value: listing.features?.length ? listing.features.join(", ") : "—", editKey: "features", editTarget: "listing", inputType: "array" },
           ],
         },
         {
@@ -841,6 +889,22 @@ export function ListingWorkflow({
     showing_window_start?: string | null;
     showing_window_end?: string | null;
     created_at?: string;
+    // Property details
+    bedrooms?: number | null;
+    bathrooms?: number | null;
+    total_sqft?: number | null;
+    finished_sqft?: number | null;
+    lot_sqft?: number | null;
+    year_built?: number | null;
+    parking_spaces?: number | null;
+    stories?: number | null;
+    basement_type?: string | null;
+    heating_type?: string | null;
+    cooling_type?: string | null;
+    roof_type?: string | null;
+    exterior_type?: string | null;
+    flooring?: string[];
+    features?: string[];
   };
   documents: ListingDocument[];
   formStatuses?: Record<string, "draft" | "completed">;
