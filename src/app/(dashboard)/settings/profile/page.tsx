@@ -1,5 +1,5 @@
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
-import { ProfileForm } from "@/components/settings/ProfileForm";
+import { ProfileFormLoader } from "@/components/settings/ProfileFormLoader";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +29,7 @@ export default async function ProfilePage() {
         subtitle="Manage your personal and professional details"
       />
       <div className="p-6 max-w-2xl mx-auto">
-        <ProfileForm user={user} brandProfile={brandProfile} />
+        <ProfileFormLoader user={user} brandProfile={brandProfile} />
       </div>
     </>
   );
