@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "CAPTCHA verification required." }, { status: 422 });
     }
 
-    const supabase = createAdminClient();
+    // Admin client required — no authenticated session exists during signup
+    const supabase = createAdminClient();  
     const normalizedEmail = email.toLowerCase().trim();
 
     // Check if email already exists
@@ -107,16 +108,16 @@ export async function POST(request: NextRequest) {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
       const { token, tokenHash } = generateMagicLinkToken();
 
-      const { error: tokenInsertError } = await supabase.from("verification_tokens").insert({
+      const tokenPayload = {
         user_id: newUser.id,
         identifier: normalizedEmail,
         type: "email",
         token_hash: tokenHash,
         expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 min
-      });
-
-      if (tokenInsertError) {
-        console.error("[signup] Failed to insert verification token:", tokenInsertError.message);
+      };
+      const { error } = await supabase.from("verification_tokens").insert(tokenPayload);
+      if (error) {
+        console.error("[signup] Failed to insert verification token:", error.message);
       }
 
       const verifyUrl = `${appUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(normalizedEmail)}`;

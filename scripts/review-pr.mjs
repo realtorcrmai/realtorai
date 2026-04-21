@@ -156,9 +156,12 @@ for (const file of prodFiles) {
   }
 }
 
-// 4. createAdminClient() in user-facing API routes
+// 4. createAdminClient() in user-facing API routes (exempt: auth routes — no session exists)
+function isAuthRoute(file) {
+  return file.startsWith("src/app/api/auth/");
+}
 for (const file of prodFiles) {
-  if (!isApiRoute(file) || isCronOrWebhook(file)) continue;
+  if (!isApiRoute(file) || isCronOrWebhook(file) || isAuthRoute(file)) continue;
   const content = readFileSafe(file);
   const lines = content.split("\n");
   for (let i = 0; i < lines.length; i++) {
