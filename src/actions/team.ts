@@ -492,6 +492,36 @@ export async function getTeamOverview(): Promise<{ data?: TeamOverview; error?: 
 }
 
 /**
+ * Get basic team info visible to any team member (name + member list).
+ * No admin permission required — any member can see who's on the team.
+ */
+export async function getTeamBasicInfo(): Promise<{
+  data?: { name: string; members: TeamMemberWithUser[]; maxMembers: number };
+  error?: string;
+}> {
+  const session = await getSession();
+  if (!session.teamId) return { error: "Not on a team" };
+
+  // tenants is a global table (no realtor_id scoping); admin client is correct here.
+  const supabase = createAdminClient();
+
+  const [teamRes, membersRes] = await Promise.all([
+    supabase.from("tenants").select("name, max_members").eq("id", session.teamId).single(),
+    getTeamMembers(),
+  ]);
+
+  if (!teamRes.data) return { error: "Team not found" };
+
+  return {
+    data: {
+      name: teamRes.data.name,
+      members: membersRes.data || [],
+      maxMembers: teamRes.data.max_members || 15,
+    },
+  };
+}
+
+/**
  * Remove a member from the team (soft delete).
  */
 export async function removeMember(userId: string) {
@@ -571,12 +601,16 @@ export async function leaveTeam() {
 
   const supabase = createAdminClient();
 
-  await supabase
+  const { error: leaveErr } = await supabase
     .from("tenant_memberships")
     .update({ removed_at: new Date().toISOString() })
     .eq("tenant_id", session.teamId)
     .eq("user_id", session.id)
     .is("removed_at", null);
+
+  if (leaveErr) {
+    return { error: `Failed to leave team: ${leaveErr.message}` };
+  }
 
   await supabase
     .from("users")

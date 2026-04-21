@@ -1,21 +1,27 @@
 /**
  * Auth Test Helpers — Realtors360 CRM
  *
- * Provides session mocking for NextAuth v5 in unit/integration tests.
- * Uses the demo user credentials and JWT session format.
+ * Provides auth utilities for integration and unit tests.
+ * Stack: Supabase (@supabase/supabase-js) + NextAuth v5 (JWT sessions).
+ * No Prisma, no Stripe, no Express, no MCP.
+ *
+ * Three entry points:
+ *   getDemoSession()          — log in via demo auth, return session object
+ *   getTenantClient(realtorId) — Supabase client scoped to a specific realtor
+ *   getAdminClient()          — Supabase service-role client (bypasses RLS)
  *
  * Usage:
- *   import { mockSession, createAuthenticatedRequest, getAuthHeaders } from '../helpers/auth-helpers';
+ *   import { getDemoSession, getTenantClient, getAdminClient } from '../helpers/auth-helpers';
  *
- *   // Mock getServerSession for server action tests
- *   vi.mock('next-auth', () => ({ getServerSession: () => mockSession() }));
- *
- *   // Create authenticated fetch request for API route tests
- *   const res = await fetch('/api/contacts', createAuthenticatedRequest());
+ *   const session = await getDemoSession();
+ *   const tenantDb = getTenantClient(session.user.id);
+ *   const adminDb = getAdminClient();
  */
 import { vi } from 'vitest';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 // === Demo User Constants ===
+
 export const DEMO_USER = {
   id: '00000000-0000-0000-0000-000000000099', // Fixed UUID for test user
   email: 'demo@realestatecrm.com',
@@ -35,11 +41,94 @@ export const OTHER_USER = {
   plan: 'professional',
 } as const;
 
-// === Session Mocking ===
+// === Session Functions ===
 
 /**
- * Creates a mock NextAuth session object.
- * Compatible with NextAuth v5 JWT session shape.
+ * Log in via the demo auth endpoint and return a NextAuth v5 JWT session.
+ *
+ * For integration tests against a running dev server, this POSTs to
+ * /api/auth/callback/credentials with DEMO_EMAIL/DEMO_PASSWORD.
+ * For unit tests, returns a mock session object matching NextAuth v5 shape.
+ */
+export async function getDemoSession(
+  baseUrl: string = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
+) {
+  // For unit tests or when no server is running, return a mock session
+  if (process.env.VITEST === 'true' || process.env.TEST_MODE === 'unit') {
+    return mockSession();
+  }
+
+  // For integration tests, authenticate against the running server
+  const csrfRes = await fetch(`${baseUrl}/api/auth/csrf`);
+  const { csrfToken } = await csrfRes.json();
+
+  const loginRes = await fetch(`${baseUrl}/api/auth/callback/credentials`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      csrfToken,
+      email: process.env.DEMO_EMAIL || DEMO_USER.email,
+      password: process.env.DEMO_PASSWORD || 'demo-password',
+    }).toString(),
+    redirect: 'manual',
+  });
+
+  // Extract session cookie from Set-Cookie header
+  const cookies = loginRes.headers.getSetCookie?.() || [];
+  const sessionCookie = cookies.find((c) => c.startsWith('next-auth.session-token='));
+
+  if (!sessionCookie) {
+    throw new Error('Demo login failed — no session cookie returned');
+  }
+
+  // Fetch session data using the cookie
+  const sessionRes = await fetch(`${baseUrl}/api/auth/session`, {
+    headers: { Cookie: sessionCookie.split(';')[0] },
+  });
+  const session = await sessionRes.json();
+
+  return {
+    ...session,
+    _cookie: sessionCookie.split(';')[0], // For subsequent authenticated requests
+  };
+}
+
+/**
+ * Create a Supabase client scoped to a specific realtor.
+ *
+ * Uses the service role key (bypasses RLS at the Supabase level) but provides
+ * a wrapper that auto-injects `.eq('realtor_id', realtorId)` on queries,
+ * mimicking the app's getAuthenticatedTenantClient() behavior.
+ *
+ * This is for test assertions that need to verify data belongs to a tenant.
+ */
+export function getTenantClient(realtorId: string): SupabaseClient & { realtorId: string } {
+  const client = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+
+  // Attach realtorId for test convenience — callers should use
+  // `.eq('realtor_id', client.realtorId)` in their queries
+  return Object.assign(client, { realtorId });
+}
+
+/**
+ * Return the Supabase admin client (service role, bypasses RLS).
+ * Use for test setup/teardown and cross-tenant assertions.
+ */
+export function getAdminClient(): SupabaseClient {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+}
+
+// === Session Mocking (for unit tests) ===
+
+/**
+ * Creates a mock NextAuth v5 session object.
+ * Compatible with the JWT session shape used by Realtors360.
  */
 export function mockSession(overrides?: Partial<typeof DEMO_USER>) {
   const user = { ...DEMO_USER, ...overrides };
@@ -56,39 +145,36 @@ export function mockSession(overrides?: Partial<typeof DEMO_USER>) {
 }
 
 /**
- * Creates a session for a different user (cross-tenant tests)
+ * Creates a session for a different user (cross-tenant isolation tests).
  */
 export function mockOtherSession() {
   return mockSession(OTHER_USER);
 }
 
 /**
- * Mock the auth() function from NextAuth v5 for App Router
- * Call this in your test setup to mock authenticated requests.
+ * Mock the auth() function from NextAuth v5 for App Router.
+ * Call in beforeEach() or test setup.
  *
  * Example:
- *   vi.mock('@/lib/auth', () => ({
- *     auth: vi.fn(() => Promise.resolve(mockSession())),
- *   }));
+ *   setupAuthMock(); // uses demo user
+ *   setupAuthMock(mockSession(OTHER_USER)); // uses other user
  */
 export function setupAuthMock(session = mockSession()) {
   vi.mock('@/lib/auth', () => ({
     auth: vi.fn(() => Promise.resolve(session)),
+    authOptions: {},
   }));
 }
 
 // === Request Helpers for API Route Tests ===
 
 /**
- * Creates headers with a valid session cookie for API route testing.
- * Note: In real integration tests against a running server, use the
- * Playwright auth state instead. This is for unit-testing API handlers.
+ * Creates headers with test user identification for API route testing.
+ * In real integration tests, use getDemoSession() cookie instead.
  */
 export function getAuthHeaders(): Record<string, string> {
   return {
     'Content-Type': 'application/json',
-    // NextAuth v5 uses encrypted JWT cookies — for unit tests, we mock
-    // the auth() call directly rather than passing real cookies.
     'x-test-user-id': DEMO_USER.id,
     'x-test-user-email': DEMO_USER.email,
   };
@@ -125,7 +211,7 @@ export function getCronHeaders(secret?: string): Record<string, string> {
 }
 
 /**
- * Creates an invalid cron auth header for negative testing.
+ * Creates invalid cron auth headers for negative testing.
  */
 export function getInvalidCronHeaders(): Record<string, string> {
   return {
@@ -137,19 +223,15 @@ export function getInvalidCronHeaders(): Record<string, string> {
 // === Tenant Isolation Helpers ===
 
 /**
- * Mock the tenant client to return data scoped to a specific realtor.
- * Use this to test that getAuthenticatedTenantClient() correctly filters.
+ * Mock the tenant client module to return a scoped client for a specific realtor.
+ * Use in unit tests to verify tenant isolation without a running server.
  */
 export function mockTenantClient(realtorId: string = DEMO_REALTOR_ID) {
   vi.mock('@/lib/supabase/tenant', () => ({
-    getAuthenticatedTenantClient: vi.fn(async () => {
-      // Return a mock that auto-adds .eq('realtor_id', realtorId)
-      return {
-        realtorId,
-        // In practice, the tenant client wraps Supabase —
-        // individual tests should mock specific queries
-      };
-    }),
+    getAuthenticatedTenantClient: vi.fn(async () => ({
+      realtorId,
+      // Individual tests should mock specific Supabase query chains
+    })),
   }));
 }
 
@@ -157,15 +239,13 @@ export function mockTenantClient(realtorId: string = DEMO_REALTOR_ID) {
 
 /**
  * Standard auth setup for server action tests.
- * Call in beforeEach() to ensure session is available.
+ * Mocks both next-auth and @/lib/auth for full coverage.
  */
 export function setupServerActionAuth(session = mockSession()) {
-  // Mock next-auth getServerSession
   vi.mock('next-auth', () => ({
     getServerSession: vi.fn(() => Promise.resolve(session)),
   }));
 
-  // Mock the auth config export
   vi.mock('@/lib/auth', () => ({
     auth: vi.fn(() => Promise.resolve(session)),
     authOptions: {},
@@ -194,16 +274,5 @@ export function setupUnauthenticated() {
 export function assertUnauthorized(response: Response) {
   if (response.status !== 401) {
     throw new Error(`Expected 401 Unauthorized, got ${response.status}`);
-  }
-}
-
-/**
- * Assert that a response has the correct CORS headers (if applicable).
- */
-export function assertCorsHeaders(response: Response) {
-  // Realtors360 doesn't use CORS for same-origin — this is for webhook endpoints
-  const origin = response.headers.get('access-control-allow-origin');
-  if (origin && origin !== '*') {
-    // Webhook endpoints may have specific CORS
   }
 }

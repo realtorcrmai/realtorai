@@ -1,23 +1,159 @@
 /**
  * Database Test Helpers — Realtors360 CRM
  *
- * Uses Supabase admin client (bypasses RLS) for test assertions.
- * Import from: tests/helpers/db-helpers.ts
+ * Uses @supabase/supabase-js with SUPABASE_SERVICE_ROLE_KEY (bypasses RLS).
+ * No Prisma. No ORM. Direct Supabase queries.
+ *
+ * Provides:
+ *   - Admin client for raw DB access
+ *   - Cleanup utilities: cleanupRecord(), cleanupRecords()
+ *   - Factory functions: createTestContact(), createTestListing(), createTestShowing()
+ *   - Table-specific query helpers (contacts, listings, appointments, etc.)
+ *   - Assertion helpers: assertRowExists(), assertRowNotExists(), assertRowCount()
  *
  * Usage:
- *   import { db } from '../helpers/db-helpers';
- *   const contact = await db.contacts.findById('uuid');
- *   expect(contact).not.toBeNull();
+ *   import { db, createTestContact, cleanupRecord } from '../helpers/db-helpers';
+ *
+ *   const contact = await createTestContact({ name: 'TEST_Jane' });
+ *   // ... run test assertions ...
+ *   await cleanupRecord('contacts', contact.id);
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-// Admin client — bypasses RLS for test assertions
+// === Admin Client (bypasses RLS) ===
+
 const supabaseAdmin: SupabaseClient = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
-// === Contacts ===
+// Default realtor ID for test data (matches auth-helpers DEMO_USER)
+const DEFAULT_REALTOR_ID = '00000000-0000-0000-0000-000000000099';
+
+// === Cleanup Utilities ===
+
+/**
+ * Delete a single record from a table by ID.
+ * Safe to call even if the record doesn't exist.
+ */
+export async function cleanupRecord(table: string, id: string): Promise<void> {
+  const { error } = await supabaseAdmin.from(table).delete().eq('id', id);
+  if (error && error.code !== 'PGRST116') {
+    throw new Error(`cleanupRecord(${table}, ${id}) failed: ${error.message}`);
+  }
+}
+
+/**
+ * Delete multiple records across one or more tables.
+ * Processes in order (use for FK-safe cleanup: children first, parents last).
+ *
+ * Usage:
+ *   await cleanupRecords([
+ *     { table: 'communications', id: commId },
+ *     { table: 'appointments', id: showingId },
+ *     { table: 'listings', id: listingId },
+ *     { table: 'contacts', id: contactId },
+ *   ]);
+ */
+export async function cleanupRecords(
+  items: Array<{ table: string; id: string }>,
+): Promise<void> {
+  for (const { table, id } of items) {
+    await cleanupRecord(table, id);
+  }
+}
+
+// === Factory Functions ===
+
+/**
+ * Create a test contact with sensible defaults.
+ * All factory records use TEST_ prefix for easy cleanup.
+ * realtor_id is always included.
+ */
+export async function createTestContact(
+  overrides: Record<string, unknown> = {},
+): Promise<Record<string, unknown>> {
+  const defaults = {
+    realtor_id: DEFAULT_REALTOR_ID,
+    name: `TEST_Contact_${Date.now()}`,
+    email: `test-${Date.now()}@example.com`,
+    phone: `+1604555${String(Date.now()).slice(-4)}`,
+    type: 'buyer',
+    pref_channel: 'sms',
+    notes: 'Auto-generated test contact',
+  };
+
+  const record = { ...defaults, ...overrides };
+  const { data, error } = await supabaseAdmin
+    .from('contacts')
+    .insert(record)
+    .select()
+    .single();
+
+  if (error) throw new Error(`createTestContact failed: ${error.message}`);
+  return data;
+}
+
+/**
+ * Create a test listing with sensible defaults.
+ * realtor_id is always included.
+ */
+export async function createTestListing(
+  overrides: Record<string, unknown> = {},
+): Promise<Record<string, unknown>> {
+  const defaults = {
+    realtor_id: DEFAULT_REALTOR_ID,
+    address: `TEST_${Date.now()} Main St, Vancouver, BC`,
+    status: 'active',
+    list_price: 899000,
+    property_type: 'detached',
+    bedrooms: 3,
+    bathrooms: 2,
+    sqft: 1800,
+  };
+
+  const record = { ...defaults, ...overrides };
+  const { data, error } = await supabaseAdmin
+    .from('listings')
+    .insert(record)
+    .select()
+    .single();
+
+  if (error) throw new Error(`createTestListing failed: ${error.message}`);
+  return data;
+}
+
+/**
+ * Create a test showing (appointment) with sensible defaults.
+ * Requires a listing_id — pass one or let it use a placeholder.
+ * realtor_id is always included.
+ */
+export async function createTestShowing(
+  overrides: Record<string, unknown> = {},
+): Promise<Record<string, unknown>> {
+  const defaults = {
+    realtor_id: DEFAULT_REALTOR_ID,
+    listing_id: overrides.listing_id || '00000000-0000-0000-0000-000000000001',
+    buyer_agent_name: `TEST_Agent_${Date.now()}`,
+    buyer_agent_phone: `+1604555${String(Date.now()).slice(-4)}`,
+    buyer_agent_email: `test-agent-${Date.now()}@example.com`,
+    start_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    status: 'pending',
+  };
+
+  const record = { ...defaults, ...overrides };
+  const { data, error } = await supabaseAdmin
+    .from('appointments')
+    .insert(record)
+    .select()
+    .single();
+
+  if (error) throw new Error(`createTestShowing failed: ${error.message}`);
+  return data;
+}
+
+// === Table-Specific Query Helpers ===
+
 export const contacts = {
   async findById(id: string) {
     const { data, error } = await supabaseAdmin
@@ -75,7 +211,6 @@ export const contacts = {
   },
 };
 
-// === Listings ===
 export const listings = {
   async findById(id: string) {
     const { data, error } = await supabaseAdmin
@@ -124,7 +259,6 @@ export const listings = {
   },
 };
 
-// === Appointments (Showings) ===
 export const appointments = {
   async findById(id: string) {
     const { data, error } = await supabaseAdmin
@@ -163,7 +297,6 @@ export const appointments = {
   },
 };
 
-// === Communications ===
 export const communications = {
   async findByContactId(contactId: string) {
     const { data, error } = await supabaseAdmin
@@ -188,7 +321,6 @@ export const communications = {
   },
 };
 
-// === Notifications ===
 export const notifications = {
   async findByRealtorId(realtorId: string) {
     const { data, error } = await supabaseAdmin
@@ -211,7 +343,6 @@ export const notifications = {
   },
 };
 
-// === Newsletters ===
 export const newsletters = {
   async findById(id: string) {
     const { data, error } = await supabaseAdmin
@@ -233,7 +364,6 @@ export const newsletters = {
   },
 };
 
-// === Users ===
 export const users = {
   async findByEmail(email: string) {
     const { data, error } = await supabaseAdmin
@@ -251,7 +381,6 @@ export const users = {
   },
 };
 
-// === Seller Identities ===
 export const sellerIdentities = {
   async findByListingId(listingId: string) {
     const { data, error } = await supabaseAdmin
@@ -263,10 +392,10 @@ export const sellerIdentities = {
   },
 };
 
-// === Utility Functions ===
+// === Assertion Utilities ===
 
 /**
- * Assert a row exists in a table matching the given conditions
+ * Assert a row exists in a table matching the given conditions.
  */
 export async function assertRowExists(
   table: string,
@@ -287,7 +416,7 @@ export async function assertRowExists(
 }
 
 /**
- * Assert a row does NOT exist in a table
+ * Assert a row does NOT exist in a table.
  */
 export async function assertRowNotExists(
   table: string,
@@ -307,7 +436,7 @@ export async function assertRowNotExists(
 }
 
 /**
- * Assert row count in a table
+ * Assert row count in a table.
  */
 export async function assertRowCount(
   table: string,
@@ -330,7 +459,7 @@ export async function assertRowCount(
 }
 
 /**
- * Clean up all test data (call in afterAll)
+ * Clean up all test data prefixed with TEST_ (call in afterAll).
  */
 export async function cleanupAllTestData() {
   await contacts.deleteTestData();
@@ -338,7 +467,8 @@ export async function cleanupAllTestData() {
   await appointments.deleteTestData();
 }
 
-// Export grouped namespace
+// === Export Grouped Namespace ===
+
 export const db = {
   contacts,
   listings,
@@ -351,6 +481,11 @@ export const db = {
   assertRowExists,
   assertRowNotExists,
   assertRowCount,
+  cleanupRecord,
+  cleanupRecords,
   cleanupAllTestData,
+  createTestContact,
+  createTestListing,
+  createTestShowing,
   admin: supabaseAdmin,
 };

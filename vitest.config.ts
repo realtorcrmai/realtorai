@@ -9,6 +9,7 @@ export default defineConfig({
       'src/__tests__/**/*.test.ts',
       'src/components/**/*.test.tsx',
       'tests/integration/**/*.test.ts',
+      'tests/integration/**/*.spec.ts',
       'tests/contract/**/*.spec.ts',
       'tests/api/**/*.spec.ts',
     ],
