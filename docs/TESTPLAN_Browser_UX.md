@@ -306,3 +306,4 @@ npx playwright test tests/browser/ --project=mobile
 *Last updated: 2026-04-13*
 
 <!-- Last reviewed: 2026-04-21 -->
+

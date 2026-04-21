@@ -428,3 +428,4 @@ Update listings → Send messages → Review AI emails → End of day
 - `src/app/layout.tsx` (67 lines) — PWA, fonts, providers
 
 <!-- Last reviewed: 2026-04-21 -->
+

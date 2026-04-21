@@ -455,3 +455,4 @@ The logo animation system uses iframe-embedded HTML files served from `public/`.
 - For local dev: `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`
 
 <!-- Last reviewed: 2026-04-21 -->
+

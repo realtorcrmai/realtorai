@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 -->
 # Contributing to Realtors360
 
 ## Local Development Setup
@@ -366,3 +367,4 @@ if (!check.allowed) return { error: check.reason };
 - Issues: https://github.com/realtorcrmai/realtorai/issues
 
 <!-- Last reviewed: 2026-04-21 -->
+

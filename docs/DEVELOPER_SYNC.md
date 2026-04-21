@@ -358,3 +358,4 @@ These are tracked in `docs/ENVIRONMENTS.md` §"Open follow-ups" — none of them
 10. Add `VERCEL_TOKEN` to GitHub Actions secrets for CI-triggered deploys
 
 <!-- Last reviewed: 2026-04-21 -->
+

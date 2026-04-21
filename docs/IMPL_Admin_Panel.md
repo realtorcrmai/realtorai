@@ -802,3 +802,4 @@ Phase 3:
 - [ ] Email KPIs match Resend dashboard numbers
 - [ ] Per-user email table shows bounce rate with red/amber/green status
 - [ ] System page links to Sentry and Vercel dashboard open correctly
+

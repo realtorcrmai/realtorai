@@ -643,3 +643,5 @@ Every new feature MUST include all of the following before it is considered comp
 **Tables:** `realtor_sites`, `site_generations`, `site_variants`, `site_pages`, `testimonials`, `site_leads`, `site_media`.
 
 **Env vars:** `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `AGENT_SERVICE_URL`, `ANTHROPIC_API_KEY`.
+
+
