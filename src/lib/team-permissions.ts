@@ -1,5 +1,3 @@
-"use server";
-
 import type { TeamAction, TeamRole, ResourceAction } from "@/types/team";
 
 /**

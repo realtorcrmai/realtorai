@@ -246,8 +246,8 @@ export async function seedWorkflowSteps(workflowId: string, slug: string) {
   const supabase = createAdminClient();
 
   // Delete existing steps first
-  const { error: delError } = await supabase.from("workflow_steps").delete().eq("workflow_id", workflowId);
-  if (delError) return { error: "Failed to clear existing steps" };
+  { const { error } = await supabase.from("workflow_steps").delete().eq("workflow_id", workflowId);
+  if (error) return { error: "Failed to clear existing steps" }; }
 
   // Insert steps from blueprint
   const steps = blueprint.steps.map((step, idx) => {
@@ -421,14 +421,14 @@ export async function enrollContact(
   if (error) return { error: "Failed to enroll contact: " + error.message };
 
   // Log activity
-  const { error: logError } = await supabase.from("activity_log").insert({
+  { const { error } = await supabase.from("activity_log").insert({
     contact_id: contactId,
     listing_id: listingId || null,
     activity_type: "workflow_enrolled",
     description: `Enrolled in workflow`,
     metadata: { workflow_id: workflowId, enrollment_id: enrollment.id },
   });
-  if (logError) console.error("[workflows] activity log failed:", logError.message);
+  if (error) console.error("[workflows] activity log failed:", error.message); }
 
   revalidatePath(`/contacts/${contactId}`);
   revalidatePath("/automations");
@@ -665,14 +665,14 @@ export async function backfillWorkflowEnrollments(): Promise<{
     activeEnrollmentSet.add(key);
 
     // Log activity
-    const { error: actErr } = await supabase.from("activity_log").insert({
+    { const { error } = await supabase.from("activity_log").insert({
       contact_id: contactId,
       listing_id: listingId || null,
       activity_type: "workflow_auto_enrolled",
       description: `Backfill: auto-enrolled in ${workflowSlug}`,
       metadata: { workflow_id: workflowId, backfill: true },
     });
-    if (actErr) console.error("[workflows] backfill log failed:", actErr.message);
+    if (error) console.error("[workflows] backfill log failed:", error.message); }
 
     return "enrolled";
   }
@@ -852,13 +852,13 @@ export async function backfillWorkflowEnrollments(): Promise<{
 
   // Create summary notification
   if (totalEnrolled > 0) {
-    const { error: notifErr } = await supabase.from("agent_notifications").insert({
+    { const { error } = await supabase.from("agent_notifications").insert({
       title: "Workflow Backfill Complete",
       body: `Enrolled ${totalEnrolled} contacts across ${results.filter((r) => r.enrolled.length > 0).length} workflows`,
       type: "workflow",
       action_url: "/automations",
     });
-    if (notifErr) console.error("[workflows] notification insert failed:", notifErr.message);
+    if (error) console.error("[workflows] notification insert failed:", error.message); }
   }
 
   revalidatePath("/automations");

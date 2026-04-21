@@ -1,11 +1,23 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { acceptInvite } from "@/actions/team";
 import { signIn, useSession } from "next-auth/react";
 
 export default function InviteAcceptPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="animate-spin h-8 w-8 border-2 border-brand border-t-transparent rounded-full" />
+      </div>
+    }>
+      <InviteAcceptContent />
+    </Suspense>
+  );
+}
+
+function InviteAcceptContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { data: session, status } = useSession();
