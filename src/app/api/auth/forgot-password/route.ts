@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient as createSystemClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/resend";
 
 export async function POST(req: NextRequest) {
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    const supabase = createAdminClient();
+    const supabase = createSystemClient();
 
     // Always return success to prevent email enumeration
     const successResponse = NextResponse.json({

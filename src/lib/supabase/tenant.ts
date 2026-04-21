@@ -518,7 +518,7 @@ class AssistantQueryBuilder {
    
   update(data: Record<string, unknown>): any {
     // Assistant cannot update (enforced at permission level, but defense-in-depth)
-    return this.supabase.from(this.table).update(data).eq("assigned_to", this.userId);
+    return this.supabase.from(this.table).update(data).eq("assigned_to", this.userId); // .error checked by caller
   }
 
    

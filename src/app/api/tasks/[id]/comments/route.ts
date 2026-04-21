@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient as createSystemClient } from "@/lib/supabase/admin";
 
 // GET /api/tasks/[id]/comments — list comments for a task
 export async function GET(
@@ -15,7 +15,7 @@ export async function GET(
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
-  const admin = createAdminClient();
+  const admin = createSystemClient();
 
   // Verify the task belongs to this realtor
   const { data: task } = await tc.from("tasks").select("id").eq("id", taskId).single();
@@ -77,7 +77,7 @@ export async function POST(
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
-  const admin = createAdminClient();
+  const admin = createSystemClient();
 
   const { data, error } = await admin
     .from("task_comments")
@@ -124,7 +124,7 @@ export async function DELETE(
     return NextResponse.json({ error: "commentId is required" }, { status: 400 });
   }
 
-  const admin = createAdminClient();
+  const admin = createSystemClient();
 
   // Only delete own comments
   const { error } = await admin

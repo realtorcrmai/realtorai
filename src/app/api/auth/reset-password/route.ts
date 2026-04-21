@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient as createSystemClient } from "@/lib/supabase/admin";
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
     }
 
-    const supabase = createAdminClient();
+    const supabase = createSystemClient();
 
     // Find user by reset token
     const { data: user } = await supabase
