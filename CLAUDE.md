@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 -->
 # CLAUDE.md — Realtors360 Real Estate CRM
 
 ## Think Thoroughly — Depth Over Speed
@@ -179,7 +180,8 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 │   │   ├── recommendations.ts     # AI recommendations CRUD + execute
 │   │   ├── templates.ts           # Email template CRUD, preview, duplicate
 │   │   ├── segments.ts            # Contact segment builder + bulk enroll
-│   │   └── notifications.ts      # Notification CRUD, mark read, dismiss
+│   │   ├── notifications.ts      # Notification CRUD, mark read, dismiss
+│   │   └── team.ts               # Team CRUD, invites, memberships
 │   ├── emails/                    # React Email templates
 │   │   ├── BaseLayout.tsx         # Shared wrapper (branding, dark mode, unsubscribe)
 │   │   ├── NewListingAlert.tsx    # Property listing cards
