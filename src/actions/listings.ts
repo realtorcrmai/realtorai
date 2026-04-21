@@ -52,14 +52,29 @@ export async function createListing(formData: ListingFormData) {
   // Real-time RAG ingestion
   triggerIngest("listings", data.id);
 
-  // A4: Auto-generate MLS remarks on first listing (fire-and-forget)
+  // A4: Auto-generate MLS remarks (fire-and-forget)
   try {
-    const { count } = await tc.from("listings").select("id", { count: "exact", head: true });
-    if ((count ?? 0) <= 1) {
-      import("@/lib/anthropic/creative-director").then(({ generateMLSRemarks }) => {
-        generateMLSRemarks(data.id).catch(console.error);
-      });
-    }
+    import("@/lib/anthropic/creative-director").then(({ generateMLSRemarks }) => {
+      generateMLSRemarks({
+        address: data.address,
+        listPrice: data.list_price,
+        notes: data.notes,
+        bedrooms: data.bedrooms ?? undefined,
+        bathrooms: data.bathrooms ?? undefined,
+        sqft: data.total_sqft ?? undefined,
+        yearBuilt: data.year_built ?? undefined,
+        features: (data.features ?? []).join(", ") || undefined,
+        showingInstructions: data.showing_window_start && data.showing_window_end
+          ? `Showings ${data.showing_window_start}–${data.showing_window_end}`
+          : undefined,
+      }).then(async (remarks) => {
+        // Save remarks back to listing
+        await tc.from("listings").update({
+          mls_remarks: remarks.publicRemarks,
+          mls_realtor_remarks: remarks.realtorRemarks,
+        }).eq("id", data.id);
+      }).catch(console.error);
+    });
   } catch {
     // Don't fail listing creation if auto-remarks fails
   }

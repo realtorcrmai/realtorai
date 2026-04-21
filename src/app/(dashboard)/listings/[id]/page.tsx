@@ -417,6 +417,8 @@ export default async function ListingDetailPage({
                     showingsCount={showingCount}
                     listingId={id}
                     contactId={seller.id}
+                    sellerIdentities={(sellerIdentities ?? []) as never}
+                    photos={(listingPhotos ?? []) as any}
                   />
                 </CardContent>
               </Card>

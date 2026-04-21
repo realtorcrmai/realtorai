@@ -12,6 +12,22 @@ export const listingSchema = z.object({
   showing_window_start: z.string().optional(),
   showing_window_end: z.string().optional(),
   notes: z.string().optional(),
+  // Property details (migration 141)
+  bedrooms: z.number().int().min(0).optional(),
+  bathrooms: z.number().min(0).optional(),
+  total_sqft: z.number().positive().optional(),
+  finished_sqft: z.number().positive().optional(),
+  lot_sqft: z.number().positive().optional(),
+  year_built: z.number().int().min(1800).max(2030).optional(),
+  parking_spaces: z.number().int().min(0).optional(),
+  stories: z.number().int().min(1).optional(),
+  basement_type: z.string().optional(),
+  heating_type: z.string().optional(),
+  cooling_type: z.string().optional(),
+  roof_type: z.string().optional(),
+  exterior_type: z.string().optional(),
+  flooring: z.array(z.string()).optional(),
+  features: z.array(z.string()).optional(),
 });
 
 export type ListingFormData = z.infer<typeof listingSchema>;

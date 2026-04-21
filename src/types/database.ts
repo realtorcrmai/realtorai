@@ -225,6 +225,8 @@ export interface Database {
           exterior_type: string | null;
           flooring: string[];
           features: string[];
+          mls_remarks: string | null;
+          mls_realtor_remarks: string | null;
           deleted_at: string | null;
           created_at: string;
           updated_at: string;
@@ -264,6 +266,8 @@ export interface Database {
           exterior_type?: string | null;
           flooring?: string[];
           features?: string[];
+          mls_remarks?: string | null;
+          mls_realtor_remarks?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -302,8 +306,43 @@ export interface Database {
           exterior_type?: string | null;
           flooring?: string[];
           features?: string[];
+          mls_remarks?: string | null;
+          mls_realtor_remarks?: string | null;
           created_at?: string;
           updated_at?: string;
+};
+      };
+      listing_photos: {
+        Row: {
+          id: string;
+          listing_id: string;
+          realtor_id: string;
+          photo_url: string;
+          storage_path: string | null;
+          role: "exterior" | "living" | "kitchen" | "bedroom" | "bathroom" | "outdoor" | "gallery";
+          sort_order: number;
+          caption: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          listing_id: string;
+          realtor_id?: string;
+          photo_url: string;
+          storage_path?: string | null;
+          role?: "exterior" | "living" | "kitchen" | "bedroom" | "bathroom" | "outdoor" | "gallery";
+          sort_order?: number;
+          caption?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          listing_id?: string;
+          photo_url?: string;
+          storage_path?: string | null;
+          role?: "exterior" | "living" | "kitchen" | "bedroom" | "bathroom" | "outdoor" | "gallery";
+          sort_order?: number;
+          caption?: string | null;
         };
       };
       appointments: {

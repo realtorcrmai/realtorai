@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useTransition, useRef } from "react";
+import { useState, useEffect, useCallback, useTransition, useRef, useId } from "react";
 import { Bell } from "lucide-react";
 import {
   Popover,
@@ -57,6 +57,7 @@ function getLink(related_type: string | null, related_id: string | null): string
 }
 
 export function NotificationDropdown() {
+  const triggerId = useId();
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -137,6 +138,7 @@ export function NotificationDropdown() {
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
+        id={triggerId}
         className="p-2 rounded-lg hover:bg-muted transition-colors relative"
         aria-label="Notifications"
       >

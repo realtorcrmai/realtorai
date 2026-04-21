@@ -14,6 +14,7 @@ import {
   TypingDots,
   getStepDataSections,
 } from "./workflow";
+import { PhaseActions } from "./workflow/PhaseActions";
 import type { MessageContext, StepDataContext } from "./workflow";
 
 export function ListingWorkflow({
@@ -23,6 +24,8 @@ export function ListingWorkflow({
   seller,
   showingsCount,
   listingId,
+  sellerIdentities = [],
+  photos = [],
   contactId,
 }: {
   listing: {
@@ -58,6 +61,8 @@ export function ListingWorkflow({
   showingsCount?: number;
   listingId: string;
   contactId: string;
+  sellerIdentities?: unknown[];
+  photos?: { id: string; photo_url: string; role: string; caption: string | null; sort_order: number }[];
 }) {
   const statuses = deriveStepStatuses(listing, documents, formStatuses);
   const substepStatuses = deriveSubstepStatuses(listing, documents, formStatuses, statuses);
@@ -307,6 +312,21 @@ export function ListingWorkflow({
                               </div>
                             );
                           })}
+
+                          {/* Phase action panel */}
+                          <div className="ml-0 mt-2 border-t border-border/30 pt-3">
+                            <PhaseActions
+                              stepId={step.id}
+                              listingId={listingId}
+                              contactId={contactId}
+                              listing={listing as Record<string, unknown>}
+                              seller={seller as any}
+                              documents={documents}
+                              formStatuses={formStatuses}
+                              sellerIdentities={sellerIdentities}
+                              photos={photos}
+                            />
+                          </div>
                         </div>
                       )}
                     </div>

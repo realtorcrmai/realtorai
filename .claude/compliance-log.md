@@ -3,6 +3,12 @@
 > Append-only log. Every task gets an entry. Never edit or delete past entries.
 > See `agent-playbook.md` Section 11 for format and rules.
 
+## 2026-04-21 | CODING | Team visibility — add teamName to JWT + sidebar/header indicators
+- **Task:** User created a team but couldn't see it anywhere in the UI
+- **Root cause:** Team info only visible on `/settings/team` page; no indicators in sidebar or header
+- **Changes:** `auth.ts` (add teamName to JWT/session), `MondaySidebar.tsx` (team badge in user section), `MondayHeader.tsx` (team badge + dropdown link)
+- **Validation:** TypeScript clean (no new errors), pre-existing vitest.config.ts error only
+
 ## 2026-04-21 — Listing Detail Page Redesign
 - **Type:** CODING | **Confidence:** HIGH
 - **Branch:** `claude/listing-property-details`
