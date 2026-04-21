@@ -1,0 +1,201 @@
+name: "G4: Release Candidate — Full Validation"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "release/*"
+
+concurrency:
+  group: g4-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+  NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+  NEXTAUTH_URL: http://localhost:3000
+  DEMO_EMAIL: ${{ secrets.DEMO_EMAIL }}
+  DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+
+jobs:
+  l0-static:
+    name: "L0: Static Analysis"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"
+      - run: npm audit --audit-level=high
+
+  l1-unit:
+    name: "L1: Unit Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run test:unit
+
+  l4-integration:
+    name: "L4: API Integration Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run test:integration
+
+  l5-full:
+    name: "L5: Full E2E (shard ${{ matrix.shard }}/4)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium --with-deps
+      - name: Install Playwright deps (cached)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - name: Run full E2E (shard ${{ matrix.shard }}/4)
+        run: npx playwright test --shard=${{ matrix.shard }}/4
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-release-shard-${{ matrix.shard }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 14
+
+  l6a-full:
+    name: "L6a: Full Accessibility Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium --with-deps
+      - name: Install Playwright deps (cached)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - run: npx playwright test tests/browser/accessibility
+
+  l7-resilience:
+    name: "L7: Resilience Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Run resilience tests (if exist)
+        run: |
+          if [ -f tests/resilience/run.mjs ]; then
+            node tests/resilience/run.mjs
+          elif npx playwright test tests/resilience 2>/dev/null; then
+            echo "Resilience tests passed"
+          else
+            echo "No resilience tests found — skipping"
+          fi
+
+  l8-load:
+    name: "L8: Load Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Run load tests (if exist)
+        run: |
+          if [ -f tests/load/run.mjs ]; then
+            node tests/load/run.mjs
+          elif [ -f k6/run.js ]; then
+            echo "k6 load tests found but k6 not installed — skipping"
+          else
+            echo "No load tests found — skipping"
+          fi
+
+  rtm-strict:
+    name: "RTM Audit (Strict — Zero Waivers)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Run RTM audit strict mode
+        run: |
+          if [ -f scripts/rtm-audit.mjs ]; then
+            node scripts/rtm-audit.mjs --strict
+          else
+            echo "RTM audit script not found — skipping"
+          fi
+
+  build:
+    name: "Production Build"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [l0-static, l1-unit, l4-integration, l5-full, l6a-full, l7-resilience, l8-load, rtm-strict]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build

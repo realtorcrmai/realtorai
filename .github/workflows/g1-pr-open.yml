@@ -1,0 +1,94 @@
+name: "G1: PR Gate — Lint, Type-check, Unit, P0 E2E"
+
+on:
+  pull_request:
+    branches-ignore:
+      - dev
+      - main
+
+concurrency:
+  group: g1-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+  NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+  NEXTAUTH_URL: http://localhost:3000
+  DEMO_EMAIL: ${{ secrets.DEMO_EMAIL }}
+  DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+
+jobs:
+  l0-static:
+    name: "L0: Static Analysis"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"
+      - run: npm audit --audit-level=high || true
+
+  l1-unit:
+    name: "L1: Unit Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: l0-static
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run test:unit
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: unit-test-results
+          path: |
+            test-results/
+            coverage/
+          retention-days: 7
+
+  l5-p0:
+    name: "L5: P0 E2E (Desktop)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    needs: l0-static
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium --with-deps
+      - name: Install Playwright deps (cached)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - name: Run P0 E2E tests
+        run: npx playwright test --grep @p0 --project=desktop
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-p0-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7

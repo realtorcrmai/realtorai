@@ -7,7 +7,13 @@ export default defineConfig({
     environment: 'node',
     include: [
       'src/__tests__/**/*.test.ts',
+      'src/components/**/*.test.tsx',
       'tests/integration/**/*.test.ts',
+      'tests/contract/**/*.spec.ts',
+      'tests/api/**/*.spec.ts',
+    ],
+    environmentMatchGlobs: [
+      ['src/components/**/*.test.tsx', 'happy-dom'],
     ],
     exclude: ['node_modules', '.next', 'tests/browser'],
   },
