@@ -6,10 +6,18 @@ import { Clock, CheckCircle2, MapPin, Calendar, ArrowRight, Sunrise, Coffee } fr
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "./DashboardCalendar";
 
+interface PriorityAlert {
+  icon: string;
+  label: string;
+  count: number;
+  href: string;
+}
+
 interface DayActivityFeedProps {
   events: CalendarEvent[];
   selectedDate: Date;
   tasks: DayTask[];
+  priorities?: PriorityAlert[];
 }
 
 export type DayTask = {
@@ -47,11 +55,12 @@ function getDateLabel(date: Date): string {
   return format(date, "EEEE, MMMM d");
 }
 
-export function DayActivityFeed({ events, selectedDate, tasks }: DayActivityFeedProps) {
+export function DayActivityFeed({ events, selectedDate, tasks, priorities }: DayActivityFeedProps) {
   const dayEvents = events.filter((ev) => isSameDay(ev.start, selectedDate)).sort((a, b) => a.start.getTime() - b.start.getTime());
   const dayTasks = tasks.filter((t) => t.due_date && isSameDay(new Date(t.due_date), selectedDate));
   const isEmpty = dayEvents.length === 0 && dayTasks.length === 0;
   const totalItems = dayEvents.length + dayTasks.length;
+  const visiblePriorities = (priorities ?? []).filter((p) => p.count > 0);
 
   return (
     <div className="relative rounded-2xl overflow-hidden elevation-8 bg-card border border-brand/20 flex flex-col h-full">
@@ -69,6 +78,25 @@ export function DayActivityFeed({ events, selectedDate, tasks }: DayActivityFeed
           </span>
         )}
       </div>
+
+      {/* Priority alerts */}
+      {visiblePriorities.length > 0 && (
+        <div className="px-4 pb-2">
+          <div className="flex flex-wrap gap-1.5">
+            {visiblePriorities.map((p) => (
+              <Link
+                key={p.label}
+                href={p.href}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-muted/60 hover:bg-muted px-2.5 py-1.5 text-[11px] font-semibold text-foreground/80 transition-colors"
+              >
+                <span>{p.icon}</span>
+                <span className="font-bold">{p.count}</span>
+                <span className="text-muted-foreground">{p.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2.5 min-h-0">
         {isEmpty ? (

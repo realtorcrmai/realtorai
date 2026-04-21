@@ -290,7 +290,7 @@ export function ContactsTableClient({ contacts }: { contacts: ContactRow[] }) {
             ),
           },
           { key: "email", header: "Email", render: (r) => <span className="text-muted-foreground">{r.email || "\u2014"}</span> },
-          { key: "phone", header: "Phone", render: (r) => <span className="text-muted-foreground">{r.phone ? formatPhone(r.phone) : "\u2014"}</span> },
+          { key: "phone", header: "Phone", render: (r) => <span className="text-muted-foreground" suppressHydrationWarning>{r.phone ? formatPhone(r.phone) : "\u2014"}</span> },
           {
             key: "type",
             header: "Type",
