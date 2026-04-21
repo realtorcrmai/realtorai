@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
   let query = tc
     .from("listings")
     .select("*, contacts!listings_seller_id_fkey(name, phone)", { count: "exact" })
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (search) {

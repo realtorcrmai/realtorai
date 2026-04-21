@@ -39,10 +39,12 @@ export default async function ListingsPage({
     const [{ count }, { data }] = await Promise.all([
       supabase
         .from("listings")
-        .select("id", { count: "exact", head: true }),
+        .select("id", { count: "exact", head: true })
+        .is("deleted_at", null),
       supabase
         .from("listings")
         .select("id, address, status, mls_number, list_price, property_type, hero_image_url, created_at, contacts!listings_seller_id_fkey(name)")
+        .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .range(from, to),
     ]);

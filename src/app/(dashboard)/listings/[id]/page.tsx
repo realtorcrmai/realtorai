@@ -7,6 +7,7 @@ import { ManualStatusOverride } from "@/components/listings/ManualStatusOverride
 import { ListingWorkflow } from "@/components/listings/ListingWorkflow";
 import { FormReadinessPanel } from "@/components/listings/FormReadinessPanel";
 import { SellerIdentitiesPanel } from "@/components/listings/SellerIdentitiesPanel";
+import { BuyerIdentitiesPanel } from "@/components/listings/BuyerIdentitiesPanel";
 import { ConveyancingPackButton } from "@/components/listings/ConveyancingPackButton";
 import { ShowingRequestForm } from "@/components/showings/ShowingRequestForm";
 import { ShowingStatusBadge } from "@/components/showings/ShowingStatusBadge";
@@ -54,6 +55,7 @@ export default async function ListingDetailPage({
     { data: buyerMatches },
     { data: sellerIdentities },
     { data: listingPhotos },
+    { data: buyerIdentities },
   ] = await Promise.all([
     supabase
       .from("listing_documents")
@@ -91,6 +93,11 @@ export default async function ListingDetailPage({
     supabase
       .from("listing_photos")
       .select("id, photo_url, role, caption, sort_order")
+      .eq("listing_id", id)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("buyer_identities")
+      .select("*")
       .eq("listing_id", id)
       .order("sort_order", { ascending: true }),
   ]);
@@ -316,6 +323,10 @@ export default async function ListingDetailPage({
                 listingId={id}
                 initialIdentities={(sellerIdentities ?? []) as never}
               />
+              <BuyerIdentitiesPanel
+                listingId={id}
+                initialIdentities={(buyerIdentities ?? []) as never}
+              />
               <FormReadinessPanel
                 listingId={id}
                 documents={(documents ?? []) as ListingDocument[]}
@@ -333,6 +344,10 @@ export default async function ListingDetailPage({
         <SellerIdentitiesPanel
           listingId={id}
           initialIdentities={(sellerIdentities ?? []) as never}
+        />
+        <BuyerIdentitiesPanel
+          listingId={id}
+          initialIdentities={(buyerIdentities ?? []) as never}
         />
         <FormReadinessPanel
           listingId={id}
