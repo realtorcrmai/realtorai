@@ -232,7 +232,10 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
   const stepIndex = STEPS.findIndex(s => s.key === step);
 
   const canGoNext = () => {
-    if (step === "basics") return name.length >= 2 && phone.length >= 10;
+    if (step === "basics") {
+      const emailValid = !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      return name.length >= 2 && phone.length >= 10 && emailValid;
+    }
     if (step === "type") return !!type;
     return true;
   };

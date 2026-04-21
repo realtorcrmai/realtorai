@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Phone, Mail, Eye } from "lucide-react";
 import { ContactPreviewSheet } from "@/components/contacts/ContactPreviewSheet";
 import { bulkUpdateContactStage, bulkDeleteContacts, bulkExportContacts } from "@/actions/contacts";
+import { formatPhone } from "@/lib/format";
 import { toast } from "sonner";
 
 interface ContactRow {
@@ -289,7 +290,7 @@ export function ContactsTableClient({ contacts }: { contacts: ContactRow[] }) {
             ),
           },
           { key: "email", header: "Email", render: (r) => <span className="text-muted-foreground">{r.email || "\u2014"}</span> },
-          { key: "phone", header: "Phone", render: (r) => <span className="text-muted-foreground">{r.phone || "\u2014"}</span> },
+          { key: "phone", header: "Phone", render: (r) => <span className="text-muted-foreground">{r.phone ? formatPhone(r.phone) : "\u2014"}</span> },
           {
             key: "type",
             header: "Type",
