@@ -24,6 +24,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { createContact, updateContact } from "@/actions/contacts";
+import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import type { Contact } from "@/types";
 import { formatPhone, formatPostalCode, normalizePhoneE164, titleCaseName } from "@/lib/format";
@@ -180,8 +181,12 @@ export function ContactFormContent({
     setDuplicates(null);
     const payload = buildPayload(data);
     if (contact) {
-      await updateContact(contact.id, payload);
+      const result = await updateContact(contact.id, payload);
       setSubmitting(false);
+      if (result && "error" in result) {
+        toast.error(result.error);
+        return;
+      }
       reset();
       onSuccess?.();
     } else {
