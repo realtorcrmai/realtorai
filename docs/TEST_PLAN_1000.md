@@ -3094,6 +3094,11 @@ Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. Thi
 **Expected:** Returns array of `{ id, name, email }` matching users (max 5). Excludes current user. Unauthenticated requests return 401.
 **Priority:** P1
 
+#### TEAM-004: GET /api/team/invite-info
+**Steps:** Send GET request with `?token=<valid-invite-token>` query param.
+**Expected:** Returns `{ team_name, inviter_name, inviter_email }` for valid pending invites. Returns 404 for expired/invalid tokens. No auth required (public endpoint for invite acceptance flow).
+**Priority:** P1
+
 #### CRON-JOURNEY-001: POST /api/cron/process-journeys
 **Steps:** Trigger with Bearer CRON_SECRET header.
 **Expected:** Advances eligible contact journeys to next phase. Rejects missing/invalid token.
