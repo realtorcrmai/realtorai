@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
+import { getAuthenticatedTenantClient, getScopedTenantClient } from "@/lib/supabase/tenant";
+import type { DataScope } from "@/types/team";
 import { requireAuth } from "@/lib/api-auth";
 import { contactSchema } from "@/lib/schemas";
 
@@ -7,8 +8,9 @@ export async function GET(req: NextRequest) {
   const { unauthorized } = await requireAuth();
   if (unauthorized) return unauthorized;
 
-  const supabase = await getAuthenticatedTenantClient();
   const searchParams = req.nextUrl.searchParams;
+  const scope = (searchParams.get("scope") || "personal") as DataScope;
+  const supabase = await getScopedTenantClient(scope);
   const search = searchParams.get("search");
   const type = searchParams.get("type")?.toLowerCase();
   const typesParam = searchParams.get("types"); // comma-separated: e.g. "agent,partner"

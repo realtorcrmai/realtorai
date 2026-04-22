@@ -475,6 +475,20 @@ export async function updateMemberRole(input: UpdateRoleInput) {
     new_role: input.new_role,
   });
 
+  // Notify the affected member about their role change
+  if (membership.user_id && membership.user_id !== session.id) {
+    try {
+      const { createNotification } = await import("@/lib/notifications");
+      await createNotification(membership.user_id, {
+        type: "team_role_changed",
+        title: "Your team role has been updated",
+        body: `Your role was changed from ${membership.role} to ${input.new_role} by ${session.name}.`,
+        related_type: "team",
+        related_id: session.teamId,
+      });
+    } catch { /* Don't fail role change if notification fails */ }
+  }
+
   revalidatePath("/settings/team");
   return { data: { success: true } };
 }
@@ -662,6 +676,18 @@ export async function removeMember(userId: string) {
   await logActivity(session.teamId, session.id, "member_removed", "user", userId, {
     email: membership.agent_email,
   });
+
+  // Notify the removed member
+  try {
+    const { createNotification } = await import("@/lib/notifications");
+    await createNotification(userId, {
+      type: "team_removed",
+      title: "You have been removed from the team",
+      body: `${session.name} removed you from the team.`,
+      related_type: "team",
+      related_id: session.teamId,
+    });
+  } catch { /* Don't fail removal if notification fails */ }
 
   revalidatePath("/settings/team");
   return { data: { success: true } };
@@ -864,7 +890,43 @@ export async function resendInvite(inviteId: string) {
 
   if (error) return { error: `Failed to resend invite: ${error.message}` };
 
-  // TODO: Actually resend email via Resend
+  // Fetch invite details to send email
+  const { data: invite } = await supabase
+    .from("team_invites")
+    .select("email, invite_token, role, inviter_name, team_name")
+    .eq("id", inviteId)
+    .single();
+
+  if (invite) {
+    try {
+      const { sendEmail } = await import("@/lib/resend");
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const inviteUrl = `${appUrl}/invite/accept?token=${invite.invite_token}`;
+      const teamName = invite.team_name || "a team";
+      const inviterName = invite.inviter_name || session.name;
+
+      await sendEmail({
+        to: invite.email,
+        subject: `Reminder: ${inviterName} invited you to join ${teamName} on Realtors360`,
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 40px 20px;">
+            <h1 style="color: #2D3E50; font-size: 24px; margin-bottom: 8px;">Reminder: You're invited!</h1>
+            <p style="color: #555; font-size: 16px; line-height: 1.5;">
+              <strong>${inviterName}</strong> invited you to join <strong>${teamName}</strong> as a <strong>${invite.role}</strong> on Realtors360.
+            </p>
+            <a href="${inviteUrl}" style="display: inline-block; background: #FF7A59; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; margin: 24px 0;">
+              Accept Invite
+            </a>
+            <p style="color: #999; font-size: 13px; margin-top: 24px;">
+              This invite expires in 30 days. If you didn't expect this, you can ignore it.
+            </p>
+          </div>
+        `,
+      });
+    } catch (emailErr) {
+      console.error("[team] Failed to resend invite email:", emailErr);
+    }
+  }
 
   revalidatePath("/settings/team");
   return { data: { success: true } };
