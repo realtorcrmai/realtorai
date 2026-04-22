@@ -729,10 +729,16 @@ export async function sendNewsletter(newsletterId: string, realtorApproved: bool
     .limit(1)
     .maybeSingle();
 
-  const trustLevelLabel = (journey as { trust_level?: string } | null)?.trust_level ?? 'ghost';
-  // Map trust level labels to numeric levels (0=ghost, 1=copilot, 2=supervised, 3=autonomous)
-  const trustLevelMap: Record<string, number> = { ghost: 0, copilot: 1, supervised: 2, autonomous: 3 };
-  const trustLevel = trustLevelMap[trustLevelLabel] ?? 0;
+  // trust_level is stored as INT (0-3) in contact_journeys, but some legacy code may
+  // have stored it as a string label. Handle both.
+  const rawTrustLevel = (journey as { trust_level?: string | number } | null)?.trust_level;
+  let trustLevel: number;
+  if (typeof rawTrustLevel === 'number') {
+    trustLevel = rawTrustLevel;
+  } else {
+    const trustLevelMap: Record<string, number> = { ghost: 0, copilot: 1, supervised: 2, autonomous: 3 };
+    trustLevel = trustLevelMap[rawTrustLevel ?? 'ghost'] ?? 0;
+  }
   const journeyPhase = journey?.current_phase || newsletter.journey_phase || undefined;
 
   // Fetch recent subjects for deduplication check
