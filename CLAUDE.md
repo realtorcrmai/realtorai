@@ -645,3 +645,4 @@ Every new feature MUST include all of the following before it is considered comp
 **Env vars:** `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `AGENT_SERVICE_URL`, `ANTHROPIC_API_KEY`.
 
 
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->

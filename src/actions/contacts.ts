@@ -39,7 +39,7 @@ export async function createContact(formData: ContactFormData, force = false) {
       .select("id, name, phone, email");
 
     if (existing && existing.length > 0) {
-      const duplicates = existing.filter((c: any) => {
+      const duplicates = existing.filter((c: { phone?: string | null; email?: string | null; id: string; name: string }) => {
         const phoneMatch =
           last10.length === 10 &&
           (c.phone ?? "").replace(/\D/g, "").slice(-10) === last10;
@@ -53,7 +53,7 @@ export async function createContact(formData: ContactFormData, force = false) {
       if (duplicates.length > 0) {
         return {
           error: "Duplicate contact detected",
-          duplicates: duplicates.map((c: any) => ({
+          duplicates: duplicates.map((c: { id: string; name: string; phone?: string | null; email?: string | null }) => ({
             id: c.id,
             name: c.name,
             phone: c.phone,
@@ -655,12 +655,11 @@ export async function convertContactType(
  * Welcome email comes from the "Speed to Contact" workflow via trigger engine.
  */
 async function enrollInJourney(contactId: string, contactType: string, _name: string) {
+  // Only buyer/seller have journey support — DB constraint rejects other types
+  if (contactType !== "buyer" && contactType !== "seller") return;
+
   const tc = await getAuthenticatedTenantClient();
-  // Map contact type to journey type
-  const journeyMap: Record<string, string> = {
-    buyer: "buyer", seller: "seller", customer: "customer", agent: "agent",
-  };
-  const journeyType = journeyMap[contactType] || "customer";
+  const journeyType = contactType;
 
   // Check if already enrolled
   const { data: existing } = await tc

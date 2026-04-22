@@ -13,9 +13,7 @@ export default defineConfig({
       'tests/contract/**/*.spec.ts',
       'tests/api/**/*.spec.ts',
     ],
-    environmentMatchGlobs: [
-      ['src/components/**/*.test.tsx', 'happy-dom'],
-    ],
+
     exclude: ['node_modules', '.next', 'tests/browser'],
   },
   resolve: {

@@ -1590,3 +1590,5 @@ Issues identified during review and their resolutions:
 | 23 | Retention tab in UI Analytics but deferred in IMPL | **UI Design updated** — Tab shows placeholder with data collection start date. Full spec preserved in collapsed details block for v2. |
 | 24 | TeamSettingsClient updated with invite accept/decline notifications and inline confirm for member removal | **Noted** — TeamSettingsClient.tsx now supports in-app invite notifications and inline confirmation before removing members. |
 
+
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->

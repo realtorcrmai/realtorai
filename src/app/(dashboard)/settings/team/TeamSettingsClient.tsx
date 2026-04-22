@@ -145,9 +145,9 @@ export default function TeamSettingsClient({
       setMessage({ type: "error", text: result.error });
       setLeaving(false);
     } else {
-      // Refresh JWT to clear team context, then navigate to force server re-render
-      await updateSession();
-      router.push("/settings/team");
+      // Hard navigate to force full server re-render — updateSession() hangs
+      // in NextAuth v5 beta 30, so use window.location instead
+      window.location.href = "/settings/team";
     }
   };
 
