@@ -90,6 +90,8 @@ jobs:
         run: npm ci
       - name: Lint
         run: npm run lint
+      - name: Security audit
+        run: npm audit --audit-level=high || echo "::warning::npm audit found high-severity vulnerabilities"
 
   # ──────────────────────────────────────────────────────────────────
   #  3. Build — verifies the app compiles successfully
