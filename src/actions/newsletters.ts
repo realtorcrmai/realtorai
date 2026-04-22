@@ -16,7 +16,55 @@ import { assembleEmail, getBrandConfig, type EmailData } from "@/lib/email-block
 import type { RealtorBranding } from "@/emails/BaseLayout";
 import { getBrandProfile } from "@/actions/brand-profile";
 
-async function getRealtorBranding(): Promise<RealtorBranding> {
+async function getRealtorBranding(realtorId?: string): Promise<RealtorBranding> {
+  // When called from cron context (realtorId provided), fetch directly from
+  // realtor_agent_config.brand_config — no session required.
+  if (realtorId) {
+    try {
+      const adminClient = createAdminClient();
+      const { data: config } = await adminClient
+        .from("realtor_agent_config")
+        .select("brand_config")
+        .eq("realtor_id", realtorId)
+        .maybeSingle();
+      const b = (config?.brand_config as Record<string, string>) || {};
+      if (b.realtorName) {
+        return {
+          name: b.realtorName,
+          title: "REALTOR®",
+          brokerage: b.brokerage || "",
+          phone: b.phone || "",
+          email: b.email || "",
+          accentColor: b.primaryColor || "#4f35d2",
+          physicalAddress: b.address || undefined,
+        };
+      }
+      // Also try users table
+      const { data: user } = await adminClient
+        .from("users")
+        .select("name, email, phone, brokerage")
+        .eq("id", realtorId)
+        .maybeSingle();
+      return {
+        name: user?.name || "Jordan Lee",
+        title: "REALTOR®",
+        brokerage: user?.brokerage || "Magnate360 Realty",
+        phone: user?.phone || "",
+        email: user?.email || "hello@magnate360.com",
+        accentColor: "#4f35d2",
+      };
+    } catch {
+      return {
+        name: "Jordan Lee",
+        title: "REALTOR®",
+        brokerage: "Magnate360 Realty",
+        phone: "",
+        email: "hello@magnate360.com",
+        accentColor: "#4f35d2",
+      };
+    }
+  }
+
   try {
     const tc = await getAuthenticatedTenantClient();
 
@@ -341,7 +389,7 @@ export async function generateAndQueueNewsletter(
     .order("created_at", { ascending: false })
     .limit(5);
 
-  const branding = await getRealtorBranding();
+  const branding = await getRealtorBranding(realtorId);
 
   // Build AI context
   const intelligence = (contact.newsletter_intelligence as Record<string, unknown>) || {};
@@ -593,7 +641,7 @@ export async function generateAndQueueNewsletter(
 
     if (sendMode === "auto") {
       try {
-        await sendNewsletter(newsletter.id);
+        await sendNewsletter(newsletter.id, false, realtorId);
       } catch (sendErr) {
         console.error("[newsletter] Auto-send failed for newsletter", newsletter.id, sendErr);
         await tc.from("newsletters").update({
@@ -609,8 +657,14 @@ export async function generateAndQueueNewsletter(
   return { data: newsletter };
 }
 
-export async function sendNewsletter(newsletterId: string, realtorApproved: boolean = false) {
-  const tc = await getAuthenticatedTenantClient();
+export async function sendNewsletter(newsletterId: string, realtorApproved: boolean = false, realtorId?: string) {
+  let tc: Awaited<ReturnType<typeof getAuthenticatedTenantClient>>;
+  if (realtorId) {
+    const { tenantClient } = await import("@/lib/supabase/tenant");
+    tc = tenantClient(realtorId);
+  } else {
+    tc = await getAuthenticatedTenantClient();
+  }
 
   // Fetch newsletter with full contact data (including buyer_preferences and type)
   const { data: newsletter } = await tc
@@ -675,10 +729,16 @@ export async function sendNewsletter(newsletterId: string, realtorApproved: bool
     .limit(1)
     .maybeSingle();
 
-  const trustLevelLabel = (journey as { trust_level?: string } | null)?.trust_level ?? 'ghost';
-  // Map trust level labels to numeric levels (0=ghost, 1=copilot, 2=supervised, 3=autonomous)
-  const trustLevelMap: Record<string, number> = { ghost: 0, copilot: 1, supervised: 2, autonomous: 3 };
-  const trustLevel = trustLevelMap[trustLevelLabel] ?? 0;
+  // trust_level is stored as INT (0-3) in contact_journeys, but some legacy code may
+  // have stored it as a string label. Handle both.
+  const rawTrustLevel = (journey as { trust_level?: string | number } | null)?.trust_level;
+  let trustLevel: number;
+  if (typeof rawTrustLevel === 'number') {
+    trustLevel = rawTrustLevel;
+  } else {
+    const trustLevelMap: Record<string, number> = { ghost: 0, copilot: 1, supervised: 2, autonomous: 3 };
+    trustLevel = trustLevelMap[rawTrustLevel ?? 'ghost'] ?? 0;
+  }
   const journeyPhase = journey?.current_phase || newsletter.journey_phase || undefined;
 
   // Fetch recent subjects for deduplication check
@@ -1240,7 +1300,7 @@ export async function sendListingBlast(listingId: string, _template: string) {
     const { sendBatchEmails } = await import("@/lib/resend");
     const emailPayloads = emails.map((to: string) => ({
       to, subject, html,
-      from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
+      from: process.env.RESEND_FROM_EMAIL || "hello@magnate360.com",
       tags: [{ name: "type", value: "listing_blast" }, { name: "listing_id", value: listingId }],
     }));
     const result = await sendBatchEmails(emailPayloads);
