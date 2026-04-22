@@ -90,6 +90,39 @@ EOF
             if [[ "$TEST_CHANGES" == "0" ]]; then
                 DELIVERABLE_WARNINGS="$DELIVERABLE_WARNINGS\n  ⚠ No test files created/updated (CODING tasks should include tests)"
             fi
+
+            # For CODING:feature, require test coverage of new exports
+            if [[ "$TYPE" == "CODING:feature" ]]; then
+                cd "$PROJECT_DIR" 2>/dev/null
+                NEW_EXPORTS_JSON=$(node scripts/extract-new-exports.mjs 2>/dev/null || echo "[]")
+                NEW_EXPORT_COUNT=$(echo "$NEW_EXPORTS_JSON" | jq 'length' 2>/dev/null || echo "0")
+
+                if [[ "$NEW_EXPORT_COUNT" -gt 0 ]]; then
+                    # Get list of changed test files
+                    CHANGED_TEST_FILES=$(git diff --name-only origin/dev...HEAD 2>/dev/null | grep -E "tests/|__tests__/|\.test\.|\.spec\." || echo "")
+
+                    if [[ -z "$CHANGED_TEST_FILES" ]]; then
+                        MISSING="$MISSING\n- CODING:feature added $NEW_EXPORT_COUNT new export(s) but no test files are in this PR"
+                    else
+                        # Grep each new symbol in each changed test file
+                        MATCHED=0
+                        SYMBOLS=$(echo "$NEW_EXPORTS_JSON" | jq -r '.[].symbol' 2>/dev/null)
+                        for symbol in $SYMBOLS; do
+                            for test_file in $CHANGED_TEST_FILES; do
+                                if grep -q "\b$symbol\b" "$test_file" 2>/dev/null; then
+                                    MATCHED=$((MATCHED + 1))
+                                    break
+                                fi
+                            done
+                        done
+
+                        if [[ "$MATCHED" -eq 0 ]]; then
+                            SYMBOL_LIST=$(echo "$NEW_EXPORTS_JSON" | jq -r '.[].symbol' | tr '\n' ',' | sed 's/,$//')
+                            MISSING="$MISSING\n- CODING:feature added new exports ($SYMBOL_LIST) but no test file references any of them"
+                        fi
+                    fi
+                fi
+            fi
         fi
         # Docs freshness check — warn if docs are stale after code changes
         if [[ "$TYPE" == CODING:* || "$TYPE" == DOCS* ]]; then

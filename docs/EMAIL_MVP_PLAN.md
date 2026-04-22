@@ -1,4 +1,4 @@
-# Email MVP Plan
+<!-- docs-audit: none --># Email MVP Plan
 **Nothing built yet. Start here every session.**
 
 ---

@@ -1,4 +1,4 @@
-# Signup Functionality — E2E Test Results
+<!-- docs-audit: none --># Signup Functionality — E2E Test Results
 
 **Date:** 2026-04-20  
 **Tester:** Claude (Automated via Playwright MCP + curl API tests)  
