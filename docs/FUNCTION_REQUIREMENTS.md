@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-21 -->
+<!-- docs-audit-reviewed: 2026-04-22 -->
 <!-- docs-audit: src/actions/*, src/app/api/* -->
 # Function Requirements — Detailed Specifications
 

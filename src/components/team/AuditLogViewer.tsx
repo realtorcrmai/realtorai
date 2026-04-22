@@ -32,14 +32,15 @@ export function AuditLogViewer() {
   const [filter, setFilter] = useState("");
 
   useEffect(() => {
-    fetch("/api/team/audit-log?limit=50")
-      .then((r) => r.json())
-      .then((data) => {
+    (async () => {
+      try {
+        const r = await fetch("/api/team/audit-log?limit=50");
+        const data = await r.json();
         if (Array.isArray(data)) setEntries(data);
         else if (data.data) setEntries(data.data);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      } catch { /* ignore */ }
+      setLoading(false);
+    })();
   }, []);
 
   const filtered = filter
