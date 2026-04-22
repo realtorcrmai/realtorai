@@ -16,7 +16,55 @@ import { assembleEmail, getBrandConfig, type EmailData } from "@/lib/email-block
 import type { RealtorBranding } from "@/emails/BaseLayout";
 import { getBrandProfile } from "@/actions/brand-profile";
 
-async function getRealtorBranding(): Promise<RealtorBranding> {
+async function getRealtorBranding(realtorId?: string): Promise<RealtorBranding> {
+  // When called from cron context (realtorId provided), fetch directly from
+  // realtor_agent_config.brand_config — no session required.
+  if (realtorId) {
+    try {
+      const adminClient = createAdminClient();
+      const { data: config } = await adminClient
+        .from("realtor_agent_config")
+        .select("brand_config")
+        .eq("realtor_id", realtorId)
+        .maybeSingle();
+      const b = (config?.brand_config as Record<string, string>) || {};
+      if (b.realtorName) {
+        return {
+          name: b.realtorName,
+          title: "REALTOR®",
+          brokerage: b.brokerage || "",
+          phone: b.phone || "",
+          email: b.email || "",
+          accentColor: b.primaryColor || "#4f35d2",
+          physicalAddress: b.address || undefined,
+        };
+      }
+      // Also try users table
+      const { data: user } = await adminClient
+        .from("users")
+        .select("name, email, phone, brokerage")
+        .eq("id", realtorId)
+        .maybeSingle();
+      return {
+        name: user?.name || "Jordan Lee",
+        title: "REALTOR®",
+        brokerage: user?.brokerage || "Magnate360 Realty",
+        phone: user?.phone || "",
+        email: user?.email || "hello@magnate360.com",
+        accentColor: "#4f35d2",
+      };
+    } catch {
+      return {
+        name: "Jordan Lee",
+        title: "REALTOR®",
+        brokerage: "Magnate360 Realty",
+        phone: "",
+        email: "hello@magnate360.com",
+        accentColor: "#4f35d2",
+      };
+    }
+  }
+
   try {
     const tc = await getAuthenticatedTenantClient();
 
@@ -341,7 +389,7 @@ export async function generateAndQueueNewsletter(
     .order("created_at", { ascending: false })
     .limit(5);
 
-  const branding = await getRealtorBranding();
+  const branding = await getRealtorBranding(realtorId);
 
   // Build AI context
   const intelligence = (contact.newsletter_intelligence as Record<string, unknown>) || {};
