@@ -370,3 +370,5 @@ These are tracked in `docs/ENVIRONMENTS.md` §"Open follow-ups" — none of them
 
 <!-- Last reviewed: 2026-04-21 — Wave 1a demo gate -->
 <!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
+
+<!-- Last reviewed: 2026-04-21 — DR runbook -->
