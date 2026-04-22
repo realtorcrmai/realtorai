@@ -1,4 +1,4 @@
-# Contacts E2E Test Case Book
+<!-- docs-audit: none --># Contacts E2E Test Case Book
 
 ## Test Execution Guide
 - **Tool:** Playwright MCP (browser automation)

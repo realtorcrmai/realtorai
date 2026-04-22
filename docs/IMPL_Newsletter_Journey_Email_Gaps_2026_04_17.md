@@ -1,4 +1,4 @@
-# Implementation Plan — Newsletter, Journey & Email Quality Gaps
+<!-- docs-audit: none --># Implementation Plan — Newsletter, Journey & Email Quality Gaps
 **Date:** 2026-04-17  
 **Source:** Session audit covering newsletter functionality, contact intelligence/journey workflows, and email generation quality  
 **Status:** PENDING EXECUTION

@@ -1,4 +1,4 @@
-# Contacts E2E Test Results — 2026-04-20
+<!-- docs-audit: none --># Contacts E2E Test Results — 2026-04-20
 
 ## Execution Summary
 - **Date:** April 20, 2026

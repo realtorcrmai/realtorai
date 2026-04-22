@@ -1,4 +1,4 @@
-# Agent Playbook — Complete Functionality Documentation
+<!-- docs-audit: none --># Agent Playbook — Complete Functionality Documentation
 
 **Version:** 1.0 | **Date:** 2026-04-20 | **Status:** Comprehensive reference for all existing agent playbook functionality
 

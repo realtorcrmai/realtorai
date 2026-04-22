@@ -1,4 +1,4 @@
-# Signup Functionality — End-to-End Test Plan
+<!-- docs-audit: none --># Signup Functionality — End-to-End Test Plan
 
 **Date:** 2026-04-20  
 **Tester:** Claude (Automated via Playwright MCP)  

@@ -1,4 +1,4 @@
-# Seed Data Reference
+<!-- docs-audit: none --># Seed Data Reference
 
 Complete reference for all demo/seed data in Realtors360. This document covers realtors (users), contacts, listings, showings, newsletters, and photos across all seed scripts.
 

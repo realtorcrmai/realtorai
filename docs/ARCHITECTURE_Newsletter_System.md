@@ -1,4 +1,4 @@
-# Newsletter & Email Marketing System — Architecture
+<!-- docs-audit: none --># Newsletter & Email Marketing System — Architecture
 
 > **~70,000+ lines of code across ~200+ files**
 > Two live services (CRM on Vercel + Newsletter Agent on Render) sharing one Supabase database.

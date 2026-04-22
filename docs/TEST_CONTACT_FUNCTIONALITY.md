@@ -1,4 +1,4 @@
-# Contact Functionality — End-to-End Test Plan
+<!-- docs-audit: none --># Contact Functionality — End-to-End Test Plan
 
 **Date:** 2026-04-20
 **Module:** Contacts (CRUD, UI, Forms, Filters, Bulk Actions, Import/Export)
