@@ -234,3 +234,7 @@
 ## Execution Log
 
 _(Filled in during test execution)_
+
+<!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
+
+<!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
