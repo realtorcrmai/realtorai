@@ -231,11 +231,17 @@ export async function inviteMember(input: InviteMemberInput) {
     const inviteUrl = `${appUrl}/invite/accept?token=${token}`;
     const teamName = team?.name || "a team";
 
+    const logoUrl = team?.logo_url;
+    const logoHtml = logoUrl
+      ? `<img src="${logoUrl}" alt="${teamName}" style="height: 48px; margin-bottom: 16px;" />`
+      : `<div style="font-size: 28px; font-weight: 700; color: #2D3E50; margin-bottom: 16px;">${teamName}</div>`;
+
     await sendEmail({
       to: input.email,
       subject: `${session.name} invited you to join ${teamName} on Realtors360`,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 40px 20px;">
+          ${logoHtml}
           <h1 style="color: #2D3E50; font-size: 24px; margin-bottom: 8px;">You're invited!</h1>
           <p style="color: #555; font-size: 16px; line-height: 1.5;">
             <strong>${session.name}</strong> has invited you to join <strong>${teamName}</strong> as a <strong>${input.role}</strong> on Realtors360.
@@ -817,6 +823,48 @@ export async function getOffboardImpact(userId: string): Promise<{ data?: Offboa
       scheduled_showings_count: showings.count || 0,
     },
   };
+}
+
+/**
+ * Get per-agent analytics for team dashboard.
+ */
+export async function getTeamAnalytics() {
+  const session = await getSession();
+  if (!session.teamId) return { error: "Not on a team" };
+  if (!checkTeamPermission({ user: session }, "team:manage_settings")) {
+    return { error: "Only owner/admin can view team analytics" };
+  }
+
+  const supabase = createAdminClient();
+  const { data: memberships } = await supabase
+    .from("tenant_memberships")
+    .select("user_id, role, agent_email, users(name)")
+    .eq("tenant_id", session.teamId)
+    .is("removed_at", null);
+
+  if (!memberships || memberships.length === 0) return { data: [] };
+
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+
+  const analytics = await Promise.all(
+    memberships.map(async (m: Record<string, unknown>) => {
+      const uid = m.user_id as string;
+      if (!uid) return null;
+      const [contacts, listings, tasksCompleted, showings] = await Promise.all([
+        supabase.from("contacts").select("*", { count: "exact", head: true }).eq("realtor_id", uid),
+        supabase.from("listings").select("*", { count: "exact", head: true }).eq("realtor_id", uid).in("status", ["active", "pending", "conditional"]),
+        supabase.from("tasks").select("*", { count: "exact", head: true }).eq("realtor_id", uid).eq("status", "completed").gte("completed_at", monthStart),
+        supabase.from("appointments").select("*", { count: "exact", head: true }).eq("realtor_id", uid).gte("start_time", monthStart),
+      ]);
+      const user = m.users as Record<string, unknown> | null;
+      return {
+        user_id: uid, name: (user?.name as string) || (m.agent_email as string), role: m.role as string,
+        contacts: contacts.count || 0, active_listings: listings.count || 0,
+        tasks_completed_this_month: tasksCompleted.count || 0, showings_this_month: showings.count || 0,
+      };
+    })
+  );
+  return { data: analytics.filter(Boolean) };
 }
 
 /**

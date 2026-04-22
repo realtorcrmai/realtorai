@@ -9,6 +9,7 @@ import type { FeedItem } from "@/components/dashboard/ActivityFeed";
 
 import DashboardPipelineWidget from "@/components/dashboard/DashboardPipelineWidget";
 import { TeamActivityFeed } from "@/components/dashboard/TeamActivityFeed";
+import { TeamAnalyticsWidget } from "@/components/dashboard/TeamAnalyticsWidget";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Building2, Clock, ListTodo, Users } from "lucide-react";
@@ -306,7 +307,13 @@ export default async function DashboardPage() {
         </div>
 
         {/* Team Activity Feed (only for team members) */}
-        {teamId && <TeamActivityFeed />}
+        {/* Team widgets (only for team members) */}
+        {teamId && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <TeamAnalyticsWidget />
+            <TeamActivityFeed />
+          </div>
+        )}
       </div>
     </>
   );
