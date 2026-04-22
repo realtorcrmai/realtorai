@@ -139,9 +139,36 @@ if [[ -f "$TASK_FILE" ]]; then
     DATE=$(date +%Y-%m-%d)
     DESCRIPTION=$(jq -r '.description // "unknown"' "$TASK_FILE" | head -c 80)
     PHASES_DONE=$(jq -r '[.phases | to_entries[] | select(.value == true) | .key] | join(", ")' "$TASK_FILE" 2>/dev/null)
+    PHASES_SKIPPED=$(jq -r '[.phases | to_entries[] | select(.value == false) | .key] | join(", ")' "$TASK_FILE" 2>/dev/null)
+
+    # Determine pass/fail state
+    STATUS="✅"
+    NOTES="Auto-logged by completion-gate"
+
+    # FAIL if any phase was skipped (medium/large tier)
+    if [[ -n "$PHASES_SKIPPED" && ("$TIER" == "medium" || "$TIER" == "large") ]]; then
+        STATUS="❌"
+        NOTES="FAIL: phases skipped ($PHASES_SKIPPED)"
+    fi
+
+    # FAIL if deliverable warnings fired
+    if [[ -n "$DELIVERABLE_WARNINGS" ]]; then
+        STATUS="❌"
+        if [[ "$NOTES" == "Auto-logged by completion-gate" ]]; then
+            NOTES="FAIL: deliverable warnings — see session output"
+        else
+            NOTES="$NOTES; deliverable warnings"
+        fi
+    fi
+
+    # FAIL if tsc failed (defensive — if user overrode the block, log it)
+    if [[ -n "$TSC_EXIT" && "$TSC_EXIT" -ne 0 ]]; then
+        STATUS="❌"
+        NOTES="FAIL: tsc errors bypassed"
+    fi
 
     if [[ -f "$COMPLIANCE_LOG" ]]; then
-        echo "| $DATE | claude | $DESCRIPTION | $TYPE | ✅ | $PHASES_DONE | — | Auto-logged by completion-gate |" >> "$COMPLIANCE_LOG"
+        echo "| $DATE | claude | $DESCRIPTION | $TYPE | $STATUS | $PHASES_DONE | ${PHASES_SKIPPED:-—} | $NOTES |" >> "$COMPLIANCE_LOG"
     fi
 fi
 

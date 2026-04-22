@@ -34,7 +34,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx tsc --noEmit
-      - run: npx next lint
+      - run: npm run lint
       - name: Gitleaks secret scan
         run: |
           if command -v gitleaks &>/dev/null; then
