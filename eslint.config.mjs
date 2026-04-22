@@ -39,7 +39,6 @@ export default [
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
       "@typescript-eslint/consistent-type-assertions": ["error", {
         assertionStyle: "as",
-        objectLiteralTypeAssertions: "allow-with-type-annotation"
       }],
     },
   },
