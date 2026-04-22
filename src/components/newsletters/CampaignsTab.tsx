@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +60,15 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
   const [selectedRecipients, setSelectedRecipients] = useState("all_buyers");
   const [scheduleType, setScheduleType] = useState<"now" | "scheduled">("now");
   const [campaignSent, setCampaignSent] = useState(false);
+
+  const [agentCount, setAgentCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/contacts?types=agent,partner&hasEmail=true&countOnly=true")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.count != null) setAgentCount(d.count); })
+      .catch(() => {/* leave null — UI shows no badge */});
+  }, []);
 
   function resetBlast() { setBlastStep("select_listing"); setSelectedListing(null); setBlastSent(false); setBlastIncludes({ photos: true, openhouse: true, commission: false, floorplan: false }); setImportEmails(""); }
   function resetCampaign() { setCampaignStep("select_template"); setSelectedTemplate(null); setSelectedRecipients("all_buyers"); setScheduleType("now"); setCampaignSent(false); }
@@ -290,8 +299,8 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
         {blastStep === "recipients" && (
           <RecipientStep selectedRecipients={selectedRecipients} setSelectedRecipients={setSelectedRecipients}
             options={[
-              { value: "all_agents", label: "All agents in CRM", desc: "Every partner/agent contact", count: "5" },
-              { value: "area_agents", label: "Area-specific agents", desc: "Agents active in this listing's area", count: "3" },
+              { value: "all_agents", label: "All agents in CRM", desc: "Every partner/agent contact", count: agentCount != null ? String(agentCount) : "" },
+              { value: "area_agents", label: "Area-specific agents", desc: "Agents active in this listing's area", count: "" },
               { value: "import", label: "Import email list", desc: "Paste emails from your board", count: "" },
             ]}
             importEmails={importEmails} setImportEmails={setImportEmails}
