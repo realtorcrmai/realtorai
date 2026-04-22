@@ -27,8 +27,11 @@ export default async function DashboardLayout({
   }
 
   // ── Email verification gate — must verify before accessing dashboard ──
+  // Only gate users who are explicitly unverified AND haven't completed onboarding.
+  // Existing/demo users who finished onboarding are implicitly trusted — their JWT
+  // may have a stale emailVerified=false if they signed up before this column existed.
   const user = session.user as Record<string, unknown>;
-  if (user.emailVerified === false) {
+  if (user.emailVerified === false && user.onboardingCompleted === false) {
     redirect("/verify");
   }
 
