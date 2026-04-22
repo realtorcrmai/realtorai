@@ -10,7 +10,7 @@ import {
   ImageIcon,
   MessageSquare,
   FileText,
-  Instagram,
+  Camera,
 } from "lucide-react";
 import { LogoSpinner } from "@/components/brand/Logo";
 import type { Prompt } from "@/types";
@@ -50,7 +50,7 @@ const fields: PromptField[] = [
     key: "igCaption",
     dbKey: "ig_caption",
     label: "Instagram Caption",
-    icon: Instagram,
+    icon: Camera,
     rows: 4,
   },
   {
