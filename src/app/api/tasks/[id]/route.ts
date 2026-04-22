@@ -41,6 +41,21 @@ export async function GET(
   const commentAgg = task.task_comments as { count: number }[] | undefined;
   const { task_comments: _, ...taskData } = task;
 
+  // Resolve user UUIDs in activity old_value/new_value for assigned_to changes
+  const activityItems = (activityRes.data ?? []) as Record<string, unknown>[];
+  const assigneeUuids = new Set<string>();
+  for (const a of activityItems) {
+    if (a.action === "assigned" || a.field_name === "assigned_to") {
+      if (a.old_value && typeof a.old_value === "string" && a.old_value.includes("-")) assigneeUuids.add(a.old_value);
+      if (a.new_value && typeof a.new_value === "string" && a.new_value.includes("-")) assigneeUuids.add(a.new_value);
+    }
+  }
+  let activityUserMap = new Map<string, string>();
+  if (assigneeUuids.size > 0) {
+    const { data: actUsers } = await tc.raw.from("users").select("id, name").in("id", [...assigneeUuids]);
+    activityUserMap = new Map((actUsers ?? []).map((u: { id: string; name: string }) => [u.id, u.name || "Unknown"]));
+  }
+
   return NextResponse.json({
     ...taskData,
     comment_count: Number(commentAgg?.[0]?.count ?? 0),
@@ -52,11 +67,21 @@ export async function GET(
     })),
     blocks: (blockersRes.data ?? []).map((d: Record<string, unknown>) => d.tasks),
     blocked_by: (blockedByRes.data ?? []).map((d: Record<string, unknown>) => d.tasks),
-    activity: (activityRes.data ?? []).map((a: Record<string, unknown>) => ({
-      ...a,
-      user_name: (a.users as Record<string, unknown>)?.name || "Unknown",
-      users: undefined,
-    })),
+    activity: activityItems.map((a) => {
+      let oldValue = a.old_value as string | null;
+      let newValue = a.new_value as string | null;
+      if (a.action === "assigned" || a.field_name === "assigned_to") {
+        if (oldValue && activityUserMap.has(oldValue)) oldValue = activityUserMap.get(oldValue)!;
+        if (newValue && activityUserMap.has(newValue)) newValue = activityUserMap.get(newValue)!;
+      }
+      return {
+        ...a,
+        old_value: oldValue,
+        new_value: newValue,
+        user_name: (a.users as Record<string, unknown>)?.name || "Unknown",
+        users: undefined,
+      };
+    }),
   });
 }
 
