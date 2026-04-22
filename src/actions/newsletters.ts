@@ -561,6 +561,17 @@ export async function generateAndQueueNewsletter(
     }
   }
 
+  // WELCOME EMAIL CTA — override vague AI CTAs with a specific action
+  if (emailType === 'welcome') {
+    const vagueCTAs = ['learn more', 'get in touch', 'quick conversation', 'view details', 'read more'];
+    if (!content.ctaText || vagueCTAs.includes(content.ctaText.toLowerCase())) {
+      content.ctaText = 'Book a Free Consultation';
+    }
+    if (!content.ctaUrl || content.ctaUrl === '#') {
+      content.ctaUrl = `mailto:${branding.email || ''}?subject=Hi ${branding.name} — I'd like to connect`;
+    }
+  }
+
   // 8. AREA HIGHLIGHTS — powers areaHighlights block (for neighbourhood_guide and others)
   if (!content.highlights && ['neighbourhood_guide', 'welcome', 'reengagement'].includes(emailType)) {
     const buyerPrefs = contact.buyer_preferences as { preferred_areas?: string[] } | null;
