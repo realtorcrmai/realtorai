@@ -104,6 +104,8 @@ export function MondaySidebar() {
   const avatarUrl = (session?.user as Record<string, unknown> | undefined)?.avatarUrl as string | null;
 
   const enabledFeatures: string[] = (session?.user as Record<string, unknown>)?.enabledFeatures as string[] || [];
+  const teamName = (session?.user as Record<string, unknown> | undefined)?.teamName as string | null;
+  const teamRole = (session?.user as Record<string, unknown> | undefined)?.teamRole as string | null;
 
   // Recent items — hydration guard (Zustand persist rehydrates from localStorage after mount)
   const [mounted, setMounted] = useState(false);
@@ -280,6 +282,19 @@ export function MondaySidebar() {
 
       {/* User section */}
       <div className="p-3 border-t border-sidebar-accent shrink-0">
+        {/* Team indicator — links to team settings */}
+        {teamName && (
+          <Link
+            href="/settings/team"
+            className="flex items-center gap-2 px-2 py-1.5 mb-2 rounded-md bg-sidebar-primary/10 hover:bg-sidebar-primary/20 transition-colors"
+          >
+            <Users className="h-3.5 w-3.5 text-sidebar-primary shrink-0" />
+            <span className="text-xs font-medium text-sidebar-primary truncate">{teamName}</span>
+            {teamRole && (
+              <span className="ml-auto text-[10px] text-sidebar-foreground/50 capitalize shrink-0">{teamRole}</span>
+            )}
+          </Link>
+        )}
         <div className="flex items-center gap-3">
           {avatarUrl ? (
             <img src={avatarUrl} alt={userName} className="h-8 w-8 rounded-full object-cover shrink-0" />

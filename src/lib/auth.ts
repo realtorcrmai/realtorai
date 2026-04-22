@@ -273,6 +273,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               token.teamRole = membership.role;
               token.teamPermissions = membership.permissions || {};
 
+              // Fetch team name for display in sidebar/header
+              if (!token.teamName || token.teamId !== membership.tenant_id) {
+                const { data: tenant } = await supabase
+                  .from("tenants")
+                  .select("name")
+                  .eq("id", membership.tenant_id)
+                  .single();
+                token.teamName = tenant?.name || null;
+              }
+
               // Link user_id on membership if not yet set
               if (!membership.user_id && token.userId) {
                 await supabase
@@ -284,6 +294,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             } else {
               token.teamId = null;
               token.teamRole = null;
+              token.teamName = null;
               token.teamPermissions = {};
             }
           } catch {
@@ -311,6 +322,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Team context
       (session.user as unknown as Record<string, unknown>).teamId = (token.teamId as string) ?? null;
       (session.user as unknown as Record<string, unknown>).teamRole = (token.teamRole as string) ?? null;
+      (session.user as unknown as Record<string, unknown>).teamName = (token.teamName as string) ?? null;
       (session.user as unknown as Record<string, unknown>).teamPermissions = (token.teamPermissions as Record<string, boolean>) ?? {};
       return session;
     },

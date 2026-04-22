@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Search, Menu, User, Settings, LogOut } from "lucide-react";
+import { Search, Menu, User, Users, Settings, LogOut } from "lucide-react";
 import { NotificationDropdown } from "@/components/layout/NotificationDropdown";
 import { TeamScopeToggle } from "@/components/team/TeamScopeToggle";
 
@@ -19,6 +19,7 @@ export function MondayHeader() {
   const avatarUrl = (session?.user as Record<string, unknown> | undefined)?.avatarUrl as string | null;
   const teamId = (session?.user as Record<string, unknown> | undefined)?.teamId as string | null;
   const teamRole = (session?.user as Record<string, unknown> | undefined)?.teamRole as string | null;
+  const teamName = (session?.user as Record<string, unknown> | undefined)?.teamName as string | null;
 
   // Close menu on outside click
   useEffect(() => {
@@ -40,6 +41,16 @@ export function MondayHeader() {
         </button>
         {teamId && teamRole && session?.user?.id && (
           <TeamScopeToggle userId={session.user.id} teamRole={teamRole} />
+        )}
+        {teamName && (
+          <button
+            onClick={() => router.push("/settings/team")}
+            className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-brand/10 hover:bg-brand/20 transition-colors text-xs font-medium text-brand"
+            aria-label="Team settings"
+          >
+            <Users className="h-3.5 w-3.5" />
+            {teamName}
+          </button>
         )}
       </div>
 
@@ -99,6 +110,13 @@ export function MondayHeader() {
                 >
                   <User className="h-4 w-4 text-muted-foreground" />
                   My Profile
+                </button>
+                <button
+                  onClick={() => { setMenuOpen(false); router.push("/settings/team"); }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted/50 transition-colors"
+                >
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  {teamName ? teamName : "Create Team"}
                 </button>
                 <button
                   onClick={() => { setMenuOpen(false); router.push("/settings"); }}
