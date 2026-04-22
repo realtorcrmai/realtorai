@@ -95,6 +95,30 @@ case "$TIER" in
         ;;
 esac
 
+# --- Mechanical scope enforcement: block Edit/Write outside declared affected_files ---
+if [[ "$TOOL_NAME" == "Edit" || "$TOOL_NAME" == "Write" ]]; then
+    AF_COUNT=$(jq -r '.affected_files | length // 0' "$TASK_FILE" 2>/dev/null)
+    if [[ "$AF_COUNT" -gt 0 && -n "$FILE_PATH" ]]; then
+        # Normalize file path to relative
+        REL_PATH="${FILE_PATH#$PROJECT_DIR/}"
+        REL_PATH="${REL_PATH#$CLAUDE_PROJECT_DIR/}"
+        # Check if the file matches any declared affected_files pattern
+        MATCHED=0
+        while IFS= read -r pattern; do
+            [[ -z "$pattern" ]] && continue
+            # Support exact match and glob-style prefix match (e.g. "src/actions/" matches "src/actions/contacts.ts")
+            if [[ "$REL_PATH" == "$pattern" || "$REL_PATH" == $pattern* ]]; then
+                MATCHED=1
+                break
+            fi
+        done < <(jq -r '.affected_files[]' "$TASK_FILE" 2>/dev/null)
+        if [[ "$MATCHED" -eq 0 ]]; then
+            echo "WARNING: Editing $REL_PATH which is not in affected_files. Consider adding it to current-task.json." >&2
+            # Warning only — not blocking. Upgrade to exit 2 once agents learn the pattern.
+        fi
+    fi
+fi
+
 # --- Wave 2a: For CODING:feature medium/large, require usecases/<slug>.md before Edit/Write on src/** ---
 TYPE=$(jq -r '.type // empty' "$TASK_FILE" 2>/dev/null)
 if [[ "$TYPE" == "CODING:feature" && ("$TIER" == "medium" || "$TIER" == "large") ]]; then
