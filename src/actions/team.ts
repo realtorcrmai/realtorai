@@ -865,6 +865,107 @@ export async function cancelInvite(inviteId: string) {
 }
 
 /**
+ * Toggle contact visibility between private and team.
+ * Checks for duplicates when sharing with team.
+ */
+export async function toggleContactVisibility(contactId: string) {
+  const session = await getSession();
+  if (!session.teamId) return { error: "Not on a team" };
+
+  const supabase = createAdminClient();
+
+  const { data: contact } = await supabase
+    .from("contacts")
+    .select("id, visibility, email, name, realtor_id")
+    .eq("id", contactId)
+    .eq("realtor_id", session.id)
+    .single();
+
+  if (!contact) return { error: "Contact not found" };
+
+  const newVis = contact.visibility === "team" ? "private" : "team";
+
+  // Check for duplicates when sharing with team
+  if (newVis === "team" && contact.email) {
+    const { data: memberships } = await supabase
+      .from("tenant_memberships")
+      .select("user_id")
+      .eq("tenant_id", session.teamId)
+      .is("removed_at", null);
+
+    const memberIds = (memberships ?? [])
+      .map((m: { user_id: string | null }) => m.user_id)
+      .filter((id): id is string => !!id && id !== session.id);
+
+    if (memberIds.length > 0) {
+      const { data: duplicates } = await supabase
+        .from("contacts")
+        .select("id, name, realtor_id")
+        .eq("email", contact.email)
+        .eq("visibility", "team")
+        .in("realtor_id", memberIds)
+        .limit(1);
+
+      if (duplicates && duplicates.length > 0) {
+        return { warning: `A team member already has a contact with email ${contact.email}. Sharing anyway.`, duplicate: true };
+      }
+    }
+  }
+
+  const { error } = await supabase
+    .from("contacts")
+    .update({
+      visibility: newVis,
+      shared_at: newVis === "team" ? new Date().toISOString() : null,
+      shared_by: newVis === "team" ? session.id : null,
+    })
+    .eq("id", contactId)
+    .eq("realtor_id", session.id);
+
+  if (error) return { error: `Failed to update visibility: ${error.message}` };
+
+  revalidatePath(`/contacts/${contactId}`);
+  revalidatePath("/contacts");
+  return { data: { visibility: newVis } };
+}
+
+/**
+ * Toggle listing visibility between private and team.
+ */
+export async function toggleListingVisibility(listingId: string) {
+  const session = await getSession();
+  if (!session.teamId) return { error: "Not on a team" };
+
+  const supabase = createAdminClient();
+
+  const { data: listing } = await supabase
+    .from("listings")
+    .select("id, visibility")
+    .eq("id", listingId)
+    .eq("realtor_id", session.id)
+    .single();
+
+  if (!listing) return { error: "Listing not found" };
+
+  const newVis = listing.visibility === "team" ? "private" : "team";
+
+  const { error } = await supabase
+    .from("listings")
+    .update({
+      visibility: newVis,
+      shared_at: newVis === "team" ? new Date().toISOString() : null,
+    })
+    .eq("id", listingId)
+    .eq("realtor_id", session.id);
+
+  if (error) return { error: `Failed to update visibility: ${error.message}` };
+
+  revalidatePath(`/listings/${listingId}`);
+  revalidatePath("/listings");
+  return { data: { visibility: newVis } };
+}
+
+/**
  * Resend a pending invite (resets expiry).
  */
 export async function resendInvite(inviteId: string) {
