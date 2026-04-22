@@ -34,6 +34,9 @@ const TYPE_ICONS: Record<string, string> = {
   email_bounced: "\uD83D\uDCE7",
   task_due: "\u2705",
   new_lead: "\uD83D\uDC64",
+  team_invite: "\uD83D\uDC65",
+  team_invite_accepted: "\uD83C\uDF89",
+  team_invite_declined: "\uD83D\uDEAB",
 };
 
 function getIcon(type: string): string {
@@ -204,6 +207,59 @@ export function NotificationDropdown() {
                       <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                         {n.body}
                       </p>
+                    )}
+                    {n.type === "team_invite" && n.related_id && !n.is_read && (
+                      <div className="flex gap-2 mt-1.5">
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            try {
+                              const { acceptInvite } = await import("@/actions/team");
+                              const result = await acceptInvite(n.related_id!);
+                              if (result.error) {
+                                alert(result.error);
+                              } else {
+                                handleMarkRead(n.id);
+                                window.location.href = "/settings/team";
+                              }
+                            } catch {
+                              alert("Failed to accept invite");
+                            }
+                          }}
+                          className="px-2.5 py-1 rounded-md bg-brand text-white text-xs font-medium hover:bg-brand/90 transition-colors"
+                        >
+                          Accept
+                        </button>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            try {
+                              const { declineInvite } = await import("@/actions/team");
+                              const result = await declineInvite(n.related_id!);
+                              if (result.error) {
+                                alert(result.error);
+                              } else {
+                                handleMarkRead(n.id);
+                                // Update notification body to show declined
+                                setNotifications((prev) =>
+                                  prev.map((notif) =>
+                                    notif.id === n.id
+                                      ? { ...notif, body: "Invite declined.", is_read: true }
+                                      : notif
+                                  )
+                                );
+                              }
+                            } catch {
+                              alert("Failed to decline invite");
+                            }
+                          }}
+                          className="px-2.5 py-1 rounded-md bg-muted text-muted-foreground text-xs font-medium hover:bg-muted/80 transition-colors"
+                        >
+                          Decline
+                        </button>
+                      </div>
                     )}
                     <p className="text-[11px] text-muted-foreground/70 mt-1">
                       {formatDistanceToNow(new Date(n.created_at), {

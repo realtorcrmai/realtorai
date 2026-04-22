@@ -3075,6 +3075,25 @@ Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. Thi
 
 ### Category 59: Journey & Dormant Crons
 
+---
+
+### Category 60: Team Management Actions
+
+#### TEAM-001: declineInvite(token)
+**Steps:** Call `declineInvite` with a valid pending invite token.
+**Expected:** Invite record marked as declined. Revalidates settings/team path. Returns success.
+**Priority:** P1
+
+#### TEAM-002: declineInvite — invalid token
+**Steps:** Call `declineInvite` with an expired or non-existent token.
+**Expected:** Returns `{ error }` message. No DB changes.
+**Priority:** P1
+
+#### TEAM-003: GET /api/users/search
+**Steps:** Send authenticated GET request with `?q=test` (2+ chars).
+**Expected:** Returns array of `{ id, name, email }` matching users (max 5). Excludes current user. Unauthenticated requests return 401.
+**Priority:** P1
+
 #### CRON-JOURNEY-001: POST /api/cron/process-journeys
 **Steps:** Trigger with Bearer CRON_SECRET header.
 **Expected:** Advances eligible contact journeys to next phase. Rejects missing/invalid token.

@@ -254,6 +254,29 @@ export async function inviteMember(input: InviteMemberInput) {
     console.error("[team] Failed to send invite email:", emailErr);
   }
 
+  // Send in-app notification if invitee is an existing portal user
+  try {
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", input.email)
+      .single();
+
+    if (existingUser) {
+      const { createNotification } = await import("@/lib/notifications");
+      const teamName = team?.name || "a team";
+      await createNotification(existingUser.id, {
+        type: "team_invite",
+        title: `You've been invited to join ${teamName}`,
+        body: `${session.name} invited you as ${input.role}. Accept or decline from your notifications.`,
+        related_type: "team_invite",
+        related_id: token,
+      });
+    }
+  } catch {
+    // Don't fail invite if notification fails
+  }
+
   await logActivity(session.teamId, session.id, "member_invited", "invite", null, {
     email: input.email,
     role: input.role,
@@ -332,6 +355,20 @@ export async function acceptInvite(token: string) {
   // Refresh materialized view
   try { await supabase.rpc("refresh_team_members"); } catch { /* view may not exist yet */ }
 
+  // Notify the inviter that their invite was accepted
+  try {
+    const { createNotification } = await import("@/lib/notifications");
+    await createNotification(invite.inviter_id, {
+      type: "team_invite_accepted",
+      title: `${session.name} joined your team`,
+      body: `${session.email} accepted your invite as ${invite.role}.`,
+      related_type: "user",
+      related_id: session.id,
+    });
+  } catch {
+    // Don't fail accept if notification fails
+  }
+
   await logActivity(invite.team_id, session.id, "member_joined", "user", session.id, {
     role: invite.role,
     invited_by: invite.inviter_id,
@@ -339,6 +376,48 @@ export async function acceptInvite(token: string) {
 
   revalidatePath("/settings/team");
   return { data: { teamId: invite.team_id, role: invite.role } };
+}
+
+/**
+ * Decline an invite from the notification center.
+ */
+export async function declineInvite(token: string) {
+  const session = await getSession();
+  const supabase = createAdminClient();
+
+  const { data: invite } = await supabase
+    .from("team_invites")
+    .select("id, email, inviter_id, team_id")
+    .eq("invite_token", token)
+    .in("status", ["pending", "sent"])
+    .single();
+
+  if (!invite) return { error: "Invite not found or already processed" };
+  if (invite.email !== session.email) return { error: "This invite is not for you" };
+
+  await supabase
+    .from("team_invites")
+    .update({ status: "expired" })
+    .eq("id", invite.id);
+
+  // Notify inviter of decline
+  try {
+    const { createNotification } = await import("@/lib/notifications");
+    await createNotification(invite.inviter_id, {
+      type: "team_invite_declined",
+      title: `${session.name} declined your invite`,
+      body: `${session.email} declined the team invitation.`,
+      related_type: "user",
+      related_id: session.id,
+    });
+  } catch { /* ignore */ }
+
+  await logActivity(invite.team_id, session.id, "invite_declined", "invite", invite.id, {
+    email: invite.email,
+  });
+
+  revalidatePath("/settings/team");
+  return { success: true };
 }
 
 /**

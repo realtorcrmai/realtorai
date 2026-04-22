@@ -152,7 +152,7 @@ Or paste each file's contents into the Supabase SQL Editor in order.
 ### 4. Run the App
 
 ```bash
-npm run dev
+npm run dev    # allocates 4GB heap for Turbopack
 ```
 
 Open [http://localhost:3000](http://localhost:3000). Login with demo credentials or Google OAuth.

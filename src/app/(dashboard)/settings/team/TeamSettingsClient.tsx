@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import {
   inviteMember,
@@ -50,6 +50,40 @@ export default function TeamSettingsClient({
   const [leaving, setLeaving] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Email autocomplete for existing portal users
+  const [suggestions, setSuggestions] = useState<{ id: string; name: string; email: string; hasTeam: boolean }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (inviteEmail.length < 2 || inviteEmail.includes("@") && inviteEmail.split("@")[1]?.includes(".")) {
+      // Only search partial emails (before they type full domain)
+    }
+    const timeout = setTimeout(async () => {
+      if (inviteEmail.length < 2) { setSuggestions([]); return; }
+      try {
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(inviteEmail)}`);
+        const data = await res.json();
+        setSuggestions(Array.isArray(data) ? data : []);
+        setShowSuggestions(data.length > 0);
+      } catch {
+        setSuggestions([]);
+      }
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [inviteEmail]);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (suggestRef.current && !suggestRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   const handleInvite = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -176,7 +210,7 @@ export default function TeamSettingsClient({
           <section className="bg-card border border-border rounded-lg p-5 mb-6">
             <h2 className="text-lg font-semibold mb-3">Invite New Member</h2>
             <form onSubmit={handleInvite} className="flex gap-2 items-end flex-wrap">
-              <div className="flex-1 min-w-[200px]">
+              <div className="flex-1 min-w-[200px] relative" ref={suggestRef}>
                 <label htmlFor="invite-email" className="text-sm text-muted-foreground block mb-1">
                   Email address
                 </label>
@@ -184,11 +218,38 @@ export default function TeamSettingsClient({
                   id="invite-email"
                   type="email"
                   value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="agent@example.com"
+                  onChange={(e) => { setInviteEmail(e.target.value); setShowSuggestions(true); }}
+                  onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                  placeholder="Search by email or type a new one..."
                   className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
                   aria-label="Invite email address"
+                  autoComplete="off"
                 />
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+                    {suggestions.map((u) => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => { setInviteEmail(u.email); setShowSuggestions(false); }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-brand/10 flex items-center justify-center text-xs font-bold text-brand shrink-0">
+                          {(u.name || u.email).charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{u.name || "No name"}</p>
+                          <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                        </div>
+                        <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${
+                          u.hasTeam ? "bg-amber-100 text-amber-700" : "bg-success/10 text-success"
+                        }`}>
+                          {u.hasTeam ? "On another team" : "Existing user"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <label htmlFor="invite-role" className="text-sm text-muted-foreground block mb-1">

@@ -346,6 +346,32 @@ realtorId: string;  // Which realtor to analyze
 
 ---
 
+---
+
+## declineInvite()
+
+**File:** `src/actions/team.ts`
+
+**Purpose:** Allows a user to decline a pending team invitation via its token.
+
+**Input:** `token: string` — the invite token from the invitation link.
+
+**Output:** `{ success: true } | { error: string }`
+
+**Database Interactions:**
+- READS: `team_invitations` (find pending invite by token)
+- WRITES: `team_invitations` (update status to declined), `team_audit_log` (log decline action)
+
+**Error Handling:**
+- Token not found or already used → return `{ error }`, no DB changes
+- User not authenticated → throw (server action guard)
+
+**Edge Cases:**
+- Token already accepted → return error, don't re-process
+- Token expired → return error
+
+---
+
 *Created: 2026-03-24*
 *Read this alongside TODO_WIRING_GUIDE.md for complete implementation instructions.*
 

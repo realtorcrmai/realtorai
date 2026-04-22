@@ -414,6 +414,8 @@ Three lines of code replace ~200 lines of custom middleware instrumentation, an 
 | | `5 cron routes` | Wrap with cron_run tracking | +50 |
 | | **Total delta** | | **~501** |
 
+> **Note (2026-04-21):** `TeamSettingsClient.tsx` now includes invite notification actions (accept/decline), inline confirmation for member removal, and decline-invite flow. These changes are outside Admin Panel scope but affect the same settings route group.
+
 ### Files NOT Created (Removed from PRD)
 
 | PRD File | Why Removed |
