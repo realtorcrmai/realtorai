@@ -15,6 +15,15 @@ FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // .tool_input.path // 
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 PROJECT_DIR=$(echo "$INPUT" | jq -r '.cwd // empty')
 
+# --- Violation logging helper ---
+log_violation() {
+    local RULE="$1" ACTION="$2" TARGET="$3"
+    local VLOG="$PROJECT_DIR/.claude/violation-log.md"
+    if [[ -f "$VLOG" ]]; then
+        echo "| $(date '+%Y-%m-%d %H:%M') | playbook-gate | $RULE | $ACTION | $TARGET |" >> "$VLOG"
+    fi
+}
+
 # --- Always allow: Read, Grep, Glob, TodoWrite, ToolSearch ---
 # These are observation/planning tools needed DURING classification
 case "$TOOL_NAME" in
@@ -66,6 +75,7 @@ done
 
 # No task file = not classified → BLOCK
 if [[ -z "$TASK_FILE" || ! -f "$TASK_FILE" ]]; then
+    log_violation "classification" "No task file — $TOOL_NAME blocked" "${FILE_PATH:-$COMMAND}"
     echo "BLOCKED: No classified task found. Before using $TOOL_NAME, you MUST:" >&2
     echo "  1. Read the request twice (HC-15)" >&2
     echo "  2. Decompose → map dependencies → reorder" >&2
@@ -77,6 +87,7 @@ fi
 # Check classified phase
 CLASSIFIED=$(jq -r '.phases.classified // false' "$TASK_FILE" 2>/dev/null)
 if [[ "$CLASSIFIED" != "true" ]]; then
+    log_violation "classification" "phases.classified not true" "${FILE_PATH:-$COMMAND}"
     echo "BLOCKED: Task file exists but classification incomplete. Set phases.classified=true after outputting classification block." >&2
     exit 2
 fi
@@ -88,6 +99,7 @@ case "$TIER" in
         SCOPED=$(jq -r '.phases.scoped // false' "$TASK_FILE" 2>/dev/null)
         if [[ "$SCOPED" != "true" ]]; then
             if [[ "$TOOL_NAME" == "Edit" || "$TOOL_NAME" == "Write" || "$TOOL_NAME" == "Agent" ]]; then
+                log_violation "scope" "$TIER tier — $TOOL_NAME before scoped" "${FILE_PATH:-$COMMAND}"
                 echo "BLOCKED: $TIER tier requires scope phase before $TOOL_NAME. Set phases.scoped=true in current-task.json." >&2
                 exit 2
             fi
@@ -116,6 +128,7 @@ if [[ "$TYPE" == "CODING:feature" && ("$TIER" == "medium" || "$TIER" == "large")
                     fi
                 done
                 if [[ -z "$USECASE_FILE" ]]; then
+                    log_violation "FQ-3" "Missing usecases/$SLUG.md" "$FILE_PATH"
                     echo "BLOCKED: CODING:feature at $TIER tier requires usecases/$SLUG.md BEFORE editing src/**." >&2
                     echo "" >&2
                     echo "Copy usecases/TEMPLATE.md to usecases/$SLUG.md and fill in 3 scenarios." >&2
@@ -141,6 +154,7 @@ if [[ "$TYPE" == "CODING:feature" ]]; then
             */src/*)
                 SEARCH_COUNT=$(jq -r '.existing_search | length // 0' "$TASK_FILE" 2>/dev/null)
                 if [[ "$SEARCH_COUNT" -lt 3 ]]; then
+                    log_violation "FQ-5" "existing_search has $SEARCH_COUNT entries (need 3+)" "$FILE_PATH"
                     echo "BLOCKED: CODING:feature requires existing_search to contain 3+ entries before editing src/**." >&2
                     echo "" >&2
                     echo "Before coding, search the codebase for related capabilities. For each search:" >&2
