@@ -255,6 +255,39 @@ for (const file of prodFiles) {
   }
 }
 
+// 11. HC-3: Mutations in API routes (should be Server Actions)
+for (const file of prodFiles) {
+  // Only check API route files, exclude cron/webhook/auth
+  if (!file.includes("src/app/api/")) continue;
+  if (/\/cron\/|\/webhook|\/auth\/|\/test\//.test(file)) continue;
+  const content = readFileSafe(file);
+  if (/\.(insert|update|delete|upsert)\s*\(/.test(content)) {
+    addFinding("warning", file, null, "HC-3: mutation in API route — use Server Action instead (src/actions/)", 11);
+  }
+}
+
+// 12. HC-10: Server Actions without Zod validation
+for (const file of prodFiles) {
+  if (!file.includes("src/actions/")) continue;
+  const content = readFileSafe(file);
+  // Check if file has exported async functions (server actions) but no .parse()/.safeParse()
+  if (/export\s+async\s+function/.test(content)) {
+    if (!/\.parse\s*\(|\.safeParse\s*\(|Schema\./.test(content)) {
+      addFinding("warning", file, null, "HC-10: Server Action file without Zod .parse()/.safeParse() — validate inputs", 12);
+    }
+  }
+}
+
+// 13. HC-16: Markdown files over 550 lines
+for (const file of changedFiles) {
+  if (!file.endsWith(".md")) continue;
+  const content = readFileSafe(file);
+  const lineCount = content.split("\n").length;
+  if (lineCount > 550) {
+    addFinding("warning", file, null, `HC-16: Markdown file is ${lineCount} lines (limit 550) — consider splitting`, 13);
+  }
+}
+
 // ── Output ───────────────────────────────────────────────────────────
 const errors = findings.filter((f) => f.severity === "error");
 const warnings = findings.filter((f) => f.severity === "warning");
