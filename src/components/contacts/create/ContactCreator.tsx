@@ -982,9 +982,22 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
             </div>
             <div className="flex items-center gap-3">
               {!isLastStep ? (
-                <Button onClick={goNext} disabled={!canGoNext()} className="gap-2 bg-brand hover:bg-brand/90">
-                  Next <ArrowRight className="h-4 w-4" />
-                </Button>
+                <>
+                  {/* Show submit on non-last steps for small screens where right panel is hidden */}
+                  {canSubmit && (
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={submitting}
+                      variant="outline"
+                      className="gap-2 lg:hidden"
+                    >
+                      {submitting ? "Creating..." : "Add to Network →"}
+                    </Button>
+                  )}
+                  <Button onClick={goNext} disabled={!canGoNext()} className="gap-2 bg-brand hover:bg-brand/90">
+                    Next <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </>
               ) : (
                 <Button
                   onClick={handleSubmit}
