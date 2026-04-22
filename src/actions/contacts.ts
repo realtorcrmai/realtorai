@@ -889,7 +889,8 @@ export async function computeLifecycleStage(
 }
 
 async function _persistStage(
-  supabase: ReturnType<typeof getAuthenticatedTenantClient> extends Promise<infer T> ? T : never,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
   contactId: string,
   realtorId: string,
   stage: LifecycleStage
