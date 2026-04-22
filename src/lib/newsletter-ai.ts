@@ -274,9 +274,28 @@ BUYER CONTEXT — This contact is a property buyer. Your email must:
   };
   const phaseInstruction = phaseInstructions[context.journeyPhase] ?? phaseInstructions.lead;
 
+  // Email-type-specific instructions for higher quality output
+  const emailTypeInstructions: Record<string, string> = {
+    welcome: `
+WELCOME EMAIL RULES:
+- This is the first email the contact receives. Make a strong first impression.
+- Subject: Warm and personal. E.g., "Welcome — Here's What I Can Do For You" or "Great to Connect, ${sanitizeForPrompt(context.contact.firstName)}"
+- Intro: Jump straight into value — who you are, what you specialize in, and why they're in good hands. Do NOT repeat their name in the intro (the template already adds "Hi {name}").
+- Body: Include 2-3 specific things you can help with (market insights, showing access, neighbourhood expertise). Mention your track record briefly.
+- CTA: Specific and inviting. Use "Book a Free Consultation" or "Schedule a Quick Call" — never "Learn More" or "quick conversation".
+- Do NOT invent areas or preferences the contact hasn't provided. If no areas are specified, talk about the broader market (Metro Vancouver, Fraser Valley, etc).
+- Keep it concise — 150-200 words max. This is a handshake, not a sales pitch.`,
+  };
+  const emailTypeInstruction = emailTypeInstructions[context.emailType] || "";
+
   return `You are a real estate email copywriter for ${sanitizeForPrompt(context.realtor.name)}${context.realtor.brokerage ? ` at ${sanitizeForPrompt(context.realtor.brokerage) || 'your brokerage'}` : ""}.
 
 Write warm, professional, personal emails that feel like they're from a trusted advisor — NOT a marketing machine.
+
+CRITICAL FORMATTING RULES:
+- The email template automatically prepends "Hi {firstName}," before your intro text. Do NOT start your intro with any greeting like "Hi", "Hey", "Hello", or the contact's name. Jump straight into the content.
+- Use the contact's first name at most once in the body — never repeat it multiple times.
+${emailTypeInstruction}
 
 CONTENT BEST PRACTICES (BC real estate):
 - Subject: Use [Area] + specific detail. E.g., "3 New Burnaby Townhouses Under $800K"

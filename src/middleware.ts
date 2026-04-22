@@ -38,8 +38,9 @@ export async function middleware(request: NextRequest) {
     // Auth API (NextAuth handles its own auth)
     pathname.startsWith("/api/auth") ||
 
-    // Health check (uptime monitors, load balancers)
+    // Health check & version (uptime monitors, load balancers)
     pathname.startsWith("/api/health") ||
+    pathname === "/api/version" ||
 
     // Webhooks (verified by signature, not session)
     pathname.startsWith("/api/webhooks") ||

@@ -280,6 +280,16 @@ export function MondaySidebar() {
       {/* Spacer */}
       <div className="flex-1" />
 
+      {/* Version */}
+      <div className="px-3 pb-1 text-center">
+        <span className="text-[10px] text-sidebar-foreground/30 tabular-nums">
+          v{process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0"}
+          {process.env.NEXT_PUBLIC_BUILD_ID && process.env.NEXT_PUBLIC_BUILD_ID !== "local" && (
+            <span className="ml-1">({process.env.NEXT_PUBLIC_BUILD_ID})</span>
+          )}
+        </span>
+      </div>
+
       {/* User section */}
       <div className="p-3 border-t border-sidebar-accent shrink-0">
         {/* Team indicator — links to team settings */}
