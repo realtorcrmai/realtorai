@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,23 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowRight } from "lucide-react";
 import { LogoSpinner, LogoVideo, LogoIcon } from "@/components/brand/Logo";
-import { loginAsDemo } from "@/actions/auth";
 import Link from "next/link";
-
-const DEMO_SLOTS = [
-  { label: "Kunal (Pro)", slot: 0, color: "bg-brand-muted text-brand-dark hover:bg-brand/20" },
-  { label: "Sarah (Studio)", slot: 1, color: "bg-brand-muted text-brand-dark hover:bg-brand-muted-strong" },
-  { label: "Mike (Pro)", slot: 2, color: "bg-amber-100 text-amber-700 hover:bg-amber-200" },
-  { label: "Priya (Free)", slot: 3, color: "bg-pink-100 text-pink-700 hover:bg-pink-200" },
-  { label: "Jordan (Demo)", slot: 4, color: "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" },
-] as const;
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isPending, startTransition] = useTransition();
 
   async function handleCredentialsLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -155,46 +145,6 @@ export default function LoginPage() {
                   )}
                 </Button>
               </form>
-
-              {/* Quick login — demo accounts (credentials stored server-side only) */}
-              <div className="pt-2 border-t space-y-2">
-                <p className="text-xs text-muted-foreground text-center font-medium">
-                  Quick Login (Demo)
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {DEMO_SLOTS.filter(s => s.slot < 4).map(({ label, slot, color }) => (
-                    <button
-                      key={slot}
-                      type="button"
-                      className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${color}`}
-                      disabled={loading || isPending}
-                      onClick={() => {
-                        setError("");
-                        startTransition(async () => {
-                          const result = await loginAsDemo(slot);
-                          if (result?.error) setError(result.error);
-                        });
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  className="w-full px-3 py-2 rounded-lg text-xs font-semibold transition-colors bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-200"
-                  disabled={loading || isPending}
-                  onClick={() => {
-                    setError("");
-                    startTransition(async () => {
-                      const result = await loginAsDemo(4);
-                      if (result?.error) setError(result.error);
-                    });
-                  }}
-                >
-                  ✨ Jordan Lee — Clean Demo Account
-                </button>
-              </div>
 
               <p className="text-xs text-muted-foreground text-center mt-3">
                 Don&apos;t have an account?{" "}

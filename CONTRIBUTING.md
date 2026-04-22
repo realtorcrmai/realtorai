@@ -374,3 +374,5 @@ if (!check.allowed) return { error: check.reason };
 <!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
 
 <!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
+
+<!-- Last reviewed: 2026-04-21 — AGENTS.md v0.6 + violation logging -->
