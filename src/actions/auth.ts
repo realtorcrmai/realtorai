@@ -12,10 +12,11 @@ const DEMO_SLOTS = [
   { label: "Sarah (Studio)", email: process.env.DEMO_EMAIL_SARAH || "sarah@realtors360.com" },
   { label: "Mike (Pro)", email: process.env.DEMO_EMAIL_MIKE || "mike@realtors360.com" },
   { label: "Priya (Free)", email: process.env.DEMO_EMAIL_PRIYA || "priya@realtors360.com" },
+  { label: "Jordan (Demo)", email: process.env.DEMO_EMAIL_JORDAN || "demo@magnate360.com" },
 ] as const;
 
 export async function loginAsDemo(slot: number): Promise<{ error?: string }> {
-  const s = DEMO_SLOTS[slot as 0 | 1 | 2 | 3];
+  const s = DEMO_SLOTS[slot as 0 | 1 | 2 | 3 | 4];
   if (!s) return { error: "Invalid demo slot" };
 
   const password = process.env.DEMO_PASSWORD;
