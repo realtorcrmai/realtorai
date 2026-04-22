@@ -25,6 +25,7 @@ export async function middleware(request: NextRequest) {
     // Static assets
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/favicon") ||
+    pathname === "/manifest.json" ||
     pathname.startsWith("/logo-") ||
     pathname === "/logo-animated.html" ||
     pathname === "/white-rock-digital-twin.html" ||

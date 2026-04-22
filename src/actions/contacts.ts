@@ -889,7 +889,7 @@ export async function computeLifecycleStage(
 }
 
 async function _persistStage(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   supabase: any,
   contactId: string,
   realtorId: string,
