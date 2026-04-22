@@ -655,12 +655,11 @@ export async function convertContactType(
  * Welcome email comes from the "Speed to Contact" workflow via trigger engine.
  */
 async function enrollInJourney(contactId: string, contactType: string, _name: string) {
+  // Only buyer/seller have journey support — DB constraint rejects other types
+  if (contactType !== "buyer" && contactType !== "seller") return;
+
   const tc = await getAuthenticatedTenantClient();
-  // Map contact type to journey type
-  const journeyMap: Record<string, string> = {
-    buyer: "buyer", seller: "seller", customer: "customer", agent: "agent",
-  };
-  const journeyType = journeyMap[contactType] || "customer";
+  const journeyType = contactType;
 
   // Check if already enrolled
   const { data: existing } = await tc

@@ -17,25 +17,30 @@ type Task = {
   assignee_name?: string | null;
 };
 
-type StatusFilter = "all" | "pending" | "in_progress" | "completed";
+type StatusFilter = "active" | "all" | "pending" | "in_progress" | "completed";
 
 export function TaskSidebar({ initialTasks }: { initialTasks: Task[] }) {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
 
   const pendingCount = initialTasks.filter((t) => t.status === "pending").length;
   const inProgressCount = initialTasks.filter((t) => t.status === "in_progress").length;
   const completedCount = initialTasks.filter((t) => t.status === "completed").length;
+  const activeCount = pendingCount + inProgressCount;
 
   const filtered = initialTasks.filter((t) => {
     const matchesSearch = t.title.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+    const matchesStatus =
+      statusFilter === "all" ? true
+      : statusFilter === "active" ? t.status !== "completed"
+      : t.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const today = new Date().toISOString().split("T")[0];
 
   const filters: { key: StatusFilter; label: string; count: number }[] = [
+    { key: "active", label: "Active", count: activeCount },
     { key: "pending", label: "To Do", count: pendingCount },
     { key: "in_progress", label: "In Progress", count: inProgressCount },
     { key: "completed", label: "Done", count: completedCount },
