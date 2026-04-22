@@ -42,3 +42,5 @@
 - [ ] Images have alt text (decorative images: `alt=""`)
 - [ ] Modals trap focus and return focus on close
 - [ ] Page has a single `<h1>` with logical heading hierarchy
+
+<!-- Last reviewed: 2026-04-21 — team WIP session artifacts -->

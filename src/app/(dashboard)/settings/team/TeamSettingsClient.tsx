@@ -13,6 +13,7 @@ import {
 import type { TeamRole, TeamMemberWithUser } from "@/types/team";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { OffboardingDialog } from "@/components/team/OffboardingDialog";
 
 interface InviteData {
   id: string;
@@ -112,15 +113,13 @@ export default function TeamSettingsClient({
     }
   };
 
+  const [offboardUserId, setOffboardUserId] = useState<string | null>(null);
+  const offboardMember = members.find((m) => m.user_id === offboardUserId);
+
   const handleRemove = async (userId: string) => {
-    const result = await removeMember(userId);
-    if (result.error) {
-      setMessage({ type: "error", text: result.error });
-    } else {
-      setMessage({ type: "success", text: "Member removed" });
-      setConfirmRemove(null);
-      router.refresh();
-    }
+    // Show offboarding dialog instead of instant remove
+    setOffboardUserId(userId);
+    setConfirmRemove(null);
   };
 
   const handleCancelInvite = async (inviteId: string) => {
@@ -405,6 +404,21 @@ export default function TeamSettingsClient({
           </section>
         )}
       </div>
+
+      {/* Offboarding Dialog */}
+      {offboardUserId && offboardMember && (
+        <OffboardingDialog
+          userId={offboardUserId}
+          userName={offboardMember.user?.name || offboardMember.agent_email}
+          currentUserId={currentUserId}
+          onComplete={() => {
+            setOffboardUserId(null);
+            setMessage({ type: "success", text: "Member removed" });
+            router.refresh();
+          }}
+          onCancel={() => setOffboardUserId(null)}
+        />
+      )}
     </>
   );
 }

@@ -40,3 +40,5 @@
 - [ ] Set up Lighthouse CI in nightly workflow
 - [ ] Identify and fix top 3 bundle size contributors
 - [ ] Add `next/dynamic` lazy loading for heavy components (newsletters, workflow builder)
+
+<!-- Last reviewed: 2026-04-21 — team WIP session artifacts -->

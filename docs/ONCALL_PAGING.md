@@ -156,3 +156,5 @@ Business hours definition: Mon–Fri, 8 AM – 6 PM Pacific Time.
 ## Incident Log
 
 All P0 and P1 incidents must be documented in GitHub Issues with label `incident`. Include: timeline, root cause, fix applied, follow-up tasks. Link the issue in `.claude/compliance-log.md`.
+
+<!-- Last reviewed: 2026-04-21 — team WIP -->

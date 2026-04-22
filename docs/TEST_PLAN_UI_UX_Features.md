@@ -1356,3 +1356,5 @@
 <!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->
 
 <!-- Last reviewed: 2026-04-21 — AGENTS.md v0.6 + violation logging -->
+
+<!-- Last reviewed: 2026-04-21 — team WIP session artifacts -->

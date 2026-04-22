@@ -59,3 +59,5 @@ All SLIs are defined but **not yet instrumented**. Next steps:
 - [ ] Add structured logging for API error rate calculation
 - [ ] Configure external uptime monitor
 - [ ] Build simple dashboard (even a spreadsheet works for start)
+
+<!-- Last reviewed: 2026-04-21 — team WIP session artifacts -->
