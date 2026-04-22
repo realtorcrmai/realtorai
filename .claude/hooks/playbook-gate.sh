@@ -128,6 +128,7 @@ if [[ "$TYPE" == "CODING:feature" && ("$TIER" == "medium" || "$TIER" == "large")
                     fi
                 done
                 if [[ -z "$USECASE_FILE" ]]; then
+                    log_violation "FQ-3" "Missing usecases/$SLUG.md" "$FILE_PATH"
                     echo "BLOCKED: CODING:feature at $TIER tier requires usecases/$SLUG.md BEFORE editing src/**." >&2
                     echo "" >&2
                     echo "Copy usecases/TEMPLATE.md to usecases/$SLUG.md and fill in 3 scenarios." >&2
@@ -153,6 +154,7 @@ if [[ "$TYPE" == "CODING:feature" ]]; then
             */src/*)
                 SEARCH_COUNT=$(jq -r '.existing_search | length // 0' "$TASK_FILE" 2>/dev/null)
                 if [[ "$SEARCH_COUNT" -lt 3 ]]; then
+                    log_violation "FQ-5" "existing_search has $SEARCH_COUNT entries (need 3+)" "$FILE_PATH"
                     echo "BLOCKED: CODING:feature requires existing_search to contain 3+ entries before editing src/**." >&2
                     echo "" >&2
                     echo "Before coding, search the codebase for related capabilities. For each search:" >&2
