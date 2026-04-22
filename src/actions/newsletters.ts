@@ -872,8 +872,9 @@ export async function sendNewsletter(newsletterId: string, realtorApproved: bool
     // ── QUALITY SCORING — rate email before sending ──
     // Skip quality scoring for greeting emails (they're intentionally short & personal)
     const isGreeting = newsletter.email_type?.startsWith("greeting_");
-    if (isGreeting) {
-      // Greetings bypass quality scoring — they're relationship touches, not marketing emails
+    const isWelcome = newsletter.email_type === "welcome";
+    if (isGreeting || isWelcome) {
+      // Greetings and welcome emails bypass quality scoring — no contact data to personalize against
     } else try {
       const { scoreEmailQuality, makeQualityDecision, recordQualityOutcome } = await import("@/lib/quality-pipeline");
       const qualityScore = await scoreEmailQuality({
@@ -957,7 +958,7 @@ export async function sendNewsletter(newsletterId: string, realtorApproved: bool
         trustLevel: realtorApproved ? 3 : trustLevel,
         lastSubjects,
         journeyPhase,
-        skipQualityScore: isGreeting || realtorApproved || regenAttempt >= MAX_REGEN_ATTEMPTS,
+        skipQualityScore: isGreeting || isWelcome || realtorApproved || regenAttempt >= MAX_REGEN_ATTEMPTS,
         skipCompliance: realtorApproved,
       });
 
