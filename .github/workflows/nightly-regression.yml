@@ -131,7 +131,7 @@ jobs:
       # ── Open issue if sync drifted ───────────────────────
       - name: Open issue on drift
         if: steps.sync.outcome == 'failure'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -188,7 +188,7 @@ jobs:
       # ── Open issue on pipeline crash ─────────────────────
       - name: Report pipeline crash
         if: always() && failure() && steps.health.outputs.results_exist != 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const date = new Date().toISOString().slice(0, 10);
