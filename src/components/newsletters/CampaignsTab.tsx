@@ -62,6 +62,8 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
   const [campaignSent, setCampaignSent] = useState(false);
 
   const [agentCount, setAgentCount] = useState<number | null>(null);
+  const [recipientContacts, setRecipientContacts] = useState<{ name: string; email: string }[]>([]);
+  const [isLoadingRecipients, setIsLoadingRecipients] = useState(false);
 
   useEffect(() => {
     fetch("/api/contacts?types=agent,partner&hasEmail=true&countOnly=true")
@@ -69,6 +71,29 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
       .then(d => { if (d?.count != null) setAgentCount(d.count); })
       .catch(() => {/* leave null — UI shows no badge */});
   }, []);
+
+  // Fetch/compute the actual recipient list when entering the review step
+  useEffect(() => {
+    if (blastStep !== "review") return;
+
+    if (selectedRecipients === "all_agents") {
+      setIsLoadingRecipients(true);
+      fetch("/api/contacts?types=agent,partner&hasEmail=true&limit=500")
+        .then(r => r.ok ? r.json() : [])
+        .then((data: { name?: string; email?: string }[]) => {
+          setRecipientContacts(
+            (Array.isArray(data) ? data : []).map(c => ({ name: c.name ?? "Unknown", email: c.email ?? "" }))
+          );
+          setIsLoadingRecipients(false);
+        })
+        .catch(() => setIsLoadingRecipients(false));
+    } else if (selectedRecipients === "import") {
+      const emails = importEmails.split(/[\n,]+/).map(e => e.trim()).filter(Boolean);
+      setRecipientContacts(emails.map(email => ({ name: email, email })));
+    } else {
+      setRecipientContacts([]);
+    }
+  }, [blastStep, selectedRecipients, importEmails]);
 
   function resetBlast() { setBlastStep("select_listing"); setSelectedListing(null); setBlastSent(false); setBlastIncludes({ photos: true, openhouse: true, commission: false, floorplan: false }); setImportEmails(""); }
   function resetCampaign() { setCampaignStep("select_template"); setSelectedTemplate(null); setSelectedRecipients("all_buyers"); setScheduleType("now"); setCampaignSent(false); }
@@ -313,9 +338,28 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
             <Card><CardContent className="p-5">
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div className="p-3 bg-muted/50 rounded-lg"><Home className="h-4 w-4 mx-auto mb-1 text-muted-foreground" /><p className="text-xs font-semibold">{selectedListing.address?.split(",")[0]}</p></div>
-                <div className="p-3 bg-muted/50 rounded-lg"><Users className="h-4 w-4 mx-auto mb-1 text-muted-foreground" /><p className="text-xs font-semibold">All agent contacts</p></div>
+                <div className="p-3 bg-muted/50 rounded-lg"><Users className="h-4 w-4 mx-auto mb-1 text-muted-foreground" /><p className="text-xs font-semibold">{isLoadingRecipients ? "Loading..." : `${recipientContacts.length} recipient${recipientContacts.length !== 1 ? "s" : ""}`}</p></div>
                 <div className="p-3 bg-muted/50 rounded-lg"><Send className="h-4 w-4 mx-auto mb-1 text-muted-foreground" /><p className="text-xs font-semibold">Send Now</p></div>
               </div>
+            </CardContent></Card>
+            <Card><CardContent className="p-4">
+              <p className="text-sm font-semibold mb-3">
+                📬 {isLoadingRecipients ? "Loading recipients…" : `Sending to ${recipientContacts.length} recipient${recipientContacts.length !== 1 ? "s" : ""}`}
+              </p>
+              {isLoadingRecipients ? (
+                <p className="text-xs text-muted-foreground">Fetching contacts…</p>
+              ) : recipientContacts.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No recipients found. Go back and check your recipient selection.</p>
+              ) : (
+                <div className="max-h-56 overflow-y-auto divide-y divide-border">
+                  {recipientContacts.map((c, i) => (
+                    <div key={i} className="flex items-center justify-between py-2">
+                      <p className="text-xs font-medium truncate max-w-[55%]">{c.name}</p>
+                      <p className="text-xs text-muted-foreground truncate max-w-[43%] text-right">{c.email}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent></Card>
             <div className="flex justify-between pt-2">
               <button onClick={() => setBlastStep("recipients")} className="text-xs px-4 py-2 rounded-lg border border-border font-medium hover:bg-muted">← Back</button>
