@@ -18,7 +18,7 @@ export interface Database {
           type: "buyer" | "seller" | "customer" | "agent" | "partner" | "other";
           roles: string[];
           lifecycle_stage: "prospect" | "nurture" | "active_buyer" | "active_seller" | "dual_client" | "under_contract" | "closed" | "past_client" | "referral_partner";
-          pref_channel: "whatsapp" | "sms";
+          pref_channel: "whatsapp" | "sms" | "email" | "phone";
           notes: string | null;
           family_members: Json | null;
           referred_by_id: string | null;
@@ -58,7 +58,7 @@ export interface Database {
           type: "buyer" | "seller" | "customer" | "agent" | "partner" | "other";
           roles?: string[];
           lifecycle_stage?: "prospect" | "nurture" | "active_buyer" | "active_seller" | "dual_client" | "under_contract" | "closed" | "past_client" | "referral_partner";
-          pref_channel?: "whatsapp" | "sms";
+          pref_channel?: "whatsapp" | "sms" | "email" | "phone";
           notes?: string | null;
           family_members?: Json | null;
           referred_by_id?: string | null;
@@ -98,7 +98,7 @@ export interface Database {
           type?: "buyer" | "seller" | "customer" | "agent" | "partner" | "other";
           roles?: string[];
           lifecycle_stage?: "prospect" | "nurture" | "active_buyer" | "active_seller" | "dual_client" | "under_contract" | "closed" | "past_client" | "referral_partner";
-          pref_channel?: "whatsapp" | "sms";
+          pref_channel?: "whatsapp" | "sms" | "email" | "phone";
           notes?: string | null;
           family_members?: Json | null;
           referred_by_id?: string | null;

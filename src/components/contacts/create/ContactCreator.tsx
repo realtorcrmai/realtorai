@@ -360,7 +360,7 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
         };
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- payload built dynamically from multi-step form
+       
       const result = await createContact(payload as unknown as Parameters<typeof createContact>[0]);
       if (result && typeof result === "object" && "error" in result) {
         setError((result as { error: string }).error);
@@ -835,7 +835,7 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
                       <option value="new">New</option>
                       <option value="contacted">Contacted</option>
                       <option value="qualified">Qualified</option>
-                      <option value="interested">Interested</option>
+                      <option value="nurturing">Nurturing</option>
                     </select>
                   </div>
                 </div>
