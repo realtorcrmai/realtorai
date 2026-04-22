@@ -3106,6 +3106,7 @@ Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. Thi
 
 <!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->
 
+<!-- Last reviewed: 2026-04-21 — Wave 1a demo gate -->
 <!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
 
 <!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
