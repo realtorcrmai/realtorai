@@ -559,12 +559,8 @@ export default async function ContactDetailPage({
                   <div className="flex items-center gap-1.5 shrink-0">
                     <form action={async () => {
                       "use server";
-                      const { getAuthenticatedTenantClient } = await import("@/lib/supabase/tenant");
-                      const tc = await getAuthenticatedTenantClient();
-                      const newVis = contact.visibility === "team" ? "private" : "team";
-                      await tc.from("contacts").update({ visibility: newVis }).eq("id", id);
-                      const { revalidatePath } = await import("next/cache");
-                      revalidatePath(`/contacts/${id}`);
+                      const { toggleContactVisibility } = await import("@/actions/team");
+                      await toggleContactVisibility(id);
                     }}>
                       <Button type="submit" variant="outline" size="sm" title={contact.visibility === "team" ? "Shared with team" : "Private"}>
                         {contact.visibility === "team" ? "👥 Team" : "🔒 Private"}
