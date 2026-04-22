@@ -47,7 +47,8 @@ if (files.length === 0) {
 }
 
 // Match patterns like `src/lib/foo.ts:123` or `path/to/file.ts:45`
-const CITATION_RE = /(?<![`\w\/])([a-zA-Z][\w\-./]*\.(?:ts|tsx|js|jsx|mjs|sql|sh|py|json)):(\d+)/g;
+// Requires at least one `/` to avoid matching bare filenames in prose (e.g. "builder.ts:57")
+const CITATION_RE = /(?<![`\w])([a-zA-Z][\w\-]*\/[\w\-./]*\.(?:ts|tsx|js|jsx|mjs|sql|sh|py|json)):(\d+)/g;
 
 let totalCitations = 0;
 let invalidCitations = [];
@@ -61,14 +62,18 @@ for (const file of files) {
     const lineNum = parseInt(lineStr, 10);
     totalCitations++;
 
-    // Check file exists
-    if (!existsSync(citedFile)) {
+    // Check file exists — try with and without src/ prefix
+    let resolvedFile = citedFile;
+    if (!existsSync(resolvedFile) && !resolvedFile.startsWith("src/")) {
+      resolvedFile = `src/${citedFile}`;
+    }
+    if (!existsSync(resolvedFile)) {
       invalidCitations.push({ source: file, citation: full, reason: `file not found: ${citedFile}` });
       continue;
     }
 
     // Check line number is valid
-    const lines = readFileSync(citedFile, "utf-8").split("\n");
+    const lines = readFileSync(resolvedFile, "utf-8").split("\n");
     if (lineNum > lines.length || lineNum < 1) {
       invalidCitations.push({
         source: file,
