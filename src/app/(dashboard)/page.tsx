@@ -8,6 +8,7 @@ import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import type { FeedItem } from "@/components/dashboard/ActivityFeed";
 
 import DashboardPipelineWidget from "@/components/dashboard/DashboardPipelineWidget";
+import { TeamActivityFeed } from "@/components/dashboard/TeamActivityFeed";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Building2, Clock, ListTodo, Users } from "lucide-react";
@@ -25,6 +26,7 @@ function getGreeting(): string {
 export default async function DashboardPage() {
   const session = await auth();
   const userName = session?.user?.name ?? "there";
+  const teamId = (session?.user as Record<string, unknown>)?.teamId as string | null;
    
   const now = Date.now();
 
@@ -302,6 +304,9 @@ export default async function DashboardPage() {
           <ActivityFeed items={feedItems} />
           <DashboardPipelineWidget deals={pipelineDeals} />
         </div>
+
+        {/* Team Activity Feed (only for team members) */}
+        {teamId && <TeamActivityFeed />}
       </div>
     </>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +29,9 @@ import { Input } from "@/components/ui/input";
 import type { TaskViewMode } from "@/lib/constants/tasks";
 
 export default function TasksPage() {
-  const { tasks, pagination, loading, filters, updateFilters, refresh } = useTasks({ parent_id: "null" });
+  const searchParams = useSearchParams();
+  const scope = searchParams.get("scope") || undefined;
+  const { tasks, pagination, loading, filters, updateFilters, refresh } = useTasks({ parent_id: "null", scope });
   const { members } = useTeamMembers();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -36,6 +39,9 @@ export default function TasksPage() {
   const [viewMode, setViewMode] = useState<TaskViewMode>("list");
   const [showFilters, setShowFilters] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+
+  // Sync scope from URL toggle
+  useEffect(() => { updateFilters({ scope }); }, [scope, updateFilters]);
 
   // Debounced search
   useEffect(() => {
