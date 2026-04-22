@@ -349,3 +349,4 @@ realtorId: string;  // Which realtor to analyze
 *Created: 2026-03-24*
 *Read this alongside TODO_WIRING_GUIDE.md for complete implementation instructions.*
 
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->

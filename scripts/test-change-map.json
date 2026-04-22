@@ -26,7 +26,7 @@
       "reason": "New email template needs render + send + tracking test"
     },
     {
-      "pattern": "src/components/*/",
+      "pattern": "src/components/*",
       "docs": ["docs/TEST_PLAN_UI_UX_Features.md"],
       "section": "Component tests (render, interaction, a11y)",
       "reason": "New component directory needs basic render + a11y test cases"
