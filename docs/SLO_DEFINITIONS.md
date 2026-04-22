@@ -61,3 +61,5 @@ All SLIs are defined but **not yet instrumented**. Next steps:
 - [ ] Build simple dashboard (even a spreadsheet works for start)
 
 <!-- Last reviewed: 2026-04-21 — team WIP session artifacts -->
+
+<!-- team-management: reviewed 2026-04-22 — team analytics widget, audit log, offboarding wizard added -->

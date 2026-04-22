@@ -307,3 +307,5 @@ npx playwright test tests/browser/ --project=mobile
 
 <!-- Last reviewed: 2026-04-21 -->
 
+
+<!-- team-management: reviewed 2026-04-22 — team analytics widget, audit log, offboarding wizard added -->

@@ -1,5 +1,5 @@
 <!-- docs-audit: src/components/**, src/app/(dashboard)/** -->
-
+<!-- docs-audit-reviewed: 2026-04-22 -->
 # Accessibility Baseline
 
 **Target:** WCAG 2.2 AA
@@ -44,3 +44,5 @@
 - [ ] Page has a single `<h1>` with logical heading hierarchy
 
 <!-- Last reviewed: 2026-04-21 — team WIP session artifacts -->
+
+<!-- team-management: reviewed 2026-04-22 — team analytics widget, audit log, offboarding wizard added -->

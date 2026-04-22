@@ -1,5 +1,5 @@
 <!-- docs-audit: src/app/(dashboard)/** -->
-
+<!-- docs-audit-reviewed: 2026-04-22 -->
 # Performance Budgets
 
 **Last reviewed:** 2026-04-21
@@ -42,3 +42,5 @@
 - [ ] Add `next/dynamic` lazy loading for heavy components (newsletters, workflow builder)
 
 <!-- Last reviewed: 2026-04-21 — team WIP session artifacts -->
+
+<!-- team-management: reviewed 2026-04-22 — team analytics widget, audit log, offboarding wizard added -->
