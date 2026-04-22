@@ -339,3 +339,5 @@ Score 7-10: 2-person review + staged rollout
 15. Add Playwright visual regression
 16. Add decision trail logging
 17. Evaluate Stryker for mutation testing
+
+<!-- Last reviewed: 2026-04-21 — three-layer playbook split -->
