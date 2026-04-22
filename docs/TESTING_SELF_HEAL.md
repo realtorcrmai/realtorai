@@ -1,4 +1,4 @@
-# Testing Self-Heal Architecture
+<!-- docs-audit: none --># Testing Self-Heal Architecture
 
 **Status:** Active
 **Workflows:** 3 GitHub Actions + 1 CLI script

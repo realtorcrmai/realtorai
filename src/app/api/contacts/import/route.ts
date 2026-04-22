@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   return handleFormDataImport(tc, request);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 async function handleJSONImport(_tc: any, request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -63,23 +63,54 @@ async function handleJSONImport(_tc: any, request: NextRequest) {
   const errors: string[] = [];
   const newContacts: Array<{ id: string; name: string }> = [];
 
+  // ── Fetch existing contacts for dedup (phone + email) ──
+  const { data: existingContacts } = await supabase
+    .from("contacts")
+    .select("phone, email")
+    .eq("realtor_id", realtorId);
+
+  const existingPhones = new Set<string>();
+  const existingEmails = new Set<string>();
+  for (const c of existingContacts ?? []) {
+    if (c.phone) existingPhones.add(normalizePhone(c.phone));
+    if (c.email) existingEmails.add(c.email.toLowerCase().trim());
+  }
+
   // Batch insert in chunks of 50
   for (let i = 0; i < contacts.length; i += 50) {
     const batch = contacts.slice(i, i + 50);
     const rows = batch
-      .filter((c: Record<string, string>) => c.name || c.email)
-      .map((c: Record<string, string>) => ({
-        realtor_id: realtorId,
-        name: c.name || "Unknown",
-        email: c.email || null,
-        phone: c.phone ? normalizePhone(c.phone) : null,
-        type: validTypes.has(c.type?.toLowerCase()) ? c.type.toLowerCase() : "lead",
-        notes: c.notes || null,
-        source: source || "csv_import",
-        is_sample: false,
-      }));
+      .filter((c: Record<string, string>) => {
+        if (!c.name && !c.email) return false;
+        // Skip if phone already exists
+        if (c.phone) {
+          const normalized = normalizePhone(c.phone);
+          if (existingPhones.has(normalized)) { skipped++; return false; }
+        }
+        // Skip if email already exists (and no phone to match on)
+        if (!c.phone && c.email && existingEmails.has(c.email.toLowerCase().trim())) {
+          skipped++; return false;
+        }
+        return true;
+      })
+      .map((c: Record<string, string>) => {
+        const phone = c.phone ? normalizePhone(c.phone) : null;
+        // Track newly added phones/emails to prevent intra-batch dupes
+        if (phone) existingPhones.add(phone);
+        if (c.email) existingEmails.add(c.email.toLowerCase().trim());
+        return {
+          realtor_id: realtorId,
+          name: c.name || "Unknown",
+          email: c.email || null,
+          phone,
+          type: validTypes.has(c.type?.toLowerCase()) ? c.type.toLowerCase() : "lead",
+          notes: c.notes || null,
+          source: source || "csv_import",
+          is_sample: false,
+        };
+      });
 
-    if (rows.length === 0) { skipped += batch.length; continue; }
+    if (rows.length === 0) continue;
 
     const { data, error } = await supabase
       .from("contacts")
@@ -166,7 +197,7 @@ async function handleJSONImport(_tc: any, request: NextRequest) {
   });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 async function handleFormDataImport(tc: any, request: NextRequest) {
   const formData = await request.formData();
   const file = formData.get("file");

@@ -463,6 +463,123 @@ export async function seedSampleData() {
     });
   }
 
+  // ── Enroll sample contacts in journeys so email engine works ──
+  const contactIds = contacts || [];
+  for (const c of contactIds) {
+    const contactType = ["Sarah Chen", "Lisa Wong", "Emily Nakamura"].includes(c.name) ? "buyer" : "seller";
+    await supabase.from("contact_journeys").insert({
+      contact_id: c.id,
+      journey_type: contactType,
+      current_phase: "lead",
+      phase_entered_at: new Date().toISOString(),
+      next_email_at: new Date(Date.now() + (2 + Math.floor(Math.random() * 5)) * 86400000).toISOString(),
+      emails_sent_in_phase: 0,
+      send_mode: "review",
+      is_paused: false,
+      agent_mode: "schedule",
+      trust_level: 0,
+    }).then(({ error }) => {
+      if (error) console.error(`[seed] Journey insert for ${c.name}:`, error.message);
+    });
+  }
+
+  // ── Create realtor_agent_config so email marketing engine works ──
+  const { data: userData } = await supabase
+    .from("users")
+    .select("name, brokerage")
+    .eq("id", session.user.id)
+    .single();
+
+  const firstName = userData?.name?.split(" ")[0] || "there";
+  const signature = userData?.brokerage
+    ? `${firstName} — ${userData.brokerage}`
+    : firstName;
+
+  await supabase.from("realtor_agent_config").upsert({
+    realtor_id: session.user.id,
+    brand_config: {
+      voice_rules: [],
+      greeting_rules: [
+        { occasion: "birthday", enabled: true, approval: "review" },
+        { occasion: "home_anniversary", enabled: true, approval: "review" },
+        { occasion: "christmas", enabled: true, approval: "review" },
+      ],
+      logo_url: null,
+      signature,
+      primary_color: "#4f35d2",
+    },
+    voice_rules: [],
+    frequency_caps: {
+      lead: { per_week: 2, min_gap_hours: 48 },
+      active: { per_week: 3, min_gap_hours: 18 },
+      under_contract: { per_week: 1, min_gap_hours: 72 },
+      past_client: { per_month: 2, min_gap_hours: 168 },
+      dormant: { per_month: 1, min_gap_hours: 336 },
+    },
+    sending_enabled: true,
+    skip_weekends: false,
+    default_send_day: "tuesday",
+    default_send_hour: 9,
+    quiet_hours: { start: "20:00", end: "07:00" },
+    escalation_thresholds: { soft_alert: 40, hot_lead: 60, urgent: 80 },
+    dormancy_days: 60,
+    auto_sunset_days: 90,
+    re_engagement_attempts: 2,
+    content_rankings: [],
+    total_emails_analyzed: 0,
+    total_conversions: 0,
+    learning_confidence: "none",
+  }, { onConflict: "realtor_id" }).then(({ error }) => {
+    if (error) console.error("[seed] Agent config insert:", error.message);
+  });
+
+  // ── Create default contact segments ──
+  const segmentDefs = [
+    { name: "Hot Leads", description: "Contacts with high engagement scores", filter: { engagement_min: 60 } },
+    { name: "All Buyers", description: "All buyer contacts", filter: { type: "buyer" } },
+    { name: "All Sellers", description: "All seller contacts", filter: { type: "seller" } },
+    { name: "Needs Follow-Up", description: "Contacts with no recent activity", filter: { days_inactive: 30 } },
+  ];
+
+  for (const seg of segmentDefs) {
+    await supabase.from("contact_segments").insert({
+      realtor_id: session.user.id,
+      name: seg.name,
+      description: seg.description,
+      filter_criteria: seg.filter,
+      is_dynamic: true,
+    }).then(({ error }) => {
+      if (error && !error.message.includes("duplicate")) {
+        console.error(`[seed] Segment "${seg.name}":`, error.message);
+      }
+    });
+  }
+
+  // ── Add sample contact dates (birthdays) for greeting automations ──
+  const contactDateMap: Record<string, string> = {
+    "Sarah Chen": "1988-06-22",
+    "James Patel": "1982-03-15",
+    "Lisa Wong": "1990-11-12",
+    "Michael Torres": "1985-09-08",
+    "Emily Nakamura": "1993-01-30",
+  };
+
+  for (const c of contactIds) {
+    const bday = contactDateMap[c.name];
+    if (bday) {
+      await supabase.from("contact_dates").insert({
+        contact_id: c.id,
+        label: "Birthday",
+        date: bday,
+        event_type: "birthday",
+        recurring: true,
+        auto_workflow: true,
+      }).then(({ error }) => {
+        if (error) console.error(`[seed] Contact date for ${c.name}:`, error.message);
+      });
+    }
+  }
+
   return { success: true };
 }
 
@@ -474,8 +591,22 @@ export async function clearSampleData() {
 
   const supabase = createAdminClient();
 
+  // Get sample contact IDs first (needed for FK cleanup)
+  const { data: sampleContacts } = await supabase
+    .from("contacts")
+    .select("id")
+    .eq("realtor_id", session.user.id)
+    .eq("is_sample", true);
+  const sampleContactIds = sampleContacts?.map((c) => c.id) || [];
+
   // Delete in dependency order (FK constraints)
-  // 1. Appointments (FK → listings)
+  // 1. Contact dates, journeys, context (FK → contacts)
+  if (sampleContactIds.length) {
+    await supabase.from("contact_dates").delete().in("contact_id", sampleContactIds);
+    await supabase.from("contact_journeys").delete().in("contact_id", sampleContactIds);
+  }
+
+  // 2. Appointments (FK → listings)
   const { data: sampleListings } = await supabase
     .from("listings")
     .select("id")
@@ -486,14 +617,17 @@ export async function clearSampleData() {
     await supabase.from("appointments").delete().in("listing_id", listingIds);
   }
 
-  // 2. Newsletters (FK → contacts)
+  // 3. Newsletters (FK → contacts)
   await supabase.from("newsletters").delete().eq("realtor_id", session.user.id).eq("is_sample", true);
 
-  // 3. Listings (FK → contacts)
+  // 4. Listings (FK → contacts)
   await supabase.from("listings").delete().eq("realtor_id", session.user.id).eq("is_sample", true);
 
-  // 4. Contacts (leaf)
+  // 5. Contacts (leaf)
   await supabase.from("contacts").delete().eq("realtor_id", session.user.id).eq("is_sample", true);
+
+  // 6. Default segments
+  await supabase.from("contact_segments").delete().eq("realtor_id", session.user.id);
 
   return { success: true };
 }

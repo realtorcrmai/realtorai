@@ -1,4 +1,4 @@
-# Comprehensive Test Plan: Onboarding Overhaul
+<!-- docs-audit: none --># Comprehensive Test Plan: Onboarding Overhaul
 
 **Version:** 1.0 | **Date:** 2026-04-10 | **Total Test Cases:** 312
 **Coverage:** Every button, input, animation, redirect, error state, edge case, layout check

@@ -13,6 +13,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isFeatureEnabled } from "@/lib/feature-gate";
 
 export type TriggerEvent =
   | "new_lead"
@@ -50,15 +51,32 @@ export async function fireTrigger(
   const supabase = createAdminClient();
   const result: TriggerResult = { enrolled: [], paused: [], skipped: [] };
 
-  // 1. Get contact info
+  // 1. Get contact info (include realtor_id for feature gate)
   const { data: contact } = await supabase
     .from("contacts")
-    .select("id, name, type, email")
+    .select("id, name, type, email, realtor_id")
     .eq("id", contactId)
     .single();
 
   if (!contact) {
     console.warn(`[trigger-engine] Contact not found: ${contactId}`);
+    return result;
+  }
+
+  // Gate: skip workflow enrollment if automations is disabled for this realtor.
+  // Fail-closed: if the contact has no realtor_id (nullable column from migration 062),
+  // block enrollment — we cannot verify the flag without knowing the owner.
+  if (!contact.realtor_id) {
+    console.warn(
+      `[trigger-engine] Contact ${contactId} has no realtor_id — cannot verify automations flag. Blocking enrollment.`
+    );
+    return result;
+  }
+  const automationsEnabled = await isFeatureEnabled(contact.realtor_id, "automations");
+  if (!automationsEnabled) {
+    console.log(
+      `[trigger-engine] automations disabled for realtor ${contact.realtor_id} — skipping ${event} trigger`
+    );
     return result;
   }
 

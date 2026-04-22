@@ -1,0 +1,114 @@
+rules:
+  - id: supabase-admin-in-server-action
+    patterns:
+      - pattern: createAdminClient()
+      - pattern-not-inside: |
+          // ADMIN_BYPASS: $REASON
+          ...
+    paths:
+      include:
+        - src/actions/*.ts
+    message: >
+      Server actions must use getAuthenticatedTenantClient() for user-scoped data.
+      createAdminClient() bypasses RLS and tenant isolation.
+      If intentional, add comment: // ADMIN_BYPASS: <reason>
+    languages: [typescript]
+    severity: ERROR
+    metadata:
+      category: security
+      technology: [supabase]
+      cwe: ["CWE-284"]
+
+  - id: api-route-missing-auth
+    patterns:
+      - pattern: |
+          export async function $METHOD(req: $REQ) {
+            ...
+          }
+      - pattern-not-inside: |
+          export async function $METHOD(req: $REQ) {
+            ...
+            $SESSION = await auth();
+            ...
+          }
+      - pattern-not-inside: |
+          export async function $METHOD(req: $REQ) {
+            ...
+            const authHeader = ...;
+            ...
+          }
+      - metavariable-regex:
+          metavariable: $METHOD
+          regex: (GET|POST|PUT|PATCH|DELETE)
+    paths:
+      include:
+        - src/app/api/**/*.ts
+      exclude:
+        - src/app/api/auth/**
+        - src/app/api/webhooks/**
+    message: >
+      API route handler missing authentication check.
+      Add `const session = await auth()` or Bearer token validation.
+    languages: [typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-306"]
+
+  - id: hardcoded-api-key
+    patterns:
+      - pattern-regex: >
+          (sk-ant-|re_[a-zA-Z0-9]{20}|AC[a-f0-9]{32}|GOCSPX-|eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9)
+    paths:
+      exclude:
+        - .gitleaks.toml
+        - .semgrep.yml
+        - "*.md"
+        - tests/fixtures/**
+    message: >
+      Hardcoded API key or secret detected. Use environment variables instead.
+    languages: [typescript, javascript]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: ["CWE-798"]
+
+  - id: raw-sql-in-handler
+    patterns:
+      - pattern: $CLIENT.rpc('$FUNC', ...)
+      - pattern-not-inside: |
+          // RAW_SQL: $REASON
+          ...
+    paths:
+      include:
+        - src/app/api/**/*.ts
+        - src/actions/*.ts
+    message: >
+      Direct RPC call detected. Prefer typed Supabase queries.
+      If RPC is required, add comment: // RAW_SQL: <reason>
+    languages: [typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-89"]
+
+  - id: response-without-tenant-scope
+    patterns:
+      - pattern: |
+          .from('$TABLE').select(...)
+      - pattern-not-inside: |
+          .from('$TABLE').select(...).eq('realtor_id', ...)
+      - pattern-not-inside: |
+          getAuthenticatedTenantClient()
+          ...
+    paths:
+      include:
+        - src/app/api/**/*.ts
+    message: >
+      Database query may lack tenant scoping. Ensure realtor_id filter
+      is applied or use getAuthenticatedTenantClient().
+    languages: [typescript]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: ["CWE-284"]

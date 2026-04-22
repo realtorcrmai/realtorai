@@ -162,6 +162,14 @@ export type AgentLearningLog = Database["public"]["Tables"]["agent_learning_log"
 // Tasks & Notifications
 export type Task = Database["public"]["Tables"]["tasks"]["Row"];
 export type TaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
+export type TaskComment = Database["public"]["Tables"]["task_comments"]["Row"];
+export type TaskTemplate = Database["public"]["Tables"]["task_templates"]["Row"];
+export type TaskTemplateInsert = Database["public"]["Tables"]["task_templates"]["Insert"];
+export type TaskTemplateItem = Database["public"]["Tables"]["task_template_items"]["Row"];
+export type TaskActivity = Database["public"]["Tables"]["task_activity"]["Row"];
+export type TaskWatcher = Database["public"]["Tables"]["task_watchers"]["Row"];
+export type TaskDependency = Database["public"]["Tables"]["task_dependencies"]["Row"];
+export type TaskSavedFilter = Database["public"]["Tables"]["task_saved_filters"]["Row"];
 export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 export type NotificationInsert = Database["public"]["Tables"]["notifications"]["Insert"];
 

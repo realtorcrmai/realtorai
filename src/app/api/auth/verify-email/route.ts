@@ -25,23 +25,38 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${appUrl}/verify?error=not_found`);
   }
 
-  // Already verified — skip to phone
+  // Already verified — skip to onboarding/dashboard
   if (user.email_verified) {
-    return NextResponse.redirect(`${appUrl}/verify/phone`);
+    return NextResponse.redirect(`${appUrl}/onboarding`);
   }
 
   // Find valid (non-expired) token
-  const { data: tokenRecord } = await supabase
+  const now = new Date().toISOString();
+  const { data: tokenRecord, error: tokenError } = await supabase
     .from("verification_tokens")
     .select("*")
     .eq("user_id", user.id)
     .eq("type", "email")
-    .gt("expires_at", new Date().toISOString())
+    .gt("expires_at", now)
     .order("created_at", { ascending: false })
     .limit(1)
     .single();
 
   if (!tokenRecord) {
+    // Debug: check if ANY tokens exist for this user (even expired)
+    const { data: allTokens } = await supabase
+      .from("verification_tokens")
+      .select("id, expires_at, created_at")
+      .eq("user_id", user.id)
+      .eq("type", "email")
+      .order("created_at", { ascending: false })
+      .limit(3);
+    console.error("[verify-email] No valid token found.", {
+      userId: user.id,
+      now,
+      tokenError: tokenError?.message,
+      allTokensForUser: allTokens,
+    });
     return NextResponse.redirect(`${appUrl}/verify?error=expired`);
   }
 
@@ -62,12 +77,20 @@ export async function GET(request: NextRequest) {
     .delete()
     .eq("id", tokenRecord.id);
 
-  // Log event
-  await supabase.from("signup_events").insert({
-    user_id: user.id,
-    event: "email_verified",
+  // Log event (non-critical — don't block verification on logging failure)
+  const { error } = await supabase.from("signup_events").insert({ user_id: user.id, event: "email_verified" });
+  if (error) console.error("Failed to log verification event:", error.message);
+
+  // Now that email is confirmed, send Day 0 welcome drip
+  const { data: verifiedUser } = await supabase
+    .from("users")
+    .select("name")
+    .eq("id", user.id)
+    .single();
+  import("@/actions/drip").then(({ sendDripEmail }) => {
+    sendDripEmail(user.id, normalizedEmail, verifiedUser?.name || "", 0).catch(console.error);
   });
 
-  // Redirect to phone verification
-  return NextResponse.redirect(`${appUrl}/verify/phone`);
+  // Redirect to onboarding (email verified → continue signup flow)
+  return NextResponse.redirect(`${appUrl}/onboarding`);
 }

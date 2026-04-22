@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 -->
 <!-- docs-audit: src/app/(auth)/*, src/app/(dashboard)/onboarding/* -->
 # SPEC: Realtor Signup & Onboarding v2
 
@@ -580,3 +581,4 @@ Signup (3 fields) --> Personalization (3 questions) --> Onboarding Dashboard
 - Userpilot activation metrics research
 - PostHog activation metric methodology
 - GlockApps SaaS email onboarding sequences
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->

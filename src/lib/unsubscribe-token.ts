@@ -56,7 +56,7 @@ export function verifyUnsubscribeToken(token: string): string | null {
  * Build the full unsubscribe URL for use in email footers.
  */
 export function buildUnsubscribeUrl(contactId: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://realtors360.ai";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://magnate360.com";
   const token = generateUnsubscribeToken(contactId);
   return `${baseUrl}/api/newsletters/unsubscribe?token=${token}`;
 }

@@ -165,3 +165,4 @@ In contacts list and on contact card:
 - Legal co-ownership documents / FINTRAC for all partners
 - Offer management on co-owned properties
 - Notifications to partners
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->

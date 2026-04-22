@@ -1,4 +1,4 @@
-# TEST_PLAN_ONBOARDING.md -- Onboarding Flow Test Plan
+<!-- docs-audit: none --># TEST_PLAN_ONBOARDING.md -- Onboarding Flow Test Plan
 
 **Version:** 1.0
 **Date:** 2026-04-12

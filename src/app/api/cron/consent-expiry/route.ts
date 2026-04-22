@@ -56,7 +56,7 @@ export async function GET(req: Request) {
 
     // Send re-confirmation emails for consents expiring soon
     let reconfirmationsSent = 0;
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://realtors360.ai";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://magnate360.com";
 
     if (expiring) {
       for (const record of expiring) {

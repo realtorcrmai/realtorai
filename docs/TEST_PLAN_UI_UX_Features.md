@@ -1,8 +1,9 @@
+<!-- docs-audit-reviewed: 2026-04-21T18 -->
 <!-- docs-audit: src/components/**, tests/e2e/* -->
-<!-- last-verified: 2026-04-13 -->
+<!-- last-verified: 2026-04-20 -->
 # Test Plan: UI Redesign & Competitive UX Features
 
-**Version:** 1.0
+**Version:** 1.1
 **Date:** 2026-04-10
 **Scope:** All features built in the UI redesign (HubSpot-inspired layout shell, DataTable, PageHeader) and competitive UX features sprint (Cmd+K, Notifications, Recent Items, Lead Scores, Contact Preview, Dashboard Widgets, Post-Showing Feedback, Accessibility, Mobile, Dark Mode).
 **Total Test Cases:** 102
@@ -1284,7 +1285,7 @@
   1. Send `GET /api/cron/daily-digest` without Authorization header
   2. Send `GET /api/cron/daily-digest` with `Authorization: Bearer wrong-secret`
   3. Send `GET /api/cron/daily-digest` with `Authorization: Bearer $CRON_SECRET`
-- **Expected:** Request 1: 401 Unauthorized. Request 2: 401 Unauthorized. Request 3: 200 OK. Same pattern applies to: `/api/cron/consent-expiry`, `/api/cron/process-workflows`, `/api/cron/agent-evaluate`, `/api/cron/agent-scoring`, `/api/cron/agent-recommendations`, `/api/cron/greeting-automations`, `/api/cron/social-publish`, `/api/cron/voice-session-cleanup`, `/api/cron/trial-expiry`, `/api/cron/welcome-drip`, `/api/cron/weekly-learning`, `/api/cron/rag-backfill`.
+- **Expected:** Request 1: 401 Unauthorized. Request 2: 401 Unauthorized. Request 3: 200 OK. Same pattern applies to: `/api/cron/consent-expiry`, `/api/cron/process-workflows`, `/api/cron/agent-evaluate`, `/api/cron/agent-scoring`, `/api/cron/agent-recommendations`, `/api/cron/greeting-automations`, `/api/cron/score-contacts`, `/api/cron/social-publish`, `/api/cron/voice-session-cleanup`, `/api/cron/trial-expiry`, `/api/cron/welcome-drip`, `/api/cron/weekly-learning`, `/api/cron/rag-backfill`.
 - **Automated:** Yes
 
 ### TC-124: API search sanitizes special characters
@@ -1349,3 +1350,7 @@
 | Notifications Actions | `src/actions/notifications.ts` |
 | Notifications Lib | `src/lib/notifications.ts` |
 | Editorial Newsletter UI (a11y catchup) | `src/components/editorial/` — full WCAG AA audit pending. Placeholder to satisfy coverage scan until feature owner backfills focused a11y test cases. |
+
+<!-- Last reviewed: 2026-04-21 -->
+
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->

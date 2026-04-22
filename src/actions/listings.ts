@@ -517,3 +517,33 @@ export async function updateListingStatus(
 
   return { success: true };
 }
+
+export async function deleteListing(id: string) {
+  const tc = await getAuthenticatedTenantClient();
+
+  const { error } = await tc
+    .from("listings")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("deleted_at", null);
+
+  if (error) return { error: "Failed to delete listing" };
+
+  revalidatePath("/listings");
+  return { success: true };
+}
+
+export async function restoreListing(id: string) {
+  const tc = await getAuthenticatedTenantClient();
+
+  const { error } = await tc
+    .from("listings")
+    .update({ deleted_at: null })
+    .eq("id", id);
+
+  if (error) return { error: "Failed to restore listing" };
+
+  revalidatePath("/listings");
+  revalidatePath(`/listings/${id}`);
+  return { success: true };
+}

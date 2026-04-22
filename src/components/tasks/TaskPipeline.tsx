@@ -81,13 +81,13 @@ export function TaskPipeline({ tasks }: { tasks: Task[] }) {
     completed: completedCount,
   };
 
-  const today = new Date(new Date().toDateString());
+  const todayStr = new Date().toISOString().split("T")[0];
   const overdueByPhase: Record<string, number> = {
     pending: tasks.filter(
-      (t) => t.status === "pending" && t.due_date && new Date(t.due_date as string) < today
+      (t) => t.status === "pending" && t.due_date && (t.due_date as string) < todayStr
     ).length,
     in_progress: tasks.filter(
-      (t) => t.status === "in_progress" && t.due_date && new Date(t.due_date as string) < today
+      (t) => t.status === "in_progress" && t.due_date && (t.due_date as string) < todayStr
     ).length,
     completed: 0,
   };

@@ -1,8 +1,9 @@
+<!-- docs-audit-reviewed: 2026-04-21T18 -->
 <!-- docs-audit: docs/SPEC_*, docs/PLAN_*, src/actions/*, src/components/*, src/lib/* -->
 # Competitive Differentiators — Complete Specification
 
-**Version:** 1.0
-**Date:** 2026-04-13
+**Version:** 1.1
+**Date:** 2026-04-20
 **Status:** Draft — Design Document
 **Author:** Rahul Mittal + Claude
 
@@ -1803,4 +1804,18 @@ ALTER TABLE deal_coordinator ENABLE ROW LEVEL SECURITY;
 
 ---
 
-*Version 1.0 — 2026-04-13*
+*Version 1.1 — 2026-04-20*
+
+<!-- changelog: added team-permissions.ts (RBAC for team collaboration), MondaySidebar team nav -->
+
+<!-- Last reviewed: 2026-04-21 -->
+
+
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->
+
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 2 spec extraction -->
+
+<!-- Last reviewed: 2026-04-21 — Wave 1a demo gate -->
+<!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
+
+<!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->

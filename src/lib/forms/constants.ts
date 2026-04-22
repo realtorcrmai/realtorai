@@ -16,6 +16,7 @@ export const BC_FORMS = [
   { key: "agency", name: "Agency", full: "Agency Relationships", icon: "🏢", required: false },
   { key: "c3conf", name: "C3 Conf", full: "C3 Confirmation of Representation", icon: "✅", required: false },
   { key: "fairhsg", name: "Fair Housing", full: "Fair Housing Declaration", icon: "⚖️", required: false },
+  { key: "receipt_of_funds", name: "Receipt of Funds", full: "FINTRAC Receipt of Funds Record", icon: "💵", required: false },
 ] as const;
 
 export type BCFormKey = (typeof BC_FORMS)[number]["key"];

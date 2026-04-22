@@ -148,12 +148,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // Skip DB lookup if role/features are already cached in the token
         // Fetch on sign-in, update (session refresh), or if data is missing
-        const needsUserFetch = !token.role || !token.enabledFeatures || trigger === "signIn" || trigger === "update" || account;
+        const needsUserFetch = !token.role || !token.enabledFeatures || !("avatarUrl" in token) || trigger === "signIn" || trigger === "update" || account;
 
         if (token.email && needsUserFetch && usersTableExists !== false) {
           const { data: existingUser, error: fetchError } = await supabase
             .from("users")
-            .select("id, role, plan, enabled_features, is_active, email_verified, phone_verified, onboarding_completed, trial_ends_at, trial_plan, personalization_completed")
+            .select("id, role, plan, enabled_features, is_active, email_verified, phone_verified, onboarding_completed, trial_ends_at, trial_plan, personalization_completed, avatar_url")
             .eq("email", token.email)
             .single();
 
@@ -173,17 +173,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
             if (existingUser) {
               // Update last_active_at on every login
-              await supabase.from("users").update({ last_active_at: new Date().toISOString() }).eq("id", existingUser.id);
+              const { error: updateError } = await supabase.from("users").update({ last_active_at: new Date().toISOString() }).eq("id", existingUser.id);
+              if (updateError) console.error("[auth] Error updating last_active_at:", updateError.message);
               await trackEvent("session_start", existingUser.id, { user_agent: "" });
 
               token.role = existingUser.role;
               token.userId = existingUser.id;
-              token.emailVerified = existingUser.email_verified ?? true;
+              token.emailVerified = existingUser.email_verified ?? false;
               token.phoneVerified = existingUser.phone_verified ?? false;
               token.onboardingCompleted = existingUser.onboarding_completed ?? true;
               // Default to true for pre-existing users (column didn't exist before migration 095)
               token.personalizationCompleted = existingUser.personalization_completed ?? (existingUser.onboarding_completed ? true : false);
               token.trialEndsAt = existingUser.trial_ends_at ?? null;
+              token.avatarUrl = existingUser.avatar_url ?? null;
               // Resolve effective plan: trial plan if active, otherwise base plan
               const { getEffectivePlan } = await import("@/lib/plans");
               const effectivePlan = getEffectivePlan(
@@ -210,6 +212,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     name: token.name as string | undefined,
                     role: isAdmin ? "admin" : "realtor",
                     plan: defaultPlan,
+                    email_verified: !!account && ["google", "apple", "facebook"].includes(account.provider),
                     personalization_completed: false,
                     onboarding_completed: false,
                   },
@@ -249,6 +252,58 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.plan = "free";
           token.enabledFeatures = getUserFeatures("free");
         }
+        // ============================================================
+        // Team context: fetch membership if user has one
+        // ============================================================
+        const shouldFetchTeam = token.userId && (
+          !("teamId" in token) || trigger === "signIn" || trigger === "update"
+        );
+
+        if (shouldFetchTeam && token.email) {
+          try {
+            const { data: membership } = await supabase
+              .from("tenant_memberships")
+              .select("tenant_id, role, permissions, user_id")
+              .eq("agent_email", token.email as string)
+              .is("removed_at", null)
+              .single();
+
+            if (membership) {
+              token.teamId = membership.tenant_id;
+              token.teamRole = membership.role;
+              token.teamPermissions = membership.permissions || {};
+
+              // Fetch team name for display in sidebar/header
+              if (!token.teamName || token.teamId !== membership.tenant_id) {
+                const { data: tenant } = await supabase
+                  .from("tenants")
+                  .select("name")
+                  .eq("id", membership.tenant_id)
+                  .single();
+                token.teamName = tenant?.name || null;
+              }
+
+              // Link user_id on membership if not yet set
+              if (!membership.user_id && token.userId) {
+                await supabase
+                  .from("tenant_memberships")
+                  .update({ user_id: token.userId as string })
+                  .eq("agent_email", token.email as string)
+                  .is("removed_at", null);
+              }
+            } else {
+              token.teamId = null;
+              token.teamRole = null;
+              token.teamName = null;
+              token.teamPermissions = {};
+            }
+          } catch {
+            // Team tables may not exist yet — graceful fallback
+            token.teamId = token.teamId ?? null;
+            token.teamRole = token.teamRole ?? null;
+            token.teamPermissions = token.teamPermissions ?? {};
+          }
+        }
       } catch (err) {
         console.error("[auth] JWT callback error:", err);
       }
@@ -262,7 +317,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Multi-tenancy: userId = realtorId (the tenant identifier)
       session.user.id = (token.userId as string) || (token.sub as string) || "";
       session.user.realtorId = (token.userId as string) || (token.sub as string) || "";
-      (session.user as unknown as Record<string, unknown>).emailVerified = (token.emailVerified as boolean) ?? true;
+      (session.user as unknown as Record<string, unknown>).emailVerified = (token.emailVerified as boolean) ?? false;
+      (session.user as unknown as Record<string, unknown>).avatarUrl = (token.avatarUrl as string) ?? null;
+      // Team context
+      (session.user as unknown as Record<string, unknown>).teamId = (token.teamId as string) ?? null;
+      (session.user as unknown as Record<string, unknown>).teamRole = (token.teamRole as string) ?? null;
+      (session.user as unknown as Record<string, unknown>).teamName = (token.teamName as string) ?? null;
+      (session.user as unknown as Record<string, unknown>).teamPermissions = (token.teamPermissions as Record<string, boolean>) ?? {};
       return session;
     },
   },

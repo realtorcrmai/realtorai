@@ -162,7 +162,7 @@ describe('assembleEmail email types', () => {
 describe('assembleEmail dark mode', () => {
   it('includes dark mode media query', () => {
     const html = assembleEmail('welcome', makeData());
-    expect(html).toContain('prefers-color-scheme:dark');
+    expect(html).toContain('prefers-color-scheme: dark');
   });
 
   it('includes email-body class for dark mode targeting', () => {

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { fireConfetti } from "@/hooks/useConfetti";
 import { WELCOME_TOUR } from "@/components/help/TourDefinitions";
 
@@ -12,13 +11,12 @@ import { WELCOME_TOUR } from "@/components/help/TourDefinitions";
  * - Animated welcome banner with gradient text
  * - Auto-dismisses after 6 seconds
  */
-export function WelcomeConfetti() {
+export function WelcomeConfetti({ userName }: { userName?: string }) {
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
   const fired = useRef(false);
   const [showBanner, setShowBanner] = useState(false);
 
-  const firstName = session?.user?.name?.split(" ")[0] || "";
+  const firstName = userName?.split(" ")[0] || "";
 
   useEffect(() => {
     if (searchParams.get("welcome") !== "1" || fired.current) return;

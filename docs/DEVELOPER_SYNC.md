@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 --task-bugfix -->
 <!-- docs-audit: CONTRIBUTING.md, .env.local.example -->
 # Developer Sync — Post-Consolidation (2026-04-09)
 
@@ -355,3 +356,17 @@ These are tracked in `docs/ENVIRONMENTS.md` §"Open follow-ups" — none of them
 8. Check `realtors360-sites/.env.local` for old project references
 9. Consider moving Supabase to us-east-2 or ca-central-1 for latency
 10. Add `VERCEL_TOKEN` to GitHub Actions secrets for CI-triggered deploys
+
+## Changelog
+
+| Date | Change |
+|------|--------|
+| 2026-04-21 | `CONTRIBUTING.md` updated: dev script now uses `NODE_OPTIONS=--max-old-space-size=4096` (4 GB heap) to prevent OOM during builds. See CONTRIBUTING.md for details. |
+
+<!-- Last reviewed: 2026-04-21 -->
+
+
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->
+
+<!-- Last reviewed: 2026-04-21 — Wave 1a demo gate -->
+<!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->

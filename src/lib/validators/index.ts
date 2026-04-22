@@ -49,6 +49,7 @@ export type PipelineInput = {
   lastSubjects?: string[];
   journeyPhase?: string;
   skipQualityScore?: boolean; // Skip for speed on bulk operations
+  skipCompliance?: boolean;   // Skip frequency/gap/quiet-hours (realtor explicitly approved)
 };
 
 /**
@@ -112,12 +113,16 @@ export async function runValidationPipeline(
   }
 
   // Step 5: Compliance Gate
-  const complianceResult = await checkCompliance({
-    contactId: input.contactId,
-    contactEmail: input.contactEmail,
-    realtorId: undefined, // TODO: pass realtor ID when multi-tenant
-    trustLevel: input.trustLevel,
-  });
+  // When realtor explicitly approved from queue, skip frequency/gap/quiet-hours checks.
+  // Unsubscribe and bounce checks still apply regardless.
+  const complianceResult = input.skipCompliance
+    ? { allowed: true, reason: null, defer: false, deferUntil: null }
+    : await checkCompliance({
+        contactId: input.contactId,
+        contactEmail: input.contactEmail,
+        realtorId: undefined, // TODO: pass realtor ID when multi-tenant
+        trustLevel: input.trustLevel,
+      });
 
   if (!complianceResult.allowed) {
     if (complianceResult.defer) {
@@ -150,6 +155,10 @@ export async function runValidationPipeline(
   let qualityScore: QualityScore | null = null;
   if (!input.skipQualityScore) {
     const bodyText = input.htmlBody
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+      // Strip hidden preheader spans (display:none) that duplicate subject line at top of HTML
+      .replace(/<[^>]*display\s*:\s*none[^>]*>[\s\S]*?<\/[a-z]+>/gi, "")
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
       .trim();

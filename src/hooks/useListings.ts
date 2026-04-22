@@ -15,8 +15,8 @@ export function useListings(status?: string) {
 
       const res = await fetch(`/api/listings?${params}`);
       if (res.ok) {
-        const data = await res.json();
-        setListings(data);
+        const json = await res.json();
+        setListings(json.data ?? json);
       }
       setLoading(false);
     }

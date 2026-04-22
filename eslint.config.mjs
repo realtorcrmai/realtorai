@@ -19,6 +19,7 @@ export default [
       "realtors360-rag/**",
       "agent-pipeline/**",
       "app-duplicate-*/**",
+      ".netlify/**",
       "**/dist/**",
       "**/.next/**",
     ],
@@ -36,6 +37,9 @@ export default [
     rules: {
       ...typescript.rules,
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+      "@typescript-eslint/consistent-type-assertions": ["error", {
+        assertionStyle: "as",
+      }],
     },
   },
   ...rest,

@@ -100,7 +100,7 @@ export default function EditorialUpgradePage() {
 
           <div className="mt-auto pt-2">
             <a
-              href="mailto:hello@realtors360.ai?subject=Pro%20Trial%20Request&body=Hi%2C%20I%27d%20like%20to%20start%20a%20Pro%20trial%20for%20the%20Editorial%20Newsletter%20System."
+              href="mailto:hello@magnate360.com?subject=Pro%20Trial%20Request&body=Hi%2C%20I%27d%20like%20to%20start%20a%20Pro%20trial%20for%20the%20Editorial%20Newsletter%20System."
               target="_blank"
               rel="noopener noreferrer"
               className={buttonVariants({ variant: 'brand', size: 'default' }) + ' w-full justify-center'}
@@ -166,7 +166,7 @@ export default function EditorialUpgradePage() {
           </p>
         </div>
         <a
-          href="mailto:hello@realtors360.ai?subject=Editorial%20Pro%20Question"
+          href="mailto:hello@magnate360.com?subject=Editorial%20Pro%20Question"
           target="_blank"
           rel="noopener noreferrer"
           className={buttonVariants({ variant: 'outline', size: 'sm' })}

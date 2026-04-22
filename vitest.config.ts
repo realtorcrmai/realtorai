@@ -7,8 +7,13 @@ export default defineConfig({
     environment: 'node',
     include: [
       'src/__tests__/**/*.test.ts',
+      'src/components/**/*.test.tsx',
       'tests/integration/**/*.test.ts',
+      'tests/integration/**/*.spec.ts',
+      'tests/contract/**/*.spec.ts',
+      'tests/api/**/*.spec.ts',
     ],
+
     exclude: ['node_modules', '.next', 'tests/browser'],
   },
   resolve: {

@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 --task-mgmt -->
 # Contributing to Realtors360
 
 ## Local Development Setup
@@ -85,7 +86,7 @@ npm run dev
 
 | Service | Port | Start command | Required? |
 |---------|------|---------------|-----------|
-| **CRM** (Next.js) | 3000 | `npm run dev` | Yes — core app |
+| **CRM** (Next.js) | 3000 | `npm run dev` (uses `NODE_OPTIONS='--max-old-space-size=4096'`) | Yes — core app |
 | **Newsletter service** (Express) | 8080 | `cd realtors360-newsletter && npm run dev` | Only for newsletter event processing |
 | **Voice agent** (Python) | 8768 | `cd voice_agent && python3 server/main.py` | Only for voice features |
 | **Form server** (Python) | 8767 | `cd forms && python3 server.py` | Only for BCREA form generation |
@@ -123,7 +124,9 @@ realestate-crm/                  ← You are here (repo root)
 │   ├── app/                     # Next.js App Router pages + API routes
 │   │   ├── (auth)/login/        # Login page
 │   │   ├── (dashboard)/         # All authenticated pages
+│   │   │   └── settings/team/   # Team management page
 │   │   └── api/                 # API routes (webhooks, crons, REST)
+│   │       └── tasks/           # Task CRUD, templates, filters, export
 │   ├── actions/                 # Server actions (mutations)
 │   ├── components/              # React components
 │   │   ├── brand/               # Logo components (LogoIcon, LogoAnimated, etc.)
@@ -146,6 +149,7 @@ realestate-crm/                  ← You are here (repo root)
 ├── scripts/                     # Utility scripts (test, seed, eval)
 ├── tests/                       # Integration tests
 ├── docs/                        # Documentation
+├── .github/workflows/           # CI workflows (g1-pr.yml, g2-review.yml, g3-merge.yml)
 └── .vscode/                     # VS Code workspace settings
 ```
 
@@ -189,6 +193,9 @@ feature branch → PR → dev → PR → main (production)
 | Lint | `npx eslint .` | ✅ |
 | Build | `npm run build` | ✅ |
 | Python Syntax | Compiles voice agent files | ✅ |
+| G1 PR Gate (`g1-pr.yml`) | TypeScript + Lint + Build on PR open | ✅ |
+| G2 Review Gate (`g2-review.yml`) | Docs audit + test plan validation on review | ✅ |
+| G3 Merge Gate (`g3-merge.yml`) | Full test suite before merge to `dev`/`main` | ✅ |
 
 ---
 
@@ -269,7 +276,25 @@ npm run test:rls
 npm run test:watch
 
 # Browser tests (Playwright)
-npx playwright test
+npm run test:e2e              # all E2E tests
+npm run test:e2e:ui           # interactive UI mode
+npm run test:e2e:debug        # debug mode
+npm run test:e2e:p0           # P0 critical tests only
+npm run test:e2e:desktop      # desktop viewport only
+npm run test:e2e:mobile       # mobile viewport only
+npm run test:contract         # contract tests (API shape validation)
+
+# Specialized test suites
+npm run test:api              # API endpoint tests
+npm run test:a11y             # accessibility audit
+npm run test:rtm              # requirements traceability matrix
+npm run test:rtm:strict       # RTM strict mode (fail on gaps)
+npm run test:rtm:json         # RTM output as JSON
+
+# Code quality & security
+npm run format:check          # check Prettier formatting
+npm run scan-secrets          # detect leaked secrets (gitleaks)
+npm run size-check            # bundle size limits
 
 # Docs freshness audit
 node scripts/audit-docs.mjs
@@ -340,3 +365,12 @@ if (!check.allowed) return { error: check.reason };
 - `CLAUDE.md` — AI agent instructions (read by Claude Code automatically)
 - `.claude/agent-playbook.md` — mandatory task execution protocol
 - Issues: https://github.com/realtorcrmai/realtorai/issues
+
+<!-- Last reviewed: 2026-04-21 -->
+
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->
+
+<!-- Last reviewed: 2026-04-21 — Wave 1a demo gate -->
+<!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
+
+<!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->

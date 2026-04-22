@@ -1,0 +1,557 @@
+version: "1.0"
+last_updated: "2026-04-21"
+areas:
+  - id: AUTH
+    name: Authentication & Authorization
+    requirements:
+      - id: REQ-AUTH-001
+        description: Demo user can log in with email/password
+        priority: P0
+        acceptance: User lands on dashboard after login
+        tests:
+          - { id: TC-E2E-AUTH-001, file: tests/browser/comprehensive-e2e-part1.spec.ts, layer: L5 }
+          - { id: TC-E2E-AUTH-002, file: tests/browser/r1-e2e.spec.ts, layer: L5 }
+      - id: REQ-AUTH-002
+        description: Google OAuth login redirects and completes
+        priority: P0
+        acceptance: User authenticated via Google lands on dashboard
+        tests:
+          - { id: TC-E2E-AUTH-010, file: tests/browser/r1-e2e.spec.ts, layer: L5 }
+      - id: REQ-AUTH-003
+        description: Session persists across page navigations
+        priority: P0
+        acceptance: Authenticated user remains logged in on refresh
+        tests:
+          - { id: TC-E2E-AUTH-020, file: tests/browser/auth.setup.ts, layer: L5 }
+      - id: REQ-AUTH-004
+        description: Logout clears session and redirects to login
+        priority: P0
+        acceptance: After logout, user cannot access protected routes
+        tests:
+          - { id: TC-E2E-AUTH-030, file: tests/browser/comprehensive-e2e-part1.spec.ts, layer: L5 }
+      - id: REQ-AUTH-005
+        description: Unauthenticated users redirected to login
+        priority: P0
+        acceptance: Accessing /listings without session redirects to /login
+        tests:
+          - { id: TC-SEC-001, file: tests/browser/security/auth-and-isolation.spec.ts, layer: L5 }
+      - id: REQ-AUTH-006
+        description: API routes reject requests without valid session
+        priority: P0
+        acceptance: 401 returned for unauthenticated API calls
+        tests:
+          - { id: TC-SEC-010, file: tests/browser/security/auth-and-isolation.spec.ts, layer: L5 }
+          - { id: TC-SMOKE-CRON, file: scripts/test-suite.sh, layer: L0 }
+
+  - id: CONTACT
+    name: Contact Management
+    requirements:
+      - id: REQ-CONTACT-001
+        description: Create a new contact with required fields (name, type)
+        priority: P0
+        acceptance: Contact appears in list and database after creation
+        tests:
+          - { id: TC-CR-001, file: tests/browser/journeys/contact-crud-4layer.spec.ts, layer: L5 }
+          - { id: TC-E2E-CT-001, file: tests/browser/components/contacts.spec.ts, layer: L5 }
+      - id: REQ-CONTACT-002
+        description: Read contact details by ID
+        priority: P0
+        acceptance: Contact detail page shows all stored fields
+        tests:
+          - { id: TC-VL-001, file: src/__tests__/contact-schema.test.ts, layer: L1 }
+          - { id: TC-VL-002, file: src/__tests__/contact-schema.test.ts, layer: L1 }
+          - { id: TC-CR-002, file: tests/browser/journeys/contact-crud-4layer.spec.ts, layer: L5 }
+          - { id: TC-CN-001, file: tests/contract/api-contacts.spec.ts, layer: L3 }
+      - id: REQ-CONTACT-003
+        description: Update contact fields (name, email, phone, notes)
+        priority: P0
+        acceptance: Changes persisted and reflected in UI
+        tests:
+          - { id: TC-E2E-CT-010, file: tests/browser/components/contacts.spec.ts, layer: L5 }
+      - id: REQ-CONTACT-004
+        description: Delete a contact (hard delete)
+        priority: P0
+        acceptance: Contact removed from database and list view
+        tests:
+          - { id: TC-SMOKE-CASCADE, file: scripts/test-suite.sh, layer: L0 }
+      - id: REQ-CONTACT-005
+        description: Duplicate detection on email match
+        priority: P1
+        acceptance: Warning shown when creating contact with existing email
+        tests: []
+      - id: REQ-CONTACT-006
+        description: Phone numbers stored in E.164 format
+        priority: P0
+        acceptance: +1 prefix auto-added, whitespace stripped
+        tests:
+          - { id: TC-PH-001, file: src/__tests__/utils/phone-format.test.ts, layer: L1 }
+          - { id: TC-PH-002, file: src/__tests__/utils/phone-format.test.ts, layer: L1 }
+          - { id: TC-PH-003, file: src/__tests__/utils/phone-format.test.ts, layer: L1 }
+          - { id: TC-PH-PROP, file: src/__tests__/utils/phone-format.test.ts, layer: L1 }
+      - id: REQ-CONTACT-007
+        description: Contacts scoped to authenticated realtor (tenant isolation)
+        priority: P0
+        acceptance: User A cannot see User B contacts
+        tests:
+          - { id: TC-CR-010, file: tests/browser/journeys/contact-crud-4layer.spec.ts, layer: L5 }
+      - id: REQ-CONTACT-008
+        description: Bulk delete multiple contacts
+        priority: P1
+        acceptance: Selected contacts removed in single operation
+        tests: []
+      - id: REQ-CONTACT-009
+        description: Search contacts by name or email
+        priority: P0
+        acceptance: Matching results returned with partial input
+        tests:
+          - { id: TC-E2E-CMD-001, file: tests/browser/comprehensive-e2e-part1.spec.ts, layer: L5 }
+      - id: REQ-CONTACT-010
+        description: CASL consent tracking (given date, expiry)
+        priority: P0
+        acceptance: Consent fields stored and displayed on contact record
+        tests:
+          - { id: TC-SMOKE-CASL, file: scripts/test-suite.sh, layer: L0 }
+      - id: REQ-CONTACT-011
+        description: Contact type classification (buyer, seller, both)
+        priority: P0
+        acceptance: Type field enforced and filterable
+        tests:
+          - { id: TC-VL-040, file: src/__tests__/contact-schema.test.ts, layer: L1 }
+          - { id: TC-VL-041, file: src/__tests__/contact-schema.test.ts, layer: L1 }
+          - { id: TC-CN-010, file: tests/contract/api-contacts.spec.ts, layer: L3 }
+      - id: REQ-CONTACT-012
+        description: Preferred communication channel stored
+        priority: P1
+        acceptance: pref_channel used for outbound messaging
+        tests:
+          - { id: TC-VL-060, file: src/__tests__/contact-schema.test.ts, layer: L1 }
+          - { id: TC-CN-011, file: tests/contract/api-contacts.spec.ts, layer: L3 }
+      - id: REQ-CONTACT-020
+        description: No NaN/undefined data corruption in contact display
+        priority: P1
+        acceptance: Contact detail pages render clean data without artifacts
+        tests:
+          - { id: TC-CR-020, file: tests/browser/journeys/contact-crud-4layer.spec.ts, layer: L5 }
+      - id: REQ-CONTACT-021
+        description: Phone displayed in UI matches database value
+        priority: P1
+        acceptance: Phone digits in UI tel href match DB phone field
+        tests:
+          - { id: TC-CR-021, file: tests/browser/journeys/contact-crud-4layer.spec.ts, layer: L5 }
+
+  - id: CONTRACT
+    name: API Contract Verification
+    requirements:
+      - id: REQ-CONTRACT-001
+        description: Contact Zod schema has all expected fields and rejects invalid data
+        priority: P0
+        acceptance: Schema shape matches API spec, invalid payloads rejected
+        tests:
+          - { id: TC-CN-001, file: tests/contract/api-contacts.spec.ts, layer: L3 }
+          - { id: TC-CN-002, file: tests/contract/api-contacts.spec.ts, layer: L3 }
+          - { id: TC-CN-003, file: tests/contract/api-contacts.spec.ts, layer: L3 }
+      - id: REQ-CONTRACT-002
+        description: Contact type and channel enums match expected values
+        priority: P0
+        acceptance: All valid enum values accepted, invalid rejected
+        tests:
+          - { id: TC-CN-010, file: tests/contract/api-contacts.spec.ts, layer: L3 }
+          - { id: TC-CN-011, file: tests/contract/api-contacts.spec.ts, layer: L3 }
+      - id: REQ-CONTRACT-003
+        description: API response includes DB-only fields not in input schema
+        priority: P1
+        acceptance: id, realtor_id, created_at etc. not in Zod input but in DB response
+        tests:
+          - { id: TC-CN-020, file: tests/contract/api-contacts.spec.ts, layer: L3 }
+
+  - id: LISTING
+    name: Listing Management
+    requirements:
+      - id: REQ-LISTING-001
+        description: Create a new listing with address and property type
+        priority: P0
+        acceptance: Listing appears in list view with correct details
+        tests:
+          - { id: TC-E2E-LS-001, file: tests/browser/journeys/listing-lifecycle.spec.ts, layer: L5 }
+          - { id: TC-SMOKE-CRUD-LIST, file: scripts/test-suite.sh, layer: L0 }
+      - id: REQ-LISTING-002
+        description: Read listing details by ID
+        priority: P0
+        acceptance: Detail page shows all fields including enrichment data
+        tests:
+          - { id: TC-E2E-LS-010, file: tests/browser/components/listings.spec.ts, layer: L5 }
+      - id: REQ-LISTING-003
+        description: Update listing fields (price, description, status)
+        priority: P0
+        acceptance: Changes persisted and reflected in UI
+        tests:
+          - { id: TC-E2E-LS-020, file: tests/browser/journeys/listing-lifecycle.spec.ts, layer: L5 }
+      - id: REQ-LISTING-004
+        description: Delete a listing
+        priority: P0
+        acceptance: Listing removed from database and cascades to related records
+        tests:
+          - { id: TC-LD-001, file: tests/integration/listings.test.ts, layer: L4 }
+          - { id: TC-LD-002, file: tests/integration/listings.test.ts, layer: L4 }
+      - id: REQ-LISTING-005
+        description: Status transitions follow valid state machine
+        priority: P0
+        acceptance: Invalid transitions rejected with error
+        tests:
+          - { id: TC-LS-001, file: tests/integration/listings.test.ts, layer: L4 }
+          - { id: TC-LS-002, file: tests/integration/listings.test.ts, layer: L4 }
+          - { id: TC-LS-003, file: tests/integration/listings.test.ts, layer: L4 }
+          - { id: TC-LS-004, file: tests/integration/listings.test.ts, layer: L4 }
+          - { id: TC-LS-005, file: tests/integration/listings.test.ts, layer: L4 }
+          - { id: TC-LS-006, file: tests/integration/listings.test.ts, layer: L4 }
+      - id: REQ-LISTING-006
+        description: Seller linked to listing via seller_id FK
+        priority: P0
+        acceptance: Seller contact displayed on listing detail
+        tests:
+          - { id: TC-E2E-LS-030, file: tests/browser/components/listings.spec.ts, layer: L5 }
+      - id: REQ-LISTING-007
+        description: Workflow phases tracked per listing (1-8)
+        priority: P0
+        acceptance: Current phase visible and advanceable
+        tests:
+          - { id: TC-E2E-WF-001, file: tests/browser/journeys/listing-lifecycle.spec.ts, layer: L5 }
+      - id: REQ-LISTING-008
+        description: Property details stored (beds, baths, sqft, lot_size, year_built)
+        priority: P0
+        acceptance: All property fields persisted and editable
+        tests:
+          - { id: TC-SMOKE-PROP, file: scripts/test-suite.sh, layer: L0 }
+      - id: REQ-LISTING-009
+        description: MLS number unique when provided
+        priority: P1
+        acceptance: Duplicate MLS number rejected at DB level
+        tests: []
+      - id: REQ-LISTING-010
+        description: Listings scoped to authenticated realtor (tenant isolation)
+        priority: P0
+        acceptance: User A cannot see User B listings
+        tests:
+          - { id: TC-LT-001, file: tests/integration/listings.test.ts, layer: L4 }
+          - { id: TC-LT-002, file: tests/integration/listings.test.ts, layer: L4 }
+          - { id: TC-LT-003, file: tests/integration/listings.test.ts, layer: L4 }
+          - { id: TC-TI-020, file: tests/integration/tenant-isolation.spec.ts, layer: L4 }
+      - id: REQ-LISTING-011
+        description: List price stored as numeric and formatted for display
+        priority: P0
+        acceptance: Price stored without formatting, displayed with $ and commas
+        tests:
+          - { id: TC-E2E-LS-040, file: tests/browser/components/listings.spec.ts, layer: L5 }
+      - id: REQ-LISTING-012
+        description: Photos uploadable and linked to listing
+        priority: P1
+        acceptance: Uploaded photos appear in listing gallery
+        tests: []
+
+  - id: SHOWING
+    name: Showing Management
+    requirements:
+      - id: REQ-SHOWING-001
+        description: Request a showing for a listing with date/time
+        priority: P0
+        acceptance: Showing created with pending status
+        tests:
+          - { id: TC-E2E-SH-001, file: tests/browser/journeys/showing-workflow.spec.ts, layer: L5 }
+          - { id: TC-E2E-SH-002, file: tests/browser/components/showings.spec.ts, layer: L5 }
+          - { id: TC-SH-001, file: tests/integration/showings.spec.ts, layer: L4 }
+          - { id: TC-SH-002, file: tests/integration/showings.spec.ts, layer: L4 }
+      - id: REQ-SHOWING-002
+        description: Seller confirms showing via SMS (YES reply)
+        priority: P0
+        acceptance: Status changes to confirmed, buyer agent notified
+        tests:
+          - { id: TC-E2E-SH-010, file: tests/browser/journeys/showing-workflow.spec.ts, layer: L5 }
+      - id: REQ-SHOWING-003
+        description: Seller denies showing via SMS (NO reply)
+        priority: P0
+        acceptance: Status changes to denied, buyer agent notified
+        tests:
+          - { id: TC-E2E-SH-020, file: tests/browser/journeys/showing-workflow.spec.ts, layer: L5 }
+      - id: REQ-SHOWING-004
+        description: SMS notification sent to seller on new showing request
+        priority: P0
+        acceptance: Twilio message delivered with listing details and time
+        tests:
+          - { id: TC-E2E-SH-030, file: tests/browser/journeys/showing-workflow.spec.ts, layer: L5 }
+      - id: REQ-SHOWING-005
+        description: Lockbox code delivered on confirmation
+        priority: P0
+        acceptance: Buyer agent receives lockbox code via SMS after seller confirms
+        tests:
+          - { id: TC-SH-003, file: tests/integration/showings.spec.ts, layer: L4 }
+      - id: REQ-SHOWING-006
+        description: Google Calendar event created for confirmed showing
+        priority: P1
+        acceptance: Event visible in agent's Google Calendar
+        tests:
+          - { id: TC-E2E-CAL-001, file: tests/browser/components/calendar.spec.ts, layer: L5 }
+      - id: REQ-SHOWING-007
+        description: Post-showing feedback requested after completion
+        priority: P1
+        acceptance: SMS feedback request sent, response logged to communications
+        tests: []
+      - id: REQ-SHOWING-008
+        description: Showing status lifecycle (pending/confirmed/completed/denied/cancelled)
+        priority: P0
+        acceptance: Valid transitions succeed, invalid ones rejected
+        tests:
+          - { id: TC-SB-001, file: src/components/showings/ShowingStatusBadge.test.tsx, layer: L2 }
+          - { id: TC-SB-002, file: src/components/showings/ShowingStatusBadge.test.tsx, layer: L2 }
+          - { id: TC-SB-003, file: src/components/showings/ShowingStatusBadge.test.tsx, layer: L2 }
+          - { id: TC-SB-004, file: src/components/showings/ShowingStatusBadge.test.tsx, layer: L2 }
+          - { id: TC-SB-010, file: src/components/showings/ShowingStatusBadge.test.tsx, layer: L2 }
+      - id: REQ-SHOWING-009
+        description: Showing scoped to authenticated realtor (tenant isolation)
+        priority: P0
+        acceptance: User A cannot see User B showings
+        tests:
+          - { id: TC-SH-005, file: tests/integration/showings.spec.ts, layer: L4 }
+          - { id: TC-TI-030, file: tests/integration/tenant-isolation.spec.ts, layer: L4 }
+
+  - id: WORKFLOW
+    name: Listing Workflow (8 Phases)
+    requirements:
+      - id: REQ-WORKFLOW-001
+        description: 8-phase sequential advancement
+        priority: P0
+        acceptance: Phases advance in order 1-2-3-...-8
+        tests:
+          - { id: TC-E2E-WF-010, file: tests/browser/journeys/listing-lifecycle.spec.ts, layer: L5 }
+      - id: REQ-WORKFLOW-002
+        description: Phase validation before advancement
+        priority: P0
+        acceptance: Cannot advance to phase N+1 without completing phase N requirements
+        tests: []
+      - id: REQ-WORKFLOW-003
+        description: Phase 5 form generation via Python server
+        priority: P0
+        acceptance: BCREA forms generated with CDM data from listing
+        tests:
+          - { id: TC-FM-001, file: src/__tests__/lib/field-mapping.test.ts, layer: L1 }
+          - { id: TC-FM-PROP, file: src/__tests__/lib/field-mapping.test.ts, layer: L1 }
+      - id: REQ-WORKFLOW-004
+        description: Phase 2 data enrichment (Geocoder, ParcelMap)
+        priority: P0
+        acceptance: Enrichment data populated in listing_enrichment table
+        tests: []
+      - id: REQ-WORKFLOW-005
+        description: Phase 7 MLS remarks generation via Claude AI
+        priority: P0
+        acceptance: Public and realtor remarks generated (max 500 chars each)
+        tests: []
+      - id: REQ-WORKFLOW-006
+        description: Audit trail logged for phase transitions
+        priority: P0
+        acceptance: Phase change timestamp and actor recorded
+        tests: []
+      - id: REQ-WORKFLOW-007
+        description: Phase 1 FINTRAC identity collection
+        priority: P0
+        acceptance: Seller identity fields stored in seller_identities table
+        tests: []
+
+  - id: NEWSLETTER
+    name: Newsletter & Email Marketing
+    requirements:
+      - id: REQ-NEWSLETTER-001
+        description: Create a newsletter draft
+        priority: P0
+        acceptance: Newsletter record created with draft status
+        tests:
+          - { id: TC-E2E-NL-001, file: tests/browser/journeys/newsletter-pipeline.spec.ts, layer: L5 }
+          - { id: TC-E2E-NL-002, file: tests/browser/components/newsletters.spec.ts, layer: L5 }
+      - id: REQ-NEWSLETTER-002
+        description: AI generates newsletter content from prompt
+        priority: P0
+        acceptance: Claude produces email body matching brand voice
+        tests:
+          - { id: TC-EB-001, file: src/__tests__/lib/email-blocks.test.ts, layer: L1 }
+          - { id: TC-EB-002, file: src/__tests__/lib/email-blocks.test.ts, layer: L1 }
+          - { id: TC-EB-PROP, file: src/__tests__/lib/email-blocks.test.ts, layer: L1 }
+          - { id: TC-TP-001, file: src/__tests__/lib/text-pipeline.test.ts, layer: L1 }
+          - { id: TC-TP-005, file: src/__tests__/lib/text-pipeline.test.ts, layer: L1 }
+          - { id: TC-TP-006, file: src/__tests__/lib/text-pipeline.test.ts, layer: L1 }
+          - { id: TC-TP-011, file: src/__tests__/lib/text-pipeline.test.ts, layer: L1 }
+          - { id: TC-QD-001, file: src/__tests__/lib/quality-pipeline.test.ts, layer: L1 }
+          - { id: TC-QD-002, file: src/__tests__/lib/quality-pipeline.test.ts, layer: L1 }
+      - id: REQ-NEWSLETTER-003
+        description: Approval queue shows pending newsletters
+        priority: P0
+        acceptance: Realtor can review and approve/reject drafts
+        tests:
+          - { id: TC-E2E-NL-010, file: tests/browser/journeys/newsletter-pipeline.spec.ts, layer: L5 }
+          - { id: TC-E2E-NL-011, file: tests/browser/components/newsletters.spec.ts, layer: L5 }
+      - id: REQ-NEWSLETTER-004
+        description: Approved newsletter sent via Resend
+        priority: P0
+        acceptance: Email delivered to selected contacts, events logged
+        tests:
+          - { id: TC-E2E-NL-020, file: tests/browser/journeys/newsletter-pipeline.spec.ts, layer: L5 }
+      - id: REQ-NEWSLETTER-005
+        description: Analytics tracked (opens, clicks, bounces)
+        priority: P0
+        acceptance: newsletter_events table populated via webhooks
+        tests: []
+      - id: REQ-NEWSLETTER-006
+        description: Journey enrollment for drip sequences
+        priority: P1
+        acceptance: Contact enrolled in journey, phases advance on schedule
+        tests:
+          - { id: TC-FC-001, file: src/__tests__/lib/flow-converter.test.ts, layer: L1 }
+          - { id: TC-FC-PROP, file: src/__tests__/lib/flow-converter.test.ts, layer: L1 }
+      - id: REQ-NEWSLETTER-007
+        description: Frequency caps enforced (send governor)
+        priority: P1
+        acceptance: Contact not emailed more than cap allows per period
+        tests:
+          - { id: TC-SG-001, file: src/__tests__/lib/send-governor.test.ts, layer: L1 }
+          - { id: TC-SG-003, file: src/__tests__/lib/send-governor.test.ts, layer: L1 }
+          - { id: TC-SG-004, file: src/__tests__/lib/send-governor.test.ts, layer: L1 }
+
+  - id: TENANT
+    name: Multi-Tenancy & Data Isolation
+    requirements:
+      - id: REQ-TENANT-001
+        description: All data tables enforce realtor_id scoping
+        priority: P0
+        acceptance: Queries without realtor_id filter return no cross-tenant data
+        tests:
+          - { id: TC-RLS-001, file: tests/integration/rls/cross-tenant.test.ts, layer: L4 }
+          - { id: TC-LE-001, file: src/__tests__/lib/learning-engine.test.ts, layer: L1 }
+      - id: REQ-TENANT-002
+        description: API endpoints scope responses to authenticated user
+        priority: P0
+        acceptance: GET /api/contacts returns only current user contacts
+        tests:
+          - { id: TC-SEC-020, file: tests/browser/security/auth-and-isolation.spec.ts, layer: L5 }
+      - id: REQ-TENANT-003
+        description: Cross-tenant data access denied
+        priority: P0
+        acceptance: User A requesting User B record returns 404 or empty
+        tests:
+          - { id: TC-RLS-002, file: tests/integration/rls/cross-tenant.test.ts, layer: L4 }
+          - { id: TC-RLS-003, file: tests/integration/rls/cross-tenant.test.ts, layer: L4 }
+      - id: REQ-TENANT-004
+        description: Admin client bypass available for system operations
+        priority: P0
+        acceptance: createAdminClient can access all records for crons/webhooks
+        tests:
+          - { id: TC-TI-001, file: tests/integration/tenant-isolation.spec.ts, layer: L4 }
+          - { id: TC-TI-002, file: tests/integration/tenant-isolation.spec.ts, layer: L4 }
+      - id: REQ-TENANT-005
+        description: RLS policies active on all tenant-scoped tables
+        priority: P0
+        acceptance: Direct DB queries respect RLS when using anon/authenticated role
+        tests:
+          - { id: TC-TI-010, file: tests/integration/tenant-isolation.spec.ts, layer: L4 }
+          - { id: TC-TI-011, file: tests/integration/tenant-isolation.spec.ts, layer: L4 }
+          - { id: TC-TI-020, file: tests/integration/tenant-isolation.spec.ts, layer: L4 }
+          - { id: TC-TI-030, file: tests/integration/tenant-isolation.spec.ts, layer: L4 }
+          - { id: TC-TI-040, file: tests/integration/tenant-isolation.spec.ts, layer: L4 }
+
+  - id: A11Y
+    name: Accessibility (WCAG AA)
+    requirements:
+      - id: REQ-A11Y-001
+        description: All text meets WCAG AA contrast ratio (4.5:1 normal, 3:1 large)
+        priority: P0
+        acceptance: 18/18 color pairs pass automated contrast check
+        tests:
+          - { id: TC-A11Y-001, file: tests/browser/accessibility/all-pages.spec.ts, layer: L6a }
+      - id: REQ-A11Y-002
+        description: Keyboard navigation works for all interactive elements
+        priority: P0
+        acceptance: Tab/Enter/Arrow keys navigate tables, menus, modals
+        tests:
+          - { id: TC-A11Y-010, file: tests/browser/accessibility/all-pages.spec.ts, layer: L6a }
+      - id: REQ-A11Y-003
+        description: ARIA labels present on all form inputs, tables, and buttons
+        priority: P0
+        acceptance: Screen reader announces all interactive elements correctly
+        tests:
+          - { id: TC-A11Y-020, file: tests/browser/accessibility/all-pages.spec.ts, layer: L6a }
+      - id: REQ-A11Y-004
+        description: Skip-to-content link present on all pages
+        priority: P1
+        acceptance: Focus moves to main content on activation
+        tests:
+          - { id: TC-A11Y-030, file: tests/browser/accessibility/all-pages.spec.ts, layer: L6a }
+      - id: REQ-A11Y-005
+        description: Focus ring visible on all focusable elements
+        priority: P0
+        acceptance: ring-brand class applied on :focus-visible
+        tests:
+          - { id: TC-A11Y-040, file: tests/browser/accessibility/all-pages.spec.ts, layer: L6a }
+
+  - id: INTEGRATION
+    name: External Integrations
+    requirements:
+      - id: REQ-INTEGRATION-001
+        description: Twilio SMS sends to valid phone numbers
+        priority: P0
+        acceptance: Message SID returned, delivery confirmed
+        tests:
+          - { id: TC-PH-SMS-001, file: src/__tests__/utils/phone-format.test.ts, layer: L1 }
+          - { id: TC-E2E-CM-001, file: tests/browser/journeys/contact-communication.spec.ts, layer: L5 }
+      - id: REQ-INTEGRATION-002
+        description: Twilio WhatsApp sends via whatsapp prefix
+        priority: P1
+        acceptance: WhatsApp message delivered when pref_channel is whatsapp
+        tests:
+          - { id: TC-PH-WA-001, file: src/__tests__/utils/phone-format.test.ts, layer: L1 }
+      - id: REQ-INTEGRATION-003
+        description: Resend email delivery with retry on failure
+        priority: P0
+        acceptance: Email sent, retry on 5xx, failure logged
+        tests: []
+      - id: REQ-INTEGRATION-004
+        description: Google Calendar event creation with token refresh
+        priority: P1
+        acceptance: Event created, expired token auto-refreshed
+        tests:
+          - { id: TC-E2E-CAL-010, file: tests/browser/components/calendar.spec.ts, layer: L5 }
+      - id: REQ-INTEGRATION-005
+        description: Claude AI generates text within token limits
+        priority: P0
+        acceptance: Response returned within 30s, under max_tokens
+        tests: []
+      - id: REQ-INTEGRATION-006
+        description: Kling AI task submission and polling
+        priority: P1
+        acceptance: Task ID returned, status polled until complete/failed
+        tests: []
+      - id: REQ-INTEGRATION-007
+        description: Twilio webhook processes inbound SMS correctly
+        priority: P0
+        acceptance: YES/NO replies update showing status, unknown replies logged
+        tests:
+          - { id: TC-TW-001, file: tests/integration/twilio-webhook.spec.ts, layer: L4 }
+          - { id: TC-TW-002, file: tests/integration/twilio-webhook.spec.ts, layer: L4 }
+          - { id: TC-TW-003, file: tests/integration/twilio-webhook.spec.ts, layer: L4 }
+
+  - id: RESILIENCE
+    name: Resilience & Fault Tolerance
+    requirements:
+      - id: REQ-RESILIENCE-001
+        description: App handles Twilio 500 gracefully
+        priority: P1
+        acceptance: Showing request saved to DB even when Twilio fails
+        tests:
+          - { id: TC-RS-001, file: tests/resilience/external-services.test.ts, layer: L7, status: skipped }
+      - id: REQ-RESILIENCE-002
+        description: App handles Resend rate limit gracefully
+        priority: P1
+        acceptance: Newsletter marked deferred not failed on 429
+        tests:
+          - { id: TC-RS-002, file: tests/resilience/external-services.test.ts, layer: L7, status: skipped }
+      - id: REQ-RESILIENCE-003
+        description: App handles Anthropic timeout gracefully
+        priority: P1
+        acceptance: MLS remarks generation returns fallback on timeout
+        tests:
+          - { id: TC-RS-003, file: tests/resilience/external-services.test.ts, layer: L7, status: skipped }

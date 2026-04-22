@@ -82,3 +82,5 @@ voice_agent/server/__pycache__/
 # Large binary assets (source copies — serving copies are in public/)
 logo/mikemarfori-full.png
 logo/*.mp4
+*.xlsx
+~$*.xlsx

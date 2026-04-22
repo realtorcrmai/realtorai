@@ -1,4 +1,4 @@
-# Realtors360 Editorial — Alpha Agent Onboarding Guide
+<!-- docs-audit: none --># Realtors360 Editorial — Alpha Agent Onboarding Guide
 > Version 1.0 · April 2026 · 10-agent cohort
 
 ## Pre-Call Setup (5 min before Zoom)

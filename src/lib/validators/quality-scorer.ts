@@ -50,7 +50,7 @@ export async function scoreEmailQuality(
 
 EMAIL:
 Subject: ${input.subject}
-Body: ${input.bodyText.slice(0, 500)}
+Body: ${input.bodyText.slice(0, 1500)}
 
 CONTEXT:
 To: ${input.contactName} (${input.contactType}, ${input.journeyPhase} phase)

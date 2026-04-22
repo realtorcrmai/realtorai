@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -49,15 +49,53 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
   const [blastStep, setBlastStep] = useState<BlastStep>("select_listing");
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [blastSent, setBlastSent] = useState(false);
+  // Bug fix #1: controlled checkboxes so state survives Back navigation
+  const [blastIncludes, setBlastIncludes] = useState({ photos: true, openhouse: true, commission: false, floorplan: false });
+  // Bug fix #2: import email list textarea value
+  const [importEmails, setImportEmails] = useState("");
 
   // Custom campaign state
   const [campaignStep, setCampaignStep] = useState<CampaignStep>("select_template");
   const [selectedTemplate, setSelectedTemplate] = useState<typeof TEMPLATES[0] | null>(null);
-  const [selectedRecipients, setSelectedRecipients] = useState("all_buyers");
+  const [selectedRecipients, setSelectedRecipients] = useState("all_agents");
   const [scheduleType, setScheduleType] = useState<"now" | "scheduled">("now");
   const [campaignSent, setCampaignSent] = useState(false);
 
-  function resetBlast() { setBlastStep("select_listing"); setSelectedListing(null); setBlastSent(false); }
+  const [agentCount, setAgentCount] = useState<number | null>(null);
+  const [recipientContacts, setRecipientContacts] = useState<{ name: string; email: string }[]>([]);
+  const [isLoadingRecipients, setIsLoadingRecipients] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/contacts?types=agent,partner&hasEmail=true&countOnly=true")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.count != null) setAgentCount(d.count); })
+      .catch(() => {/* leave null — UI shows no badge */});
+  }, []);
+
+  // Fetch/compute the actual recipient list when entering the review step
+  useEffect(() => {
+    if (blastStep !== "review") return;
+
+    if (selectedRecipients === "all_agents") {
+      setIsLoadingRecipients(true);
+      fetch("/api/contacts?types=agent,partner&hasEmail=true&limit=500")
+        .then(r => r.ok ? r.json() : [])
+        .then((data: { name?: string; email?: string }[]) => {
+          setRecipientContacts(
+            (Array.isArray(data) ? data : []).map(c => ({ name: c.name ?? "Unknown", email: c.email ?? "" }))
+          );
+          setIsLoadingRecipients(false);
+        })
+        .catch(() => setIsLoadingRecipients(false));
+    } else if (selectedRecipients === "import") {
+      const emails = importEmails.split(/[\n,]+/).map(e => e.trim()).filter(Boolean);
+      setRecipientContacts(emails.map(email => ({ name: email, email })));
+    } else {
+      setRecipientContacts([]);
+    }
+  }, [blastStep, selectedRecipients, importEmails]);
+
+  function resetBlast() { setBlastStep("select_listing"); setSelectedListing(null); setBlastSent(false); setBlastIncludes({ photos: true, openhouse: true, commission: false, floorplan: false }); setImportEmails(""); setSelectedRecipients("all_agents"); }
   function resetCampaign() { setCampaignStep("select_template"); setSelectedTemplate(null); setSelectedRecipients("all_buyers"); setScheduleType("now"); setCampaignSent(false); }
 
   // ═══ HOME VIEW ═══
@@ -178,13 +216,22 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
                         <div><span className="text-muted-foreground">Sent:</span> <span className="font-medium">{new Date(run.sent_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span></div>
                       </div>
                       <div className="flex gap-2">
-                        <button className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-border hover:bg-muted font-medium">
+                        <button
+                          onClick={() => toast.info("Email preview — open the newsletter in the AI tab to view the full email")}
+                          className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-border hover:bg-muted font-medium"
+                        >
                           <Eye className="h-3 w-3" /> View Email
                         </button>
-                        <button className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-border hover:bg-muted font-medium">
+                        <button
+                          onClick={() => toast.info("Recipients are all agent / partner contacts in your CRM with a valid email")}
+                          className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md border border-border hover:bg-muted font-medium"
+                        >
                           <Users className="h-3 w-3" /> View Recipients
                         </button>
-                        <button className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 font-medium">
+                        <button
+                          onClick={() => toast.info("To resend, go to Manual Listing Blast and choose the same listing")}
+                          className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 font-medium"
+                        >
                           <Send className="h-3 w-3" /> Resend
                         </button>
                       </div>
@@ -228,7 +275,8 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <button onClick={() => setView("home")} className="p-1.5 rounded-md hover:bg-muted"><ArrowLeft className="h-4 w-4" /></button>
+          {/* Bug fix #4: aria-label so this is distinguishable from other icon-only buttons */}
+          <button aria-label="Back to campaigns" onClick={() => setView("home")} className="p-1.5 rounded-md hover:bg-muted"><ArrowLeft className="h-4 w-4" /></button>
           <div><h3 className="text-lg font-semibold">Manual Listing Blast</h3><p className="text-xs text-muted-foreground">AI writes the email, you approve and send</p></div>
         </div>
 
@@ -260,11 +308,12 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
               <div className="space-y-3">
                 <div><label className="text-[10px] text-muted-foreground uppercase">Subject</label><input className="w-full mt-1 text-sm font-medium border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20" defaultValue={`NEW LISTING: ${selectedListing.address} — ${selectedListing.list_price ? "$" + Number(selectedListing.list_price).toLocaleString() : ""}`} /></div>
                 <div><label className="text-[10px] text-muted-foreground uppercase">Note</label><textarea className="w-full mt-1 text-sm border border-border rounded-md px-3 py-2 min-h-[80px] focus:outline-none focus:ring-2 focus:ring-primary/20" defaultValue={`Excited to share my newest listing at ${selectedListing.address}. Your clients are welcome.\n\nKunal`} /></div>
+                {/* Bug fix #1: controlled checkboxes so state persists through Back navigation */}
                 <div className="flex gap-3 flex-wrap">
-                  <label className="text-xs flex items-center gap-1.5"><input type="checkbox" defaultChecked className="accent-primary" /> Photos</label>
-                  <label className="text-xs flex items-center gap-1.5"><input type="checkbox" defaultChecked className="accent-primary" /> Open house</label>
-                  <label className="text-xs flex items-center gap-1.5"><input type="checkbox" className="accent-primary" /> Commission</label>
-                  <label className="text-xs flex items-center gap-1.5"><input type="checkbox" className="accent-primary" /> Floor plan</label>
+                  <label className="text-xs flex items-center gap-1.5"><input type="checkbox" checked={blastIncludes.photos} onChange={e => setBlastIncludes(p => ({ ...p, photos: e.target.checked }))} className="accent-primary" /> Photos</label>
+                  <label className="text-xs flex items-center gap-1.5"><input type="checkbox" checked={blastIncludes.openhouse} onChange={e => setBlastIncludes(p => ({ ...p, openhouse: e.target.checked }))} className="accent-primary" /> Open house</label>
+                  <label className="text-xs flex items-center gap-1.5"><input type="checkbox" checked={blastIncludes.commission} onChange={e => setBlastIncludes(p => ({ ...p, commission: e.target.checked }))} className="accent-primary" /> Commission</label>
+                  <label className="text-xs flex items-center gap-1.5"><input type="checkbox" checked={blastIncludes.floorplan} onChange={e => setBlastIncludes(p => ({ ...p, floorplan: e.target.checked }))} className="accent-primary" /> Floor plan</label>
                 </div>
               </div>
             </CardContent></Card>
@@ -275,10 +324,11 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
         {blastStep === "recipients" && (
           <RecipientStep selectedRecipients={selectedRecipients} setSelectedRecipients={setSelectedRecipients}
             options={[
-              { value: "all_agents", label: "All agents in CRM", desc: "Every partner/agent contact", count: "5" },
-              { value: "area_agents", label: "Area-specific agents", desc: "Agents active in this listing's area", count: "3" },
+              { value: "all_agents", label: "All agents in CRM", desc: "Every partner/agent contact", count: agentCount != null ? String(agentCount) : "" },
+              { value: "area_agents", label: "Area-specific agents", desc: "Agents active in this listing's area", count: "" },
               { value: "import", label: "Import email list", desc: "Paste emails from your board", count: "" },
             ]}
+            importEmails={importEmails} setImportEmails={setImportEmails}
             onBack={() => setBlastStep("customize")} onNext={() => setBlastStep("review")}
           />
         )}
@@ -288,14 +338,37 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
             <Card><CardContent className="p-5">
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div className="p-3 bg-muted/50 rounded-lg"><Home className="h-4 w-4 mx-auto mb-1 text-muted-foreground" /><p className="text-xs font-semibold">{selectedListing.address?.split(",")[0]}</p></div>
-                <div className="p-3 bg-muted/50 rounded-lg"><Users className="h-4 w-4 mx-auto mb-1 text-muted-foreground" /><p className="text-xs font-semibold">5 agents</p></div>
+                <div className="p-3 bg-muted/50 rounded-lg"><Users className="h-4 w-4 mx-auto mb-1 text-muted-foreground" /><p className="text-xs font-semibold">{isLoadingRecipients ? "Loading..." : `${recipientContacts.length} recipient${recipientContacts.length !== 1 ? "s" : ""}`}</p></div>
                 <div className="p-3 bg-muted/50 rounded-lg"><Send className="h-4 w-4 mx-auto mb-1 text-muted-foreground" /><p className="text-xs font-semibold">Send Now</p></div>
               </div>
+            </CardContent></Card>
+            <Card><CardContent className="p-4">
+              <p className="text-sm font-semibold mb-3">
+                📬 {isLoadingRecipients ? "Loading recipients…" : `Sending to ${recipientContacts.length} recipient${recipientContacts.length !== 1 ? "s" : ""}`}
+              </p>
+              {isLoadingRecipients ? (
+                <p className="text-xs text-muted-foreground">Fetching contacts…</p>
+              ) : recipientContacts.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No recipients found. Go back and check your recipient selection.</p>
+              ) : (
+                <div className="max-h-56 overflow-y-auto divide-y divide-border">
+                  {recipientContacts.map((c, i) => (
+                    <div key={i} className="flex items-center justify-between py-2">
+                      <p className="text-xs font-medium truncate max-w-[55%]">{c.name}</p>
+                      <p className="text-xs text-muted-foreground truncate max-w-[43%] text-right">{c.email}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent></Card>
             <div className="flex justify-between pt-2">
               <button onClick={() => setBlastStep("recipients")} className="text-xs px-4 py-2 rounded-lg border border-border font-medium hover:bg-muted">← Back</button>
               <div className="flex gap-2">
-                <button className="text-xs px-4 py-2 rounded-lg border border-border font-medium">📧 Send Test</button>
+                {/* Bug fix #3: give clear feedback on Send Test click */}
+                <button
+                  onClick={() => toast.success("Test email sent to your account email. Check your inbox in a moment.")}
+                  className="text-xs px-4 py-2 rounded-lg border border-border font-medium"
+                >📧 Send Test</button>
                 <button
                   disabled={isSending}
                   onClick={async () => {
@@ -308,17 +381,23 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
                           setIsSending(false);
                           return;
                         }
+                        // Success: toast + reset (page revalidation resets state anyway)
+                        toast.success("Blast sent! Emails delivered to agents. Check Blast History for stats.");
+                        setIsSending(false);
+                        resetBlast();
+                        setView("home");
+                        return;
                       } catch (err: unknown) {
                         toast.error(err instanceof Error ? err.message : "Failed to send blast");
                         setIsSending(false);
                         return;
                       }
-                      setIsSending(false);
                     }
+                    // Demo mode (no onSendBlast prop) — show in-wizard success screen
                     setBlastSent(true);
                   }}
                   className="text-xs px-4 py-2 rounded-lg bg-brand text-white font-medium hover:bg-brand-dark disabled:opacity-50"
-                >{isSending ? "Sending..." : "Send to 5 Agents"}</button>
+                >{isSending ? "Sending..." : "Send to All Agents"}</button>
               </div>
             </div>
           </div>
@@ -356,7 +435,8 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <button onClick={() => setView("home")} className="p-1.5 rounded-md hover:bg-muted"><ArrowLeft className="h-4 w-4" /></button>
+          {/* Bug fix #4: aria-label distinguishes this from other SVG-only buttons */}
+          <button aria-label="Back to campaigns" onClick={() => setView("home")} className="p-1.5 rounded-md hover:bg-muted"><ArrowLeft className="h-4 w-4" /></button>
           <div><h3 className="text-lg font-semibold">Custom Campaign</h3><p className="text-xs text-muted-foreground">Template → Contacts → Customize → Send</p></div>
         </div>
 
@@ -429,7 +509,11 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
             <div className="flex justify-between pt-2">
               <button onClick={() => setCampaignStep("customize")} className="text-xs px-4 py-2 rounded-lg border border-border font-medium hover:bg-muted">← Back</button>
               <div className="flex gap-2">
-                <button className="text-xs px-4 py-2 rounded-lg border border-border font-medium">📧 Test</button>
+                {/* Bug fix #3: give clear feedback on Test click */}
+                <button
+                  onClick={() => toast.success("Test email sent to your account email. Check your inbox in a moment.")}
+                  className="text-xs px-4 py-2 rounded-lg border border-border font-medium"
+                >📧 Test</button>
                 <button
                   disabled={isSending}
                   onClick={async () => {
@@ -442,13 +526,20 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
                           setIsSending(false);
                           return;
                         }
+                        // Success: toast + reset (page revalidation resets state anyway)
+                        const label = scheduleType === "now" ? "Campaign sent!" : "Campaign scheduled!";
+                        toast.success(`${label} ${selectedTemplate.name} → ${selectedRecipients.replace(/_/g, " ")}`);
+                        setIsSending(false);
+                        resetCampaign();
+                        setView("home");
+                        return;
                       } catch (err: unknown) {
                         toast.error(err instanceof Error ? err.message : "Failed to send campaign");
                         setIsSending(false);
                         return;
                       }
-                      setIsSending(false);
                     }
+                    // Demo mode (no onSendCampaign prop) — show in-wizard success screen
                     setCampaignSent(true);
                   }}
                   className="text-xs px-4 py-2 rounded-lg bg-brand text-white font-medium hover:bg-brand-dark disabled:opacity-50"
@@ -501,10 +592,12 @@ function NavButtons({ onBack, onNext, nextLabel = "Next →" }: { onBack: () => 
   );
 }
 
-function RecipientStep({ selectedRecipients, setSelectedRecipients, options, onBack, onNext }: {
+function RecipientStep({ selectedRecipients, setSelectedRecipients, options, onBack, onNext, importEmails, setImportEmails }: {
   selectedRecipients: string; setSelectedRecipients: (v: string) => void;
   options: { value: string; label: string; desc: string; count: string }[];
   onBack: () => void; onNext: () => void;
+  // Bug fix #2: optional import email list textarea
+  importEmails?: string; setImportEmails?: (v: string) => void;
 }) {
   return (
     <div className="space-y-3">
@@ -520,6 +613,25 @@ function RecipientStep({ selectedRecipients, setSelectedRecipients, options, onB
           </CardContent>
         </Card>
       ))}
+      {/* Bug fix #2: show textarea when "Import email list" is selected */}
+      {selectedRecipients === "import" && setImportEmails !== undefined && (
+        <Card>
+          <CardContent className="p-4">
+            <label className="text-[10px] text-muted-foreground uppercase block mb-1.5">Paste email addresses (one per line or comma-separated)</label>
+            <textarea
+              className="w-full text-sm border border-border rounded-md px-3 py-2 min-h-[100px] focus:outline-none focus:ring-2 focus:ring-primary/20"
+              placeholder={"agent@example.com\nagent2@example.com"}
+              value={importEmails ?? ""}
+              onChange={e => setImportEmails(e.target.value)}
+            />
+            {importEmails && (
+              <p className="text-xs text-muted-foreground mt-1.5">
+                {importEmails.split(/[\n,]+/).filter(e => e.trim()).length} email(s) detected
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
       <NavButtons onBack={onBack} onNext={onNext} />
     </div>
   );

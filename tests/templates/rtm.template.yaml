@@ -1,0 +1,228 @@
+# Requirements Traceability Matrix (RTM) — Realtors360 CRM
+# Format: REQ-<AREA>-<NNN> with linked test cases
+# Areas: AUTH, CONTACT, LISTING, SHOWING, WORKFLOW, NEWSLETTER, CALENDAR, CONTENT, COMPLIANCE
+
+requirements:
+  # === Authentication & Authorization ===
+  - id: REQ-AUTH-001
+    title: Demo login with email/password
+    priority: P0
+    source: NextAuth v5 config (src/lib/auth.ts)
+    acceptance_criteria:
+      - Demo user can login with demo@realestatecrm.com / demo1234
+      - JWT session created with realtor_id
+      - Redirect to /dashboard on success
+    test_cases:
+      - TC-AUTH-001: Demo login success flow @P0
+      - TC-AUTH-002: Demo login invalid password @P0
+      - TC-AUTH-003: Session JWT contains realtor_id @P0
+
+  - id: REQ-AUTH-002
+    title: Google OAuth login
+    priority: P1
+    source: NextAuth Google provider
+    acceptance_criteria:
+      - Google OAuth redirects to provider
+      - User created/matched in users table
+      - Session established after callback
+    test_cases:
+      - TC-AUTH-004: Google OAuth redirect @P1
+      - TC-AUTH-005: Google callback creates user @P1
+
+  - id: REQ-AUTH-003
+    title: Multi-tenant RLS isolation
+    priority: P0
+    source: src/lib/supabase/tenant.ts
+    acceptance_criteria:
+      - All queries scoped by realtor_id
+      - User A cannot see User B's data
+      - Admin client bypasses RLS for system ops
+    test_cases:
+      - TC-AUTH-006: Tenant isolation on contacts @P0
+      - TC-AUTH-007: Tenant isolation on listings @P0
+      - TC-AUTH-008: Cross-tenant data leak test @P0
+
+  # === Contacts ===
+  - id: REQ-CONTACT-001
+    title: Create contact with CASL consent
+    priority: P0
+    source: src/actions/contacts.ts
+    acceptance_criteria:
+      - Contact created with name, email, phone, type
+      - CASL consent date recorded when given
+      - Speed-to-lead notification triggered
+      - realtor_id auto-set from session
+    test_cases:
+      - TC-CON-001: Create contact happy path @P0
+      - TC-CON-002: Create contact missing required fields @P0
+      - TC-CON-003: Speed-to-lead notification on create @P1
+      - TC-CON-004: CASL consent tracking @P1
+
+  - id: REQ-CONTACT-002
+    title: Contact search and filtering
+    priority: P1
+    source: src/app/api/contacts/route.ts
+    acceptance_criteria:
+      - Search by name, email, phone
+      - Filter by type (buyer/seller/both)
+      - Filter by engagement stage
+      - Results capped at 200
+    test_cases:
+      - TC-CON-005: Search contacts by name @P1
+      - TC-CON-006: Filter contacts by type @P1
+      - TC-CON-007: 200-item cap enforced @P2
+
+  - id: REQ-CONTACT-003
+    title: Send message to contact
+    priority: P1
+    source: src/actions/contacts.ts (sendMessage)
+    acceptance_criteria:
+      - SMS sent via Twilio to contact phone
+      - WhatsApp sent if pref_channel = whatsapp
+      - Communication logged in communications table
+    test_cases:
+      - TC-CON-008: Send SMS to contact @P1
+      - TC-CON-009: Send WhatsApp to contact @P1
+      - TC-CON-010: Communication logged after send @P1
+
+  # === Listings ===
+  - id: REQ-LISTING-001
+    title: Create property listing
+    priority: P0
+    source: src/actions/listings.ts
+    acceptance_criteria:
+      - Listing created with address, property_type, list_price
+      - seller_id FK to contacts table
+      - Status defaults to 'active'
+      - realtor_id auto-set from session
+    test_cases:
+      - TC-LST-001: Create listing happy path @P0
+      - TC-LST-002: Create listing with seller FK @P0
+      - TC-LST-003: Listing status default @P1
+      - TC-LST-004: Create listing missing address @P0
+
+  - id: REQ-LISTING-002
+    title: Listing status transitions
+    priority: P0
+    source: src/actions/listings.ts
+    acceptance_criteria:
+      - Valid transitions: active→conditional→pending→sold
+      - Valid transitions: active→expired, active→withdrawn
+      - Invalid transitions rejected
+    test_cases:
+      - TC-LST-005: Valid status transition active→sold @P0
+      - TC-LST-006: Invalid status transition sold→active @P0
+      - TC-LST-007: Status change audit logged @P1
+
+  # === Showings ===
+  - id: REQ-SHOWING-001
+    title: Request showing appointment
+    priority: P0
+    source: src/actions/showings.ts
+    acceptance_criteria:
+      - Appointment created with listing_id, buyer agent info, start_time
+      - SMS/WhatsApp sent to seller for confirmation
+      - Status set to 'pending'
+    test_cases:
+      - TC-SHW-001: Create showing request @P0
+      - TC-SHW-002: Seller notification sent @P0
+      - TC-SHW-003: Showing status defaults to pending @P0
+
+  - id: REQ-SHOWING-002
+    title: Showing confirmation via webhook
+    priority: P0
+    source: src/app/api/webhooks/twilio/route.ts
+    acceptance_criteria:
+      - YES response confirms showing
+      - NO response denies showing
+      - Lockbox code sent on confirmation
+      - Google Calendar event created on confirmation
+    test_cases:
+      - TC-SHW-004: Twilio YES webhook confirms showing @P0
+      - TC-SHW-005: Twilio NO webhook denies showing @P0
+      - TC-SHW-006: Lockbox code delivered on confirm @P1
+      - TC-SHW-007: Calendar event created on confirm @P1
+
+  # === 8-Phase Workflow ===
+  - id: REQ-WORKFLOW-001
+    title: Phase advancement with validation
+    priority: P0
+    source: src/actions/workflow.ts
+    acceptance_criteria:
+      - Phases advance sequentially (1→2→3...→8)
+      - Phase completion requires all mandatory fields
+      - Audit trail logged for each advancement
+    test_cases:
+      - TC-WF-001: Advance from phase 1 to 2 @P0
+      - TC-WF-002: Skip phase rejected @P0
+      - TC-WF-003: Audit trail on advancement @P1
+
+  - id: REQ-WORKFLOW-002
+    title: FINTRAC identity collection (Phase 1)
+    priority: P0
+    source: src/components/workflow/Phase1SellerIntake.tsx
+    acceptance_criteria:
+      - Seller identity stored in seller_identities table
+      - ID type, number, expiry captured
+      - DOB and citizenship recorded
+    test_cases:
+      - TC-WF-004: FINTRAC identity save @P0
+      - TC-WF-005: FINTRAC missing required fields @P0
+
+  # === Newsletters ===
+  - id: REQ-NEWSLETTER-001
+    title: AI newsletter generation
+    priority: P1
+    source: src/actions/newsletters.ts
+    acceptance_criteria:
+      - Claude AI generates newsletter content
+      - Content passes quality pipeline (7 dimensions)
+      - Newsletter saved in draft status
+    test_cases:
+      - TC-NL-001: Generate newsletter via AI @P1
+      - TC-NL-002: Quality pipeline scoring @P1
+      - TC-NL-003: Newsletter saved as draft @P1
+
+  - id: REQ-NEWSLETTER-002
+    title: Newsletter send with consent check
+    priority: P0
+    source: src/actions/newsletters.ts
+    acceptance_criteria:
+      - Only contacts with CASL consent receive emails
+      - Resend API called for delivery
+      - Newsletter events tracked (sent, delivered, opened)
+    test_cases:
+      - TC-NL-004: CASL consent gate @P0
+      - TC-NL-005: Resend API called @P1
+      - TC-NL-006: Event tracking on send @P1
+
+  # === Calendar ===
+  - id: REQ-CALENDAR-001
+    title: Google Calendar event sync
+    priority: P1
+    source: src/actions/calendar.ts
+    acceptance_criteria:
+      - Events fetched from Google Calendar API
+      - Busy times returned for availability check
+      - Token refresh handled transparently
+    test_cases:
+      - TC-CAL-001: Fetch calendar events @P1
+      - TC-CAL-002: Busy time calculation @P1
+      - TC-CAL-003: Token refresh on expiry @P2
+
+# === Coverage Summary ===
+coverage:
+  total_requirements: 14
+  total_test_cases: 42
+  by_priority:
+    P0: 22
+    P1: 16
+    P2: 4
+  by_area:
+    AUTH: 8
+    CONTACT: 10
+    LISTING: 7
+    SHOWING: 7
+    WORKFLOW: 5
+    NEWSLETTER: 6
+    CALENDAR: 3

@@ -95,4 +95,69 @@ case "$TIER" in
         ;;
 esac
 
+# --- Wave 2a: For CODING:feature medium/large, require usecases/<slug>.md before Edit/Write on src/** ---
+TYPE=$(jq -r '.type // empty' "$TASK_FILE" 2>/dev/null)
+if [[ "$TYPE" == "CODING:feature" && ("$TIER" == "medium" || "$TIER" == "large") ]]; then
+    if [[ "$TOOL_NAME" == "Edit" || "$TOOL_NAME" == "Write" ]]; then
+        case "$FILE_PATH" in
+            */src/*)
+                SLUG=$(jq -r '.slug // empty' "$TASK_FILE" 2>/dev/null)
+                if [[ -z "$SLUG" ]]; then
+                    echo "BLOCKED: CODING:feature at $TIER tier requires 'slug' field in current-task.json (kebab-case)." >&2
+                    exit 2
+                fi
+                USECASE_FILE=""
+                for candidate in \
+                    "$CLAUDE_PROJECT_DIR/usecases/$SLUG.md" \
+                    "$PROJECT_DIR/usecases/$SLUG.md"; do
+                    if [[ -f "$candidate" ]]; then
+                        USECASE_FILE="$candidate"
+                        break
+                    fi
+                done
+                if [[ -z "$USECASE_FILE" ]]; then
+                    echo "BLOCKED: CODING:feature at $TIER tier requires usecases/$SLUG.md BEFORE editing src/**." >&2
+                    echo "" >&2
+                    echo "Copy usecases/TEMPLATE.md to usecases/$SLUG.md and fill in 3 scenarios." >&2
+                    echo "Then set phases.usecases_written=true in current-task.json." >&2
+                    exit 2
+                fi
+                SCENARIO_COUNT=$(grep -cE "^###\s+Scenario\s+[0-9]+:" "$USECASE_FILE" 2>/dev/null || echo "0")
+                if [[ "$SCENARIO_COUNT" -lt 3 ]]; then
+                    echo "BLOCKED: usecases/$SLUG.md has only $SCENARIO_COUNT scenario(s). Minimum 3 required." >&2
+                    echo "" >&2
+                    echo "Scenarios must be formatted as '### Scenario N: <description>'. See usecases/TEMPLATE.md." >&2
+                    exit 2
+                fi
+                ;;
+        esac
+    fi
+fi
+
+# --- Wave 2c: For CODING:feature, require existing_search before Edit/Write on src/** ---
+if [[ "$TYPE" == "CODING:feature" ]]; then
+    if [[ "$TOOL_NAME" == "Edit" || "$TOOL_NAME" == "Write" ]]; then
+        case "$FILE_PATH" in
+            */src/*)
+                SEARCH_COUNT=$(jq -r '.existing_search | length // 0' "$TASK_FILE" 2>/dev/null)
+                if [[ "$SEARCH_COUNT" -lt 3 ]]; then
+                    echo "BLOCKED: CODING:feature requires existing_search to contain 3+ entries before editing src/**." >&2
+                    echo "" >&2
+                    echo "Before coding, search the codebase for related capabilities. For each search:" >&2
+                    echo "  1. Run grep/glob to find existing code that might do what you're about to build" >&2
+                    echo "  2. Add an entry to existing_search in current-task.json:" >&2
+                    echo "     { \"query\": \"<search term>\", \"matches_count\": N, \"decision\": \"extend <file>|create new because <reason>\" }" >&2
+                    exit 2
+                fi
+
+                # Sanity check: warn if all queries returned 0 matches
+                TOTAL_MATCHES=$(jq -r '[.existing_search[].matches_count] | add // 0' "$TASK_FILE" 2>/dev/null)
+                if [[ "$TOTAL_MATCHES" == "0" ]]; then
+                    echo "WARNING: All existing_search entries returned 0 matches. Did you search thoroughly?" >&2
+                fi
+                ;;
+        esac
+    fi
+fi
+
 exit 0
