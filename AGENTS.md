@@ -2,7 +2,7 @@
 
 **Policy layer for Realtors360.** Loaded by AI coding agents; read by humans in reviews and onboarding.
 
-**Version:** 0.6 | **Last verified:** 2026-04-21 | **Changelog:** v0.5→0.6: RFC 2119 STOP IF on all HCs, updated enforcement labels post-Phase 1 patches + Waves 1-2, added FQ gates, violation logging.
+**Version:** 0.7 | **Last verified:** 2026-04-21 | **Changelog:** v0.6→0.7: HC grouping into 5 principles, HC-3/HC-10/HC-16 enforcers added (review-pr.mjs checks 11-13), known limitations section. v0.5→0.6: RFC 2119 STOP IF, FQ gates, violation logging.
 
 ---
 
@@ -15,16 +15,26 @@
 - `[runtime]` — dev/commit-time hooks cannot enforce
 - `[none]` — no enforcer; rule is aspirational
 
-**Enforcement baseline at v0.6:**
+**Enforcement baseline at v0.7:**
 
 | Status | Count | Rules |
 |--------|-------|-------|
 | Fully blocks | 8 | HC-7, HC-9, HC-12, HC-18, FQ-1, FQ-2, FQ-3, FQ-5 |
 | Partially blocks | 3 | HC-1, HC-2, HC-8 |
-| Warnings only | 0 | — |
+| Warns (non-blocking) | 3 | HC-3, HC-10, HC-16 |
 | Advisory | 5 | HC-4, HC-6, HC-14, HC-15, HC-17 |
 | Runtime-dependent | 1 | HC-5 |
-| No enforcer | 5 | HC-3, HC-10, HC-11, HC-13, HC-16 |
+| No enforcer | 2 | HC-11, HC-13 |
+
+**Principle groups:**
+
+| Principle | Rules | Theme |
+|-----------|-------|-------|
+| **Safety** | HC-7, HC-8, HC-9, HC-INJ | Git safety, secret protection, destructive ops |
+| **Security** | HC-4, HC-11, HC-14 | Tenant isolation, PII protection, RLS |
+| **Quality** | HC-1, HC-2, HC-13, HC-15 | Type safety, design system, citations, analysis depth |
+| **Compliance** | HC-5, HC-6, HC-12, HC-18 | CASL, FINTRAC, tenant scoping, doc freshness |
+| **Process** | HC-3, HC-10, HC-16, HC-17 | Server Actions, Zod validation, file size, task decomposition |
 
 ---
 
@@ -187,3 +197,20 @@ Enables pattern detection: "agent skips existing_search in 40% of CODING:feature
 - Every label is traceable to hook line, script check, or config setting.
 - When hooks, scripts, or config change, this file MUST be updated within the same PR.
 - This file is authoritative over `docs/reference/agent-playbook.md` where they conflict.
+
+---
+
+## Known limitations
+
+What this framework does NOT cover. Honest limits beat hidden gaps.
+
+| Area | Gap | Impact | Reference |
+|------|-----|--------|-----------|
+| **HC-11 enforcement** | No scanner checks AI prompts for PII at dev time | PII could reach Anthropic/Kling | Self-enforced only |
+| **HC-13 enforcement** | Citation verifier runs at PR time, not at commit time | Invalid citations possible in WIP | `verify-citations.mjs` in docs-gate |
+| **Compliance log integrity** | Agent-writable, not append-only at filesystem level | Log entries can be forged | Needs separate audit trail |
+| **Phase-transition artifacts** | Phases tracked in `current-task.json` but no JSONL transition log | Cannot audit phase sequence after task completes | Deferred to v0.8 |
+| **Staging environment** | No staging DB — migrations run directly on live | Bad migration = production data loss (PITR is backstop) | `docs/ENVIRONMENT_SEPARATION.md` |
+| **Performance testing** | No load tests, no perf regression in CI | Performance issues discovered by users, not CI | `docs/PERFORMANCE_BUDGETS.md` |
+| **Error tracking** | No Sentry/APM — errors visible only in Vercel/Render logs | Silent failures in production | `docs/OBSERVABILITY.md` |
+| **Scope enforcement** | `affected_files[]` gate is warning-only, not blocking | Agent can edit outside declared scope | Upgrade to block in v0.8 |
