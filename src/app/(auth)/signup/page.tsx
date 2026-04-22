@@ -158,7 +158,9 @@ export default function SignupPage() {
       });
 
       if (signInResult?.ok) {
-        router.push(hasTeam ? "/onboarding?create_team=true" : "/onboarding");
+        // Redirect to email verification — mandatory before onboarding
+        const verifyUrl = hasTeam ? "/verify?next=/onboarding?create_team=true" : "/verify";
+        router.push(verifyUrl);
       } else {
         // Account created but auto-sign-in failed — send to login
         router.push("/login");

@@ -25,9 +25,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${appUrl}/verify?error=not_found`);
   }
 
-  // Already verified — skip to phone
+  // Already verified — skip to onboarding/dashboard
   if (user.email_verified) {
-    return NextResponse.redirect(`${appUrl}/verify/phone`);
+    return NextResponse.redirect(`${appUrl}/onboarding`);
   }
 
   // Find valid (non-expired) token
@@ -93,6 +93,6 @@ export async function GET(request: NextRequest) {
     sendDripEmail(user.id, normalizedEmail, verifiedUser?.name || "", 0).catch(console.error);
   });
 
-  // Redirect to phone verification
-  return NextResponse.redirect(`${appUrl}/verify/phone`);
+  // Redirect to onboarding (email verified → continue signup flow)
+  return NextResponse.redirect(`${appUrl}/onboarding`);
 }
