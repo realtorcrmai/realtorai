@@ -922,27 +922,97 @@ export async function sendNewsletter(newsletterId: string, realtorApproved: bool
       console.error('[newsletter] Quality pipeline failed, continuing with send:', qualityErr instanceof Error ? qualityErr.message : qualityErr);
     }
 
-    const result = await validatedSend({
-      newsletterId,
-      contactId: contact.id,
-      contactName: contact.name,
-      contactEmail: contact.email,
-      contactType: contact.type || "buyer",
-      preferredAreas,
-      budgetMin,
-      budgetMax,
-      subject: finalSubject,
-      htmlBody: finalHtml,
-      emailType: newsletter.email_type,
-      // If realtor manually approved, treat as autonomous (trust level 3) to bypass trust gate re-queuing
-      trustLevel: realtorApproved ? 3 : trustLevel,
-      lastSubjects,
-      journeyPhase,
-      // Skip quality gate when realtor explicitly approved — they've reviewed the content themselves
-      skipQualityScore: isGreeting || realtorApproved,
-      // Skip frequency/gap/quiet-hours compliance when realtor explicitly approved from queue
-      skipCompliance: realtorApproved,
-    });
+    // ── REGENERATION LOOP — retry with quality feedback if scorer says "regenerate" ──
+    const MAX_REGEN_ATTEMPTS = 1; // 1 retry = 2 total attempts
+    let regenAttempt = 0;
+    let currentSubject = finalSubject;
+    let currentHtml = finalHtml;
+    let result: Awaited<ReturnType<typeof validatedSend>>;
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      result = await validatedSend({
+        newsletterId,
+        contactId: contact.id,
+        contactName: contact.name,
+        contactEmail: contact.email,
+        contactType: contact.type || "buyer",
+        preferredAreas,
+        budgetMin,
+        budgetMax,
+        subject: currentSubject,
+        htmlBody: currentHtml,
+        emailType: newsletter.email_type,
+        trustLevel: realtorApproved ? 3 : trustLevel,
+        lastSubjects,
+        journeyPhase,
+        skipQualityScore: isGreeting || realtorApproved || regenAttempt >= MAX_REGEN_ATTEMPTS,
+        skipCompliance: realtorApproved,
+      });
+
+      // If not a regenerate action, or we've exhausted retries, break out
+      if (result.action !== "regenerate" || regenAttempt >= MAX_REGEN_ATTEMPTS) break;
+      regenAttempt++;
+
+      // Extract quality feedback for the AI
+      const qualityIssues = result.validationResult?.qualityScore?.issues || [];
+      const qualityAvg = result.validationResult?.qualityScore?.average || 0;
+      console.log(`[newsletter] Regenerating (attempt ${regenAttempt}): score=${qualityAvg}, issues=${qualityIssues.join("; ")}`);
+
+      try {
+        // Rebuild AI context from stored newsletter data
+        const storedAiContext = (newsletter.ai_context as NewsletterContext) || {};
+        const regenContext: NewsletterContext = {
+          ...storedAiContext,
+          contact: storedAiContext.contact || {
+            name: contact.name,
+            firstName: contact.name.split(" ")[0],
+            type: contact.type as "buyer" | "seller" | "partner",
+            email: contact.email,
+          },
+          realtor: storedAiContext.realtor || { name: "Your Realtor", brokerage: "", phone: "", email: "" },
+          emailType: newsletter.email_type,
+          journeyPhase: journeyPhase || newsletter.journey_phase || "lead",
+          // Inject quality feedback so AI improves the content
+          additionalContext: `QUALITY FEEDBACK — your previous draft scored ${qualityAvg}/10. Issues: ${qualityIssues.join("; ")}. Write a significantly better version that addresses these issues. Be more specific, personal, and valuable.`,
+        };
+
+        const regenContent = await generateNewsletterContent(regenContext) as Record<string, any>;
+        const intelligence = (contact.newsletter_intelligence as Record<string, unknown>) || {};
+        const preferredArea0 = (intelligence.preferred_areas as string[] | undefined)?.[0] || undefined;
+        const engScore = typeof intelligence.engagement_score === "number" ? intelligence.engagement_score : 0;
+
+        const regenHtml = await renderEmailTemplate(
+          newsletter.email_type,
+          regenContent,
+          await getRealtorBranding(realtorId),
+          contact.name,
+          contact.id,
+          preferredArea0,
+          journeyPhase || newsletter.journey_phase || "lead",
+          engScore,
+        );
+
+        // Update newsletter with regenerated content
+        currentSubject = regenContent.subject || currentSubject;
+        currentHtml = regenHtml;
+        await tc.from("newsletters").update({
+          subject: currentSubject,
+          html_body: currentHtml,
+          status: "approved", // Reset so validatedSend can claim it again
+          ai_context: {
+            ...((newsletter.ai_context as object) || {}),
+            regenerated: true,
+            regen_attempt: regenAttempt,
+            previous_quality_score: qualityAvg,
+            previous_quality_issues: qualityIssues,
+          },
+        }).eq("id", newsletterId);
+      } catch (regenErr) {
+        console.error("[newsletter] Regeneration failed, proceeding with original:", regenErr instanceof Error ? regenErr.message : regenErr);
+        break;
+      }
+    }
 
     // validatedSend handles status updates for sent/blocked/deferred/regenerate internally.
     // We only need to handle the communications log and rollback for non-sent outcomes.
