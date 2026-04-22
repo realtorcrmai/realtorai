@@ -653,3 +653,5 @@ Every new feature MUST include all of the following before it is considered comp
 <!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
 
 <!-- Last reviewed: 2026-04-21 — AGENTS.md v0.6 + violation logging -->
+
+<!-- Last reviewed: 2026-04-21 — team WIP session artifacts -->

@@ -162,3 +162,5 @@ Maintain a running table in this doc of all active and completed deprecations:
 | `FLAG_PROCESS_WORKFLOWS` | Config flag | — | After 60-day stability | Not started |
 
 Add a row here when starting any deprecation. Update status as it progresses.
+
+<!-- Last reviewed: 2026-04-21 — team WIP session artifacts -->

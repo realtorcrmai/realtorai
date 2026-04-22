@@ -376,3 +376,5 @@ if (!check.allowed) return { error: check.reason };
 <!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
 
 <!-- Last reviewed: 2026-04-22 — team management PR -->
+
+<!-- Last reviewed: 2026-04-21 — team WIP session artifacts -->
