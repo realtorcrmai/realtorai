@@ -61,16 +61,16 @@ export default async function DashboardPage() {
     tc.raw.from("users").select("onboarding_persona, onboarding_experience").eq("id", tc.realtorId).single(),
   ]);
 
-  const activeListingIds = (pipelineListings ?? []).filter((l: any) => l.status === "active");
+  const activeListingIds = (pipelineListings ?? []).filter((l: Record<string, unknown>) => l.status === "active");
   const requiredTypes = ["FINTRAC", "DORTS", "PDS"];
-  const listingsWithMissing = activeListingIds.filter((listing: any) => {
-    const docs = (allDocs ?? []).filter((d: any) => d.listing_id === listing.id);
-    const docTypes = docs.map((d: any) => d.doc_type);
-    return requiredTypes.some((t: any) => !docTypes.includes(t));
+  const listingsWithMissing = activeListingIds.filter((listing: Record<string, unknown>) => {
+    const docs = (allDocs ?? []).filter((d: Record<string, unknown>) => d.listing_id === listing.id);
+    const docTypes = docs.map((d: Record<string, unknown>) => d.doc_type);
+    return requiredTypes.some((t) => !docTypes.includes(t));
   });
 
-  const pendingTasks = (tasks ?? []).filter((t: any) => t.status === "pending").length;
-  const inProgressTasks = (tasks ?? []).filter((t: any) => t.status === "in_progress").length;
+  const pendingTasks = (tasks ?? []).filter((t: Record<string, unknown>) => t.status === "pending").length;
+  const inProgressTasks = (tasks ?? []).filter((t: Record<string, unknown>) => t.status === "in_progress").length;
   const openTasksCount = pendingTasks + inProgressTasks;
 
   const PIPELINE_STAGES = [
@@ -135,47 +135,48 @@ export default async function DashboardPage() {
     newLeadsToday: newLeadsCount ?? 0,
   };
 
-  const clientTasks = (tasks ?? []).map((t: any) => ({
+  type R = Record<string, unknown>;
+  const clientTasks = (tasks ?? []).map((t: R) => ({
     id: t.id, title: t.title, status: t.status, priority: t.priority, category: t.category, due_date: t.due_date,
   }));
 
   // Overdue tasks: due_date < today and not completed
   const todayStr = new Date().toISOString().slice(0, 10);
   const overdueTasks = (tasks ?? []).filter(
-    (t: any) => t.due_date && t.due_date < todayStr && t.status !== "completed"
+    (t: R) => t.due_date && (t.due_date as string) < todayStr && t.status !== "completed"
   ).length;
 
   // Hot leads: contacts with engagement_score >= 60 in newsletter_intelligence
-  const hotLeadsCount = (pipelineContacts ?? []).filter((c: any) => {
+  const hotLeadsCount = (pipelineContacts ?? []).filter((c: R) => {
     const intel = c.newsletter_intelligence;
     if (!intel || typeof intel !== "object") return false;
-    return (intel as any).engagement_score >= 60;
+    return Number((intel as R).engagement_score ?? 0) >= 60;
   }).length;
 
   // Build activity feed from communications + newsletter_events
-  const commFeedItems: FeedItem[] = (recentComms ?? []).map((c: any) => {
-    const contactName = c.contacts?.name ?? "Unknown";
+  const commFeedItems: FeedItem[] = (recentComms ?? []).map((c: R) => {
+    const contactName = (c.contacts as R)?.name ?? "Unknown";
     const channelIcon = c.channel === "email" ? "\uD83D\uDCE7" : c.channel === "sms" ? "\uD83D\uDCF1" : c.channel === "whatsapp" ? "\uD83D\uDCAC" : "\uD83D\uDCE8";
     return {
       id: `comm-${c.id}`,
       icon: channelIcon,
-      title: `${c.direction === "outbound" ? "Sent" : "Received"} ${c.channel ?? "message"}`,
-      subtitle: `${contactName}: ${(c.body ?? "").slice(0, 80)}`,
-      timestamp: c.created_at,
+      title: `${c.direction === "outbound" ? "Sent" : "Received"} ${(c.channel as string) ?? "message"}`,
+      subtitle: `${contactName}: ${((c.body as string) ?? "").slice(0, 80)}`,
+      timestamp: c.created_at as string,
       href: c.contact_id ? `/contacts/${c.contact_id}` : "/contacts",
     };
   });
 
-  const eventFeedItems: FeedItem[] = (recentEvents ?? []).map((e: any) => {
-    const nl = e.newsletters as any;
-    const contactName = nl?.contacts?.name ?? "Subscriber";
+  const eventFeedItems: FeedItem[] = (recentEvents ?? []).map((e: R) => {
+    const nl = e.newsletters as R | null;
+    const contactName = (nl?.contacts as R)?.name ?? "Subscriber";
     const eventIcon = e.event_type === "open" ? "\uD83D\uDC40" : e.event_type === "click" ? "\uD83D\uDD17" : e.event_type === "bounce" ? "\u26A0\uFE0F" : "\uD83D\uDCE9";
     return {
       id: `evt-${e.id}`,
       icon: eventIcon,
       title: `Email ${e.event_type}`,
-      subtitle: `${contactName} — ${nl?.subject ?? "Newsletter"}`,
-      timestamp: e.created_at,
+      subtitle: `${contactName} — ${(nl?.subject as string) ?? "Newsletter"}`,
+      timestamp: e.created_at as string,
       href: "/newsletters/analytics",
     };
   });
@@ -185,11 +186,11 @@ export default async function DashboardPage() {
     .slice(0, 15);
 
   // Pipeline deals — gracefully handle missing table
-  const pipelineDeals = (pipelineDealsRaw ?? []).map((d: any) => ({
+  const pipelineDeals = (pipelineDealsRaw ?? []).map((d: R) => ({
     id: d.id,
-    name: d.name ?? "Untitled Deal",
-    stage: d.stage ?? "new",
-    value: d.value ?? 0,
+    name: (d.name as string) ?? "Untitled Deal",
+    stage: (d.stage as string) ?? "new",
+    value: (d.value as number) ?? 0,
     contacts: d.contacts ?? null,
   }));
 
