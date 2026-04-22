@@ -3099,6 +3099,16 @@ Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. Thi
 **Expected:** Returns `{ team_name, inviter_name, inviter_email }` for valid pending invites. Returns 404 for expired/invalid tokens. No auth required (public endpoint for invite acceptance flow).
 **Priority:** P1
 
+#### TEAM-005: GET /api/team/activity
+**Steps:** Send authenticated GET request with `?limit=10` query param.
+**Expected:** Returns array of team_activity_log entries for current user's team. Returns 400 if not on a team. Respects limit param.
+**Priority:** P2
+
+#### TEAM-006: GET /api/team-members
+**Steps:** Send authenticated GET request.
+**Expected:** Returns team member list with id, name, email, role, is_current. Solo users get array with just themselves. Team users get all active members.
+**Priority:** P1
+
 #### CRON-JOURNEY-001: POST /api/cron/process-journeys
 **Steps:** Trigger with Bearer CRON_SECRET header.
 **Expected:** Advances eligible contact journeys to next phase. Rejects missing/invalid token.
