@@ -3109,6 +3109,11 @@ Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. Thi
 **Expected:** Returns team member list with id, name, email, role, is_current. Solo users get array with just themselves. Team users get all active members.
 **Priority:** P1
 
+#### TEAM-007: GET /api/team/audit-log
+**Steps:** Send authenticated GET request as owner/admin with `?limit=20`.
+**Expected:** Returns array of audit_log entries for team. Returns 403 for agent/assistant roles. Returns 400 if not on a team.
+**Priority:** P2
+
 #### CRON-JOURNEY-001: POST /api/cron/process-journeys
 **Steps:** Trigger with Bearer CRON_SECRET header.
 **Expected:** Advances eligible contact journeys to next phase. Rejects missing/invalid token.

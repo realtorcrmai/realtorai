@@ -14,6 +14,7 @@ import type { TeamRole, TeamMemberWithUser } from "@/types/team";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { OffboardingDialog } from "@/components/team/OffboardingDialog";
+import { AuditLogViewer } from "@/components/team/AuditLogViewer";
 
 interface InviteData {
   id: string;
@@ -404,6 +405,13 @@ export default function TeamSettingsClient({
           </section>
         )}
       </div>
+
+      {/* Audit Log — owner/admin only */}
+      {isAdmin && (
+        <div className="mt-6">
+          <AuditLogViewer />
+        </div>
+      )}
 
       {/* Offboarding Dialog */}
       {offboardUserId && offboardMember && (

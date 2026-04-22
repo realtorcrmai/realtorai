@@ -1,5 +1,5 @@
 <!-- docs-audit: src/lib/*, src/app/api/* -->
-
+<!-- docs-audit-reviewed: 2026-04-22 -->
 # Observability Baseline
 
 **Last reviewed:** 2026-04-21
@@ -90,3 +90,5 @@ function log(level: LogLevel, message: string, meta?: Record<string, unknown>) {
 - [ ] Replace top 10 `console.log` statements with structured logger
 
 <!-- Last reviewed: 2026-04-21 — team WIP session artifacts -->
+
+<!-- team-management: reviewed 2026-04-22 — team analytics widget, audit log, offboarding wizard added -->
