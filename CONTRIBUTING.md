@@ -86,7 +86,7 @@ npm run dev
 
 | Service | Port | Start command | Required? |
 |---------|------|---------------|-----------|
-| **CRM** (Next.js) | 3000 | `npm run dev` | Yes — core app |
+| **CRM** (Next.js) | 3000 | `npm run dev` (uses `NODE_OPTIONS='--max-old-space-size=4096'`) | Yes — core app |
 | **Newsletter service** (Express) | 8080 | `cd realtors360-newsletter && npm run dev` | Only for newsletter event processing |
 | **Voice agent** (Python) | 8768 | `cd voice_agent && python3 server/main.py` | Only for voice features |
 | **Form server** (Python) | 8767 | `cd forms && python3 server.py` | Only for BCREA form generation |

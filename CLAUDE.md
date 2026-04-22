@@ -181,7 +181,7 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 │   │   ├── templates.ts           # Email template CRUD, preview, duplicate
 │   │   ├── segments.ts            # Contact segment builder + bulk enroll
 │   │   ├── notifications.ts      # Notification CRUD, mark read, dismiss
-│   │   └── team.ts               # Team CRUD, invites, memberships
+│   │   └── team.ts               # Team CRUD, invites (accept/decline), memberships
 │   ├── emails/                    # React Email templates
 │   │   ├── BaseLayout.tsx         # Shared wrapper (branding, dark mode, unsubscribe)
 │   │   ├── NewListingAlert.tsx    # Property listing cards
