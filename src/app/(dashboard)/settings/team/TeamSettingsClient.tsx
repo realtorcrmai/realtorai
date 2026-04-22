@@ -52,7 +52,7 @@ export default function TeamSettingsClient({
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Email autocomplete for existing portal users
-  const [suggestions, setSuggestions] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [suggestions, setSuggestions] = useState<{ id: string; name: string; email: string; hasTeam: boolean }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestRef = useRef<HTMLDivElement>(null);
 
@@ -241,8 +241,10 @@ export default function TeamSettingsClient({
                           <p className="text-sm font-medium truncate">{u.name || "No name"}</p>
                           <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                         </div>
-                        <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-success/10 text-success font-medium shrink-0">
-                          Existing user
+                        <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${
+                          u.hasTeam ? "bg-amber-100 text-amber-700" : "bg-success/10 text-success"
+                        }`}>
+                          {u.hasTeam ? "On another team" : "Existing user"}
                         </span>
                       </button>
                     ))}

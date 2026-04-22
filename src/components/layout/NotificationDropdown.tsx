@@ -237,8 +237,20 @@ export function NotificationDropdown() {
                             e.preventDefault();
                             try {
                               const { declineInvite } = await import("@/actions/team");
-                              await declineInvite(n.related_id!);
-                              handleMarkRead(n.id);
+                              const result = await declineInvite(n.related_id!);
+                              if (result.error) {
+                                alert(result.error);
+                              } else {
+                                handleMarkRead(n.id);
+                                // Update notification body to show declined
+                                setNotifications((prev) =>
+                                  prev.map((notif) =>
+                                    notif.id === n.id
+                                      ? { ...notif, body: "Invite declined.", is_read: true }
+                                      : notif
+                                  )
+                                );
+                              }
                             } catch {
                               alert("Failed to decline invite");
                             }
