@@ -1240,7 +1240,7 @@ export async function sendListingBlast(listingId: string, _template: string) {
     const { sendBatchEmails } = await import("@/lib/resend");
     const emailPayloads = emails.map((to: string) => ({
       to, subject, html,
-      from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
+      from: process.env.RESEND_FROM_EMAIL || "hello@magnate360.com",
       tags: [{ name: "type", value: "listing_blast" }, { name: "listing_id", value: listingId }],
     }));
     const result = await sendBatchEmails(emailPayloads);
