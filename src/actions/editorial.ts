@@ -645,7 +645,7 @@ export async function sendEdition(
     }
 
     const subject = edition.subject_a ?? edition.title;
-    const fromEmail = process.env.RESEND_FROM_EMAIL ?? 'hello@realtors360.ai';
+    const fromEmail = process.env.RESEND_FROM_EMAIL ?? 'hello@magnate360.com';
     const resendApiKey = process.env.RESEND_API_KEY ?? '';
 
     // 3. Test send — single address, no status update

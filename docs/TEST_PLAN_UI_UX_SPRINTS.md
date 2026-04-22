@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 --task-mgmt -->
 <!-- docs-audit: src/components/contacts/**, src/components/listings/**, src/components/showings/**, src/app/(dashboard)/** -->
 # Test Plan: UI/UX Sprint Changes
 
@@ -1114,6 +1115,29 @@
 - **Expected:** Skeleton loading states appear and are replaced by real content. No stuck loading states. No error boundaries triggered. Pages render correctly after navigation.
 - **Automated:** Yes (E2E)
 
+### SP-101a: Decline team invite removes invite from list
+- **Category:** Regression Tests
+- **Priority:** P1
+- **Precondition:** Logged in, user has a pending team invite
+- **Steps:**
+  1. Navigate to /settings/team
+  2. Locate the pending invite notification
+  3. Click "Decline"
+- **Expected:** Invite is removed from the pending list. No error toast. Team membership is not created. UI updates immediately without full page reload.
+- **Automated:** Yes (Playwright)
+
+### SP-101b: Inline confirm for team member removal
+- **Category:** Regression Tests
+- **Priority:** P1
+- **Precondition:** Logged in as team owner, team has at least 1 other member
+- **Steps:**
+  1. Navigate to /settings/team
+  2. Click the remove/delete button next to a team member
+  3. Observe inline confirmation prompt
+  4. Confirm removal
+- **Expected:** An inline confirmation appears (not a modal dialog). Confirming removes the member from the team. Cancelling keeps the member. Success toast displayed after removal.
+- **Automated:** Yes (Playwright)
+
 ### SP-101: Print stylesheet does not affect screen display
 - **Category:** Regression Tests
 - **Priority:** P2
@@ -1152,3 +1176,9 @@
 ### Automation Coverage
 - **Automated (Playwright + Server Actions):** 81 of 101 test cases (80%)
 - **Manual only:** 20 of 101 test cases (20%) — screen reader tests, visual alignment checks, performance edge cases
+
+<!-- Last reviewed: 2026-04-21 -->
+
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->
+
+<!-- Last reviewed: 2026-04-21 — AGENTS.md v0.6 + violation logging -->

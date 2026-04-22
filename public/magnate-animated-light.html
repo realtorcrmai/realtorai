@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Magnate</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #F8F6F2; /* warm near-white */
+      overflow: hidden;
+    }
+
+    /* ── Ambient background (subtle warm tint) ── */
+    .ambient {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+    .ambient::before {
+      content: '';
+      position: absolute;
+      top: 25%; left: 35%;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(228,195,120,0.08) 0%, transparent 60%);
+      animation: pulse-glow 5s ease-in-out infinite;
+    }
+    .ambient::after {
+      content: '';
+      position: absolute;
+      bottom: 20%; right: 30%;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(138,106,46,0.05) 0%, transparent 60%);
+      animation: pulse-glow 7s ease-in-out infinite reverse;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50%      { transform: scale(1.2); opacity: 0.8; }
+    }
+
+    /* ── Scene ── */
+    .scene {
+      position: relative;
+      z-index: 1;
+      width: 720px;
+      height: 360px;
+      perspective: 1200px;
+    }
+
+    /* ── 3D floating wordmark ── */
+    .word-3d {
+      position: relative;
+      width: 100%;
+      height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-style: preserve-3d;
+      animation:
+        entrance 1.8s cubic-bezier(0.16, 1, 0.3, 1) both,
+        float 6s ease-in-out 1.8s infinite;
+    }
+
+    @keyframes entrance {
+      from { opacity: 0; transform: translateY(80px) rotateX(30deg) rotateY(-10deg) scale(0.6); }
+      to   { opacity: 1; transform: translateY(0) rotateX(0deg) rotateY(0deg) scale(1); }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotateX(2deg) rotateY(0deg) rotateZ(0deg); }
+      25%  { transform: translateY(-10px) rotateX(0deg) rotateY(3deg) rotateZ(0.4deg); }
+      50%  { transform: translateY(-6px) rotateX(-2deg) rotateY(0deg) rotateZ(0deg); }
+      75%  { transform: translateY(-12px) rotateX(0deg) rotateY(-3deg) rotateZ(-0.4deg); }
+    }
+
+    .wordmark {
+      position: relative;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Helvetica Neue", Arial, sans-serif;
+      font-weight: 800;
+      font-size: 142px;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      text-transform: uppercase;
+      transform-style: preserve-3d;
+    }
+
+    /* Layer 1 — deeper bronze extrusion (no dark bg to contrast, so depth must be darker) */
+    .word-back {
+      position: absolute;
+      inset: 0;
+      color: #3a2806;
+      text-shadow:
+        1px 1px 0 #5e4615,
+        2px 2px 0 #6a4f1a,
+        3px 3px 0 #755820,
+        4px 4px 0 #7d5f24,
+        5px 5px 0 #6a4f1a,
+        6px 6px 0 #5e4615,
+        7px 7px 0 #4a350a,
+        8px 8px 0 #3a2806,
+        9px 9px 0 #2a1e04,
+        10px 10px 0 #1a1303,
+        11px 11px 0 #0a0a02,
+        12px 12px 28px rgba(0, 0, 0, 0.3);
+      z-index: 1;
+    }
+
+    /* Layer 2 — gold gilt face (same gradient, slightly deeper stops for white bg legibility) */
+    .word-face {
+      position: relative;
+      background: linear-gradient(
+        168deg,
+        #FFE9A8 0%,
+        #F5D48C 15%,
+        #E8BE70 35%,
+        #C69A4A 60%,
+        #8A6A2E 85%,
+        #5E4615 100%
+      );
+      -webkit-background-clip: text;
+              background-clip: text;
+      -webkit-text-fill-color: transparent;
+              color: transparent;
+      z-index: 2;
+      transition: filter 0.5s ease;
+      filter:
+        drop-shadow(0 1px 0 rgba(255, 250, 220, 0.3))
+        drop-shadow(0 2px 4px rgba(90, 65, 25, 0.15));
+    }
+
+    /* Layer 3 — dual-band glare sweep (brighter since it competes with a light bg) */
+    .word-shine {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(
+          105deg,
+          transparent 18%,
+          rgba(255, 240, 180, 0.25) 26%,
+          rgba(255, 245, 200, 0.35) 30%,
+          rgba(255, 240, 180, 0.25) 34%,
+          transparent 40%,
+          transparent 44%,
+          rgba(255, 245, 200, 0.5) 48%,
+          rgba(255, 255, 240, 0.85) 50%,
+          rgba(255, 245, 200, 0.55) 52%,
+          transparent 62%
+        );
+      background-size: 240% 100%;
+      background-position: -130% 0;
+      background-repeat: no-repeat;
+      -webkit-background-clip: text;
+              background-clip: text;
+      -webkit-text-fill-color: transparent;
+              color: transparent;
+      animation: glare-sweep 5.5s cubic-bezier(0.65, 0, 0.35, 1) 2.5s infinite;
+      z-index: 3;
+      pointer-events: none;
+      transition: animation-duration 0.3s ease;
+      mix-blend-mode: soft-light;
+    }
+
+    @keyframes glare-sweep {
+      0%, 10%  { background-position: -130% 0; }
+      55%      { background-position: 55% 0; }
+      100%     { background-position: 250% 0; }
+    }
+
+    .word-3d:hover .word-shine {
+      animation-duration: 1.8s;
+    }
+    .word-3d:hover .word-face {
+      filter:
+        drop-shadow(0 1px 0 rgba(255, 250, 220, 0.5))
+        drop-shadow(0 3px 8px rgba(90, 65, 25, 0.25));
+    }
+
+    /* ── Very subtle reflection (light bg already reflective-feeling) ── */
+    .reflection {
+      position: absolute;
+      bottom: -80px;
+      left: 0; right: 0;
+      height: 120px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      overflow: hidden;
+      transform: scaleY(-1);
+      opacity: 0.12;
+      filter: blur(3px);
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.45), transparent 75%);
+      -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.45), transparent 75%);
+      pointer-events: none;
+      animation: entrance 1.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .reflection .wordmark-reflect {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Helvetica Neue", Arial, sans-serif;
+      font-weight: 800;
+      font-size: 142px;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      text-transform: uppercase;
+      background: linear-gradient(168deg, #C69A4A 0%, #5E4615 100%);
+      -webkit-background-clip: text;
+              background-clip: text;
+      -webkit-text-fill-color: transparent;
+              color: transparent;
+    }
+
+    /* ── Soft warm floor glow (much lighter than dark variant) ── */
+    .floor-glow {
+      position: absolute;
+      bottom: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 560px;
+      height: 48px;
+      background: radial-gradient(ellipse, rgba(138,106,46,0.10) 0%, transparent 70%);
+      border-radius: 50%;
+      animation:
+        shadow-entrance 1.8s cubic-bezier(0.16, 1, 0.3, 1) both,
+        shadow-pulse 6s ease-in-out 1.8s infinite;
+    }
+    @keyframes shadow-entrance {
+      from { opacity: 0; transform: translateX(-50%) scaleX(0.3); }
+      to   { opacity: 1; transform: translateX(-50%) scaleX(1); }
+    }
+    @keyframes shadow-pulse {
+      0%, 100% { transform: translateX(-50%) scaleX(1); opacity: 0.6; }
+      50%      { transform: translateX(-50%) scaleX(0.85); opacity: 0.35; }
+    }
+
+    /* ── Responsive scaling for smaller previews ── */
+    @media (max-width: 760px) {
+      .scene { transform: scale(0.55); }
+    }
+
+    /* ── Reduced-motion support ── */
+    @media (prefers-reduced-motion: reduce) {
+      .word-3d,
+      .word-shine,
+      .floor-glow,
+      .reflection,
+      .ambient::before,
+      .ambient::after {
+        animation: none !important;
+      }
+      .word-3d { transform: none !important; }
+      .word-shine { opacity: 0 !important; }
+      .floor-glow { opacity: 0.4 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient"></div>
+
+  <div class="scene">
+    <div class="word-3d" id="word3d">
+
+      <div class="wordmark">
+        <!-- Layer 1: extruded depth -->
+        <span class="word-back" aria-hidden="true">Magnate</span>
+        <!-- Layer 2: gold face -->
+        <span class="word-face">Magnate</span>
+        <!-- Layer 3: L→R glare sweep -->
+        <span class="word-shine" aria-hidden="true">Magnate</span>
+      </div>
+
+      <!-- Reflection -->
+      <div class="reflection">
+        <span class="wordmark-reflect">Magnate</span>
+      </div>
+
+      <div class="floor-glow"></div>
+    </div>
+  </div>
+
+  <script>
+    // ── Mouse tilt ──
+    const word = document.getElementById('word3d');
+    let tiltX = 0, tiltY = 0, targetX = 0, targetY = 0;
+    let entered = false;
+
+    setTimeout(() => { entered = true; }, 2000);
+
+    document.addEventListener('mousemove', (e) => {
+      if (!entered) return;
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+      targetX = ((e.clientY - cy) / cy) * -10;
+      targetY = ((e.clientX - cx) / cx) * 10;
+    });
+
+    document.addEventListener('mouseleave', () => {
+      targetX = 0; targetY = 0;
+    });
+
+    function animate() {
+      tiltX += (targetX - tiltX) * 0.06;
+      tiltY += (targetY - tiltY) * 0.06;
+      if (entered) {
+        word.style.setProperty('--tiltX', tiltX + 'deg');
+        word.style.setProperty('--tiltY', tiltY + 'deg');
+      }
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // Inject tilt-aware float
+    const s = document.createElement('style');
+    s.textContent = `
+      .word-3d {
+        animation:
+          entrance 1.8s cubic-bezier(0.16, 1, 0.3, 1) both,
+          float-tilt 6s ease-in-out 1.8s infinite !important;
+      }
+      @keyframes float-tilt {
+        0%, 100% { transform: translateY(0) rotateX(calc(2deg + var(--tiltX, 0deg))) rotateY(var(--tiltY, 0deg)) rotateZ(0deg); }
+        25%  { transform: translateY(-10px) rotateX(var(--tiltX, 0deg)) rotateY(calc(3deg + var(--tiltY, 0deg))) rotateZ(0.4deg); }
+        50%  { transform: translateY(-6px) rotateX(calc(-2deg + var(--tiltX, 0deg))) rotateY(var(--tiltY, 0deg)) rotateZ(0deg); }
+        75%  { transform: translateY(-12px) rotateX(var(--tiltX, 0deg)) rotateY(calc(-3deg + var(--tiltY, 0deg))) rotateZ(-0.4deg); }
+      }
+    `;
+    document.head.appendChild(s);
+  </script>
+</body>
+</html>

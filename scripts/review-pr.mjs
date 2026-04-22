@@ -121,11 +121,15 @@ for (const file of prodFiles) {
   const lines = content.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    // Skip comments
+    // Skip comments and eslint-disable lines
     const trimmed = line.trim();
     if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
+    // Skip lines with eslint-disable for this specific rule
+    const prevLine = i > 0 ? lines[i - 1].trim() : "";
+    if (prevLine.includes("eslint-disable") && prevLine.includes("no-explicit-any")) continue;
+    if (line.includes("eslint-disable") && line.includes("no-explicit-any")) continue;
     if (/\bas\s+any\b|:\s*any\b|<any>/.test(line)) {
-      addFinding("warning", file, i + 1, "`any` type usage — use a specific type", 2);
+      addFinding("error", file, i + 1, "`any` type usage — use a specific type", 2);
     }
   }
 }
@@ -156,9 +160,12 @@ for (const file of prodFiles) {
   }
 }
 
-// 4. createAdminClient() in user-facing API routes
+// 4. createAdminClient() in user-facing API routes (exempt: auth routes — no session exists)
+function isAuthRoute(file) {
+  return file.startsWith("src/app/api/auth/");
+}
 for (const file of prodFiles) {
-  if (!isApiRoute(file) || isCronOrWebhook(file)) continue;
+  if (!isApiRoute(file) || isCronOrWebhook(file) || isAuthRoute(file)) continue;
   const content = readFileSafe(file);
   const lines = content.split("\n");
   for (let i = 0; i < lines.length; i++) {
@@ -198,7 +205,7 @@ for (const file of prodFiles) {
   const lines = content.split("\n");
   for (let i = 0; i < lines.length; i++) {
     if (/style=\{\{/.test(lines[i])) {
-      addFinding("warning", file, i + 1, "Inline style — use Tailwind or lf-* classes", 6);
+      addFinding("error", file, i + 1, "Inline style — use Tailwind or lf-* classes", 6);
     }
   }
 }

@@ -15,6 +15,15 @@ FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // .tool_input.path // 
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 PROJECT_DIR=$(echo "$INPUT" | jq -r '.cwd // empty')
 
+# --- Violation logging helper ---
+log_violation() {
+    local RULE="$1" ACTION="$2" TARGET="$3"
+    local VLOG="$PROJECT_DIR/.claude/violation-log.md"
+    if [[ -f "$VLOG" ]]; then
+        echo "| $(date '+%Y-%m-%d %H:%M') | playbook-gate | $RULE | $ACTION | $TARGET |" >> "$VLOG"
+    fi
+}
+
 # --- Always allow: Read, Grep, Glob, TodoWrite, ToolSearch ---
 # These are observation/planning tools needed DURING classification
 case "$TOOL_NAME" in
@@ -66,6 +75,7 @@ done
 
 # No task file = not classified → BLOCK
 if [[ -z "$TASK_FILE" || ! -f "$TASK_FILE" ]]; then
+    log_violation "classification" "No task file — $TOOL_NAME blocked" "${FILE_PATH:-$COMMAND}"
     echo "BLOCKED: No classified task found. Before using $TOOL_NAME, you MUST:" >&2
     echo "  1. Read the request twice (HC-15)" >&2
     echo "  2. Decompose → map dependencies → reorder" >&2
@@ -77,6 +87,7 @@ fi
 # Check classified phase
 CLASSIFIED=$(jq -r '.phases.classified // false' "$TASK_FILE" 2>/dev/null)
 if [[ "$CLASSIFIED" != "true" ]]; then
+    log_violation "classification" "phases.classified not true" "${FILE_PATH:-$COMMAND}"
     echo "BLOCKED: Task file exists but classification incomplete. Set phases.classified=true after outputting classification block." >&2
     exit 2
 fi
@@ -88,11 +99,103 @@ case "$TIER" in
         SCOPED=$(jq -r '.phases.scoped // false' "$TASK_FILE" 2>/dev/null)
         if [[ "$SCOPED" != "true" ]]; then
             if [[ "$TOOL_NAME" == "Edit" || "$TOOL_NAME" == "Write" || "$TOOL_NAME" == "Agent" ]]; then
+                log_violation "scope" "$TIER tier — $TOOL_NAME before scoped" "${FILE_PATH:-$COMMAND}"
                 echo "BLOCKED: $TIER tier requires scope phase before $TOOL_NAME. Set phases.scoped=true in current-task.json." >&2
                 exit 2
             fi
         fi
         ;;
 esac
+
+# --- Mechanical scope enforcement: block Edit/Write outside declared affected_files ---
+if [[ "$TOOL_NAME" == "Edit" || "$TOOL_NAME" == "Write" ]]; then
+    AF_COUNT=$(jq -r '.affected_files | length // 0' "$TASK_FILE" 2>/dev/null)
+    if [[ "$AF_COUNT" -gt 0 && -n "$FILE_PATH" ]]; then
+        # Normalize file path to relative
+        REL_PATH="${FILE_PATH#$PROJECT_DIR/}"
+        REL_PATH="${REL_PATH#$CLAUDE_PROJECT_DIR/}"
+        # Check if the file matches any declared affected_files pattern
+        MATCHED=0
+        while IFS= read -r pattern; do
+            [[ -z "$pattern" ]] && continue
+            # Support exact match and glob-style prefix match (e.g. "src/actions/" matches "src/actions/contacts.ts")
+            if [[ "$REL_PATH" == "$pattern" || "$REL_PATH" == $pattern* ]]; then
+                MATCHED=1
+                break
+            fi
+        done < <(jq -r '.affected_files[]' "$TASK_FILE" 2>/dev/null)
+        if [[ "$MATCHED" -eq 0 ]]; then
+            echo "WARNING: Editing $REL_PATH which is not in affected_files. Consider adding it to current-task.json." >&2
+            # Warning only — not blocking. Upgrade to exit 2 once agents learn the pattern.
+        fi
+    fi
+fi
+
+# --- Wave 2a: For CODING:feature medium/large, require usecases/<slug>.md before Edit/Write on src/** ---
+TYPE=$(jq -r '.type // empty' "$TASK_FILE" 2>/dev/null)
+if [[ "$TYPE" == "CODING:feature" && ("$TIER" == "medium" || "$TIER" == "large") ]]; then
+    if [[ "$TOOL_NAME" == "Edit" || "$TOOL_NAME" == "Write" ]]; then
+        case "$FILE_PATH" in
+            */src/*)
+                SLUG=$(jq -r '.slug // empty' "$TASK_FILE" 2>/dev/null)
+                if [[ -z "$SLUG" ]]; then
+                    echo "BLOCKED: CODING:feature at $TIER tier requires 'slug' field in current-task.json (kebab-case)." >&2
+                    exit 2
+                fi
+                USECASE_FILE=""
+                for candidate in \
+                    "$CLAUDE_PROJECT_DIR/usecases/$SLUG.md" \
+                    "$PROJECT_DIR/usecases/$SLUG.md"; do
+                    if [[ -f "$candidate" ]]; then
+                        USECASE_FILE="$candidate"
+                        break
+                    fi
+                done
+                if [[ -z "$USECASE_FILE" ]]; then
+                    log_violation "FQ-3" "Missing usecases/$SLUG.md" "$FILE_PATH"
+                    echo "BLOCKED: CODING:feature at $TIER tier requires usecases/$SLUG.md BEFORE editing src/**." >&2
+                    echo "" >&2
+                    echo "Copy usecases/TEMPLATE.md to usecases/$SLUG.md and fill in 3 scenarios." >&2
+                    echo "Then set phases.usecases_written=true in current-task.json." >&2
+                    exit 2
+                fi
+                SCENARIO_COUNT=$(grep -cE "^###\s+Scenario\s+[0-9]+:" "$USECASE_FILE" 2>/dev/null || echo "0")
+                if [[ "$SCENARIO_COUNT" -lt 3 ]]; then
+                    echo "BLOCKED: usecases/$SLUG.md has only $SCENARIO_COUNT scenario(s). Minimum 3 required." >&2
+                    echo "" >&2
+                    echo "Scenarios must be formatted as '### Scenario N: <description>'. See usecases/TEMPLATE.md." >&2
+                    exit 2
+                fi
+                ;;
+        esac
+    fi
+fi
+
+# --- Wave 2c: For CODING:feature, require existing_search before Edit/Write on src/** ---
+if [[ "$TYPE" == "CODING:feature" ]]; then
+    if [[ "$TOOL_NAME" == "Edit" || "$TOOL_NAME" == "Write" ]]; then
+        case "$FILE_PATH" in
+            */src/*)
+                SEARCH_COUNT=$(jq -r '.existing_search | length // 0' "$TASK_FILE" 2>/dev/null)
+                if [[ "$SEARCH_COUNT" -lt 3 ]]; then
+                    log_violation "FQ-5" "existing_search has $SEARCH_COUNT entries (need 3+)" "$FILE_PATH"
+                    echo "BLOCKED: CODING:feature requires existing_search to contain 3+ entries before editing src/**." >&2
+                    echo "" >&2
+                    echo "Before coding, search the codebase for related capabilities. For each search:" >&2
+                    echo "  1. Run grep/glob to find existing code that might do what you're about to build" >&2
+                    echo "  2. Add an entry to existing_search in current-task.json:" >&2
+                    echo "     { \"query\": \"<search term>\", \"matches_count\": N, \"decision\": \"extend <file>|create new because <reason>\" }" >&2
+                    exit 2
+                fi
+
+                # Sanity check: warn if all queries returned 0 matches
+                TOTAL_MATCHES=$(jq -r '[.existing_search[].matches_count] | add // 0' "$TASK_FILE" 2>/dev/null)
+                if [[ "$TOTAL_MATCHES" == "0" ]]; then
+                    echo "WARNING: All existing_search entries returned 0 matches. Did you search thoroughly?" >&2
+                fi
+                ;;
+        esac
+    fi
+fi
 
 exit 0

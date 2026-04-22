@@ -1304,3 +1304,5 @@ For developers adding new tracking: these are the existing tables that already c
 ---
 
 *End of PRD*
+
+<!-- Last reviewed: 2026-04-21 — AGENTS.md v0.6 + violation logging -->

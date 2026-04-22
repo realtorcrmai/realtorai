@@ -110,7 +110,12 @@ export async function checkCompliance(
     }
   }
 
-  // 4. Check frequency cap (max emails per week)
+  // 4. Check frequency cap — skip for Trust Level 3 (autonomous / realtor-approved)
+  // Realtor has explicitly reviewed and approved the email, so frequency/gap/quiet-hours don't apply.
+  if (input.trustLevel === 3) {
+    return { allowed: true, reason: null, defer: false, deferUntil: null };
+  }
+
   const frequencyCap = getFrequencyCap(contact.type);
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 

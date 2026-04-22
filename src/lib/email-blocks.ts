@@ -3,10 +3,28 @@
  *
  * Each block is a function that returns an HTML string.
  * Templates are assembled by picking blocks based on email type + available data.
+ * Journey-aware: pass journeyPhase to select the right block layout per lifecycle stage.
  *
  * Usage:
- *   const html = assembleEmail("listing_alert", { listing, contact, agent, content });
+ *   const html = assembleEmail("listing_alert", data);
+ *   const html = assembleEmail("listing_alert", data, undefined, "active", 85); // journey-aware + high-intent banner
  */
+
+import { THEMES, getDefaultTheme, EmailTheme } from "./email-design-tokens";
+
+// ═══════════════════════════════════════════════
+// XSS ESCAPE HELPER
+// ═══════════════════════════════════════════════
+
+/** Escape user-controlled strings before interpolating into HTML. */
+function esc(s: string | null | undefined): string {
+  if (!s) return "";
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 // ═══════════════════════════════════════════════
 // TYPES
@@ -60,10 +78,39 @@ const blocks: Record<string, BlockFn> = {
   header: (d, branding) => `
     <tr><td style="padding:20px 32px 16px;">
       <table width="100%"><tr>
-        <td><span style="font-size:15px;font-weight:700;color:#1d1d1f;letter-spacing:-0.3px;">${branding?.name ?? 'Your Agent'}</span></td>
+        <td><span style="font-size:15px;font-weight:700;color:#1d1d1f;letter-spacing:-0.3px;">${esc(branding?.name ?? 'Your Agent')}</span></td>
         <td align="right"><span style="font-size:11px;color:#86868b;letter-spacing:0.5px;text-transform:uppercase;">${d.content.subject.includes("Welcome") ? "Welcome" : d.listing ? "New Listing" : "Update"}</span></td>
       </tr></table>
     </td></tr>`,
+
+  luxuryHeader: (d) => {
+    const agentName = esc(d.agent.name);
+    const brokerage = esc(d.agent.brokerage);
+    return `
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr>
+    <td style="padding:32px 48px 24px;text-align:center;border-bottom:1px solid #e8e8e8">
+      <p style="font:500 11px/1 -apple-system,sans-serif;letter-spacing:0.12em;text-transform:uppercase;color:#6b6b6b;margin:0">
+        ${agentName} &nbsp;&middot;&nbsp; ${brokerage || "Real Estate"}
+      </p>
+    </td>
+  </tr>
+</table>`;
+  },
+
+  priorityBookingBanner: (d) => {
+    const url = d.content.ctaUrl || "#";
+    return `
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr>
+    <td style="background:#1a1a1a;padding:14px 32px;text-align:center">
+      <p style="font:600 13px/1 -apple-system,sans-serif;color:#ffffff;margin:0">
+        Based on your interest &#8212; <a href="${url}" style="color:#ffffff;text-decoration:underline">book a showing today</a>
+      </p>
+    </td>
+  </tr>
+</table>`;
+  },
 
   heroImage: (d) => {
     const photo = d.listing?.photos?.[0];
@@ -71,11 +118,11 @@ const blocks: Record<string, BlockFn> = {
     return `
     <tr><td style="padding:0 16px;">
       <div style="border-radius:16px;overflow:hidden;position:relative;">
-        <img src="${photo}" alt="${d.listing?.address}" width="568" style="display:block;width:100%;height:auto;">
+        <img src="${photo}" alt="${esc(d.listing?.address)}" width="568" style="display:block;width:100%;height:auto;">
         <div style="position:absolute;bottom:0;left:0;right:0;padding:32px 28px 24px;background:linear-gradient(0deg,rgba(0,0,0,0.65),transparent);">
           <div style="font-size:13px;color:rgba(255,255,255,0.7);font-weight:500;letter-spacing:1.5px;text-transform:uppercase;">Just Listed</div>
-          <div style="font-size:32px;font-weight:700;color:#fff;margin-top:4px;letter-spacing:-0.5px;">${d.listing?.address}</div>
-          <div style="font-size:15px;color:rgba(255,255,255,0.8);margin-top:4px;">${d.listing?.area || ""}</div>
+          <div style="font-size:32px;font-weight:700;color:#fff;margin-top:4px;letter-spacing:-0.5px;">${esc(d.listing?.address)}</div>
+          <div style="font-size:15px;color:rgba(255,255,255,0.8);margin-top:4px;">${esc(d.listing?.area || "")}</div>
         </div>
       </div>
     </td></tr>`;
@@ -91,15 +138,37 @@ const blocks: Record<string, BlockFn> = {
     <tr><td style="padding:0 16px;">
       <div style="background:${bg};border-radius:16px;padding:40px 28px;text-align:center;">
         ${emoji}
-        <div style="font-size:32px;font-weight:800;color:#fff;letter-spacing:-0.5px;">${d.content.subject}</div>
-        <div style="font-size:15px;color:rgba(255,255,255,0.7);margin-top:8px;">${d.listing?.area || d.contact.firstName + "'s update"}</div>
+        <div style="font-size:32px;font-weight:800;color:#fff;letter-spacing:-0.5px;">${esc(d.content.subject)}</div>
+        <div style="font-size:15px;color:rgba(255,255,255,0.7);margin-top:8px;">${esc(d.listing?.area || d.contact.firstName + "'s update")}</div>
       </div>
     </td></tr>`;
   },
 
   priceBar: (d) => {
     if (!d.listing) return "";
-    const price = typeof d.listing.price === "number" ? `$${d.listing.price.toLocaleString()}` : d.listing.price;
+    const isLuxury = (d as EmailData & { _theme?: EmailTheme })._theme === "luxury";
+    const price =
+      typeof d.listing.price === "number"
+        ? `$${d.listing.price.toLocaleString()}`
+        : d.listing.price;
+
+    if (isLuxury) {
+      const metrics = [
+        d.listing.beds ? `${d.listing.beds} Beds` : null,
+        d.listing.baths ? `${d.listing.baths} Baths` : null,
+        d.listing.sqft ? `${Number(d.listing.sqft).toLocaleString()} sq.ft.` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
+      return `
+    <tr><td style="padding:0 48px 8px;">
+      ${metrics ? `<p style="font:600 11px/1 -apple-system,sans-serif;letter-spacing:0.08em;color:#6b6b6b;text-transform:uppercase;margin:0 0 8px;">${metrics}</p>` : ""}
+      ${price ? `<p style="font:700 32px/1.1 -apple-system,sans-serif;color:#1a1a1a;margin:0 0 32px;letter-spacing:-0.5px;">${price}</p>` : ""}
+    </td></tr>`;
+    }
+
+    // Standard / editorial — widget style
     return `
     <tr><td style="padding:20px 32px 0;">
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -118,8 +187,8 @@ const blocks: Record<string, BlockFn> = {
 
   personalNote: (d) => `
     <tr><td style="padding:24px 32px 0;">
-      <p style="font-size:15px;color:#1d1d1f;line-height:1.65;margin:0;">Hi ${d.contact.firstName}, ${d.content.intro}</p>
-      ${d.content.body ? `<p style="font-size:15px;color:#1d1d1f;line-height:1.65;margin:16px 0 0;">${d.content.body}</p>` : ""}
+      <p style="font-size:15px;color:#1d1d1f;line-height:1.65;margin:0;">Hi ${esc(d.contact.firstName)}, ${esc(d.content.intro)}</p>
+      ${d.content.body ? `<p style="font-size:15px;color:#1d1d1f;line-height:1.65;margin:16px 0 0;">${esc(d.content.body)}</p>` : ""}
     </td></tr>`,
 
   featureList: (d) => {
@@ -131,28 +200,53 @@ const blocks: Record<string, BlockFn> = {
       <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
         <tr>
           <td width="44" style="vertical-align:top;padding-top:2px;"><div style="width:36px;height:36px;background:#f5f5f7;border-radius:10px;text-align:center;line-height:36px;font-size:16px;">${f.icon}</div></td>
-          <td style="padding-left:12px;"><div style="font-size:14px;font-weight:600;color:#1d1d1f;">${f.title}</div><div style="font-size:13px;color:#86868b;margin-top:1px;">${f.desc}</div></td>
+          <td style="padding-left:12px;"><div style="font-size:14px;font-weight:600;color:#1d1d1f;">${esc(f.title)}</div><div style="font-size:13px;color:#86868b;margin-top:1px;">${esc(f.desc)}</div></td>
         </tr>
       </table>`).join("")}
     </td></tr>`;
   },
 
+  // G-E09: Photo grid with fixed aspect-ratio enforcement, up to 10 photos, "View all" link
   photoGallery: (d) => {
-    const photos = d.listing?.photos;
-    if (!photos || photos.length < 2) return "";
-    const grid = photos.slice(0, 4);
+    const allPhotos: string[] = d.listing?.photos || [];
+    const photos = allPhotos.slice(0, 10);
+    if (!photos.length) return "";
+    const remaining = allPhotos.length - 10;
+    const address = d.listing?.address || "property";
+    const ctaUrl = d.content.ctaUrl || "#";
+
+    const rows: string[] = [];
+    for (let i = 0; i < photos.length; i += 2) {
+      const left = photos[i];
+      const right = photos[i + 1];
+      const escapedAddress = esc(address);
+      rows.push(`
+    <tr>
+      <td width="49%" style="padding:1px;vertical-align:top">
+        <img src="${left}" width="285" height="160" alt="Photo ${i + 1} of ${escapedAddress}" style="display:block;width:100%;height:160px;object-fit:cover;border-radius:4px">
+      </td>
+      <td width="2%"> </td>
+      ${right
+        ? `<td width="49%" style="padding:1px;vertical-align:top"><img src="${right}" width="285" height="160" alt="Photo ${i + 2} of ${escapedAddress}" style="display:block;width:100%;height:160px;object-fit:cover;border-radius:4px"></td>`
+        : `<td width="49%"> </td>`
+      }
+    </tr>`);
+    }
+
     return `
-    <tr><td style="padding:24px 16px 0;">
-      <table width="100%" cellpadding="0" cellspacing="0"><tr>
-        <td width="49%" style="padding:4px;"><img src="${grid[0]}" width="100%" style="display:block;border-radius:12px;"></td>
-        <td width="2%"></td>
-        <td width="49%" style="padding:4px;"><img src="${grid[1]}" width="100%" style="display:block;border-radius:12px;"></td>
-      </tr>${grid.length > 2 ? `<tr>
-        <td width="49%" style="padding:4px;"><img src="${grid[2]}" width="100%" style="display:block;border-radius:12px;"></td>
-        <td width="2%"></td>
-        <td width="49%" style="padding:4px;"><img src="${grid[3] || grid[2]}" width="100%" style="display:block;border-radius:12px;"></td>
-      </tr>` : ""}</table>
-    </td></tr>`;
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px" class="photo-grid">
+  <tbody>
+    ${rows.join("\n")}
+    ${remaining > 0 ? `
+    <tr>
+      <td colspan="3" style="padding:12px 0 0;text-align:center">
+        <a href="${ctaUrl}" style="font:500 13px/1 -apple-system,sans-serif;color:#6b6b6b;text-decoration:none">
+          View all ${allPhotos.length} photos &#8594;
+        </a>
+      </td>
+    </tr>` : ""}
+  </tbody>
+</table>`;
   },
 
   statsRow: (d) => {
@@ -161,17 +255,17 @@ const blocks: Record<string, BlockFn> = {
     <tr><td style="padding:20px 32px 0;">
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
         <td style="text-align:center;padding:16px;background:#f5f5f7;border-radius:12px;">
-          <div style="font-size:24px;font-weight:800;color:#1d1d1f;">${d.market.avgPrice || "—"}</div>
+          <div style="font-size:24px;font-weight:800;color:#1d1d1f;">${esc(d.market.avgPrice) || "—"}</div>
           <div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Avg Price</div>
         </td>
         <td width="8"></td>
         <td style="text-align:center;padding:16px;background:#f5f5f7;border-radius:12px;">
-          <div style="font-size:24px;font-weight:800;color:#1d1d1f;">${d.market.avgDom || "—"}</div>
+          <div style="font-size:24px;font-weight:800;color:#1d1d1f;">${d.market.avgDom != null ? esc(String(d.market.avgDom)) : "—"}</div>
           <div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Avg DOM</div>
         </td>
         <td width="8"></td>
         <td style="text-align:center;padding:16px;background:#f5f5f7;border-radius:12px;">
-          <div style="font-size:24px;font-weight:800;color:#1d1d1f;">${d.market.inventoryChange || "—"}</div>
+          <div style="font-size:24px;font-weight:800;color:#1d1d1f;">${esc(d.market.inventoryChange) || "—"}</div>
           <div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;margin-top:4px;">Inventory</div>
         </td>
       </tr></table>
@@ -186,9 +280,9 @@ const blocks: Record<string, BlockFn> = {
       <div style="font-size:12px;font-weight:700;color:#1d1d1f;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Recent Sales</div>
       <table width="100%" cellpadding="0" cellspacing="0">
         ${sales.map(s => `<tr style="border-bottom:1px solid #f0f0f0;">
-          <td style="padding:10px 0;font-size:14px;font-weight:500;color:#1d1d1f;">${s.address}</td>
-          <td style="padding:10px 0;font-size:14px;font-weight:600;color:#1d1d1f;text-align:right;">${s.price}</td>
-          <td style="padding:10px 0;font-size:12px;color:#86868b;text-align:right;width:60px;">${s.dom}d</td>
+          <td style="padding:10px 0;font-size:14px;font-weight:500;color:#1d1d1f;">${esc(s.address)}</td>
+          <td style="padding:10px 0;font-size:14px;font-weight:600;color:#1d1d1f;text-align:right;">${esc(s.price)}</td>
+          <td style="padding:10px 0;font-size:12px;color:#86868b;text-align:right;width:60px;">${esc(String(s.dom))}d</td>
         </tr>`).join("")}
       </table>
     </td></tr>`;
@@ -201,11 +295,11 @@ const blocks: Record<string, BlockFn> = {
     <tr><td style="padding:24px 32px 0;">
       <div style="background:#f0fdf4;border-radius:14px;padding:16px 20px;">
         <table width="100%"><tr>
-          <td style="text-align:center;"><div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;">This Listing</div><div style="font-size:22px;font-weight:700;color:#15803d;">${pc.listing}</div></td>
+          <td style="text-align:center;"><div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;">This Listing</div><div style="font-size:22px;font-weight:700;color:#15803d;">${esc(pc.listing)}</div></td>
           <td width="1" style="background:#d1fae5;"></td>
-          <td style="text-align:center;"><div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;">Area Average</div><div style="font-size:22px;font-weight:700;color:#1d1d1f;">${pc.average}</div></td>
+          <td style="text-align:center;"><div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;">Area Average</div><div style="font-size:22px;font-weight:700;color:#1d1d1f;">${esc(pc.average)}</div></td>
           <td width="1" style="background:#d1fae5;"></td>
-          <td style="text-align:center;"><div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;">Difference</div><div style="font-size:22px;font-weight:700;color:#15803d;">${pc.diff}</div></td>
+          <td style="text-align:center;"><div style="font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;">Difference</div><div style="font-size:22px;font-weight:700;color:#15803d;">${esc(pc.diff)}</div></td>
         </tr></table>
       </div>
     </td></tr>`;
@@ -213,6 +307,21 @@ const blocks: Record<string, BlockFn> = {
 
   openHouse: (d) => {
     if (!d.listing?.openHouseDate) return "";
+    const isLuxury = (d as EmailData & { _theme?: EmailTheme })._theme === "luxury";
+
+    if (isLuxury) {
+      return `
+    <tr><td style="padding:0 48px 32px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e8e8e8;border-radius:8px;">
+        <tr><td style="padding:20px 24px;">
+          <p style="font:600 11px/1 -apple-system,sans-serif;letter-spacing:0.08em;color:#6b6b6b;text-transform:uppercase;margin:0 0 10px;">Open House</p>
+          <p style="font:400 15px/1.6 -apple-system,sans-serif;color:#1a1a1a;margin:0;">${d.listing.openHouseDate}${d.listing.openHouseTime ? " · " + d.listing.openHouseTime : ""}</p>
+        </td></tr>
+      </table>
+    </td></tr>`;
+    }
+
+    // Standard / editorial — gradient pill style
     return `
     <tr><td style="padding:24px 32px 0;">
       <div style="background:linear-gradient(135deg,#f5f0ff,#fef3f2);border-radius:14px;padding:20px;text-align:center;border:1px solid rgba(128,90,213,0.1);">
@@ -230,7 +339,7 @@ const blocks: Record<string, BlockFn> = {
       <div style="background:#f0fdf4;border-radius:14px;padding:20px;">
         <table width="100%"><tr>
           <td style="text-align:center;"><div style="font-size:11px;color:#86868b;text-transform:uppercase;">You Paid</div><div style="font-size:22px;font-weight:700;color:#1d1d1f;">${d.anniversary.purchasePrice || "—"}</div></td>
-          <td style="text-align:center;font-size:24px;color:#15803d;">→</td>
+          <td style="text-align:center;font-size:24px;color:#15803d;">&#8594;</td>
           <td style="text-align:center;"><div style="font-size:11px;color:#86868b;text-transform:uppercase;">Estimated Now</div><div style="font-size:22px;font-weight:700;color:#15803d;">${d.anniversary.currentEstimate || "—"}</div><div style="font-size:11px;color:#15803d;font-weight:600;">${d.anniversary.equityGained ? "+" + d.anniversary.equityGained : ""} (${d.anniversary.appreciation || ""})</div></td>
         </tr></table>
       </div>
@@ -245,7 +354,7 @@ const blocks: Record<string, BlockFn> = {
       <div style="font-size:12px;font-weight:700;color:#1d1d1f;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">What's New in the Area</div>
       ${highlights.map(h => `
       <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
-        <tr><td width="36"><div style="width:28px;height:28px;background:#f5f5f7;border-radius:8px;text-align:center;line-height:28px;font-size:14px;">${h.icon}</div></td><td style="padding-left:10px;font-size:13px;color:#1d1d1f;line-height:1.5;">${h.text}</td></tr>
+        <tr><td width="36"><div style="width:28px;height:28px;background:#f5f5f7;border-radius:8px;text-align:center;line-height:28px;font-size:14px;">${h.icon}</div></td><td style="padding-left:10px;font-size:13px;color:#1d1d1f;line-height:1.5;">${esc(h.text)}</td></tr>
       </table>`).join("")}
     </td></tr>`;
   },
@@ -262,9 +371,9 @@ const blocks: Record<string, BlockFn> = {
           <div style="background:#f5f5f7;border-radius:14px;overflow:hidden;">
             ${l.photo ? `<img src="${l.photo}" width="100%" style="display:block;">` : `<div style="height:120px;background:linear-gradient(135deg,#e5e5ea,#f5f5f7);"></div>`}
             <div style="padding:12px;">
-              <div style="font-size:16px;font-weight:700;color:#1d1d1f;">${typeof l.price === "number" ? "$" + l.price.toLocaleString() : l.price}</div>
-              <div style="font-size:12px;color:#86868b;margin-top:2px;">${l.address}</div>
-              <div style="font-size:11px;color:#86868b;">${l.beds || "—"} bd · ${l.baths || "—"} ba${l.sqft ? " · " + l.sqft + " sqft" : ""}</div>
+              <div style="font-size:16px;font-weight:700;color:#1d1d1f;">${esc(typeof l.price === "number" ? "$" + l.price.toLocaleString() : l.price)}</div>
+              <div style="font-size:12px;color:#86868b;margin-top:2px;">${esc(l.address)}</div>
+              <div style="font-size:11px;color:#86868b;">${esc(String(l.beds || "—"))} bd · ${esc(String(l.baths || "—"))} ba${l.sqft ? " · " + esc(l.sqft) + " sqft" : ""}</div>
             </div>
           </div>
         </td>`).join('<td width="2%"></td>')}
@@ -279,9 +388,9 @@ const blocks: Record<string, BlockFn> = {
     <tr><td style="padding:24px 32px 0;">
       <div style="background:#f5f5f7;border-radius:14px;padding:24px;position:relative;">
         <div style="font-size:36px;color:#d1d1d6;line-height:1;margin-bottom:8px;">"</div>
-        <p style="font-size:15px;color:#1d1d1f;line-height:1.65;margin:0;font-style:italic;">${t.quote}</p>
-        <div style="margin-top:12px;font-size:13px;font-weight:600;color:#1d1d1f;">${t.name}</div>
-        <div style="font-size:12px;color:#86868b;">${t.role || "Client"}</div>
+        <p style="font-size:15px;color:#1d1d1f;line-height:1.65;margin:0;font-style:italic;">${esc(t.quote)}</p>
+        <div style="margin-top:12px;font-size:13px;font-weight:600;color:#1d1d1f;">${esc(t.name)}</div>
+        <div style="font-size:12px;color:#86868b;">${esc(t.role || "Client")}</div>
       </div>
     </td></tr>`;
   },
@@ -324,7 +433,7 @@ const blocks: Record<string, BlockFn> = {
       <div style="border-radius:16px;overflow:hidden;">
         <img src="${mp.imageUrl}" alt="Location map" width="568" style="display:block;width:100%;height:auto;">
       </div>
-      ${mp.caption ? `<div style="text-align:center;padding:8px 32px 0;font-size:12px;color:#86868b;">${mp.caption}</div>` : ""}
+      ${mp.caption ? `<div style="text-align:center;padding:8px 32px 0;font-size:12px;color:#86868b;">${esc(mp.caption)}</div>` : ""}
     </td></tr>`;
   },
 
@@ -338,7 +447,7 @@ const blocks: Record<string, BlockFn> = {
         <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:64px;height:64px;background:rgba(0,0,0,0.7);border-radius:50%;display:flex;align-items:center;justify-content:center;">
           <div style="width:0;height:0;border-top:12px solid transparent;border-bottom:12px solid transparent;border-left:20px solid #fff;margin-left:4px;"></div>
         </div>
-        <div style="position:absolute;bottom:12px;left:12px;background:rgba(0,0,0,0.6);border-radius:6px;padding:4px 10px;font-size:11px;color:#fff;font-weight:500;">▶ Watch Property Tour</div>
+        <div style="position:absolute;bottom:12px;left:12px;background:rgba(0,0,0,0.6);border-radius:6px;padding:4px 10px;font-size:11px;color:#fff;font-weight:500;">&#9654; Watch Property Tour</div>
       </a>
     </td></tr>`;
   },
@@ -351,11 +460,11 @@ const blocks: Record<string, BlockFn> = {
       <div style="background:#f5f5f7;border-radius:14px;padding:20px;">
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
           <td width="48" style="vertical-align:top;">
-            <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#5856d6,#ff6b6b);text-align:center;line-height:44px;color:#fff;font-weight:700;font-size:17px;">${d.agent.initials || d.agent.name[0]}</div>
+            <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#5856d6,#ff6b6b);text-align:center;line-height:44px;color:#fff;font-weight:700;font-size:17px;">${esc(d.agent.initials || d.agent.name[0])}</div>
           </td>
           <td style="padding-left:14px;">
-            <div style="font-size:14px;font-weight:600;color:#1d1d1f;">${sp.headline || d.agent.name + "'s Track Record"}</div>
-            <div style="font-size:13px;color:#86868b;margin-top:2px;line-height:1.5;">${sp.text}</div>
+            <div style="font-size:14px;font-weight:600;color:#1d1d1f;">${esc(sp.headline || d.agent.name + "'s Track Record")}</div>
+            <div style="font-size:13px;color:#86868b;margin-top:2px;line-height:1.5;">${esc(sp.text)}</div>
             ${sp.stats ? `<div style="margin-top:8px;display:flex;gap:16px;">${sp.stats.map((s: {value:string;label:string}) => `<span style="font-size:12px;"><strong style="color:#5856d6;">${s.value}</strong> <span style="color:#86868b;">${s.label}</span></span>`).join(" · ")}</div>` : ""}
           </td>
         </tr></table>
@@ -363,20 +472,29 @@ const blocks: Record<string, BlockFn> = {
     </td></tr>`;
   },
 
-  cta: (d) => `
-    <tr><td style="padding:28px 32px 0;text-align:center;">
-      <a href="${d.content.ctaUrl || "#"}" class="email-cta-btn" style="display:inline-block;background:#1d1d1f;color:#ffffff;padding:16px 48px;border-radius:980px;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:-0.2px;">${d.content.ctaText}</a>
-    </td></tr>`,
+  cta: (d) => {
+    const theme = (d as EmailData & { _theme?: EmailTheme })._theme ?? "standard";
+    const url = d.content.ctaUrl || "#";
+    const text = d.content.ctaText || "Learn More";
+    const bgColor =
+      theme === "luxury" ? "#1a1a1a" : theme === "editorial" ? "#1a2e1a" : "#4f35d2";
+    return `
+    <tr><td style="padding:0 48px 40px;text-align:center;">
+      <a href="${url}" class="email-cta-btn" style="display:inline-block;background:${bgColor};color:#ffffff;font:600 15px/1 -apple-system,sans-serif;text-decoration:none;padding:14px 28px;border-radius:8px;">
+        ${esc(text)}
+      </a>
+    </td></tr>`;
+  },
 
   agentCard: (d) => `
     <tr><td style="padding:32px 32px 0;">
       <table width="100%" style="border-top:1px solid #e5e5ea;padding-top:20px;">
         <tr>
-          <td width="48"><div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#5856d6,#ff6b6b);text-align:center;line-height:44px;color:#fff;font-weight:700;font-size:17px;">${d.agent.initials || d.agent.name[0]}</div></td>
+          <td width="48"><div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#5856d6,#ff6b6b);text-align:center;line-height:44px;color:#fff;font-weight:700;font-size:17px;">${esc(d.agent.initials || d.agent.name[0])}</div></td>
           <td style="padding-left:14px;">
-            <div style="font-size:15px;font-weight:600;color:#1d1d1f;">${d.agent.name}</div>
-            <div style="font-size:13px;color:#86868b;">${d.agent.brokerage}</div>
-            <div style="font-size:13px;"><a href="tel:${d.agent.phone}" style="color:#5856d6;text-decoration:none;font-weight:500;">${d.agent.phone}</a></div>
+            <div style="font-size:15px;font-weight:600;color:#1d1d1f;">${esc(d.agent.name)}</div>
+            <div style="font-size:13px;color:#86868b;">${esc(d.agent.brokerage)}</div>
+            <div style="font-size:13px;"><a href="tel:${d.agent.phone}" style="color:#5856d6;text-decoration:none;font-weight:500;">${esc(d.agent.phone)}</a></div>
           </td>
         </tr>
       </table>
@@ -385,45 +503,127 @@ const blocks: Record<string, BlockFn> = {
   footer: (d) => `
     <tr><td style="padding:24px 32px 20px;text-align:center;">
       <p style="font-size:11px;color:#86868b;margin:0;line-height:1.6;">
-        ${d.agent.name} · ${d.agent.brokerage}<br>
+        ${esc(d.agent.name)} · ${esc(d.agent.brokerage)}<br>
         <a href="${d.unsubscribeUrl ?? '#'}" style="color:#86868b;text-decoration:underline;">Unsubscribe</a> · <a href="#" style="color:#86868b;text-decoration:underline;">Privacy</a>
       </p>
       <p style="font-size:11px;color:#999;text-align:center;margin:4px 0 0">
-        ${d.physicalAddress ?? 'Please contact us for our mailing address'}
+        ${esc(d.physicalAddress ?? 'Please contact us for our mailing address')}
       </p>
     </td></tr>`,
 };
 
 // ═══════════════════════════════════════════════
-// TEMPLATE DEFINITIONS — which blocks for each email type
+// TEMPLATE DEFINITIONS — journey-aware block layout mapping (G-E05)
+//
+// Structure: Record<emailType, Record<journeyPhase | "default", string[]>>
+// - Each email type has a "default" phase used when no journey phase is known.
+// - Phase-specific variants are selected by assembleEmail() when journeyPhase is passed.
+// - All existing block lists are preserved under "default" so existing callers are unaffected.
 // ═══════════════════════════════════════════════
 
-const TEMPLATE_BLOCKS: Record<string, string[]> = {
-  listing_alert: ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "priceComparison", "mortgageCalc", "openHouse", "cta", "agentCard", "footer"],
-  // Fix 5: Welcome template — warm greeting (personalNote), value prop (heroGradient),
-  // optional matching properties (propertyGrid → returns "" when data.listings is absent),
-  // optional social proof (socialProof → returns "" when data.socialProof is absent),
-  // single CTA, agent card, footer.  All optional blocks degrade gracefully — no
-  // required fields beyond contact + agent + content.
-  welcome: ["header", "heroGradient", "personalNote", "propertyGrid", "socialProof", "cta", "agentCard", "footer"],
-  market_update: ["header", "heroGradient", "statsRow", "personalNote", "recentSales", "propertyGrid", "cta", "agentCard", "footer"],
-  neighbourhood_guide: ["header", "heroGradient", "personalNote", "areaHighlights", "mapPreview", "cta", "agentCard", "footer"],
-  home_anniversary: ["header", "heroGradient", "personalNote", "anniversaryComparison", "areaHighlights", "cta", "agentCard", "footer"],
-  just_sold: ["header", "heroImage", "priceBar", "personalNote", "testimonial", "socialProof", "cta", "agentCard", "footer"],
-  open_house: ["header", "heroGradient", "heroImage", "priceBar", "personalNote", "featureList", "mapPreview", "openHouse", "cta", "agentCard", "footer"],
-  seller_report: ["header", "heroGradient", "statsRow", "personalNote", "recentSales", "countdown", "cta", "agentCard", "footer"],
-  cma_preview: ["header", "heroGradient", "personalNote", "priceComparison", "recentSales", "socialProof", "cta", "agentCard", "footer"],
-  re_engagement: ["header", "heroGradient", "personalNote", "statsRow", "propertyGrid", "cta", "agentCard", "footer"],
-  luxury_showcase: ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "videoThumbnail", "cta", "agentCard", "footer"],
-  // Transaction lifecycle templates
-  closing_checklist: ["header", "personalNote", "featureList", "cta", "agentCard", "footer"],
-  inspection_reminder: ["header", "personalNote", "featureList", "cta", "agentCard", "footer"],
-  closing_countdown: ["header", "heroGradient", "personalNote", "statsRow", "countdown", "cta", "agentCard", "footer"],
-  mortgage_renewal: ["header", "personalNote", "statsRow", "priceComparison", "featureList", "cta", "agentCard", "footer"],
-  referral: ["header", "personalNote", "socialProof", "cta", "agentCard", "footer"],
-  buyer_guide: ["header", "heroGradient", "personalNote", "featureList", "propertyGrid", "cta", "agentCard", "footer"],
-  seller_guide: ["header", "heroGradient", "personalNote", "featureList", "cta", "agentCard", "footer"],
+const TEMPLATE_BLOCKS: Record<string, Record<string, string[]>> = {
+  // G-E05: listing_alert — journey-aware variants
+  listing_alert: {
+    lead:           ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "priceComparison", "cta", "agentCard", "footer"],
+    active:         ["header", "heroImage", "priceBar", "openHouse", "photoGallery", "personalNote", "cta", "agentCard", "footer"],
+    dormant:        ["header", "heroImage", "personalNote", "cta", "agentCard", "footer"],
+    under_contract: ["header", "heroImage", "priceBar", "personalNote", "cta", "agentCard", "footer"],
+    past_client:    ["header", "heroImage", "priceBar", "personalNote", "priceComparison", "cta", "agentCard", "footer"],
+    default:        ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "priceComparison", "mortgageCalc", "openHouse", "cta", "agentCard", "footer"],
+  },
+
+  // G-E08: luxury_listing — premium template with luxuryHeader block
+  luxury_listing: {
+    lead:    ["luxuryHeader", "heroImage", "priceBar", "personalNote", "openHouse", "photoGallery", "agentCard", "footer"],
+    active:  ["luxuryHeader", "heroImage", "priceBar", "openHouse", "photoGallery", "personalNote", "cta", "agentCard", "footer"],
+    dormant: ["luxuryHeader", "heroImage", "personalNote", "cta", "agentCard", "footer"],
+    default: ["luxuryHeader", "heroImage", "priceBar", "personalNote", "openHouse", "photoGallery", "agentCard", "footer"],
+  },
+
+  // G-E05: market_update — journey-aware variants
+  market_update: {
+    lead:    ["header", "heroGradient", "personalNote", "statsRow", "recentSales", "cta", "agentCard", "footer"],
+    active:  ["header", "heroGradient", "statsRow", "recentSales", "propertyGrid", "cta", "agentCard", "footer"],
+    dormant: ["header", "heroGradient", "personalNote", "cta", "agentCard", "footer"],
+    default: ["header", "heroGradient", "statsRow", "personalNote", "recentSales", "propertyGrid", "cta", "agentCard", "footer"],
+  },
+
+  // G-E05: home_anniversary — journey-aware variants
+  home_anniversary: {
+    past_client: ["header", "heroGradient", "personalNote", "anniversaryComparison", "areaHighlights", "cta", "agentCard", "footer"],
+    default:     ["header", "heroGradient", "personalNote", "anniversaryComparison", "areaHighlights", "cta", "agentCard", "footer"],
+  },
+
+  // All templates — comprehensive block lists for rich visual emails
+  welcome: {
+    default: ["header", "heroGradient", "personalNote", "propertyGrid", "statsRow", "testimonial", "socialProof", "cta", "agentCard", "footer"],
+  },
+  neighbourhood_guide: {
+    default: ["header", "heroGradient", "heroImage", "personalNote", "areaHighlights", "propertyGrid", "statsRow", "testimonial", "mapPreview", "cta", "agentCard", "footer"],
+  },
+  just_sold: {
+    default: ["header", "heroImage", "priceBar", "personalNote", "priceComparison", "recentSales", "testimonial", "socialProof", "cta", "agentCard", "footer"],
+  },
+  open_house: {
+    default: ["header", "heroGradient", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "mapPreview", "openHouse", "mortgageCalc", "cta", "agentCard", "footer"],
+  },
+  seller_report: {
+    default: ["header", "heroGradient", "statsRow", "personalNote", "recentSales", "priceComparison", "countdown", "testimonial", "cta", "agentCard", "footer"],
+  },
+  cma_preview: {
+    default: ["header", "heroGradient", "personalNote", "priceComparison", "statsRow", "recentSales", "socialProof", "cta", "agentCard", "footer"],
+  },
+  re_engagement: {
+    default: ["header", "heroGradient", "heroImage", "personalNote", "statsRow", "recentSales", "propertyGrid", "mortgageCalc", "testimonial", "cta", "agentCard", "footer"],
+  },
+  luxury_showcase: {
+    default: ["header", "heroImage", "priceBar", "personalNote", "featureList", "photoGallery", "videoThumbnail", "mortgageCalc", "testimonial", "cta", "agentCard", "footer"],
+  },
+  closing_checklist: {
+    default: ["header", "heroGradient", "personalNote", "featureList", "countdown", "testimonial", "cta", "agentCard", "footer"],
+  },
+  inspection_reminder: {
+    default: ["header", "heroGradient", "personalNote", "featureList", "countdown", "cta", "agentCard", "footer"],
+  },
+  closing_countdown: {
+    default: ["header", "heroGradient", "personalNote", "countdown", "statsRow", "featureList", "testimonial", "cta", "agentCard", "footer"],
+  },
+  mortgage_renewal: {
+    default: ["header", "heroGradient", "personalNote", "statsRow", "priceComparison", "mortgageCalc", "featureList", "cta", "agentCard", "footer"],
+  },
+  referral: {
+    default: ["header", "heroGradient", "personalNote", "testimonial", "socialProof", "propertyGrid", "cta", "agentCard", "footer"],
+  },
+  buyer_guide: {
+    default: ["header", "heroGradient", "heroImage", "personalNote", "featureList", "propertyGrid", "mortgageCalc", "statsRow", "testimonial", "cta", "agentCard", "footer"],
+  },
+  seller_guide: {
+    default: ["header", "heroGradient", "personalNote", "statsRow", "recentSales", "priceComparison", "featureList", "testimonial", "cta", "agentCard", "footer"],
+  },
 };
+
+// ═══════════════════════════════════════════════
+// BLOCK SELECTION — journey-phase-aware resolver (G-E05)
+// ═══════════════════════════════════════════════
+
+/**
+ * Returns the block list for a given email type and optional journey phase.
+ * Falls back: phase-specific → "default" → first available phase → welcome.default
+ */
+function getBlockList(emailType: string, journeyPhase?: string): string[] {
+  const typeBlocks = TEMPLATE_BLOCKS[emailType];
+  if (!typeBlocks) {
+    // Unknown type — fall back to welcome
+    return TEMPLATE_BLOCKS["welcome"]?.["default"] ?? [];
+  }
+  // Try phase-specific first, then default, then first value
+  return (
+    (journeyPhase ? typeBlocks[journeyPhase] : undefined) ??
+    typeBlocks["default"] ??
+    Object.values(typeBlocks)[0] ??
+    []
+  );
+}
 
 // ═══════════════════════════════════════════════
 // ASSEMBLER — builds full email HTML from blocks
@@ -432,16 +632,34 @@ const TEMPLATE_BLOCKS: Record<string, string[]> = {
 export function assembleEmail(
   emailType: string,
   data: EmailData,
-  unsubscribeUrl?: string,
-  physicalAddress?: string,
+  themeOverride?: EmailTheme,
+  journeyPhase?: string,
+  engagementScore?: number,
 ): string {
-  const blockList = TEMPLATE_BLOCKS[emailType] || TEMPLATE_BLOCKS.welcome;
+  // Select block list based on journey phase (G-E05)
+  let blockList = getBlockList(emailType, journeyPhase);
 
-  // Merge CASL-required fields into data so footer block can access them
+  // High-intent banner: prepend for engaged non-seller contacts with a CTA URL (G-E05).
+  // Sellers are excluded — "Book a Showing" is irrelevant for contacts selling a property.
+  if (
+    (engagementScore ?? 0) >= 70 &&
+    data.content.ctaUrl &&
+    data.contact.type !== "seller"
+  ) {
+    blockList = ["priorityBookingBanner", ...blockList];
+  }
+
+  // Resolve theme — caller override wins, otherwise derive from email type
+  const theme: EmailTheme = themeOverride ?? getDefaultTheme(emailType);
+  const tokens = THEMES[theme];
+
+  // Merge CASL-required fields into data so footer block can access them.
+  // Also inject _theme and _tokens so theme-aware blocks can branch without
+  // changing the public BlockFn signature.
   const enrichedData: EmailData = {
     ...data,
-    unsubscribeUrl: unsubscribeUrl ?? data.unsubscribeUrl,
-    physicalAddress: physicalAddress ?? data.physicalAddress,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...({ _theme: theme, _tokens: tokens } as any),
   };
 
   // Derive branding from agent field for blocks that need it (e.g. header)
@@ -475,7 +693,7 @@ export function assembleEmail(
 </style>
 </head>
 <body style="margin:0;padding:0;background:#f5f5f7;font-family:${FONT};-webkit-font-smoothing:antialiased;" class="email-body">
-<div style="display:none;max-height:0;overflow:hidden;font-size:1px;color:#f5f5f7;">${data.content.subject} — ${data.content.intro.slice(0, 80)}</div>
+<div style="display:none;max-height:0;overflow:hidden;font-size:1px;color:#f5f5f7;">${esc(data.content.subject)} — ${esc(data.content.intro.slice(0, 80))}</div>
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f7;" class="email-body">
 <tr><td align="center" style="padding:24px 16px;">
 <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);" class="email-card">
@@ -492,17 +710,21 @@ const DEFAULT_BRAND = { name: "Your Realtor", brokerage: "", phone: "", initials
 /**
  * Get brand config from DB for the authenticated tenant.
  * Queries realtor_agent_config.brand_config first, then users table as fallback.
- * Caches for 5 minutes to avoid repeated DB calls per server request.
+ * Caches for 5 minutes per realtorId — keyed to prevent cross-tenant leakage.
  */
-let brandCache: { data: typeof DEFAULT_BRAND; expires: number } | null = null;
+// H2: Map<realtorId, cached entry> — prevents one tenant's brand leaking to another
+const brandCache = new Map<string, { data: typeof DEFAULT_BRAND; expires: number }>();
 
 export async function getBrandConfig(): Promise<typeof DEFAULT_BRAND> {
-  if (brandCache && Date.now() < brandCache.expires) return brandCache.data;
   try {
     const { getAuthenticatedTenantClient } = await import("@/lib/supabase/tenant");
     const tc = await getAuthenticatedTenantClient();
     const realtorId = tc.realtorId;
     const supabase = tc.raw;
+
+    // H2: Check cache keyed by realtorId
+    const cached = brandCache.get(realtorId);
+    if (cached && Date.now() < cached.expires) return cached.data;
 
     // 1. Try realtor_agent_config.brand_config
     const { data: configRow } = await supabase
@@ -526,7 +748,7 @@ export async function getBrandConfig(): Promise<typeof DEFAULT_BRAND> {
           phone: bc.phone || DEFAULT_BRAND.phone,
           initials,
         };
-        brandCache = { data: brand, expires: Date.now() + 300000 };
+        brandCache.set(realtorId, { data: brand, expires: Date.now() + 300000 });
         return brand;
       }
     }
@@ -551,7 +773,7 @@ export async function getBrandConfig(): Promise<typeof DEFAULT_BRAND> {
         phone: DEFAULT_BRAND.phone,
         initials,
       };
-      brandCache = { data: brand, expires: Date.now() + 300000 };
+      brandCache.set(realtorId, { data: brand, expires: Date.now() + 300000 });
       return brand;
     }
   } catch {

@@ -432,7 +432,7 @@ export async function POST(request: NextRequest) {
     if (!tenantId) {
       return NextResponse.json(
         textResponse(
-          "I couldn't verify your account. Please sign in to RealtorAI through Microsoft Teams or Cortana."
+          "I couldn't verify your account. Please sign in to Magnate through Microsoft Teams or Cortana."
         ),
         { status: 200 }
       );

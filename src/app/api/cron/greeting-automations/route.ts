@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getRealtorConfig } from "@/actions/config";
 import type { GreetingRule } from "@/actions/config";
 import { trackEvent } from "@/lib/analytics";
+import { isFeatureEnabled } from "@/lib/feature-gate";
 
 export const maxDuration = 120;
 
@@ -48,6 +49,16 @@ export async function GET(req: NextRequest) {
     if (!config?.brand_config) {
       await trackEvent('cron_run', null, { cron: 'greeting-automations', status: 'success', duration_ms: Date.now() - cronStart });
       return NextResponse.json({ ok: true, processed: 0, reason: "No config" });
+    }
+
+    // Gate: skip all greeting sends if automations is disabled for this realtor
+    const realtorId = (config as Record<string, unknown>).realtor_id as string | undefined;
+    if (realtorId) {
+      const automationsEnabled = await isFeatureEnabled(realtorId, "automations");
+      if (!automationsEnabled) {
+        await trackEvent('cron_run', null, { cron: 'greeting-automations', status: 'success', duration_ms: Date.now() - cronStart });
+        return NextResponse.json({ ok: true, processed: 0, reason: "automations_disabled" });
+      }
     }
 
     const greetingRules: GreetingRule[] = (config.brand_config as any).greeting_rules || [];

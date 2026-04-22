@@ -1,7 +1,7 @@
 export { listingSchema, type ListingFormData } from "./listing";
 export { contactSchema, type ContactFormData } from "./contact";
 export { showingSchema, type ShowingFormData } from "./showing";
-export { taskSchema, type TaskFormData } from "./task";
+export { taskSchema, taskTemplateSchema, taskFilterSchema, type TaskFormData, type TaskFilterData } from "./task";
 export {
   generatePromptsSchema,
   type GeneratePromptsData,

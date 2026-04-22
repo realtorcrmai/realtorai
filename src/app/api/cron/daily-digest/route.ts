@@ -105,7 +105,7 @@ export async function GET(req: Request) {
   <!-- Header -->
   <tr><td style="padding:20px 32px 16px;border-bottom:1px solid #f0ecff;">
     <table width="100%"><tr>
-      <td><span style="font-size:16px;font-weight:700;color:#4f35d2;" class="el">Realtors360</span></td>
+      <td><span style="font-size:16px;font-weight:700;color:#4f35d2;" class="el">Magnate</span></td>
       <td align="right"><span style="font-size:11px;color:#6b6b8a;letter-spacing:0.5px;text-transform:uppercase;" class="em">Daily Digest</span></td>
     </tr></table>
   </td></tr>
@@ -169,7 +169,7 @@ export async function GET(req: Request) {
 
   <!-- Footer -->
   <tr><td style="padding:24px 32px 20px;text-align:center;">
-    <p style="font-size:11px;color:#6b6b8a;margin:0;" class="em">Realtors360 CRM &middot; <a href="${appUrl}/settings" style="color:#6b6b8a;text-decoration:underline;">Manage digest preferences</a></p>
+    <p style="font-size:11px;color:#6b6b8a;margin:0;" class="em">Magnate &middot; <a href="${appUrl}/settings" style="color:#6b6b8a;text-decoration:underline;">Manage digest preferences</a></p>
   </td></tr>
 
 </table></td></tr></table></body></html>`.trim();
@@ -178,7 +178,7 @@ export async function GET(req: Request) {
     try {
       emailResult = await sendEmail({
         to: realtorEmail,
-        subject: `Realtors360 Daily: ${digest.emails_sent} emails sent, ${digest.hot_leads.length} hot leads`,
+        subject: `Magnate Daily: ${digest.emails_sent} emails sent, ${digest.hot_leads.length} hot leads`,
         html: digestHtml,
       });
     } catch (emailError) {

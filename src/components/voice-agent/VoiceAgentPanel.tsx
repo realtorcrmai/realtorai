@@ -93,7 +93,7 @@ export function VoiceAgentPanel() {
     {
       role: "assistant",
       content:
-        "Hey! I'm your RealtorAI assistant. I can help you navigate the portal, search properties, manage tasks, and more. Try saying \"show me contacts\" or ask anything!",
+        "Hey! I'm your Magnate assistant. I can help you navigate the portal, search properties, manage tasks, and more. Try saying \"show me contacts\" or ask anything!",
     },
   ]);
   const [input, setInput] = useState("");

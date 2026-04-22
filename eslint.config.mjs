@@ -8,6 +8,22 @@ const nextConfig = require("eslint-config-next");
 const [base, typescript, ...rest] = nextConfig;
 
 export default [
+  // Ignore sub-packages, dist files, and generated code
+  {
+    ignores: [
+      "listingflow-sites/**",
+      "listingflow-agent/**",
+      "realtors360-newsletter/**",
+      "realtors360-social/**",
+      "realtors360-agent/**",
+      "realtors360-rag/**",
+      "agent-pipeline/**",
+      "app-duplicate-*/**",
+      ".netlify/**",
+      "**/dist/**",
+      "**/.next/**",
+    ],
+  },
   {
     ...base,
     rules: {
@@ -20,19 +36,25 @@ export default [
     ...typescript,
     rules: {
       ...typescript.rules,
-      "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+      "@typescript-eslint/consistent-type-assertions": ["error", {
+        assertionStyle: "as",
+      }],
     },
   },
   ...rest,
   // Disable React Compiler lint rules — codebase not yet optimized for
   // the compiler's strict requirements (setState in effects, impure
-  // render functions, etc.). Re-enable once patterns are migrated.
+  // render functions, refs during render, etc.). Re-enable once migrated.
   {
     files: ["**/*.{ts,tsx,js,jsx}"],
     rules: {
       "react-compiler/react-compiler": "off",
-      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/set-state-in-render": "off",
+      "react-hooks/purity": "off",
+      "react-hooks/refs": "off",
+      "react-hooks/preserve-manual-memoization": "off",
     },
   },
 ];

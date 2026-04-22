@@ -24,7 +24,7 @@ import {
   type IntegrationProvider,
 } from "@/lib/constants/integrations";
 
-const PROVIDER_ICONS: Record<string, React.ElementType> = {
+const PROVIDER_ICONS: Record<string, React.FC<{ className?: string }>> = {
   PenTool,
   Database,
   Mail,

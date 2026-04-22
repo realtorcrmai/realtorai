@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 // ---------------------------------------------------------------------------
 // Google Actions Fulfillment Webhook
 // ---------------------------------------------------------------------------
-// Handles intents from Google Assistant for the RealtorAI voice agent.
+// Handles intents from Google Assistant for the Magnate voice agent.
 // Validates the authorization header, maps intents to CRM queries, and
 // returns SSML-formatted responses.
 // ---------------------------------------------------------------------------
@@ -266,7 +266,7 @@ export async function POST(request: NextRequest) {
         googleResponse(
           session.id,
           session.params,
-          "I couldn't verify your account. Please re-link your RealtorAI account in the Google Home app."
+          "I couldn't verify your account. Please re-link your Magnate account in the Google Home app."
         ),
         { status: 200 }
       );

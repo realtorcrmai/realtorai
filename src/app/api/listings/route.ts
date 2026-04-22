@@ -10,12 +10,17 @@ export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
   const status = searchParams.get("status")?.toLowerCase();
   const search = searchParams.get("search");
-  const rawLimit = parseInt(searchParams.get("limit") || "200");
-  const limit = Number.isNaN(rawLimit) ? 200 : Math.min(Math.max(rawLimit, 1), 500);
+  const rawLimit = parseInt(searchParams.get("limit") || "50");
+  const limit = Number.isNaN(rawLimit) ? 50 : Math.min(Math.max(rawLimit, 1), 500);
+  const rawPage = parseInt(searchParams.get("page") || "1");
+  const page = Number.isNaN(rawPage) ? 1 : Math.max(rawPage, 1);
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
 
   let query = tc
     .from("listings")
-    .select("*, contacts!listings_seller_id_fkey(name, phone)")
+    .select("*, contacts!listings_seller_id_fkey(name, phone)", { count: "exact" })
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (search) {
@@ -27,16 +32,19 @@ export async function GET(req: NextRequest) {
   if (status && ["active", "pending", "sold", "expired", "withdrawn", "conditional"].includes(status)) {
     query = query.eq("status", status);
   }
-  query = query.limit(limit);
+  query = query.range(from, to);
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
 
   if (error) {
     console.error("[listings GET]", error.message);
     return NextResponse.json({ error: "Failed to fetch listings" }, { status: 500 });
   }
 
-  return NextResponse.json(data ?? []);
+  return NextResponse.json({
+    data: data ?? [],
+    pagination: { page, limit, total: count ?? 0, totalPages: Math.ceil((count ?? 0) / limit) },
+  });
 }
 
 export async function POST(req: NextRequest) {

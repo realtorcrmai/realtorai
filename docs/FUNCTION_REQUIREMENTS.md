@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 -->
 <!-- docs-audit: src/actions/*, src/app/api/* -->
 # Function Requirements — Detailed Specifications
 
@@ -345,5 +346,40 @@ realtorId: string;  // Which realtor to analyze
 
 ---
 
+---
+
+## declineInvite()
+
+**File:** `src/actions/team.ts`
+
+**Purpose:** Allows a user to decline a pending team invitation via its token.
+
+**Input:** `token: string` — the invite token from the invitation link.
+
+**Output:** `{ success: true } | { error: string }`
+
+**Database Interactions:**
+- READS: `team_invitations` (find pending invite by token)
+- WRITES: `team_invitations` (update status to declined), `team_audit_log` (log decline action)
+
+**Error Handling:**
+- Token not found or already used → return `{ error }`, no DB changes
+- User not authenticated → throw (server action guard)
+
+**Edge Cases:**
+- Token already accepted → return error, don't re-process
+- Token expired → return error
+
+---
+
 *Created: 2026-03-24*
 *Read this alongside TODO_WIRING_GUIDE.md for complete implementation instructions.*
+
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->
+
+<!-- Last reviewed: 2026-04-21 — Wave 1a demo gate -->
+<!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
+
+<!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
+
+<!-- Last reviewed: 2026-04-21 — AGENTS.md v0.6 + violation logging -->

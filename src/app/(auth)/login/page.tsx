@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,21 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowRight } from "lucide-react";
 import { LogoSpinner, LogoVideo, LogoIcon } from "@/components/brand/Logo";
-import { loginAsDemo } from "@/actions/auth";
-
-const DEMO_SLOTS = [
-  { label: "Kunal (Pro)", slot: 0, color: "bg-brand-muted text-brand-dark hover:bg-brand/20" },
-  { label: "Sarah (Studio)", slot: 1, color: "bg-brand-muted text-brand-dark hover:bg-brand-muted-strong" },
-  { label: "Mike (Pro)", slot: 2, color: "bg-amber-100 text-amber-700 hover:bg-amber-200" },
-  { label: "Priya (Free)", slot: 3, color: "bg-pink-100 text-pink-700 hover:bg-pink-200" },
-] as const;
+import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isPending, startTransition] = useTransition();
 
   async function handleCredentialsLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -68,10 +60,10 @@ export default function LoginPage() {
           {/* Brand text below logo */}
           <div className="text-center mt-6 space-y-3">
             <h1 className="text-3xl font-bold tracking-tight text-white">
-              Realtors360
+              Magnate
             </h1>
             <p className="text-sm text-white/40 tracking-widest uppercase">
-              AI-Powered Real Estate Platform
+              360° AI Platform for Realtors
             </p>
           </div>
 
@@ -88,7 +80,7 @@ export default function LoginPage() {
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-2">
             <LogoIcon size={36} />
-            <span className="text-xl font-bold tracking-tight">Realtors360</span>
+            <span className="text-xl font-bold tracking-tight">Magnate</span>
           </div>
 
           <div className="text-center lg:text-left">
@@ -114,7 +106,15 @@ export default function LoginPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    <Link
+                      href="/forgot-password"
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
                   <Input
                     id="password"
                     type="password"
@@ -145,32 +145,6 @@ export default function LoginPage() {
                   )}
                 </Button>
               </form>
-
-              {/* Quick login — demo accounts (credentials stored server-side only) */}
-              <div className="pt-2 border-t space-y-2">
-                <p className="text-xs text-muted-foreground text-center font-medium">
-                  Quick Login (Demo)
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {DEMO_SLOTS.map(({ label, slot, color }) => (
-                    <button
-                      key={slot}
-                      type="button"
-                      className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${color}`}
-                      disabled={loading || isPending}
-                      onClick={() => {
-                        setError("");
-                        startTransition(async () => {
-                          const result = await loginAsDemo(slot);
-                          if (result?.error) setError(result.error);
-                        });
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               <p className="text-xs text-muted-foreground text-center mt-3">
                 Don&apos;t have an account?{" "}

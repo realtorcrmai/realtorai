@@ -11,7 +11,7 @@ type FieldItem = {
   value: string;
   editKey?: string;
   editTarget?: "listing" | "contact";
-  inputType?: "text" | "number" | "time";
+  inputType?: "text" | "number" | "time" | "array";
 };
 
 type DataSection = { title: string; fields: FieldItem[] };
@@ -94,6 +94,10 @@ function EditableSection({
         if (target === "listing") {
           if (field.inputType === "number") {
             listingUpdates[field.editKey] = val ? Number(val) : null;
+          } else if (field.inputType === "array") {
+            listingUpdates[field.editKey] = val
+              ? val.split(",").map((s) => s.trim()).filter(Boolean)
+              : [];
           } else {
             listingUpdates[field.editKey] = val || null;
           }
@@ -179,7 +183,7 @@ function EditableSection({
             </dt>
             {isEditing && field.editKey ? (
               <input
-                type={field.inputType ?? "text"}
+                type={field.inputType === "array" ? "text" : (field.inputType ?? "text")}
                 value={editValues[field.editKey] ?? ""}
                 onChange={(e) =>
                   setEditValues((prev) => ({
@@ -187,6 +191,7 @@ function EditableSection({
                     [field.editKey!]: e.target.value,
                   }))
                 }
+                placeholder={field.inputType === "array" ? "comma-separated values" : undefined}
                 className="w-full mt-0.5 px-2 py-1 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
                 disabled={isPending}
               />

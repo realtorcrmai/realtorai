@@ -7,7 +7,7 @@ import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 
 // Drip schedule: day → subject + skip check
 const DRIP_SCHEDULE = [
-  { day: 0, subject: "Welcome to Realtors360 — here's your first win", skipCheck: null },
+  { day: 0, subject: "Welcome to Magnate — here's your first win", skipCheck: null },
   { day: 1, subject: "Import your contacts in 60 seconds", skipCheck: "contacts" },
   { day: 2, subject: "Did you know? AI writes your MLS remarks", skipCheck: "remarks" },
   { day: 3, subject: "Send your first newsletter in 3 minutes", skipCheck: "newsletter" },
@@ -17,7 +17,7 @@ const DRIP_SCHEDULE = [
 ];
 
 const FOUNDER_FROM = {
-  name: "Rahul from Realtors360",
+  name: "The Magnate Team",
   email: process.env.RESEND_FROM_EMAIL || "onboarding@realtors360.com",
 };
 
@@ -143,12 +143,13 @@ export async function sendDripEmail(
 export async function processWelcomeDrip(): Promise<{ processed: number; sent: number; skipped: number }> {
   const supabase = createAdminClient();
 
-  // Get users within 14-day signup window
+  // Get users within 14-day signup window — only those who verified their email
   const { data: users } = await supabase
     .from("users")
     .select("id, email, name, created_at, drip_unsubscribed")
     .gte("created_at", new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString())
     .eq("is_active", true)
+    .eq("email_verified", true)
     .eq("drip_unsubscribed", false);
 
   if (!users?.length) return { processed: 0, sent: 0, skipped: 0 };

@@ -69,6 +69,15 @@ EOF
             else
                 jq '.phases.validated = true' "$TASK_FILE" > "$TASK_FILE.tmp" && mv "$TASK_FILE.tmp" "$TASK_FILE"
             fi
+
+            # Wave 2b: For CODING:feature, run smoke harness
+            if [[ "$TYPE" == "CODING:feature" ]]; then
+                SMOKE_OUTPUT=$(node scripts/run-smoke.mjs 2>&1)
+                SMOKE_EXIT=$?
+                if [[ $SMOKE_EXIT -ne 0 ]]; then
+                    MISSING="$MISSING\n- Smoke harness failed:\n$SMOKE_OUTPUT"
+                fi
+            fi
         fi
 
         if [[ "$COMPLIANCE" != "true" ]]; then
@@ -89,6 +98,39 @@ EOF
             TEST_CHANGES=$(cd "$PROJECT_DIR" && git diff --cached --name-only 2>/dev/null | grep -E "tests/|__tests__/|\.test\.|\.spec\." | wc -l | tr -d ' ')
             if [[ "$TEST_CHANGES" == "0" ]]; then
                 DELIVERABLE_WARNINGS="$DELIVERABLE_WARNINGS\n  ⚠ No test files created/updated (CODING tasks should include tests)"
+            fi
+
+            # For CODING:feature, require test coverage of new exports
+            if [[ "$TYPE" == "CODING:feature" ]]; then
+                cd "$PROJECT_DIR" 2>/dev/null
+                NEW_EXPORTS_JSON=$(node scripts/extract-new-exports.mjs 2>/dev/null || echo "[]")
+                NEW_EXPORT_COUNT=$(echo "$NEW_EXPORTS_JSON" | jq 'length' 2>/dev/null || echo "0")
+
+                if [[ "$NEW_EXPORT_COUNT" -gt 0 ]]; then
+                    # Get list of changed test files
+                    CHANGED_TEST_FILES=$(git diff --name-only origin/dev...HEAD 2>/dev/null | grep -E "tests/|__tests__/|\.test\.|\.spec\." || echo "")
+
+                    if [[ -z "$CHANGED_TEST_FILES" ]]; then
+                        MISSING="$MISSING\n- CODING:feature added $NEW_EXPORT_COUNT new export(s) but no test files are in this PR"
+                    else
+                        # Grep each new symbol in each changed test file
+                        MATCHED=0
+                        SYMBOLS=$(echo "$NEW_EXPORTS_JSON" | jq -r '.[].symbol' 2>/dev/null)
+                        for symbol in $SYMBOLS; do
+                            for test_file in $CHANGED_TEST_FILES; do
+                                if grep -q "\b$symbol\b" "$test_file" 2>/dev/null; then
+                                    MATCHED=$((MATCHED + 1))
+                                    break
+                                fi
+                            done
+                        done
+
+                        if [[ "$MATCHED" -eq 0 ]]; then
+                            SYMBOL_LIST=$(echo "$NEW_EXPORTS_JSON" | jq -r '.[].symbol' | tr '\n' ',' | sed 's/,$//')
+                            MISSING="$MISSING\n- CODING:feature added new exports ($SYMBOL_LIST) but no test file references any of them"
+                        fi
+                    fi
+                fi
             fi
         fi
         # Docs freshness check — warn if docs are stale after code changes
@@ -139,9 +181,36 @@ if [[ -f "$TASK_FILE" ]]; then
     DATE=$(date +%Y-%m-%d)
     DESCRIPTION=$(jq -r '.description // "unknown"' "$TASK_FILE" | head -c 80)
     PHASES_DONE=$(jq -r '[.phases | to_entries[] | select(.value == true) | .key] | join(", ")' "$TASK_FILE" 2>/dev/null)
+    PHASES_SKIPPED=$(jq -r '[.phases | to_entries[] | select(.value == false) | .key] | join(", ")' "$TASK_FILE" 2>/dev/null)
+
+    # Determine pass/fail state
+    STATUS="✅"
+    NOTES="Auto-logged by completion-gate"
+
+    # FAIL if any phase was skipped (medium/large tier)
+    if [[ -n "$PHASES_SKIPPED" && ("$TIER" == "medium" || "$TIER" == "large") ]]; then
+        STATUS="❌"
+        NOTES="FAIL: phases skipped ($PHASES_SKIPPED)"
+    fi
+
+    # FAIL if deliverable warnings fired
+    if [[ -n "$DELIVERABLE_WARNINGS" ]]; then
+        STATUS="❌"
+        if [[ "$NOTES" == "Auto-logged by completion-gate" ]]; then
+            NOTES="FAIL: deliverable warnings — see session output"
+        else
+            NOTES="$NOTES; deliverable warnings"
+        fi
+    fi
+
+    # FAIL if tsc failed (defensive — if user overrode the block, log it)
+    if [[ -n "$TSC_EXIT" && "$TSC_EXIT" -ne 0 ]]; then
+        STATUS="❌"
+        NOTES="FAIL: tsc errors bypassed"
+    fi
 
     if [[ -f "$COMPLIANCE_LOG" ]]; then
-        echo "| $DATE | claude | $DESCRIPTION | $TYPE | ✅ | $PHASES_DONE | — | Auto-logged by completion-gate |" >> "$COMPLIANCE_LOG"
+        echo "| $DATE | claude | $DESCRIPTION | $TYPE | $STATUS | $PHASES_DONE | ${PHASES_SKIPPED:-—} | $NOTES |" >> "$COMPLIANCE_LOG"
     fi
 fi
 

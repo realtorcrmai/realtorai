@@ -1,0 +1,71 @@
+name: "Drift Monitor: Smoke Test Live Environment"
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "URL to smoke test (defaults to VERCEL_URL secret)"
+        required: false
+        type: string
+
+concurrency:
+  group: drift-monitor
+  cancel-in-progress: true
+
+env:
+  TARGET_URL: ${{ inputs.target_url || secrets.VERCEL_URL || 'http://localhost:3000' }}
+
+jobs:
+  smoke-test:
+    name: "Smoke Test Critical Pages"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Smoke test critical routes
+        run: |
+          BASE_URL="${{ env.TARGET_URL }}"
+          echo "Testing against: $BASE_URL"
+
+          ROUTES=(
+            "/"
+            "/login"
+            "/api/health"
+          )
+
+          FAILED=0
+          for route in "${ROUTES[@]}"; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${BASE_URL}${route}" 2>/dev/null || echo "000")
+            if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
+              echo "OK [$STATUS] ${route}"
+            else
+              echo "FAIL [$STATUS] ${route}"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+
+          if [ $FAILED -gt 0 ]; then
+            echo "::error::$FAILED route(s) failed smoke test"
+            exit 1
+          fi
+
+          echo "All routes healthy"
+
+      - name: Check API responsiveness
+        run: |
+          BASE_URL="${{ env.TARGET_URL }}"
+
+          # Time the response
+          RESPONSE_TIME=$(curl -s -o /dev/null -w "%{time_total}" --max-time 30 "${BASE_URL}/login" 2>/dev/null || echo "99")
+
+          echo "Login page response time: ${RESPONSE_TIME}s"
+
+          # Alert if response > 10s
+          if (( $(echo "$RESPONSE_TIME > 10" | bc -l 2>/dev/null || echo "0") )); then
+            echo "::warning::Slow response detected: ${RESPONSE_TIME}s (threshold: 10s)"
+          fi

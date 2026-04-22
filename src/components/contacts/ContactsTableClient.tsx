@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Phone, Mail, Eye } from "lucide-react";
 import { ContactPreviewSheet } from "@/components/contacts/ContactPreviewSheet";
 import { bulkUpdateContactStage, bulkDeleteContacts, bulkExportContacts } from "@/actions/contacts";
+import { formatPhone } from "@/lib/format";
 import { toast } from "sonner";
 
 interface ContactRow {
@@ -277,15 +278,19 @@ export function ContactsTableClient({ contacts }: { contacts: ContactRow[] }) {
             sortable: true,
             render: (r) => (
               <div className="flex items-center gap-2.5">
-                <div className={`h-7 w-7 rounded-full ${hashColor(r.name)} flex items-center justify-center text-white text-[10px] font-semibold shrink-0`}>
-                  {getInitials(r.name)}
-                </div>
+                {(r as any).photo_url ? (
+                  <img src={(r as any).photo_url} alt="" className="h-7 w-7 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className={`h-7 w-7 rounded-full ${hashColor(r.name)} flex items-center justify-center text-white text-[10px] font-semibold shrink-0`}>
+                    {getInitials(r.name)}
+                  </div>
+                )}
                 <span className="font-medium">{r.name}</span>
               </div>
             ),
           },
           { key: "email", header: "Email", render: (r) => <span className="text-muted-foreground">{r.email || "\u2014"}</span> },
-          { key: "phone", header: "Phone", render: (r) => <span className="text-muted-foreground">{r.phone || "\u2014"}</span> },
+          { key: "phone", header: "Phone", render: (r) => <span className="text-muted-foreground" suppressHydrationWarning>{r.phone ? formatPhone(r.phone) : "\u2014"}</span> },
           {
             key: "type",
             header: "Type",

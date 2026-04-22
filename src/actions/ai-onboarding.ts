@@ -311,7 +311,7 @@ export async function suggestFirstActions(userId?: string): Promise<{ actions: {
   if (!recentContacts?.length) {
     return {
       actions: [
-        { title: "Import your contacts", description: "Get your client data into Realtors360", href: "/contacts/new" },
+        { title: "Import your contacts", description: "Get your client data into Magnate", href: "/contacts/new" },
       ],
     };
   }

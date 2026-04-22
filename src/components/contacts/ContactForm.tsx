@@ -24,6 +24,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { createContact, updateContact } from "@/actions/contacts";
+import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import type { Contact } from "@/types";
 import { formatPhone, formatPostalCode, normalizePhoneE164, titleCaseName } from "@/lib/format";
@@ -42,6 +43,7 @@ import {
   LEAD_SOURCES,
   CONTACT_TYPES,
   CONTACT_TYPE_LABELS,
+  PREF_CHANNELS,
   PARTNER_TYPES,
   PARTNER_TYPE_LABELS,
 } from "@/lib/constants";
@@ -51,7 +53,7 @@ const formSchema = z.object({
   phone: z.string().min(10, "Valid phone number required"),
   email: z.string().email().optional().or(z.literal("")),
   type: z.enum(CONTACT_TYPES),
-  pref_channel: z.enum(["whatsapp", "sms"]),
+  pref_channel: z.enum(PREF_CHANNELS),
   notes: z.string().optional(),
   address: z.string().optional(),
   postal_code: z.string()
@@ -179,8 +181,12 @@ export function ContactFormContent({
     setDuplicates(null);
     const payload = buildPayload(data);
     if (contact) {
-      await updateContact(contact.id, payload);
+      const result = await updateContact(contact.id, payload);
       setSubmitting(false);
+      if (result && "error" in result) {
+        toast.error(result.error);
+        return;
+      }
       reset();
       onSuccess?.();
     } else {
@@ -284,7 +290,7 @@ export function ContactFormContent({
           <Select
             defaultValue={contact?.pref_channel ?? "sms"}
             onValueChange={(val) =>
-              setValue("pref_channel", val as "whatsapp" | "sms", { shouldValidate: true, shouldDirty: true })
+              setValue("pref_channel", val as FormData["pref_channel"], { shouldValidate: true, shouldDirty: true })
             }
           >
             <SelectTrigger>
@@ -293,6 +299,8 @@ export function ContactFormContent({
             <SelectContent>
               <SelectItem value="sms">SMS</SelectItem>
               <SelectItem value="whatsapp">WhatsApp</SelectItem>
+              <SelectItem value="email">Email</SelectItem>
+              <SelectItem value="phone">Phone</SelectItem>
             </SelectContent>
           </Select>
         </div>

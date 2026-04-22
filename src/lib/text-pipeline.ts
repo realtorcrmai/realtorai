@@ -83,6 +83,31 @@ const COMPLIANCE_BLOCKLIST = [
   { pattern: /better\s+than\s+(remax|keller|century|coldwell|royal\s?lepage|sotheby|compass|sutton|macdonald)/i, reason: "Cannot disparage competitor brokerages" },
   { pattern: /worst\s+(realtor|agent|brokerage)/i, reason: "Cannot disparage competitors" },
   { pattern: /no\s+money\s+down/i, reason: "Cannot make financing claims" },
+  // G-N06: Extended compliance blocklist
+  {
+    pattern: /\b(act now|limited time only|expires tonight|don't wait|last chance|hurry up|ends soon)\b/i,
+    reason: "False urgency: use specific factual deadlines (e.g., 'offer deadline Friday April 19 at 5pm')",
+  },
+  {
+    pattern: /\b(best neighbourhood|safest area|most desirable area|best place to live in)\b/i,
+    reason: "Unsubstantiated claim: back claims with data (Walk Score, school ratings, crime statistics)",
+  },
+  {
+    pattern: /\b(thousands of clients|most trusted agent|everyone loves|all agents use|top rated agent in)\b/i,
+    reason: "Fake social proof: use specific verifiable numbers with cited sources",
+  },
+  {
+    pattern: /\b(#1 realtor|number one realtor|lowest price in|best deal in|nobody beats)\b/i,
+    reason: "Unverifiable superlative: use verifiable claims (e.g., 'ranked top 5% by REBGV volume')",
+  },
+  {
+    pattern: /\b(great investment|will definitely appreciate|guaranteed to go up|prices will rise|can't lose)\b/i,
+    reason: "Investment advice: BCFSA prohibits unlicensed investment predictions — remove forward-looking value claims",
+  },
+  {
+    pattern: /\b(clean title guaranteed|no legal issues guaranteed|guaranteed clear title)\b/i,
+    reason: "Legal title claim: do not guarantee title status — requires a lawyer's confirmation",
+  },
 ];
 
 // ═══════════════════════════════════════════════
@@ -102,7 +127,7 @@ export async function runTextPipeline(input: PipelineInput): Promise<PipelineRes
     "{area}": input.contactArea || "",
     "{budget_min}": input.contactBudget?.min ? `$${input.contactBudget.min.toLocaleString()}` : "",
     "{budget_max}": input.contactBudget?.max ? `$${input.contactBudget.max.toLocaleString()}` : "",
-    "{agent_name}": input.realtorName || "Kunal",
+    "{agent_name}": input.realtorName || "Your Agent",
     "{{first_name}}": input.contactFirstName,
     "{{name}}": input.contactName,
   };

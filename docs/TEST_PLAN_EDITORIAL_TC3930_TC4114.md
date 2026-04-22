@@ -1,4 +1,4 @@
-# QA Expansion — Section X, Y, Z, AA, AB: Component/System/Error/Onboarding Tests
+<!-- docs-audit: none --># QA Expansion — Section X, Y, Z, AA, AB: Component/System/Error/Onboarding Tests
 ## Test Range: TC-3930 to TC-4114
 ## Feature: Editorial Newsletter System
 

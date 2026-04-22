@@ -243,6 +243,34 @@ export async function overrideListingStatus(
           }
         }
       }
+
+      // G-J01: Also advance buyer's journey if there's a linked buyer contact
+      if (newStatus === "conditional" || newStatus === "sold") {
+        try {
+          const { data: appts } = await tc
+            .from("appointments")
+            .select("buyer_agent_email, buyer_agent_name")
+            .eq("listing_id", id)
+            .in("status", ["confirmed", "completed"])
+            .limit(1);
+
+          if (appts?.[0]?.buyer_agent_email) {
+            const { data: buyerContact } = await tc
+              .from("contacts")
+              .select("id")
+              .ilike("email", appts[0].buyer_agent_email)
+              .maybeSingle();
+
+            if (buyerContact) {
+              const { advanceJourneyPhase } = await import("@/actions/journeys");
+              const buyerPhase = newStatus === "conditional" ? "under_contract" : "past_client";
+              await advanceJourneyPhase(buyerContact.id, "buyer", buyerPhase);
+            }
+          }
+        } catch (err) {
+          console.error("[listings] Failed to advance buyer journey:", err);
+        }
+      }
     } catch {
       // Don't fail status update if seller stage sync fails
     }
@@ -290,7 +318,7 @@ export async function updateListingStatus(
   // this in production.
   const FINTRAC_GATED_STATUSES = new Set(["active", "pending", "sold"]);
   if (FINTRAC_GATED_STATUSES.has(newStatus) && process.env.BYPASS_FINTRAC_GATE !== "true") {
-    const { count: identityCount } = await tc.raw
+    const { count: identityCount } = await tc
       .from("seller_identities")
       .select("id", { count: "exact", head: true })
       .eq("listing_id", id);
@@ -487,5 +515,35 @@ export async function updateListingStatus(
     }
   }
 
+  return { success: true };
+}
+
+export async function deleteListing(id: string) {
+  const tc = await getAuthenticatedTenantClient();
+
+  const { error } = await tc
+    .from("listings")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("deleted_at", null);
+
+  if (error) return { error: "Failed to delete listing" };
+
+  revalidatePath("/listings");
+  return { success: true };
+}
+
+export async function restoreListing(id: string) {
+  const tc = await getAuthenticatedTenantClient();
+
+  const { error } = await tc
+    .from("listings")
+    .update({ deleted_at: null })
+    .eq("id", id);
+
+  if (error) return { error: "Failed to restore listing" };
+
+  revalidatePath("/listings");
+  revalidatePath(`/listings/${id}`);
   return { success: true };
 }

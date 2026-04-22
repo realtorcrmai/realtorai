@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 --task-mgmt -->
 <!-- docs-audit: src/app/(dashboard)/settings/* -->
 # UI Design Spec: Super Admin Panel
 
@@ -1587,3 +1588,7 @@ Issues identified during review and their resolutions:
 | 21 | Settings page in UI nav but deferred in IMPL | **UI Design updated** — Settings section marked as v2 deferred with "Coming soon" placeholder. |
 | 22 | Impersonation "View as user" links in UI but deferred in IMPL | **UI Design updated** — Links marked as disabled in v1 with "Coming in v2" tooltip. |
 | 23 | Retention tab in UI Analytics but deferred in IMPL | **UI Design updated** — Tab shows placeholder with data collection start date. Full spec preserved in collapsed details block for v2. |
+| 24 | TeamSettingsClient updated with invite accept/decline notifications and inline confirm for member removal | **Noted** — TeamSettingsClient.tsx now supports in-app invite notifications and inline confirmation before removing members. |
+
+
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->

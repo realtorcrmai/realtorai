@@ -35,13 +35,17 @@ function generateBrief({ events, tasks, selectedDate, pendingShowings, activeLis
   const lines: BriefLine[] = [];
   const dayLabel = isToday(selectedDate) ? "today" : isTomorrow(selectedDate) ? "tomorrow" : format(selectedDate, "EEEE");
 
-  if (dayEvents.length === 0) {
+  const taskEvents = dayEvents.filter((ev) => ev.type === "task");
+  const totalScheduled = showings.length + googleEvents.length + dayTasks.length;
+
+  if (totalScheduled === 0) {
     lines.push({ text: `No events scheduled ${dayLabel}. A great day to focus on follow-ups and prospecting.`, type: "positive" });
   } else {
     const parts: string[] = [];
     if (showings.length > 0) parts.push(`${showings.length} showing${showings.length !== 1 ? "s" : ""}`);
     if (googleEvents.length > 0) parts.push(`${googleEvents.length} calendar event${googleEvents.length !== 1 ? "s" : ""}`);
-    lines.push({ text: `You have ${parts.join(" and ")} ${dayLabel}.`, type: "info" });
+    if (dayTasks.length > 0) parts.push(`${dayTasks.length} task${dayTasks.length !== 1 ? "s" : ""}`);
+    lines.push({ text: `You have ${parts.join(", ")} ${dayLabel}.`, type: "info" });
   }
   if (confirmedToday.length > 0) lines.push({ text: `${confirmedToday.length} showing${confirmedToday.length !== 1 ? "s" : ""} confirmed and ready to go.`, type: "positive" });
   if (pendingToday.length > 0) lines.push({ text: `${pendingToday.length} showing${pendingToday.length !== 1 ? "s" : ""} still awaiting confirmation.`, type: "alert" });

@@ -33,13 +33,13 @@
       "reason": "New server action file should be referenced in project structure"
     },
     {
-      "pattern": "src/components/*/",
+      "pattern": "src/components/*",
       "docs": ["CONTRIBUTING.md"],
       "section": "Project structure → components",
       "reason": "New component directory should appear in structure tree"
     },
     {
-      "pattern": "src/lib/*/",
+      "pattern": "src/lib/*",
       "docs": ["CONTRIBUTING.md"],
       "section": "Project structure → lib",
       "reason": "New lib directory should appear in structure tree"

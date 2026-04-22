@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 -->
 <!-- docs-audit: src/components/contacts/*, src/actions/contacts.ts -->
 # Prospect 360 — Complete Specification
 
@@ -637,3 +638,6 @@ ContactDetailPage (server component)
 ---
 
 *Version 1.0 — 2026-03-23*
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->
+
+<!-- Last reviewed: 2026-04-21 — AGENTS.md v0.6 + violation logging -->

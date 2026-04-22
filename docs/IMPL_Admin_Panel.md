@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 --task-mgmt -->
 <!-- docs-audit: src/app/(dashboard)/settings/*, src/app/api/admin/* -->
 # Implementation Plan: Super Admin Panel
 
@@ -413,6 +414,8 @@ Three lines of code replace ~200 lines of custom middleware instrumentation, an 
 | | `5 cron routes` | Wrap with cron_run tracking | +50 |
 | | **Total delta** | | **~501** |
 
+> **Note (2026-04-21):** `TeamSettingsClient.tsx` now includes invite notification actions (accept/decline), inline confirmation for member removal, and decline-invite flow. These changes are outside Admin Panel scope but affect the same settings route group.
+
 ### Files NOT Created (Removed from PRD)
 
 | PRD File | Why Removed |
@@ -801,3 +804,6 @@ Phase 3:
 - [ ] Email KPIs match Resend dashboard numbers
 - [ ] Per-user email table shows bounce rate with red/amber/green status
 - [ ] System page links to Sentry and Vercel dashboard open correctly
+
+
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->

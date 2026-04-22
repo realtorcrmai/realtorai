@@ -39,12 +39,16 @@ export function DeleteContactButton({
   function handleDelete() {
     setErrorMsg(null);
     startTransition(async () => {
-      const result = await deleteContact(contactId);
-      if (result.error) {
-        setErrorMsg(result.error);
-      } else {
-        setOpen(false);
-        router.push("/contacts");
+      try {
+        const result = await deleteContact(contactId);
+        if (result.error) {
+          setErrorMsg(result.error);
+        } else {
+          setOpen(false);
+          router.push("/contacts");
+        }
+      } catch {
+        setErrorMsg("Your session may have expired. Please refresh and try again.");
       }
     });
   }

@@ -27,7 +27,7 @@ export function renderVerifyEmail(props: { name: string; verifyUrl: string }): s
         <tr><td style="padding:32px 40px;">
           <p style="color:#1a1535;font-size:16px;line-height:1.6;margin:0 0 16px;">Hi ${name},</p>
           <p style="color:#4a4a68;font-size:14px;line-height:1.6;margin:0 0 24px;">
-            Thanks for signing up for Realtors360! Click the button below to verify your email address and get started.
+            Thanks for signing up for Magnate! Click the button below to verify your email address and get started.
           </p>
           <!-- CTA Button -->
           <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:8px 0;">
@@ -46,7 +46,7 @@ export function renderVerifyEmail(props: { name: string; verifyUrl: string }): s
         </td></tr>
         <!-- Footer -->
         <tr><td style="padding:20px 40px;border-top:1px solid #eee;text-align:center;">
-          <p style="color:#9994b3;font-size:11px;margin:0;">Realtors360 &mdash; AI-Powered Real Estate CRM</p>
+          <p style="color:#9994b3;font-size:11px;margin:0;">Magnate &mdash; AI-Powered Real Estate CRM</p>
           <p style="color:#9994b3;font-size:11px;margin:4px 0 0;">
             <a href="${appUrl}" style="color:#4f35d2;text-decoration:underline;">Visit Dashboard</a>
           </p>

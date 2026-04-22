@@ -246,7 +246,8 @@ export async function seedWorkflowSteps(workflowId: string, slug: string) {
   const supabase = createAdminClient();
 
   // Delete existing steps first
-  await supabase.from("workflow_steps").delete().eq("workflow_id", workflowId);
+  { const { error } = await supabase.from("workflow_steps").delete().eq("workflow_id", workflowId);
+  if (error) return { error: "Failed to clear existing steps" }; }
 
   // Insert steps from blueprint
   const steps = blueprint.steps.map((step, idx) => {
@@ -329,7 +330,7 @@ export async function enrollContact(
 ) {
   const supabase = createAdminClient();
 
-  // Check if already enrolled in this workflow
+  // Check if already enrolled in this workflow (same user)
   const { data: existing } = await supabase
     .from("workflow_enrollments")
     .select("id")
@@ -340,6 +341,20 @@ export async function enrollContact(
 
   if (existing) {
     return { error: "Contact is already enrolled in this workflow" };
+  }
+
+  // Team dedup: check if any team member already enrolled this contact
+  // in the same workflow (prevents duplicate sends within a team)
+  const { data: teamDedup } = await supabase
+    .from("workflow_enrollments")
+    .select("id, realtor_id")
+    .eq("workflow_id", workflowId)
+    .eq("contact_id", contactId)
+    .eq("status", "active")
+    .limit(1);
+
+  if (teamDedup && teamDedup.length > 0) {
+    return { error: "Contact is already enrolled in this workflow by another team member" };
   }
 
   // Enforce max_enrollments concurrency limit
@@ -374,6 +389,17 @@ export async function enrollContact(
   const now = new Date();
   const nextRun = new Date(now.getTime() + (firstStep?.delay_minutes || 0) * 60000);
 
+  // Generate team dedup key if user is on a team
+  let teamDedupKey: string | null = null;
+  try {
+    const { auth } = await import("@/lib/auth");
+    const session = await auth();
+    const teamId = (session?.user as Record<string, unknown> | undefined)?.teamId as string | null;
+    if (teamId) {
+      teamDedupKey = `${teamId}:${contactId}:${workflowId}`;
+    }
+  } catch { /* solo user or auth unavailable */ }
+
   const { data: enrollment, error } = await supabase
     .from("workflow_enrollments")
     .upsert(
@@ -384,6 +410,7 @@ export async function enrollContact(
         status: "active",
         current_step: 1,
         next_run_at: nextRun.toISOString(),
+        team_dedup_key: teamDedupKey,
       },
       { onConflict: "workflow_id,contact_id", ignoreDuplicates: true }
     )
@@ -394,13 +421,14 @@ export async function enrollContact(
   if (error) return { error: "Failed to enroll contact: " + error.message };
 
   // Log activity
-  await supabase.from("activity_log").insert({
+  { const { error } = await supabase.from("activity_log").insert({
     contact_id: contactId,
     listing_id: listingId || null,
     activity_type: "workflow_enrolled",
     description: `Enrolled in workflow`,
     metadata: { workflow_id: workflowId, enrollment_id: enrollment.id },
   });
+  if (error) console.error("[workflows] activity log failed:", error.message); }
 
   revalidatePath(`/contacts/${contactId}`);
   revalidatePath("/automations");
@@ -637,13 +665,14 @@ export async function backfillWorkflowEnrollments(): Promise<{
     activeEnrollmentSet.add(key);
 
     // Log activity
-    await supabase.from("activity_log").insert({
+    { const { error } = await supabase.from("activity_log").insert({
       contact_id: contactId,
       listing_id: listingId || null,
       activity_type: "workflow_auto_enrolled",
       description: `Backfill: auto-enrolled in ${workflowSlug}`,
       metadata: { workflow_id: workflowId, backfill: true },
     });
+    if (error) console.error("[workflows] backfill log failed:", error.message); }
 
     return "enrolled";
   }
@@ -823,12 +852,13 @@ export async function backfillWorkflowEnrollments(): Promise<{
 
   // Create summary notification
   if (totalEnrolled > 0) {
-    await supabase.from("agent_notifications").insert({
+    { const { error } = await supabase.from("agent_notifications").insert({
       title: "Workflow Backfill Complete",
       body: `Enrolled ${totalEnrolled} contacts across ${results.filter((r) => r.enrolled.length > 0).length} workflows`,
       type: "workflow",
       action_url: "/automations",
     });
+    if (error) console.error("[workflows] notification insert failed:", error.message); }
   }
 
   revalidatePath("/automations");

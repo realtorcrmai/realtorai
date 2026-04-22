@@ -1,0 +1,69 @@
+title = "Realtors360 Secret Scanning"
+
+[allowlist]
+  paths = [
+    '''tests/fixtures/.*''',
+    '''docs/.*''',
+    '''\.env\.example''',
+    '''\.env\.vault''',
+  ]
+
+[[rules]]
+  id = "anthropic-api-key"
+  description = "Anthropic API Key"
+  regex = '''sk-ant-[a-zA-Z0-9_-]{20,}'''
+  tags = ["key", "anthropic"]
+
+[[rules]]
+  id = "supabase-service-role"
+  description = "Supabase Service Role JWT"
+  regex = '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[a-zA-Z0-9_-]{50,}\.[a-zA-Z0-9_-]{20,}'''
+  tags = ["key", "supabase"]
+
+[[rules]]
+  id = "twilio-account-sid"
+  description = "Twilio Account SID"
+  regex = '''AC[a-f0-9]{32}'''
+  tags = ["key", "twilio"]
+
+[[rules]]
+  id = "twilio-auth-token"
+  description = "Twilio Auth Token"
+  regex = '''(?i)twilio[_\-]?auth[_\-]?token[\s]*[=:]\s*['"]?([a-f0-9]{32})['"]?'''
+  tags = ["key", "twilio"]
+
+[[rules]]
+  id = "resend-api-key"
+  description = "Resend API Key"
+  regex = '''re_[a-zA-Z0-9]{20,}'''
+  tags = ["key", "resend"]
+
+[[rules]]
+  id = "nextauth-secret"
+  description = "NextAuth Secret in code"
+  regex = '''(?i)nextauth[_\-]?secret[\s]*[=:]\s*['"]([^'"]{16,})['"]'''
+  tags = ["key", "nextauth"]
+
+[[rules]]
+  id = "google-client-secret"
+  description = "Google OAuth Client Secret"
+  regex = '''GOCSPX-[a-zA-Z0-9_-]{28,}'''
+  tags = ["key", "google"]
+
+[[rules]]
+  id = "google-client-id"
+  description = "Google OAuth Client ID"
+  regex = '''[0-9]{12}-[a-z0-9]{32}\.apps\.googleusercontent\.com'''
+  tags = ["key", "google"]
+
+[[rules]]
+  id = "generic-secret-assignment"
+  description = "Generic secret assignment in source"
+  regex = '''(?i)(api[_\-]?key|secret|password|token)[\s]*[=:]\s*['"]([a-zA-Z0-9_\-]{20,})['"]'''
+  tags = ["key", "generic"]
+  [rules.allowlist]
+    paths = [
+      '''\.env\.example''',
+      '''\.env\.vault''',
+      '''docs/.*''',
+    ]

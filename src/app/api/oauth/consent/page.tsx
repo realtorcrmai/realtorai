@@ -81,7 +81,7 @@ export default async function ConsentPage({ searchParams }: ConsentPageProps) {
             Authorize {platform.name}
           </h1>
           <p style={{ color: "#6B7280", fontSize: 14, marginTop: 4 }}>
-            <strong>{client.client_name}</strong> wants to access your RealtorAI account
+            <strong>{client.client_name}</strong> wants to access your Magnate account
           </p>
         </div>
 

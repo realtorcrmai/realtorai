@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-21 --task-mgmt -->
 # CLAUDE.md — Realtors360 Real Estate CRM
 
 ## Think Thoroughly — Depth Over Speed
@@ -158,6 +159,11 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 │   │   │   ├── neighborhood/      # Mock neighbourhood comps
 │   │   │   ├── kling/status/      # Kling AI task polling
 │   │   │   ├── onboarding/nps/    # NPS survey submission endpoint
+│   │   │   ├── tasks/             # Task CRUD, bulk, export, templates, saved-filters
+│   │   │   ├── tasks/[id]/        # Single task detail, duplicate
+│   │   │   ├── tasks/[id]/activity/ # Task activity log
+│   │   │   ├── tasks/[id]/subtasks/ # Subtask CRUD
+│   │   │   ├── team-members/      # Team member listing
 │   │   │   └── webhooks/twilio/   # Inbound SMS/WhatsApp handler
 │   │   ├── globals.css            # Design system + Tailwind config
 │   │   └── layout.tsx             # Root layout (fonts, providers)
@@ -174,7 +180,8 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 │   │   ├── recommendations.ts     # AI recommendations CRUD + execute
 │   │   ├── templates.ts           # Email template CRUD, preview, duplicate
 │   │   ├── segments.ts            # Contact segment builder + bulk enroll
-│   │   └── notifications.ts      # Notification CRUD, mark read, dismiss
+│   │   ├── notifications.ts      # Notification CRUD, mark read, dismiss
+│   │   └── team.ts               # Team CRUD, invites (accept/decline), memberships
 │   ├── emails/                    # React Email templates
 │   │   ├── BaseLayout.tsx         # Shared wrapper (branding, dark mode, unsubscribe)
 │   │   ├── NewListingAlert.tsx    # Property listing cards
@@ -636,3 +643,13 @@ Every new feature MUST include all of the following before it is considered comp
 **Tables:** `realtor_sites`, `site_generations`, `site_variants`, `site_pages`, `testimonials`, `site_leads`, `site_media`.
 
 **Env vars:** `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `AGENT_SERVICE_URL`, `ANTHROPIC_API_KEY`.
+
+
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->
+
+<!-- Last reviewed: 2026-04-21 — Wave 1a demo gate -->
+<!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
+
+<!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
+
+<!-- Last reviewed: 2026-04-21 — AGENTS.md v0.6 + violation logging -->

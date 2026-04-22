@@ -27,7 +27,7 @@ export function EmailSyncStep({ onNext, onBack, onSkip }: EmailSyncStepProps) {
       <div className="text-center">
         <h2 className="text-xl font-bold">Connect your email</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Send emails from Realtors360, track opens and clicks
+          Send emails from Magnate, track opens and clicks
         </p>
       </div>
 

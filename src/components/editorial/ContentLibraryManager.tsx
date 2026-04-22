@@ -488,7 +488,7 @@ export function ContentLibraryManager({
       {/* Platform tips are read-only notice */}
       {activeTab === "platform" && (
         <div className="mb-4 p-3 rounded-md bg-muted/50 border border-border text-xs text-muted-foreground">
-          💡 Platform tips are curated by Realtors360 and available to all agents. They are
+          💡 Platform tips are curated by Magnate and available to all agents. They are
           read-only. Add your own tips under &ldquo;My Tips&rdquo;.
         </div>
       )}

@@ -232,7 +232,10 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
   const stepIndex = STEPS.findIndex(s => s.key === step);
 
   const canGoNext = () => {
-    if (step === "basics") return name.length >= 2 && phone.length >= 10;
+    if (step === "basics") {
+      const emailValid = !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      return name.length >= 2 && phone.length >= 10 && emailValid;
+    }
     if (step === "type") return !!type;
     return true;
   };
@@ -357,7 +360,8 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
         };
       }
 
-      const result = await createContact(payload as any);
+       
+      const result = await createContact(payload as unknown as Parameters<typeof createContact>[0]);
       if (result && typeof result === "object" && "error" in result) {
         setError((result as { error: string }).error);
         setSubmitting(false);
@@ -831,7 +835,7 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
                       <option value="new">New</option>
                       <option value="contacted">Contacted</option>
                       <option value="qualified">Qualified</option>
-                      <option value="interested">Interested</option>
+                      <option value="nurturing">Nurturing</option>
                     </select>
                   </div>
                 </div>
@@ -979,9 +983,22 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
             </div>
             <div className="flex items-center gap-3">
               {!isLastStep ? (
-                <Button onClick={goNext} disabled={!canGoNext()} className="gap-2 bg-brand hover:bg-brand/90">
-                  Next <ArrowRight className="h-4 w-4" />
-                </Button>
+                <>
+                  {/* Show submit on non-last steps for small screens where right panel is hidden */}
+                  {canSubmit && (
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={submitting}
+                      variant="outline"
+                      className="gap-2 lg:hidden"
+                    >
+                      {submitting ? "Creating..." : "Add to Network →"}
+                    </Button>
+                  )}
+                  <Button onClick={goNext} disabled={!canGoNext()} className="gap-2 bg-brand hover:bg-brand/90">
+                    Next <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </>
               ) : (
                 <Button
                   onClick={handleSubmit}
@@ -998,7 +1015,7 @@ export function ContactCreator({ allContacts = [] }: ContactCreatorProps) {
 
         {/* RIGHT — Live Preview (fixed, scrollable if overflow, submit always pinned) */}
         <div className="hidden lg:block w-[340px] shrink-0">
-          <div className="fixed flex flex-col" style={{ width: "340px", top: "180px", maxHeight: "calc(100vh - 200px)" }}>
+          <div className="fixed flex flex-col w-[340px] top-[180px] max-h-[calc(100vh-200px)]">
             {/* Scrollable preview area */}
             <div ref={previewRef} className="flex-1 min-h-0 overflow-y-auto">
               <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Live Preview</p>

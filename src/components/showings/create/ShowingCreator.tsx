@@ -37,7 +37,8 @@ export function ShowingCreator() {
     (async () => {
       try {
         const res = await fetch("/api/listings?status=active");
-        const data = await res.json();
+        const json = await res.json();
+        const data = json.data ?? json;
         setListings(Array.isArray(data) ? data : []);
       } catch {
         setListings([]);

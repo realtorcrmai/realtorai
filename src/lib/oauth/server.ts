@@ -1,5 +1,5 @@
 /**
- * OAuth2 Authorization Server for RealtorAI Voice Agent.
+ * OAuth2 Authorization Server for Magnate Voice Agent.
  *
  * Implements:
  *   - Authorization Code flow with PKCE (RFC 7636)

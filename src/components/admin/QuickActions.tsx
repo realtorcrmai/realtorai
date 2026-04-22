@@ -281,7 +281,7 @@ export function QuickActions() {
           <AlertDialogHeader>
             <AlertDialogTitle>Create User</AlertDialogTitle>
             <AlertDialogDescription>
-              Add a new user to Realtors360.
+              Add a new user to Magnate.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-3 px-1">

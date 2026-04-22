@@ -1,4 +1,4 @@
-// Realtors360 Social — AI Content Generator
+// Magnate Social — AI Content Generator
 // Uses Claude to generate platform-specific social media content from CRM data
 
 import Anthropic from "@anthropic-ai/sdk";

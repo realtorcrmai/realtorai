@@ -1,19 +1,18 @@
 {
-  "name": "RealtorAI",
-  "short_name": "RealtorAI",
+  "name": "Realtors360",
+  "short_name": "Realtors360",
   "start_url": "/",
   "display": "standalone",
-  "theme_color": "#4f35d2",
-  "background_color": "#f4f2ff",
+  "theme_color": "#2D3E50",
+  "background_color": "#F5F8FA",
   "icons": [
-    {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"}
+    {"src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml"}
   ],
   "shortcuts": [
-    {"name": "New Lead", "url": "/contacts?new=1", "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]},
-    {"name": "Showings", "url": "/showings", "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]},
-    {"name": "Pipeline", "url": "/deals", "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]},
-    {"name": "Voice Agent", "url": "/voice-agent", "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]}
+    {"name": "New Lead", "url": "/contacts?new=1", "icons": [{"src": "/favicon.svg", "sizes": "any"}]},
+    {"name": "Showings", "url": "/showings", "icons": [{"src": "/favicon.svg", "sizes": "any"}]},
+    {"name": "Pipeline", "url": "/deals", "icons": [{"src": "/favicon.svg", "sizes": "any"}]},
+    {"name": "Voice Agent", "url": "/voice-agent", "icons": [{"src": "/favicon.svg", "sizes": "any"}]}
   ],
   "share_target": {
     "action": "/api/share-target",

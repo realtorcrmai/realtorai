@@ -7,13 +7,21 @@ import { DayActivityFeed, type DayTask } from "./DayActivityFeed";
 import { AIBriefCard } from "./AIBriefCard";
 import { RemindersWidget } from "./RemindersWidget";
 
+interface PriorityAlert {
+  icon: string;
+  label: string;
+  count: number;
+  href: string;
+}
+
 interface DashboardShellProps {
   initialTasks: DayTask[];
   pendingShowings: number;
   activeListings: number;
+  priorities?: PriorityAlert[];
 }
 
-export function DashboardShell({ initialTasks, pendingShowings, activeListings }: DashboardShellProps) {
+export function DashboardShell({ initialTasks, pendingShowings, activeListings, priorities }: DashboardShellProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
 
@@ -28,6 +36,7 @@ export function DashboardShell({ initialTasks, pendingShowings, activeListings }
       const calEvents: CalendarEvent[] = [
         ...(data.googleEvents ?? []).map((e: any) => ({ id: e.id, title: e.title, start: new Date(e.start), end: new Date(e.end), type: "google" as const })),
         ...(data.showingEvents ?? []).map((e: any) => ({ id: e.id, title: e.title, start: new Date(e.start), end: new Date(e.end), type: "showing" as const, status: e.status })),
+        ...(data.taskEvents ?? []).map((e: any) => ({ id: `task-${e.id}`, title: e.title, start: new Date(e.start), end: new Date(e.end), type: "task" as const, status: e.status })),
       ];
       setEvents(calEvents);
     } catch { /* silent */ }
@@ -50,7 +59,7 @@ export function DashboardShell({ initialTasks, pendingShowings, activeListings }
       </div>
       <div className="lg:col-span-5">
         <div className="animate-float-in lg:sticky lg:top-4" style={{ animationDelay: "100ms" }}>
-          <DayActivityFeed events={events} selectedDate={selectedDate} tasks={initialTasks} />
+          <DayActivityFeed events={events} selectedDate={selectedDate} tasks={initialTasks} priorities={priorities} />
         </div>
       </div>
     </div>

@@ -2,68 +2,51 @@
 
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import {
-  LayoutDashboard,
-  Bot,
-  Megaphone,
-  Workflow,
-  Zap,
-  Settings2,
-} from "lucide-react";
-
-type Tab = {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  badge?: number;
-};
 
 type Props = {
   queueCount: number;
+  hasAutomations: boolean;
   children: {
-    overview: React.ReactNode;
-    queue: React.ReactNode;
+    ai: React.ReactNode;
     campaigns: React.ReactNode;
-    workflows: React.ReactNode;
-    automation: React.ReactNode;
-    settings: React.ReactNode;
+    automations: React.ReactNode;
+    settings?: React.ReactNode;
   };
 };
 
-export function EmailMarketingTabs({ queueCount, children }: Props) {
-  const [activeTab, setActiveTab] = useState("overview");
+export function EmailMarketingTabs({ queueCount, hasAutomations, children }: Props) {
+  const [activeTab, setActiveTab] = useState("ai");
+  // Bug fix #5: allow dismissing the "Automations not enabled" overlay
+  const [automationsBannerDismissed, setAutomationsBannerDismissed] = useState(false);
 
-  const tabs: Tab[] = [
-    { id: "overview", label: "Overview", icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: "workflows", label: "AI Workflows", icon: <Workflow className="w-4 h-4" /> },
-    { id: "queue", label: "Performance", icon: <Bot className="w-4 h-4" />, badge: queueCount > 0 ? queueCount : undefined },
-    { id: "campaigns", label: "Campaigns", icon: <Megaphone className="w-4 h-4" /> },
-    { id: "automation", label: "Automation", icon: <Zap className="w-4 h-4" /> },
-    { id: "settings", label: "Settings", icon: <Settings2 className="w-4 h-4" /> },
+  const tabs = [
+    { id: "ai", label: "AI", badge: queueCount > 0 ? queueCount : undefined, locked: false },
+    { id: "campaigns", label: "Campaigns", locked: false },
+    { id: "automations", label: "Automations", locked: !hasAutomations },
+    { id: "settings", label: "Settings", locked: false },
   ];
 
   return (
     <div className="space-y-4">
-      {/* Tab Bar */}
-      <div className="flex items-center gap-1 overflow-x-auto pb-1 border-b border-border">
+      <div className="flex items-center gap-1 border-b border-border">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium transition-all whitespace-nowrap border-b-2 -mb-px ${
               activeTab === tab.id
-                ? "bg-brand text-white"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            {tab.icon}
             {tab.label}
+            {tab.locked && (
+              <span className="text-[10px] ml-0.5">🔒</span>
+            )}
             {tab.badge !== undefined && (
               <Badge
-                variant={activeTab === tab.id ? "outline" : "secondary"}
-                className={`text-[10px] px-1.5 py-0 ml-0.5 ${
-                  activeTab === tab.id ? "border-white/50 text-white" : ""
-                }`}
+                variant={activeTab === tab.id ? "default" : "secondary"}
+                className="text-[10px] px-1.5 py-0"
               >
                 {tab.badge}
               </Badge>
@@ -72,14 +55,40 @@ export function EmailMarketingTabs({ queueCount, children }: Props) {
         ))}
       </div>
 
-      {/* Tab Content */}
       <div className="min-h-[400px]">
-        {activeTab === "overview" && children.overview}
-        {activeTab === "queue" && children.queue}
+        {activeTab === "ai" && children.ai}
         {activeTab === "campaigns" && children.campaigns}
-        {activeTab === "workflows" && children.workflows}
-        {activeTab === "automation" && children.automation}
         {activeTab === "settings" && children.settings}
+        {activeTab === "automations" && (
+          hasAutomations
+            ? children.automations
+            : (
+              <div className="relative">
+                {/* Content visible but non-interactive */}
+                <div className="pointer-events-none select-none opacity-40">
+                  {children.automations}
+                </div>
+                {/* Bug fix #5: overlay is now dismissible via "Got it" button */}
+                {!automationsBannerDismissed && (
+                  <div className="absolute inset-0 flex items-start justify-center pt-16">
+                    <div className="bg-background border border-border rounded-xl shadow-lg px-6 py-5 text-center max-w-sm">
+                      <p className="text-2xl mb-2">🔒</p>
+                      <p className="text-sm font-semibold text-foreground">Automations not enabled</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Contact your administrator to unlock this feature.
+                      </p>
+                      <button
+                        onClick={() => setAutomationsBannerDismissed(true)}
+                        className="mt-4 text-xs px-4 py-1.5 rounded-lg border border-border font-medium hover:bg-muted transition-colors"
+                      >
+                        Got it
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+        )}
       </div>
     </div>
   );

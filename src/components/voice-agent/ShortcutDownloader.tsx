@@ -18,31 +18,31 @@ interface Shortcut {
 const SHORTCUTS: Shortcut[] = [
   {
     name: "Check My Leads",
-    phrase: "check my RealtorAI leads",
+    phrase: "check my Magnate leads",
     description: "Ask about new leads and inquiries",
     icon: "👥",
   },
   {
     name: "Schedule a Showing",
-    phrase: "schedule a RealtorAI showing",
+    phrase: "schedule a Magnate showing",
     description: "Book a property showing by voice",
     icon: "🏠",
   },
   {
     name: "Pipeline Summary",
-    phrase: "RealtorAI pipeline",
+    phrase: "Magnate pipeline",
     description: "Get your deal pipeline overview",
     icon: "📊",
   },
   {
     name: "Log a Note",
-    phrase: "RealtorAI note",
+    phrase: "Magnate note",
     description: "Dictate a quick note to your CRM",
     icon: "📝",
   },
   {
     name: "Today's Schedule",
-    phrase: "my RealtorAI schedule",
+    phrase: "my Magnate schedule",
     description: "Check your showings and appointments",
     icon: "📅",
   },

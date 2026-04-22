@@ -11,8 +11,28 @@ export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
   const search = searchParams.get("search");
   const type = searchParams.get("type")?.toLowerCase();
+  const typesParam = searchParams.get("types"); // comma-separated: e.g. "agent,partner"
+  const hasEmail = searchParams.get("hasEmail") === "true";
+  const countOnly = searchParams.get("countOnly") === "true";
   const rawLimit = parseInt(searchParams.get("limit") || "200");
   const limit = Number.isNaN(rawLimit) ? 200 : Math.min(Math.max(rawLimit, 1), 500);
+
+  const VALID_TYPES = ["buyer", "seller", "customer", "agent", "partner", "other"];
+
+  // countOnly=true returns { count: N } without fetching full rows
+  if (countOnly) {
+    let countQuery = supabase.from("contacts").select("id", { count: "exact", head: true });
+    if (typesParam) {
+      const types = typesParam.split(",").map(t => t.trim().toLowerCase()).filter(t => VALID_TYPES.includes(t));
+      if (types.length > 0) countQuery = countQuery.in("type", types);
+    } else if (type && VALID_TYPES.includes(type)) {
+      countQuery = countQuery.eq("type", type);
+    }
+    if (hasEmail) countQuery = countQuery.not("email", "is", null);
+    const { count, error } = await countQuery;
+    if (error) return NextResponse.json({ error: "Failed to count contacts" }, { status: 500 });
+    return NextResponse.json({ count: count ?? 0 });
+  }
 
   let query = supabase.from("contacts").select("*").order("created_at", { ascending: false });
 
@@ -23,9 +43,13 @@ export async function GET(req: NextRequest) {
       query = query.or(`name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%,email.ilike.%${sanitized}%`);
     }
   }
-  if (type && ["buyer", "seller", "customer", "agent", "partner", "other"].includes(type)) {
+  if (typesParam) {
+    const types = typesParam.split(",").map(t => t.trim().toLowerCase()).filter(t => VALID_TYPES.includes(t));
+    if (types.length > 0) query = query.in("type", types);
+  } else if (type && VALID_TYPES.includes(type)) {
     query = query.eq("type", type);
   }
+  if (hasEmail) query = query.not("email", "is", null);
 
   const { data, error } = await query.limit(limit);
 
@@ -63,6 +87,10 @@ export async function POST(req: NextRequest) {
     .insert({
       ...parsed.data,
       email: parsed.data.email || null,
+      // Default CASL consent to true — realtor collected verbal/written consent at intake.
+      // Contacts can be opted-out individually via the contact detail page.
+      casl_consent_given: parsed.data.casl_consent_given ?? true,
+      casl_consent_date: parsed.data.casl_consent_date ?? new Date().toISOString(),
     })
     .select()
     .single();

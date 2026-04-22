@@ -1,7 +1,7 @@
 /**
  * editorial-renderer.tsx
  *
- * Server-side renderer for Realtors360 editorial newsletter editions.
+ * Server-side renderer for Magnate editorial newsletter editions.
  * Delegates rendering to EditorialDigest (React Email component).
  *
  * Public API:

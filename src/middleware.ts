@@ -13,17 +13,24 @@ export async function middleware(request: NextRequest) {
     // Auth pages (must be public for login/signup flow)
     pathname === "/login" ||
     pathname === "/signup" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password" ||
     pathname === "/verify" ||
     pathname.startsWith("/verify/") ||
     pathname === "/onboarding" ||
     pathname === "/personalize" ||
     pathname.startsWith("/join/") ||
+    pathname.startsWith("/invite/accept") ||
 
     // Static assets
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/favicon") ||
+    pathname === "/manifest.json" ||
     pathname.startsWith("/logo-") ||
     pathname === "/logo-animated.html" ||
+    pathname === "/white-rock-digital-twin.html" ||
+    pathname === "/three.min.js" ||
+    pathname === "/OrbitControls.js" ||
 
     // Auth API (NextAuth handles its own auth)
     pathname.startsWith("/api/auth") ||

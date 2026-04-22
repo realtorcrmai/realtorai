@@ -47,16 +47,16 @@ export default async function UnsubscribePage({
           <p className="mt-5 text-sm text-gray-400">
             Need help?{" "}
             <a
-              href="mailto:support@realtors360.ai"
+              href="mailto:support@magnate360.com"
               className="font-medium text-indigo-600 underline underline-offset-2 hover:text-indigo-800"
             >
-              support@realtors360.ai
+              support@magnate360.com
             </a>
           </p>
 
           {/* Footer */}
           <p className="mt-10 text-xs text-gray-300">
-            Realtors360 · Sent in compliance with CASL
+            Magnate · Sent in compliance with CASL
           </p>
         </div>
       </main>
@@ -100,7 +100,7 @@ export default async function UnsubscribePage({
 
         {/* Footer */}
         <p className="mt-10 text-xs text-gray-300">
-          Realtors360 · Sent in compliance with CASL
+          Magnate · Sent in compliance with CASL
         </p>
       </div>
     </main>

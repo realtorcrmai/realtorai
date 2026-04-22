@@ -1,4 +1,4 @@
-# QA Expansion — Sections AC through AH: Accessibility, Personalization, Analytics, Settings, Load, Regression
+<!-- docs-audit: none --># QA Expansion — Sections AC through AH: Accessibility, Personalization, Analytics, Settings, Load, Regression
 ## Test Range: TC-4115 to TC-4414
 ## Feature: Editorial Newsletter System
 

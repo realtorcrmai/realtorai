@@ -6,7 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import {
   Home, ListTodo, Building2, Users, Clock, Calendar,
   Mail, Zap, Search, Upload, FileText,
-  Wand2, Settings, LogOut, Newspaper,
+  Wand2, Settings, LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -35,8 +35,6 @@ const TOOLS_NAV: NavItem[] = [
   { href: "/tasks", label: "Tasks", icon: ListTodo, featureKey: "tasks" },
   { href: "/content", label: "Content Engine", icon: Wand2, featureKey: "content" },
   { href: "/newsletters", label: "Email Marketing", icon: Mail, featureKey: "newsletters" },
-  { href: "/newsletters/editorial", label: "Editions", icon: Newspaper, featureKey: "newsletters" },
-  { href: "/newsletters/ab-testing", label: "A/B Testing", icon: Zap, featureKey: "newsletters" },
   { href: "/automations", label: "Automations", icon: Zap, featureKey: "automations" },
 ];
 
@@ -103,8 +101,11 @@ export function MondaySidebar() {
   const userName = session?.user?.name || "User";
   const userEmail = session?.user?.email || "";
   const initials = userName.split(" ").map((w: string) => w[0]).filter(Boolean).join("").toUpperCase().slice(0, 2) || "U";
+  const avatarUrl = (session?.user as Record<string, unknown> | undefined)?.avatarUrl as string | null;
 
   const enabledFeatures: string[] = (session?.user as Record<string, unknown>)?.enabledFeatures as string[] || [];
+  const teamName = (session?.user as Record<string, unknown> | undefined)?.teamName as string | null;
+  const teamRole = (session?.user as Record<string, unknown> | undefined)?.teamRole as string | null;
 
   // Recent items — hydration guard (Zustand persist rehydrates from localStorage after mount)
   const [mounted, setMounted] = useState(false);
@@ -190,7 +191,7 @@ export function MondaySidebar() {
       >
         <LogoVideo size={72} />
         <div className="text-center mt-1">
-          <span className="text-[15px] font-semibold text-sidebar-foreground tracking-tight">Realtors360</span>
+          <span className="text-[15px] font-semibold text-sidebar-foreground tracking-tight">Magnate</span>
           <span className="block text-[9px] text-sidebar-foreground/40 tracking-widest uppercase">AI Platform</span>
         </div>
       </div>
@@ -242,6 +243,23 @@ export function MondaySidebar() {
       {renderNavGroup("Tools", TOOLS_NAV)}
       {renderNavGroup("Admin", ADMIN_NAV)}
 
+      {/* Team — visible to all users (solo users see Create Team, members see team page) */}
+      <div className="px-2 pt-1">
+        <Link
+          href="/settings/team"
+          data-tour="nav-team"
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+            pathname === "/settings/team"
+              ? "bg-sidebar-primary/15 text-white border-l-[3px] border-sidebar-primary font-medium"
+              : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-white"
+          )}
+        >
+          <Users className="h-4 w-4" />
+          Team
+        </Link>
+      </div>
+
       {/* Recent Items */}
       {mounted && recentItems.length > 0 && (
         <div className="px-2 pt-2 border-t border-sidebar-accent mt-2">
@@ -264,10 +282,27 @@ export function MondaySidebar() {
 
       {/* User section */}
       <div className="p-3 border-t border-sidebar-accent shrink-0">
+        {/* Team indicator — links to team settings */}
+        {teamName && (
+          <Link
+            href="/settings/team"
+            className="flex items-center gap-2 px-2 py-1.5 mb-2 rounded-md bg-sidebar-primary/10 hover:bg-sidebar-primary/20 transition-colors"
+          >
+            <Users className="h-3.5 w-3.5 text-sidebar-primary shrink-0" />
+            <span className="text-xs font-medium text-sidebar-primary truncate">{teamName}</span>
+            {teamRole && (
+              <span className="ml-auto text-[10px] text-sidebar-foreground/50 capitalize shrink-0">{teamRole}</span>
+            )}
+          </Link>
+        )}
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 text-sidebar-primary flex items-center justify-center text-xs font-semibold shrink-0">
-            {initials}
-          </div>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={userName} className="h-8 w-8 rounded-full object-cover shrink-0" />
+          ) : (
+            <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 text-sidebar-primary flex items-center justify-center text-xs font-semibold shrink-0">
+              {initials}
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-sidebar-foreground truncate">{userName}</p>
             <p className="text-xs text-sidebar-foreground/50 truncate">{userEmail}</p>

@@ -67,7 +67,7 @@ export function CommandPalette() {
       try {
         const [c, l] = await Promise.all([
           fetch(`/api/contacts?search=${encodeURIComponent(searchQuery)}&limit=5`).then(r => r.ok ? r.json() : []),
-          fetch(`/api/listings?search=${encodeURIComponent(searchQuery)}&limit=5`).then(r => r.ok ? r.json() : []),
+          fetch(`/api/listings?search=${encodeURIComponent(searchQuery)}&limit=5`).then(r => r.ok ? r.json().then(j => j.data ?? j) : []),
         ]);
         setSearchResults({
           contacts: Array.isArray(c) ? c.slice(0, 5) : [],

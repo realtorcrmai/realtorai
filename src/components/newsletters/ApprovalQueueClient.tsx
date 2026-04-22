@@ -2,11 +2,11 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { approveNewsletter, skipNewsletter, editNewsletterDraft } from "@/actions/newsletters";
+import { approveNewsletter, skipNewsletter, editNewsletterDraft, regenerateNewsletter, getDeferredNewsletters, bulkApproveNewsletters } from "@/actions/newsletters";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Send, X, Pencil, Save, Undo2, Brain } from "lucide-react";
+import { CheckCircle2, Send, X, Pencil, Save, Undo2, Brain, RefreshCw, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 interface QueueItem {
@@ -16,7 +16,18 @@ interface QueueItem {
   journey_phase: string | null;
   html_body: string;
   created_at: string;
+  status?: string;
+  regeneration_count?: number;
   contacts: { id: string; name: string; email: string; type: string } | null;
+}
+
+interface DeferredItem {
+  id: string;
+  subject: string | null;
+  email_type: string;
+  status: string;
+  created_at: string;
+  contacts: { id: string; name: string; email: string | null } | null;
 }
 
 interface VoiceLearningNotification {
@@ -24,7 +35,13 @@ interface VoiceLearningNotification {
   rules: string[];
 }
 
-export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[] }) {
+export function ApprovalQueueClient({
+  initialQueue,
+  initialDeferred = [],
+}: {
+  initialQueue: QueueItem[];
+  initialDeferred?: DeferredItem[];
+}) {
   const [queue, setQueue] = useState(initialQueue);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
@@ -38,6 +55,11 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
   const [originalSubject, setOriginalSubject] = useState("");
   const [originalBody, setOriginalBody] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Deferred newsletters
+  const [deferred, setDeferred] = useState<DeferredItem[]>(initialDeferred);
+  const [deferredOpen, setDeferredOpen] = useState(false);
+  const [regeneratingIds, setRegeneratingIds] = useState<Set<string>>(new Set());
 
   // Voice learning notification
   const [voiceNotification, setVoiceNotification] = useState<VoiceLearningNotification | null>(null);
@@ -106,19 +128,37 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
     startTransition(async () => {
       const ids = queue.map((q) => q.id);
       setLoadingIds(new Set(ids));
-      const results = await Promise.allSettled(ids.map((id) => approveNewsletter(id)));
-      const failures = results.filter(
-        (r) => r.status === "rejected" || (r.status === "fulfilled" && r.value?.error)
-      );
-      if (failures.length > 0) {
-        toast.error(`${failures.length} newsletter${failures.length > 1 ? "s" : ""} failed to send`);
-      } else {
-        toast.success(`${ids.length} newsletter${ids.length > 1 ? "s" : ""} sent`);
+      const result = await bulkApproveNewsletters(ids);
+      if (result.failed > 0) {
+        toast.error(`${result.failed} newsletter${result.failed > 1 ? "s" : ""} failed to send`);
+      }
+      if (result.sent > 0) {
+        toast.success(`${result.sent} newsletter${result.sent > 1 ? "s" : ""} sent`);
       }
       setQueue([]);
       setPreviewId(null);
       setEditingId(null);
       setLoadingIds(new Set());
+      router.refresh();
+    });
+  };
+
+  const handleRegenerate = (id: string) => {
+    setRegeneratingIds((prev) => new Set(prev).add(id));
+    startTransition(async () => {
+      const result = await regenerateNewsletter(id) as { success?: boolean; error?: string };
+      if (result?.error) {
+        toast.error("Regeneration failed: " + result.error);
+        setRegeneratingIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+        return;
+      }
+      // Remove old item; fetch fresh deferred list and refresh queue
+      setQueue((q) => q.filter((item) => item.id !== id));
+      setDeferred((d) => d.filter((item) => item.id !== id));
+      if (previewId === id) setPreviewId(null);
+      if (editingId === id) setEditingId(null);
+      setRegeneratingIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+      toast.success("Newsletter regenerated — check the queue");
       router.refresh();
     });
   };
@@ -348,6 +388,21 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
                           </Button>
                           <Button
                             size="sm"
+                            variant="outline"
+                            className="gap-1.5"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRegenerate(item.id);
+                            }}
+                            disabled={isLoading || pending || regeneratingIds.has(item.id)}
+                            aria-label="Regenerate newsletter"
+                            title={`Regenerate${(item.regeneration_count ?? 0) > 0 ? ` (${item.regeneration_count}/3)` : ""}`}
+                          >
+                            <RefreshCw className={`h-3.5 w-3.5 ${regeneratingIds.has(item.id) ? "animate-spin" : ""}`} />
+                            {regeneratingIds.has(item.id) ? "..." : (item.regeneration_count ?? 0) > 0 ? `${item.regeneration_count}/3` : "Redo"}
+                          </Button>
+                          <Button
+                            size="sm"
                             className="gap-1.5 bg-brand-dark hover:bg-brand-dark text-white"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -424,6 +479,42 @@ export function ApprovalQueueClient({ initialQueue }: { initialQueue: QueueItem[
           </Card>
         )}
       </div>
+
+      {/* Held Back — deferred newsletters */}
+      {deferred.length > 0 && (
+        <div className="mt-6">
+          <button
+            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setDeferredOpen((o) => !o)}
+            aria-expanded={deferredOpen}
+          >
+            {deferredOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            Held Back
+            <Badge variant="secondary" className="ml-1">{deferred.length}</Badge>
+          </button>
+          {deferredOpen && (
+            <div className="mt-3 space-y-2">
+              {deferred.map((item) => (
+                <Card key={item.id} className="opacity-75">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {item.contacts?.name || "Unknown"}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {item.subject || item.email_type.replace(/_/g, " ")}
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="text-xs shrink-0 bg-muted text-muted-foreground">
+                      Deferred
+                    </Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

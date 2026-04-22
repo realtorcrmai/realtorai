@@ -18,7 +18,7 @@ export interface Database {
           type: "buyer" | "seller" | "customer" | "agent" | "partner" | "other";
           roles: string[];
           lifecycle_stage: "prospect" | "nurture" | "active_buyer" | "active_seller" | "dual_client" | "under_contract" | "closed" | "past_client" | "referral_partner";
-          pref_channel: "whatsapp" | "sms";
+          pref_channel: "whatsapp" | "sms" | "email" | "phone";
           notes: string | null;
           family_members: Json | null;
           referred_by_id: string | null;
@@ -58,7 +58,7 @@ export interface Database {
           type: "buyer" | "seller" | "customer" | "agent" | "partner" | "other";
           roles?: string[];
           lifecycle_stage?: "prospect" | "nurture" | "active_buyer" | "active_seller" | "dual_client" | "under_contract" | "closed" | "past_client" | "referral_partner";
-          pref_channel?: "whatsapp" | "sms";
+          pref_channel?: "whatsapp" | "sms" | "email" | "phone";
           notes?: string | null;
           family_members?: Json | null;
           referred_by_id?: string | null;
@@ -98,7 +98,7 @@ export interface Database {
           type?: "buyer" | "seller" | "customer" | "agent" | "partner" | "other";
           roles?: string[];
           lifecycle_stage?: "prospect" | "nurture" | "active_buyer" | "active_seller" | "dual_client" | "under_contract" | "closed" | "past_client" | "referral_partner";
-          pref_channel?: "whatsapp" | "sms";
+          pref_channel?: "whatsapp" | "sms" | "email" | "phone";
           notes?: string | null;
           family_members?: Json | null;
           referred_by_id?: string | null;
@@ -209,6 +209,23 @@ export interface Database {
           closing_date: string | null;
           commission_rate: number | null;
           commission_amount: number | null;
+          // Property details (migration 141)
+          bedrooms: number | null;
+          bathrooms: number | null;
+          total_sqft: number | null;
+          finished_sqft: number | null;
+          lot_sqft: number | null;
+          year_built: number | null;
+          parking_spaces: number | null;
+          stories: number | null;
+          basement_type: string | null;
+          heating_type: string | null;
+          cooling_type: string | null;
+          roof_type: string | null;
+          exterior_type: string | null;
+          flooring: string[];
+          features: string[];
+          deleted_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -231,6 +248,22 @@ export interface Database {
           closing_date?: string | null;
           commission_rate?: number | null;
           commission_amount?: number | null;
+          // Property details (migration 141)
+          bedrooms?: number | null;
+          bathrooms?: number | null;
+          total_sqft?: number | null;
+          finished_sqft?: number | null;
+          lot_sqft?: number | null;
+          year_built?: number | null;
+          parking_spaces?: number | null;
+          stories?: number | null;
+          basement_type?: string | null;
+          heating_type?: string | null;
+          cooling_type?: string | null;
+          roof_type?: string | null;
+          exterior_type?: string | null;
+          flooring?: string[];
+          features?: string[];
           created_at?: string;
           updated_at?: string;
         };
@@ -253,6 +286,22 @@ export interface Database {
           closing_date?: string | null;
           commission_rate?: number | null;
           commission_amount?: number | null;
+          // Property details (migration 141)
+          bedrooms?: number | null;
+          bathrooms?: number | null;
+          total_sqft?: number | null;
+          finished_sqft?: number | null;
+          lot_sqft?: number | null;
+          year_built?: number | null;
+          parking_spaces?: number | null;
+          stories?: number | null;
+          basement_type?: string | null;
+          heating_type?: string | null;
+          cooling_type?: string | null;
+          roof_type?: string | null;
+          exterior_type?: string | null;
+          flooring?: string[];
+          features?: string[];
           created_at?: string;
           updated_at?: string;
         };
@@ -2059,6 +2108,77 @@ export interface Database {
         };
       };
       // ── Realtor Agent Config ───────────────────────────────────
+      realtor_brand_profiles: {
+        Row: {
+          id: string;
+          realtor_id: string;
+          display_name: string | null;
+          title: string | null;
+          headshot_url: string | null;
+          logo_url: string | null;
+          brokerage_logo_url: string | null;
+          website_url: string | null;
+          phone: string | null;
+          email: string | null;
+          physical_address: string | null;
+          brand_color: string;
+          instagram_url: string | null;
+          facebook_url: string | null;
+          linkedin_url: string | null;
+          twitter_url: string | null;
+          tagline: string | null;
+          service_areas: string[];
+          brokerage_name: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          realtor_id: string;
+          display_name?: string | null;
+          title?: string | null;
+          headshot_url?: string | null;
+          logo_url?: string | null;
+          brokerage_logo_url?: string | null;
+          website_url?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          physical_address?: string | null;
+          brand_color?: string;
+          instagram_url?: string | null;
+          facebook_url?: string | null;
+          linkedin_url?: string | null;
+          twitter_url?: string | null;
+          tagline?: string | null;
+          service_areas?: string[];
+          brokerage_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          realtor_id?: string;
+          display_name?: string | null;
+          title?: string | null;
+          headshot_url?: string | null;
+          logo_url?: string | null;
+          brokerage_logo_url?: string | null;
+          website_url?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          physical_address?: string | null;
+          brand_color?: string;
+          instagram_url?: string | null;
+          facebook_url?: string | null;
+          linkedin_url?: string | null;
+          twitter_url?: string | null;
+          tagline?: string | null;
+          service_areas?: string[];
+          brokerage_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       realtor_agent_config: {
         Row: {
           id: string;
@@ -2184,45 +2304,228 @@ export interface Database {
       tasks: {
         Row: {
           id: string;
+          realtor_id: string;
           title: string;
           description: string | null;
           status: "pending" | "in_progress" | "completed";
           priority: "low" | "medium" | "high" | "urgent";
           category: "follow_up" | "showing" | "document" | "listing" | "marketing" | "inspection" | "closing" | "general";
           due_date: string | null;
+          start_date: string | null;
           contact_id: string | null;
           listing_id: string | null;
+          assigned_to: string | null;
+          parent_id: string | null;
+          estimated_hours: number | null;
+          labels: string[];
+          position: number;
+          visibility: "private" | "team";
+          recurrence_rule: string | null;
+          recurrence_next: string | null;
+          archived_at: string | null;
           completed_at: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
+          realtor_id?: string;
           title: string;
           description?: string | null;
           status?: "pending" | "in_progress" | "completed";
           priority?: "low" | "medium" | "high" | "urgent";
           category?: "follow_up" | "showing" | "document" | "listing" | "marketing" | "inspection" | "closing" | "general";
           due_date?: string | null;
+          start_date?: string | null;
           contact_id?: string | null;
           listing_id?: string | null;
+          assigned_to?: string | null;
+          parent_id?: string | null;
+          estimated_hours?: number | null;
+          labels?: string[];
+          position?: number;
+          visibility?: "private" | "team";
+          recurrence_rule?: string | null;
+          recurrence_next?: string | null;
+          archived_at?: string | null;
           completed_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
+          realtor_id?: string;
           title?: string;
           description?: string | null;
           status?: "pending" | "in_progress" | "completed";
           priority?: "low" | "medium" | "high" | "urgent";
           category?: "follow_up" | "showing" | "document" | "listing" | "marketing" | "inspection" | "closing" | "general";
           due_date?: string | null;
+          start_date?: string | null;
           contact_id?: string | null;
           listing_id?: string | null;
+          assigned_to?: string | null;
+          parent_id?: string | null;
+          estimated_hours?: number | null;
+          labels?: string[];
+          position?: number;
+          visibility?: "private" | "team";
+          recurrence_rule?: string | null;
+          recurrence_next?: string | null;
+          archived_at?: string | null;
           completed_at?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      // ── Task Comments ──────────────────────────────────────────
+      task_comments: {
+        Row: {
+          id: string;
+          task_id: string;
+          realtor_id: string;
+          body: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          task_id: string;
+          realtor_id: string;
+          body: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          body?: string;
+          updated_at?: string;
+        };
+      };
+      // ── Task Templates ─────────────────────────────────────────
+      task_templates: {
+        Row: {
+          id: string;
+          realtor_id: string;
+          name: string;
+          description: string | null;
+          category: string;
+          trigger_event: string | null;
+          is_shared: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          realtor_id?: string;
+          name: string;
+          description?: string | null;
+          category?: string;
+          trigger_event?: string | null;
+          is_shared?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          name?: string;
+          description?: string | null;
+          category?: string;
+          trigger_event?: string | null;
+          is_shared?: boolean;
+        };
+      };
+      // ── Task Template Items ────────────────────────────────────
+      task_template_items: {
+        Row: {
+          id: string;
+          template_id: string;
+          title: string;
+          description: string | null;
+          priority: string;
+          category: string;
+          offset_days: number;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          template_id: string;
+          title: string;
+          description?: string | null;
+          priority?: string;
+          category?: string;
+          offset_days?: number;
+          position?: number;
+        };
+        Update: {
+          title?: string;
+          description?: string | null;
+          priority?: string;
+          category?: string;
+          offset_days?: number;
+          position?: number;
+        };
+      };
+      // ── Task Activity Log ──────────────────────────────────────
+      task_activity: {
+        Row: {
+          id: string;
+          task_id: string;
+          user_id: string;
+          action: string;
+          field_name: string | null;
+          old_value: string | null;
+          new_value: string | null;
+          metadata: Record<string, unknown>;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          task_id: string;
+          user_id: string;
+          action: string;
+          field_name?: string | null;
+          old_value?: string | null;
+          new_value?: string | null;
+          metadata?: Record<string, unknown>;
+        };
+        Update: never;
+      };
+      // ── Task Watchers ──────────────────────────────────────────
+      task_watchers: {
+        Row: { id: string; task_id: string; user_id: string; created_at: string };
+        Insert: { id?: string; task_id: string; user_id: string };
+        Update: never;
+      };
+      // ── Task Dependencies ──────────────────────────────────────
+      task_dependencies: {
+        Row: { id: string; blocker_id: string; blocked_id: string; created_at: string };
+        Insert: { id?: string; blocker_id: string; blocked_id: string };
+        Update: never;
+      };
+      // ── Task Saved Filters ─────────────────────────────────────
+      task_saved_filters: {
+        Row: {
+          id: string;
+          realtor_id: string;
+          name: string;
+          filters: Record<string, unknown>;
+          is_default: boolean;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          realtor_id?: string;
+          name: string;
+          filters: Record<string, unknown>;
+          is_default?: boolean;
+          position?: number;
+        };
+        Update: {
+          name?: string;
+          filters?: Record<string, unknown>;
+          is_default?: boolean;
+          position?: number;
         };
       };
       // ── Notifications ──────────────────────────────────────────

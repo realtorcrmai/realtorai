@@ -4,13 +4,14 @@
  * from listing data and rendered as editable HTML.
  */
 
-export type FieldType = "text" | "date" | "textarea" | "checkbox" | "signature";
+export type FieldType = "text" | "date" | "textarea" | "checkbox" | "signature" | "select";
 
 export interface FormField {
   id: string;
   label: string;
   type: FieldType;
   value?: string;
+  options?: string[];
   placeholder?: string;
   width?: "full" | "half" | "third";
 }
@@ -536,6 +537,54 @@ export function getFormDefinition(
           ],
         },
       ],
+    },
+    receipt_of_funds: {
+      key: "receipt_of_funds",
+      title: "FINTRAC Receipt of Funds Record",
+      subtitle: "Proceeds of Crime (Money Laundering) and Terrorist Financing Act",
+      sections: [
+        {
+          title: "Transaction Details",
+          fields: [
+            { id: "transactionDate", label: "Date Funds Received", type: "date", value: today(), width: "third" },
+            { id: "amount", label: "Amount Received ($CAD)", type: "text", value: listing.listPrice ? String(listing.listPrice) : "", width: "third" },
+            { id: "currency", label: "Currency", type: "select", options: ["CAD", "USD", "Other"], value: "CAD", width: "third" },
+            { id: "method", label: "Method of Receipt", type: "select", options: ["Wire Transfer", "Bank Draft", "Certified Cheque", "Personal Cheque", "Cash", "Electronic Funds Transfer", "Other"], value: "Wire Transfer", width: "half" },
+            { id: "description", label: "Description/Purpose", type: "text", value: "Deposit on purchase of property", width: "half" },
+            { id: "largeCash", label: "Cash amount ≥ $10,000?", type: "select", options: ["No", "Yes — Large Cash Transaction Report required"], value: "No", width: "full" },
+          ],
+        },
+        {
+          title: "Payor Information",
+          fields: [
+            { id: "payorName", label: "Full Name of Payor", type: "text", value: "", width: "half" },
+            { id: "payorAddress", label: "Address", type: "text", value: "", width: "half" },
+            { id: "payorPhone", label: "Phone", type: "text", value: "", width: "third" },
+            { id: "payorRelationship", label: "Relationship to Transaction", type: "select", options: ["Buyer", "Buyer's Agent", "Third Party", "Other"], value: "Buyer", width: "third" },
+            { id: "onBehalfOf", label: "On Behalf Of (if different)", type: "text", value: "", width: "third" },
+          ],
+        },
+        {
+          title: "Deposit Account",
+          fields: [
+            { id: "institution", label: "Financial Institution", type: "text", value: "", width: "half" },
+            { id: "accountType", label: "Account Type", type: "select", options: ["Trust Account", "Client Account", "Other"], value: "Trust Account", width: "half" },
+            { id: "accountNumber", label: "Account # (last 4 digits)", type: "text", value: "", width: "third" },
+            { id: "depositDate", label: "Date Deposited", type: "date", value: today(), width: "third" },
+            { id: "confirmationNumber", label: "Confirmation/Reference #", type: "text", value: "", width: "third" },
+          ],
+        },
+        {
+          title: "Verification",
+          fields: [
+            { id: "propAddress", label: "Property Address", type: "text", value: addr, width: "full" },
+            { id: "agentName", label: "Receiving Agent", type: "text", value: listing.agentName ?? "", width: "half" },
+            { id: "verifyDate", label: "Date", type: "date", value: today(), width: "half" },
+            { id: "agentSig", label: "Agent Signature", type: "signature", width: "half" },
+          ],
+        },
+      ],
+      footer: "This record must be kept for a minimum of 5 years. If cash received is $10,000 or more, a Large Cash Transaction Report must also be filed with FINTRAC within 15 calendar days.",
     },
   };
 

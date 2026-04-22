@@ -308,8 +308,13 @@ Rules:
   "stats": [{"label": "Stat name", "value": "$X", "change": "+X%"}],
   "tips": ["Optional tips or advice"],
   "funFact": "Optional interesting neighbourhood fact",
+  "address": "Property address (REQUIRED for listing emails — copy from the listings data provided)",
+  "area": "Neighbourhood/area name",
+  "recentSales": [{"address": "123 Main St", "price": "$850,000", "daysOnMarket": 12}],
   "reasoning": "1-2 sentences explaining WHY you chose this content, tone, and angle for this specific contact. Reference their click history, preferences, or journey phase."
 }
+
+IMPORTANT: If listings data is provided, you MUST include "address" and "area" fields from the first listing. For market update emails, include "stats" and "recentSales". These fields power the visual email blocks (property cards, stat boxes, recent sales tables). Without them, the email will be text-only.
 
 Always include the "reasoning" field. The realtor sees this to understand why the AI chose this content. Omit other optional fields if not needed.`;
 }

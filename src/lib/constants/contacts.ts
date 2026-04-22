@@ -39,7 +39,7 @@ export const PARTNER_TYPE_LABELS: Record<PartnerType, string> = {
   other: "Other",
 };
 
-export const PREF_CHANNELS = ["whatsapp", "sms"] as const;
+export const PREF_CHANNELS = ["whatsapp", "sms", "email", "phone"] as const;
 export type PrefChannel = (typeof PREF_CHANNELS)[number];
 
 // ── Lead Status ──────────────────────────────────────────────
