@@ -86,7 +86,7 @@ const blocks: Record<string, BlockFn> = {
     <tr><td style="padding:20px 32px 16px;">
       <table width="100%"><tr>
         <td><span style="font-size:15px;font-weight:700;color:#1d1d1f;letter-spacing:-0.3px;">${esc(branding?.name ?? 'Your Agent')}</span></td>
-        <td align="right"><span style="font-size:11px;color:#86868b;letter-spacing:0.5px;text-transform:uppercase;">${d.content.subject.includes("Welcome") ? "Welcome" : d.listing ? "New Listing" : "Update"}</span></td>
+        <td align="right"><span style="font-size:11px;color:#86868b;letter-spacing:0.5px;text-transform:uppercase;">${(d as any)._emailType === "welcome" ? "Welcome" : d.content.subject.includes("Welcome") ? "Welcome" : d.listing ? "New Listing" : "Update"}</span></td>
       </tr></table>
     </td></tr>`,
 
@@ -717,7 +717,7 @@ export function assembleEmail(
   const enrichedData: EmailData = {
     ...data,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...({ _theme: theme, _tokens: tokens } as any),
+    ...({ _theme: theme, _tokens: tokens, _emailType: emailType } as any),
   };
 
   // Derive branding from agent field for blocks that need it (e.g. header)

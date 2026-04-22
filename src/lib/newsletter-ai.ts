@@ -115,6 +115,7 @@ interface GeneratedContent {
   tips?: string[];
   funFact?: string;
   reasoning?: string;
+  valueProps?: Array<{ icon: string; title: string; description: string }>;
 }
 
 export async function generateNewsletterContent(
@@ -160,15 +161,15 @@ export async function generateNewsletterContent(
 
   // Parse and validate JSON response
   try {
-    // Extract JSON — handle markdown code fences
+    // Extract JSON — handle markdown code fences (greedy match for nested backticks)
     let jsonStr = text;
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (fenceMatch) {
       jsonStr = fenceMatch[1].trim();
-    } else {
-      const braceMatch = text.match(/\{[\s\S]*\}/);
-      if (braceMatch) jsonStr = braceMatch[0];
     }
+    // Always try to find a JSON object even after fence extraction
+    const braceMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (braceMatch) jsonStr = braceMatch[0];
 
     const parsed = JSON.parse(jsonStr);
     const validated = GeneratedContentSchema.parse(parsed);
@@ -177,11 +178,25 @@ export async function generateNewsletterContent(
     console.warn("AI content parsing failed, using fallback:", e instanceof Error ? e.message : e);
   }
 
-  // Fallback: construct from raw text
+  // Fallback: type-specific static content (never dump raw AI text into email)
+  if (context.emailType === "welcome") {
+    return {
+      subject: `Welcome — Here's What I Can Do For You`,
+      intro: `I'm ${sanitizeForPrompt(context.realtor.name)} at ${sanitizeForPrompt(context.realtor.brokerage)}. I specialize in helping ${context.contact.type === "seller" ? "sellers" : "buyers"} like you navigate the real estate market with confidence. I'm excited to connect.`,
+      body: "",
+      ctaText: "Book a Free Consultation",
+      valueProps: [
+        { icon: "🏠", title: "Curated Property Matches", description: "I'll send you listings that match your criteria — no spam, only relevant opportunities." },
+        { icon: "📊", title: "Real-Time Market Intelligence", description: "Monthly insights on pricing trends, inventory levels, and what's actually selling." },
+        { icon: "🤝", title: "Expert Guidance & Support", description: "When you're ready to make a move, I'll be there every step of the way." },
+      ],
+    };
+  }
+
   return {
     subject: `Update for ${context.contact.firstName}`,
-    intro: text.slice(0, 300).replace(/[{}"\[\]]/g, "").trim(),
-    body: text.slice(0, 800).replace(/[{}"\[\]]/g, "").trim(),
+    intro: text.slice(0, 300).replace(/[{}"\[\]`]/g, "").replace(/\n+/g, " ").trim(),
+    body: "",
     ctaText: "Learn More",
   };
 }
