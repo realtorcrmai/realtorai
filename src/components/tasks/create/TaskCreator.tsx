@@ -10,6 +10,7 @@ import Link from "next/link";
 import { PrioritySelector } from "./PrioritySelector";
 import { CategorySelector } from "./CategorySelector";
 import { TaskPreviewCard } from "./TaskPreviewCard";
+import { useTeamMembers } from "@/hooks/useTasks";
 import type { Contact } from "@/types";
 
 interface ListingOption {
@@ -31,6 +32,8 @@ export function TaskCreator() {
   const [dueDate, setDueDate] = useState("");
   const [contactId, setContactId] = useState("");
   const [listingId, setListingId] = useState("");
+  const [assignedTo, setAssignedTo] = useState("");
+  const { members: teamMembers } = useTeamMembers();
 
   // Loaded from API
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -69,6 +72,7 @@ export function TaskCreator() {
         due_date: dueDate || undefined,
         contact_id: contactId || undefined,
         listing_id: listingId || undefined,
+        assigned_to: assignedTo || undefined,
       };
 
       const res = await fetch("/api/tasks", {
@@ -180,7 +184,28 @@ export function TaskCreator() {
               </div>
             </div>
 
-            {/* Section 5: Link to contact/listing (collapsible) */}
+            {/* Section 5: Assign To (team members) */}
+            {teamMembers.length > 1 && (
+              <div className="space-y-4">
+                <SectionLabel number={5} label="Assign to" />
+                <div className="p-4 rounded-xl bg-brand-muted dark:bg-foreground/10 border border-brand/15 dark:border-brand/10">
+                  <select
+                    value={assignedTo}
+                    onChange={(e) => setAssignedTo(e.target.value)}
+                    className="w-full h-11 px-3 text-sm rounded-lg border border-border bg-background"
+                  >
+                    <option value="">Unassigned</option>
+                    {teamMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}{m.is_current ? " (me)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Section 6: Link to contact/listing (collapsible) */}
             <div className="space-y-4">
               <button
                 type="button"

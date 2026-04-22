@@ -555,8 +555,17 @@ export default async function ContactDetailPage({
                     </div>
                   </div>
 
-                  {/* Actions — Edit prominent, destructive actions in More menu */}
+                  {/* Actions — Visibility toggle, Edit, destructive actions in More menu */}
                   <div className="flex items-center gap-1.5 shrink-0">
+                    <form action={async () => {
+                      "use server";
+                      const { toggleContactVisibility } = await import("@/actions/team");
+                      await toggleContactVisibility(id);
+                    }}>
+                      <Button type="submit" variant="outline" size="sm" title={contact.visibility === "team" ? "Shared with team" : "Private"}>
+                        {contact.visibility === "team" ? "👥 Team" : "🔒 Private"}
+                      </Button>
+                    </form>
                     <ContactForm
                       contact={contact}
                       allContacts={(allContacts ?? []) as { id: string; name: string }[]}

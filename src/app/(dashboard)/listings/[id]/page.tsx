@@ -162,6 +162,15 @@ export default async function ListingDetailPage({
                   {listing.status.charAt(0).toUpperCase() + listing.status.slice(1)}
                 </Badge>
                 <ManualStatusOverride listingId={id} currentStatus={listing.status} />
+                <form action={async () => {
+                  "use server";
+                  const { toggleListingVisibility } = await import("@/actions/team");
+                  await toggleListingVisibility(id);
+                }}>
+                  <button type="submit" className={`text-xs font-medium px-2 py-0.5 rounded border cursor-pointer ${listing.visibility === "team" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-muted text-muted-foreground border-border"}`}>
+                    {listing.visibility === "team" ? "👥 Team" : "🔒 Private"}
+                  </button>
+                </form>
               </div>
               <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                 <span>{listing.property_type}</span>

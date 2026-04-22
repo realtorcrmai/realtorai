@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import type { Appointment } from "@/types";
 
-export function useShowings(status?: string) {
+export function useShowings(status?: string, scope?: string) {
   const [showings, setShowings] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -12,6 +12,7 @@ export function useShowings(status?: string) {
       setLoading(true);
       const params = new URLSearchParams();
       if (status) params.set("status", status);
+      if (scope) params.set("scope", scope);
 
       const res = await fetch(`/api/showings?${params}`);
       if (res.ok) {
@@ -22,7 +23,7 @@ export function useShowings(status?: string) {
     }
 
     fetchShowings();
-  }, [status]);
+  }, [status, scope]);
 
   return { showings, loading };
 }

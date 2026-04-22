@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { AddressAutocompleteInput } from "@/components/shared/AddressAutocompleteInput";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -103,6 +103,7 @@ export function ContactFormContent({
   const [submitting, setSubmitting] = useState(false);
   const [duplicates, setDuplicates] = useState<DuplicateContact[] | null>(null);
   const [pendingPayload, setPendingPayload] = useState<FormData | null>(null);
+  const [caslConsent, setCaslConsent] = useState(contact?.casl_consent_given ?? true);
   const [socialProfiles, setSocialProfiles] = useState<Record<string, string>>(
     (contact?.social_profiles as Record<string, string>) ?? {}
   );
@@ -166,6 +167,8 @@ export function ContactFormContent({
       name: data.name.trim(),
       postal_code: data.postal_code?.trim() || undefined,
       social_profiles: Object.keys(socialProfiles).length > 0 ? socialProfiles : undefined,
+      casl_consent_given: caslConsent,
+      casl_consent_date: caslConsent ? new Date().toISOString() : undefined,
       ...(data.type !== "partner" && {
         partner_type: undefined,
         company_name: undefined,
@@ -548,6 +551,20 @@ export function ContactFormContent({
           </div>
         </div>
       )}
+
+      {/* CASL Consent */}
+      <label className="flex items-start gap-3 cursor-pointer select-none rounded-lg border border-border p-3 hover:bg-muted/40 transition-colors">
+        <input
+          type="checkbox"
+          checked={caslConsent}
+          onChange={(e) => setCaslConsent(e.target.checked)}
+          className="mt-0.5 h-4 w-4 accent-brand cursor-pointer"
+        />
+        <span className="text-sm">
+          <span className="font-medium">CASL Consent</span>
+          <span className="text-muted-foreground"> — contact has agreed to receive email communications</span>
+        </span>
+      </label>
 
       <Button type="submit" className="w-full" disabled={submitting}>
         {submitting

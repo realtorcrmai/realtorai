@@ -231,11 +231,17 @@ export async function inviteMember(input: InviteMemberInput) {
     const inviteUrl = `${appUrl}/invite/accept?token=${token}`;
     const teamName = team?.name || "a team";
 
+    const logoUrl = team?.logo_url;
+    const logoHtml = logoUrl
+      ? `<img src="${logoUrl}" alt="${teamName}" style="height: 48px; margin-bottom: 16px;" />`
+      : `<div style="font-size: 28px; font-weight: 700; color: #2D3E50; margin-bottom: 16px;">${teamName}</div>`;
+
     await sendEmail({
       to: input.email,
       subject: `${session.name} invited you to join ${teamName} on Realtors360`,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 40px 20px;">
+          ${logoHtml}
           <h1 style="color: #2D3E50; font-size: 24px; margin-bottom: 8px;">You're invited!</h1>
           <p style="color: #555; font-size: 16px; line-height: 1.5;">
             <strong>${session.name}</strong> has invited you to join <strong>${teamName}</strong> as a <strong>${input.role}</strong> on Realtors360.
@@ -475,6 +481,20 @@ export async function updateMemberRole(input: UpdateRoleInput) {
     new_role: input.new_role,
   });
 
+  // Notify the affected member about their role change
+  if (membership.user_id && membership.user_id !== session.id) {
+    try {
+      const { createNotification } = await import("@/lib/notifications");
+      await createNotification(membership.user_id, {
+        type: "team_role_changed",
+        title: "Your team role has been updated",
+        body: `Your role was changed from ${membership.role} to ${input.new_role} by ${session.name}.`,
+        related_type: "team",
+        related_id: session.teamId,
+      });
+    } catch { /* Don't fail role change if notification fails */ }
+  }
+
   revalidatePath("/settings/team");
   return { data: { success: true } };
 }
@@ -663,6 +683,18 @@ export async function removeMember(userId: string) {
     email: membership.agent_email,
   });
 
+  // Notify the removed member
+  try {
+    const { createNotification } = await import("@/lib/notifications");
+    await createNotification(userId, {
+      type: "team_removed",
+      title: "You have been removed from the team",
+      body: `${session.name} removed you from the team.`,
+      related_type: "team",
+      related_id: session.teamId,
+    });
+  } catch { /* Don't fail removal if notification fails */ }
+
   revalidatePath("/settings/team");
   return { data: { success: true } };
 }
@@ -794,6 +826,48 @@ export async function getOffboardImpact(userId: string): Promise<{ data?: Offboa
 }
 
 /**
+ * Get per-agent analytics for team dashboard.
+ */
+export async function getTeamAnalytics() {
+  const session = await getSession();
+  if (!session.teamId) return { error: "Not on a team" };
+  if (!checkTeamPermission({ user: session }, "team:manage_settings")) {
+    return { error: "Only owner/admin can view team analytics" };
+  }
+
+  const supabase = createAdminClient();
+  const { data: memberships } = await supabase
+    .from("tenant_memberships")
+    .select("user_id, role, agent_email, users(name)")
+    .eq("tenant_id", session.teamId)
+    .is("removed_at", null);
+
+  if (!memberships || memberships.length === 0) return { data: [] };
+
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+
+  const analytics = await Promise.all(
+    memberships.map(async (m: Record<string, unknown>) => {
+      const uid = m.user_id as string;
+      if (!uid) return null;
+      const [contacts, listings, tasksCompleted, showings] = await Promise.all([
+        supabase.from("contacts").select("*", { count: "exact", head: true }).eq("realtor_id", uid),
+        supabase.from("listings").select("*", { count: "exact", head: true }).eq("realtor_id", uid).in("status", ["active", "pending", "conditional"]),
+        supabase.from("tasks").select("*", { count: "exact", head: true }).eq("realtor_id", uid).eq("status", "completed").gte("completed_at", monthStart),
+        supabase.from("appointments").select("*", { count: "exact", head: true }).eq("realtor_id", uid).gte("start_time", monthStart),
+      ]);
+      const user = m.users as Record<string, unknown> | null;
+      return {
+        user_id: uid, name: (user?.name as string) || (m.agent_email as string), role: m.role as string,
+        contacts: contacts.count || 0, active_listings: listings.count || 0,
+        tasks_completed_this_month: tasksCompleted.count || 0, showings_this_month: showings.count || 0,
+      };
+    })
+  );
+  return { data: analytics.filter(Boolean) };
+}
+
+/**
  * Get recent team activity feed.
  */
 export async function getTeamActivity(limit = 50) {
@@ -839,6 +913,107 @@ export async function cancelInvite(inviteId: string) {
 }
 
 /**
+ * Toggle contact visibility between private and team.
+ * Checks for duplicates when sharing with team.
+ */
+export async function toggleContactVisibility(contactId: string) {
+  const session = await getSession();
+  if (!session.teamId) return { error: "Not on a team" };
+
+  const supabase = createAdminClient();
+
+  const { data: contact } = await supabase
+    .from("contacts")
+    .select("id, visibility, email, name, realtor_id")
+    .eq("id", contactId)
+    .eq("realtor_id", session.id)
+    .single();
+
+  if (!contact) return { error: "Contact not found" };
+
+  const newVis = contact.visibility === "team" ? "private" : "team";
+
+  // Check for duplicates when sharing with team
+  if (newVis === "team" && contact.email) {
+    const { data: memberships } = await supabase
+      .from("tenant_memberships")
+      .select("user_id")
+      .eq("tenant_id", session.teamId)
+      .is("removed_at", null);
+
+    const memberIds = (memberships ?? [])
+      .map((m: { user_id: string | null }) => m.user_id)
+      .filter((id): id is string => !!id && id !== session.id);
+
+    if (memberIds.length > 0) {
+      const { data: duplicates } = await supabase
+        .from("contacts")
+        .select("id, name, realtor_id")
+        .eq("email", contact.email)
+        .eq("visibility", "team")
+        .in("realtor_id", memberIds)
+        .limit(1);
+
+      if (duplicates && duplicates.length > 0) {
+        return { warning: `A team member already has a contact with email ${contact.email}. Sharing anyway.`, duplicate: true };
+      }
+    }
+  }
+
+  const { error } = await supabase
+    .from("contacts")
+    .update({
+      visibility: newVis,
+      shared_at: newVis === "team" ? new Date().toISOString() : null,
+      shared_by: newVis === "team" ? session.id : null,
+    })
+    .eq("id", contactId)
+    .eq("realtor_id", session.id);
+
+  if (error) return { error: `Failed to update visibility: ${error.message}` };
+
+  revalidatePath(`/contacts/${contactId}`);
+  revalidatePath("/contacts");
+  return { data: { visibility: newVis } };
+}
+
+/**
+ * Toggle listing visibility between private and team.
+ */
+export async function toggleListingVisibility(listingId: string) {
+  const session = await getSession();
+  if (!session.teamId) return { error: "Not on a team" };
+
+  const supabase = createAdminClient();
+
+  const { data: listing } = await supabase
+    .from("listings")
+    .select("id, visibility")
+    .eq("id", listingId)
+    .eq("realtor_id", session.id)
+    .single();
+
+  if (!listing) return { error: "Listing not found" };
+
+  const newVis = listing.visibility === "team" ? "private" : "team";
+
+  const { error } = await supabase
+    .from("listings")
+    .update({
+      visibility: newVis,
+      shared_at: newVis === "team" ? new Date().toISOString() : null,
+    })
+    .eq("id", listingId)
+    .eq("realtor_id", session.id);
+
+  if (error) return { error: `Failed to update visibility: ${error.message}` };
+
+  revalidatePath(`/listings/${listingId}`);
+  revalidatePath("/listings");
+  return { data: { visibility: newVis } };
+}
+
+/**
  * Resend a pending invite (resets expiry).
  */
 export async function resendInvite(inviteId: string) {
@@ -864,7 +1039,43 @@ export async function resendInvite(inviteId: string) {
 
   if (error) return { error: `Failed to resend invite: ${error.message}` };
 
-  // TODO: Actually resend email via Resend
+  // Fetch invite details to send email
+  const { data: invite } = await supabase
+    .from("team_invites")
+    .select("email, invite_token, role, inviter_name, team_name")
+    .eq("id", inviteId)
+    .single();
+
+  if (invite) {
+    try {
+      const { sendEmail } = await import("@/lib/resend");
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const inviteUrl = `${appUrl}/invite/accept?token=${invite.invite_token}`;
+      const teamName = invite.team_name || "a team";
+      const inviterName = invite.inviter_name || session.name;
+
+      await sendEmail({
+        to: invite.email,
+        subject: `Reminder: ${inviterName} invited you to join ${teamName} on Realtors360`,
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 40px 20px;">
+            <h1 style="color: #2D3E50; font-size: 24px; margin-bottom: 8px;">Reminder: You're invited!</h1>
+            <p style="color: #555; font-size: 16px; line-height: 1.5;">
+              <strong>${inviterName}</strong> invited you to join <strong>${teamName}</strong> as a <strong>${invite.role}</strong> on Realtors360.
+            </p>
+            <a href="${inviteUrl}" style="display: inline-block; background: #FF7A59; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; margin: 24px 0;">
+              Accept Invite
+            </a>
+            <p style="color: #999; font-size: 13px; margin-top: 24px;">
+              This invite expires in 30 days. If you didn't expect this, you can ignore it.
+            </p>
+          </div>
+        `,
+      });
+    } catch (emailErr) {
+      console.error("[team] Failed to resend invite email:", emailErr);
+    }
+  }
 
   revalidatePath("/settings/team");
   return { data: { success: true } };

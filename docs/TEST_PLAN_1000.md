@@ -3094,6 +3094,26 @@ Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. Thi
 **Expected:** Returns array of `{ id, name, email }` matching users (max 5). Excludes current user. Unauthenticated requests return 401.
 **Priority:** P1
 
+#### TEAM-004: GET /api/team/invite-info
+**Steps:** Send GET request with `?token=<valid-invite-token>` query param.
+**Expected:** Returns `{ team_name, inviter_name, inviter_email }` for valid pending invites. Returns 404 for expired/invalid tokens. No auth required (public endpoint for invite acceptance flow).
+**Priority:** P1
+
+#### TEAM-005: GET /api/team/activity
+**Steps:** Send authenticated GET request with `?limit=10` query param.
+**Expected:** Returns array of team_activity_log entries for current user's team. Returns 400 if not on a team. Respects limit param.
+**Priority:** P2
+
+#### TEAM-006: GET /api/team-members
+**Steps:** Send authenticated GET request.
+**Expected:** Returns team member list with id, name, email, role, is_current. Solo users get array with just themselves. Team users get all active members.
+**Priority:** P1
+
+#### TEAM-007: GET /api/team/audit-log
+**Steps:** Send authenticated GET request as owner/admin with `?limit=20`.
+**Expected:** Returns array of audit_log entries for team. Returns 403 for agent/assistant roles. Returns 400 if not on a team.
+**Priority:** P2
+
 #### CRON-JOURNEY-001: POST /api/cron/process-journeys
 **Steps:** Trigger with Bearer CRON_SECRET header.
 **Expected:** Advances eligible contact journeys to next phase. Rejects missing/invalid token.
@@ -3112,3 +3132,5 @@ Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. Thi
 <!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
 
 <!-- Last reviewed: 2026-04-21 — AGENTS.md v0.6 + violation logging -->
+
+<!-- Last reviewed: 2026-04-21 — team WIP session artifacts -->

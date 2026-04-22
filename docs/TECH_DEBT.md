@@ -142,6 +142,20 @@ Last updated: 2026-03-26
 
 ---
 
+## Resolved Tech Debt (2026-04-21 Playbook Audit)
+
+| ID | Item | Resolution |
+|----|------|-----------|
+| TD-R07 | `as any` casts unblocked in CI | ESLint `consistent-type-assertions: error` + review-pr.mjs check 2 → error |
+| TD-R08 | Compliance log always ✅ | completion-gate.sh FAIL path (logs ❌ on skipped phases/warnings) |
+| TD-R09 | Dead glob rules in change maps | Trailing slashes removed from 3 rules |
+| TD-R10 | `npx next lint` broken in CI (Next.js 16) | Replaced with `npm run lint` in g1/g2/g3 |
+| TD-R11 | No violation-level logging | `.claude/violation-log.md` + log_violation() in hooks |
+| TD-R12 | No citation verifier (HC-13) | `scripts/verify-citations.mjs` wired into docs-gate |
+| TD-R13 | No post-step output validators | `.claude/hooks/output-validator.sh` checks usecases/demo/smoke |
+| TD-R14 | No DR runbook | `docs/DR_RUNBOOK.md` with RPO/RTO, 4 scenarios, drill checklist |
+| TD-R15 | No Dependabot | `.github/dependabot.yml` — weekly npm + GH Actions |
+
 ## Resolved Tech Debt (2026-04-12 UI/UX Audit)
 
 | ID | Item | Resolution |

@@ -22,6 +22,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/join/") ||
     pathname.startsWith("/invite/accept") ||
 
+    // Team invite info (public — shows invite details before login)
+    pathname.startsWith("/api/team/invite-info") ||
+
     // Static assets
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/favicon") ||

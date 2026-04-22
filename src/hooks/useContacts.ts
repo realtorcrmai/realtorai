@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import type { Contact } from "@/types";
 
-export function useContacts(search?: string) {
+export function useContacts(search?: string, scope?: string) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -12,6 +12,7 @@ export function useContacts(search?: string) {
       setLoading(true);
       const params = new URLSearchParams();
       if (search) params.set("search", search);
+      if (scope) params.set("scope", scope);
 
       const res = await fetch(`/api/contacts?${params}`);
       if (res.ok) {
@@ -22,7 +23,7 @@ export function useContacts(search?: string) {
     }
 
     fetchContacts();
-  }, [search]);
+  }, [search, scope]);
 
   return { contacts, loading };
 }

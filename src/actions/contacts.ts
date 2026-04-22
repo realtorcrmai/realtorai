@@ -87,6 +87,8 @@ export async function createContact(formData: ContactFormData, force = false) {
       seller_preferences: (parsed.data.seller_preferences as Json) ?? null,
       demographics: (parsed.data.demographics as Json) ?? null,
       social_profiles: (parsed.data.social_profiles as Json) ?? null,
+      casl_consent_given: parsed.data.casl_consent_given ?? true,
+      casl_consent_date: parsed.data.casl_consent_given !== false ? new Date().toISOString() : null,
     })
     .select()
     .single();
