@@ -69,6 +69,15 @@ EOF
             else
                 jq '.phases.validated = true' "$TASK_FILE" > "$TASK_FILE.tmp" && mv "$TASK_FILE.tmp" "$TASK_FILE"
             fi
+
+            # Wave 2b: For CODING:feature, run smoke harness
+            if [[ "$TYPE" == "CODING:feature" ]]; then
+                SMOKE_OUTPUT=$(node scripts/run-smoke.mjs 2>&1)
+                SMOKE_EXIT=$?
+                if [[ $SMOKE_EXIT -ne 0 ]]; then
+                    MISSING="$MISSING\n- Smoke harness failed:\n$SMOKE_OUTPUT"
+                fi
+            fi
         fi
 
         if [[ "$COMPLIANCE" != "true" ]]; then

@@ -263,3 +263,5 @@ Without those vars, the RLS suite skips automatically (`describe.skipIf`).
 
 
 <!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->
+
+<!-- Last reviewed: 2026-04-21 — Waves 2a/2b/2c -->
