@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // GET /api/team/invite-info?token=xxx — public endpoint to fetch invite details
-// Used by the /invite/accept page to display invite info before login
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token");
   if (!token || token.length < 10) {
