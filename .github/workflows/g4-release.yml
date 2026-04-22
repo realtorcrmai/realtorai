@@ -91,7 +91,7 @@ jobs:
         run: npx playwright install-deps chromium
       - name: Run full E2E (shard ${{ matrix.shard }}/4)
         run: npx playwright test --shard=${{ matrix.shard }}/4
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-release-shard-${{ matrix.shard }}
