@@ -26,13 +26,18 @@ function esc(s: string | null | undefined): string {
     .replace(/"/g, "&quot;");
 }
 
+/** Convert markdown bold (**text**) to HTML <strong> tags. Must run AFTER esc(). */
+function mdBold(s: string): string {
+  return s.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+}
+
 // ═══════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════
 
 export type EmailData = {
   contact: { name: string; firstName: string; type: string };
-  agent: { name: string; brokerage: string; phone: string; initials?: string };
+  agent: { name: string; brokerage: string; phone: string; initials?: string; headshotUrl?: string };
   content: { subject: string; intro: string; body: string; ctaText: string; ctaUrl?: string };
   unsubscribeUrl?: string;
   physicalAddress?: string;
@@ -58,6 +63,8 @@ export type EmailData = {
   mapPreview?: { imageUrl: string; caption?: string };
   videoThumbnail?: { thumbnailUrl: string; videoUrl?: string };
   socialProof?: { headline?: string; text: string; stats?: { value: string; label: string }[] };
+  welcomeHero?: { headshotUrl?: string; tagline?: string };
+  valueProps?: Array<{ icon: string; title: string; description: string }>;
 };
 
 type Branding = { name: string; brokerage?: string; phone?: string; initials?: string };
@@ -187,8 +194,8 @@ const blocks: Record<string, BlockFn> = {
 
   personalNote: (d) => `
     <tr><td style="padding:24px 32px 0;">
-      <p style="font-size:15px;color:#1d1d1f;line-height:1.65;margin:0;">Hi ${esc(d.contact.firstName)}, ${esc(d.content.intro)}</p>
-      ${d.content.body ? `<p style="font-size:15px;color:#1d1d1f;line-height:1.65;margin:16px 0 0;">${esc(d.content.body)}</p>` : ""}
+      <p style="font-size:15px;color:#1d1d1f;line-height:1.65;margin:0;">Hi ${esc(d.contact.firstName)}, ${mdBold(esc(d.content.intro))}</p>
+      ${d.content.body ? `<p style="font-size:15px;color:#1d1d1f;line-height:1.65;margin:16px 0 0;">${mdBold(esc(d.content.body))}</p>` : ""}
     </td></tr>`,
 
   featureList: (d) => {
@@ -472,6 +479,51 @@ const blocks: Record<string, BlockFn> = {
     </td></tr>`;
   },
 
+  welcomeHero: (d) => {
+    const agentName = esc(d.agent.name);
+    const brokerage = esc(d.agent.brokerage);
+    const headshotUrl = d.welcomeHero?.headshotUrl || d.agent.headshotUrl;
+    const initials = esc(d.agent.initials || d.agent.name.split(" ").map(w => w[0]).join("").slice(0, 2));
+    const tagline = esc(d.welcomeHero?.tagline || "Your Real Estate Partner");
+
+    const photoHtml = headshotUrl
+      ? `<img src="${headshotUrl}" width="96" height="96" alt="${agentName}" style="display:block;width:96px;height:96px;border-radius:50%;object-fit:cover;margin:0 auto;border:3px solid rgba(255,255,255,0.3);">`
+      : `<div style="width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,#5856d6,#ff6b6b);text-align:center;line-height:96px;color:#fff;font-weight:700;font-size:36px;margin:0 auto;">${initials}</div>`;
+
+    return `
+    <tr><td style="padding:0 16px;">
+      <div style="background:linear-gradient(135deg,#1d1d1f 0%,#2c2c2e 50%,#3a3a3c 100%);border-radius:16px;padding:40px 28px;text-align:center;">
+        ${photoHtml}
+        <div style="font-size:24px;font-weight:700;color:#fff;margin-top:16px;letter-spacing:-0.3px;">${agentName}</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.6);margin-top:4px;">${brokerage}</div>
+        <div style="width:40px;height:2px;background:linear-gradient(90deg,#5856d6,#ff6b6b);margin:16px auto;border-radius:1px;"></div>
+        <div style="font-size:16px;color:rgba(255,255,255,0.85);font-style:italic;letter-spacing:-0.2px;">${tagline}</div>
+      </div>
+    </td></tr>`;
+  },
+
+  valueProps: (d) => {
+    const props = d.valueProps;
+    if (!props?.length) return "";
+    const items = props.slice(0, 3);
+    return `
+    <tr><td style="padding:24px 32px 0;">
+      <div style="font-size:12px;font-weight:700;color:#86868b;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:16px;">What I'll Do For You</div>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        ${items.map((p: { icon: string; title: string; description: string }) => `
+        <tr>
+          <td width="48" style="vertical-align:top;padding:10px 0;">
+            <div style="width:40px;height:40px;background:#f5f5f7;border-radius:12px;text-align:center;line-height:40px;font-size:20px;">${p.icon}</div>
+          </td>
+          <td style="padding:10px 0 10px 14px;vertical-align:top;">
+            <div style="font-size:15px;font-weight:600;color:#1d1d1f;letter-spacing:-0.2px;">${esc(p.title)}</div>
+            <div style="font-size:13px;color:#86868b;margin-top:3px;line-height:1.5;">${esc(p.description)}</div>
+          </td>
+        </tr>`).join("")}
+      </table>
+    </td></tr>`;
+  },
+
   cta: (d) => {
     const theme = (d as EmailData & { _theme?: EmailTheme })._theme ?? "standard";
     const url = d.content.ctaUrl || "#";
@@ -486,11 +538,16 @@ const blocks: Record<string, BlockFn> = {
     </td></tr>`;
   },
 
-  agentCard: (d) => `
+  agentCard: (d) => {
+    const headshotUrl = d.agent.headshotUrl;
+    const photoHtml = headshotUrl
+      ? `<img src="${headshotUrl}" width="44" height="44" alt="${esc(d.agent.name)}" style="display:block;width:44px;height:44px;border-radius:50%;object-fit:cover;">`
+      : `<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#5856d6,#ff6b6b);text-align:center;line-height:44px;color:#fff;font-weight:700;font-size:17px;">${esc(d.agent.initials || d.agent.name[0])}</div>`;
+    return `
     <tr><td style="padding:32px 32px 0;">
       <table width="100%" style="border-top:1px solid #e5e5ea;padding-top:20px;">
         <tr>
-          <td width="48"><div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#5856d6,#ff6b6b);text-align:center;line-height:44px;color:#fff;font-weight:700;font-size:17px;">${esc(d.agent.initials || d.agent.name[0])}</div></td>
+          <td width="48">${photoHtml}</td>
           <td style="padding-left:14px;">
             <div style="font-size:15px;font-weight:600;color:#1d1d1f;">${esc(d.agent.name)}</div>
             <div style="font-size:13px;color:#86868b;">${esc(d.agent.brokerage)}</div>
@@ -498,7 +555,8 @@ const blocks: Record<string, BlockFn> = {
           </td>
         </tr>
       </table>
-    </td></tr>`,
+    </td></tr>`;
+  },
 
   footer: (d) => `
     <tr><td style="padding:24px 32px 20px;text-align:center;">
@@ -556,7 +614,7 @@ const TEMPLATE_BLOCKS: Record<string, Record<string, string[]>> = {
 
   // All templates — comprehensive block lists for rich visual emails
   welcome: {
-    default: ["header", "heroGradient", "personalNote", "areaHighlights", "propertyGrid", "statsRow", "testimonial", "socialProof", "cta", "agentCard", "footer"],
+    default: ["header", "welcomeHero", "personalNote", "valueProps", "areaHighlights", "cta", "agentCard", "footer"],
   },
   neighbourhood_guide: {
     default: ["header", "heroGradient", "heroImage", "personalNote", "areaHighlights", "propertyGrid", "statsRow", "testimonial", "mapPreview", "cta", "agentCard", "footer"],

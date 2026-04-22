@@ -165,6 +165,7 @@ async function renderEmailTemplate(
       brokerage: branding.brokerage || brandConfig.brokerage,
       phone: branding.phone || brandConfig.phone,
       initials: (branding.name || brandConfig.name).split(" ").map((w: string) => w[0]).join("").slice(0, 2),
+      headshotUrl: branding.headshotUrl,
     },
     content: {
       subject: content.subject || content.title || "",
@@ -248,6 +249,18 @@ async function renderEmailTemplate(
     ...(content.listings ? { listings: content.listings } : {}),
     // Social proof
     ...(content.socialProof ? { socialProof: content.socialProof } : {}),
+    // Welcome hero (agent headshot + tagline)
+    ...(emailType === 'welcome' ? {
+      welcomeHero: {
+        headshotUrl: branding.headshotUrl,
+        tagline: `Your Real Estate Partner in ${preferredArea || 'Metro Vancouver'}`,
+      },
+      valueProps: content.valueProps || [
+        { icon: "🏠", title: "Curated Property Matches", description: "I'll send you listings that match your criteria — no spam, only relevant opportunities." },
+        { icon: "📊", title: "Real-Time Market Intelligence", description: "Insights on pricing trends, inventory levels, and what's actually selling in your target areas." },
+        { icon: "🤝", title: "Expert Guidance & Support", description: "When you're ready to make a move, I'll be there every step of the way." },
+      ],
+    } : {}),
     // Closing checklist — featureList with transaction milestone items
     ...(emailType === "closing_checklist" && !content.address ? {
       listing: {
@@ -518,11 +531,13 @@ export async function generateAndQueueNewsletter(
     content.mortgageDetails = `Based on $${price.toLocaleString()} purchase, 25-year amortization`;
   }
 
-  // 5. SOCIAL PROOF — powers socialProof block
-  if (!content.socialProof) {
+  // 5. SOCIAL PROOF — powers socialProof block (skip for welcome — relationship first)
+  if (!content.socialProof && emailType !== 'welcome') {
+    const buyerPrefs2 = contact.buyer_preferences as { preferred_areas?: string[] } | null;
+    const areaRef = buyerPrefs2?.preferred_areas?.[0] || 'your area';
     content.socialProof = {
       headline: `Why clients trust ${branding.name}`,
-      text: `${branding.name} at ${branding.brokerage || 'Realtors360 Realty'} specializes in ${contact.name.split(' ')[0]}'s target areas with deep local market knowledge.`,
+      text: `${branding.name} at ${branding.brokerage || 'Magnate360 Realty'} specializes in ${areaRef} with deep local market knowledge.`,
       stats: [
         { value: '150+', label: 'homes sold' },
         { value: '98%', label: 'client satisfaction' },
@@ -531,8 +546,8 @@ export async function generateAndQueueNewsletter(
     };
   }
 
-  // 6. TESTIMONIAL — powers testimonial block
-  if (!content.quote) {
+  // 6. TESTIMONIAL — powers testimonial block (skip for welcome — no fake quotes on first impression)
+  if (!content.quote && emailType !== 'welcome') {
     const contactType = contact.type as string;
     content.quote = contactType === 'seller'
       ? `${branding.name} made selling our home effortless. The market analysis was spot-on and we sold above asking in just 8 days.`

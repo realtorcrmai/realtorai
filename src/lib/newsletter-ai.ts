@@ -42,6 +42,11 @@ const GeneratedContentSchema = z.object({
     price: z.string(),
     daysOnMarket: z.number(),
   })).optional(),
+  valueProps: z.array(z.object({
+    icon: z.string(),
+    title: z.string(),
+    description: z.string(),
+  })).optional(),
 });
 
 export interface NewsletterContext {
@@ -278,13 +283,17 @@ BUYER CONTEXT — This contact is a property buyer. Your email must:
   const emailTypeInstructions: Record<string, string> = {
     welcome: `
 WELCOME EMAIL RULES:
-- This is the first email the contact receives. Make a strong first impression.
+- This is the FIRST email. Make a strong first impression focused on RELATIONSHIP, not property pushing.
 - Subject: Warm and personal. E.g., "Welcome — Here's What I Can Do For You" or "Great to Connect, ${sanitizeForPrompt(context.contact.firstName)}"
-- Intro: Jump straight into value — who you are, what you specialize in, and why they're in good hands. Do NOT repeat their name in the intro (the template already adds "Hi {name}").
-- Body: Include 2-3 specific things you can help with (market insights, showing access, neighbourhood expertise). Mention your track record briefly.
-- CTA: Specific and inviting. Use "Book a Free Consultation" or "Schedule a Quick Call" — never "Learn More" or "quick conversation".
-- Do NOT invent areas or preferences the contact hasn't provided. If no areas are specified, talk about the broader market (Metro Vancouver, Fraser Valley, etc).
-- Keep it concise — 150-200 words max. This is a handshake, not a sales pitch.`,
+- Intro: 2-3 sentences MAX (under 80 words). Who you are, what you specialize in, why they're in good hands. Do NOT repeat their name (template adds "Hi {name}" automatically).
+- Body: Leave EMPTY string (""). The visual value proposition block handles the content.
+- valueProps: Generate EXACTLY 3 items with {icon (emoji), title (5-8 words), description (15-25 words)}. Examples:
+  - {icon: "🏠", title: "Curated Property Matches", description: "I'll send you listings that match your criteria — no spam, only relevant opportunities."}
+  - {icon: "📊", title: "Real-Time Market Intelligence", description: "Monthly insights on pricing trends, inventory levels, and what's actually selling in your target areas."}
+  - {icon: "🤝", title: "Expert Negotiation & Support", description: "When you're ready to make a move, I'll fight for the best possible terms on your behalf."}
+- CTA: "Book a Free Consultation" — never "Learn More".
+- Do NOT invent areas or preferences the contact hasn't provided. If no areas specified, talk about the broader market.
+- This is a handshake, not a sales pitch. Keep it warm and concise.`,
   };
   const emailTypeInstruction = emailTypeInstructions[context.emailType] || "";
 
@@ -330,6 +339,7 @@ Rules:
   "address": "Property address (REQUIRED for listing emails — copy from the listings data provided)",
   "area": "Neighbourhood/area name",
   "recentSales": [{"address": "123 Main St", "price": "$850,000", "daysOnMarket": 12}],
+  "valueProps": [{"icon": "emoji", "title": "Short title (5-8 words)", "description": "1-2 sentence description (15-25 words)"}],
   "reasoning": "1-2 sentences explaining WHY you chose this content, tone, and angle for this specific contact. Reference their click history, preferences, or journey phase."
 }
 
