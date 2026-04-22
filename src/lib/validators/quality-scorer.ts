@@ -104,9 +104,11 @@ Return JSON: {"personalization":N,"relevance":N,"tone":N,"value":N,"cta_clarity"
         `Quality too low: avg=${average.toFixed(1)}, min=${minScore}`
       );
     } else if (average < 7) {
-      action = "regenerate";
+      // No regeneration loop exists in any caller — returning "regenerate" is a dead end
+      // that leaves emails stuck as "draft" forever. Send with a logged warning instead.
+      action = "send";
       issues.push(
-        `Quality below threshold: avg=${average.toFixed(1)}, consider regenerating`
+        `Quality below threshold: avg=${average.toFixed(1)}, sent anyway (no retry loop)`
       );
     }
 
