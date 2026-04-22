@@ -1,4 +1,4 @@
-# PRD — Newsletter System Gaps
+<!-- docs-audit: none --># PRD — Newsletter System Gaps
 **Area A: 9 Gaps**  
 **Date:** 2026-04-17  
 **Status:** Approved for Sprint 1–2  

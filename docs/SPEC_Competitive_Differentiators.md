@@ -1816,3 +1816,6 @@ ALTER TABLE deal_coordinator ENABLE ROW LEVEL SECURITY;
 <!-- Last reviewed: 2026-04-21 — playbook audit Phase 2 spec extraction -->
 
 <!-- Last reviewed: 2026-04-21 — Wave 1a demo gate -->
+<!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
+
+<!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->

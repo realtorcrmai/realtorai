@@ -1,4 +1,4 @@
-# Team Functionality — Comprehensive Test Plan
+<!-- docs-audit: none --># Team Functionality — Comprehensive Test Plan
 
 **Test Date:** 2026-04-21
 **Tester:** Claude (automated via Node.js + Supabase admin client)

@@ -1,4 +1,4 @@
-# Resend Webhook Setup
+<!-- docs-audit: none --># Resend Webhook Setup
 
 This document describes how to configure Resend webhooks so that email engagement events (opens, clicks, bounces, complaints) are tracked in Supabase and feed the AI engagement intelligence engine.
 

@@ -1,4 +1,4 @@
-# Test Plan — Newsletter, Journey & Email Quality Gap Fixes
+<!-- docs-audit: none --># Test Plan — Newsletter, Journey & Email Quality Gap Fixes
 **Date:** 2026-04-17  
 **Coverage:** All 25 gaps from IMPL_Newsletter_Journey_Email_Gaps_2026_04_17.md  
 **Test Types:** Unit | Integration | Browser (Playwright) | Email Delivery | Journey Flow  

@@ -1,4 +1,4 @@
-# PRD — Email Quality & Design Redesign
+<!-- docs-audit: none --># PRD — Email Quality & Design Redesign
 **Area C: 10 Gaps**  
 **Date:** 2026-04-17  
 **Reference:** EVVancouver listing email (https://mailchi.mp/evvancouver/1207-1277-nelson-street-6018632)  
