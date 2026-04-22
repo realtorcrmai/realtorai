@@ -57,7 +57,7 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
   // Custom campaign state
   const [campaignStep, setCampaignStep] = useState<CampaignStep>("select_template");
   const [selectedTemplate, setSelectedTemplate] = useState<typeof TEMPLATES[0] | null>(null);
-  const [selectedRecipients, setSelectedRecipients] = useState("all_buyers");
+  const [selectedRecipients, setSelectedRecipients] = useState("all_agents");
   const [scheduleType, setScheduleType] = useState<"now" | "scheduled">("now");
   const [campaignSent, setCampaignSent] = useState(false);
 
@@ -95,7 +95,7 @@ export function CampaignsTab({ listings, blastHistory = [], onSendBlast, onSendC
     }
   }, [blastStep, selectedRecipients, importEmails]);
 
-  function resetBlast() { setBlastStep("select_listing"); setSelectedListing(null); setBlastSent(false); setBlastIncludes({ photos: true, openhouse: true, commission: false, floorplan: false }); setImportEmails(""); }
+  function resetBlast() { setBlastStep("select_listing"); setSelectedListing(null); setBlastSent(false); setBlastIncludes({ photos: true, openhouse: true, commission: false, floorplan: false }); setImportEmails(""); setSelectedRecipients("all_agents"); }
   function resetCampaign() { setCampaignStep("select_template"); setSelectedTemplate(null); setSelectedRecipients("all_buyers"); setScheduleType("now"); setCampaignSent(false); }
 
   // ═══ HOME VIEW ═══
