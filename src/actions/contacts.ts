@@ -39,7 +39,7 @@ export async function createContact(formData: ContactFormData, force = false) {
       .select("id, name, phone, email");
 
     if (existing && existing.length > 0) {
-      const duplicates = existing.filter((c: any) => {
+      const duplicates = existing.filter((c: { phone?: string | null; email?: string | null; id: string; name: string }) => {
         const phoneMatch =
           last10.length === 10 &&
           (c.phone ?? "").replace(/\D/g, "").slice(-10) === last10;
@@ -53,7 +53,7 @@ export async function createContact(formData: ContactFormData, force = false) {
       if (duplicates.length > 0) {
         return {
           error: "Duplicate contact detected",
-          duplicates: duplicates.map((c: any) => ({
+          duplicates: duplicates.map((c: { id: string; name: string; phone?: string | null; email?: string | null }) => ({
             id: c.id,
             name: c.name,
             phone: c.phone,

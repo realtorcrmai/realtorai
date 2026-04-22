@@ -1366,3 +1366,4 @@ src/
 > **Version:** 2.1 | April 20, 2026
 > **Based on:** Full codebase audit (60+ tables, 18 action files, 14 cron jobs), competitive analysis (Follow Up Boss, kvCORE, LionDesk), CASL/PIPEDA/GDPR compliance research, NAR 2025 team statistics, industry RBAC patterns
 
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->

@@ -77,11 +77,9 @@ export async function GET(request: NextRequest) {
     .delete()
     .eq("id", tokenRecord.id);
 
-  // Log event
-  await supabase.from("signup_events").insert({
-    user_id: user.id,
-    event: "email_verified",
-  });
+  // Log event (non-critical — don't block verification on logging failure)
+  const { error } = await supabase.from("signup_events").insert({ user_id: user.id, event: "email_verified" });
+  if (error) console.error("Failed to log verification event:", error.message);
 
   // Now that email is confirmed, send Day 0 welcome drip
   const { data: verifiedUser } = await supabase

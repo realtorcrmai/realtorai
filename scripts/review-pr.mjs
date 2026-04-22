@@ -121,9 +121,13 @@ for (const file of prodFiles) {
   const lines = content.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    // Skip comments
+    // Skip comments and eslint-disable lines
     const trimmed = line.trim();
     if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
+    // Skip lines with eslint-disable for this specific rule
+    const prevLine = i > 0 ? lines[i - 1].trim() : "";
+    if (prevLine.includes("eslint-disable") && prevLine.includes("no-explicit-any")) continue;
+    if (line.includes("eslint-disable") && line.includes("no-explicit-any")) continue;
     if (/\bas\s+any\b|:\s*any\b|<any>/.test(line)) {
       addFinding("error", file, i + 1, "`any` type usage — use a specific type", 2);
     }

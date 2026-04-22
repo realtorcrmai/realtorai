@@ -308,8 +308,9 @@ export default function SignupPage() {
                 <div id="password-strength" className="mt-1.5 flex items-center gap-2">
                   <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-300 ${strength.color}`}
-                      style={{ width: `${(strength.level / 3) * 100}%` }}
+                      className={`h-full rounded-full transition-all duration-300 ${strength.color} ${
+                        strength.level === 1 ? "w-1/3" : strength.level === 2 ? "w-2/3" : strength.level === 3 ? "w-full" : "w-0"
+                      }`}
                     />
                   </div>
                   <span className={`text-xs font-medium ${
