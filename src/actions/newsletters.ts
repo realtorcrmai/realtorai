@@ -593,7 +593,7 @@ export async function generateAndQueueNewsletter(
 
     if (sendMode === "auto") {
       try {
-        await sendNewsletter(newsletter.id);
+        await sendNewsletter(newsletter.id, false, realtorId);
       } catch (sendErr) {
         console.error("[newsletter] Auto-send failed for newsletter", newsletter.id, sendErr);
         await tc.from("newsletters").update({
@@ -609,8 +609,14 @@ export async function generateAndQueueNewsletter(
   return { data: newsletter };
 }
 
-export async function sendNewsletter(newsletterId: string, realtorApproved: boolean = false) {
-  const tc = await getAuthenticatedTenantClient();
+export async function sendNewsletter(newsletterId: string, realtorApproved: boolean = false, realtorId?: string) {
+  let tc: Awaited<ReturnType<typeof getAuthenticatedTenantClient>>;
+  if (realtorId) {
+    const { tenantClient } = await import("@/lib/supabase/tenant");
+    tc = tenantClient(realtorId);
+  } else {
+    tc = await getAuthenticatedTenantClient();
+  }
 
   // Fetch newsletter with full contact data (including buyer_preferences and type)
   const { data: newsletter } = await tc
