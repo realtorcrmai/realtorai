@@ -803,3 +803,5 @@ Phase 3:
 - [ ] Per-user email table shows bounce rate with red/amber/green status
 - [ ] System page links to Sentry and Vercel dashboard open correctly
 
+
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->
