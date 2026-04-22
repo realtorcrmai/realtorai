@@ -1,7 +1,17 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+import { readFileSync } from "fs";
+import { join } from "path";
+
+// Read version from package.json at build time
+const pkg = JSON.parse(readFileSync(join(__dirname, "package.json"), "utf-8"));
+const appVersion = pkg.version || "0.0.0";
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_APP_VERSION: appVersion,
+    NEXT_PUBLIC_BUILD_ID: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || "local",
+  },
   // Fix Turbopack workspace root detection (picks up parent package-lock.json otherwise)
   turbopack: {
     root: __dirname,

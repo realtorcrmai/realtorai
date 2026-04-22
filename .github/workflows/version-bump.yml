@@ -1,0 +1,62 @@
+name: "Version Bump on Merge to Main"
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    name: "Bump patch version & tag"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Skip if the commit was already a version bump (prevent infinite loop)
+    if: "!startsWith(github.event.head_commit.message, 'chore: bump version')"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump patch version
+        id: bump
+        run: |
+          # Read current version
+          CURRENT=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT"
+
+          # Bump patch version using npm (no git tag from npm)
+          NEW=$(npm version patch --no-git-tag-version)
+          echo "New version: $NEW"
+          echo "version=$NEW" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and tag
+        run: |
+          VERSION=${{ steps.bump.outputs.version }}
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to ${VERSION}
+
+          Auto-generated on merge to main.
+
+          Co-Authored-By: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+          git tag -a "${VERSION}" -m "Release ${VERSION}"
+          git push origin main --follow-tags
+
+      - name: Summary
+        run: |
+          echo "### Release ${{ steps.bump.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Version bumped and tagged on merge to main." >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** ${{ steps.bump.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
