@@ -456,3 +456,5 @@ The logo animation system uses iframe-embedded HTML files served from `public/`.
 
 <!-- Last reviewed: 2026-04-21 -->
 
+
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->

@@ -574,3 +574,4 @@ In the header area, show time since last contact: "Last reached out: 10 hours ag
 ---
 
 *This is a design specification document. No code changes are included. Ready for implementation when approved.*
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->

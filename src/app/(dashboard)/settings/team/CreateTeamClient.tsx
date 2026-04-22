@@ -31,10 +31,9 @@ export default function CreateTeamClient() {
       return;
     }
 
-    // Refresh the NextAuth JWT so teamId/teamRole are picked up,
-    // then navigate to force a full server re-render with the new session
-    await updateSession();
-    router.push("/settings/team");
+    // Hard navigate to force full server re-render — updateSession() hangs
+    // in NextAuth v5 beta 30, so use window.location instead
+    window.location.href = "/settings/team";
   };
 
   return (

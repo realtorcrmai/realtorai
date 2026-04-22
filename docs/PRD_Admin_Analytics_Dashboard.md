@@ -1013,3 +1013,5 @@ At no point should the admin panel be broken or empty during the rollout.
 - Custom report builder
 - Tenant API key management UI (tables exist, UI deferred)
 
+
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->

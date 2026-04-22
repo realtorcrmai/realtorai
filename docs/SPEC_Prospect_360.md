@@ -638,3 +638,4 @@ ContactDetailPage (server component)
 ---
 
 *Version 1.0 — 2026-03-23*
+<!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->
