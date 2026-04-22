@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
+import { getAuthenticatedTenantClient, getScopedTenantClient } from "@/lib/supabase/tenant";
 
 import { taskSchema } from "@/lib/schemas";
 import { PRIORITY_SORT_WEIGHT } from "@/lib/constants/tasks";
 import type { TaskPriority } from "@/lib/constants/tasks";
+import type { DataScope } from "@/types/team";
 
 // ── GET /api/tasks — list with pagination, filters, search ──
 export async function GET(req: NextRequest) {
   let tc;
-  try { tc = await getAuthenticatedTenantClient(); }
-  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
-
   const sp = req.nextUrl.searchParams;
+  try {
+    const scope = (sp.get("scope") || "personal") as DataScope;
+    tc = await getScopedTenantClient(scope);
+  } catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
 
   // Pagination
   const page = Math.max(1, parseInt(sp.get("page") || "1") || 1);

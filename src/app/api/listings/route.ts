@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
+import { getAuthenticatedTenantClient, getScopedTenantClient } from "@/lib/supabase/tenant";
 import { listingSchema } from "@/lib/schemas";
+import type { DataScope } from "@/types/team";
 
 export async function GET(req: NextRequest) {
   let tc;
-  try { tc = await getAuthenticatedTenantClient(); }
-  catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
-
   const searchParams = req.nextUrl.searchParams;
+  try {
+    const scope = (searchParams.get("scope") || "personal") as DataScope;
+    tc = await getScopedTenantClient(scope);
+  } catch { return NextResponse.json({ error: "Authentication required" }, { status: 401 }); }
+
   const status = searchParams.get("status")?.toLowerCase();
   const search = searchParams.get("search");
   const rawLimit = parseInt(searchParams.get("limit") || "50");

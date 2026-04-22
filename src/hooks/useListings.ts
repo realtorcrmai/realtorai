@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import type { Listing } from "@/types";
 
-export function useListings(status?: string) {
+export function useListings(status?: string, scope?: string) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -12,6 +12,7 @@ export function useListings(status?: string) {
       setLoading(true);
       const params = new URLSearchParams();
       if (status) params.set("status", status);
+      if (scope) params.set("scope", scope);
 
       const res = await fetch(`/api/listings?${params}`);
       if (res.ok) {
@@ -22,7 +23,7 @@ export function useListings(status?: string) {
     }
 
     fetchListings();
-  }, [status]);
+  }, [status, scope]);
 
   return { listings, loading };
 }

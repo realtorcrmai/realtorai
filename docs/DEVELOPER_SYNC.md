@@ -371,4 +371,6 @@ These are tracked in `docs/ENVIRONMENTS.md` §"Open follow-ups" — none of them
 <!-- Last reviewed: 2026-04-21 — Wave 1a demo gate -->
 <!-- Last reviewed: 2026-04-21 — Wave 1b test grep -->
 
+<!-- Last reviewed: 2026-04-21 — DR runbook -->
 <!-- Last reviewed: 2026-04-21 — AGENTS.md v0.6 -->
+>>>>>>> dd67353640288d42f1adf87df6571a21885bb515
