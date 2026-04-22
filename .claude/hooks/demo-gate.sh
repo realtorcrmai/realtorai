@@ -13,6 +13,15 @@ INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 PROJECT_DIR=$(echo "$INPUT" | jq -r '.cwd // empty')
 
+# Violation logging helper
+log_violation() {
+    local RULE="$1" ACTION="$2" TARGET="$3"
+    local VLOG="$PROJECT_DIR/.claude/violation-log.md"
+    if [[ -f "$VLOG" ]]; then
+        echo "| $(date '+%Y-%m-%d %H:%M') | demo-gate | $RULE | $ACTION | $TARGET |" >> "$VLOG"
+    fi
+}
+
 # Only gate `gh pr create` commands
 if ! echo "$COMMAND" | grep -qE "gh pr create"; then
     exit 0
@@ -54,6 +63,7 @@ fi
 # Check the demo file exists
 DEMO_FILE="$PROJECT_DIR/demo/$SLUG.md"
 if [[ ! -f "$DEMO_FILE" ]]; then
+    log_violation "FQ-1" "Missing demo/$SLUG.md" "gh pr create"
     cat <<EOF
 {
   "decision": "block",

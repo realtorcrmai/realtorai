@@ -33,7 +33,11 @@ DEEP_EXIT=$?
 TEST_OUTPUT=$(node scripts/audit-test-plans.mjs 2>&1)
 TEST_EXIT=$?
 
-if [[ $BASIC_EXIT -ne 0 || $DEEP_EXIT -ne 0 || $TEST_EXIT -ne 0 ]]; then
+# Run citation verifier (HC-13)
+CITE_OUTPUT=$(node scripts/verify-citations.mjs --diff 2>&1)
+CITE_EXIT=$?
+
+if [[ $BASIC_EXIT -ne 0 || $DEEP_EXIT -ne 0 || $TEST_EXIT -ne 0 || $CITE_EXIT -ne 0 ]]; then
     ISSUES=""
     if [[ $BASIC_EXIT -ne 0 ]]; then
         STALE=$(echo "$BASIC_OUTPUT" | grep "⚠" | head -5 | sed 's/"/\\"/g' | tr '\n' '|')
@@ -46,6 +50,10 @@ if [[ $BASIC_EXIT -ne 0 || $DEEP_EXIT -ne 0 || $TEST_EXIT -ne 0 ]]; then
     if [[ $TEST_EXIT -ne 0 ]]; then
         TEST_STALE=$(echo "$TEST_OUTPUT" | grep "⚠" | head -5 | sed 's/"/\\"/g' | tr '\n' '|')
         ISSUES="$ISSUES Test plan audit: $TEST_STALE"
+    fi
+    if [[ $CITE_EXIT -ne 0 ]]; then
+        CITE_ERRORS=$(echo "$CITE_OUTPUT" | grep "  " | head -5 | sed 's/"/\\"/g' | tr '\n' '|')
+        ISSUES="$ISSUES Citation errors (HC-13): $CITE_ERRORS"
     fi
 
     cat <<EOF

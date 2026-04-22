@@ -889,8 +889,7 @@ export async function computeLifecycleStage(
 }
 
 async function _persistStage(
-   
-  supabase: any,
+  supabase: ReturnType<typeof getAuthenticatedTenantClient> extends Promise<infer T> ? T : never,
   contactId: string,
   realtorId: string,
   stage: LifecycleStage
