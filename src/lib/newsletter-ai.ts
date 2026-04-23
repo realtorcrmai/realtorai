@@ -182,8 +182,8 @@ export async function generateNewsletterContent(
   if (context.emailType === "welcome") {
     return {
       subject: "Nice to meet you",
-      intro: `I'm ${sanitizeForPrompt(context.realtor.name)} at ${sanitizeForPrompt(context.realtor.brokerage)}. I work with ${context.contact.type === "seller" ? "sellers" : "buyers"} across the local market, and I'm looking forward to helping you navigate this process with confidence.`,
-      body: `Every client's situation is different, and I take the time to understand yours before making any recommendations. Here's what you can expect from me going forward.`,
+      intro: `I'm ${sanitizeForPrompt(context.realtor.name)} at ${sanitizeForPrompt(context.realtor.brokerage)}, and I'm looking forward to helping you find the right property.`,
+      body: `I take the time to understand what matters to you before making any recommendations.`,
       ctaText: "Schedule a Call",
       valueProps: [
         { icon: "", title: "Properties before they list", description: "Early access to new listings in your target areas, before they hit the portals." },
@@ -300,8 +300,8 @@ BUYER CONTEXT — This contact is a property buyer. Your email must:
 WELCOME EMAIL RULES:
 - This is the FIRST email. Make a strong first impression. Think Stripe or Linear — clean, confident, minimal.
 - Subject: Short and direct. E.g., "Nice to meet you" or "Let's find your next home" — under 40 characters.
-- Intro: 3-4 sentences (50-80 words). Introduce yourself, mention your specialization and market area, and what they can expect from working with you. Warm and confident. Do NOT repeat their name (template adds "Hi {name}" automatically). Do NOT use markdown bold.
-- Body: One short paragraph (30-50 words). A personal touch — why you love helping clients, what drives you, or a specific promise. This adds warmth below the intro.
+- Intro: 2 sentences ONLY (30-40 words). Who you are and what you do. Warm, confident, no fluff. Do NOT repeat their name (template adds "Hi {name}" automatically). Do NOT use markdown bold. Do NOT mention specific areas or market conditions.
+- Body: 1 sentence ONLY (15-25 words). A personal touch or promise. E.g., "I take the time to understand what matters to you before making any recommendations." NEVER mention listings, inventory, or market conditions in the body — the value props handle that.
 - valueProps: Generate EXACTLY 3 items. NO emoji icons — set icon to empty string "". Title should be 4-6 words. Description should be 10-18 words. Be specific, not generic. Examples:
   - {icon: "", title: "Properties before they list", description: "Early access to new listings in your target areas, before they hit the portals."}
   - {icon: "", title: "Market data that matters", description: "What's actually selling, at what price, and what that means for your search."}
