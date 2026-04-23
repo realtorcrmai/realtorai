@@ -181,14 +181,14 @@ export async function generateNewsletterContent(
   // Fallback: type-specific static content (never dump raw AI text into email)
   if (context.emailType === "welcome") {
     return {
-      subject: `Welcome — Here's What I Can Do For You`,
-      intro: `I'm ${sanitizeForPrompt(context.realtor.name)} at ${sanitizeForPrompt(context.realtor.brokerage)}. I specialize in helping ${context.contact.type === "seller" ? "sellers" : "buyers"} like you navigate the real estate market with confidence. I'm excited to connect.`,
+      subject: "Nice to meet you",
+      intro: `I'm ${sanitizeForPrompt(context.realtor.name)} at ${sanitizeForPrompt(context.realtor.brokerage)}. Looking forward to helping you find the right property.`,
       body: "",
-      ctaText: "Book a Free Consultation",
+      ctaText: "Schedule a Call",
       valueProps: [
-        { icon: "🏠", title: "Curated Property Matches", description: "I'll send you listings that match your criteria — no spam, only relevant opportunities." },
-        { icon: "📊", title: "Real-Time Market Intelligence", description: "Monthly insights on pricing trends, inventory levels, and what's actually selling." },
-        { icon: "🤝", title: "Expert Guidance & Support", description: "When you're ready to make a move, I'll be there every step of the way." },
+        { icon: "", title: "Properties before they list", description: "Early access to new listings in your target areas, before they hit the portals." },
+        { icon: "", title: "Market data that matters", description: "What's actually selling, at what price, and what that means for your search." },
+        { icon: "", title: "Negotiation on your side", description: "When you find the one, I'll make sure you get the best terms possible." },
       ],
     };
   }
@@ -298,17 +298,17 @@ BUYER CONTEXT — This contact is a property buyer. Your email must:
   const emailTypeInstructions: Record<string, string> = {
     welcome: `
 WELCOME EMAIL RULES:
-- This is the FIRST email. Make a strong first impression focused on RELATIONSHIP, not property pushing.
-- Subject: Warm and personal. E.g., "Welcome — Here's What I Can Do For You" or "Great to Connect, ${sanitizeForPrompt(context.contact.firstName)}"
-- Intro: 2-3 sentences MAX (under 80 words). Who you are, what you specialize in, why they're in good hands. Do NOT repeat their name (template adds "Hi {name}" automatically).
-- Body: Leave EMPTY string (""). The visual value proposition block handles the content.
-- valueProps: Generate EXACTLY 3 items with {icon (emoji), title (5-8 words), description (15-25 words)}. Examples:
-  - {icon: "🏠", title: "Curated Property Matches", description: "I'll send you listings that match your criteria — no spam, only relevant opportunities."}
-  - {icon: "📊", title: "Real-Time Market Intelligence", description: "Monthly insights on pricing trends, inventory levels, and what's actually selling in your target areas."}
-  - {icon: "🤝", title: "Expert Negotiation & Support", description: "When you're ready to make a move, I'll fight for the best possible terms on your behalf."}
-- CTA: "Book a Free Consultation" — never "Learn More".
-- Do NOT invent areas or preferences the contact hasn't provided. If no areas specified, talk about the broader market.
-- This is a handshake, not a sales pitch. Keep it warm and concise.`,
+- This is the FIRST email. Make a strong first impression. Think Stripe or Linear — clean, confident, minimal.
+- Subject: Short and direct. E.g., "Nice to meet you" or "Let's find your next home" — under 40 characters.
+- Intro: 2 sentences MAX (under 50 words). One sentence about you, one about what's next. Warm but concise. Do NOT repeat their name (template adds "Hi {name}" automatically). Do NOT use markdown bold.
+- Body: Leave EMPTY string (""). The layout handles structure.
+- valueProps: Generate EXACTLY 3 items. NO emoji icons — set icon to empty string "". Title should be 4-6 words. Description should be 10-18 words. Be specific, not generic. Examples:
+  - {icon: "", title: "Properties before they list", description: "Early access to new listings in your target areas, before they hit the portals."}
+  - {icon: "", title: "Market data that matters", description: "What's actually selling, at what price, and what that means for your search."}
+  - {icon: "", title: "Negotiation on your side", description: "When you find the one, I'll make sure you get the best terms possible."}
+- CTA: "Schedule a Call" — short, direct. Never "Learn More" or "Book a Free Consultation".
+- Do NOT invent areas the contact hasn't provided.
+- Restraint is luxury. Less text = more professional.`,
   };
   const emailTypeInstruction = emailTypeInstructions[context.emailType] || "";
 

@@ -592,7 +592,7 @@ export async function generateAndQueueNewsletter(
   if (emailType === 'welcome') {
     const vagueCTAs = ['learn more', 'get in touch', 'quick conversation', 'view details', 'read more'];
     if (!content.ctaText || vagueCTAs.includes(content.ctaText.toLowerCase())) {
-      content.ctaText = 'Book a Free Consultation';
+      content.ctaText = 'Schedule a Call';
     }
     if (!content.ctaUrl || content.ctaUrl === '#') {
       content.ctaUrl = `mailto:${branding.email || ''}?subject=Hi ${branding.name} — I'd like to connect`;

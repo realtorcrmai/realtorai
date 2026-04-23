@@ -482,50 +482,31 @@ const blocks: Record<string, BlockFn> = {
   welcomeHero: (d) => {
     const agentName = esc(d.agent.name);
     const brokerage = esc(d.agent.brokerage);
-    const title = esc(d.agent.title || "REALTOR®");
     const accent = d.agent.brandColor || "#5856d6";
-    const headshotUrl = d.welcomeHero?.headshotUrl || d.agent.headshotUrl;
-    const initials = esc(d.agent.initials || d.agent.name.split(" ").map(w => w[0]).join("").slice(0, 2));
-    const tagline = esc(d.welcomeHero?.tagline || "Your Real Estate Partner");
-
-    const photoHtml = headshotUrl
-      ? `<img src="${headshotUrl}" width="280" height="280" alt="${agentName}" style="display:block;width:280px;height:280px;border-radius:16px;object-fit:cover;margin:0 auto;border:3px solid ${accent};">`
-      : `<div style="width:280px;height:280px;border-radius:16px;background:linear-gradient(135deg,${accent},#ff6b6b);text-align:center;line-height:280px;color:#fff;font-weight:700;font-size:80px;margin:0 auto;">${initials}</div>`;
 
     return `
-    <tr><td style="padding:0 16px;">
-      <div style="background:linear-gradient(135deg,#1d1d1f 0%,#2c2c2e 50%,#3a3a3c 100%);border-radius:16px;padding:48px 28px;text-align:center;">
-        ${photoHtml}
-        <div style="font-size:26px;font-weight:700;color:#fff;margin-top:20px;letter-spacing:-0.5px;">${agentName}</div>
-        <div style="font-size:12px;color:${accent};text-transform:uppercase;letter-spacing:2px;margin-top:6px;font-weight:500;">${title}</div>
-        <div style="font-size:14px;color:rgba(255,255,255,0.5);margin-top:4px;">${brokerage}</div>
-        <div style="width:50px;height:2px;background:linear-gradient(90deg,${accent},transparent);margin:20px auto;border-radius:1px;"></div>
-        <div style="font-size:16px;color:rgba(255,255,255,0.8);font-style:italic;letter-spacing:-0.2px;line-height:1.5;">${tagline}</div>
-      </div>
+    <tr><td style="padding:40px 40px 0;text-align:center;">
+      <div style="font-size:32px;font-weight:700;color:#1a1a1a;letter-spacing:-0.8px;line-height:1.2;">${agentName}</div>
+      <div style="font-size:14px;color:#6b7280;margin-top:6px;letter-spacing:0.3px;">${brokerage}</div>
+      <div style="width:40px;height:2px;background:${accent};margin:24px auto;border-radius:1px;"></div>
     </td></tr>`;
   },
 
   valueProps: (d) => {
     const props = d.valueProps;
     if (!props?.length) return "";
-    const accent = d.agent.brandColor || "#5856d6";
     const items = props.slice(0, 3);
     return `
-    <tr><td style="padding:32px 32px 0;">
-      <div style="font-size:11px;font-weight:700;color:${accent};text-transform:uppercase;letter-spacing:2px;margin-bottom:20px;">What I'll Do For You</div>
+    <tr><td style="padding:0 40px;">
       <table width="100%" cellpadding="0" cellspacing="0">
-        ${items.map((p: { icon: string; title: string; description: string }) => `
+        ${items.map((p: { icon: string; title: string; description: string }, i: number) => `
+        ${i > 0 ? `<tr><td style="padding:0;"><div style="height:1px;background:#f0f0f0;margin:16px 0;"></div></td></tr>` : ""}
         <tr>
-          <td width="4" style="background:${accent};border-radius:2px;"></td>
-          <td width="56" style="vertical-align:top;padding:12px 0 12px 14px;">
-            <div style="width:48px;height:48px;background:${accent}15;border-radius:14px;text-align:center;line-height:48px;font-size:24px;">${p.icon}</div>
+          <td style="padding:0;">
+            <div style="font-size:15px;font-weight:600;color:#1a1a1a;letter-spacing:-0.2px;">${esc(p.title)}</div>
+            <div style="font-size:14px;color:#6b7280;margin-top:4px;line-height:1.6;">${esc(p.description)}</div>
           </td>
-          <td style="padding:12px 0 12px 12px;vertical-align:top;">
-            <div style="font-size:16px;font-weight:600;color:#1d1d1f;letter-spacing:-0.2px;">${esc(p.title)}</div>
-            <div style="font-size:13px;color:#86868b;margin-top:4px;line-height:1.6;">${esc(p.description)}</div>
-          </td>
-        </tr>
-        <tr><td colspan="3" style="height:8px;"></td></tr>`).join("")}
+        </tr>`).join("")}
       </table>
     </td></tr>`;
   },
@@ -536,50 +517,49 @@ const blocks: Record<string, BlockFn> = {
     const accent = d.agent.brandColor || "#5856d6";
     const url = d.content.ctaUrl || "#";
     const text = d.content.ctaText || "Learn More";
-    const bgColor = d.agent.brandColor
-      ? d.agent.brandColor
-      : theme === "luxury" ? "#1a1a1a" : theme === "editorial" ? "#1a2e1a" : "#4f35d2";
-    // For welcome emails, use dark text on gold buttons for better contrast
-    const textColor = d.agent.brandColor ? "#0a0a0a" : "#ffffff";
+    const isWelcome = emailType === "welcome";
+    const bgColor = isWelcome
+      ? "#1a1a1a"
+      : d.agent.brandColor || (theme === "luxury" ? "#1a1a1a" : theme === "editorial" ? "#1a2e1a" : "#4f35d2");
+    const textColor = isWelcome ? "#ffffff" : (d.agent.brandColor ? "#0a0a0a" : "#ffffff");
     const phone = d.agent.phone;
     return `
-    <tr><td style="padding:8px 48px 0;">
-      <div style="width:50px;height:1px;background:linear-gradient(90deg,transparent,#e5e5ea,transparent);margin:0 auto 24px;"></div>
-    </td></tr>
-    <tr><td style="padding:0 48px ${emailType === "welcome" && phone ? "8px" : "40px"};text-align:center;">
-      <a href="${url}" class="email-cta-btn" style="display:inline-block;background:${bgColor};color:${textColor};font:600 16px/1 -apple-system,sans-serif;text-decoration:none;padding:18px 44px;border-radius:10px;letter-spacing:0.2px;">
+    <tr><td style="padding:${isWelcome ? "32" : "24"}px 40px ${isWelcome && phone ? "8" : "40"}px;text-align:center;">
+      <a href="${url}" class="email-cta-btn" style="display:inline-block;background:${bgColor};color:${textColor};font:600 15px/1 -apple-system,sans-serif;text-decoration:none;padding:16px 40px;border-radius:8px;letter-spacing:0.2px;">
         ${esc(text)}
       </a>
-    </td></tr>${emailType === "welcome" && phone ? `
-    <tr><td style="padding:8px 48px 32px;text-align:center;">
-      <span style="font-size:13px;color:#86868b;">or call </span><a href="tel:${phone}" style="color:${accent};text-decoration:none;font-size:13px;font-weight:600;">${esc(phone)}</a>
+    </td></tr>${isWelcome && phone ? `
+    <tr><td style="padding:12px 40px 24px;text-align:center;">
+      <span style="font-size:13px;color:#9ca3af;">or call </span><a href="tel:${phone}" style="color:#6b7280;text-decoration:none;font-size:13px;font-weight:500;">${esc(phone)}</a>
     </td></tr>` : ""}`;
   },
 
   agentCard: (d) => {
+    const isWelcome = (d as any)._emailType === "welcome";
+    if (isWelcome) {
+      // Minimal signature for welcome emails
+      return `
+    <tr><td style="padding:0 40px 8px;">
+      <div style="height:1px;background:#f0f0f0;margin-bottom:20px;"></div>
+      <div style="font-size:14px;color:#1a1a1a;font-weight:500;">${esc(d.agent.name)}</div>
+      <div style="font-size:13px;color:#9ca3af;">${esc(d.agent.brokerage)}${d.agent.phone ? ` · ${esc(d.agent.phone)}` : ""}</div>
+    </td></tr>`;
+    }
+    // Standard agent card for other email types
     const headshotUrl = d.agent.headshotUrl;
     const accent = d.agent.brandColor || "#5856d6";
     const photoHtml = headshotUrl
-      ? `<img src="${headshotUrl}" width="56" height="56" alt="${esc(d.agent.name)}" style="display:block;width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid ${accent};">`
-      : `<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,${accent},#ff6b6b);text-align:center;line-height:56px;color:#fff;font-weight:700;font-size:21px;">${esc(d.agent.initials || d.agent.name[0])}</div>`;
-    const socials = d.agent.socialLinks;
-    const socialLinks: string[] = [];
-    if (socials?.instagram) socialLinks.push(`<a href="${socials.instagram}" style="color:${accent};text-decoration:none;font-size:12px;">Instagram</a>`);
-    if (socials?.facebook) socialLinks.push(`<a href="${socials.facebook}" style="color:${accent};text-decoration:none;font-size:12px;">Facebook</a>`);
-    if (socials?.linkedin) socialLinks.push(`<a href="${socials.linkedin}" style="color:${accent};text-decoration:none;font-size:12px;">LinkedIn</a>`);
+      ? `<img src="${headshotUrl}" width="44" height="44" alt="${esc(d.agent.name)}" style="display:block;width:44px;height:44px;border-radius:50%;object-fit:cover;">`
+      : `<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,${accent},#ff6b6b);text-align:center;line-height:44px;color:#fff;font-weight:700;font-size:17px;">${esc(d.agent.initials || d.agent.name[0])}</div>`;
     return `
     <tr><td style="padding:32px 32px 0;">
-      <table width="100%" style="border-top:1px solid #e5e5ea;padding-top:24px;">
+      <table width="100%" style="border-top:1px solid #e5e5ea;padding-top:20px;">
         <tr>
-          <td width="64">${photoHtml}</td>
-          <td style="padding-left:16px;">
-            <div style="font-size:16px;font-weight:600;color:#1d1d1f;">${esc(d.agent.name)}</div>
-            <div style="font-size:13px;color:#86868b;margin-top:2px;">${esc(d.agent.brokerage)}</div>
-            <div style="margin-top:6px;">
-              <a href="tel:${d.agent.phone}" style="color:${accent};text-decoration:none;font-size:13px;font-weight:500;">${esc(d.agent.phone)}</a>
-              ${d.agent.email ? `<span style="color:#d1d1d6;margin:0 6px;">·</span><a href="mailto:${d.agent.email}" style="color:${accent};text-decoration:none;font-size:13px;">${esc(d.agent.email)}</a>` : ""}
-            </div>
-            ${socialLinks.length ? `<div style="margin-top:6px;">${socialLinks.join(' <span style="color:#d1d1d6;margin:0 4px;">·</span> ')}</div>` : ""}
+          <td width="48">${photoHtml}</td>
+          <td style="padding-left:14px;">
+            <div style="font-size:15px;font-weight:600;color:#1d1d1f;">${esc(d.agent.name)}</div>
+            <div style="font-size:13px;color:#86868b;">${esc(d.agent.brokerage)}</div>
+            <div style="font-size:13px;"><a href="tel:${d.agent.phone}" style="color:${accent};text-decoration:none;font-weight:500;">${esc(d.agent.phone)}</a></div>
           </td>
         </tr>
       </table>
@@ -587,13 +567,12 @@ const blocks: Record<string, BlockFn> = {
   },
 
   footer: (d) => `
-    <tr><td style="padding:24px 32px 20px;text-align:center;">
-      <p style="font-size:11px;color:#86868b;margin:0;line-height:1.6;">
-        ${esc(d.agent.name)} · ${esc(d.agent.brokerage)}<br>
-        <a href="${d.unsubscribeUrl ?? '#'}" style="color:#86868b;text-decoration:underline;">Unsubscribe</a> · <a href="#" style="color:#86868b;text-decoration:underline;">Privacy</a>
+    <tr><td style="padding:20px 40px 24px;text-align:center;">
+      <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.8;">
+        <a href="${d.unsubscribeUrl ?? '#'}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a> · <a href="#" style="color:#9ca3af;text-decoration:underline;">Privacy</a>
       </p>
-      <p style="font-size:11px;color:#999;text-align:center;margin:4px 0 0">
-        ${esc(d.physicalAddress ?? 'Please contact us for our mailing address')}
+      <p style="font-size:11px;color:#d1d5db;margin:4px 0 0;">
+        ${esc(d.physicalAddress ?? '')}
       </p>
     </td></tr>`,
 };
@@ -642,7 +621,7 @@ const TEMPLATE_BLOCKS: Record<string, Record<string, string[]>> = {
 
   // All templates — comprehensive block lists for rich visual emails
   welcome: {
-    default: ["header", "welcomeHero", "personalNote", "valueProps", "areaHighlights", "cta", "agentCard", "footer"],
+    default: ["welcomeHero", "personalNote", "valueProps", "cta", "agentCard", "footer"],
   },
   neighbourhood_guide: {
     default: ["header", "heroGradient", "heroImage", "personalNote", "areaHighlights", "propertyGrid", "statsRow", "testimonial", "mapPreview", "cta", "agentCard", "footer"],
