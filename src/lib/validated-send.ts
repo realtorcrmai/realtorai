@@ -41,6 +41,8 @@ type ValidatedSendInput = {
   workflowName?: string;
   stepName?: string;
   triggeredBy?: string;
+  /** Realtor branding for From/Reply-To headers on contact-facing emails */
+  realtorBranding?: { name: string; email?: string } | null;
 };
 
 /**
@@ -115,6 +117,7 @@ export async function validatedSend(
           to: input.contactEmail,
           subject: input.subject,
           html: input.htmlBody,
+          realtorBranding: input.realtorBranding,
           tags: [
             { name: "newsletter_id", value: input.newsletterId },
             { name: "contact_id", value: input.contactId },

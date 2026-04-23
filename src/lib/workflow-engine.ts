@@ -33,6 +33,7 @@ type Contact = {
   lead_status: string;
   tags: Json;
   stage_bar: string | null;
+  realtor_id: string | null;
   // CASL + unsubscribe fields — read by executeAutoMessage before sending email.
   // See src/lib/compliance/can-send.ts for the enforcement rules.
   newsletter_unsubscribed: boolean | null;
@@ -262,11 +263,22 @@ async function executeAutoMessage(
       });
 
       // Send via Resend (not Gmail) for tracking + deliverability
+      // Use realtor branding so the contact sees the realtor's name and can reply to them
+      let realtorEmail: string | undefined;
+      if (contact.realtor_id) {
+        const { data: bp } = await supabase
+          .from("realtor_brand_profiles")
+          .select("email")
+          .eq("realtor_id", contact.realtor_id)
+          .maybeSingle();
+        realtorEmail = bp?.email || undefined;
+      }
       const { sendEmail } = await import("@/lib/resend");
       const result = await sendEmail({
         to: contact.email,
         subject: emailSubject,
         html: htmlBody,
+        realtorBranding: { name: brand.name, email: realtorEmail },
         tags: [
           { name: "contact_id", value: contact.id },
           { name: "email_type", value: emailType },

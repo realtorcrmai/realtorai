@@ -42,6 +42,11 @@ const GeneratedContentSchema = z.object({
     price: z.string(),
     daysOnMarket: z.number(),
   })).optional(),
+  valueProps: z.array(z.object({
+    icon: z.string(),
+    title: z.string(),
+    description: z.string(),
+  })).optional(),
 });
 
 export interface NewsletterContext {
@@ -110,6 +115,7 @@ interface GeneratedContent {
   tips?: string[];
   funFact?: string;
   reasoning?: string;
+  valueProps?: Array<{ icon: string; title: string; description: string }>;
 }
 
 export async function generateNewsletterContent(
@@ -155,15 +161,15 @@ export async function generateNewsletterContent(
 
   // Parse and validate JSON response
   try {
-    // Extract JSON — handle markdown code fences
+    // Extract JSON — handle markdown code fences (greedy match for nested backticks)
     let jsonStr = text;
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (fenceMatch) {
       jsonStr = fenceMatch[1].trim();
-    } else {
-      const braceMatch = text.match(/\{[\s\S]*\}/);
-      if (braceMatch) jsonStr = braceMatch[0];
     }
+    // Always try to find a JSON object even after fence extraction
+    const braceMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (braceMatch) jsonStr = braceMatch[0];
 
     const parsed = JSON.parse(jsonStr);
     const validated = GeneratedContentSchema.parse(parsed);
@@ -172,11 +178,25 @@ export async function generateNewsletterContent(
     console.warn("AI content parsing failed, using fallback:", e instanceof Error ? e.message : e);
   }
 
-  // Fallback: construct from raw text
+  // Fallback: type-specific static content (never dump raw AI text into email)
+  if (context.emailType === "welcome") {
+    return {
+      subject: "Nice to meet you",
+      intro: `I'm ${sanitizeForPrompt(context.realtor.name)} at ${sanitizeForPrompt(context.realtor.brokerage)}, and I'm looking forward to helping you find the right property.`,
+      body: `I take the time to understand what matters to you before making any recommendations.`,
+      ctaText: "Schedule a Call",
+      valueProps: [
+        { icon: "", title: "Properties before they list", description: "Early access to new listings in your target areas, before they hit the portals." },
+        { icon: "", title: "Market data that matters", description: "What's actually selling, at what price, and what that means for your search." },
+        { icon: "", title: "Negotiation on your side", description: "When you find the one, I'll make sure you get the best terms possible." },
+      ],
+    };
+  }
+
   return {
     subject: `Update for ${context.contact.firstName}`,
-    intro: text.slice(0, 300).replace(/[{}"\[\]]/g, "").trim(),
-    body: text.slice(0, 800).replace(/[{}"\[\]]/g, "").trim(),
+    intro: text.slice(0, 300).replace(/[{}"\[\]`]/g, "").replace(/\n+/g, " ").trim(),
+    body: "",
     ctaText: "Learn More",
   };
 }
@@ -278,13 +298,17 @@ BUYER CONTEXT — This contact is a property buyer. Your email must:
   const emailTypeInstructions: Record<string, string> = {
     welcome: `
 WELCOME EMAIL RULES:
-- This is the first email the contact receives. Make a strong first impression.
-- Subject: Warm and personal. E.g., "Welcome — Here's What I Can Do For You" or "Great to Connect, ${sanitizeForPrompt(context.contact.firstName)}"
-- Intro: Jump straight into value — who you are, what you specialize in, and why they're in good hands. Do NOT repeat their name in the intro (the template already adds "Hi {name}").
-- Body: Include 2-3 specific things you can help with (market insights, showing access, neighbourhood expertise). Mention your track record briefly.
-- CTA: Specific and inviting. Use "Book a Free Consultation" or "Schedule a Quick Call" — never "Learn More" or "quick conversation".
-- Do NOT invent areas or preferences the contact hasn't provided. If no areas are specified, talk about the broader market (Metro Vancouver, Fraser Valley, etc).
-- Keep it concise — 150-200 words max. This is a handshake, not a sales pitch.`,
+- This is the FIRST email. Make a strong first impression. Think Stripe or Linear — clean, confident, minimal.
+- Subject: Short and direct. E.g., "Nice to meet you" or "Let's find your next home" — under 40 characters.
+- Intro: 2 sentences ONLY (30-40 words). Who you are and what you do. Warm, confident, no fluff. Do NOT repeat their name (template adds "Hi {name}" automatically). Do NOT use markdown bold. Do NOT mention specific areas or market conditions.
+- Body: 1 sentence ONLY (15-25 words). A personal touch or promise. E.g., "I take the time to understand what matters to you before making any recommendations." NEVER mention listings, inventory, or market conditions in the body — the value props handle that.
+- valueProps: Generate EXACTLY 3 items. NO emoji icons — set icon to empty string "". Title should be 4-6 words. Description should be 10-18 words. Be specific, not generic. Examples:
+  - {icon: "", title: "Properties before they list", description: "Early access to new listings in your target areas, before they hit the portals."}
+  - {icon: "", title: "Market data that matters", description: "What's actually selling, at what price, and what that means for your search."}
+  - {icon: "", title: "Negotiation on your side", description: "When you find the one, I'll make sure you get the best terms possible."}
+- CTA: "Schedule a Call" — short, direct. Never "Learn More" or "Book a Free Consultation".
+- Do NOT invent areas the contact hasn't provided.
+- Restraint is luxury. Less text = more professional.`,
   };
   const emailTypeInstruction = emailTypeInstructions[context.emailType] || "";
 
@@ -330,6 +354,7 @@ Rules:
   "address": "Property address (REQUIRED for listing emails — copy from the listings data provided)",
   "area": "Neighbourhood/area name",
   "recentSales": [{"address": "123 Main St", "price": "$850,000", "daysOnMarket": 12}],
+  "valueProps": [{"icon": "emoji", "title": "Short title (5-8 words)", "description": "1-2 sentence description (15-25 words)"}],
   "reasoning": "1-2 sentences explaining WHY you chose this content, tone, and angle for this specific contact. Reference their click history, preferences, or journey phase."
 }
 

@@ -10,7 +10,6 @@ type Props = {
     ai: React.ReactNode;
     campaigns: React.ReactNode;
     automations: React.ReactNode;
-    settings?: React.ReactNode;
   };
 };
 
@@ -20,10 +19,9 @@ export function EmailMarketingTabs({ queueCount, hasAutomations, children }: Pro
   const [automationsBannerDismissed, setAutomationsBannerDismissed] = useState(false);
 
   const tabs = [
-    { id: "ai", label: "AI", badge: queueCount > 0 ? queueCount : undefined, locked: false },
+    { id: "ai", label: "AI Nurture", badge: queueCount > 0 ? queueCount : undefined, locked: false },
     { id: "campaigns", label: "Campaigns", locked: false },
     { id: "automations", label: "Automations", locked: !hasAutomations },
-    { id: "settings", label: "Settings", locked: false },
   ];
 
   return (
@@ -58,7 +56,6 @@ export function EmailMarketingTabs({ queueCount, hasAutomations, children }: Pro
       <div className="min-h-[400px]">
         {activeTab === "ai" && children.ai}
         {activeTab === "campaigns" && children.campaigns}
-        {activeTab === "settings" && children.settings}
         {activeTab === "automations" && (
           hasAutomations
             ? children.automations

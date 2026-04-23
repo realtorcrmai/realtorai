@@ -235,7 +235,7 @@ export async function updateShowingStatus(
     try {
       const { data: appointment } = await tc
         .from("appointments")
-        .select("listing_id, start_time")
+        .select("listing_id, start_time, buyer_agent_email")
         .eq("id", appointmentId)
         .single();
 
@@ -253,6 +253,32 @@ export async function updateShowingStatus(
             contactId: listing.buyer_id,
             data: { appointmentId, listingId: appointment.listing_id },
           });
+
+          // Phase 2 fix: advance buyer journey lead → active on showing confirmation
+          try {
+            const { advanceJourneyPhase } = await import("@/actions/journeys");
+            await advanceJourneyPhase(listing.buyer_id, "buyer", "active");
+          } catch (journeyErr) {
+            console.warn("[showings] Could not advance buyer journey on confirmation:", journeyErr);
+          }
+        }
+
+        // Also check buyer agent contact — they may be in CRM even if not listing.buyer_id
+        if (!listing?.buyer_id && appointment.buyer_agent_email) {
+          try {
+            const { data: buyerContact } = await tc
+              .from("contacts")
+              .select("id")
+              .ilike("email", appointment.buyer_agent_email)
+              .maybeSingle();
+
+            if (buyerContact) {
+              const { advanceJourneyPhase } = await import("@/actions/journeys");
+              await advanceJourneyPhase(buyerContact.id, "buyer", "active");
+            }
+          } catch {
+            // Don't fail status update if buyer agent journey advance fails
+          }
         }
 
         // Newsletter Engine v3: notify the seller that a showing was confirmed

@@ -588,6 +588,13 @@ export async function sendEdition(
 
     const tc = await getAuthenticatedTenantClient();
 
+    // Fetch realtor's brand profile for email headers + rendering
+    const { data: brandProfileData } = await tc
+      .from('realtor_brand_profiles')
+      .select('display_name, title, brokerage_name, phone, email, brand_color, physical_address')
+      .eq('realtor_id', tc.realtorId)
+      .maybeSingle();
+
     // 1. Fetch and validate edition
     const { data: edition, error: fetchError } = await tc
       .from('editorial_editions')
@@ -625,14 +632,13 @@ export async function sendEdition(
         // which is structurally compatible — cast through unknown to satisfy both types
         blocks: typedEdition.blocks as unknown as Parameters<typeof renderEdition>[0]['blocks'],
         branding: {
-          name: process.env.AGENT_NAME ?? 'Your Realtor',
-          title: 'REALTOR\u00AE',
-          brokerage: process.env.AGENT_BROKERAGE ?? '',
-          phone: process.env.AGENT_PHONE ?? '',
-          email: process.env.AGENT_EMAIL ?? '',
-          accentColor: '#FF7A59',
-          // Required for CASL/CAN-SPAM compliance — physical mailing address in footer
-          physicalAddress: process.env.AGENT_PHYSICAL_ADDRESS ?? process.env.AGENT_BROKERAGE ?? '',
+          name: brandProfileData?.display_name ?? process.env.AGENT_NAME ?? 'Your Realtor',
+          title: brandProfileData?.title ?? 'REALTOR\u00AE',
+          brokerage: brandProfileData?.brokerage_name ?? process.env.AGENT_BROKERAGE ?? '',
+          phone: brandProfileData?.phone ?? process.env.AGENT_PHONE ?? '',
+          email: brandProfileData?.email ?? process.env.AGENT_EMAIL ?? '',
+          accentColor: brandProfileData?.brand_color ?? '#FF7A59',
+          physicalAddress: brandProfileData?.physical_address ?? process.env.AGENT_PHYSICAL_ADDRESS ?? '',
         },
         // Use placeholder — replaced per-recipient in the send loop with a signed URL
         unsubscribe_url: UNSUBSCRIBE_PLACEHOLDER,
@@ -645,7 +651,11 @@ export async function sendEdition(
     }
 
     const subject = edition.subject_a ?? edition.title;
-    const fromEmail = process.env.RESEND_FROM_EMAIL ?? 'hello@magnate360.com';
+    const baseDomain = process.env.RESEND_FROM_EMAIL ?? 'hello@magnate360.com';
+    const realtorName = brandProfileData?.display_name ?? process.env.AGENT_NAME ?? '';
+    const realtorEmail = brandProfileData?.email ?? process.env.AGENT_EMAIL ?? '';
+    const fromEmail = realtorName ? `${realtorName} <${baseDomain}>` : baseDomain;
+    const replyToEmail = realtorEmail || undefined;
     const resendApiKey = process.env.RESEND_API_KEY ?? '';
 
     // 3. Test send — single address, no status update
@@ -675,6 +685,7 @@ export async function sendEdition(
             body: JSON.stringify({
               from: fromEmail,
               to: [options.test_email],
+              reply_to: replyToEmail,
               subject: `[TEST] ${subject}`,
               html,
               tags: [
@@ -887,6 +898,7 @@ export async function sendEdition(
             body: JSON.stringify({
               from: fromEmail,
               to: [contact.email!],
+              reply_to: replyToEmail,
               subject: resolvedSubject,
               html: finalHtml,
               tags,
@@ -895,6 +907,25 @@ export async function sendEdition(
 
           if (response.ok) {
             sent++;
+
+            // Phase 2 fix: insert per-recipient row into newsletters table
+            // so editorial sends count toward the global frequency cap
+            try {
+              const resData = await response.json().catch(() => null);
+              await tc.from('newsletters').insert({
+                contact_id: contact.id,
+                subject: resolvedSubject,
+                email_type: 'editorial',
+                status: 'sent',
+                html_body: finalHtml,
+                sent_at: new Date().toISOString(),
+                resend_message_id: resData?.id || null,
+                send_mode: 'auto',
+                ai_context: { source: 'editorial', edition_id: editionId, edition_type: (edition as { edition_type: string }).edition_type },
+              });
+            } catch {
+              // Best effort — don't fail the send loop
+            }
           } else {
             failed++;
           }

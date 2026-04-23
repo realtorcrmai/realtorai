@@ -22,21 +22,28 @@ async function getRealtorBranding(realtorId?: string): Promise<RealtorBranding> 
   if (realtorId) {
     try {
       const adminClient = createAdminClient();
-      const { data: config } = await adminClient
-        .from("realtor_agent_config")
-        .select("brand_config")
-        .eq("realtor_id", realtorId)
-        .maybeSingle();
+      // Fetch brand_config and brand_profile in parallel
+      const [{ data: config }, { data: profile }] = await Promise.all([
+        adminClient.from("realtor_agent_config").select("brand_config").eq("realtor_id", realtorId).maybeSingle(),
+        adminClient.from("realtor_brand_profiles").select("display_name, headshot_url, phone, email, brokerage_name, brand_color, physical_address, tagline, title, instagram_url, facebook_url, linkedin_url").eq("realtor_id", realtorId).maybeSingle(),
+      ]);
       const b = (config?.brand_config as Record<string, string>) || {};
-      if (b.realtorName) {
+      const p = profile as Record<string, string | null> | null;
+      if (b.realtorName || p?.display_name) {
         return {
-          name: b.realtorName,
-          title: "REALTOR®",
-          brokerage: b.brokerage || "",
-          phone: b.phone || "",
-          email: b.email || "",
-          accentColor: b.primaryColor || "#4f35d2",
-          physicalAddress: b.address || undefined,
+          name: p?.display_name || b.realtorName || "Your Realtor",
+          title: p?.title || "REALTOR®",
+          brokerage: p?.brokerage_name || b.brokerage || "",
+          phone: p?.phone || b.phone || "",
+          email: p?.email || b.email || "",
+          accentColor: (b.primaryColor || p?.brand_color || "#4f35d2") as string,
+          physicalAddress: (p?.physical_address || b.address || undefined) as string | undefined,
+          headshotUrl: (p?.headshot_url || undefined) as string | undefined,
+          socialLinks: {
+            instagram: (p?.instagram_url || undefined) as string | undefined,
+            facebook: (p?.facebook_url || undefined) as string | undefined,
+            linkedin: (p?.linkedin_url || undefined) as string | undefined,
+          },
         };
       }
       // Also try users table
@@ -52,6 +59,7 @@ async function getRealtorBranding(realtorId?: string): Promise<RealtorBranding> 
         phone: user?.phone || "",
         email: user?.email || "hello@magnate360.com",
         accentColor: "#4f35d2",
+        headshotUrl: (p?.headshot_url || undefined) as string | undefined,
       };
     } catch {
       return {
@@ -164,7 +172,13 @@ async function renderEmailTemplate(
       name: branding.name || brandConfig.name,
       brokerage: branding.brokerage || brandConfig.brokerage,
       phone: branding.phone || brandConfig.phone,
+      email: branding.email || undefined,
+      title: branding.title || "REALTOR®",
       initials: (branding.name || brandConfig.name).split(" ").map((w: string) => w[0]).join("").slice(0, 2),
+      headshotUrl: branding.headshotUrl,
+      logoUrl: branding.logoUrl,
+      brandColor: branding.accentColor || undefined,
+      socialLinks: branding.socialLinks,
     },
     content: {
       subject: content.subject || content.title || "",
@@ -248,6 +262,18 @@ async function renderEmailTemplate(
     ...(content.listings ? { listings: content.listings } : {}),
     // Social proof
     ...(content.socialProof ? { socialProof: content.socialProof } : {}),
+    // Welcome hero (agent headshot + tagline)
+    ...(emailType === 'welcome' ? {
+      welcomeHero: {
+        headshotUrl: branding.headshotUrl,
+        tagline: `Your Real Estate Partner in ${preferredArea || 'Metro Vancouver'}`,
+      },
+      valueProps: content.valueProps || [
+        { icon: "🏠", title: "Curated Property Matches", description: "I'll send you listings that match your criteria — no spam, only relevant opportunities." },
+        { icon: "📊", title: "Real-Time Market Intelligence", description: "Insights on pricing trends, inventory levels, and what's actually selling in your target areas." },
+        { icon: "🤝", title: "Expert Guidance & Support", description: "When you're ready to make a move, I'll be there every step of the way." },
+      ],
+    } : {}),
     // Closing checklist — featureList with transaction milestone items
     ...(emailType === "closing_checklist" && !content.address ? {
       listing: {
@@ -518,11 +544,13 @@ export async function generateAndQueueNewsletter(
     content.mortgageDetails = `Based on $${price.toLocaleString()} purchase, 25-year amortization`;
   }
 
-  // 5. SOCIAL PROOF — powers socialProof block
-  if (!content.socialProof) {
+  // 5. SOCIAL PROOF — powers socialProof block (skip for welcome — relationship first)
+  if (!content.socialProof && emailType !== 'welcome') {
+    const buyerPrefs2 = contact.buyer_preferences as { preferred_areas?: string[] } | null;
+    const areaRef = buyerPrefs2?.preferred_areas?.[0] || 'your area';
     content.socialProof = {
       headline: `Why clients trust ${branding.name}`,
-      text: `${branding.name} at ${branding.brokerage || 'Realtors360 Realty'} specializes in ${contact.name.split(' ')[0]}'s target areas with deep local market knowledge.`,
+      text: `${branding.name} at ${branding.brokerage || 'Magnate360 Realty'} specializes in ${areaRef} with deep local market knowledge.`,
       stats: [
         { value: '150+', label: 'homes sold' },
         { value: '98%', label: 'client satisfaction' },
@@ -531,8 +559,8 @@ export async function generateAndQueueNewsletter(
     };
   }
 
-  // 6. TESTIMONIAL — powers testimonial block
-  if (!content.quote) {
+  // 6. TESTIMONIAL — powers testimonial block (skip for welcome — no fake quotes on first impression)
+  if (!content.quote && emailType !== 'welcome') {
     const contactType = contact.type as string;
     content.quote = contactType === 'seller'
       ? `${branding.name} made selling our home effortless. The market analysis was spot-on and we sold above asking in just 8 days.`
@@ -565,7 +593,7 @@ export async function generateAndQueueNewsletter(
   if (emailType === 'welcome') {
     const vagueCTAs = ['learn more', 'get in touch', 'quick conversation', 'view details', 'read more'];
     if (!content.ctaText || vagueCTAs.includes(content.ctaText.toLowerCase())) {
-      content.ctaText = 'Book a Free Consultation';
+      content.ctaText = 'Schedule a Call';
     }
     if (!content.ctaUrl || content.ctaUrl === '#') {
       content.ctaUrl = `mailto:${branding.email || ''}?subject=Hi ${branding.name} — I'd like to connect`;
@@ -676,6 +704,9 @@ export async function sendNewsletter(newsletterId: string, realtorApproved: bool
   } else {
     tc = await getAuthenticatedTenantClient();
   }
+
+  // Fetch realtor branding for From/Reply-To headers
+  const sendBranding = await getRealtorBranding(realtorId || tc.realtorId);
 
   // Fetch newsletter with full contact data (including buyer_preferences and type)
   const { data: newsletter } = await tc
@@ -872,8 +903,9 @@ export async function sendNewsletter(newsletterId: string, realtorApproved: bool
     // ── QUALITY SCORING — rate email before sending ──
     // Skip quality scoring for greeting emails (they're intentionally short & personal)
     const isGreeting = newsletter.email_type?.startsWith("greeting_");
-    if (isGreeting) {
-      // Greetings bypass quality scoring — they're relationship touches, not marketing emails
+    const isWelcome = newsletter.email_type === "welcome";
+    if (isGreeting || isWelcome) {
+      // Greetings and welcome emails bypass quality scoring — no contact data to personalize against
     } else try {
       const { scoreEmailQuality, makeQualityDecision, recordQualityOutcome } = await import("@/lib/quality-pipeline");
       const qualityScore = await scoreEmailQuality({
@@ -957,8 +989,9 @@ export async function sendNewsletter(newsletterId: string, realtorApproved: bool
         trustLevel: realtorApproved ? 3 : trustLevel,
         lastSubjects,
         journeyPhase,
-        skipQualityScore: isGreeting || realtorApproved || regenAttempt >= MAX_REGEN_ATTEMPTS,
+        skipQualityScore: isGreeting || isWelcome || realtorApproved || regenAttempt >= MAX_REGEN_ATTEMPTS,
         skipCompliance: realtorApproved,
+        realtorBranding: { name: sendBranding.name, email: sendBranding.email },
       });
 
       // If not a regenerate action, or we've exhausted retries, break out
