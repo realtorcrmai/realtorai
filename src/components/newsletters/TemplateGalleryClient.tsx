@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 import {
   Dialog,
   DialogContent,
@@ -295,9 +296,18 @@ export function TemplateGalleryClient({
                 <p className="text-xs text-muted-foreground mt-2">
                   {selectedTemplate.description}
                 </p>
-                <p className="text-[10px] text-muted-foreground/70 mt-1 italic">
-                  AI personalizes this email with each contact's details, area preferences, and market data.
-                </p>
+                <div className="flex items-center gap-3 mt-2">
+                  <p className="text-[10px] text-muted-foreground/70 italic flex-1">
+                    AI personalizes this email with each contact's details, area preferences, and market data.
+                  </p>
+                  <Link
+                    href={`/newsletters/templates/${selectedTemplate.slug}`}
+                    className="text-xs px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shrink-0"
+                    onClick={() => setSelectedTemplate(null)}
+                  >
+                    Full Page
+                  </Link>
+                </div>
               </DialogHeader>
               <div className="flex-1 overflow-hidden">
                 <iframe

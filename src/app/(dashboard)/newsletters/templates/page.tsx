@@ -78,6 +78,11 @@ export default async function TemplateGalleryPage() {
     logoUrl: brandProfile?.logo_url || undefined,
     accentColor: brandProfile?.brand_color || "#4f35d2",
     physicalAddress: brandProfile?.physical_address || "",
+    socialLinks: {
+      instagram: brandProfile?.instagram_url || undefined,
+      facebook: brandProfile?.facebook_url || undefined,
+      linkedin: brandProfile?.linkedin_url || undefined,
+    },
   };
 
   // Collect all unique email types across journey schedules + event templates

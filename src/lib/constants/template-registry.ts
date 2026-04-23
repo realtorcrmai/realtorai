@@ -35,6 +35,15 @@ function agentFromBranding(branding: RealtorBranding) {
     initials: (branding.name || "R")[0],
     brandColor: branding.accentColor || "#1a1a1a",
     headshotUrl: branding.headshotUrl || undefined,
+    socialLinks: branding.socialLinks || undefined,
+  };
+}
+
+/** Common fields injected into every template's data for CASL footer + unsubscribe */
+function commonFields(branding: RealtorBranding) {
+  return {
+    unsubscribeUrl: "#unsubscribe-preview",
+    physicalAddress: branding.physicalAddress || "123 Main St, Vancouver BC V6B 1A1",
   };
 }
 
@@ -62,7 +71,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
         { icon: "\u{1F4CA}", title: "Market Intelligence", description: "Weekly updates on prices, trends, and new listings in your target neighbourhoods." },
         { icon: "\u{1F91D}", title: "Expert Negotiation", description: "From offer strategy to closing, I'll advocate for your best interests at every step." },
       ],
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -87,7 +96,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
         { address: "3456 W 4th Ave", price: "$899,000", beds: 2, baths: 2 },
         { address: "2845 Vine St", price: "$1,195,000", beds: 3, baths: 2 },
       ],
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -112,7 +121,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
         { address: "2845 Vine St, Kitsilano", price: "$1,195,000", beds: 3, baths: 2 },
         { address: "1890 W 1st Ave, False Creek", price: "$749,000", beds: 2, baths: 2 },
       ],
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -141,7 +150,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
           { address: "3210 Main St, Mount Pleasant", price: "$949,000", dom: 6 },
         ],
       },
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -169,7 +178,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
         ],
       },
       countdown: { value: "14", label: "days to closing", subtext: "May 15, 2026" },
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -196,7 +205,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
         ],
       },
       countdown: { value: "2", label: "days until inspection", subtext: "May 3, 2026 at 10:00 AM" },
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -228,7 +237,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
         avgPrice: "$1,125,000", avgDom: 18, inventoryChange: "+15%",
         recentSales: [{ address: "2845 W 4th Ave", price: "$1,195,000", dom: 8 }],
       },
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -257,7 +266,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
           { icon: "\u{1F4C8}", text: "Neighbourhood prices up 6.8% this year" },
         ],
       },
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -286,7 +295,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
         text: "42 homes sold in 2025",
         stats: [{ value: "42", label: "Homes Sold" }, { value: "4.9/5", label: "Rating" }],
       },
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -316,7 +325,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
       listings: [
         { address: "3456 W 4th Ave, Kitsilano", price: "$899,000", beds: 2, baths: 2 },
       ],
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -346,7 +355,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
           { address: "3210 Main St", price: "$949,000", dom: 6 },
         ],
       },
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -368,7 +377,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
         features: ["3 bedrooms, 2 bathrooms", "Updated kitchen with quartz counters", "South-facing patio", "Steps to transit and shops"],
       },
       listing: { address: "3456 W 4th Ave, Kitsilano", area: "Kitsilano", price: "$899,000" },
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -390,7 +399,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
       },
       listing: { address: "3456 W 4th Ave, Kitsilano", area: "Kitsilano", price: "$849,000" },
       listings: [{ address: "3456 W 4th Ave, Kitsilano", price: "$849,000", beds: 2, baths: 2 }],
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -412,7 +421,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
         features: ["Chef's kitchen with Sub-Zero & Wolf", "Rooftop deck with ocean views", "Heated floors throughout", "EV charging", "Smart home system"],
       },
       listing: { address: "4120 W 2nd Ave, Kitsilano", area: "Kitsilano", price: "$2,195,000" },
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -443,7 +452,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
         { address: "3456 W 4th Ave, Kitsilano", price: "$899,000", beds: 2, baths: 2 },
         { address: "2845 Vine St", price: "$1,195,000", beds: 3, baths: 2 },
       ],
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -464,7 +473,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
         body: "", ctaText: "Learn More", ctaUrl: "#",
       },
       listing: { address: "Kitsilano Community Centre", area: "Kitsilano" },
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -493,7 +502,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
         text: "42 homes sold in 2025",
         stats: [{ value: "42", label: "Homes Sold" }, { value: "4.9/5", label: "Rating" }],
       },
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -521,7 +530,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
         ],
         priceComparison: { listing: "$1,050,000", average: "$985,000", diff: "+$65,000" },
       },
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -552,7 +561,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
         priceComparison: { listing: "4.29%", average: "4.79%", diff: "-0.50%" },
       },
       mortgageCalc: { monthly: "$2,847", downPayment: "$190,000", rate: "4.29%", details: "25-year amortization" },
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 
@@ -585,7 +594,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
         text: "42 families helped",
         stats: [{ value: "42", label: "Homes Sold" }, { value: "$1.18M", label: "Avg Price" }, { value: "16", label: "Avg Days" }],
       },
-      unsubscribeUrl: "#",
+      ...commonFields(branding),
     }),
   },
 };
