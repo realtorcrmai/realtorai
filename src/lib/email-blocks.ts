@@ -197,8 +197,8 @@ const blocks: Record<string, BlockFn> = {
     const pad = isWelcome ? "28px 40px 24px" : "24px 32px 0";
     return `
     <tr><td style="padding:${pad};">
-      <p style="font-size:15px;color:#1a1a1a;line-height:1.7;margin:0;">Hi ${esc(d.contact.firstName)}, ${mdBold(esc(d.content.intro))}</p>
-      ${d.content.body ? `<p style="font-size:15px;color:#1a1a1a;line-height:1.7;margin:16px 0 0;">${mdBold(esc(d.content.body))}</p>` : ""}
+      <p style="font-size:17px;color:#1d1d1f;line-height:1.47;margin:0;font-weight:400;letter-spacing:-0.2px;">Hi ${esc(d.contact.firstName)}, ${mdBold(esc(d.content.intro))}</p>
+      ${d.content.body ? `<p style="font-size:17px;color:#1d1d1f;line-height:1.47;margin:20px 0 0;font-weight:400;letter-spacing:-0.2px;">${mdBold(esc(d.content.body))}</p>` : ""}
     </td></tr>`;
   },
 
@@ -489,10 +489,10 @@ const blocks: Record<string, BlockFn> = {
     const accent = d.agent.brandColor || "#1a1a1a";
 
     return `
-    <tr><td style="padding:48px 40px 0;text-align:center;">
-      <div style="font-size:32px;font-weight:700;color:#1a1a1a;letter-spacing:-0.8px;line-height:1.2;">${agentName}</div>
-      <div style="font-size:14px;color:#6b7280;margin-top:6px;letter-spacing:0.3px;">${brokerage}</div>
-      <div style="width:40px;height:2px;background:${accent};margin:28px auto 0;border-radius:1px;"></div>
+    <tr><td style="padding:56px 40px 0;text-align:center;">
+      <div style="font-size:40px;font-weight:700;color:#1d1d1f;letter-spacing:-1.5px;line-height:1.1;">${agentName}</div>
+      <div style="font-size:17px;color:#6e6e73;margin-top:8px;font-weight:400;letter-spacing:-0.2px;">${brokerage}</div>
+      <div style="width:36px;height:2px;background:${accent};margin:32px auto 0;border-radius:1px;"></div>
     </td></tr>`;
   },
 
@@ -504,11 +504,11 @@ const blocks: Record<string, BlockFn> = {
     <tr><td style="padding:0 40px;">
       <table width="100%" cellpadding="0" cellspacing="0">
         ${items.map((p: { icon: string; title: string; description: string }, i: number) => `
-        ${i > 0 ? `<tr><td style="padding:0;"><div style="height:1px;background:#f0f0f0;margin:16px 0;"></div></td></tr>` : ""}
+        ${i > 0 ? `<tr><td style="padding:0;"><div style="height:1px;background:#e8e8ed;margin:20px 0;"></div></td></tr>` : ""}
         <tr>
           <td style="padding:0;">
-            <div style="font-size:15px;font-weight:600;color:#1a1a1a;letter-spacing:-0.2px;">${esc(p.title)}</div>
-            <div style="font-size:14px;color:#6b7280;margin-top:4px;line-height:1.6;">${esc(p.description)}</div>
+            <div style="font-size:19px;font-weight:600;color:#1d1d1f;letter-spacing:-0.4px;line-height:1.21;">${esc(p.title)}</div>
+            <div style="font-size:14px;color:#6e6e73;margin-top:6px;line-height:1.43;letter-spacing:-0.1px;">${esc(p.description)}</div>
           </td>
         </tr>`).join("")}
       </table>
@@ -529,12 +529,12 @@ const blocks: Record<string, BlockFn> = {
     const phone = d.agent.phone?.trim();
     return `
     <tr><td style="padding:${isWelcome ? "32" : "24"}px 40px ${isWelcome && phone ? "8" : "40"}px;text-align:center;">
-      <a href="${url}" class="email-cta-btn" style="display:inline-block;background:${bgColor};color:${textColor};font:600 15px/1 -apple-system,sans-serif;text-decoration:none;padding:16px 40px;border-radius:8px;letter-spacing:0.2px;">
+      <a href="${url}" class="email-cta-btn" style="display:inline-block;background:${bgColor};color:${textColor};font:400 17px/1 -apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;text-decoration:none;padding:16px 32px;border-radius:980px;letter-spacing:-0.2px;">
         ${esc(text)}
       </a>
     </td></tr>${isWelcome && phone ? `
     <tr><td style="padding:12px 40px 24px;text-align:center;">
-      <span style="font-size:13px;color:#9ca3af;">or call </span><a href="tel:${phone}" style="color:#6b7280;text-decoration:none;font-size:13px;font-weight:500;">${esc(phone)}</a>
+      <span style="font-size:14px;color:#6e6e73;letter-spacing:-0.1px;">or call </span><a href="tel:${phone}" style="color:#06c;text-decoration:none;font-size:14px;font-weight:400;letter-spacing:-0.1px;">${esc(phone)}</a>
     </td></tr>` : ""}`;
   },
 
@@ -550,8 +550,8 @@ const blocks: Record<string, BlockFn> = {
     <tr><td style="padding:0 40px 8px;">
       <div style="height:1px;background:#f0f0f0;margin-bottom:24px;"></div>
       ${photoHtml ? `<div style="margin-bottom:20px;">${photoHtml}</div>` : ""}
-      <div style="font-size:14px;color:#1a1a1a;font-weight:500;">${esc(d.agent.name)}</div>
-      <div style="font-size:13px;color:#9ca3af;">${esc(d.agent.brokerage)}${d.agent.phone?.trim() ? ` · ${esc(d.agent.phone.trim())}` : ""}</div>
+      <div style="font-size:14px;color:#1d1d1f;font-weight:600;letter-spacing:-0.1px;">${esc(d.agent.name)}</div>
+      <div style="font-size:12px;color:#6e6e73;margin-top:2px;letter-spacing:-0.1px;">${esc(d.agent.brokerage)}${d.agent.phone?.trim() ? ` · ${esc(d.agent.phone.trim())}` : ""}</div>
     </td></tr>`;
     }
     // Standard agent card for other email types
@@ -580,7 +580,7 @@ const blocks: Record<string, BlockFn> = {
     return `
     <tr><td style="padding:20px 40px 28px;text-align:center;">
       <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.8;">
-        <a href="${d.unsubscribeUrl ?? '#'}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a> · <a href="#" style="color:#9ca3af;text-decoration:underline;">Privacy</a>
+        <a href="${d.unsubscribeUrl ?? '#'}" style="color:#6e6e73;text-decoration:underline;">Unsubscribe</a> · <a href="#" style="color:#6e6e73;text-decoration:underline;">Privacy</a>
       </p>
       ${addr ? `<p style="font-size:11px;color:#d1d5db;margin:4px 0 0;">${esc(addr)}</p>` : ""}
     </td></tr>`;
