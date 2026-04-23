@@ -6,110 +6,11 @@ import { canSendToContact } from "@/lib/compliance/can-send";
 import { checkSendGovernor } from "@/lib/send-governor";
 import { revalidatePath } from "next/cache";
 
-type JourneyType = "buyer" | "seller" | "customer" | "agent";
-type JourneyPhase = "lead" | "active" | "under_contract" | "past_client" | "dormant";
-
-// Journey phase email schedules (delays in hours)
-const JOURNEY_SCHEDULES: Record<JourneyType, Record<JourneyPhase, Array<{ emailType: string; delayHours: number }>>> = {
-  buyer: {
-    lead: [
-      { emailType: "welcome", delayHours: 0 },
-      { emailType: "neighbourhood_guide", delayHours: 72 },
-      { emailType: "new_listing_alert", delayHours: 168 },
-      { emailType: "market_update", delayHours: 336 },
-      { emailType: "new_listing_alert", delayHours: 504 },
-    ],
-    active: [
-      { emailType: "new_listing_alert", delayHours: 168 },
-      { emailType: "market_update", delayHours: 504 },
-    ],
-    under_contract: [
-      { emailType: "closing_checklist", delayHours: 0 },       // closing support at contract entry
-      { emailType: "inspection_reminder", delayHours: 48 },    // 2 days — inspection deadline reminder
-      { emailType: "neighbourhood_guide", delayHours: 48 },    // 2 days — area orientation for new home
-    ],
-    past_client: [
-      { emailType: "home_anniversary", delayHours: 720 },      // 30 days after close
-      { emailType: "referral_ask", delayHours: 720 },          // 30 days after close — refer a friend
-      { emailType: "market_update", delayHours: 2160 },
-      { emailType: "referral_ask", delayHours: 4320 },
-      { emailType: "home_anniversary", delayHours: 8760 },
-    ],
-    dormant: [
-      { emailType: "reengagement", delayHours: 0 },            // "We miss you" — market snapshot
-      { emailType: "new_listing_alert", delayHours: 120 },     // 5 days — here's something you'll love
-      { emailType: "referral_ask", delayHours: 240 },          // 10 days — if you're not ready, know anyone who is?
-    ],
-  },
-  seller: {
-    lead: [
-      { emailType: "welcome", delayHours: 0 },
-      { emailType: "market_update", delayHours: 72 },
-      { emailType: "neighbourhood_guide", delayHours: 168 },
-    ],
-    active: [
-      { emailType: "market_update", delayHours: 168 },
-    ],
-    under_contract: [
-      { emailType: "closing_checklist", delayHours: 0 },
-      { emailType: "inspection_reminder", delayHours: 72 },
-      { emailType: "closing_countdown", delayHours: 168 },
-    ],
-    past_client: [
-      { emailType: "market_update", delayHours: 720 },
-      { emailType: "referral_ask", delayHours: 720 },          // 30 days after close
-      { emailType: "referral_ask", delayHours: 2160 },
-      { emailType: "home_anniversary", delayHours: 8760 },
-    ],
-    dormant: [
-      { emailType: "reengagement", delayHours: 0 },            // "We miss you" — market conditions
-      { emailType: "market_update", delayHours: 120 },         // 5 days — what's happening in your area
-      { emailType: "referral_ask", delayHours: 240 },          // 10 days — referral ask
-    ],
-  },
-  customer: {
-    lead: [
-      { emailType: "welcome", delayHours: 0 },
-      { emailType: "neighbourhood_guide", delayHours: 72 },
-      { emailType: "market_update", delayHours: 336 },
-    ],
-    active: [
-      { emailType: "market_update", delayHours: 0 },
-      { emailType: "new_listing_alert", delayHours: 168 },
-    ],
-    under_contract: [],
-    past_client: [
-      { emailType: "home_anniversary", delayHours: 0 },
-      { emailType: "market_update", delayHours: 168 },
-      { emailType: "referral_ask", delayHours: 504 },          // 3 weeks
-    ],
-    dormant: [
-      { emailType: "reengagement", delayHours: 0 },
-      { emailType: "market_update", delayHours: 168 },
-      { emailType: "referral_ask", delayHours: 336 },
-    ],
-  },
-  agent: {
-    lead: [
-      { emailType: "welcome", delayHours: 0 },
-      { emailType: "market_update", delayHours: 168 },         // 1 week — market data
-      { emailType: "referral_ask", delayHours: 336 },          // 2 weeks — referral partnership ask
-    ],
-    active: [
-      { emailType: "market_update", delayHours: 0 },
-      { emailType: "new_listing_alert", delayHours: 168 },
-    ],
-    under_contract: [],
-    past_client: [
-      { emailType: "market_update", delayHours: 0 },
-      { emailType: "referral_ask", delayHours: 336 },
-    ],
-    dormant: [
-      { emailType: "reengagement", delayHours: 0 },
-      { emailType: "referral_ask", delayHours: 168 },
-    ],
-  },
-};
+import {
+  JOURNEY_SCHEDULES,
+  type JourneyType,
+  type JourneyPhase,
+} from "@/lib/constants/journey-schedules";
 
 export async function enrollContactInJourney(contactId: string, journeyType: JourneyType) {
   const tc = await getAuthenticatedTenantClient();

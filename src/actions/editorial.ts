@@ -895,6 +895,25 @@ export async function sendEdition(
 
           if (response.ok) {
             sent++;
+
+            // Phase 2 fix: insert per-recipient row into newsletters table
+            // so editorial sends count toward the global frequency cap
+            try {
+              const resData = await response.json().catch(() => null);
+              await tc.from('newsletters').insert({
+                contact_id: contact.id,
+                subject: resolvedSubject,
+                email_type: 'editorial',
+                status: 'sent',
+                html_body: finalHtml,
+                sent_at: new Date().toISOString(),
+                resend_message_id: resData?.id || null,
+                send_mode: 'auto',
+                ai_context: { source: 'editorial', edition_id: editionId, edition_type: (edition as { edition_type: string }).edition_type },
+              });
+            } catch {
+              // Best effort — don't fail the send loop
+            }
           } else {
             failed++;
           }

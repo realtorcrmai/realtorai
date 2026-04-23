@@ -241,6 +241,22 @@ export async function overrideListingStatus(
           } catch (err) {
             console.error("[listings] Failed to advance seller journey to past_client:", err);
           }
+
+          // Phase 2 fix: emit listing_sold event for Render newsletter agent
+          try {
+            await emitNewsletterEvent(tc, {
+              event_type: "listing_sold",
+              listing_id: id,
+              contact_id: stageListing.seller_id,
+              event_data: {
+                listing_id: id,
+                seller_id: stageListing.seller_id,
+                sold_at: new Date().toISOString(),
+              },
+            });
+          } catch {
+            // Don't fail status update if newsletter event fails
+          }
         }
       }
 

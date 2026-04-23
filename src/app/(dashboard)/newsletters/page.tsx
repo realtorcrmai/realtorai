@@ -6,11 +6,9 @@ import { getJourneyDashboard } from "@/actions/journeys";
 import { getApprovalQueue } from "@/actions/newsletters";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Send, MailOpen, MousePointerClick } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmailMarketingTabs } from "@/components/newsletters/EmailMarketingTabs";
 import { CampaignsTab } from "@/components/newsletters/CampaignsTab";
-import { SentByAIList } from "@/components/newsletters/SentByAIList";
 import { AIWorkingForYou } from "@/components/newsletters/AIWorkingForYou";
 import { ListingBlastAutomation } from "@/components/newsletters/ListingBlastAutomation";
 import { GreetingAutomations } from "@/components/newsletters/GreetingAutomations";
@@ -19,9 +17,7 @@ import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { WORKFLOW_BLUEPRINTS } from "@/lib/constants";
 import { getRealtorConfig, getAutomationRules, getGreetingRules } from "@/actions/config";
 import { AIAgentQueue } from "@/components/newsletters/AIAgentQueue";
-import { BrandProfileForm } from "@/components/newsletters/BrandProfileForm";
-import { SettingsTab } from "@/components/newsletters/SettingsTab";
-import { getBrandProfile } from "@/actions/brand-profile";
+import { WhatWentOutFeed } from "@/components/newsletters/WhatWentOutFeed";
 
 export default async function NewsletterDashboard() {
   const session = await auth();
@@ -39,18 +35,16 @@ export default async function NewsletterDashboard() {
     freshUser?.enabled_features as string[] | null,
   );
   const hasAutomations = enabledFeatures.includes("automations");
-  const [dashboard, queue, realtorConfig, automationRules, greetingRules, brandProfile] = await Promise.all([
+  const [dashboard, queue, realtorConfig, , greetingRules] = await Promise.all([
     getJourneyDashboard(),
     getApprovalQueue(),
     getRealtorConfig(),
     getAutomationRules(),
     getGreetingRules(),
-    getBrandProfile(),
   ]);
 
   const _now = Date.now();
   const sevenDaysFromNow = new Date(_now + 7 * 86400000).toISOString();
-  const thirtyDaysAgo = new Date(_now - 30 * 86400000).toISOString();
 
   const [
     { data: journeys },
@@ -59,16 +53,14 @@ export default async function NewsletterDashboard() {
     { data: hotLeadsRaw },
     { data: sentRaw },
     { data: upcomingJourneys },
-    { count: bounceCount },
     { data: recentBlastsRaw },
   ] = await Promise.all([
     tc.from("contact_journeys").select("id, contact_id, journey_type, current_phase, is_paused, next_email_at, send_mode, contacts(name, type, email)").order("created_at", { ascending: false }),
     tc.from("workflows").select("id, name, slug, description, is_active, trigger_type, contact_type, workflow_steps(id)").order("name"),
     tc.from("listings").select("id, address, list_price, status").eq("status", "active").order("created_at", { ascending: false }).limit(10),
     tc.from("contacts").select("id, name, phone, type, newsletter_intelligence").not("newsletter_intelligence", "is", null).order("created_at", { ascending: false }).limit(50),
-    tc.from("newsletters").select("id, subject, email_type, status, sent_at, contact_id, html_body, contacts(name, type), newsletter_events(event_type, metadata, created_at)").eq("status", "sent").order("sent_at", { ascending: false }).limit(20),
+    tc.from("newsletters").select("id, subject, email_type, status, sent_at, contact_id, html_body, ai_context, contacts(name, type), newsletter_events(event_type, metadata, created_at)").eq("status", "sent").order("sent_at", { ascending: false }).limit(20),
     tc.from("contact_journeys").select("id, contact_id, journey_type, current_phase, next_email_at, emails_sent_in_phase, contacts(name, type)").eq("is_paused", false).not("next_email_at", "is", null).lte("next_email_at", sevenDaysFromNow).order("next_email_at").limit(50),
-    tc.from("newsletter_events").select("id", { count: "exact", head: true }).eq("event_type", "bounced").gte("created_at", thirtyDaysAgo),
     tc.from("newsletters").select("id, subject, email_type, status, sent_at, contact_id, created_at, contacts(name, type), newsletter_events(event_type)").in("email_type", ["listing_blast", "campaign", "listing_alert"]).eq("status", "sent").order("created_at", { ascending: false }).limit(10),
   ]);
 
@@ -87,6 +79,28 @@ export default async function NewsletterDashboard() {
 
   // Sent newsletters for AI tab
   const sentNewsletters = (sentRaw || []).map((nl: any) => ({ ...nl, events: nl.newsletter_events || [] }));
+
+  // Unified "What went out" feed — read-only union across all email systems
+  const whatWentOut = sentNewsletters.map((nl: any) => {
+    const contact = Array.isArray(nl.contacts) ? nl.contacts[0] : nl.contacts;
+    const aiContext = nl.ai_context as Record<string, unknown> | null;
+    const source = aiContext?.source === "workflow" ? "workflow"
+      : aiContext?.source === "editorial" ? "editorial"
+      : nl.email_type === "greeting" ? "greeting"
+      : "ai_nurture";
+    const hasClick = nl.events?.some((e: any) => e.event_type === "clicked");
+    const hasOpen = nl.events?.some((e: any) => e.event_type === "opened");
+    return {
+      id: nl.id,
+      contact_id: nl.contact_id,
+      contact_name: contact?.name || "Unknown",
+      subject: nl.subject || "(no subject)",
+      email_type: nl.email_type || "email",
+      source,
+      sent_at: nl.sent_at,
+      status: hasClick ? "clicked" : hasOpen ? "opened" : "sent",
+    };
+  });
 
   // AI success stories
   const successStories: Array<{ contactId: string; contactName: string; contactType: string; icon: string; story: string; score?: number }> = [];
@@ -161,6 +175,16 @@ export default async function NewsletterDashboard() {
       <PageHeader
         title="Email Marketing"
         subtitle="AI sends emails to your contacts automatically"
+        actions={
+          <div className="flex items-center gap-2">
+            <a href="/newsletters/templates" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-border">
+              📋 Templates
+            </a>
+            <a href="/newsletters/settings" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-border">
+              ⚙️ Settings
+            </a>
+          </div>
+        }
       />
       <div className="p-6 space-y-6">
         <EmailMarketingTabs queueCount={queue.length} hasAutomations={hasAutomations}>
@@ -271,33 +295,8 @@ export default async function NewsletterDashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Recent emails sent by AI */}
-                {sentNewsletters.length > 0 && (
-                  <SentByAIList newsletters={sentNewsletters as any} />
-                )}
-
-                {/* Recent engagement from Render */}
-                {dashboard.recentEvents.length > 0 && (
-                  <Card>
-                    <CardContent className="p-4">
-                      <h4 className="text-sm font-semibold mb-3">Recent engagement</h4>
-                      <div className="space-y-2">
-                        {dashboard.recentEvents.slice(0, 6).map((event: any) => (
-                          <div key={event.id} className="flex items-center gap-2 text-xs">
-                            <span className="w-5 h-5 rounded-full bg-muted flex items-center justify-center shrink-0">
-                              {event.event_type === "opened" ? <MailOpen className="h-3 w-3 text-brand" /> :
-                               event.event_type === "clicked" ? <MousePointerClick className="h-3 w-3 text-primary" /> :
-                               <Send className="h-3 w-3 text-muted-foreground" />}
-                            </span>
-                            <span className="truncate text-muted-foreground">
-                              <strong className="text-foreground">{event.contacts?.name}</strong> {event.event_type} · {event.newsletters?.subject?.slice(0, 40)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                {/* Unified feed — what went out across all email systems */}
+                <WhatWentOutFeed items={whatWentOut as any} />
 
               </div>
             ),
@@ -373,56 +372,6 @@ export default async function NewsletterDashboard() {
               </div>
             ),
 
-            /* ══════════════════════════════
-               SETTINGS TAB
-               Brand profile + AI & send settings
-            ══════════════════════════════ */
-            settings: (
-              <div className="max-w-3xl space-y-10">
-                <section>
-                  <div className="mb-4">
-                    <h2 className="text-base font-semibold text-foreground">Brand Profile</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Your logo, contact details, and branding used in every email you send.
-                      The physical address is legally required by CASL.
-                    </p>
-                  </div>
-                  <BrandProfileForm profile={brandProfile} />
-                </section>
-
-                <hr className="border-border" />
-
-                <section>
-                  <div className="mb-4">
-                    <h2 className="text-base font-semibold text-foreground">AI &amp; Send Settings</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Voice profile, frequency caps, quiet hours, and send mode.
-                    </p>
-                  </div>
-                  <SettingsTab
-                    config={
-                      realtorConfig
-                        ? {
-                            sending_enabled: realtorConfig.sending_enabled,
-                            skip_weekends: realtorConfig.skip_weekends,
-                            quiet_hours: realtorConfig.quiet_hours as { start: string; end: string },
-                            frequency_caps: realtorConfig.frequency_caps as Record<string, unknown>,
-                            default_send_hour: realtorConfig.default_send_hour,
-                            brand_config: realtorConfig.brand_config as { default_send_mode?: string },
-                            ai_quality_tier: (realtorConfig.ai_quality_tier as string) ?? undefined,
-                            brand_name: (realtorConfig.brand_name as string) ?? "",
-                            tone: (realtorConfig.tone as string) ?? "",
-                            writing_style_rules: (realtorConfig.writing_style_rules as string[]) ?? [],
-                            content_rankings: (realtorConfig.content_rankings as Array<{ type: string; effectiveness: number }>) ?? [],
-                          }
-                        : null
-                    }
-                    unsubscribeCount={0}
-                    complaintCount={bounceCount ?? 0}
-                  />
-                </section>
-              </div>
-            ),
           }}
         </EmailMarketingTabs>
       </div>

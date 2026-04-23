@@ -582,7 +582,7 @@ async function testFrequency() {
 
   // 5.1 Realtor agent config exists (10)
   if (await tableExists("realtor_agent_config")) {
-    const configs = await sb("GET", "realtor_agent_config", { select: "realtor_id,frequency_caps,quiet_hours,auto_send_enabled", limit: 10 });
+    const configs = await sb("GET", "realtor_agent_config", { select: "realtor_id,frequency_caps,quiet_hours,sending_enabled", limit: 10 });
     assertGte((configs || []).length, 0, `Realtor agent configs: ${(configs || []).length}`);
     for (const c of (configs || []).slice(0, 9)) {
       assert(c.realtor_id, `Config has realtor_id`);
@@ -809,11 +809,11 @@ async function testWorkflows() {
 
   // Workflow steps
   if (await tableExists("workflow_steps")) {
-    const steps = await sb("GET", "workflow_steps", { select: "id,step_type,channel", limit: 200 });
+    const steps = await sb("GET", "workflow_steps", { select: "id,action_type,name", limit: 200 });
     pass(`Workflow steps: ${(steps || []).length}`);
     const stepTypes = {};
     for (const s of (steps || [])) {
-      stepTypes[s.step_type] = (stepTypes[s.step_type] || 0) + 1;
+      stepTypes[s.action_type] = (stepTypes[s.action_type] || 0) + 1;
     }
     for (const [t, c] of Object.entries(stepTypes)) {
       pass(`Step type '${t}': ${c}`);
@@ -939,11 +939,11 @@ async function testGreetings() {
   // Contact dates for birthdays
   if (await tableExists("contact_dates") || await tableExists("contact_important_dates")) {
     const tableName = (await tableExists("contact_dates")) ? "contact_dates" : "contact_important_dates";
-    const dates = await sb("GET", tableName, { select: "id,date_type", limit: 50 });
+    const dates = await sb("GET", tableName, { select: "id,label", limit: 50 });
     pass(`Contact dates: ${(dates || []).length}`);
     const dateTypes = {};
     for (const d of (dates || [])) {
-      dateTypes[d.date_type] = (dateTypes[d.date_type] || 0) + 1;
+      dateTypes[d.label] = (dateTypes[d.label] || 0) + 1;
     }
     for (const [t, c] of Object.entries(dateTypes)) {
       pass(`Date type '${t}': ${c}`);
