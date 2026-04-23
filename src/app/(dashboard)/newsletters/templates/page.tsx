@@ -66,10 +66,14 @@ function renderTemplate(
 }
 
 export default async function TemplateGalleryPage() {
-  // Fetch realtor branding
+  const { auth } = await import("@/lib/auth");
+  const session = await auth();
+  const userName = session?.user?.name || "Your Name";
+
+  // Fetch realtor branding — fall back to user's account name
   const brandProfile = await getBrandProfile();
   const branding: RealtorBranding = {
-    name: brandProfile?.display_name || "Your Name",
+    name: brandProfile?.display_name || userName,
     title: brandProfile?.title || "REALTOR\u00ae",
     brokerage: brandProfile?.brokerage_name || "",
     phone: brandProfile?.phone || "",

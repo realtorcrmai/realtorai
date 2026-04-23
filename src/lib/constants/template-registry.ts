@@ -28,8 +28,8 @@ export interface TemplateEntry {
 function agentFromBranding(branding: RealtorBranding) {
   return {
     name: branding.name || "Your Name",
-    brokerage: branding.brokerage || "RE/MAX City Realty",
-    phone: branding.phone || "604-555-0123",
+    brokerage: branding.brokerage || "",
+    phone: branding.phone || "",
     email: branding.email || "",
     title: branding.title || "REALTOR\u00ae",
     initials: (branding.name || "R")[0],
@@ -64,7 +64,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
       agent: agentFromBranding(branding),
       content: {
         subject: "Nice to meet you, Sarah",
-        intro: `I'm ${branding.name || "Your Name"} at ${branding.brokerage || "RE/MAX City Realty"}, and I'm looking forward to helping you find the right property. Whether you're just starting to explore or ready to make a move, I'm here to guide you every step of the way.`,
+        intro: `I'm ${branding.name}${branding.brokerage ? ` at ${branding.brokerage}` : ""}, and I'm looking forward to helping you find the right property. Whether you're just starting to explore or ready to make a move, I'm here to guide you every step of the way.`,
         body: "", ctaText: "View Listings in Your Area", ctaUrl: "#",
       },
       valueProps: [
