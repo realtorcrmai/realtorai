@@ -494,9 +494,16 @@ const blocks: Record<string, BlockFn> = {
     const agentName = esc(d.agent.name);
     const brokerage = esc(d.agent.brokerage);
     const accent = d.agent.brandColor || "#1a1a1a";
+    const logoUrl = d.agent.logoUrl;
+
+    // If logo is set, show logo above name; otherwise just the large name
+    const logoHtml = logoUrl
+      ? `<img src="${logoUrl}" alt="${agentName}" style="height:48px;max-width:240px;display:block;margin:0 auto 20px;" />`
+      : "";
 
     return `
     <tr><td style="padding:56px 40px 0;text-align:center;">
+      ${logoHtml}
       <div style="font-size:40px;font-weight:700;color:#1d1d1f;letter-spacing:-1.5px;line-height:1.1;">${agentName}</div>
       <div style="font-size:17px;color:#6e6e73;margin-top:8px;font-weight:400;letter-spacing:-0.2px;">${brokerage}</div>
       <div style="width:36px;height:2px;background:${accent};margin:32px auto 0;border-radius:1px;"></div>
