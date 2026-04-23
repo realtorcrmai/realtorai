@@ -22,21 +22,23 @@ async function getRealtorBranding(realtorId?: string): Promise<RealtorBranding> 
   if (realtorId) {
     try {
       const adminClient = createAdminClient();
-      const { data: config } = await adminClient
-        .from("realtor_agent_config")
-        .select("brand_config")
-        .eq("realtor_id", realtorId)
-        .maybeSingle();
+      // Fetch brand_config and brand_profile in parallel
+      const [{ data: config }, { data: profile }] = await Promise.all([
+        adminClient.from("realtor_agent_config").select("brand_config").eq("realtor_id", realtorId).maybeSingle(),
+        adminClient.from("realtor_brand_profiles").select("display_name, headshot_url, phone, email, brokerage_name, brand_color, physical_address, tagline, title").eq("realtor_id", realtorId).maybeSingle(),
+      ]);
       const b = (config?.brand_config as Record<string, string>) || {};
-      if (b.realtorName) {
+      const p = profile as Record<string, string | null> | null;
+      if (b.realtorName || p?.display_name) {
         return {
-          name: b.realtorName,
-          title: "REALTOR®",
-          brokerage: b.brokerage || "",
-          phone: b.phone || "",
-          email: b.email || "",
-          accentColor: b.primaryColor || "#4f35d2",
-          physicalAddress: b.address || undefined,
+          name: p?.display_name || b.realtorName || "Your Realtor",
+          title: p?.title || "REALTOR®",
+          brokerage: p?.brokerage_name || b.brokerage || "",
+          phone: p?.phone || b.phone || "",
+          email: p?.email || b.email || "",
+          accentColor: (b.primaryColor || p?.brand_color || "#4f35d2") as string,
+          physicalAddress: (p?.physical_address || b.address || undefined) as string | undefined,
+          headshotUrl: (p?.headshot_url || undefined) as string | undefined,
         };
       }
       // Also try users table
@@ -52,6 +54,7 @@ async function getRealtorBranding(realtorId?: string): Promise<RealtorBranding> 
         phone: user?.phone || "",
         email: user?.email || "hello@magnate360.com",
         accentColor: "#4f35d2",
+        headshotUrl: (p?.headshot_url || undefined) as string | undefined,
       };
     } catch {
       return {
