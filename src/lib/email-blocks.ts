@@ -192,11 +192,15 @@ const blocks: Record<string, BlockFn> = {
     </td></tr>`;
   },
 
-  personalNote: (d) => `
-    <tr><td style="padding:24px 32px 0;">
-      <p style="font-size:15px;color:#1d1d1f;line-height:1.65;margin:0;">Hi ${esc(d.contact.firstName)}, ${mdBold(esc(d.content.intro))}</p>
-      ${d.content.body ? `<p style="font-size:15px;color:#1d1d1f;line-height:1.65;margin:16px 0 0;">${mdBold(esc(d.content.body))}</p>` : ""}
-    </td></tr>`,
+  personalNote: (d) => {
+    const isWelcome = (d as any)._emailType === "welcome";
+    const pad = isWelcome ? "28px 40px 24px" : "24px 32px 0";
+    return `
+    <tr><td style="padding:${pad};">
+      <p style="font-size:15px;color:#1a1a1a;line-height:1.7;margin:0;">Hi ${esc(d.contact.firstName)}, ${mdBold(esc(d.content.intro))}</p>
+      ${d.content.body ? `<p style="font-size:15px;color:#1a1a1a;line-height:1.7;margin:16px 0 0;">${mdBold(esc(d.content.body))}</p>` : ""}
+    </td></tr>`;
+  },
 
   featureList: (d) => {
     const features = d.listing?.features;
@@ -482,13 +486,13 @@ const blocks: Record<string, BlockFn> = {
   welcomeHero: (d) => {
     const agentName = esc(d.agent.name);
     const brokerage = esc(d.agent.brokerage);
-    const accent = d.agent.brandColor || "#5856d6";
+    const accent = d.agent.brandColor || "#1a1a1a";
 
     return `
-    <tr><td style="padding:40px 40px 0;text-align:center;">
+    <tr><td style="padding:48px 40px 0;text-align:center;">
       <div style="font-size:32px;font-weight:700;color:#1a1a1a;letter-spacing:-0.8px;line-height:1.2;">${agentName}</div>
       <div style="font-size:14px;color:#6b7280;margin-top:6px;letter-spacing:0.3px;">${brokerage}</div>
-      <div style="width:40px;height:2px;background:${accent};margin:24px auto;border-radius:1px;"></div>
+      <div style="width:40px;height:2px;background:${accent};margin:28px auto 0;border-radius:1px;"></div>
     </td></tr>`;
   },
 
@@ -522,7 +526,7 @@ const blocks: Record<string, BlockFn> = {
       ? "#1a1a1a"
       : d.agent.brandColor || (theme === "luxury" ? "#1a1a1a" : theme === "editorial" ? "#1a2e1a" : "#4f35d2");
     const textColor = isWelcome ? "#ffffff" : (d.agent.brandColor ? "#0a0a0a" : "#ffffff");
-    const phone = d.agent.phone;
+    const phone = d.agent.phone?.trim();
     return `
     <tr><td style="padding:${isWelcome ? "32" : "24"}px 40px ${isWelcome && phone ? "8" : "40"}px;text-align:center;">
       <a href="${url}" class="email-cta-btn" style="display:inline-block;background:${bgColor};color:${textColor};font:600 15px/1 -apple-system,sans-serif;text-decoration:none;padding:16px 40px;border-radius:8px;letter-spacing:0.2px;">
@@ -542,7 +546,7 @@ const blocks: Record<string, BlockFn> = {
     <tr><td style="padding:0 40px 8px;">
       <div style="height:1px;background:#f0f0f0;margin-bottom:20px;"></div>
       <div style="font-size:14px;color:#1a1a1a;font-weight:500;">${esc(d.agent.name)}</div>
-      <div style="font-size:13px;color:#9ca3af;">${esc(d.agent.brokerage)}${d.agent.phone ? ` · ${esc(d.agent.phone)}` : ""}</div>
+      <div style="font-size:13px;color:#9ca3af;">${esc(d.agent.brokerage)}${d.agent.phone?.trim() ? ` · ${esc(d.agent.phone.trim())}` : ""}</div>
     </td></tr>`;
     }
     // Standard agent card for other email types
@@ -566,15 +570,16 @@ const blocks: Record<string, BlockFn> = {
     </td></tr>`;
   },
 
-  footer: (d) => `
-    <tr><td style="padding:20px 40px 24px;text-align:center;">
+  footer: (d) => {
+    const addr = d.physicalAddress?.trim();
+    return `
+    <tr><td style="padding:20px 40px 28px;text-align:center;">
       <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.8;">
         <a href="${d.unsubscribeUrl ?? '#'}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a> · <a href="#" style="color:#9ca3af;text-decoration:underline;">Privacy</a>
       </p>
-      <p style="font-size:11px;color:#d1d5db;margin:4px 0 0;">
-        ${esc(d.physicalAddress ?? '')}
-      </p>
-    </td></tr>`,
+      ${addr ? `<p style="font-size:11px;color:#d1d5db;margin:4px 0 0;">${esc(addr)}</p>` : ""}
+    </td></tr>`;
+  },
 };
 
 // ═══════════════════════════════════════════════
