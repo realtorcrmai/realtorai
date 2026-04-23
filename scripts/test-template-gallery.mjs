@@ -173,12 +173,14 @@ async function run() {
   assert(pageCode.includes("GREETING_OCCASIONS"), "Has greeting occasions");
 
   // Import all 18 email components
-  for (const comp of ["WelcomeDrip","NewListingAlert","MarketUpdate","JustSold","OpenHouseInvite",
+  for (const comp of ["NewListingAlert","MarketUpdate","JustSold","OpenHouseInvite",
     "NeighbourhoodGuide","HomeAnniversary","PremiumListingShowcase","InspectionReminder",
     "ClosingReminder","BuyerGuide","PriceDropAlert","ReferralThankYou","ClientTestimonial",
     "HomeValueUpdate","MortgageRenewalAlert","YearInReview","CommunityEvent"]) {
     assert(pageCode.includes(`import { ${comp} }`), `Imports ${comp}`);
   }
+  // WelcomeDrip is NOT imported — it's a platform onboarding email, not a contact email
+  assert(!pageCode.includes("WelcomeDrip"), "Does NOT import WelcomeDrip (platform onboarding, not contact email)");
 
   // Doesn't import from journeys.ts (use server file)
   assert(!pageCode.includes('from "@/actions/journeys"'), "Does NOT import from use-server journeys.ts");
@@ -363,10 +365,12 @@ async function run() {
 
   // COMPONENTS map
   assert(pageCode.includes("const COMPONENTS"), "Has COMPONENTS map");
-  for (const comp of ["WelcomeDrip","MarketUpdate","JustSold","HomeAnniversary","BuyerGuide",
+  for (const comp of ["MarketUpdate","JustSold","HomeAnniversary","BuyerGuide",
     "ClosingReminder","InspectionReminder","PriceDropAlert","ReferralThankYou"]) {
     assert(pageCode.includes(`${comp},`) || pageCode.includes(`${comp}\n`), `COMPONENTS has ${comp}`);
   }
+  // Welcome uses NeighbourhoodGuide (not WelcomeDrip which is platform onboarding)
+  assert(registryCode.includes('welcome: "NeighbourhoodGuide"'), "welcome maps to NeighbourhoodGuide (not WelcomeDrip)");
 
   // ── 13. PHASE 2: SHOWINGS BUG FIX ──
   section("phase2-showings");

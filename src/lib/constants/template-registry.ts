@@ -31,15 +31,22 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
   welcome: {
     slug: "welcome",
     displayName: "Welcome Email",
-    description: "First email a new contact receives. Sets the tone and introduces the realtor.",
+    description: "Personal introduction from you to your new contact. AI writes a warm welcome using your name, brokerage, and the contact's interests.",
     icon: "👋",
     category: "journey",
-    sampleSubject: "Welcome — Let's Find Your Perfect Home",
-    sampleProps: () => ({
-      firstName: "Sarah",
-      day: 0,
-      appUrl: "http://localhost:3000",
-      unsubscribeUrl: UNSUB,
+    sampleSubject: "Nice to meet you, Sarah",
+    sampleProps: (branding) => ({
+      ...defaultBranding(branding),
+      recipientName: "Sarah",
+      area: "Greater Vancouver",
+      intro: `I'm ${branding.name || "Your Agent"} at ${branding.brokerage || "RE/MAX City Realty"}, and I'm looking forward to helping you find the right property. Whether you're just starting to explore or ready to make a move, I'm here to help every step of the way.`,
+      highlights: [
+        { category: "What I Can Help With", items: ["Personalized property search based on your criteria", "Market analysis for your target neighbourhoods", "Guidance through offers, inspections, and closing"] },
+        { category: "Your Local Market", items: ["Average home price: $1,125,000", "Homes are selling in 18 days on average", "New listings up 15% this month"] },
+      ],
+      funFact: "I'll be sending you personalized updates based on your preferences — new listings, market insights, and neighbourhood guides. You can adjust your preferences anytime.",
+      ctaText: "View Listings in Your Area",
+      ctaUrl: "#",
     }),
   },
 
@@ -509,7 +516,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
  * WelcomeDrip is a special case — it doesn't use BaseLayout.
  */
 export const EMAIL_TYPE_TO_COMPONENT: Record<string, string> = {
-  welcome: "WelcomeDrip",
+  welcome: "NeighbourhoodGuide",
   neighbourhood_guide: "NeighbourhoodGuide",
   new_listing_alert: "NewListingAlert",
   market_update: "MarketUpdate",

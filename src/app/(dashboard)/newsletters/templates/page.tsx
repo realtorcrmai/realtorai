@@ -13,7 +13,6 @@ import {
 } from "@/components/newsletters/TemplateGalleryClient";
 
 // Dynamic imports for all email components
-import { WelcomeDrip } from "@/emails/WelcomeDrip";
 import { NewListingAlert } from "@/emails/NewListingAlert";
 import { MarketUpdate } from "@/emails/MarketUpdate";
 import { JustSold } from "@/emails/JustSold";
@@ -35,7 +34,6 @@ import type { RealtorBranding } from "@/emails/BaseLayout";
 
 // Map component names to actual components
 const COMPONENTS: Record<string, React.ComponentType<any>> = {
-  WelcomeDrip,
   NewListingAlert,
   MarketUpdate,
   JustSold,
