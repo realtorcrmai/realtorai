@@ -541,10 +541,15 @@ const blocks: Record<string, BlockFn> = {
   agentCard: (d) => {
     const isWelcome = (d as any)._emailType === "welcome";
     if (isWelcome) {
-      // Minimal signature for welcome emails
+      // Large headshot signature for welcome emails
+      const headshotUrl = d.agent.headshotUrl;
+      const photoHtml = headshotUrl
+        ? `<img src="${headshotUrl}" width="520" alt="${esc(d.agent.name)}" style="display:block;width:100%;height:auto;border-radius:12px;object-fit:cover;margin:0 auto;">`
+        : "";
       return `
     <tr><td style="padding:0 40px 8px;">
-      <div style="height:1px;background:#f0f0f0;margin-bottom:20px;"></div>
+      <div style="height:1px;background:#f0f0f0;margin-bottom:24px;"></div>
+      ${photoHtml ? `<div style="margin-bottom:20px;">${photoHtml}</div>` : ""}
       <div style="font-size:14px;color:#1a1a1a;font-weight:500;">${esc(d.agent.name)}</div>
       <div style="font-size:13px;color:#9ca3af;">${esc(d.agent.brokerage)}${d.agent.phone?.trim() ? ` · ${esc(d.agent.phone.trim())}` : ""}</div>
     </td></tr>`;
