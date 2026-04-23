@@ -704,6 +704,9 @@ export async function sendNewsletter(newsletterId: string, realtorApproved: bool
     tc = await getAuthenticatedTenantClient();
   }
 
+  // Fetch realtor branding for From/Reply-To headers
+  const sendBranding = await getRealtorBranding(realtorId || tc.realtorId);
+
   // Fetch newsletter with full contact data (including buyer_preferences and type)
   const { data: newsletter } = await tc
     .from("newsletters")
@@ -987,6 +990,7 @@ export async function sendNewsletter(newsletterId: string, realtorApproved: bool
         journeyPhase,
         skipQualityScore: isGreeting || isWelcome || realtorApproved || regenAttempt >= MAX_REGEN_ATTEMPTS,
         skipCompliance: realtorApproved,
+        realtorBranding: { name: sendBranding.name, email: sendBranding.email },
       });
 
       // If not a regenerate action, or we've exhausted retries, break out

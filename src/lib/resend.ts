@@ -55,6 +55,16 @@ interface SendEmailParams {
   replyTo?: string;
   tags?: { name: string; value: string }[];
   headers?: Record<string, string>;
+  /**
+   * When set, the email is sent on behalf of the realtor:
+   *   From: "Jazz Grewal" <newsletters@magnate360.com>
+   *   Reply-To: jazz@24krealty.ca
+   * The buyer sees the realtor's name and can reply directly.
+   */
+  realtorBranding?: {
+    name: string;
+    email?: string;
+  } | null;
   /** Metadata injected as a banner at the top of the email for BCC monitoring */
   metadata?: {
     workflowName?: string;
@@ -104,9 +114,17 @@ export async function sendEmail(params: SendEmailParams) {
   }
 
   const resend = getResend();
-  const fromEmail = params.from || process.env.RESEND_FROM_EMAIL || "newsletters@magnate360.com";
+  const baseDomain = process.env.RESEND_FROM_EMAIL || "newsletters@magnate360.com";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const monitorEmail = process.env.EMAIL_MONITOR_BCC || "";
+
+  // If realtorBranding is provided, send on behalf of the realtor:
+  //   From: "Jazz Grewal" <newsletters@magnate360.com>
+  //   Reply-To: jazz@24krealty.ca
+  // This way the buyer sees the realtor's name and can reply directly.
+  const fromEmail = params.from
+    || (params.realtorBranding?.name ? `${params.realtorBranding.name} <${baseDomain}>` : baseDomain);
+  const replyTo = params.replyTo || params.realtorBranding?.email || undefined;
 
   // Inject metadata banner into HTML for BCC monitoring
   let html = params.html;
@@ -144,7 +162,7 @@ export async function sendEmail(params: SendEmailParams) {
       subject: params.subject,
       html,
       text: params.text,
-      replyTo: params.replyTo,
+      replyTo,
       tags: params.tags?.filter(t => t.value != null && t.value !== ""),
       headers: {
         "List-Unsubscribe": params.metadata?.contactId
