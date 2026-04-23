@@ -1,57 +1,16 @@
 export const dynamic = "force-dynamic";
 
-import React from "react";
-import { render } from "@react-email/components";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { getBrandProfile } from "@/actions/brand-profile";
 import { JOURNEY_SCHEDULES } from "@/lib/constants/journey-schedules";
-import { TEMPLATE_REGISTRY, EMAIL_TYPE_TO_COMPONENT } from "@/lib/constants/template-registry";
+import { TEMPLATE_REGISTRY } from "@/lib/constants/template-registry";
+import { assembleEmail } from "@/lib/email-blocks";
 import {
   TemplateGalleryClient,
   type PhaseGroup,
   type TemplateCard,
 } from "@/components/newsletters/TemplateGalleryClient";
-
-// Dynamic imports for all email components
-import { NewListingAlert } from "@/emails/NewListingAlert";
-import { MarketUpdate } from "@/emails/MarketUpdate";
-import { JustSold } from "@/emails/JustSold";
-import { OpenHouseInvite } from "@/emails/OpenHouseInvite";
-import { NeighbourhoodGuide } from "@/emails/NeighbourhoodGuide";
-import { HomeAnniversary } from "@/emails/HomeAnniversary";
-import { PremiumListingShowcase } from "@/emails/PremiumListingShowcase";
-import { InspectionReminder } from "@/emails/InspectionReminder";
-import { ClosingReminder } from "@/emails/ClosingReminder";
-import { BuyerGuide } from "@/emails/BuyerGuide";
-import { PriceDropAlert } from "@/emails/PriceDropAlert";
-import { ReferralThankYou } from "@/emails/ReferralThankYou";
-import { ClientTestimonial } from "@/emails/ClientTestimonial";
-import { HomeValueUpdate } from "@/emails/HomeValueUpdate";
-import { MortgageRenewalAlert } from "@/emails/MortgageRenewalAlert";
-import { YearInReview } from "@/emails/YearInReview";
-import { CommunityEvent } from "@/emails/CommunityEvent";
 import type { RealtorBranding } from "@/emails/BaseLayout";
-
-// Map component names to actual components
-const COMPONENTS: Record<string, React.ComponentType<any>> = {
-  NewListingAlert,
-  MarketUpdate,
-  JustSold,
-  OpenHouseInvite,
-  NeighbourhoodGuide,
-  HomeAnniversary,
-  PremiumListingShowcase,
-  InspectionReminder,
-  ClosingReminder,
-  BuyerGuide,
-  PriceDropAlert,
-  ReferralThankYou,
-  ClientTestimonial,
-  HomeValueUpdate,
-  MortgageRenewalAlert,
-  YearInReview,
-  CommunityEvent,
-};
 
 const PHASE_LABELS: Record<string, string> = {
   lead: "New Contact",
@@ -90,31 +49,16 @@ function formatDelay(hours: number): string {
   return "1 year";
 }
 
-async function renderTemplate(
+function renderTemplate(
   emailType: string,
   branding: RealtorBranding
-): Promise<string | null> {
+): string | null {
   const entry = TEMPLATE_REGISTRY[emailType];
   if (!entry) return null;
 
   try {
-    const props = entry.sampleProps(branding);
-
-    // Block-system templates (welcome, etc.) — rendered via assembleEmail()
-    if (entry.renderMode === "block-system") {
-      const { assembleEmail } = await import("@/lib/email-blocks");
-      return assembleEmail(emailType, props as any);
-    }
-
-    // React Email templates — rendered via render(createElement())
-    const componentName = EMAIL_TYPE_TO_COMPONENT[emailType];
-    if (!componentName || componentName === "__block_system__") return null;
-
-    const Component = COMPONENTS[componentName];
-    if (!Component) return null;
-
-    const html = await render(React.createElement(Component, props));
-    return html;
+    const data = entry.sampleData(branding);
+    return assembleEmail(entry.blockType, data as any);
   } catch (err) {
     console.error(`[template-gallery] Failed to render ${emailType}:`, err);
     return null;
@@ -151,17 +95,12 @@ export default async function TemplateGalleryPage() {
     }
   }
 
-  // Render all templates in parallel
-  const renderPromises: Record<string, Promise<string | null>> = {};
-  for (const emailType of allEmailTypes) {
-    renderPromises[emailType] = renderTemplate(emailType, branding);
-  }
-  const entries = Object.entries(renderPromises);
-  const results = await Promise.all(entries.map(([, p]) => p));
+  // Render all templates via the block system (synchronous)
   const rendered: Record<string, string> = {};
-  entries.forEach(([key], i) => {
-    if (results[i]) rendered[key] = results[i]!;
-  });
+  for (const emailType of allEmailTypes) {
+    const html = renderTemplate(emailType, branding);
+    if (html) rendered[emailType] = html;
+  }
 
   // Build journey phase groups
   function buildJourney(journeyType: "buyer" | "seller"): PhaseGroup[] {

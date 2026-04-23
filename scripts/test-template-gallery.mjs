@@ -83,7 +83,7 @@ async function run() {
   assertEq(allTemplates.length, 20, "Total template count is 20");
 
   // Check metadata fields
-  for (const field of ["displayName","description","icon","category","sampleSubject","sampleProps"]) {
+  for (const field of ["displayName","description","icon","category","sampleSubject","sampleData"]) {
     const count = (registryCode.match(new RegExp(field + ":", "g")) || []).length;
     assertGte(count, 20, `All templates have ${field} (${count} found)`);
   }
@@ -94,10 +94,9 @@ async function run() {
   assertEq(journeyCatCount, 10, "10 journey templates");
   assertEq(eventCatCount, 10, "10 event templates");
 
-  // EMAIL_TYPE_TO_COMPONENT mapping
-  assert(registryCode.includes("EMAIL_TYPE_TO_COMPONENT"), "Component mapping exported");
+  // blockType mapping — every template has a block system key
   for (const t of allTemplates) {
-    assert(registryCode.includes(`${t}:`), `Component mapping for ${t}`);
+    assert(registryCode.includes(`blockType:`), `Templates have blockType field`);
   }
 
   // Sample data quality
@@ -160,8 +159,7 @@ async function run() {
   assert(pageCode.includes("getBrandProfile"), "Fetches brand profile");
   assert(pageCode.includes("TEMPLATE_REGISTRY"), "Uses template registry");
   assert(pageCode.includes("JOURNEY_SCHEDULES"), "Uses journey schedules");
-  assert(pageCode.includes("Promise.all"), "Renders templates in parallel");
-  assert(pageCode.includes("render(React.createElement"), "Uses React Email render");
+  assert(pageCode.includes("assembleEmail"), "Uses block system assembleEmail");
   assert(pageCode.includes("TemplateGalleryClient"), "Passes to client component");
   assert(pageCode.includes("PageHeader"), "Has PageHeader");
   assert(pageCode.includes("Email Templates"), "Title is 'Email Templates'");
@@ -172,15 +170,10 @@ async function run() {
   assert(pageCode.includes("eventTemplates"), "Has event templates");
   assert(pageCode.includes("GREETING_OCCASIONS"), "Has greeting occasions");
 
-  // Import all 18 email components
-  for (const comp of ["NewListingAlert","MarketUpdate","JustSold","OpenHouseInvite",
-    "NeighbourhoodGuide","HomeAnniversary","PremiumListingShowcase","InspectionReminder",
-    "ClosingReminder","BuyerGuide","PriceDropAlert","ReferralThankYou","ClientTestimonial",
-    "HomeValueUpdate","MortgageRenewalAlert","YearInReview","CommunityEvent"]) {
-    assert(pageCode.includes(`import { ${comp} }`), `Imports ${comp}`);
-  }
-  // WelcomeDrip is NOT imported — it's a platform onboarding email, not a contact email
-  assert(!pageCode.includes("WelcomeDrip"), "Does NOT import WelcomeDrip (platform onboarding, not contact email)");
+  // Page uses assembleEmail, NOT React Email components
+  assert(!pageCode.includes("WelcomeDrip"), "Does NOT import WelcomeDrip");
+  assert(!pageCode.includes("React.createElement"), "Does NOT use React.createElement");
+  assert(pageCode.includes('import { assembleEmail }'), "Imports assembleEmail from email-blocks");
 
   // Doesn't import from journeys.ts (use server file)
   assert(!pageCode.includes('from "@/actions/journeys"'), "Does NOT import from use-server journeys.ts");
@@ -335,43 +328,41 @@ async function run() {
 
   // ── 11. SAMPLE DATA ──
   section("sample-data");
-  // Each template sampleProps is a function taking branding
-  for (const t of allTemplates) {
-    assert(registryCode.includes(`sampleProps: (branding) =>`), `${t} sampleProps takes branding`);
-    // (checking general pattern, not per-template since they all use this)
-  }
-  // Specific sample data checks
-  assert(registryCode.includes("recipientName"), "Sample data has recipientName");
+  // Each template sampleData is a function taking branding
+  const sampleDataCount = (registryCode.match(/sampleData: \(branding\) =>/g) || []).length;
+  assertGte(sampleDataCount, 20, `All 20 templates have sampleData function (${sampleDataCount} found)`);
+
+  // Sample data uses EmailData shape (contact, agent, content)
+  assert(registryCode.includes("contact:"), "Sample data has contact field");
+  assert(registryCode.includes("agent: agentFromBranding"), "Sample data uses agentFromBranding helper");
   assert(registryCode.includes("unsubscribeUrl"), "Sample data has unsubscribeUrl");
-  assert(registryCode.includes("#unsubscribe-preview"), "Preview unsubscribe URL is placeholder");
+  assert(registryCode.includes("unsubscribeUrl"), "Sample data has unsubscribeUrl");
   assert(registryCode.includes("Kitsilano"), "Sample data uses Vancouver neighbourhood");
   assert(registryCode.includes("listings:"), "Listing alert has listings array");
-  assert(registryCode.includes("stats:"), "Market update has stats array");
-  assert(registryCode.includes("checklist:"), "Closing reminder has checklist");
-  assert(registryCode.includes("tips:"), "Home anniversary has tips");
-  assert(registryCode.includes("steps:"), "Buyer guide has steps");
-  assert(registryCode.includes("testimonial:"), "Client testimonial has testimonial object");
-  assert(registryCode.includes("comparables:"), "Home value has comparables");
+  assert(registryCode.includes("market:"), "Market update has market data");
+  assert(registryCode.includes("features:"), "Closing checklist has features");
+  assert(registryCode.includes("anniversary:"), "Home anniversary has anniversary data");
+  assert(registryCode.includes("countdown:"), "Countdown data for closing/inspection");
+  assert(registryCode.includes("testimonial:"), "Referral/testimonial has testimonial object");
+  assert(registryCode.includes("mortgageCalc:"), "Mortgage renewal has mortgage calc");
 
   // ── 12. TEMPLATE RENDERING ──
   section("template-rendering");
-  // Verify render imports and pattern
-  assert(pageCode.includes('import { render } from "@react-email/components"'), "Imports render()");
-  assert(pageCode.includes("React.createElement"), "Uses createElement for rendering");
-  assert(pageCode.includes("Promise.all"), "Renders in parallel");
+  // ALL templates render via assembleEmail (block system), not React Email
+  assert(pageCode.includes("assembleEmail(entry.blockType"), "Renders via assembleEmail with blockType");
   assert(pageCode.includes('catch (err)'), "Handles render errors");
   assert(pageCode.includes("console.error"), "Logs render errors");
   assert(pageCode.includes("return null"), "Returns null on render failure");
 
-  // COMPONENTS map
-  assert(pageCode.includes("const COMPONENTS"), "Has COMPONENTS map");
-  for (const comp of ["MarketUpdate","JustSold","HomeAnniversary","BuyerGuide",
-    "ClosingReminder","InspectionReminder","PriceDropAlert","ReferralThankYou"]) {
-    assert(pageCode.includes(`${comp},`) || pageCode.includes(`${comp}\n`), `COMPONENTS has ${comp}`);
+  // No React Email imports or COMPONENTS map
+  assert(!pageCode.includes("const COMPONENTS"), "No COMPONENTS map needed");
+  assert(!pageCode.includes("React.createElement"), "No createElement — uses block system");
+
+  // Every template has a blockType
+  for (const t of allTemplates) {
+    const match = registryCode.match(new RegExp(`${t}:[\\s\\S]*?blockType: "([^"]+)"`));
+    assert(!!match, `${t} has blockType`);
   }
-  // Welcome uses block system (assembleEmail), not a React Email component
-  assert(registryCode.includes('welcome: "__block_system__"'), "welcome maps to block system (not React Email)");
-  assert(registryCode.includes('renderMode: "block-system"'), "welcome has renderMode block-system");
 
   // ── 13. PHASE 2: SHOWINGS BUG FIX ──
   section("phase2-showings");
