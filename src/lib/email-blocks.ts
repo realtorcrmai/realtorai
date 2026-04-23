@@ -489,8 +489,8 @@ const blocks: Record<string, BlockFn> = {
     const tagline = esc(d.welcomeHero?.tagline || "Your Real Estate Partner");
 
     const photoHtml = headshotUrl
-      ? `<img src="${headshotUrl}" width="140" height="140" alt="${agentName}" style="display:block;width:140px;height:140px;border-radius:50%;object-fit:cover;margin:0 auto;border:4px solid ${accent};">`
-      : `<div style="width:140px;height:140px;border-radius:50%;background:linear-gradient(135deg,${accent},#ff6b6b);text-align:center;line-height:140px;color:#fff;font-weight:700;font-size:52px;margin:0 auto;">${initials}</div>`;
+      ? `<img src="${headshotUrl}" width="280" height="280" alt="${agentName}" style="display:block;width:280px;height:280px;border-radius:16px;object-fit:cover;margin:0 auto;border:3px solid ${accent};">`
+      : `<div style="width:280px;height:280px;border-radius:16px;background:linear-gradient(135deg,${accent},#ff6b6b);text-align:center;line-height:280px;color:#fff;font-weight:700;font-size:80px;margin:0 auto;">${initials}</div>`;
 
     return `
     <tr><td style="padding:0 16px;">
