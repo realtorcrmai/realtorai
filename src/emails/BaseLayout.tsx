@@ -23,6 +23,7 @@ export interface RealtorBranding {
   accentColor?: string;
   /** Physical mailing address — required for CASL/CAN-SPAM compliance */
   physicalAddress?: string;
+  socialLinks?: { instagram?: string; facebook?: string; linkedin?: string };
 }
 
 interface BaseLayoutProps {
