@@ -369,8 +369,9 @@ async function run() {
     "ClosingReminder","InspectionReminder","PriceDropAlert","ReferralThankYou"]) {
     assert(pageCode.includes(`${comp},`) || pageCode.includes(`${comp}\n`), `COMPONENTS has ${comp}`);
   }
-  // Welcome uses NeighbourhoodGuide (not WelcomeDrip which is platform onboarding)
-  assert(registryCode.includes('welcome: "NeighbourhoodGuide"'), "welcome maps to NeighbourhoodGuide (not WelcomeDrip)");
+  // Welcome uses block system (assembleEmail), not a React Email component
+  assert(registryCode.includes('welcome: "__block_system__"'), "welcome maps to block system (not React Email)");
+  assert(registryCode.includes('renderMode: "block-system"'), "welcome has renderMode block-system");
 
   // ── 13. PHASE 2: SHOWINGS BUG FIX ──
   section("phase2-showings");

@@ -14,6 +14,12 @@ export interface TemplateEntry {
   icon: string;
   category: "journey" | "event" | "greeting";
   sampleSubject: string;
+  /**
+   * Render mode:
+   * - "react-email" — rendered via React Email component (default)
+   * - "block-system" — rendered via assembleEmail() from email-blocks.ts
+   */
+  renderMode?: "react-email" | "block-system";
   sampleProps: (branding: RealtorBranding) => Record<string, unknown>;
 }
 
@@ -31,22 +37,35 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
   welcome: {
     slug: "welcome",
     displayName: "Welcome Email",
-    description: "Personal introduction from you to your new contact. AI writes a warm welcome using your name, brokerage, and the contact's interests.",
+    description: "Personal introduction from you to your new contact. Shows your name, brokerage, value props, and a large headshot signature.",
     icon: "👋",
     category: "journey",
+    renderMode: "block-system",
     sampleSubject: "Nice to meet you, Sarah",
     sampleProps: (branding) => ({
-      ...defaultBranding(branding),
-      recipientName: "Sarah",
-      area: "Greater Vancouver",
-      intro: `I'm ${branding.name || "Your Agent"} at ${branding.brokerage || "RE/MAX City Realty"}, and I'm looking forward to helping you find the right property. Whether you're just starting to explore or ready to make a move, I'm here to help every step of the way.`,
-      highlights: [
-        { category: "What I Can Help With", items: ["Personalized property search based on your criteria", "Market analysis for your target neighbourhoods", "Guidance through offers, inspections, and closing"] },
-        { category: "Your Local Market", items: ["Average home price: $1,125,000", "Homes are selling in 18 days on average", "New listings up 15% this month"] },
+      contact: { name: "Sarah Chen", firstName: "Sarah", type: "buyer" },
+      agent: {
+        name: branding.name || "Your Name",
+        brokerage: branding.brokerage || "RE/MAX City Realty",
+        phone: branding.phone || "604-555-0123",
+        email: branding.email || "",
+        initials: (branding.name || "R")[0],
+        brandColor: branding.accentColor || "#1a1a1a",
+        headshotUrl: branding.headshotUrl || undefined,
+      },
+      content: {
+        subject: "Nice to meet you, Sarah",
+        intro: `I'm ${branding.name || "Your Name"} at ${branding.brokerage || "RE/MAX City Realty"}, and I'm looking forward to helping you find the right property. Whether you're just starting to explore or ready to make a move, I'm here to guide you every step of the way.`,
+        body: "",
+        ctaText: "View Listings in Your Area",
+        ctaUrl: "#",
+      },
+      valueProps: [
+        { icon: "🏠", title: "Personalized Property Search", description: "I'll find listings that match your exact criteria — location, budget, and lifestyle." },
+        { icon: "📊", title: "Market Intelligence", description: "Weekly updates on prices, trends, and new listings in your target neighbourhoods." },
+        { icon: "🤝", title: "Expert Negotiation", description: "From offer strategy to closing, I'll advocate for your best interests at every step." },
       ],
-      funFact: "I'll be sending you personalized updates based on your preferences — new listings, market insights, and neighbourhood guides. You can adjust your preferences anytime.",
-      ctaText: "View Listings in Your Area",
-      ctaUrl: "#",
+      unsubscribeUrl: "#unsubscribe-preview",
     }),
   },
 
@@ -516,7 +535,7 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
  * WelcomeDrip is a special case — it doesn't use BaseLayout.
  */
 export const EMAIL_TYPE_TO_COMPONENT: Record<string, string> = {
-  welcome: "NeighbourhoodGuide",
+  welcome: "__block_system__",
   neighbourhood_guide: "NeighbourhoodGuide",
   new_listing_alert: "NewListingAlert",
   market_update: "MarketUpdate",

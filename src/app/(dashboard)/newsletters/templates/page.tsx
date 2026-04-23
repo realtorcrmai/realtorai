@@ -97,14 +97,22 @@ async function renderTemplate(
   const entry = TEMPLATE_REGISTRY[emailType];
   if (!entry) return null;
 
-  const componentName = EMAIL_TYPE_TO_COMPONENT[emailType];
-  if (!componentName) return null;
-
-  const Component = COMPONENTS[componentName];
-  if (!Component) return null;
-
   try {
     const props = entry.sampleProps(branding);
+
+    // Block-system templates (welcome, etc.) — rendered via assembleEmail()
+    if (entry.renderMode === "block-system") {
+      const { assembleEmail } = await import("@/lib/email-blocks");
+      return assembleEmail(emailType, props as any);
+    }
+
+    // React Email templates — rendered via render(createElement())
+    const componentName = EMAIL_TYPE_TO_COMPONENT[emailType];
+    if (!componentName || componentName === "__block_system__") return null;
+
+    const Component = COMPONENTS[componentName];
+    if (!Component) return null;
+
     const html = await render(React.createElement(Component, props));
     return html;
   } catch (err) {
