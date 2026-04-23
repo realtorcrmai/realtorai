@@ -35,6 +35,7 @@ function agentFromBranding(branding: RealtorBranding) {
     initials: (branding.name || "R")[0],
     brandColor: branding.accentColor || "#1a1a1a",
     headshotUrl: branding.headshotUrl || undefined,
+    logoUrl: branding.logoUrl || undefined,
     socialLinks: branding.socialLinks || undefined,
   };
 }

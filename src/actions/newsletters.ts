@@ -176,6 +176,7 @@ async function renderEmailTemplate(
       title: branding.title || "REALTOR®",
       initials: (branding.name || brandConfig.name).split(" ").map((w: string) => w[0]).join("").slice(0, 2),
       headshotUrl: branding.headshotUrl,
+      logoUrl: branding.logoUrl,
       brandColor: branding.accentColor || undefined,
       socialLinks: branding.socialLinks,
     },

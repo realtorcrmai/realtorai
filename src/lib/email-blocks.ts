@@ -37,7 +37,7 @@ function mdBold(s: string): string {
 
 export type EmailData = {
   contact: { name: string; firstName: string; type: string };
-  agent: { name: string; brokerage: string; phone: string; email?: string; title?: string; initials?: string; headshotUrl?: string; brandColor?: string; socialLinks?: { instagram?: string; facebook?: string; linkedin?: string } };
+  agent: { name: string; brokerage: string; phone: string; email?: string; title?: string; initials?: string; headshotUrl?: string; logoUrl?: string; brandColor?: string; socialLinks?: { instagram?: string; facebook?: string; linkedin?: string } };
   content: { subject: string; intro: string; body: string; ctaText: string; ctaUrl?: string };
   unsubscribeUrl?: string;
   physicalAddress?: string;
@@ -82,13 +82,20 @@ const FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','I
 
 const blocks: Record<string, BlockFn> = {
 
-  header: (d, branding) => `
+  header: (d, branding) => {
+    const logoUrl = d.agent.logoUrl;
+    const nameHtml = logoUrl
+      ? `<img src="${logoUrl}" alt="${esc(branding?.name ?? 'Your Agent')}" style="height:28px;max-width:180px;display:block;" />`
+      : `<span style="font-size:15px;font-weight:700;color:#1d1d1f;letter-spacing:-0.3px;">${esc(branding?.name ?? 'Your Agent')}</span>`;
+    const label = (d as any)._emailType === "welcome" ? "Welcome" : d.content.subject.includes("Welcome") ? "Welcome" : d.listing ? "New Listing" : "Update";
+    return `
     <tr><td style="padding:20px 32px 16px;">
       <table width="100%"><tr>
-        <td><span style="font-size:15px;font-weight:700;color:#1d1d1f;letter-spacing:-0.3px;">${esc(branding?.name ?? 'Your Agent')}</span></td>
-        <td align="right"><span style="font-size:11px;color:#86868b;letter-spacing:0.5px;text-transform:uppercase;">${(d as any)._emailType === "welcome" ? "Welcome" : d.content.subject.includes("Welcome") ? "Welcome" : d.listing ? "New Listing" : "Update"}</span></td>
+        <td>${nameHtml}</td>
+        <td align="right"><span style="font-size:11px;color:#86868b;letter-spacing:0.5px;text-transform:uppercase;">${label}</span></td>
       </tr></table>
-    </td></tr>`,
+    </td></tr>`;
+  },
 
   luxuryHeader: (d) => {
     const agentName = esc(d.agent.name);
@@ -546,12 +553,20 @@ const blocks: Record<string, BlockFn> = {
       const photoHtml = headshotUrl
         ? `<img src="${headshotUrl}" width="520" alt="${esc(d.agent.name)}" style="display:block;width:100%;height:auto;border-radius:12px;object-fit:cover;margin:0 auto;">`
         : "";
+      const wEmail = d.agent.email?.trim();
+      const wSocial = d.agent.socialLinks;
+      const wSocialItems: string[] = [];
+      if (wSocial?.instagram) wSocialItems.push(`<a href="${wSocial.instagram}" style="color:#6e6e73;text-decoration:none;">Instagram</a>`);
+      if (wSocial?.facebook) wSocialItems.push(`<a href="${wSocial.facebook}" style="color:#6e6e73;text-decoration:none;">Facebook</a>`);
+      if (wSocial?.linkedin) wSocialItems.push(`<a href="${wSocial.linkedin}" style="color:#6e6e73;text-decoration:none;">LinkedIn</a>`);
       return `
     <tr><td style="padding:0 40px 8px;">
       <div style="height:1px;background:#f0f0f0;margin-bottom:24px;"></div>
       ${photoHtml ? `<div style="margin-bottom:20px;">${photoHtml}</div>` : ""}
       <div style="font-size:14px;color:#1d1d1f;font-weight:600;letter-spacing:-0.1px;">${esc(d.agent.name)}</div>
       <div style="font-size:12px;color:#6e6e73;margin-top:2px;letter-spacing:-0.1px;">${esc(d.agent.brokerage)}${d.agent.phone?.trim() ? ` · ${esc(d.agent.phone.trim())}` : ""}</div>
+      ${wEmail ? `<div style="font-size:12px;margin-top:2px;"><a href="mailto:${wEmail}" style="color:#6e6e73;text-decoration:none;">${esc(wEmail)}</a></div>` : ""}
+      ${wSocialItems.length > 0 ? `<div style="font-size:12px;color:#6e6e73;margin-top:4px;">${wSocialItems.join(' · ')}</div>` : ""}
     </td></tr>`;
     }
     // Standard agent card for other email types
@@ -560,6 +575,17 @@ const blocks: Record<string, BlockFn> = {
     const photoHtml = headshotUrl
       ? `<img src="${headshotUrl}" width="44" height="44" alt="${esc(d.agent.name)}" style="display:block;width:44px;height:44px;border-radius:50%;object-fit:cover;">`
       : `<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,${accent},#ff6b6b);text-align:center;line-height:44px;color:#fff;font-weight:700;font-size:17px;">${esc(d.agent.initials || d.agent.name[0])}</div>`;
+    const emailHtml = d.agent.email?.trim()
+      ? `<div style="font-size:13px;"><a href="mailto:${d.agent.email}" style="color:${accent};text-decoration:none;">${esc(d.agent.email)}</a></div>`
+      : "";
+    const social = d.agent.socialLinks;
+    const socialItems: string[] = [];
+    if (social?.instagram) socialItems.push(`<a href="${social.instagram}" style="color:#86868b;text-decoration:none;font-size:12px;">Instagram</a>`);
+    if (social?.facebook) socialItems.push(`<a href="${social.facebook}" style="color:#86868b;text-decoration:none;font-size:12px;">Facebook</a>`);
+    if (social?.linkedin) socialItems.push(`<a href="${social.linkedin}" style="color:#86868b;text-decoration:none;font-size:12px;">LinkedIn</a>`);
+    const socialHtml = socialItems.length > 0
+      ? `<div style="font-size:12px;margin-top:4px;">${socialItems.join(' · ')}</div>`
+      : "";
     return `
     <tr><td style="padding:32px 32px 0;">
       <table width="100%" style="border-top:1px solid #e5e5ea;padding-top:20px;">
@@ -569,6 +595,8 @@ const blocks: Record<string, BlockFn> = {
             <div style="font-size:15px;font-weight:600;color:#1d1d1f;">${esc(d.agent.name)}</div>
             <div style="font-size:13px;color:#86868b;">${esc(d.agent.brokerage)}</div>
             <div style="font-size:13px;"><a href="tel:${d.agent.phone}" style="color:${accent};text-decoration:none;font-weight:500;">${esc(d.agent.phone)}</a></div>
+            ${emailHtml}
+            ${socialHtml}
           </td>
         </tr>
       </table>
