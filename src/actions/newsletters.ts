@@ -12,7 +12,7 @@ import { trackEvent } from "@/lib/analytics";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe-token";
 
 // Apple-quality block-based email system (SF Pro Display / Inter font stack)
-import { assembleEmail, getBrandConfig, type EmailData } from "@/lib/email-blocks";
+import { assembleEmail, getBrandConfig, buildWelcomeEmail, type EmailData } from "@/lib/email-blocks";
 import type { RealtorBranding } from "@/emails/BaseLayout";
 import { getBrandProfile } from "@/actions/brand-profile";
 
@@ -406,6 +406,76 @@ export async function generateAndQueueNewsletter(
     .limit(5);
 
   const branding = await getRealtorBranding(realtorId);
+
+  // ═══ WELCOME EMAIL — Dark luxury template, no AI ═══
+  if (emailType === 'welcome') {
+    // Fetch full brand profile for social links + service areas
+    const adminClient = createAdminClient();
+    const rid = realtorId || tc.realtorId;
+    const { data: brandProfile } = await adminClient
+      .from("realtor_brand_profiles")
+      .select("headshot_url, brand_color, tagline, service_areas, instagram_url, facebook_url, linkedin_url, phone, email, physical_address, website_url")
+      .eq("realtor_id", rid)
+      .maybeSingle();
+    const bp = brandProfile as Record<string, unknown> | null;
+
+    const html = buildWelcomeEmail({
+      contactFirstName: contact.name.split(" ")[0],
+      agentName: branding.name,
+      agentTitle: branding.title,
+      brokerage: branding.brokerage || "",
+      phone: (bp?.phone as string) || branding.phone || "",
+      email: (bp?.email as string) || branding.email || "",
+      headshotUrl: (bp?.headshot_url as string) || branding.headshotUrl || undefined,
+      brandColor: (bp?.brand_color as string) || undefined,
+      tagline: (bp?.tagline as string) || undefined,
+      serviceAreas: (bp?.service_areas as string[]) || undefined,
+      socialLinks: {
+        instagram: (bp?.instagram_url as string) || undefined,
+        facebook: (bp?.facebook_url as string) || undefined,
+        linkedin: (bp?.linkedin_url as string) || undefined,
+      },
+      unsubscribeUrl: getUnsubscribeUrl(contactId),
+      physicalAddress: (bp?.physical_address as string) || branding.physicalAddress || undefined,
+      ctaUrl: (bp?.website_url as string) ? `https://${(bp?.website_url as string).replace(/^https?:\/\//, '')}` : undefined,
+    });
+
+    const subject = `Welcome — Here's What I Can Do For You`;
+
+    const { data: newsletter, error } = await tc
+      .from("newsletters")
+      .insert({
+        contact_id: contactId,
+        template_slug: "welcome",
+        journey_id: journeyId || null,
+        journey_phase: journeyPhase,
+        email_type: emailType,
+        subject,
+        html_body: html,
+        status: sendMode === "auto" ? "approved" : "draft",
+        send_mode: sendMode,
+        ai_context: { templateVersion: "dark-luxury-v1", noAI: true },
+      })
+      .select()
+      .single();
+
+    if (error) return { error: error.message };
+
+    if (newsletter && sendMode === "auto") {
+      try {
+        await sendNewsletter(newsletter.id, false, realtorId);
+      } catch (sendErr) {
+        console.error("[newsletter] Welcome auto-send failed:", sendErr);
+        await tc.from("newsletters").update({
+          status: "failed",
+          error_message: sendErr instanceof Error ? sendErr.message : "Auto-send failed",
+        }).eq("id", newsletter.id);
+      }
+    }
+
+    revalidatePath("/newsletters");
+    return { data: newsletter };
+  }
 
   // Build AI context
   const intelligence = (contact.newsletter_intelligence as Record<string, unknown>) || {};
