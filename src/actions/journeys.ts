@@ -434,6 +434,7 @@ export async function processJourneyQueue(realtorId?: string) {
       // H7: Clear NBA override AFTER generation succeeds — not before — so the
       // override survives if generation fails and remains for the next queue run.
       try {
+        console.log(`[journey:queue] Generating ${emailType} for contact ${contact.id} (journey ${journey.id})`);
         const genResult = await generateAndQueueNewsletter(
           contact.id,
           emailType,
@@ -442,11 +443,13 @@ export async function processJourneyQueue(realtorId?: string) {
           journey.send_mode ?? "auto",
           journey.realtor_id ?? undefined  // pass realtorId so cron can bypass session auth
         );
+        console.log(`[journey:queue] Result for ${contact.id}: ${JSON.stringify(genResult ? { error: genResult.error, hasData: !!genResult.data } : 'null/undefined')}`);
 
         // Check if generation returned an error (it doesn't throw, it returns { error })
-        if (genResult?.error) {
-          console.warn(`[journey:queue] Newsletter generation returned error for ${contact.id}: ${genResult.error}`);
-          debugSkipped.push({ contactId: contact.id, email: contact.email, reason: `gen_error: ${genResult.error}`, code: 'generation_failed' as any, casl_consent_given: contact.casl_consent_given });
+        if (!genResult || genResult.error || !genResult.data) {
+          const reason = genResult?.error || 'No newsletter created (returned empty)';
+          console.warn(`[journey:queue] Newsletter generation returned error for ${contact.id}: ${reason}`);
+          debugSkipped.push({ contactId: contact.id, email: contact.email, reason: `gen_error: ${reason}`, code: 'generation_failed' as any, casl_consent_given: contact.casl_consent_given });
           // Back off 3 hours for soft errors (frequency cap, dedup) vs 6 for hard failures
           await tc.from('contact_journeys').update({
             next_email_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
