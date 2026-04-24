@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Search, Menu, User, Users, Settings, LogOut } from "lucide-react";
+import { Search, User, Users, Settings, LogOut } from "lucide-react";
 import { NotificationDropdown } from "@/components/layout/NotificationDropdown";
 import { TeamScopeToggle } from "@/components/team/TeamScopeToggle";
 
@@ -36,9 +36,6 @@ export function MondayHeader() {
     <header className="h-14 border-b border-border bg-card flex items-center justify-between px-6 shrink-0">
       {/* Left: Mobile hamburger + Team Scope Toggle */}
       <div className="flex items-center gap-3">
-        <button className="md:hidden p-2 rounded-lg hover:bg-muted" aria-label="Open navigation menu">
-          <Menu className="h-5 w-5 text-muted-foreground" />
-        </button>
         {teamId && teamRole && session?.user?.id && (
           <TeamScopeToggle userId={session.user.id} teamRole={teamRole} />
         )}

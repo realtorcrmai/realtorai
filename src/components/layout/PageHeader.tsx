@@ -38,7 +38,7 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <div className={cn("border-b border-border bg-card", className)}>
-      <div className="px-6 pt-4 pb-3">
+      <div className="px-4 md:px-6 pt-3 md:pt-4 pb-2 md:pb-3">
         {/* Breadcrumbs */}
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">

@@ -200,7 +200,7 @@ export default async function DashboardPage() {
         title={`${getGreeting()}, ${userName}`}
         subtitle={new Date().toLocaleDateString("en-CA", { weekday: "long", month: "long", day: "numeric" })}
       />
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         {/* KPI cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <Link href="/listings?status=active" className="group">
