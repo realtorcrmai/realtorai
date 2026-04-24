@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import {
   searchProperties,
@@ -43,6 +44,9 @@ function extractMLSNumber(input: string): string | null {
 }
 
 export async function previewDDFListing(input: string) {
+  const session = await auth();
+  if (!session?.user) return { error: "Authentication required." };
+
   const mlsNumber = extractMLSNumber(input);
   if (!mlsNumber) {
     return { error: "Could not extract an MLS number from the provided input. Enter an MLS number (e.g. R2901234) or paste a realtor.ca listing URL." };

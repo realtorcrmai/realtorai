@@ -15,7 +15,7 @@ export function MondayHeader() {
 
   const userName = session?.user?.name || "User";
   const userEmail = session?.user?.email || "";
-  const initials = userName.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
+  const initials = userName.split(" ").filter(Boolean).map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
   const avatarUrl = (session?.user as Record<string, unknown> | undefined)?.avatarUrl as string | null;
   const teamId = (session?.user as Record<string, unknown> | undefined)?.teamId as string | null;
   const teamRole = (session?.user as Record<string, unknown> | undefined)?.teamRole as string | null;

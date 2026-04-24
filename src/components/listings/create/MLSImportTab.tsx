@@ -49,9 +49,9 @@ export function MLSImportTab({ sellers, loadingSellers }: MLSImportTabProps) {
 
     startFetch(async () => {
       const result = await scrapeRealtorCaListing(mlsInput.trim());
-      if ("error" in result && result.error) {
+      if ("error" in result) {
         setError(result.error);
-      } else if (result.listing) {
+      } else {
         setPreview(result.listing);
       }
     });
@@ -63,10 +63,12 @@ export function MLSImportTab({ sellers, loadingSellers }: MLSImportTabProps) {
 
     startImport(async () => {
       const result = await importScrapedListing(preview, sellerId, lockboxCode.trim());
-      if ("error" in result) {
-        setError(result.error ?? "Import failed");
-      } else if (result.success) {
-        setImportSuccess({ id: result.id!, address: result.address! });
+      if ("error" in result && result.error) {
+        setError(result.error);
+      } else if ("success" in result && result.id && result.address) {
+        setImportSuccess({ id: result.id, address: result.address });
+      } else {
+        setError("Import failed. Please try again.");
       }
     });
   }
@@ -279,11 +281,11 @@ export function MLSImportTab({ sellers, loadingSellers }: MLSImportTabProps) {
               {/* Photo thumbnails */}
               {preview.photos.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto border-t border-border/30 pt-3">
-                  {preview.photos.slice(0, 6).map((url, i) => (
+                  {preview.photos.slice(0, 6).map((url) => (
                     <img
-                      key={i}
+                      key={url}
                       src={url}
-                      alt={`Photo ${i + 1}`}
+                      alt="Property photo"
                       className="h-16 w-24 rounded-lg object-cover shrink-0 border border-border/30"
                     />
                   ))}

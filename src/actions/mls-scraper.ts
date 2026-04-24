@@ -38,7 +38,7 @@ export interface ScrapedListing {
 function isRealtorCaUrl(input: string): boolean {
   try {
     const url = new URL(input.trim());
-    return url.hostname.includes("realtor.ca");
+    return url.hostname === "www.realtor.ca" || url.hostname === "realtor.ca";
   } catch {
     return false;
   }
@@ -119,7 +119,14 @@ function mapPropertyType(category: string | null, buildingType: string | null): 
 
 // ─── Main scraper ────────────────────────────────────
 
-export async function scrapeRealtorCaListing(input: string): Promise<{ error?: string } & Partial<{ success: true; listing: ScrapedListing }>> {
+export async function scrapeRealtorCaListing(input: string): Promise<{ error: string } | { success: true; listing: ScrapedListing }> {
+  // Auth check — only logged-in users can scrape
+  try {
+    await getAuthenticatedTenantClient();
+  } catch {
+    return { error: "You must be logged in to import listings." };
+  }
+
   // Validate input
   const url = normalizeUrl(input);
   if (!isRealtorCaUrl(url)) {
