@@ -173,16 +173,17 @@ test.describe("Contact Communication Journey", () => {
   test("dashboard has a Contacts tile linking to /contacts", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    const contactsTile = page.locator("a[href='/contacts']").first();
+    // `:visible` skips the desktop-only MondaySidebar link (display:none on mobile).
+    const contactsTile = page.locator("a[href='/contacts']:visible").first();
     await expect(contactsTile).toBeVisible();
   });
 
   test("clicking Contacts tile on dashboard navigates to contact detail", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    const contactsTile = page.locator("a[href='/contacts']").first();
+    const contactsTile = page.locator("a[href='/contacts']:visible").first();
     await contactsTile.click();
-    await page.waitForTimeout(3000);
+    await page.waitForURL(/\/contacts/, { timeout: 10000 });
     expect(page.url()).toContain("/contacts");
   });
 

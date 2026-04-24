@@ -73,10 +73,10 @@ test.describe("Showing Workflow Journey", () => {
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
     await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
-    // Time display with formatDistanceToNow
-    const timeInfo = page.locator("text=/ago|minutes|hours|days/i").first();
-    const isVisible = await timeInfo.isVisible().catch(() => false);
-    expect(isVisible).toBeTruthy();
+    // Time display with formatDistanceToNow. Scope to main so hidden sidebar
+    // links (e.g. "23 days" in unrelated tooltips) don't win `.first()`.
+    const timeInfo = page.locator("main").getByText(/ago|minutes|hours|days/i).first();
+    await expect(timeInfo).toBeVisible({ timeout: 5000 });
   });
 
   // ── Showing workflow component ─────────────────────────────
@@ -151,14 +151,15 @@ test.describe("Showing Workflow Journey", () => {
   test("dashboard has a Showings tile linking to /showings", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    const showingsTile = page.locator("a[href='/showings']").first();
+    // `:visible` skips the hidden desktop MondaySidebar link on mobile viewports.
+    const showingsTile = page.locator("a[href='/showings']:visible").first();
     await expect(showingsTile).toBeVisible();
   });
 
   test("clicking Showings tile navigates to showings page", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    const showingsTile = page.locator("a[href='/showings']").first();
+    const showingsTile = page.locator("a[href='/showings']:visible").first();
     await showingsTile.click();
     await page.waitForURL(/\/showings/, { timeout: 10000 });
     expect(page.url()).toContain("/showings");

@@ -166,18 +166,22 @@ test.describe("Newsletter Pipeline Journey", () => {
   // ── Dashboard to newsletters flow ──────────────────────────
 
   test("dashboard has an Email Marketing link to /newsletters", async ({ page }) => {
+    // /newsletters link only exists in MondaySidebar + MondayHeader (both
+    // desktop-only). Dashboard has no tile and MobileNav excludes it.
+    test.skip(test.info().project.name === "mobile", "Newsletters has no mobile nav entry");
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
     await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
-    const newsletterLink = page.locator("a[href='/newsletters']").first();
+    const newsletterLink = page.locator("a[href='/newsletters']:visible").first();
     await expect(newsletterLink).toBeVisible();
   });
 
   test("clicking Email Marketing link navigates to newsletters page", async ({ page }) => {
+    test.skip(test.info().project.name === "mobile", "Newsletters has no mobile nav entry");
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
     await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
-    const newsletterLink = page.locator("a[href='/newsletters']").first();
+    const newsletterLink = page.locator("a[href='/newsletters']:visible").first();
     await newsletterLink.click();
     await page.waitForURL("/newsletters");
     await expect(page).toHaveURL("/newsletters");
