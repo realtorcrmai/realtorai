@@ -88,11 +88,13 @@ export async function GET(req: NextRequest) {
     query = query.or(`title.ilike.%${term}%,description.ilike.%${term}%`);
   }
 
-  // Labels filter
+  // Labels filter — JSONB array column, use PostgREST @> (contains) operator
   const labels = sp.get("labels");
   if (labels) {
-    for (const label of labels.split(",")) {
-      query = query.contains("labels", [label]);
+    const labelArr = labels.split(",").map((l) => l.trim()).filter(Boolean);
+    if (labelArr.length > 0) {
+      // Use .filter() with raw PostgREST syntax for JSONB contains
+      query = query.filter("labels", "cs", JSON.stringify(labelArr));
     }
   }
 

@@ -25,7 +25,7 @@ async function getRealtorBranding(realtorId?: string): Promise<RealtorBranding> 
       // Fetch brand_config and brand_profile in parallel
       const [{ data: config }, { data: profile }] = await Promise.all([
         adminClient.from("realtor_agent_config").select("brand_config").eq("realtor_id", realtorId).maybeSingle(),
-        adminClient.from("realtor_brand_profiles").select("display_name, headshot_url, phone, email, brokerage_name, brand_color, physical_address, tagline, title, instagram_url, facebook_url, linkedin_url").eq("realtor_id", realtorId).maybeSingle(),
+        adminClient.from("realtor_brand_profiles").select("display_name, headshot_url, logo_url, phone, email, brokerage_name, brand_color, physical_address, tagline, title, instagram_url, facebook_url, linkedin_url").eq("realtor_id", realtorId).maybeSingle(),
       ]);
       const b = (config?.brand_config as Record<string, string>) || {};
       const p = profile as Record<string, string | null> | null;
@@ -39,6 +39,7 @@ async function getRealtorBranding(realtorId?: string): Promise<RealtorBranding> 
           accentColor: (b.primaryColor || p?.brand_color || "#4f35d2") as string,
           physicalAddress: (p?.physical_address || b.address || undefined) as string | undefined,
           headshotUrl: (p?.headshot_url || undefined) as string | undefined,
+          logoUrl: (p?.logo_url || undefined) as string | undefined,
           socialLinks: {
             instagram: (p?.instagram_url || undefined) as string | undefined,
             facebook: (p?.facebook_url || undefined) as string | undefined,

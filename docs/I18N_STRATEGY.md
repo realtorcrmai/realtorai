@@ -1,4 +1,5 @@
-# Internationalization Strategy
+<!-- docs-audit: src/lib/i18n* -->
+<!-- docs-audit-reviewed: 2026-04-22 --># Internationalization Strategy
 
 **Last reviewed:** 2026-04-21
 **Current locale:** English (en-CA) only

@@ -228,7 +228,11 @@ export function TaskForm({ task, teamMembers = [], onSuccess, onCancel }: TaskFo
           <div>
             <Label className="text-xs text-muted-foreground mb-1 block">Assign To</Label>
             <Select value={assignedTo || "none"} onValueChange={(val) => setAssignedTo(val === "none" ? "" : (val ?? ""))}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Unassigned" /></SelectTrigger>
+              <SelectTrigger className="h-9 text-sm">
+                <span className="truncate">
+                  {assignedTo ? (teamMembers.find((m) => m.id === assignedTo)?.name ?? "Unassigned") + (teamMembers.find((m) => m.id === assignedTo)?.is_current ? " (me)" : "") : "Unassigned"}
+                </span>
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Unassigned</SelectItem>
                 {teamMembers.map((m) => (

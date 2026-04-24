@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronDown, ChevronUp, Building2, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Building2, X, PenLine, Link2 } from "lucide-react";
 import Link from "next/link";
 import { PropertyTypeSelector } from "./PropertyTypeSelector";
 import { ListingPreviewCard } from "./ListingPreviewCard";
+import { MLSImportTab } from "./MLSImportTab";
 import { createListing } from "@/actions/listings";
 import type { Contact } from "@/types";
 
@@ -17,6 +18,7 @@ export function ListingCreator() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showMore, setShowMore] = useState(false);
+  const [activeTab, setActiveTab] = useState<"manual" | "mls-import">("mls-import");
 
   // Sellers loaded from API
   const [sellers, setSellers] = useState<Contact[]>([]);
@@ -107,10 +109,44 @@ export function ListingCreator() {
         </div>
       </div>
 
+      {/* Tab Switcher */}
+      <div className="max-w-6xl mx-auto px-6 pt-6">
+        <div className="inline-flex items-center bg-muted/30 rounded-xl p-1 border border-border/30">
+          <button
+            type="button"
+            onClick={() => setActiveTab("mls-import")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === "mls-import"
+                ? "bg-white dark:bg-zinc-800 text-foreground shadow-sm border border-border/30"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Link2 className="h-4 w-4" />
+            Import from MLS
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("manual")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === "manual"
+                ? "bg-white dark:bg-zinc-800 text-foreground shadow-sm border border-border/30"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <PenLine className="h-4 w-4" />
+            Manual Entry
+          </button>
+        </div>
+      </div>
+
       {/* Content — 2 column: form scrolls, preview fixed */}
       <div className="max-w-6xl mx-auto px-6 py-8 flex gap-8">
         {/* LEFT — Form */}
         <div className="flex-1 min-w-0">
+          {activeTab === "mls-import" ? (
+            <MLSImportTab sellers={sellers} loadingSellers={loadingSellers} />
+          ) : (
+          <>
           {error && (
             <div className="mb-6 p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/30 text-sm text-red-700 dark:text-red-300 flex items-center justify-between">
               <span>{error}</span>
@@ -259,10 +295,12 @@ export function ListingCreator() {
               )}
             </div>
           </div>
+          </>
+          )}
         </div>
 
-        {/* RIGHT — Live Preview */}
-        <div className="hidden lg:block w-[340px] shrink-0">
+        {/* RIGHT — Live Preview (manual entry only) */}
+        {activeTab === "manual" && <div className="hidden lg:block w-[340px] shrink-0">
           <div className="fixed" style={{ width: "340px", top: "140px", maxHeight: "calc(100vh - 200px)", overflowY: "auto" }}>
             <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Live Preview</p>
             <ListingPreviewCard
@@ -293,7 +331,7 @@ export function ListingCreator() {
               <p className="text-xs text-brand text-center mt-1.5 font-medium">Ready to list</p>
             )}
           </div>
-        </div>
+        </div>}
       </div>
 
       <div className="h-8" />
