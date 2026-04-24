@@ -104,7 +104,8 @@ test.describe("Showing Workflow Journey", () => {
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
     await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
-    await expect(page.locator("text=Notes")).toBeVisible();
+    // Card title is "Notes & Feedback" (src/app/(dashboard)/showings/[id]/page.tsx)
+    await expect(page.getByText(/Notes\s*&\s*Feedback/i).first()).toBeVisible({ timeout: 5000 });
   });
 
   // ── Context panel ──────────────────────────────────────────
@@ -159,13 +160,13 @@ test.describe("Showing Workflow Journey", () => {
     await page.waitForLoadState("domcontentloaded");
     const showingsTile = page.locator("a[href='/showings']").first();
     await showingsTile.click();
-    await page.waitForTimeout(3000);
+    await page.waitForURL(/\/showings/, { timeout: 10000 });
     expect(page.url()).toContain("/showings");
   });
 
   // ── Sidebar navigation ─────────────────────────────────────
 
-  test("showing sidebar is visible on desktop with showing entries", async ({ page }) => {
+  test("main navigation sidebar is visible on desktop", async ({ page }) => {
     test.skip(test.info().project.name === "mobile", "Desktop sidebar only");
     const id = await getFirstEntityId(page, 'showings');
     if (!id) {
@@ -175,7 +176,8 @@ test.describe("Showing Workflow Journey", () => {
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
     await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
-    const sidebar = page.locator(".border-r").first();
+    // MondaySidebar renders as <aside>; showing detail has no per-showing list sidebar.
+    const sidebar = page.locator("aside").first();
     await expect(sidebar).toBeVisible();
   });
 });

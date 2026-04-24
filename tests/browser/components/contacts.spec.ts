@@ -62,14 +62,16 @@ test.describe("Contacts Page", () => {
     }
   });
 
-  test("Intelligence tab is visible", async ({ page }) => {
+  test("contact detail has exactly 3 tabs (Intelligence merged into Overview/Activity)", async ({ page }) => {
     const id = await getFirstEntityId(page, 'contacts');
     test.skip(!id, 'No contacts in database');
     await page.goto(`/contacts/${id}`);
     await page.waitForLoadState('domcontentloaded');
     await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
-    const tab = page.locator("[role='tab']").filter({ hasText: /intelligence/i }).first();
-    await expect(tab).toBeVisible({ timeout: 5000 });
+    // Intelligence tab was removed; demographics + relationships now live in Overview.
+    const tabs = page.locator("[role='tablist']").first().locator("[role='tab']");
+    await expect(tabs).toHaveCount(3, { timeout: 5000 });
+    await expect(page.locator("[role='tab']").filter({ hasText: /intelligence/i })).toHaveCount(0);
   });
 
   test("Activity tab is visible", async ({ page }) => {

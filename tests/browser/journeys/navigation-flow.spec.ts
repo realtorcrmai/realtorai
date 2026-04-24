@@ -24,46 +24,48 @@ test.describe("Navigation Flow Journey", () => {
     await expect(main).toBeVisible();
   });
 
-  // ── Header nav links (desktop) ─────────────────────────────
+  // ── Sidebar nav links (desktop) ────────────────────────────
+  // Nav lives in MondaySidebar (<aside>), not a top header nav.
 
-  test("header nav has Listings link that works", async ({ page }) => {
-    test.skip(test.info().project.name === "mobile", "Desktop header nav");
+  test("sidebar has Listings link that works", async ({ page }) => {
+    test.skip(test.info().project.name === "mobile", "Desktop sidebar nav");
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    const listingsLink = page.locator("header a[href='/listings'], nav a[href='/listings']").first();
+    const listingsLink = page.locator("aside a[href='/listings']").first();
     await expect(listingsLink).toBeVisible();
     await listingsLink.click();
-    await page.waitForTimeout(3000);
+    // Next.js Link is SPA navigation — waitForLoadState won't fire, use URL pattern.
+    await page.waitForURL(/\/listings/, { timeout: 10000 });
     expect(page.url()).toContain("/listings");
   });
 
-  test("header nav has Contacts link that works", async ({ page }) => {
-    test.skip(test.info().project.name === "mobile", "Desktop header nav");
+  test("sidebar has Contacts link that works", async ({ page }) => {
+    test.skip(test.info().project.name === "mobile", "Desktop sidebar nav");
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    const contactsLink = page.locator("header a[href='/contacts'], nav a[href='/contacts']").first();
+    const contactsLink = page.locator("aside a[href='/contacts']").first();
     await expect(contactsLink).toBeVisible();
     await contactsLink.click();
-    await page.waitForTimeout(3000);
+    await page.waitForURL(/\/contacts/, { timeout: 10000 });
     expect(page.url()).toContain("/contacts");
   });
 
-  test("header nav has Showings link that works", async ({ page }) => {
-    test.skip(test.info().project.name === "mobile", "Desktop header nav");
+  test("sidebar has Showings link that works", async ({ page }) => {
+    test.skip(test.info().project.name === "mobile", "Desktop sidebar nav");
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    const showingsLink = page.locator("header a[href='/showings'], nav a[href='/showings']").first();
+    const showingsLink = page.locator("aside a[href='/showings']").first();
     await expect(showingsLink).toBeVisible();
     await showingsLink.click();
-    await page.waitForTimeout(3000);
+    await page.waitForURL(/\/showings/, { timeout: 10000 });
     expect(page.url()).toContain("/showings");
   });
 
-  test("header nav has Calendar link that works", async ({ page }) => {
-    test.skip(test.info().project.name === "mobile", "Desktop header nav");
+  test("sidebar has Calendar link that works", async ({ page }) => {
+    test.skip(test.info().project.name === "mobile", "Desktop sidebar nav");
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    const calendarLink = page.locator("header a[href='/calendar'], nav a[href='/calendar']").first();
+    const calendarLink = page.locator("aside a[href='/calendar']").first();
     await expect(calendarLink).toBeVisible();
     await calendarLink.click();
     await page.waitForURL("/calendar");
@@ -193,9 +195,9 @@ test.describe("Navigation Flow Journey", () => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
 
-    // Dashboard -> Listings
-    await page.locator("a[href='/listings']").first().click();
-    await page.waitForTimeout(3000);
+    // Dashboard -> Listings (Next Link — use URL wait instead of timeout)
+    await page.locator("a[href^='/listings']").first().click();
+    await page.waitForURL(/\/listings/, { timeout: 10000 });
     expect(page.url()).toContain("/listings");
 
     // Listings -> Contacts (navigate directly to a contact)
@@ -228,10 +230,10 @@ test.describe("Navigation Flow Journey", () => {
     const main = page.locator("main");
     await expect(main).toBeVisible();
 
-    // Calendar -> Newsletters
+    // Calendar -> Newsletters — tabs are AI/Campaigns/Automations/Settings.
     await page.goto("/newsletters");
     await page.waitForURL("/newsletters");
-    await expect(page.locator("button:has-text('Overview')").first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /^AI/ }).first()).toBeVisible();
 
     // Newsletters -> Dashboard
     await page.goto("/");
