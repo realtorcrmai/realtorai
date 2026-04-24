@@ -47,12 +47,10 @@ test.describe("Calendar Page", () => {
     await page.goto("/calendar");
     await page.waitForLoadState("domcontentloaded");
     await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
-    // The calendar is rendered inside a div with h-[600px] or h-[700px]
-    const calContainer = await page.evaluate(() => {
-      const el = document.querySelector("[class*='h-\\[600px\\]'], [class*='h-\\[700px\\]'], .rbc-calendar");
-      return !!el;
-    });
-    expect(calContainer).toBe(true);
+    // CRMCalendar is a client-side dynamic import (ssr:false), so wait for
+    // react-big-calendar's .rbc-calendar root to mount rather than racing the
+    // chunk load.
+    await expect(page.locator(".rbc-calendar").first()).toBeVisible({ timeout: 15000 });
   });
 
   test("calendar has animation class on container", async ({ page }) => {
