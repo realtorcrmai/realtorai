@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowRight } from "lucide-react";
-import { LogoSpinner, LogoAnimated } from "@/components/brand/Logo";
+import { LogoSpinner, LogoVideo } from "@/components/brand/Logo";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -55,7 +55,7 @@ export default function LoginPage() {
 
         <div className="relative z-10 flex flex-col items-center justify-center w-full px-12">
           {/* Animated 3D logo */}
-          <LogoAnimated size={380} />
+          <LogoVideo size={380} />
 
           {/* Brand text below logo */}
           <div className="text-center mt-6 space-y-3">
@@ -79,7 +79,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm space-y-8">
           {/* Mobile logo */}
           <div className="lg:hidden flex flex-col items-center mb-4">
-            <LogoAnimated size={200} />
+            <LogoVideo size={200} />
             <h1 className="text-2xl font-bold tracking-tight mt-2">Magnate</h1>
             <p className="text-xs text-muted-foreground tracking-widest uppercase mt-1">
               360° AI Platform for Realtors
