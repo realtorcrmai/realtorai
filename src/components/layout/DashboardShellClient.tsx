@@ -2,7 +2,6 @@
 
 import { MondayHeader } from "@/components/layout/MondayHeader";
 import { MondaySidebar } from "@/components/layout/MondaySidebar";
-import { MobileNav } from "@/components/layout/MobileNav";
 import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 
 export function DashboardShellClient({ children }: { children: React.ReactNode }) {
@@ -21,14 +20,13 @@ export function DashboardShellClient({ children }: { children: React.ReactNode }
         <MondayHeader />
         <AnnouncementBanner />
         <main id="main-content" className="flex-1 overflow-y-auto bg-background">
-          <div className="pb-24 animate-fade-in">
+          <div className="pb-6 animate-fade-in">
             {children}
           </div>
         </main>
       </div>
 
-      {/* Mobile bottom nav */}
-      <MobileNav />
+      {/* Mobile bottom nav hidden — dashboard-only mobile view */}
     </div>
   );
 }
