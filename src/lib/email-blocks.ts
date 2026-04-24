@@ -666,7 +666,7 @@ const TEMPLATE_BLOCKS: Record<string, Record<string, string[]>> = {
 
   // All templates — comprehensive block lists for rich visual emails
   welcome: {
-    default: ["welcomeHero", "personalNote", "valueProps", "cta", "agentCard", "footer"],
+    default: ["header", "welcomeHero", "personalNote", "valueProps", "cta", "agentCard", "footer"],
   },
   neighbourhood_guide: {
     default: ["header", "heroGradient", "heroImage", "personalNote", "areaHighlights", "propertyGrid", "statsRow", "testimonial", "mapPreview", "cta", "agentCard", "footer"],
