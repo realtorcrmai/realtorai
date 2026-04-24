@@ -574,7 +574,7 @@ const blocks: Record<string, BlockFn> = {
       <div style="font-size:12px;color:#6e6e73;margin-top:2px;letter-spacing:-0.1px;">${esc(d.agent.brokerage)}${d.agent.phone?.trim() ? ` · ${esc(d.agent.phone.trim())}` : ""}</div>
       ${wEmail ? `<div style="font-size:12px;margin-top:2px;"><a href="mailto:${wEmail}" style="color:#6e6e73;text-decoration:none;">${esc(wEmail)}</a></div>` : ""}
       ${wSocialItems.length > 0 ? `<div style="font-size:12px;color:#6e6e73;margin-top:4px;">${wSocialItems.join(' · ')}</div>` : ""}
-      ${d.agent.logoUrl ? `<div style="margin-top:20px;text-align:center;"><img src="${d.agent.logoUrl}" alt="${esc(d.agent.brokerage)}" style="height:40px;max-width:200px;display:inline-block;"></div>` : ""}
+      ${d.agent.logoUrl ? `<div style="margin-top:24px;text-align:center;"><img src="${d.agent.logoUrl}" alt="${esc(d.agent.brokerage)}" style="width:100%;max-width:520px;height:auto;display:inline-block;border-radius:8px;"></div>` : ""}
     </td></tr>`;
     }
     // Standard agent card for other email types
