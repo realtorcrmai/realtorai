@@ -9,7 +9,7 @@ test.describe("Dashboard Page", () => {
   test("page loads and shows greeting", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const h1 = page.locator("h1").first();
     await expect(h1).toBeVisible({ timeout: 5000 });
     const text = await h1.textContent();
@@ -19,7 +19,7 @@ test.describe("Dashboard Page", () => {
   test("page displays a weekday name in the date line", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // The date <p> is directly above the h1 greeting
     const dateLine = page.locator("p.text-sm.font-medium.text-muted-foreground").first();
     await expect(dateLine).toBeVisible({ timeout: 5000 });
@@ -30,7 +30,7 @@ test.describe("Dashboard Page", () => {
   test("Your Workspace heading is visible", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // h2 with uppercase tracking text
     await expect(page.getByText("Your Workspace")).toBeVisible({ timeout: 5000 });
   });
@@ -38,7 +38,7 @@ test.describe("Dashboard Page", () => {
   test("feature tiles include Listings tile", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // Target the tile card (has description text), not the nav link
     const tile = page.locator("a[href='/listings']:has-text('Manage property')");
     await expect(tile).toBeVisible({ timeout: 5000 });
@@ -47,7 +47,7 @@ test.describe("Dashboard Page", () => {
   test("feature tiles include Contacts tile", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tile = page.locator("a[href='/contacts']:has-text('Buyers')");
     await expect(tile).toBeVisible({ timeout: 5000 });
   });
@@ -55,7 +55,7 @@ test.describe("Dashboard Page", () => {
   test("feature tiles include Showings tile", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tile = page.locator("a[href='/showings']:has-text('Showing')");
     await expect(tile).toBeVisible({ timeout: 5000 });
   });
@@ -63,7 +63,7 @@ test.describe("Dashboard Page", () => {
   test("feature tiles include Calendar tile", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tile = page.locator("a[href='/calendar']:has-text('schedule')");
     await expect(tile).toBeVisible({ timeout: 5000 });
   });
@@ -71,7 +71,7 @@ test.describe("Dashboard Page", () => {
   test("feature tiles include Content Engine tile", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tile = page.locator("a[href='/content']");
     await expect(tile).toBeVisible({ timeout: 5000 });
     await expect(tile).toContainText("Content Engine");
@@ -80,7 +80,7 @@ test.describe("Dashboard Page", () => {
   test("feature tiles include Email Marketing tile", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tile = page.locator("a[href='/newsletters']:has-text('Email Marketing')");
     await expect(tile).toBeVisible({ timeout: 5000 });
   });
@@ -88,7 +88,7 @@ test.describe("Dashboard Page", () => {
   test("Listings tile click navigates to /listings", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // Click the tile (with description), not the nav link
     await page.locator("a[href='/listings']:has-text('Manage property')").click();
     await page.waitForTimeout(3000);
@@ -98,7 +98,7 @@ test.describe("Dashboard Page", () => {
   test("pipeline snapshot shows stage labels", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // PipelineSnapshot renders the 5 pipeline stages
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     expect(pageText).toMatch(/New Leads|Qualified|Active|Under Contract|Closed/);
@@ -107,7 +107,7 @@ test.describe("Dashboard Page", () => {
   test("no NaN or undefined values on dashboard", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const text = await page.evaluate(() => {
       const main = document.querySelector("main");
       const clone = main?.cloneNode(true) as HTMLElement;
@@ -121,7 +121,7 @@ test.describe("Dashboard Page", () => {
   test("at least 5 internal navigation links", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const count = await page.evaluate(() => {
       return Array.from(document.querySelectorAll("a[href]"))
         .filter((a) => {

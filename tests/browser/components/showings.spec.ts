@@ -14,7 +14,7 @@ test.describe("Showings Page", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     expect(page.url()).toMatch(/\/showings/);
   });
 
@@ -26,7 +26,7 @@ test.describe("Showings Page", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // Detail page h1 = listing address; empty state h2 = "No Showings Yet"
     const heading = page.locator("h1, h2").first();
     await expect(heading).toBeVisible({ timeout: 5000 });
@@ -42,7 +42,7 @@ test.describe("Showings Page", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     // Either a status badge or empty state message
     expect(pageText).toMatch(/requested|confirmed|denied|cancelled|No Showings/i);
@@ -56,7 +56,7 @@ test.describe("Showings Page", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     if (!pageText.match(/No Showings/i)) {
       // Buyer agent name and phone are shown in metadata section
@@ -72,7 +72,7 @@ test.describe("Showings Page", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     if (!pageText.match(/No Showings/i)) {
       // formatDistanceToNow shows "X ago" or date format
@@ -88,7 +88,7 @@ test.describe("Showings Page", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     if (!pageText.match(/No Showings/i)) {
       expect(pageText).toMatch(/Notes & Feedback/);
@@ -103,7 +103,7 @@ test.describe("Showings Page", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // At least 1 card (empty state) or 3+ (header + workflow + notes)
     const cardCount = await page.locator("[class*='card'], [class*='Card']").count();
     expect(cardCount).toBeGreaterThanOrEqual(1);
@@ -117,7 +117,7 @@ test.describe("Showings Page", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     if (!pageText.match(/No Showings/i)) {
       // ShowingWorkflow component renders workflow actions
@@ -133,7 +133,7 @@ test.describe("Showings Page", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const hasAnimation = await page.evaluate(() => {
       return document.querySelectorAll("[class*='animate']").length > 0;
     });
@@ -148,7 +148,7 @@ test.describe("Showings Page", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const text = await page.evaluate(() => {
       const main = document.querySelector("main");
       const clone = main?.cloneNode(true) as HTMLElement;

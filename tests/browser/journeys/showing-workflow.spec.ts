@@ -16,7 +16,7 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // Either redirects to /showings/:id or shows empty state
     const heading = page.locator("h1, h2").first();
     await expect(heading).toBeVisible();
@@ -30,7 +30,7 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const heading = page.locator("h1").first();
     await expect(heading).toBeVisible();
     await expect(heading).not.toHaveText("");
@@ -44,7 +44,7 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // ShowingStatusBadge renders requested/confirmed/denied/cancelled
     const badge = page.locator("text=/requested|confirmed|denied|cancelled/i").first();
     await expect(badge).toBeVisible();
@@ -58,7 +58,7 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // Buyer agent name and phone are displayed
     const agentInfo = page.locator("main").first();
     await expect(agentInfo).toBeVisible();
@@ -72,7 +72,7 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // Time display with formatDistanceToNow
     const timeInfo = page.locator("text=/ago|minutes|hours|days/i").first();
     const isVisible = await timeInfo.isVisible().catch(() => false);
@@ -89,7 +89,7 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // ShowingWorkflow is inside a Card
     const workflowSection = page.locator("main .space-y-6").first();
     await expect(workflowSection).toBeVisible();
@@ -103,7 +103,7 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     await expect(page.locator("text=Notes")).toBeVisible();
   });
 
@@ -118,7 +118,7 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // ShowingContextPanel renders in an aside
     const aside = page.locator("aside").first();
     await expect(aside).toBeVisible();
@@ -131,7 +131,7 @@ test.describe("Showing Workflow Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     await expect(page.locator("text=Showing History")).toBeVisible();
   });
 
@@ -174,7 +174,7 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const sidebar = page.locator(".border-r").first();
     await expect(sidebar).toBeVisible();
   });

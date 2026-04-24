@@ -9,7 +9,7 @@ test.describe("Newsletters Page", () => {
   test("newsletter page loads with heading", async ({ page }) => {
     await page.goto("/newsletters");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // h1 says "Email Marketing"
     const h1 = page.locator("h1").first();
     await expect(h1).toBeVisible({ timeout: 5000 });
@@ -19,14 +19,14 @@ test.describe("Newsletters Page", () => {
   test("subtitle is visible", async ({ page }) => {
     await page.goto("/newsletters");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     await expect(page.getByText("AI-powered email marketing")).toBeVisible({ timeout: 5000 });
   });
 
   test("Overview tab button is visible", async ({ page }) => {
     await page.goto("/newsletters");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // EmailMarketingTabs renders custom buttons (not role="tab")
     const tab = page.locator("button").filter({ hasText: /^Overview$/i }).first();
     await expect(tab).toBeVisible({ timeout: 5000 });
@@ -35,7 +35,7 @@ test.describe("Newsletters Page", () => {
   test("AI Workflows tab button is visible", async ({ page }) => {
     await page.goto("/newsletters");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tab = page.locator("button").filter({ hasText: /AI Workflows/i }).first();
     await expect(tab).toBeVisible({ timeout: 5000 });
   });
@@ -43,7 +43,7 @@ test.describe("Newsletters Page", () => {
   test("Performance tab button is visible", async ({ page }) => {
     await page.goto("/newsletters");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tab = page.locator("button").filter({ hasText: /Performance/i }).first();
     await expect(tab).toBeVisible({ timeout: 5000 });
   });
@@ -51,7 +51,7 @@ test.describe("Newsletters Page", () => {
   test("Campaigns tab button is visible", async ({ page }) => {
     await page.goto("/newsletters");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tab = page.locator("button").filter({ hasText: /Campaigns/i }).first();
     await expect(tab).toBeVisible({ timeout: 5000 });
   });
@@ -59,7 +59,7 @@ test.describe("Newsletters Page", () => {
   test("Automation tab button is visible", async ({ page }) => {
     await page.goto("/newsletters");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tab = page.locator("button").filter({ hasText: /Automation/i }).first();
     await expect(tab).toBeVisible({ timeout: 5000 });
   });
@@ -67,7 +67,7 @@ test.describe("Newsletters Page", () => {
   test("Settings tab button is visible", async ({ page }) => {
     await page.goto("/newsletters");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tab = page.locator("button").filter({ hasText: /Settings/i }).first();
     await expect(tab).toBeVisible({ timeout: 5000 });
   });
@@ -75,7 +75,7 @@ test.describe("Newsletters Page", () => {
   test("clicking AI Workflows tab activates it", async ({ page }) => {
     await page.goto("/newsletters");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tab = page.locator("button").filter({ hasText: /AI Workflows/i }).first();
     await tab.click();
     await page.waitForTimeout(500);
@@ -87,7 +87,7 @@ test.describe("Newsletters Page", () => {
   test("clicking Performance tab activates it", async ({ page }) => {
     await page.goto("/newsletters");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tab = page.locator("button").filter({ hasText: /Performance/i }).first();
     await tab.click();
     await page.waitForTimeout(500);
@@ -98,7 +98,7 @@ test.describe("Newsletters Page", () => {
   test("clicking Campaigns tab activates it", async ({ page }) => {
     await page.goto("/newsletters");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tab = page.locator("button").filter({ hasText: /Campaigns/i }).first();
     await tab.click();
     await page.waitForTimeout(500);
@@ -109,7 +109,7 @@ test.describe("Newsletters Page", () => {
   test("overview tab shows Pipeline section", async ({ page }) => {
     await page.goto("/newsletters");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // Overview tab renders Pipeline card with "Pipeline" heading
     await expect(page.getByText("Pipeline", { exact: true }).first()).toBeVisible({ timeout: 5000 });
   });
@@ -117,7 +117,7 @@ test.describe("Newsletters Page", () => {
   test("overview tab shows stat pills", async ({ page }) => {
     await page.goto("/newsletters");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // Stat pills show "sent", "opens", "clicks" with % values
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     expect(pageText).toMatch(/sent|opens|clicks/i);
@@ -126,7 +126,7 @@ test.describe("Newsletters Page", () => {
   test("no NaN or undefined values", async ({ page }) => {
     await page.goto("/newsletters");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const text = await page.evaluate(() => {
       const main = document.querySelector("main");
       const clone = main?.cloneNode(true) as HTMLElement;
@@ -140,7 +140,7 @@ test.describe("Newsletters Page", () => {
   test("tab bar is scrollable container", async ({ page }) => {
     await page.goto("/newsletters");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tabBar = page.locator("[class*='overflow-x-auto']").first();
     await expect(tabBar).toBeVisible({ timeout: 5000 });
   });

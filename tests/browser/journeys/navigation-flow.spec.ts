@@ -203,7 +203,7 @@ test.describe("Navigation Flow Journey", () => {
     if (contactId) {
       await page.goto(`/contacts/${contactId}`);
       await page.waitForLoadState('domcontentloaded');
-      await page.waitForTimeout(2000);
+      await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
       expect(page.url()).toContain("/contacts");
     }
 

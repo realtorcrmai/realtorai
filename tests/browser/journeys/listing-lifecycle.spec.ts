@@ -13,7 +13,7 @@ test.describe("Listing Lifecycle Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     await expect(page).toHaveURL(/\/listings\/[a-f0-9-]+/);
   });
 
@@ -22,7 +22,7 @@ test.describe("Listing Lifecycle Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const heading = page.locator("h1").first();
     await expect(heading).toBeVisible();
     await expect(heading).not.toHaveText("");
@@ -33,7 +33,7 @@ test.describe("Listing Lifecycle Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // Price uses DollarSign icon + CAD formatting
     const priceText = page.locator("text=/\\$[\\d,]+/").first();
     await expect(priceText).toBeVisible();
@@ -44,7 +44,7 @@ test.describe("Listing Lifecycle Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     await expect(page.locator("text=Lockbox")).toBeVisible();
   });
 
@@ -56,7 +56,7 @@ test.describe("Listing Lifecycle Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const sidebar = page.locator(".border-r").first();
     await expect(sidebar).toBeVisible();
     const listingLinks = sidebar.locator("a[href^='/listings/']");
@@ -69,7 +69,7 @@ test.describe("Listing Lifecycle Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const sidebarLinks = page.locator(".border-r a[href^='/listings/']");
     const count = await sidebarLinks.count();
     if (count > 1) {
@@ -88,7 +88,7 @@ test.describe("Listing Lifecycle Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // ListingWorkflow component is rendered inside a Card
     const workflowCard = page.locator("text=/Phase|Intake|Enrichment|CMA|Pricing|Form|Signature|MLS/i").first();
     await expect(workflowCard).toBeVisible();
@@ -99,7 +99,7 @@ test.describe("Listing Lifecycle Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // Phase indicators exist in the workflow
     const phaseIndicators = page.locator("text=/Phase [1-8]/i");
     const count = await phaseIndicators.count();
@@ -113,7 +113,7 @@ test.describe("Listing Lifecycle Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // "View Seller" button links to /contacts/:id
     const sellerLink = page.locator("a[href^='/contacts/']").first();
     await expect(sellerLink).toBeVisible();
@@ -127,7 +127,7 @@ test.describe("Listing Lifecycle Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const sellerLink = page.locator("a:has-text('View Seller')");
     if (await sellerLink.isVisible()) {
       await sellerLink.click();
@@ -145,7 +145,7 @@ test.describe("Listing Lifecycle Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     await expect(page.locator("text=Showing History")).toBeVisible();
   });
 
@@ -154,7 +154,7 @@ test.describe("Listing Lifecycle Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const hasShowings = page.locator("text=/requested|confirmed|denied|cancelled/i").first();
     const emptyState = page.locator("text=No showings for this listing yet");
     const showingVisible = await hasShowings.isVisible().catch(() => false);
@@ -170,7 +170,7 @@ test.describe("Listing Lifecycle Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const rightPanel = page.locator("aside").first();
     await expect(rightPanel).toBeVisible();
   });
@@ -200,7 +200,7 @@ test.describe("Listing Lifecycle Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // ShowingRequestForm or a button to create showing
     const showingBtn = page.locator("button:has-text('Showing'), button:has-text('Request'), button:has-text('Schedule')").first();
     const isVisible = await showingBtn.isVisible().catch(() => false);
@@ -215,7 +215,7 @@ test.describe("Listing Lifecycle Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // AlertBanner appears when FINTRAC/DORTS/PDS missing — check it exists or not (both valid)
     const bodyContent = page.locator("main");
     // Page should at least have loaded content
@@ -230,7 +230,7 @@ test.describe("Listing Lifecycle Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // Buttons like Neighbourhood, Conveyancing Pack
     const actionsRow = page.locator("button, a").filter({ hasText: /Neighbourhood|Conveyancing|Sync/i }).first();
     const isVisible = await actionsRow.isVisible().catch(() => false);

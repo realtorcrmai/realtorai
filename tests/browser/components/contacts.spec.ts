@@ -11,7 +11,7 @@ test.describe("Contacts Page", () => {
     test.skip(!id, 'No contacts in database');
     await page.goto(`/contacts/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     expect(page.url()).toMatch(/\/contacts/);
   });
 
@@ -20,7 +20,7 @@ test.describe("Contacts Page", () => {
     test.skip(!id, 'No contacts in database');
     await page.goto(`/contacts/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const h1 = page.locator("h1").first();
     await expect(h1).toBeVisible({ timeout: 5000 });
     const text = await h1.textContent();
@@ -32,7 +32,7 @@ test.describe("Contacts Page", () => {
     test.skip(!id, 'No contacts in database');
     await page.goto(`/contacts/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     expect(pageText).toMatch(/buyer|seller|customer|other|partner/i);
   });
@@ -42,7 +42,7 @@ test.describe("Contacts Page", () => {
     test.skip(!id, 'No contacts in database');
     await page.goto(`/contacts/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     // E.164 phone format or at minimum some digits
     expect(pageText).toMatch(/\+1|phone|\d{3}/i);
@@ -53,7 +53,7 @@ test.describe("Contacts Page", () => {
     test.skip(!id, 'No contacts in database');
     await page.goto(`/contacts/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // ContactDetailTabs uses shadcn Tabs with TabsTrigger role="tab"
     const tab = page.locator("[role='tab']").filter({ hasText: /overview/i }).first();
     if (await tab.isVisible({ timeout: 5000 }).catch(() => false)) {
@@ -67,7 +67,7 @@ test.describe("Contacts Page", () => {
     test.skip(!id, 'No contacts in database');
     await page.goto(`/contacts/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tab = page.locator("[role='tab']").filter({ hasText: /intelligence/i }).first();
     await expect(tab).toBeVisible({ timeout: 5000 });
   });
@@ -77,7 +77,7 @@ test.describe("Contacts Page", () => {
     test.skip(!id, 'No contacts in database');
     await page.goto(`/contacts/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tab = page.locator("[role='tab']").filter({ hasText: /activity/i }).first();
     await expect(tab).toBeVisible({ timeout: 5000 });
   });
@@ -87,7 +87,7 @@ test.describe("Contacts Page", () => {
     test.skip(!id, 'No contacts in database');
     await page.goto(`/contacts/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tab = page.locator("[role='tab']").filter({ hasText: /deals/i }).first();
     await expect(tab).toBeVisible({ timeout: 5000 });
   });
@@ -97,7 +97,7 @@ test.describe("Contacts Page", () => {
     test.skip(!id, 'No contacts in database');
     await page.goto(`/contacts/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tab = page.locator("[role='tab']").filter({ hasText: /intelligence/i }).first();
     if (await tab.isVisible({ timeout: 5000 }).catch(() => false)) {
       await tab.click();
@@ -112,7 +112,7 @@ test.describe("Contacts Page", () => {
     test.skip(!id, 'No contacts in database');
     await page.goto(`/contacts/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tab = page.locator("[role='tab']").filter({ hasText: /activity/i }).first();
     if (await tab.isVisible({ timeout: 5000 }).catch(() => false)) {
       await tab.click();
@@ -127,7 +127,7 @@ test.describe("Contacts Page", () => {
     test.skip(!id, 'No contacts in database');
     await page.goto(`/contacts/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const tab = page.locator("[role='tab']").filter({ hasText: /deals/i }).first();
     if (await tab.isVisible({ timeout: 5000 }).catch(() => false)) {
       await tab.click();
@@ -142,7 +142,7 @@ test.describe("Contacts Page", () => {
     test.skip(!id, 'No contacts in database');
     await page.goto(`/contacts/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     // StageBar or convert button section
     expect(pageText).toMatch(/new|qualified|active|under contract|closed|cold|convert/i);
@@ -153,7 +153,7 @@ test.describe("Contacts Page", () => {
     test.skip(!id, 'No contacts in database');
     await page.goto(`/contacts/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const editBtn = page.locator("button").filter({ hasText: /edit/i }).first();
     await expect(editBtn).toBeVisible({ timeout: 5000 });
   });
@@ -163,7 +163,7 @@ test.describe("Contacts Page", () => {
     test.skip(!id, 'No contacts in database');
     await page.goto(`/contacts/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const text = await page.evaluate(() => {
       const main = document.querySelector("main");
       const clone = main?.cloneNode(true) as HTMLElement;

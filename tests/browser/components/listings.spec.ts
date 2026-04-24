@@ -11,7 +11,7 @@ test.describe("Listings Page", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     expect(page.url()).toMatch(/\/listings/);
   });
 
@@ -20,7 +20,7 @@ test.describe("Listings Page", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const h1 = page.locator("h1").first();
     await expect(h1).toBeVisible({ timeout: 5000 });
     const text = await h1.textContent();
@@ -32,7 +32,7 @@ test.describe("Listings Page", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     expect(pageText).toMatch(/\$/);
   });
@@ -42,7 +42,7 @@ test.describe("Listings Page", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     expect(pageText).toMatch(/Lockbox/i);
   });
@@ -52,7 +52,7 @@ test.describe("Listings Page", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const sellerLink = page.locator("a[href*='/contacts/']").first();
     await expect(sellerLink).toBeVisible({ timeout: 5000 });
   });
@@ -62,7 +62,7 @@ test.describe("Listings Page", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const viewSeller = page.locator("a").filter({ hasText: /View Seller/i }).first();
     if (await viewSeller.isVisible({ timeout: 3000 }).catch(() => false)) {
       const href = await viewSeller.getAttribute("href");
@@ -75,7 +75,7 @@ test.describe("Listings Page", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     expect(pageText).toMatch(/Showing History/i);
   });
@@ -85,7 +85,7 @@ test.describe("Listings Page", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     // ListingWorkflow renders phase-related content
     expect(pageText).toMatch(/Phase|Seller Intake|Data Enrichment|CMA|Pricing|Form|Signature|MLS/i);
@@ -96,7 +96,7 @@ test.describe("Listings Page", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     // ManualStatusOverride shows listing status
     expect(pageText).toMatch(/active|pending|sold|draft/i);
@@ -107,7 +107,7 @@ test.describe("Listings Page", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // At least header card + workflow card + showing history card
     const cardCount = await page.locator("[class*='card'], [class*='Card']").count();
     expect(cardCount).toBeGreaterThanOrEqual(2);
@@ -118,7 +118,7 @@ test.describe("Listings Page", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const viewSeller = page.locator("a").filter({ hasText: /View Seller/i }).first();
     if (await viewSeller.isVisible({ timeout: 3000 }).catch(() => false)) {
       await viewSeller.click();
@@ -132,7 +132,7 @@ test.describe("Listings Page", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const text = await page.evaluate(() => {
       const main = document.querySelector("main");
       const clone = main?.cloneNode(true) as HTMLElement;
@@ -148,7 +148,7 @@ test.describe("Listings Page", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     // FormReadinessPanel or workflow shows form references
     expect(pageText).toMatch(/Form|DORTS|PDS|FINTRAC|Document/i);
