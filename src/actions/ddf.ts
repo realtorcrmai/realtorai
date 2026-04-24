@@ -13,6 +13,81 @@ import {
 import { mapDDFToListing } from "@/lib/ddf/mapper";
 import type { DDFSearchParams } from "@/types/ddf";
 
+// ─── Preview a DDF listing (read-only, no database writes) ──
+
+function extractMLSNumber(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  // If it looks like a plain MLS number (e.g. R2901234, V1234567), return it directly
+  if (/^[A-Z]?\d{5,10}$/i.test(trimmed)) return trimmed.toUpperCase();
+
+  // realtor.ca URL formats:
+  //   https://www.realtor.ca/real-estate/12345678/...
+  //   https://www.realtor.ca/real-estate/27924346/123-street-city-province-postal
+  const realtorMatch = trimmed.match(/realtor\.ca\/real-estate\/(\d+)/i);
+  if (realtorMatch) return realtorMatch[1];
+
+  // Board-specific or generic URL with MLS number in path or query
+  const mlsParamMatch = trimmed.match(/[?&](?:mls|mlsNumber|listingId)=([A-Z0-9]+)/i);
+  if (mlsParamMatch) return mlsParamMatch[1].toUpperCase();
+
+  // Try to find an MLS-like pattern in the URL path (letter + digits)
+  const pathMatch = trimmed.match(/\/([A-Z]\d{6,9})\b/i);
+  if (pathMatch) return pathMatch[1].toUpperCase();
+
+  // Last resort: if it contains only alphanumeric and is 6-10 chars, treat as MLS number
+  if (/^[A-Z0-9]{6,10}$/i.test(trimmed)) return trimmed.toUpperCase();
+
+  return null;
+}
+
+export async function previewDDFListing(input: string) {
+  const mlsNumber = extractMLSNumber(input);
+  if (!mlsNumber) {
+    return { error: "Could not extract an MLS number from the provided input. Enter an MLS number (e.g. R2901234) or paste a realtor.ca listing URL." };
+  }
+
+  try {
+    const property = await getPropertyByMLS(mlsNumber);
+    if (!property) {
+      return { error: `No listing found for MLS# ${mlsNumber} in the DDF database.` };
+    }
+
+    const mapped = mapDDFToListing(property);
+    const media = property.Media ?? [];
+    const photos = media
+      .filter((m) => m.MediaCategory === "Property Photo")
+      .slice(0, 6)
+      .map((m) => m.MediaURL);
+
+    return {
+      success: true,
+      mlsNumber: property.ListingId,
+      listingKey: property.ListingKey,
+      address: property.UnparsedAddress,
+      city: property.City,
+      province: property.StateOrProvince,
+      postalCode: property.PostalCode,
+      listPrice: property.ListPrice,
+      propertyType: mapped.listing.property_type,
+      status: mapped.listing.status,
+      bedrooms: property.BedroomsTotal,
+      bathrooms: property.BathroomsTotalInteger,
+      sqft: property.LivingArea,
+      yearBuilt: property.YearBuilt,
+      lotSize: property.LotSizeDimensions,
+      description: property.PublicRemarks,
+      heroImage: mapped.listing.hero_image_url,
+      photos,
+      photoCount: property.PhotosCount ?? 0,
+      listingUrl: property.ListingURL,
+    };
+  } catch (err) {
+    return { error: `Failed to fetch listing data: ${String(err)}` };
+  }
+}
+
 // ─── Search DDF listings (no writes) ──────────────────
 
 export async function searchDDFListings(params: DDFSearchParams) {
@@ -69,7 +144,8 @@ export async function countDDFListings(
 
 export async function importDDFListing(
   listingKeyOrMLS: string,
-  lookupBy: "key" | "mls" = "mls"
+  lookupBy: "key" | "mls" = "mls",
+  options?: { seller_id?: string; lockbox_code?: string }
 ) {
   const supabase = createAdminClient();
 
@@ -101,8 +177,8 @@ export async function importDDFListing(
   // 3. Map DDF → CRM
   const mapped = mapDDFToListing(property);
 
-  // 4. Get or create placeholder seller contact
-  const sellerId = await getOrCreateImportContact(supabase);
+  // 4. Get seller: use provided seller_id or create placeholder
+  const sellerId = options?.seller_id || await getOrCreateImportContact(supabase);
 
   // 5. Insert listing
   const { data: listing, error: listingError } = await supabase
@@ -110,6 +186,7 @@ export async function importDDFListing(
     .insert({
       ...mapped.listing,
       seller_id: sellerId,
+      ...(options?.lockbox_code ? { lockbox_code: options.lockbox_code } : {}),
     })
     .select("id, address, mls_number")
     .single();
