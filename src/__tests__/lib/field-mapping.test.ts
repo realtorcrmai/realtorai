@@ -218,7 +218,13 @@ describe('field-mapping property tests', () => {
         fc.string({ minLength: 1, maxLength: 10 }),
         (fieldName) => {
           const result = applyFieldMapping({ [fieldName]: '_today' }, makeContext());
-          if (result[fieldName]) {
+          // Guard against fast-check generating keys that collide with
+          // Object.prototype members (e.g. "constructor", "toString") —
+          // result[fieldName] then surfaces the prototype value, not "".
+          if (
+            Object.prototype.hasOwnProperty.call(result, fieldName) &&
+            typeof result[fieldName] === 'string'
+          ) {
             expect(result[fieldName]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
           }
         },
