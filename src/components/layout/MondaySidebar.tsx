@@ -6,7 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import {
   Home, ListTodo, Building2, Users, Clock, Calendar,
   Mail, Zap, Search, Upload, FileText,
-  Wand2, Settings, LogOut, Newspaper, Megaphone,
+  Wand2, Settings, LogOut, Newspaper, Megaphone, PartyPopper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -37,6 +37,7 @@ const TOOLS_NAV: NavItem[] = [
   { href: "/newsletters", label: "Email Marketing", icon: Mail, featureKey: "newsletters" },
   { href: "/newsletters/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/newsletters/editorial", label: "Editorial", icon: Newspaper },
+  { href: "/newsletters/greetings", label: "Greetings", icon: PartyPopper },
   { href: "/automations", label: "Automations", icon: Zap, featureKey: "automations" },
 ];
 
