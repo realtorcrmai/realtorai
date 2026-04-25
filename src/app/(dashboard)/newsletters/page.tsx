@@ -26,6 +26,8 @@ import { WhatWentOutFeed } from "@/components/newsletters/WhatWentOutFeed";
 import { JourneyScheduleCard } from "@/components/newsletters/JourneyScheduleCard";
 import { NurturePipelineCard, type NurturedContact } from "@/components/newsletters/NurturePipelineCard";
 import { UpcomingSendsCard } from "@/components/newsletters/UpcomingSendsCard";
+import { AIInsightsTab, type AIInsightsData } from "@/components/newsletters/AIInsightsTab";
+import { getABTests } from "@/actions/editorial";
 
 export default async function NewsletterDashboard() {
   const session = await auth();
@@ -43,12 +45,13 @@ export default async function NewsletterDashboard() {
     freshUser?.enabled_features as string[] | null,
   );
   const hasAutomations = enabledFeatures.includes("automations");
-  const [dashboard, queue, realtorConfig, , greetingRules] = await Promise.all([
+  const [dashboard, queue, realtorConfig, , greetingRules, abTestsResult] = await Promise.all([
     getJourneyDashboard(),
     getApprovalQueue(),
     getRealtorConfig(),
     getAutomationRules(),
     getGreetingRules(),
+    getABTests(),
   ]);
 
   const _now = Date.now();
@@ -274,6 +277,57 @@ export default async function NewsletterDashboard() {
   for (const bp of WORKFLOW_BLUEPRINTS) blueprintsBySlug[bp.slug] = bp;
   const workflowList = workflows || [];
 
+  // AI Insights tab data
+  const agentConfig = realtorConfig as Record<string, unknown> | null;
+  const voiceRules: Array<{ rule: string; source?: string }> = Array.isArray(agentConfig?.voice_rules)
+    ? (agentConfig.voice_rules as string[]).map(r => ({ rule: r, source: "edit" }))
+    : [];
+
+  // Quality scores from sent newsletters
+  const scoredEmails = sentNewsletters.filter((nl: any) => typeof nl.quality_score === "number" && nl.quality_score > 0);
+  const qualityScores = scoredEmails.map((nl: any) => nl.quality_score as number);
+  const avgQuality = qualityScores.length > 0 ? qualityScores.reduce((a: number, b: number) => a + b, 0) / qualityScores.length : 0;
+
+  // Trust distribution from journeys
+  const trustDist = { l0: 0, l1: 0, l2: 0, l3: 0 };
+  for (const j of (journeys || [])) {
+    const tl = (j as any).trust_level ?? 0;
+    if (tl >= 3) trustDist.l3++;
+    else if (tl >= 2) trustDist.l2++;
+    else if (tl >= 1) trustDist.l1++;
+    else trustDist.l0++;
+  }
+
+  // Governor activity from deferred/failed newsletters
+  const governorBlocked = sentNewsletters.filter((nl: any) => (nl.ai_context as any)?.governor_blocked).length;
+  const governorDeferred = sentNewsletters.filter((nl: any) => nl.status === "deferred").length;
+
+  const aiInsightsData: AIInsightsData = {
+    voiceRules,
+    abTests: (abTestsResult?.data || []).map((t: any) => ({
+      id: t.id, title: t.title, status: t.status,
+      subject_a: t.subject_a, subject_b: t.subject_b, ab_winner: t.ab_winner,
+    })),
+    quality: {
+      avgScore: avgQuality,
+      totalScored: scoredEmails.length,
+      highQuality: qualityScores.filter((s: number) => s >= 7).length,
+      lowQuality: qualityScores.filter((s: number) => s < 5).length,
+    },
+    sendTime: {
+      bestDay: (agentConfig?.default_send_day as string) || null,
+      bestHour: typeof agentConfig?.default_send_hour === "number" ? agentConfig.default_send_hour : null,
+    },
+    trust: trustDist,
+    governor: {
+      blocked: governorBlocked,
+      deferred: governorDeferred,
+      autoSunset: (journeys || []).filter((j: any) => j.is_paused && j.pause_reason === "auto_sunset").length,
+    },
+    learningConfidence: voiceRules.length >= 10 ? "high" : voiceRules.length >= 3 ? "medium" : "low",
+    totalEmailsAnalyzed: dashboard.totalSent,
+  };
+
   return (
     <>
       <PageHeader
@@ -388,6 +442,13 @@ export default async function NewsletterDashboard() {
                 <JourneyScheduleCard />
 
               </div>
+            ),
+
+            /* ══════════════════════════════
+               AI INSIGHTS TAB
+            ══════════════════════════════ */
+            insights: (
+              <AIInsightsTab data={aiInsightsData} />
             ),
 
             /* ══════════════════════════════
