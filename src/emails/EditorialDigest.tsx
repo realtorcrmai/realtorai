@@ -1,13 +1,24 @@
 /**
  * EditorialDigest.tsx — Master template for Magnate editorial newsletter editions.
  *
- * Uses the shared BaseLayout wrapper (logo, headshot, branding footer, dark mode,
- * mobile responsive) and renders editorial-specific blocks inside it.
+ * Uses the same visual language as the Welcome Drip emails: light purple bg,
+ * white rounded card, system fonts, dark mode, realtor branding.
  */
 
 import * as React from 'react'
-import { Hr, Section, Text } from '@react-email/components'
-import { BaseLayout, type RealtorBranding } from '@/emails/BaseLayout'
+import {
+  Html,
+  Head,
+  Body,
+  Container,
+  Preview,
+  Section,
+  Text,
+  Link,
+  Hr,
+  Img,
+} from '@react-email/components'
+import type { RealtorBranding } from '@/emails/BaseLayout'
 import type { EditorBlock } from '@/types/editorial'
 
 // Block components
@@ -48,8 +59,6 @@ function renderBlock(
   country: 'CA' | 'US',
   branding: RealtorBranding,
 ): React.ReactElement | null {
-  const accent = branding.accentColor || '#c9a96e'
-
   switch (block.type) {
     case 'hero':
       return <HeroBlock content={block.content} />
@@ -96,7 +105,7 @@ function detectCountry(branding: RealtorBranding): 'CA' | 'US' {
   return 'US'
 }
 
-// ── Masthead subtitle builder ─────────────────────────────────────────────────
+// ── Subtitle builder ──────────────────────────────────────────────────────────
 
 function buildSubtitle(
   edition: EditorialEditionInput,
@@ -115,9 +124,7 @@ function buildSubtitle(
     seasonal: 'Seasonal Edition',
   }
   parts.push(typeLabels[edition.edition_type] || 'Real Estate Intelligence')
-
   if (edition_number) parts.push(`Edition #${edition_number}`)
-
   return parts.join('  ·  ')
 }
 
@@ -131,8 +138,8 @@ export function EditorialDigest({
   edition_number,
 }: EditorialDigestProps) {
   const resolvedCountry = country ?? detectCountry(branding)
+  const accent = branding.accentColor || '#4f35d2'
 
-  // Build preview text from the first hero headline
   const previewText = (() => {
     for (const block of edition.blocks) {
       if (block.type === 'hero') {
@@ -145,7 +152,6 @@ export function EditorialDigest({
 
   const subtitle = buildSubtitle(edition, edition_number)
 
-  // Render all blocks
   const renderedBlocks: Array<{ id: string; el: React.ReactElement }> = []
   for (const block of edition.blocks) {
     const el = renderBlock(block, resolvedCountry, branding)
@@ -155,38 +161,220 @@ export function EditorialDigest({
   }
 
   return (
-    <BaseLayout
-      previewText={previewText}
-      branding={branding}
-      unsubscribeUrl={unsubscribe_url}
-    >
-      {/* Masthead — edition title + type label */}
-      <MastheadBlock title={edition.title} subtitle={subtitle} />
+    <Html>
+      <Head>
+        <meta name="color-scheme" content="light dark" />
+        <meta name="supported-color-schemes" content="light dark" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>{`
+          @media (prefers-color-scheme: dark) {
+            .ed-body { background-color: #1a1535 !important; }
+            .ed-card { background-color: #2a2555 !important; }
+            .ed-text { color: #e8e5f5 !important; }
+            .ed-muted { color: #a0a0c0 !important; }
+            .ed-footer { background-color: #1e1845 !important; }
+          }
+          @media only screen and (max-width: 600px) {
+            .ed-card { width: 100% !important; border-radius: 0 !important; }
+            .ed-content { padding: 0 16px !important; }
+          }
+        `}</style>
+      </Head>
 
-      {/* Content blocks */}
-      {renderedBlocks.length > 0 ? (
-        renderedBlocks.map(({ id, el }, idx) => (
-          <React.Fragment key={id}>
-            {el}
-            {idx < renderedBlocks.length - 1 && (
-              <Hr
-                style={{
-                  borderColor: '#e8e5f5',
-                  borderTopWidth: '1px',
-                  borderStyle: 'solid',
-                  margin: '0',
-                }}
+      <Preview>{previewText}</Preview>
+
+      <Body style={main} className="ed-body">
+        <Container style={container} className="ed-card">
+
+          {/* ── Header: Logo or brand name ── */}
+          <Section style={headerSection}>
+            {branding.logoUrl ? (
+              <Img
+                src={branding.logoUrl}
+                width="140"
+                alt={`${branding.name} logo`}
+                style={{ margin: '0 auto', display: 'block' }}
+              />
+            ) : (
+              <Text style={{ ...brandNameStyle, color: accent }}>{branding.name}</Text>
+            )}
+          </Section>
+
+          {/* ── Masthead: Edition title + subtitle ── */}
+          <MastheadBlock title={edition.title} subtitle={subtitle} />
+
+          {/* ── Content blocks ── */}
+          <Section className="ed-content">
+            {renderedBlocks.length > 0 ? (
+              renderedBlocks.map(({ id, el }, idx) => (
+                <React.Fragment key={id}>
+                  {el}
+                  {idx < renderedBlocks.length - 1 && (
+                    <Hr style={blockDivider} />
+                  )}
+                </React.Fragment>
+              ))
+            ) : (
+              <Section style={{ padding: '40px', textAlign: 'center' }}>
+                <Text style={{ fontSize: '16px', color: '#4a4a6a', margin: '0' }} className="ed-text">
+                  {edition.title}
+                </Text>
+              </Section>
+            )}
+          </Section>
+
+          {/* ── Agent card footer ── */}
+          <Hr style={footerDivider} />
+          <Section style={footerSection} className="ed-footer">
+            {/* Headshot */}
+            {branding.headshotUrl && (
+              <Img
+                src={branding.headshotUrl}
+                width="64"
+                height="64"
+                alt={`Photo of ${branding.name}`}
+                style={avatarStyle}
               />
             )}
-          </React.Fragment>
-        ))
-      ) : (
-        <Section style={{ padding: '40px', textAlign: 'center' }}>
-          <Text style={{ fontSize: '16px', color: '#3a3a5c', margin: '0' }}>
-            {edition.title}
-          </Text>
-        </Section>
-      )}
-    </BaseLayout>
+
+            {/* Agent info */}
+            <Text style={agentNameStyle} className="ed-text">{branding.name}</Text>
+            {(branding.title || branding.brokerage) && (
+              <Text style={agentDetailStyle} className="ed-muted">
+                {[branding.title, branding.brokerage].filter(Boolean).join('  ·  ')}
+              </Text>
+            )}
+
+            {/* Contact links */}
+            {(branding.phone || branding.email) && (
+              <Text style={agentDetailStyle}>
+                {branding.phone && (
+                  <Link href={`tel:${branding.phone}`} style={{ color: accent, textDecoration: 'none' }}>
+                    {branding.phone}
+                  </Link>
+                )}
+                {branding.phone && branding.email ? '  ·  ' : ''}
+                {branding.email && (
+                  <Link href={`mailto:${branding.email}`} style={{ color: accent, textDecoration: 'none' }}>
+                    {branding.email}
+                  </Link>
+                )}
+              </Text>
+            )}
+
+            {/* Compliance */}
+            <Hr style={{ borderColor: '#e8e5f5', margin: '16px 0', borderTopWidth: '1px', borderStyle: 'solid', opacity: 0.5 }} />
+
+            {resolvedCountry === 'CA' ? (
+              <Text style={complianceStyle} className="ed-muted">
+                Sent in compliance with CASL (Canada&apos;s Anti-Spam Legislation).
+              </Text>
+            ) : (
+              <Text style={complianceStyle} className="ed-muted">
+                CAN-SPAM compliant. This email was sent to you as a valued client.
+              </Text>
+            )}
+
+            {branding.physicalAddress && (
+              <Text style={addressStyle} className="ed-muted">{branding.physicalAddress}</Text>
+            )}
+
+            <Text style={unsubTextStyle}>
+              <Link href={unsubscribe_url} style={unsubLinkStyle}>Unsubscribe</Link>
+              {' '}from this newsletter
+            </Text>
+          </Section>
+        </Container>
+      </Body>
+    </Html>
   )
+}
+
+// ── Styles (matching Welcome Drip design language) ────────────────────────────
+
+const main = {
+  backgroundColor: '#f4f2ff',
+  fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+  padding: '32px 16px',
+}
+
+const container = {
+  maxWidth: '600px',
+  margin: '0 auto',
+  backgroundColor: '#ffffff',
+  borderRadius: '16px',
+  overflow: 'hidden' as const,
+}
+
+const headerSection = {
+  padding: '28px 32px 0',
+  textAlign: 'center' as const,
+}
+
+const brandNameStyle = {
+  fontSize: '20px',
+  fontWeight: '700' as const,
+  margin: '0',
+  letterSpacing: '-0.5px',
+}
+
+const blockDivider = {
+  borderColor: '#e8e5f5',
+  borderTopWidth: '1px',
+  borderStyle: 'solid' as const,
+  margin: '0',
+}
+
+const footerDivider = {
+  borderColor: '#e8e5f5',
+  margin: '0',
+}
+
+const footerSection = {
+  padding: '24px 32px',
+  textAlign: 'center' as const,
+}
+
+const avatarStyle = {
+  borderRadius: '50%',
+  margin: '0 auto 12px',
+  objectFit: 'cover' as const,
+  display: 'block' as const,
+}
+
+const agentNameStyle = {
+  fontSize: '16px',
+  fontWeight: '600' as const,
+  color: '#1a1535',
+  margin: '0 0 2px',
+}
+
+const agentDetailStyle = {
+  fontSize: '13px',
+  color: '#6b6b8d',
+  margin: '0 0 2px',
+}
+
+const complianceStyle = {
+  fontSize: '10px',
+  color: '#a0a0b0',
+  margin: '0 0 4px',
+  lineHeight: '1.6',
+}
+
+const addressStyle = {
+  fontSize: '10px',
+  color: '#b0b0c0',
+  margin: '0 0 12px',
+}
+
+const unsubTextStyle = {
+  fontSize: '11px',
+  color: '#a0a0b0',
+  margin: '0',
+}
+
+const unsubLinkStyle = {
+  color: '#a0a0b0',
+  textDecoration: 'underline',
 }

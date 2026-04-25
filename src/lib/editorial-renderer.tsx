@@ -69,20 +69,17 @@ export async function renderEdition(edition: RenderEditionInput): Promise<string
 
   // Inject the personalizer marker just before the footer so that
   // sendEdition() can replace it per-recipient with a Haiku-generated paragraph.
-  // BaseLayout renders a <hr> before the footer section — we inject before that.
-  // Falls back to injecting before </body> if the pattern is not found.
+  // We inject before the LAST <hr> in the email (the footer divider).
+  // Falls back to injecting before </body> if no <hr> is found.
   const MARKER = '<!-- __PERSONALIZED_BLOCK__ -->'
   let markedHtml: string
 
-  // Match the footer <hr> divider (border-color:#e8e5f5) that BaseLayout renders,
-  // or the legacy dark footer table (background:#1a2e1a) for backward compat.
-  const footerHrRe = /(<hr[^>]*border-color:\s*#e8e5f5[^>]*\/?>)/i
-  const legacyFooterRe = /(<table[^>]*(?:background(?:-color)?:\s*#1a2e1a)[^>]*>)/i
-
-  if (footerHrRe.test(html)) {
-    markedHtml = html.replace(footerHrRe, `${MARKER}$1`)
-  } else if (legacyFooterRe.test(html)) {
-    markedHtml = html.replace(legacyFooterRe, `${MARKER}$1`)
+  // Find the last <hr> tag — that's the footer divider
+  const allHrs = [...html.matchAll(/<hr[^>]*\/?>/gi)]
+  if (allHrs.length > 0) {
+    const lastHr = allHrs[allHrs.length - 1]
+    const pos = lastHr.index!
+    markedHtml = html.slice(0, pos) + MARKER + html.slice(pos)
   } else {
     // Fallback: inject before closing </body>
     markedHtml = html.replace(/<\/body>/i, `${MARKER}</body>`)
