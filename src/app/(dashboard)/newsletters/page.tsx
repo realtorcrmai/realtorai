@@ -15,9 +15,11 @@ import { GreetingAutomations } from "@/components/newsletters/GreetingAutomation
 import { sendNewsletter, skipNewsletter, bulkApproveNewsletters, sendListingBlast, sendCampaign } from "@/actions/newsletters";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { WORKFLOW_BLUEPRINTS } from "@/lib/constants";
+import { JOURNEY_SCHEDULES } from "@/lib/constants/journey-schedules";
 import { getRealtorConfig, getAutomationRules, getGreetingRules } from "@/actions/config";
 import { AIAgentQueue } from "@/components/newsletters/AIAgentQueue";
 import { WhatWentOutFeed } from "@/components/newsletters/WhatWentOutFeed";
+import { JourneyScheduleCard } from "@/components/newsletters/JourneyScheduleCard";
 
 export default async function NewsletterDashboard() {
   const session = await auth();
@@ -294,6 +296,9 @@ export default async function NewsletterDashboard() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Journey Schedule — what gets sent when */}
+                <JourneyScheduleCard />
 
                 {/* Unified feed — what went out across all email systems */}
                 <WhatWentOutFeed items={whatWentOut as any} />
