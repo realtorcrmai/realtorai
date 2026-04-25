@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-25 --full-ux-audit-flake-fixes -->
+<!-- docs-audit-reviewed: 2026-04-25 --e2e-fixes-rebase -->
 <!-- docs-audit: tests/**, scripts/test-*, vitest.config.ts -->
 <!-- last-verified: 2026-04-13 -->
 # Testing Strategy — Realtors360 CRM

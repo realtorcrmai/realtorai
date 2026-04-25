@@ -1,4 +1,5 @@
 <!-- docs-audit: package.json, src/**, docs/* -->
+<!-- docs-audit-reviewed: 2026-04-24 -->
 # RealtorAI
 
 **A BC AI Agent for Real Estate Transaction & Showing Automation**

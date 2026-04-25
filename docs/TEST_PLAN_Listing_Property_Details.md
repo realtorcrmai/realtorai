@@ -1,6 +1,6 @@
 <!-- docs-audit: none --><!-- docs-audit-reviewed: 2026-04-21 -->
 <!-- last-verified: 2026-04-20 -->
-<!-- test-count: 47 -->
+<!-- test-count: 52 -->
 # Test Plan: Listing Property Details, Pagination, Soft Delete, Buyer FINTRAC & CMA
 
 ## Overview
@@ -89,3 +89,13 @@ Tests for the listing enhancement PR: property detail columns, server-side pagin
 | WR-04 | SkipStepButton still functional | Skipping advances phase correctly |
 | WR-05 | Editable fields in completed phases work | Save triggers updateListing/updateContact |
 | WR-06 | TypeScript compiles clean | npx tsc --noEmit passes |
+
+## 8. MLS Import from realtor.ca (src/actions/mls-scraper.ts)
+
+| ID | Scenario | Expected |
+|----|----------|----------|
+| MLS-01 | scrapeRealtorCa with valid realtor.ca URL | Returns parsed listing payload (address, price, beds, baths, sqft, photos) |
+| MLS-02 | scrapeRealtorCa with non-realtor.ca URL | Returns `{ error }` — rejects SSRF-class hosts |
+| MLS-03 | scrapeRealtorCa called by unauthenticated user | Returns `{ error: "Unauthorized" }` |
+| MLS-04 | scrapeRealtorCa with malformed/404 URL | Returns `{ error }`, no unhandled exception |
+| MLS-05 | Imported listing fields auto-populate Create Listing form | Address, price, photos visible without manual entry |

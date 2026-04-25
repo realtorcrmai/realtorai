@@ -67,7 +67,7 @@ test.describe("REQ-CONTACT: Contact CRUD — 4-Layer Assertions", () => {
 
     await page.goto(`/contacts/${dbContact.id}`);
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
 
     // ── Layer 1: UI assertion ──────────────────────────────────
     const h1 = page.locator("h1").first();
@@ -99,7 +99,7 @@ test.describe("REQ-CONTACT: Contact CRUD — 4-Layer Assertions", () => {
 
     await page.goto(`/contacts/${contacts[0].id}`);
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
 
     // ── Layer 1: UI assertion ──────────────────────────────────
     // Tabs have emoji prefixes: 📋 Overview, 💬 Activity, 🏠 Deals
@@ -221,7 +221,7 @@ test.describe("REQ-CONTACT: Contact CRUD — 4-Layer Assertions", () => {
     for (const contact of toCheck) {
       await page.goto(`/contacts/${contact.id}`);
       await page.waitForLoadState("domcontentloaded");
-      await page.waitForTimeout(2000);
+      await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
 
       // ── Layer 1: UI assertion ────────────────────────────────
       const text = await page.evaluate(() => {
@@ -259,7 +259,7 @@ test.describe("REQ-CONTACT: Contact CRUD — 4-Layer Assertions", () => {
 
     await page.goto(`/contacts/${contact.id}`);
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
 
     // ── Layer 1: UI assertion ──────────────────────────────────
     const pageText = await page.evaluate(
