@@ -25,6 +25,7 @@ import { AIAgentQueue } from "@/components/newsletters/AIAgentQueue";
 import { WhatWentOutFeed } from "@/components/newsletters/WhatWentOutFeed";
 import { JourneyScheduleCard } from "@/components/newsletters/JourneyScheduleCard";
 import { NurturePipelineCard, type NurturedContact } from "@/components/newsletters/NurturePipelineCard";
+import { UpcomingSendsCard } from "@/components/newsletters/UpcomingSendsCard";
 
 export default async function NewsletterDashboard() {
   const session = await auth();
@@ -356,8 +357,6 @@ export default async function NewsletterDashboard() {
                   hotLeadCount={hotLeads.length}
                   successStories={successStories}
                   upcomingSends={upcomingSends}
-                  scheduledEmails={scheduledEmailsTruncated}
-                  templatePreviews={templatePreviews}
                 />
 
                 {/* Approval queue — only shown when there are drafts */}
@@ -372,6 +371,12 @@ export default async function NewsletterDashboard() {
 
                 {/* Pipeline — who is being nurtured */}
                 <NurturePipelineCard contacts={nurturedContacts} />
+
+                {/* Upcoming sends — what's scheduled next */}
+                <UpcomingSendsCard
+                  items={scheduledEmailsTruncated}
+                  templatePreviews={templatePreviews}
+                />
 
                 {/* Unified feed — what went out across all email systems */}
                 <WhatWentOutFeed items={whatWentOut as any} />
