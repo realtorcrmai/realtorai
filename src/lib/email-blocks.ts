@@ -711,6 +711,9 @@ const TEMPLATE_BLOCKS: Record<string, Record<string, string[]>> = {
   seller_guide: {
     default: ["header", "heroGradient", "personalNote", "statsRow", "recentSales", "priceComparison", "featureList", "testimonial", "cta", "agentCard", "footer"],
   },
+  greeting: {
+    default: ["header", "heroGradient", "personalNote", "testimonial", "cta", "agentCard", "footer"],
+  },
 };
 
 // ═══════════════════════════════════════════════

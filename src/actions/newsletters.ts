@@ -157,6 +157,18 @@ async function renderEmailTemplate(
     year_in_review: "market_update",
     community_event: "neighbourhood_guide",
     price_drop_alert: "listing_alert",
+    // Greeting automations
+    greeting_birthday: "greeting",
+    greeting_home_anniversary: "greeting",
+    greeting_christmas: "greeting",
+    greeting_new_year: "greeting",
+    greeting_diwali: "greeting",
+    greeting_lunar_new_year: "greeting",
+    greeting_canada_day: "greeting",
+    greeting_thanksgiving: "greeting",
+    greeting_valentines: "greeting",
+    greeting_mothers_day: "greeting",
+    greeting_fathers_day: "greeting",
   };
 
   const blockType = typeMap[emailType] || "welcome";

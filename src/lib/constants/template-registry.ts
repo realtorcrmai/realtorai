@@ -598,4 +598,138 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateEntry> = {
       ...commonFields(branding),
     }),
   },
+
+  // ── Greeting Templates ─────────────────────────────────────
+
+  greeting_birthday: {
+    slug: "greeting-birthday",
+    displayName: "Birthday Greeting",
+    description: "Warm birthday wishes to your contacts on their special day.",
+    icon: "🎂",
+    category: "greeting",
+    blockType: "greeting",
+    sampleSubject: "Happy Birthday, Sarah!",
+    sampleData: (branding) => ({
+      contact: { name: "Sarah Chen", firstName: "Sarah", type: "buyer" },
+      agent: agentFromBranding(branding),
+      content: {
+        subject: "Happy Birthday, Sarah!",
+        intro: "Wishing you a wonderful birthday filled with joy and happiness! I hope this year brings you everything you've been hoping for.",
+        body: "Thank you for being a valued part of my network. Whether you're celebrating at home or out on the town, I hope today is truly special. Here's to an amazing year ahead!",
+        ctaText: "Stay in Touch", ctaUrl: `mailto:${branding.email || ""}`,
+      },
+      testimonial: { quote: "A home isn't just a place — it's where birthdays become memories.", name: branding.name, role: "Your REALTOR\u00ae" },
+      ...commonFields(branding),
+    }),
+  },
+
+  greeting_christmas: {
+    slug: "greeting-christmas",
+    displayName: "Christmas Greeting",
+    description: "Holiday season wishes to your entire network.",
+    icon: "🎄",
+    category: "greeting",
+    blockType: "greeting",
+    sampleSubject: "Merry Christmas, Sarah!",
+    sampleData: (branding) => ({
+      contact: { name: "Sarah Chen", firstName: "Sarah", type: "buyer" },
+      agent: agentFromBranding(branding),
+      content: {
+        subject: "Merry Christmas, Sarah!",
+        intro: "Wishing you and your family a wonderful Christmas filled with warmth, love, and joy.",
+        body: "May your home be filled with laughter and beautiful memories this holiday season. Thank you for your trust and friendship throughout the year. Here's to a bright and prosperous new year!",
+        ctaText: "Warm Wishes", ctaUrl: `mailto:${branding.email || ""}`,
+      },
+      testimonial: { quote: "Home is where the holidays come alive.", name: branding.name, role: "Your REALTOR\u00ae" },
+      ...commonFields(branding),
+    }),
+  },
+
+  greeting_new_year: {
+    slug: "greeting-new-year",
+    displayName: "New Year Greeting",
+    description: "Ring in the new year with market outlook.",
+    icon: "🎆",
+    category: "greeting",
+    blockType: "greeting",
+    sampleSubject: "Happy New Year, Sarah!",
+    sampleData: (branding) => ({
+      contact: { name: "Sarah Chen", firstName: "Sarah", type: "buyer" },
+      agent: agentFromBranding(branding),
+      content: {
+        subject: "Happy New Year, Sarah!",
+        intro: "Cheers to a brand new year! May it bring you health, happiness, and exciting new opportunities.",
+        body: "Whether you're thinking about your next move or simply enjoying where you are, I'm here to help with anything real estate. Here's to an incredible year ahead!",
+        ctaText: "Let's Connect", ctaUrl: `mailto:${branding.email || ""}`,
+      },
+      testimonial: { quote: "New year, new possibilities — your dream home awaits.", name: branding.name, role: "Your REALTOR\u00ae" },
+      ...commonFields(branding),
+    }),
+  },
+
+  greeting_diwali: {
+    slug: "greeting-diwali",
+    displayName: "Diwali Greeting",
+    description: "Festival of Lights celebration.",
+    icon: "🪔",
+    category: "greeting",
+    blockType: "greeting",
+    sampleSubject: "Happy Diwali, Sarah!",
+    sampleData: (branding) => ({
+      contact: { name: "Sarah Chen", firstName: "Sarah", type: "buyer" },
+      agent: agentFromBranding(branding),
+      content: {
+        subject: "Happy Diwali, Sarah!",
+        intro: "Wishing you a Diwali filled with the glow of prosperity and the warmth of togetherness.",
+        body: "May this Festival of Lights illuminate your home and heart with joy and abundance. Thank you for being such a valued part of my community!",
+        ctaText: "Warm Wishes", ctaUrl: `mailto:${branding.email || ""}`,
+      },
+      testimonial: { quote: "May your home shine as bright as a thousand diyas.", name: branding.name, role: "Your REALTOR\u00ae" },
+      ...commonFields(branding),
+    }),
+  },
+
+  greeting_canada_day: {
+    slug: "greeting-canada-day",
+    displayName: "Canada Day Greeting",
+    description: "National pride and community celebration.",
+    icon: "🍁",
+    category: "greeting",
+    blockType: "greeting",
+    sampleSubject: "Happy Canada Day, Sarah!",
+    sampleData: (branding) => ({
+      contact: { name: "Sarah Chen", firstName: "Sarah", type: "buyer" },
+      agent: agentFromBranding(branding),
+      content: {
+        subject: "Happy Canada Day, Sarah!",
+        intro: "Wishing you a wonderful Canada Day! There's no better feeling than celebrating in a country we're proud to call home.",
+        body: "I hope you enjoy the festivities with family and friends. Cheers to the best neighbourhoods in the world — and to the community we share!",
+        ctaText: "Celebrate Together", ctaUrl: `mailto:${branding.email || ""}`,
+      },
+      testimonial: { quote: "Home is where the heart is — and we're proud to call Canada home.", name: branding.name, role: "Your REALTOR\u00ae" },
+      ...commonFields(branding),
+    }),
+  },
+
+  greeting_thanksgiving: {
+    slug: "greeting-thanksgiving",
+    displayName: "Thanksgiving Greeting",
+    description: "Gratitude message to your network.",
+    icon: "🦃",
+    category: "greeting",
+    blockType: "greeting",
+    sampleSubject: "Happy Thanksgiving, Sarah!",
+    sampleData: (branding) => ({
+      contact: { name: "Sarah Chen", firstName: "Sarah", type: "buyer" },
+      agent: agentFromBranding(branding),
+      content: {
+        subject: "Happy Thanksgiving, Sarah!",
+        intro: "This Thanksgiving, I wanted to take a moment to say thank you.",
+        body: "Thank you for your trust, your friendship, and for being part of my journey. I'm grateful to work in a community filled with wonderful people like you. Wishing you a beautiful day with the people you love.",
+        ctaText: "With Gratitude", ctaUrl: `mailto:${branding.email || ""}`,
+      },
+      testimonial: { quote: "Grateful for every client who has trusted me with their biggest decision.", name: branding.name, role: "Your REALTOR\u00ae" },
+      ...commonFields(branding),
+    }),
+  },
 };
