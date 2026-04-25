@@ -3140,6 +3140,28 @@ Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. Thi
 **Expected:** Flags contacts with no activity past threshold as dormant. Creates notifications.
 **Priority:** P2
 
+### MLS Scraper (`src/actions/mls-scraper.ts`)
+
+#### ACTION-MLS-SCRAPER-001: Happy path — scrape valid MLS listing URL
+**Steps:** Call `scrapeMlsListing(url)` with a supported MLS provider URL.
+**Expected:** Returns parsed `{ address, list_price, beds, baths, sqft, photos[], description }`. No error.
+**Priority:** P1
+
+#### ACTION-MLS-SCRAPER-002: Invalid URL rejected
+**Steps:** Call action with a malformed URL or non-MLS host.
+**Expected:** Returns `{ error: "Invalid MLS URL" }`. Does not throw.
+**Priority:** P1
+
+#### ACTION-MLS-SCRAPER-003: SSRF guard
+**Steps:** Call action with `http://localhost`, `http://127.0.0.1`, or RFC1918 private IP.
+**Expected:** Returns `{ error }`. Never makes the outbound request.
+**Priority:** P0
+
+#### ACTION-MLS-SCRAPER-004: Tenant scoping on save
+**Steps:** Authenticate as Realtor A, scrape and save. Authenticate as Realtor B and list listings.
+**Expected:** Saved listing has `realtor_id = A`. Realtor B does not see it.
+**Priority:** P0
+
 <!-- Last reviewed: 2026-04-21 — playbook audit Phase 1 enforcement patches -->
 
 <!-- Last reviewed: 2026-04-21 — Wave 1a demo gate -->
