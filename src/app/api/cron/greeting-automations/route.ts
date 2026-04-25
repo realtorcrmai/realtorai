@@ -4,6 +4,7 @@ import { getRealtorConfig } from "@/actions/config";
 import type { GreetingRule } from "@/actions/config";
 import { trackEvent } from "@/lib/analytics";
 import { isFeatureEnabled } from "@/lib/feature-gate";
+import { assembleEmail } from "@/lib/email-blocks";
 
 export const maxDuration = 120;
 
@@ -73,6 +74,7 @@ export async function GET(req: NextRequest) {
     const brand = config.brand_config as any;
     const agentName = brand.realtorName || "Your Realtor";
     const brokerage = brand.brokerage || "";
+    const physicalAddress = brand.address || "";
 
     const results: Array<{ occasion: string; queued: number; skipped: number }> = [];
 
@@ -111,7 +113,7 @@ export async function GET(req: NextRequest) {
         }
 
         // Generate the greeting email
-        const { subject, html } = buildGreetingEmail(rule, contact, agentName, brokerage);
+        const { subject, html } = buildGreetingEmail(rule, contact, agentName, brokerage, physicalAddress);
 
         // Queue as newsletter
         const { error } = await supabase.from("newsletters").insert({
@@ -311,153 +313,111 @@ function buildGreetingEmail(
   contact: { name: string; type: string },
   agentName: string,
   brokerage: string,
+  physicalAddress?: string,
 ): { subject: string; html: string } {
   const firstName = contact.name.split(" ")[0];
   const occasion = rule.occasion;
 
-  const GREETING_CONTENT: Record<string, { subject: string; heading: string; body: string; emoji: string; color: string }> = {
+  const GREETING_CONTENT: Record<string, { subject: string; heading: string; intro: string; body: string }> = {
     birthday: {
       subject: `Happy Birthday, ${firstName}!`,
       heading: `Happy Birthday, ${contact.name}!`,
-      body: `Wishing you a wonderful birthday filled with joy and happiness! I hope this year brings you everything you've been hoping for. Thank you for being a valued part of my network — here's to an amazing year ahead!`,
-      emoji: "🎂",
-      color: "#ec4899",
+      intro: `Wishing you a wonderful birthday filled with joy and happiness! I hope this year brings you everything you've been hoping for.`,
+      body: `Thank you for being a valued part of my network — here's to an amazing year ahead!${rule.personalNote ? `\n\n${rule.personalNote}` : ""}`,
     },
     home_anniversary: {
       subject: `Happy Home Anniversary, ${firstName}!`,
       heading: `Happy Home Anniversary!`,
-      body: `Can you believe it's been another year in your beautiful home? Time flies when you love where you live! I hope you're still enjoying every moment. If you ever need anything — home value update, contractor recommendations, or just real estate advice — I'm always here for you.`,
-      emoji: "🏠",
-      color: "#4f35d2",
+      intro: `Can you believe it's been another year in your beautiful home? Time flies when you love where you live!`,
+      body: `I hope you're still enjoying every moment. If you ever need anything — home value update, contractor recommendations, or just real estate advice — I'm always here for you.${rule.personalNote ? `\n\n${rule.personalNote}` : ""}`,
     },
     christmas: {
       subject: `Merry Christmas, ${firstName}!`,
       heading: `Merry Christmas!`,
-      body: `Wishing you and your family a wonderful Christmas filled with warmth, love, and joy. May your home be filled with laughter and beautiful memories this holiday season. Thank you for your trust and friendship throughout the year!`,
-      emoji: "🎄",
-      color: "#16a34a",
+      intro: `Wishing you and your family a wonderful Christmas filled with warmth, love, and joy.`,
+      body: `May your home be filled with laughter and beautiful memories this holiday season. Thank you for your trust and friendship throughout the year!${rule.personalNote ? `\n\n${rule.personalNote}` : ""}`,
     },
     new_year: {
       subject: `Happy New Year, ${firstName}!`,
       heading: `Happy New Year!`,
-      body: `Cheers to a brand new year! May it bring you health, happiness, and exciting new opportunities. Whether you're thinking about your next move or simply enjoying where you are, I'm here to help with anything real estate. Here's to an incredible year ahead!`,
-      emoji: "🎆",
-      color: "#7c3aed",
+      intro: `Cheers to a brand new year! May it bring you health, happiness, and exciting new opportunities.`,
+      body: `Whether you're thinking about your next move or simply enjoying where you are, I'm here to help with anything real estate. Here's to an incredible year ahead!${rule.personalNote ? `\n\n${rule.personalNote}` : ""}`,
     },
     diwali: {
       subject: `Happy Diwali, ${firstName}!`,
       heading: `Happy Diwali!`,
-      body: `Wishing you a Diwali filled with the glow of prosperity and the warmth of togetherness. May this Festival of Lights illuminate your home and heart with joy and abundance. Thank you for being such a valued part of my community!`,
-      emoji: "🪔",
-      color: "#f59e0b",
+      intro: `Wishing you a Diwali filled with the glow of prosperity and the warmth of togetherness.`,
+      body: `May this Festival of Lights illuminate your home and heart with joy and abundance. Thank you for being such a valued part of my community!${rule.personalNote ? `\n\n${rule.personalNote}` : ""}`,
     },
     lunar_new_year: {
       subject: `Happy Lunar New Year, ${firstName}!`,
       heading: `Happy Lunar New Year!`,
-      body: `Wishing you good fortune, prosperity, and happiness in this new year! May your home be filled with joy and your life with wonderful new beginnings. Thank you for being part of my community!`,
-      emoji: "🧧",
-      color: "#dc2626",
+      intro: `Wishing you good fortune, prosperity, and happiness in this new year!`,
+      body: `May your home be filled with joy and your life with wonderful new beginnings. Thank you for being part of my community!${rule.personalNote ? `\n\n${rule.personalNote}` : ""}`,
     },
     canada_day: {
       subject: `Happy Canada Day, ${firstName}!`,
       heading: `Happy Canada Day!`,
-      body: `Wishing you a wonderful Canada Day! There's no better feeling than celebrating in a country we're proud to call home. I hope you enjoy the festivities with family and friends. Cheers to the best neighbourhoods in the world!`,
-      emoji: "🍁",
-      color: "#dc2626",
+      intro: `Wishing you a wonderful Canada Day! There's no better feeling than celebrating in a country we're proud to call home.`,
+      body: `I hope you enjoy the festivities with family and friends. Cheers to the best neighbourhoods in the world!${rule.personalNote ? `\n\n${rule.personalNote}` : ""}`,
     },
     thanksgiving: {
       subject: `Happy Thanksgiving, ${firstName}!`,
       heading: `Happy Thanksgiving!`,
-      body: `This Thanksgiving, I wanted to take a moment to say thank you. Thank you for your trust, your friendship, and for being part of my journey. I'm grateful to work in a community filled with wonderful people like you. Wishing you a beautiful day with the people you love.`,
-      emoji: "🦃",
-      color: "#ea580c",
+      intro: `This Thanksgiving, I wanted to take a moment to say thank you.`,
+      body: `Thank you for your trust, your friendship, and for being part of my journey. I'm grateful to work in a community filled with wonderful people like you. Wishing you a beautiful day with the people you love.${rule.personalNote ? `\n\n${rule.personalNote}` : ""}`,
     },
     valentines: {
       subject: `Happy Valentine's Day, ${firstName}!`,
       heading: `Happy Valentine's Day!`,
-      body: `Here's to loving where you live! Whether you're cozied up at home or out celebrating, I hope today is filled with warmth and happiness. Your home is your haven — and I'm always here if you want to talk about making it even better.`,
-      emoji: "💝",
-      color: "#ec4899",
+      intro: `Here's to loving where you live!`,
+      body: `Whether you're cozied up at home or out celebrating, I hope today is filled with warmth and happiness. Your home is your haven — and I'm always here if you want to talk about making it even better.${rule.personalNote ? `\n\n${rule.personalNote}` : ""}`,
     },
     mothers_day: {
       subject: `Happy Mother's Day, ${firstName}!`,
       heading: `Happy Mother's Day!`,
-      body: `Wishing all the amazing moms a beautiful Mother's Day! You make every house a home. Thank you for all you do — today and every day. I hope you're celebrated and spoiled today!`,
-      emoji: "💐",
-      color: "#ec4899",
+      intro: `Wishing all the amazing moms a beautiful Mother's Day!`,
+      body: `You make every house a home. Thank you for all you do — today and every day. I hope you're celebrated and spoiled today!${rule.personalNote ? `\n\n${rule.personalNote}` : ""}`,
     },
     fathers_day: {
       subject: `Happy Father's Day, ${firstName}!`,
       heading: `Happy Father's Day!`,
-      body: `Wishing all the wonderful dads a fantastic Father's Day! Your hard work and dedication make everything possible — including the homes we love. I hope today is all about you!`,
-      emoji: "👔",
-      color: "#2563eb",
+      intro: `Wishing all the wonderful dads a fantastic Father's Day!`,
+      body: `Your hard work and dedication make everything possible — including the homes we love. I hope today is all about you!${rule.personalNote ? `\n\n${rule.personalNote}` : ""}`,
     },
   };
 
   const content = GREETING_CONTENT[occasion] || {
     subject: `Warm Wishes, ${firstName}!`,
     heading: "Warm Wishes!",
-    body: `Just a note to say I'm thinking of you! Thank you for being part of my community. I'm always here if you need anything.`,
-    emoji: "✨",
-    color: "#4f35d2",
+    intro: `Just a note to say I'm thinking of you!`,
+    body: `Thank you for being part of my community. I'm always here if you need anything.${rule.personalNote ? `\n\n${rule.personalNote}` : ""}`,
   };
 
-  // Add personal note if provided
-  const personalSection = rule.personalNote
-    ? `<p style="font-size:14px;color:#6b7280;margin-top:16px;font-style:italic;border-left:3px solid ${content.color};padding-left:12px;">${rule.personalNote}</p>`
-    : "";
-
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');</style>
-</head>
-<body style="margin:0;padding:0;background:#f5f5f7;font-family:'Inter',-apple-system,sans-serif;">
-<div style="display:none;max-height:0;overflow:hidden;">${content.subject}</div>
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f7;">
-<tr><td align="center" style="padding:24px 16px;">
-<table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
-
-  <!-- Header gradient -->
-  <tr><td>
-    <div style="background:linear-gradient(135deg,${content.color}22,${content.color}11);padding:40px 32px;text-align:center;">
-      <div style="font-size:48px;margin-bottom:12px;">${content.emoji}</div>
-      <h1 style="font-size:24px;font-weight:700;color:#1d1d1f;margin:0;letter-spacing:-0.5px;">${content.heading}</h1>
-    </div>
-  </td></tr>
-
-  <!-- Body -->
-  <tr><td style="padding:28px 32px;">
-    <p style="font-size:15px;color:#374151;line-height:1.7;margin:0;">${content.body}</p>
-    ${personalSection}
-  </td></tr>
-
-  <!-- Agent signature -->
-  <tr><td style="padding:0 32px 28px;">
-    <table width="100%" style="border-top:1px solid #e5e7eb;padding-top:20px;">
-    <tr>
-      <td width="44" style="vertical-align:top;">
-        <div style="width:40px;height:40px;border-radius:50%;background:${content.color};text-align:center;line-height:40px;color:#fff;font-weight:700;font-size:16px;">${agentName[0]}</div>
-      </td>
-      <td style="padding-left:12px;vertical-align:top;">
-        <div style="font-size:14px;font-weight:600;color:#1d1d1f;">${agentName}</div>
-        <div style="font-size:12px;color:#6b7280;">${brokerage}</div>
-      </td>
-    </tr>
-    </table>
-  </td></tr>
-
-  <!-- Footer -->
-  <tr><td style="padding:16px 32px 20px;text-align:center;background:#f9fafb;border-top:1px solid #f3f4f6;">
-    <p style="font-size:10px;color:#9ca3af;margin:0;">
-      ${agentName} · ${brokerage}<br>
-      <a href="#" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a>
-    </p>
-  </td></tr>
-
-</table>
-</td></tr>
-</table>
-</body></html>`;
+  const html = assembleEmail("greeting", {
+    contact: { name: contact.name, firstName, type: contact.type },
+    agent: {
+      name: agentName,
+      brokerage,
+      phone: "",
+      title: "REALTOR\u00ae",
+      initials: agentName.split(" ").map((w: string) => w[0]).join("").slice(0, 2),
+    },
+    content: {
+      subject: content.heading,
+      intro: content.intro,
+      body: content.body,
+      ctaText: "Stay in Touch",
+      ctaUrl: `mailto:${agentName.toLowerCase().replace(/\s/g, "")}`,
+    },
+    testimonial: {
+      quote: content.heading.replace(/!/g, "") + " — from all of us.",
+      name: agentName,
+      role: "Your REALTOR\u00ae",
+    },
+    physicalAddress: physicalAddress || "",
+    unsubscribeUrl: "#",
+  });
 
   return { subject: content.subject, html };
 }
