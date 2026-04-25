@@ -33,6 +33,11 @@ export default async function DashboardLayout({
     redirect("/verify");
   }
 
+  // ── Personalization gate — OAuth users may skip personalization ──
+  if (user.personalizationCompleted === false && user.onboardingCompleted === false) {
+    redirect("/personalize");
+  }
+
   // ── Onboarding gate — use JWT token (populated in auth.ts callbacks) ──
   if (user.onboardingCompleted === false) {
     redirect("/onboarding");
