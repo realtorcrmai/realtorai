@@ -32,8 +32,11 @@ const MAIN_NAV: NavItem[] = [
   { href: "/tasks", label: "Tasks", icon: ListTodo, featureKey: "tasks" },
 ];
 
-const TOOLS_NAV: NavItem[] = [
+const VIRAL_NAV: NavItem[] = [
   { href: "/content", label: "Content Engine", icon: Wand2, featureKey: "content" },
+];
+
+const TOOLS_NAV: NavItem[] = [
   { href: "/newsletters", label: "AI Agents", icon: Mail, featureKey: "newsletters" },
   { href: "/newsletters/campaigns", label: "Campaigns", icon: Megaphone, featureKey: "newsletters" },
   { href: "/newsletters/editorial", label: "Editorial", icon: Newspaper, featureKey: "newsletters" },
@@ -166,7 +169,7 @@ export function MondaySidebar() {
     if (href === "/") return pathname === "/";
     if (!pathname.startsWith(href)) return false;
     // If a more-specific nav item also matches, defer to it
-    const allHrefs = [...MAIN_NAV, ...TOOLS_NAV, ...ADMIN_NAV].map(i => i.href);
+    const allHrefs = [...MAIN_NAV, ...VIRAL_NAV, ...TOOLS_NAV, ...ADMIN_NAV].map(i => i.href);
     const hasMoreSpecific = allHrefs.some(
       h => h !== href && h.length > href.length && h.startsWith(href) && pathname.startsWith(h)
     );
@@ -249,6 +252,7 @@ export function MondaySidebar() {
         </>
       )}
 
+      {renderNavGroup("Viral Engine", VIRAL_NAV)}
       {renderNavGroup("Newsletters", TOOLS_NAV)}
       {renderNavGroup("Admin", ADMIN_NAV)}
 
