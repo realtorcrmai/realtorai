@@ -6,7 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import {
   Home, ListTodo, Building2, Users, Clock, Calendar,
   Mail, Zap, Search, Upload, FileText,
-  Wand2, Settings, LogOut,
+  Wand2, Settings, LogOut, Newspaper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -35,6 +35,7 @@ const TOOLS_NAV: NavItem[] = [
   { href: "/tasks", label: "Tasks", icon: ListTodo, featureKey: "tasks" },
   { href: "/content", label: "Content Engine", icon: Wand2, featureKey: "content" },
   { href: "/newsletters", label: "Email Marketing", icon: Mail, featureKey: "newsletters" },
+  { href: "/newsletters/editorial", label: "Editorial", icon: Newspaper, featureKey: "editorial" },
   { href: "/automations", label: "Automations", icon: Zap, featureKey: "automations" },
 ];
 
@@ -161,7 +162,13 @@ export function MondaySidebar() {
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
-    return pathname.startsWith(href);
+    if (!pathname.startsWith(href)) return false;
+    // If a more-specific nav item also matches, defer to it
+    const allHrefs = [...MAIN_NAV, ...TOOLS_NAV, ...ADMIN_NAV].map(i => i.href);
+    const hasMoreSpecific = allHrefs.some(
+      h => h !== href && h.length > href.length && h.startsWith(href) && pathname.startsWith(h)
+    );
+    return !hasMoreSpecific;
   }
 
   function renderNavGroup(label: string, items: NavItem[]) {

@@ -13,6 +13,7 @@ export const FEATURE_KEYS = [
   "newsletters",
   "website",
   "mls-browse",
+  "editorial",
   "social",
   "assistant",
 ] as const;
@@ -81,6 +82,10 @@ export const FEATURE_META: Record<
     label: "MLS Browse",
     description: "Search & import listings from Repliers MLS",
   },
+  editorial: {
+    label: "Editorial",
+    description: "AI block-based newsletter editions",
+  },
   social: {
     label: "Social Media",
     description: "AI-powered social content studio",
@@ -106,25 +111,25 @@ export function getUserFeatures(
     free: ["contacts", "calendar", "tasks"],
     professional: [
       "contacts", "calendar", "tasks",
-      "newsletters", "automations",
+      "newsletters", "automations", "editorial",
       "listings", "showings", "forms",
     ],
     studio: [
       "contacts", "calendar", "tasks",
-      "newsletters", "automations",
+      "newsletters", "automations", "editorial",
       "listings", "showings", "forms",
       "website", "content", "import", "workflow",
     ],
     team: [
       "contacts", "calendar", "tasks",
-      "newsletters", "automations",
+      "newsletters", "automations", "editorial",
       "listings", "showings", "forms",
       "website", "content", "import", "workflow",
       "search",
     ],
     admin: [
       "contacts", "calendar", "tasks",
-      "newsletters", "automations",
+      "newsletters", "automations", "editorial",
       "listings", "showings", "forms",
       "website", "content", "import", "workflow",
       "search",
@@ -157,6 +162,7 @@ export const FEATURE_HREF: Record<FeatureKey, string> = {
   automations: "/automations",
   newsletters: "/newsletters",
   website: "/websites",
+  editorial: "/newsletters/editorial",
   "mls-browse": "/mls-browse",
   social: "/social",
   assistant: "/assistant",
