@@ -146,36 +146,27 @@ export default async function NewsletterDashboard() {
     const isToday = d.toDateString() === new Date().toDateString();
     const isTomorrow = d.toDateString() === new Date(_now + 86400000).toDateString();
     const label = isToday ? "Today" : isTomorrow ? "Tomorrow" : dateKey;
-    const JOURNEY_EMAIL_TYPES: Record<string, string[]> = { buyer_lead: ["welcome", "neighbourhood_guide", "new_listing_alert", "market_update", "new_listing_alert"], buyer_active: ["new_listing_alert", "market_update"], seller_lead: ["welcome", "market_update", "neighbourhood_guide"], seller_active: ["market_update"] };
-    const key = `${uj.journey_type}_${uj.current_phase}`;
-    const types = JOURNEY_EMAIL_TYPES[key] || ["email"];
-    const emailType = types[Math.min(uj.emails_sent_in_phase || 0, types.length - 1)] || "email";
+    const jType = uj.journey_type as keyof typeof JOURNEY_SCHEDULES;
+    const jPhase = uj.current_phase as string;
+    const jSchedule = JOURNEY_SCHEDULES[jType]?.[jPhase as keyof (typeof JOURNEY_SCHEDULES)[typeof jType]] || [];
+    const jIndex = uj.emails_sent_in_phase || 0;
+    const emailType = jIndex < jSchedule.length ? jSchedule[jIndex].emailType : "email";
     const groupKey = `${dateKey}_${emailType}`;
     if (!upcomingSendsMap[groupKey]) upcomingSendsMap[groupKey] = { date: label, label: `to ${uj.journey_type} contacts`, emailType, count: 0 };
     upcomingSendsMap[groupKey].count++;
   }
   const upcomingSends = Object.values(upcomingSendsMap).slice(0, 5);
 
-  // Detailed per-contact schedule for the AI tab
+  // Detailed per-contact schedule for the AI tab — uses the real JOURNEY_SCHEDULES
   const scheduledEmails = (upcomingJourneys || [])
     .filter((uj: any) => uj.next_email_at)
     .map((uj: any) => {
       const contact = Array.isArray(uj.contacts) ? uj.contacts[0] : uj.contacts;
-      const JOURNEY_EMAIL_TYPES: Record<string, string[]> = {
-        buyer_lead: ["welcome", "neighbourhood_guide", "new_listing_alert", "market_update", "new_listing_alert"],
-        buyer_active: ["new_listing_alert", "market_update"],
-        buyer_under_contract: ["closing_checklist", "inspection_reminder", "neighbourhood_guide"],
-        buyer_past_client: ["home_anniversary", "referral_ask", "market_update"],
-        buyer_dormant: ["reengagement", "new_listing_alert", "referral_ask"],
-        seller_lead: ["welcome", "market_update", "neighbourhood_guide"],
-        seller_active: ["market_update"],
-        seller_under_contract: ["closing_checklist", "inspection_reminder", "closing_countdown"],
-        seller_past_client: ["market_update", "referral_ask", "home_anniversary"],
-        seller_dormant: ["reengagement", "market_update", "referral_ask"],
-      };
-      const key = `${uj.journey_type}_${uj.current_phase}`;
-      const types = JOURNEY_EMAIL_TYPES[key] || ["email"];
-      const emailType = types[Math.min(uj.emails_sent_in_phase || 0, types.length - 1)] || "email";
+      const jType = uj.journey_type as keyof typeof JOURNEY_SCHEDULES;
+      const phase = uj.current_phase as string;
+      const schedule = JOURNEY_SCHEDULES[jType]?.[phase as keyof (typeof JOURNEY_SCHEDULES)[typeof jType]] || [];
+      const emailIndex = uj.emails_sent_in_phase || 0;
+      const emailType = emailIndex < schedule.length ? schedule[emailIndex].emailType : "email";
       return {
         id: uj.id,
         contactId: uj.contact_id,
