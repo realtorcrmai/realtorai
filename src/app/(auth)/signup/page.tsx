@@ -246,7 +246,7 @@ export default function SignupPage() {
             {/* Google OAuth signup */}
             <button
               type="button"
-              onClick={() => signIn("google", { callbackUrl: "/personalize" })}
+              onClick={() => signIn("google", { callbackUrl: "/" })}
               className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">

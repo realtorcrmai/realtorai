@@ -8,6 +8,7 @@ import { FeatureDiscovery } from "@/components/help/FeatureDiscovery";
 import { OnboardingNPS } from "@/components/help/OnboardingNPS";
 import { LayoutProvider } from "@/components/layout/LayoutProvider";
 import { DashboardShellClient } from "@/components/layout/DashboardShellClient";
+import { OnboardingOverlay } from "@/components/onboarding/OnboardingOverlay";
 
 export default async function DashboardLayout({
   children,
@@ -33,15 +34,10 @@ export default async function DashboardLayout({
     redirect("/verify");
   }
 
-  // ── Personalization gate — OAuth users may skip personalization ──
-  if (user.personalizationCompleted === false && user.onboardingCompleted === false) {
-    redirect("/personalize");
-  }
+  // ── Onboarding: show as dismissible modal overlay instead of hard redirect ──
+  const needsPersonalization = user.personalizationCompleted === false;
+  const needsOnboarding = user.onboardingCompleted === false;
 
-  // ── Onboarding gate — use JWT token (populated in auth.ts callbacks) ──
-  if (user.onboardingCompleted === false) {
-    redirect("/onboarding");
-  }
   return (
     <LayoutProvider>
       <div className="flex flex-col h-screen overflow-hidden">
@@ -49,6 +45,12 @@ export default async function DashboardLayout({
         <DashboardShellClient>
           {children}
         </DashboardShellClient>
+        {(needsPersonalization || needsOnboarding) && (
+          <OnboardingOverlay
+            needsPersonalization={needsPersonalization}
+            needsOnboarding={needsOnboarding}
+          />
+        )}
         <OnboardingChecklist />
         <CommandPalette />
         <FeatureDiscovery />
