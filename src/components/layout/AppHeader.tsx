@@ -35,8 +35,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { QuickAddButton } from "@/components/layout/QuickAddButton";
 import { ContextualHelpButton } from "@/components/help/ContextualHelpButton";
-import { VoiceStatusIndicator } from "@/components/voice-agent/VoiceStatusIndicator";
-
 import type { FeatureKey } from "@/lib/features";
 
 // featureKey is REQUIRED — every nav item must declare its plan gate.
@@ -210,11 +208,6 @@ export function AppHeader() {
             <Shield className="h-4 w-4" />
             <span className="hidden lg:inline">Admin</span>
           </Link>
-        )}
-
-        {/* Voice Agent Status — professional+ only */}
-        {hasFeatureData && enabledFeatures.includes("assistant") && (
-          <VoiceStatusIndicator />
         )}
 
         {/* Search shortcut hint */}

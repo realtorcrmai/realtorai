@@ -33,7 +33,6 @@ export const metadata: Metadata = {
   title: "Magnate — 360 AI Platform for Realtors",
   description:
     "Magnate — the 360 AI Platform for Realtors. Automate listings, showings, emails, and client journeys.",
-  manifest: "/manifest.json",
   icons: {
     icon: "/favicon.svg",
     apple: "/favicon.svg",
