@@ -42,6 +42,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/health") ||
     pathname === "/api/version" ||
 
+    // Test-only render endpoint (dev only, blocked in production by route handler)
+    pathname === "/api/test-email-render" ||
+
     // Webhooks (verified by signature, not session)
     pathname.startsWith("/api/webhooks") ||
 
@@ -73,7 +76,11 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/social/oauth") ||
 
     // Address autocomplete (public, rate-limited, no PII)
-    pathname.startsWith("/api/address-autocomplete")
+    pathname.startsWith("/api/address-autocomplete") ||
+
+    // Legal pages (public — privacy policy, terms of use)
+    pathname === "/privacy" ||
+    pathname === "/terms"
   ) {
     return NextResponse.next();
   }
