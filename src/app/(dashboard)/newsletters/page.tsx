@@ -93,15 +93,21 @@ export default async function NewsletterDashboard() {
       : "ai_nurture";
     const hasClick = nl.events?.some((e: any) => e.event_type === "clicked");
     const hasOpen = nl.events?.some((e: any) => e.event_type === "opened");
+    const openCount = nl.events?.filter((e: any) => e.event_type === "opened").length || 0;
+    const clickCount = nl.events?.filter((e: any) => e.event_type === "clicked").length || 0;
     return {
       id: nl.id,
       contact_id: nl.contact_id,
       contact_name: contact?.name || "Unknown",
+      contact_type: contact?.type || "buyer",
       subject: nl.subject || "(no subject)",
       email_type: nl.email_type || "email",
       source,
       sent_at: nl.sent_at,
       status: hasClick ? "clicked" : hasOpen ? "opened" : "sent",
+      html_body: nl.html_body || null,
+      open_count: openCount,
+      click_count: clickCount,
     };
   });
 
