@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-25 --pipeline-a11y -->
+<!-- docs-audit-reviewed: 2026-04-25 --e2e-fixes-rebase -->
 <!-- docs-audit: CONTRIBUTING.md, .env.local.example -->
 # Developer Sync — Post-Consolidation (2026-04-09)
 
