@@ -53,15 +53,16 @@ export default function PipelineSnapshot({
         {stages.map((stage) => {
           const pct = totalCount > 0 ? (stage.count / totalCount) * 100 : 0;
           if (pct === 0) return null;
+          const segmentStyle: React.CSSProperties = { width: `${pct}%` };
           return (
             <Link
               key={stage.key}
               href={stageHref(stage.key)}
               className={`${stage.color} flex items-center justify-center transition-all duration-300 hover:brightness-110 cursor-pointer`}
-              style={{ width: `${pct}%` }}
+              style={segmentStyle}
               title={`${stage.label}: ${stage.count} contacts`}
             >
-              <span className="text-xs font-bold text-white drop-shadow-sm">
+              <span className="text-xs font-bold text-primary">
                 {stage.count}
               </span>
             </Link>

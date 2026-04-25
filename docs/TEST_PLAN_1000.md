@@ -411,6 +411,22 @@ Each route must return 200 for authenticated users:
 - LISTING-095: Neighborhood comparables mock data
 - LISTING-096–LISTING-100: Data validation (address required, price numeric, etc.)
 
+### ACTION-MLS-SCRAPER-001: Realtor.ca URL → Listing fields (happy path)
+**Story:** As a realtor, I paste a public realtor.ca listing URL and the form auto-populates address, price, beds, baths, sqft so I do not have to retype it.
+**Source:** `src/actions/mls-scraper.ts`
+
+### ACTION-MLS-SCRAPER-002: Invalid URL rejected
+**Story:** Pasting a non-realtor.ca URL or malformed URL returns a typed `{ error }` instead of throwing or hitting an unrelated host.
+**Source:** `src/actions/mls-scraper.ts`
+
+### ACTION-MLS-SCRAPER-003: SSRF guard rejects private/loopback hosts
+**Story:** A URL pointing at `127.0.0.1`, `localhost`, or RFC1918 ranges is blocked before the HTTP fetch — no internal-network probing possible.
+**Source:** `src/actions/mls-scraper.ts`
+
+### ACTION-MLS-SCRAPER-004: Tenant scoping on import
+**Story:** Imported listing fields are persisted via `getAuthenticatedTenantClient()`; a second realtor cannot see another tenant's imported draft.
+**Source:** `src/actions/mls-scraper.ts`
+
 ---
 
 ## CATEGORY 5: EMAIL MARKETING (EMAIL) — 250 Tests

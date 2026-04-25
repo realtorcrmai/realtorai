@@ -52,7 +52,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // wildcard-like value.
         const isDemoLogin = DEMO_PASSWORD && password === DEMO_PASSWORD;
         const isProd = process.env.NODE_ENV === "production";
-        const demoAllowed = isDemoLogin && (!isProd || (DEMO_EMAIL && email.toLowerCase().trim() === DEMO_EMAIL.toLowerCase().trim()));
+        const emailLower = email.toLowerCase().trim();
+        const demoAllowed = isDemoLogin && (!isProd || (
+          (DEMO_EMAIL && emailLower === DEMO_EMAIL.toLowerCase().trim()) ||
+          (ADMIN_EMAIL && emailLower === ADMIN_EMAIL.toLowerCase().trim())
+        ));
 
         if (demoAllowed) {
           const supabase = createAdminClient();

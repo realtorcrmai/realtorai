@@ -62,6 +62,7 @@ guides/screenshots/*.png
 .claude/current-task.json
 .claude/start-dev.sh
 .claude/launch-*.json
+.claude/worktrees/
 
 # Playwright MCP artifacts
 .playwright-mcp/
