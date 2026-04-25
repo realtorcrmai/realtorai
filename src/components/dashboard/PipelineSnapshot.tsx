@@ -61,7 +61,7 @@ export default function PipelineSnapshot({
               style={{ width: `${pct}%` }}
               title={`${stage.label}: ${stage.count} contacts`}
             >
-              <span className="text-xs font-bold text-white drop-shadow-sm">
+              <span className="text-xs font-bold text-primary">
                 {stage.count}
               </span>
             </Link>
