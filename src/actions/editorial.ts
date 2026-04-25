@@ -574,6 +574,55 @@ function pickPersonalizedSubject(
   return validSubjects[0]!;
 }
 
+// ── 8b. getEditionRecipients ──────────────────────────────────────────────────
+
+export async function getEditionRecipients(
+  segmentId?: string,
+): Promise<{ name: string; email: string; consent: boolean; suppressed: boolean }[]> {
+  try {
+    const tc = await getAuthenticatedTenantClient();
+
+    let contactQuery = tc.from('contacts').select('id, name, email, casl_consent_given');
+
+    if (segmentId) {
+      const admin = createAdminClient();
+      const { data: enrollments } = await admin
+        .from('segment_enrollments')
+        .select('contact_id')
+        .eq('segment_id', segmentId);
+
+      if (!enrollments || enrollments.length === 0) return [];
+
+      const contactIds = enrollments.map((e: { contact_id: string }) => e.contact_id);
+      contactQuery = contactQuery.in('id', contactIds) as typeof contactQuery;
+    }
+
+    const { data: contacts } = await contactQuery.order('name', { ascending: true });
+
+    // Fetch suppressed IDs
+    let suppressedIds = new Set<string>();
+    try {
+      const suppressionAdmin = createAdminClient();
+      const { data: suppressions } = await suppressionAdmin
+        .from('contact_suppressions')
+        .select('contact_id')
+        .eq('realtor_id', tc.realtorId);
+      suppressedIds = new Set((suppressions ?? []).map((s: { contact_id: string }) => s.contact_id));
+    } catch {
+      // table may not exist
+    }
+
+    return (contacts ?? []).map((c: { id: string; name: string | null; email: string | null; casl_consent_given: boolean | null }) => ({
+      name: c.name ?? '(unnamed)',
+      email: c.email ?? '',
+      consent: c.casl_consent_given === true,
+      suppressed: suppressedIds.has(c.id),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // ── 9. sendEdition ────────────────────────────────────────────────────────────
 
 export async function sendEdition(

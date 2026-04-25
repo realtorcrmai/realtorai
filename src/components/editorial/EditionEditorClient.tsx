@@ -19,6 +19,7 @@ import {
   triggerGeneration,
   sendEdition,
   getSegmentsForPicker,
+  getEditionRecipients,
 } from '@/actions/editorial'
 import type {
   EditorialEdition,
@@ -219,51 +220,108 @@ function SendDialog({
   selectedSegmentId,
   onSegmentChange,
 }: SendDialogProps) {
+  const [mode, setMode] = React.useState<'test' | 'full'>('test')
+  const [testEmail, setTestEmail] = React.useState('')
+  const [testSending, setTestSending] = React.useState(false)
+  const [testResult, setTestResult] = React.useState<{ ok: boolean; message: string } | null>(null)
+
+  // Recipients preview
+  type Recipient = { name: string; email: string; consent: boolean; suppressed: boolean }
+  const [recipients, setRecipients] = React.useState<Recipient[]>([])
+  const [recipientsLoading, setRecipientsLoading] = React.useState(false)
+  const [showRecipients, setShowRecipients] = React.useState(false)
+  // Track which segment was loaded so we refetch on change
+  const loadedSegmentRef = React.useRef<string | undefined>(undefined)
+
+  async function loadRecipients() {
+    setRecipientsLoading(true)
+    try {
+      const data = await getEditionRecipients(selectedSegmentId)
+      setRecipients(data)
+      loadedSegmentRef.current = selectedSegmentId
+    } catch {
+      setRecipients([])
+    } finally {
+      setRecipientsLoading(false)
+    }
+  }
+
+  function handleToggleRecipients() {
+    if (showRecipients) {
+      setShowRecipients(false)
+      return
+    }
+    setShowRecipients(true)
+    // Only fetch if not already loaded for this segment
+    if (loadedSegmentRef.current !== selectedSegmentId || recipients.length === 0) {
+      loadRecipients()
+    }
+  }
+
+  // Refetch when segment changes while panel is open
+  React.useEffect(() => {
+    if (showRecipients && loadedSegmentRef.current !== selectedSegmentId) {
+      loadRecipients()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSegmentId])
+
+  async function handleTestSend() {
+    if (!testEmail || testSending) return
+    setTestSending(true)
+    setTestResult(null)
+    try {
+      const res = await sendEdition(edition.id, { test_email: testEmail })
+      if (res.error === null) {
+        setTestResult({ ok: true, message: `Test email sent to ${testEmail}` })
+      } else {
+        setTestResult({ ok: false, message: res.error ?? 'Send failed' })
+      }
+    } catch (err) {
+      setTestResult({ ok: false, message: (err as Error).message })
+    } finally {
+      setTestSending(false)
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) { setTestResult(null); } }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Send Edition #{edition.edition_number}</DialogTitle>
           <DialogDescription>
-            This will send to all CASL-consented contacts on your list.
+            Send a test email first, or deliver to your full list.
           </DialogDescription>
         </DialogHeader>
 
+        {/* Mode toggle */}
+        <div className="flex gap-1 rounded-lg border border-border p-1 bg-muted/30">
+          <button
+            onClick={() => setMode('test')}
+            className={[
+              'flex-1 text-sm font-medium px-3 py-1.5 rounded-md transition-colors',
+              mode === 'test'
+                ? 'bg-card text-foreground shadow-sm border border-border'
+                : 'text-muted-foreground hover:text-foreground',
+            ].join(' ')}
+          >
+            🧪 Test Send
+          </button>
+          <button
+            onClick={() => setMode('full')}
+            className={[
+              'flex-1 text-sm font-medium px-3 py-1.5 rounded-md transition-colors',
+              mode === 'full'
+                ? 'bg-card text-foreground shadow-sm border border-border'
+                : 'text-muted-foreground hover:text-foreground',
+            ].join(' ')}
+          >
+            🚀 Send to All
+          </button>
+        </div>
+
         <div className="flex flex-col gap-3 py-2">
-          <div className="flex items-center justify-between rounded-lg bg-muted/50 border border-border px-4 py-3">
-            <span className="text-sm text-muted-foreground">Recipients</span>
-            <span className="text-sm font-semibold text-foreground">
-              {edition.recipient_count > 0
-                ? edition.recipient_count.toLocaleString()
-                : '—'}{' '}
-              contacts
-            </span>
-          </div>
-
-          {/* Segment picker */}
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="send-segment-select"
-              className="text-sm font-medium text-foreground"
-            >
-              Send to
-            </label>
-            <select
-              id="send-segment-select"
-              value={selectedSegmentId ?? ''}
-              onChange={(e) => onSegmentChange(e.target.value || undefined)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/50"
-            >
-              <option value="">All contacts with CASL consent</option>
-              {segments.map((seg) => (
-                <option key={seg.id} value={seg.id}>
-                  {seg.name}
-                  {seg.contact_count !== undefined ? ` (${seg.contact_count})` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
+          {/* Subject line preview — shared by both modes */}
           <div className="rounded-lg border border-border px-4 py-3">
             <p className="text-xs text-muted-foreground mb-1">Subject line (variant A)</p>
             <p className="text-sm font-medium text-foreground">
@@ -279,9 +337,133 @@ function SendDialog({
             )}
           </div>
 
-          <p className="text-xs text-muted-foreground">
-            Contacts without CASL consent, or who have unsubscribed, will be automatically skipped.
-          </p>
+          {mode === 'test' ? (
+            <>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="editor-test-email" className="text-sm font-medium text-foreground">
+                  Send test to
+                </label>
+                <input
+                  id="editor-test-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  className="w-full h-9 px-3 text-sm rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Subject will be prefixed with [TEST]. This does not count as a send.
+              </p>
+
+              {testResult && (
+                <div className={`rounded-lg px-3 py-2 border ${testResult.ok ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : 'bg-destructive/10 border-destructive/20'}`}>
+                  <p className={`text-xs font-medium ${testResult.ok ? 'text-green-700 dark:text-green-400' : 'text-destructive'}`}>
+                    {testResult.ok ? '✓' : '⚠️'} {testResult.message}
+                  </p>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between rounded-lg bg-muted/50 border border-border px-4 py-3">
+                <span className="text-sm text-muted-foreground">Recipients</span>
+                <span className="text-sm font-semibold text-foreground">
+                  {edition.recipient_count > 0
+                    ? edition.recipient_count.toLocaleString()
+                    : '—'}{' '}
+                  contacts
+                </span>
+              </div>
+
+              {/* Segment picker */}
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="send-segment-select"
+                  className="text-sm font-medium text-foreground"
+                >
+                  Send to
+                </label>
+                <select
+                  id="send-segment-select"
+                  value={selectedSegmentId ?? ''}
+                  onChange={(e) => onSegmentChange(e.target.value || undefined)}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand/50"
+                >
+                  <option value="">All contacts with CASL consent</option>
+                  {segments.map((seg) => (
+                    <option key={seg.id} value={seg.id}>
+                      {seg.name}
+                      {seg.contact_count !== undefined ? ` (${seg.contact_count})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Contacts without CASL consent, or who have unsubscribed, will be automatically skipped.
+              </p>
+
+              {/* View Recipients toggle */}
+              <button
+                type="button"
+                onClick={handleToggleRecipients}
+                className="text-xs font-medium text-brand hover:underline text-left"
+              >
+                {showRecipients ? 'Hide recipient list' : 'View all recipients'}
+              </button>
+
+              {showRecipients && (
+                <div className="rounded-lg border border-border overflow-hidden">
+                  {recipientsLoading ? (
+                    <div className="px-4 py-6 text-center">
+                      <Spinner className="mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground">Loading contacts...</p>
+                    </div>
+                  ) : recipients.length === 0 ? (
+                    <div className="px-4 py-4 text-center">
+                      <p className="text-xs text-muted-foreground">No contacts found</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Summary */}
+                      <div className="px-3 py-2 bg-muted/30 border-b border-border flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          {recipients.filter(r => r.consent && !r.suppressed && r.email).length} will receive
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {recipients.filter(r => !r.consent || r.suppressed || !r.email).length} skipped
+                        </span>
+                      </div>
+                      {/* Scrollable list */}
+                      <div className="max-h-48 overflow-y-auto divide-y divide-border">
+                        {recipients.map((r, i) => {
+                          const willSend = r.consent && !r.suppressed && r.email
+                          return (
+                            <div key={i} className="px-3 py-2 flex items-center justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <p className={`text-sm truncate ${willSend ? 'text-foreground' : 'text-muted-foreground line-through'}`}>
+                                  {r.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate">{r.email || 'No email'}</p>
+                              </div>
+                              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0 ${
+                                willSend
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                  : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                              }`}>
+                                {willSend ? 'Sending' : r.suppressed ? 'Suppressed' : !r.email ? 'No email' : 'No consent'}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </>
+          )}
 
           {sendError && (
             <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2">
@@ -291,19 +473,32 @@ function SendDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSending}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSending || testSending}>
             Cancel
           </Button>
-          <Button variant="brand" onClick={onConfirm} disabled={isSending}>
-            {isSending ? (
-              <>
-                <Spinner className="mr-1.5" />
-                Sending…
-              </>
-            ) : (
-              '📤 Send Edition'
-            )}
-          </Button>
+          {mode === 'test' ? (
+            <Button variant="brand" onClick={handleTestSend} disabled={!testEmail || testSending}>
+              {testSending ? (
+                <>
+                  <Spinner className="mr-1.5" />
+                  Sending…
+                </>
+              ) : (
+                '🧪 Send Test'
+              )}
+            </Button>
+          ) : (
+            <Button variant="brand" onClick={onConfirm} disabled={isSending}>
+              {isSending ? (
+                <>
+                  <Spinner className="mr-1.5" />
+                  Sending…
+                </>
+              ) : (
+                '📤 Send Edition'
+              )}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
