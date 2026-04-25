@@ -118,12 +118,14 @@ export async function GET(req: NextRequest) {
         // Queue as newsletter
         const { error } = await supabase.from("newsletters").insert({
           contact_id: contact.id,
+          realtor_id: realtorId || null,
           email_type: `greeting_${rule.occasion}`,
           journey_phase: "greeting",
           subject,
           html_body: html,
           status: rule.approval === "auto" ? "approved" : "draft",
           send_mode: rule.approval,
+          template_slug: "welcome", // Use welcome slug as fallback for greetings
           ai_context: {
             greeting: true,
             occasion: rule.occasion,
@@ -201,18 +203,14 @@ async function getContactsForOccasion(
 
   // Personal milestones — match from contact_dates
   if (occasion === "birthday") {
-    const { data } = await supabase.rpc("get_contacts_by_date_month_day", { p_date_type: "birthday", p_month: month, p_day: day }).catch(() => ({ data: null }));
-    // Fallback: query directly with text matching
-    if (!data) {
-      const monthDay = `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      const { data: dates } = await supabase
-        .from("contact_dates")
-        .select("contact_id")
-        .eq("date_type", "birthday")
-        .like("date_value", `%-${monthDay}`);
-      return (dates || []).map((d: any) => d.contact_id);
-    }
-    return (data || []).map((d: any) => d.contact_id);
+    // Query contact_dates for birthdays matching today's month/day
+    const monthDay = `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const { data: dates } = await supabase
+      .from("contact_dates")
+      .select("contact_id")
+      .eq("date_type", "birthday")
+      .like("date_value", `%-${monthDay}`);
+    return (dates || []).map((d: any) => d.contact_id);
   }
 
   if (occasion === "home_anniversary") {
