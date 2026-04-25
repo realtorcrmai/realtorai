@@ -71,7 +71,7 @@ export const FEATURE_META: Record<
     description: "Workflow automations & drip campaigns",
   },
   newsletters: {
-    label: "Email Marketing",
+    label: "AI Agents",
     description: "AI newsletters, journeys & analytics",
   },
   website: {

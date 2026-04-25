@@ -23,7 +23,7 @@ export default async function ApprovalQueuePage() {
         title="Approval Queue"
         subtitle="Review AI-drafted emails before they are sent to contacts"
         breadcrumbs={[
-          { label: "Email Marketing", href: "/newsletters" },
+          { label: "AI Agents", href: "/newsletters" },
           { label: "Queue" },
         ]}
         actions={

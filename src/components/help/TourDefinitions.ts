@@ -47,7 +47,7 @@ export const WELCOME_TOUR: Tour = {
     },
     {
       element: "[data-tour='nav-email-marketing']",
-      popover: { title: "Email Marketing", description: "AI writes personalized emails for your contacts. You approve, we send. Market updates, listing alerts, and more.", side: "right" },
+      popover: { title: "AI Agents", description: "AI writes personalized emails for your contacts. You approve, we send. Market updates, listing alerts, and more.", side: "right" },
     },
   ],
 };
@@ -128,7 +128,7 @@ export const ALL_TOURS: Tour[] = [
     steps: [
       {
         element: "[data-tour='nav-email-marketing']",
-        popover: { title: "Open Email Marketing", description: "Click here to access the AI email marketing dashboard.", side: "bottom" },
+        popover: { title: "Open AI Agents", description: "Click here to access the AI email marketing dashboard.", side: "bottom" },
         navigateTo: "/",
       },
       {

@@ -62,7 +62,7 @@ export default async function CampaignsPage() {
         title="Campaigns"
         subtitle="Send listing blasts and one-off campaigns"
         breadcrumbs={[
-          { label: "Email Marketing", href: "/newsletters" },
+          { label: "AI Agents", href: "/newsletters" },
         ]}
       />
       <div className="p-6">

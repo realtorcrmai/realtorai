@@ -34,7 +34,7 @@ const MAIN_NAV: NavItem[] = [
 
 const TOOLS_NAV: NavItem[] = [
   { href: "/content", label: "Content Engine", icon: Wand2, featureKey: "content" },
-  { href: "/newsletters", label: "Email Marketing", icon: Mail, featureKey: "newsletters" },
+  { href: "/newsletters", label: "AI Agents", icon: Mail, featureKey: "newsletters" },
   { href: "/newsletters/campaigns", label: "Campaigns", icon: Megaphone, featureKey: "newsletters" },
   { href: "/newsletters/editorial", label: "Editorial", icon: Newspaper, featureKey: "newsletters" },
   { href: "/newsletters/greetings", label: "Greetings", icon: PartyPopper, featureKey: "newsletters" },
@@ -249,7 +249,7 @@ export function MondaySidebar() {
         </>
       )}
 
-      {renderNavGroup("Tools", TOOLS_NAV)}
+      {renderNavGroup("Newsletters", TOOLS_NAV)}
       {renderNavGroup("Admin", ADMIN_NAV)}
 
       {/* Team — visible to all users (solo users see Create Team, members see team page) */}

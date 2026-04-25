@@ -33,10 +33,10 @@ export default async function NewsletterSettingsPage() {
   return (
     <div className="flex flex-col min-h-0">
       <PageHeader
-        title="Email Marketing Settings"
+        title="AI Agents Settings"
         subtitle="Voice profile, send preferences, and compliance configuration"
         breadcrumbs={[
-          { label: "Email Marketing", href: "/newsletters" },
+          { label: "AI Agents", href: "/newsletters" },
           { label: "Settings" },
         ]}
         actions={
@@ -44,7 +44,7 @@ export default async function NewsletterSettingsPage() {
             href="/newsletters"
             className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
           >
-            ← Back to Email Marketing
+            ← Back to AI Agents
           </a>
         }
       />

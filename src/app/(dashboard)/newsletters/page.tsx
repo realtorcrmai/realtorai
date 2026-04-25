@@ -414,7 +414,7 @@ export default async function NewsletterDashboard() {
   return (
     <>
       <PageHeader
-        title="Email Marketing"
+        title="AI Agents"
         subtitle="AI sends emails to your contacts automatically"
         actions={
           <div className="flex items-center gap-2">

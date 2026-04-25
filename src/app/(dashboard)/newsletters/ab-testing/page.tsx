@@ -28,7 +28,7 @@ export default async function ABTestingPage() {
         title="A/B Subject Line Testing"
         subtitle="Split-test email subject lines to improve open rates"
         breadcrumbs={[
-          { label: "Email Marketing", href: "/newsletters" },
+          { label: "AI Agents", href: "/newsletters" },
           { label: "A/B Testing" },
         ]}
         actions={

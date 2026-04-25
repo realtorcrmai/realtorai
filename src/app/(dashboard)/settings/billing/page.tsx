@@ -8,7 +8,7 @@ import { trialDaysRemaining } from "@/lib/plans";
 const FEATURE_ROWS = [
   { label: "Contacts", free: "50", pro: "Unlimited", studio: "Unlimited", team: "Unlimited" },
   { label: "Listings", free: "—", pro: "Unlimited", studio: "Unlimited", team: "Unlimited" },
-  { label: "Email Marketing", free: "—", pro: "500/mo", studio: "Unlimited", team: "Unlimited" },
+  { label: "AI Agents", free: "—", pro: "500/mo", studio: "Unlimited", team: "Unlimited" },
   { label: "Showings", free: "—", pro: true, studio: true, team: true },
   { label: "BC Forms", free: "—", pro: true, studio: true, team: true },
   { label: "AI Content", free: "—", pro: "—", studio: true, team: true },

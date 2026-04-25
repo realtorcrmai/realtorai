@@ -179,7 +179,7 @@ export default async function TemplateGalleryPage() {
         title="Email Templates"
         subtitle="Preview every email your contacts receive"
         breadcrumbs={[
-          { label: "Email Marketing", href: "/newsletters" },
+          { label: "AI Agents", href: "/newsletters" },
         ]}
       />
       <div className="p-6">

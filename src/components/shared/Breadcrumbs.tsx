@@ -12,7 +12,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "calendar": "Calendar",
   "tasks": "Tasks",
   "pipeline": "Pipeline",
-  "newsletters": "Email Marketing",
+  "newsletters": "AI Agents",
   "automations": "Automations",
   "settings": "Settings",
   "content": "Content",
