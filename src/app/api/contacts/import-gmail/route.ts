@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchGmailContacts } from "@/lib/contacts/gmail-import";
 import { auth } from "@/lib/auth";
+import { decryptGoogleToken } from "@/lib/google-tokens";
 
 /** GET: Fetch contacts from Gmail → returns preview list with dedup flags */
 export async function GET() {
@@ -12,12 +13,14 @@ export async function GET() {
 
   const supabase = createAdminClient();
 
-  // Get stored Google access token
-  const { data: tokenData } = await supabase
+  // Get stored Google access token (encrypted at rest — migration 148)
+  const { data: rawTokenData } = await supabase
     .from("google_tokens")
     .select("access_token")
     .eq("user_email", session.user.email)
     .single();
+
+  const tokenData = decryptGoogleToken(rawTokenData);
 
   if (!tokenData?.access_token) {
     return NextResponse.json(
@@ -27,7 +30,7 @@ export async function GET() {
   }
 
   try {
-    const contacts = await fetchGmailContacts(tokenData.access_token);
+    const contacts = await fetchGmailContacts(tokenData.access_token as string);
 
     // Get existing contact emails for dedup
     const { data: existing } = await supabase

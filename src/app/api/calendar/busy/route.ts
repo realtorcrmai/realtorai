@@ -34,10 +34,7 @@ export async function GET(req: NextRequest) {
     );
     return NextResponse.json({ busy });
   } catch (err) {
-    console.error("Busy blocks API error:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch busy blocks" },
-      { status: 500 }
-    );
+    console.warn("Busy blocks API degraded to empty:", err);
+    return NextResponse.json({ busy: [], error: "google_unavailable" });
   }
 }

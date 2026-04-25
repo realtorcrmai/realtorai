@@ -7,6 +7,10 @@
 
 import { google } from "googleapis";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  decryptGoogleToken,
+  encryptGoogleTokenFields,
+} from "@/lib/google-tokens";
 
 async function getOAuth2Client(userEmail?: string) {
   const supabase = createAdminClient();
@@ -15,9 +19,13 @@ async function getOAuth2Client(userEmail?: string) {
   if (userEmail) {
     query = query.eq("user_email", userEmail);
   }
-  const { data: tokenRow } = await query.limit(1).single();
+  const { data: rawTokenRow } = await query.limit(1).single();
 
-  if (!tokenRow) throw new Error("No Google token found");
+  if (!rawTokenRow) throw new Error("No Google token found");
+
+  // Decrypt access_token / refresh_token before handing to googleapis.
+  // Legacy plaintext rows pass through unchanged (see google-tokens.ts).
+  const tokenRow = decryptGoogleToken(rawTokenRow)!;
 
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
@@ -34,11 +42,13 @@ async function getOAuth2Client(userEmail?: string) {
     if (tokens.access_token) {
       await supabase
         .from("google_tokens")
-        .update({
-          access_token: tokens.access_token,
-          expiry_date: tokens.expiry_date ?? null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(
+          encryptGoogleTokenFields({
+            access_token: tokens.access_token,
+            expiry_date: tokens.expiry_date ?? null,
+            updated_at: new Date().toISOString(),
+          })
+        )
         .eq("user_email", tokenRow.user_email);
     }
   });

@@ -3,6 +3,10 @@
 
 import { google } from "googleapis";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  decryptGoogleToken,
+  encryptGoogleTokenFields,
+} from "@/lib/google-tokens";
 
 interface GoogleContact {
   resourceName: string;
@@ -19,13 +23,15 @@ interface GoogleContact {
  */
 async function getPeopleClient(userEmail: string) {
   const supabase = createAdminClient();
-  const { data: tokens } = await supabase
+  const { data: rawTokens } = await supabase
     .from("google_tokens")
     .select("access_token, refresh_token, expiry_date")
     .eq("user_email", userEmail)
     .single();
 
-  if (!tokens) throw new Error("No Google tokens found. Please connect Google first.");
+  if (!rawTokens) throw new Error("No Google tokens found. Please connect Google first.");
+
+  const tokens = decryptGoogleToken(rawTokens)!;
 
   const oauth2 = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
@@ -38,14 +44,17 @@ async function getPeopleClient(userEmail: string) {
     expiry_date: tokens.expiry_date,
   });
 
-  // Auto-refresh and save new tokens
+  // Auto-refresh and save new tokens (encrypted at rest — migration 148)
   oauth2.on("tokens", async (newTokens) => {
     const update: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
     if (newTokens.access_token) update.access_token = newTokens.access_token;
     if (newTokens.expiry_date) update.expiry_date = newTokens.expiry_date;
-    await supabase.from("google_tokens").update(update).eq("user_email", userEmail);
+    await supabase
+      .from("google_tokens")
+      .update(encryptGoogleTokenFields(update))
+      .eq("user_email", userEmail);
   });
 
   return google.people({ version: "v1", auth: oauth2 });

@@ -19,6 +19,8 @@ import { DDFSyncButton } from "@/components/listings/DDFSyncButton";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import type { ListingDocument } from "@/types";
+import { decryptFields, FINTRAC_ENCRYPTED_FIELDS } from "@/lib/crypto";
+import { logAuditEvent, AUDIT_ACTIONS } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +109,32 @@ export default async function ListingDetailPage({
       .eq("listing_id", id)
       .order("sort_order", { ascending: true }),
   ]);
+
+  // Decrypt FINTRAC PII for the identity panels (migration 147 / SOC 2 CC6.1).
+  // Raw DB values are ciphertext; UI components render plaintext fields
+  // (dob, citizenship, id_number, mailing_address) directly.
+  const sellerIdentitiesDecrypted = (sellerIdentities ?? []).map(
+    (r: Record<string, unknown>) => decryptFields(r, FINTRAC_ENCRYPTED_FIELDS)
+  );
+  const buyerIdentitiesDecrypted = (buyerIdentities ?? []).map(
+    (r: Record<string, unknown>) => decryptFields(r, FINTRAC_ENCRYPTED_FIELDS)
+  );
+
+  // Audit: fact-of-access only. Values never leave this scope.
+  if (sellerIdentitiesDecrypted.length > 0 || buyerIdentitiesDecrypted.length > 0) {
+    await logAuditEvent({
+      action: AUDIT_ACTIONS.PII_VIEWED,
+      actor: { id: supabase.realtorId },
+      tenantId: supabase.realtorId,
+      resource: { type: "listing", id },
+      metadata: {
+        listing_id: id,
+        count:
+          sellerIdentitiesDecrypted.length + buyerIdentitiesDecrypted.length,
+        source: "listings.detail_page",
+      },
+    });
+  }
 
   const formStatuses = Object.fromEntries(
     (formSubmissions ?? []).map((s: { form_key: string; status: string }) => [s.form_key, s.status as "draft" | "completed"])
@@ -562,13 +590,13 @@ export default async function ListingDetailPage({
               {/* Seller Identities */}
               <SellerIdentitiesPanel
                 listingId={id}
-                initialIdentities={(sellerIdentities ?? []) as never}
+                initialIdentities={sellerIdentitiesDecrypted as never}
               />
 
               {/* Buyer Identities */}
               <BuyerIdentitiesPanel
                 listingId={id}
-                initialIdentities={(buyerIdentities ?? []) as never}
+                initialIdentities={buyerIdentitiesDecrypted as never}
               />
 
               {/* Form Readiness */}
