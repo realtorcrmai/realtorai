@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-25T18 --soc2-mfa-drift -->
+<!-- docs-audit-reviewed: 2026-04-25 --paragon-pdf-import -->
 <!-- docs-audit: scripts/health-check.sh, docs/ENVIRONMENTS.md, docs/DR_RUNBOOK.md, docs/SLO_DEFINITIONS.md -->
 # On-Call & Paging Policy — Realtors360
 

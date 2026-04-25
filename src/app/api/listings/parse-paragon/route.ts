@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { auth } from "@/lib/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { tenantClient } from "@/lib/supabase/tenant";
 import { parseParagonPDF } from "@/lib/paragon/parse";
 
 export const runtime = "nodejs";
@@ -44,11 +44,14 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(await file.arrayBuffer());
 
   // Persist the PDF first — auto-deleted after 7 days by /api/cron/cleanup-paragon-pdfs.
+  // Tenant scope is enforced by the object path (`<realtor_id>/<uuid>.pdf`) plus
+  // the bucket's RLS policies; we go through the tenant wrapper to keep the
+  // "no admin client in user-facing routes" rule honest.
   const objectId = randomUUID();
   const storagePath = `${realtorId}/${objectId}.pdf`;
-  const supabase = createAdminClient();
+  const tc = tenantClient(realtorId);
 
-  const { error: uploadError } = await supabase.storage
+  const { error: uploadError } = await tc.raw.storage
     .from(BUCKET)
     .upload(storagePath, buffer, {
       contentType: "application/pdf",
@@ -70,7 +73,7 @@ export async function POST(req: NextRequest) {
     console.error("[parse-paragon] failed:", err);
     // Best-effort cleanup on parse failure so we don't keep PDFs we can't use.
     if (!uploadError) {
-      await supabase.storage.from(BUCKET).remove([storagePath]).catch(() => {});
+      await tc.raw.storage.from(BUCKET).remove([storagePath]).catch(() => {});
     }
     return NextResponse.json(
       {

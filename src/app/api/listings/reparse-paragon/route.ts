@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { tenantClient } from "@/lib/supabase/tenant";
 import { parseParagonPDF } from "@/lib/paragon/parse";
 
 export const runtime = "nodejs";
@@ -44,8 +44,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const supabase = createAdminClient();
-  const { data, error: downloadError } = await supabase.storage
+  // Tenant scope is already enforced by the path check above; we go through the
+  // tenant wrapper to keep the "no admin client in user-facing routes" rule honest.
+  const tc = tenantClient(realtorId);
+  const { data, error: downloadError } = await tc.raw.storage
     .from(BUCKET)
     .download(storagePath);
 

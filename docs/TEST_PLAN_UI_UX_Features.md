@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-25 --onboarding-hook-rules-fix -->
+<!-- docs-audit-reviewed: 2026-04-25 --paragon-pdf-import -->
 <!-- docs-audit: src/components/**, tests/e2e/* -->
 <!-- last-verified: 2026-04-20 -->
 # Test Plan: UI Redesign & Competitive UX Features

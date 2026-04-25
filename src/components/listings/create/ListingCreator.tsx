@@ -71,7 +71,7 @@ export function ListingCreator() {
         notes: notes.trim() || undefined,
       };
 
-      const result = await createListing(payload as any);
+      const result = await createListing(payload as Parameters<typeof createListing>[0]);
       if (result && typeof result === "object" && "error" in result) {
         setError((result as { error: string }).error);
         setSubmitting(false);
@@ -316,7 +316,7 @@ export function ListingCreator() {
 
         {/* RIGHT — Live Preview (manual entry only) */}
         {activeTab === "manual" && <div className="hidden lg:block w-[340px] shrink-0">
-          <div className="fixed" style={{ width: "340px", top: "140px", maxHeight: "calc(100vh - 200px)", overflowY: "auto" }}>
+          <div className="fixed w-[340px] top-[140px] max-h-[calc(100vh-200px)] overflow-y-auto">
             <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Live Preview</p>
             <ListingPreviewCard
               address={address}
