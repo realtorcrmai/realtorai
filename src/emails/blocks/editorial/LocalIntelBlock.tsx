@@ -3,11 +3,12 @@ import { Section, Text, Heading, Link, Hr } from '@react-email/components'
 import type { LocalIntelBlockContent } from '@/types/editorial'
 
 export interface LocalIntelBlockEmailProps {
+  accentColor?: string
   content: LocalIntelBlockContent
 }
 
-const FOREST_GREEN = '#1a2e1a'
-const GOLD = '#c9a96e'
+const HEADING_COLOR = '#1a1535'
+
 const TEXT_BODY = '#4a4a3a'
 const TEXT_MUTED = '#6b6b5a'
 
@@ -28,7 +29,8 @@ function formatDate(iso: string | null): string | null {
   return d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-export function LocalIntelBlock({ content }: LocalIntelBlockEmailProps) {
+export function LocalIntelBlock({ content, accentColor }: LocalIntelBlockEmailProps) {
+  const accent = accentColor || '#4f35d2'
   const { headline, body, category, neighbourhood, source_url, source_label, published_date } =
     content
 
@@ -48,7 +50,7 @@ export function LocalIntelBlock({ content }: LocalIntelBlockEmailProps) {
             fontSize: '10px',
             fontWeight: '700',
             letterSpacing: '2px',
-            color: GOLD,
+            color: accent,
             textTransform: 'uppercase',
             margin: '0 0 8px',
           }}
@@ -63,7 +65,7 @@ export function LocalIntelBlock({ content }: LocalIntelBlockEmailProps) {
             fontFamily: "Georgia, 'Times New Roman', serif",
             fontSize: '17px',
             fontWeight: '700',
-            color: FOREST_GREEN,
+            color: HEADING_COLOR,
             margin: '0 0 10px',
             lineHeight: '1.3',
           }}
@@ -93,7 +95,7 @@ export function LocalIntelBlock({ content }: LocalIntelBlockEmailProps) {
                 fontFamily: 'Arial, Helvetica, sans-serif',
                 fontSize: '12px',
                 fontWeight: '700',
-                color: GOLD,
+                color: accent,
                 textDecoration: 'none',
                 letterSpacing: '0.5px',
               }}

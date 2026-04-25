@@ -3,14 +3,16 @@ import { Section, Text, Heading, Img } from '@react-email/components'
 import type { HeroBlockContent } from '@/types/editorial'
 
 export interface HeroBlockEmailProps {
+  accentColor?: string
   content: HeroBlockContent
 }
 
-const FOREST_GREEN = '#1a2e1a'
-const GOLD = '#c9a96e'
+const HEADING_COLOR = '#1a1535'
+
 const TEXT_BODY = '#4a4a3a'
 
-export function HeroBlock({ content }: HeroBlockEmailProps) {
+export function HeroBlock({ content, accentColor }: HeroBlockEmailProps) {
+  const accent = accentColor || '#4f35d2'
   const { headline, subheadline, image_url, image_alt, edition_label, date_label } = content
 
   if (!headline) return null
@@ -42,7 +44,7 @@ export function HeroBlock({ content }: HeroBlockEmailProps) {
               fontSize: '10px',
               fontWeight: '700',
               letterSpacing: '2.5px',
-              color: GOLD,
+              color: accent,
               textTransform: 'uppercase',
               margin: '0 0 12px',
             }}
@@ -57,7 +59,7 @@ export function HeroBlock({ content }: HeroBlockEmailProps) {
             fontFamily: "Georgia, 'Times New Roman', serif",
             fontSize: '28px',
             fontWeight: '700',
-            color: FOREST_GREEN,
+            color: HEADING_COLOR,
             margin: '0 0 14px',
             lineHeight: '1.25',
             letterSpacing: '-0.3px',

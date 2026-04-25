@@ -3,12 +3,13 @@ import { Section, Text, Heading } from '@react-email/components'
 import type { RateWatchBlockContent } from '@/types/editorial'
 
 export interface RateWatchBlockEmailProps {
+  accentColor?: string
   content: RateWatchBlockContent
   country: 'CA' | 'US'
 }
 
-const FOREST_GREEN = '#1a2e1a'
-const GOLD = '#c9a96e'
+const HEADING_COLOR = '#1a1535'
+
 const TEXT_BODY = '#4a4a3a'
 const TEXT_MUTED = '#6b6b5a'
 const CARD_BG = '#f9f7f2'
@@ -34,7 +35,8 @@ function changeBpsDisplay(
   return { symbol: '—', text: 'unchanged', color: TEXT_MUTED }
 }
 
-export function RateWatchBlock({ content, country }: RateWatchBlockEmailProps) {
+export function RateWatchBlock({ content, country, accentColor }: RateWatchBlockEmailProps) {
+  const accent = accentColor || '#4f35d2'
   const { commentary, change_bps, as_of_date } = content
 
   const caRows: RateRow[] = [
@@ -78,7 +80,7 @@ export function RateWatchBlock({ content, country }: RateWatchBlockEmailProps) {
                     fontSize: '10px',
                     fontWeight: '700',
                     letterSpacing: '2.5px',
-                    color: GOLD,
+                    color: accent,
                     textTransform: 'uppercase',
                     margin: '0 0 4px',
                   }}
@@ -91,7 +93,7 @@ export function RateWatchBlock({ content, country }: RateWatchBlockEmailProps) {
                     fontFamily: "Georgia, 'Times New Roman', serif",
                     fontSize: '20px',
                     fontWeight: '700',
-                    color: FOREST_GREEN,
+                    color: HEADING_COLOR,
                     margin: '0',
                   }}
                 >
@@ -171,7 +173,7 @@ export function RateWatchBlock({ content, country }: RateWatchBlockEmailProps) {
                         fontFamily: "Georgia, 'Times New Roman', serif",
                         fontSize: '20px',
                         fontWeight: '700',
-                        color: FOREST_GREEN,
+                        color: HEADING_COLOR,
                         margin: '0',
                       }}
                     >

@@ -4,50 +4,39 @@ import type { CtaBlockContent } from '@/types/editorial'
 
 export interface CtaBlockEmailProps {
   content: CtaBlockContent
+  accentColor?: string
 }
 
-const FOREST_GREEN = '#1a2e1a'
-const GOLD = '#c9a96e'
-const TEXT_BODY = '#4a4a3a'
-const CARD_BG = '#f9f7f2'
-
-export function CtaBlock({ content }: CtaBlockEmailProps) {
+export function CtaBlock({ content, accentColor }: CtaBlockEmailProps) {
+  const accent = accentColor || '#4f35d2'
   const { headline, subtext, button_label, button_url, secondary_label, secondary_url } = content
 
   if (!headline) return null
 
   return (
-    <Section
-      style={{
-        backgroundColor: CARD_BG,
-        padding: '0',
-        margin: '0',
-      }}
-    >
-      <Section style={{ padding: '36px 40px 32px', textAlign: 'center' }}>
-        {/* Headline */}
+    <Section style={{ backgroundColor: '#f7f7f8', padding: '0', margin: '0' }}>
+      <Section style={{ padding: '32px 32px 28px', textAlign: 'center' }}>
         <Heading
           as="h3"
           style={{
-            fontFamily: "Georgia, 'Times New Roman', serif",
-            fontSize: '22px',
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+            fontSize: '20px',
             fontWeight: '700',
-            color: FOREST_GREEN,
-            margin: '0 0 12px',
+            color: '#1a1535',
+            margin: '0 0 10px',
             lineHeight: '1.3',
           }}
         >
           {headline}
         </Heading>
 
-        {/* Subtext */}
         {subtext && (
           <Text
             style={{
-              fontFamily: 'Arial, Helvetica, sans-serif',
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
               fontSize: '14px',
-              color: TEXT_BODY,
-              margin: '0 0 24px',
+              color: '#4a4a6a',
+              margin: '0 0 20px',
               lineHeight: '1.6',
             }}
           >
@@ -55,35 +44,31 @@ export function CtaBlock({ content }: CtaBlockEmailProps) {
           </Text>
         )}
 
-        {/* Primary button */}
         <Button
           href={button_url}
           style={{
-            fontFamily: 'Arial, Helvetica, sans-serif',
-            backgroundColor: FOREST_GREEN,
-            color: GOLD,
-            fontSize: '13px',
-            fontWeight: '700',
-            letterSpacing: '1.5px',
-            textTransform: 'uppercase',
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+            backgroundColor: accent,
+            color: '#ffffff',
+            fontSize: '14px',
+            fontWeight: '600',
             textDecoration: 'none',
-            borderRadius: '2px',
-            padding: '14px 32px',
+            borderRadius: '10px',
+            padding: '12px 28px',
             display: 'inline-block',
           }}
         >
           {button_label}
         </Button>
 
-        {/* Secondary link */}
         {secondary_label && secondary_url && (
-          <Text style={{ margin: '16px 0 0' }}>
+          <Text style={{ margin: '14px 0 0' }}>
             <Link
               href={secondary_url}
               style={{
-                fontFamily: 'Arial, Helvetica, sans-serif',
+                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
                 fontSize: '13px',
-                color: FOREST_GREEN,
+                color: accent,
                 textDecoration: 'underline',
               }}
             >
