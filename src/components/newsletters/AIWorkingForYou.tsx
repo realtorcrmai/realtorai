@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -52,8 +53,17 @@ export function AIWorkingForYou({
   upcomingSends,
   scheduledEmails,
 }: AIWorkingForYouProps) {
+  const [showAllSends, setShowAllSends] = useState(false);
+
   // Group scheduled emails by date
   const groupedSchedule: Record<string, ScheduledEmail[]> = {};
+  const defaultCutoff = new Date();
+  defaultCutoff.setDate(defaultCutoff.getDate() + 2);
+  defaultCutoff.setHours(23, 59, 59, 999);
+
+  let totalCount = 0;
+  let defaultCount = 0;
+
   if (scheduledEmails) {
     for (const item of scheduledEmails) {
       const d = new Date(item.scheduledAt);
@@ -65,8 +75,22 @@ export function AIWorkingForYou({
       else dateLabel = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
       if (!groupedSchedule[dateLabel]) groupedSchedule[dateLabel] = [];
       groupedSchedule[dateLabel].push(item);
+      totalCount++;
+      if (d.getTime() <= defaultCutoff.getTime()) defaultCount++;
     }
   }
+
+  // Filter to 2-day window unless expanded
+  const visibleSchedule: Record<string, ScheduledEmail[]> = {};
+  if (showAllSends) {
+    Object.assign(visibleSchedule, groupedSchedule);
+  } else {
+    for (const [label, items] of Object.entries(groupedSchedule)) {
+      const filtered = items.filter(item => new Date(item.scheduledAt).getTime() <= defaultCutoff.getTime());
+      if (filtered.length > 0) visibleSchedule[label] = filtered;
+    }
+  }
+  const hiddenCount = totalCount - defaultCount;
   return (
     <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-[#0F7694]/5">
       <CardContent className="p-5 space-y-4">
@@ -152,11 +176,16 @@ export function AIWorkingForYou({
         {/* Upcoming sends — detailed per-contact schedule */}
         {scheduledEmails && scheduledEmails.length > 0 ? (
           <div>
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-              Upcoming Sends
-            </h4>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Upcoming Sends
+              </h4>
+              <span className="text-[10px] text-muted-foreground">
+                {showAllSends ? `${totalCount} emails` : `Next 2 days · ${defaultCount} email${defaultCount !== 1 ? "s" : ""}`}
+              </span>
+            </div>
             <div className="space-y-3">
-              {Object.entries(groupedSchedule).map(([dateLabel, items]) => (
+              {Object.entries(visibleSchedule).map(([dateLabel, items]) => (
                 <div key={dateLabel}>
                   <p className="text-[11px] font-semibold text-primary mb-1.5 pl-1">{dateLabel}</p>
                   <div className="space-y-1">
@@ -165,11 +194,9 @@ export function AIWorkingForYou({
                         key={item.id}
                         className="flex items-center gap-2.5 bg-white/50 rounded-md px-2.5 py-2 border"
                       >
-                        {/* Time */}
                         <span className="text-[11px] font-semibold text-foreground w-12 shrink-0">
                           {new Date(item.scheduledAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}
                         </span>
-                        {/* Avatar */}
                         <div
                           className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 ${
                             item.contactType === "seller"
@@ -179,15 +206,12 @@ export function AIWorkingForYou({
                         >
                           {item.contactName.charAt(0).toUpperCase()}
                         </div>
-                        {/* Name */}
                         <span className="text-xs font-medium flex-1 truncate">
                           {item.contactName}
                         </span>
-                        {/* Email type */}
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
                           {item.emailType.replace(/_/g, " ")}
                         </Badge>
-                        {/* Contact type */}
                         <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 ${
                           item.contactType === "seller"
                             ? "bg-orange-100 text-orange-700"
@@ -201,6 +225,14 @@ export function AIWorkingForYou({
                 </div>
               ))}
             </div>
+            {hiddenCount > 0 && (
+              <button
+                onClick={() => setShowAllSends(!showAllSends)}
+                className="mt-2 text-xs text-primary font-medium hover:underline"
+              >
+                {showAllSends ? "Show next 2 days only" : `Show all ${totalCount} scheduled (${hiddenCount} more)`}
+              </button>
+            )}
           </div>
         ) : upcomingSends.length > 0 ? (
           <div>
