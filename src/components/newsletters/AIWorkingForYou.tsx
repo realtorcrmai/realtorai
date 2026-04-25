@@ -26,6 +26,7 @@ interface ScheduledEmail {
   contactType: string;
   emailType: string;
   scheduledAt: string;
+  phase?: string;
 }
 
 interface AIWorkingForYouProps {
