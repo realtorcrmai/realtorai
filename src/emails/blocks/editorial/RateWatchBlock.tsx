@@ -45,8 +45,9 @@ export function RateWatchBlock({ content, country, accentColor }: RateWatchBlock
     { label: 'BoC Prime', key: 'prime_rate', value: content.prime_rate },
   ]
 
+  // US rates: 1yr_fixed → 30yr proxy, 3yr_fixed → 15yr proxy (schema has no dedicated US fields)
   const usRows: RateRow[] = [
-    { label: '30yr Fixed', key: 'rate_5yr_fixed', value: content.rate_5yr_fixed },
+    { label: '30yr Fixed', key: 'rate_1yr_fixed', value: content.rate_1yr_fixed },
     { label: '15yr Fixed', key: 'rate_3yr_fixed', value: content.rate_3yr_fixed },
     { label: 'Fed Funds', key: 'prime_rate', value: content.prime_rate },
   ]

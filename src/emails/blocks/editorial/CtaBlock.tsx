@@ -13,6 +13,14 @@ export function CtaBlock({ content, accentColor }: CtaBlockEmailProps) {
 
   if (!headline) return null
 
+  // Sanitize URLs — block javascript: and data: protocols
+  const safeUrl = (url: string | null | undefined): string => {
+    if (!url) return '#'
+    const trimmed = url.trim().toLowerCase()
+    if (trimmed.startsWith('javascript:') || trimmed.startsWith('data:') || trimmed.startsWith('vbscript:')) return '#'
+    return url
+  }
+
   return (
     <Section style={{ backgroundColor: '#f7f7f8', padding: '0', margin: '0' }}>
       <Section style={{ padding: '32px 32px 28px', textAlign: 'center' }}>
@@ -45,7 +53,7 @@ export function CtaBlock({ content, accentColor }: CtaBlockEmailProps) {
         )}
 
         <Button
-          href={button_url}
+          href={safeUrl(button_url)}
           style={{
             fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
             backgroundColor: accent,
@@ -64,7 +72,7 @@ export function CtaBlock({ content, accentColor }: CtaBlockEmailProps) {
         {secondary_label && secondary_url && (
           <Text style={{ margin: '14px 0 0' }}>
             <Link
-              href={secondary_url}
+              href={safeUrl(secondary_url)}
               style={{
                 fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
                 fontSize: '13px',

@@ -87,10 +87,10 @@ export function LocalIntelBlock({ content, accentColor }: LocalIntelBlockEmailPr
         </Text>
 
         {/* Source link */}
-        {source_url && (
+        {source_url && !source_url.trim().toLowerCase().startsWith('javascript:') && (
           <Text style={{ margin: '10px 0 0' }}>
             <Link
-              href={source_url}
+              href={encodeURI(source_url)}
               style={{
                 fontFamily: 'Arial, Helvetica, sans-serif',
                 fontSize: '12px',
