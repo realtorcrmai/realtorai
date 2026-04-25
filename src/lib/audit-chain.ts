@@ -1,15 +1,21 @@
 // SOC 2 CC7.2 — Audit log hash chain validation
 //
 // The compliance_audit_log table is written with a server-side trigger
-// that computes sha256(prev_hash || canonical(row)) for every row.
-// This module re-computes the chain end-to-end to detect tampering.
+// (migration 146) that computes sha256(prev_hash || canonical(row)) for
+// every row. This module re-runs that computation server-side and
+// compares stored vs expected for each row, detecting tampering.
 //
-// If any row's stored row_hash disagrees with the recomputed hash, or
-// any row's prev_hash disagrees with the prior row's row_hash, the
-// chain is broken. Break == tampering OR bug in hash computation.
-// Both warrant a P1 investigation.
+// Why server-side recompute (not TS):
+//   The trigger's canonical form uses Postgres-native serialization:
+//     - jsonb::text emits '{"k": v}' (space after colon)
+//     - timestamptz::text emits '2026-04-25 18:25:36.336508+00'
+//     - host(inet) strips CIDR mask
+//   JS can't reproduce these formats reliably across versions, and an
+//   off-by-one-byte canonical produces a different hash, leading to
+//   false positives. Migration 150 wraps the canonical formula in a
+//   SQL function (compliance_audit_log_verify_chain), so the trigger
+//   and verifier share one source of truth.
 
-import { createHash } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface ChainVerificationResult {
@@ -20,57 +26,21 @@ export interface ChainVerificationResult {
   checked_at: string;
 }
 
-interface AuditRow {
-  sequence: number;
-  occurred_at: string;
-  actor_id: string | null;
-  actor_email: string | null;
-  action: string;
-  category: string;
-  severity: string;
-  resource_type: string | null;
-  resource_id: string | null;
-  tenant_id: string | null;
-  metadata: unknown;
-  ip_address: string | null;
-  request_id: string | null;
-  prev_hash: string | null;
-  row_hash: string;
-}
-
-// Must match the canonical form in migration 146's trigger.
-function canonical(row: AuditRow, prevHash: string | null): string {
-  const parts = [
-    prevHash ?? "GENESIS",
-    String(row.sequence),
-    row.occurred_at,
-    row.actor_id ?? "",
-    row.actor_email ?? "",
-    row.action,
-    row.category,
-    row.severity,
-    row.resource_type ?? "",
-    row.resource_id ?? "",
-    row.tenant_id ?? "",
-    row.metadata == null ? "{}" : JSON.stringify(row.metadata),
-    row.ip_address ?? "",
-    row.request_id ?? "",
-  ];
-  return parts.join("|");
-}
-
-function sha256(input: string): string {
-  return createHash("sha256").update(input).digest("hex");
+interface VerifyRow {
+  out_sequence: number;
+  out_prev_hash: string | null;
+  out_prev_hash_expected: string | null;
+  out_row_hash: string;
+  out_row_hash_expected: string;
 }
 
 /**
- * Verify the audit log chain in a given sequence range.
+ * Verify the audit log chain end-to-end (default) or a sequence range.
  *
- * Note: JSON canonicalization between Postgres jsonb::text and
- * JSON.stringify can differ in whitespace/key ordering. If the chain
- * breaks in production on metadata rows only, the mismatch likely
- * stems from that — reconcile by reading metadata::text directly via
- * a Postgres function rather than through the JS client.
+ * Each returned row carries (stored_hash, expected_hash) computed by
+ * Postgres using the same canonical expression as the BEFORE-INSERT
+ * trigger. We walk the result and report the first row where either
+ * the row hash or the prev-hash linkage disagrees.
  */
 export async function verifyAuditChain(
   fromSequence = 1,
@@ -78,65 +48,47 @@ export async function verifyAuditChain(
 ): Promise<ChainVerificationResult> {
   const supabase = createAdminClient();
 
-  const { data, error } = await supabase
-    .from("compliance_audit_log")
-    .select(
-      "sequence, occurred_at, actor_id, actor_email, action, category, severity, resource_type, resource_id, tenant_id, metadata, ip_address, request_id, prev_hash, row_hash"
-    )
-    .gte("sequence", fromSequence)
-    .order("sequence", { ascending: true })
-    .limit(limit);
+  const { data, error } = await supabase.rpc(
+    "compliance_audit_log_verify_chain",
+    { p_from_sequence: fromSequence, p_max_rows: limit }
+  );
 
   if (error) {
     return {
       ok: false,
       rows_checked: 0,
       first_break_sequence: null,
-      first_break_reason: `query failed: ${error.message}`,
+      first_break_reason: `verify rpc failed: ${error.message}`,
       checked_at: new Date().toISOString(),
     };
   }
 
-  const rows = (data ?? []) as AuditRow[];
-  let priorHash: string | null = null;
+  const rows = (data ?? []) as VerifyRow[];
 
-  // Seed priorHash from the row before our range, if any
-  if (fromSequence > 1) {
-    const { data: priorRow } = await supabase
-      .from("compliance_audit_log")
-      .select("row_hash")
-      .lt("sequence", fromSequence)
-      .order("sequence", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    priorHash = (priorRow as { row_hash: string } | null)?.row_hash ?? null;
-  }
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
 
-  for (const row of rows) {
-    // Check prev_hash linkage
-    if ((row.prev_hash ?? null) !== priorHash) {
+    // prev_hash linkage check
+    if ((r.out_prev_hash ?? null) !== (r.out_prev_hash_expected ?? null)) {
       return {
         ok: false,
-        rows_checked: rows.indexOf(row) + 1,
-        first_break_sequence: row.sequence,
+        rows_checked: i + 1,
+        first_break_sequence: r.out_sequence,
         first_break_reason: "prev_hash does not match prior row's row_hash",
         checked_at: new Date().toISOString(),
       };
     }
 
-    // Recompute row_hash
-    const computed = sha256(canonical(row, priorHash));
-    if (computed !== row.row_hash) {
+    // row_hash recompute check
+    if (r.out_row_hash !== r.out_row_hash_expected) {
       return {
         ok: false,
-        rows_checked: rows.indexOf(row) + 1,
-        first_break_sequence: row.sequence,
+        rows_checked: i + 1,
+        first_break_sequence: r.out_sequence,
         first_break_reason: "row_hash does not match recomputed hash",
         checked_at: new Date().toISOString(),
       };
     }
-
-    priorHash = row.row_hash;
   }
 
   return {
