@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-25 --soc2-mfa-drift-rebase -->
+<!-- docs-audit-reviewed: 2026-04-25 --onboarding-hook-rules-fix -->
 <!-- docs-audit: src/actions/*, src/components/* -->
 <!-- last-verified: 2026-04-20 -->
 # Realtors360 — User Journey Maps

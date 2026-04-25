@@ -1,5 +1,5 @@
 <!-- docs-audit: src/components/**, src/app/(dashboard)/** -->
-<!-- docs-audit-reviewed: 2026-04-25 --soc2-mfa-drift-rebase -->
+<!-- docs-audit-reviewed: 2026-04-25 --onboarding-hook-rules-fix -->
 # Accessibility Baseline
 
 **Target:** WCAG 2.2 AA
