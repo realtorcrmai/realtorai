@@ -174,6 +174,12 @@ export default function LoginPage() {
                   Sign up free
                 </a>
               </p>
+
+              <p className="text-[10px] text-muted-foreground/60 text-center mt-4">
+                <a href="/terms" className="hover:underline">Terms of Use</a>
+                {" · "}
+                <a href="/privacy" className="hover:underline">Privacy Policy</a>
+              </p>
             </CardContent>
           </Card>
         </div>
