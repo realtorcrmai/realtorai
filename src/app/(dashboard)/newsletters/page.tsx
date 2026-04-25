@@ -62,7 +62,7 @@ export default async function NewsletterDashboard() {
     tc.from("listings").select("id, address, list_price, status").eq("status", "active").order("created_at", { ascending: false }).limit(10),
     tc.from("contacts").select("id, name, phone, type, newsletter_intelligence").not("newsletter_intelligence", "is", null).order("created_at", { ascending: false }).limit(50),
     tc.from("newsletters").select("id, subject, email_type, status, sent_at, contact_id, html_body, ai_context, contacts(name, type), newsletter_events(event_type, metadata, created_at)").eq("status", "sent").order("sent_at", { ascending: false }).limit(20),
-    tc.from("contact_journeys").select("id, contact_id, journey_type, current_phase, next_email_at, emails_sent_in_phase, contacts(name, type)").eq("is_paused", false).not("next_email_at", "is", null).lte("next_email_at", sevenDaysFromNow).order("next_email_at").limit(50),
+    tc.from("contact_journeys").select("id, contact_id, journey_type, current_phase, next_email_at, emails_sent_in_phase, contacts(name, type)").eq("is_paused", false).not("next_email_at", "is", null).gte("next_email_at", new Date().toISOString()).lte("next_email_at", sevenDaysFromNow).order("next_email_at").limit(50),
     tc.from("newsletters").select("id, subject, email_type, status, sent_at, contact_id, created_at, contacts(name, type), newsletter_events(event_type)").in("email_type", ["listing_blast", "campaign", "listing_alert"]).eq("status", "sent").order("created_at", { ascending: false }).limit(10),
   ]);
 
@@ -157,27 +157,47 @@ export default async function NewsletterDashboard() {
   }
   const upcomingSends = Object.values(upcomingSendsMap).slice(0, 5);
 
-  // Detailed per-contact schedule for the AI tab — uses the real JOURNEY_SCHEDULES
-  const scheduledEmails = (upcomingJourneys || [])
-    .filter((uj: any) => uj.next_email_at)
-    .map((uj: any) => {
-      const contact = Array.isArray(uj.contacts) ? uj.contacts[0] : uj.contacts;
-      const jType = uj.journey_type as keyof typeof JOURNEY_SCHEDULES;
-      const phase = uj.current_phase as string;
-      const schedule = JOURNEY_SCHEDULES[jType]?.[phase as keyof (typeof JOURNEY_SCHEDULES)[typeof jType]] || [];
-      const emailIndex = uj.emails_sent_in_phase || 0;
-      const emailType = emailIndex < schedule.length ? schedule[emailIndex].emailType : "email";
-      return {
-        id: uj.id,
+  // Detailed per-contact schedule for the AI tab — projects the full remaining
+  // email sequence for each contact based on JOURNEY_SCHEDULES delay hours.
+  const scheduledEmails: Array<{
+    id: string; contactId: string; contactName: string; contactType: string;
+    emailType: string; scheduledAt: string; phase: string;
+  }> = [];
+
+  for (const uj of (upcomingJourneys || [])) {
+    if (!uj.next_email_at) continue;
+    const contact = Array.isArray(uj.contacts) ? uj.contacts[0] : uj.contacts;
+    const jType = uj.journey_type as keyof typeof JOURNEY_SCHEDULES;
+    const phase = uj.current_phase as string;
+    const schedule = JOURNEY_SCHEDULES[jType]?.[phase as keyof (typeof JOURNEY_SCHEDULES)[typeof jType]] || [];
+    const emailIndex = uj.emails_sent_in_phase || 0;
+
+    // Project remaining emails in this phase
+    const baseTime = new Date(uj.next_email_at).getTime();
+    for (let i = emailIndex; i < schedule.length; i++) {
+      const step = schedule[i];
+      // First remaining email uses next_email_at directly; subsequent ones offset from it
+      const offsetMs = i === emailIndex ? 0 : (step.delayHours - schedule[emailIndex].delayHours) * 3600000;
+      const sendTime = new Date(baseTime + offsetMs);
+
+      // Only include future dates within 30 days
+      if (sendTime.getTime() < Date.now()) continue;
+      if (sendTime.getTime() > Date.now() + 30 * 86400000) break;
+
+      scheduledEmails.push({
+        id: `${uj.id}-${i}`,
         contactId: uj.contact_id,
         contactName: contact?.name || "Unknown",
         contactType: contact?.type || uj.journey_type || "buyer",
-        emailType,
-        scheduledAt: uj.next_email_at,
-      };
-    })
-    .sort((a: any, b: any) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
-    .slice(0, 20);
+        emailType: step.emailType,
+        scheduledAt: sendTime.toISOString(),
+        phase,
+      });
+    }
+  }
+
+  scheduledEmails.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+  const scheduledEmailsTruncated = scheduledEmails.slice(0, 30);
 
   // Pipeline phases
   const phases = ["lead", "active", "under_contract", "past_client", "dormant"];
@@ -278,7 +298,7 @@ export default async function NewsletterDashboard() {
                   hotLeadCount={hotLeads.length}
                   successStories={successStories}
                   upcomingSends={upcomingSends}
-                  scheduledEmails={scheduledEmails}
+                  scheduledEmails={scheduledEmailsTruncated}
                 />
 
                 {/* Approval queue — only shown when there are drafts */}
