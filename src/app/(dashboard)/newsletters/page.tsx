@@ -341,11 +341,11 @@ export default async function NewsletterDashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Journey Schedule — what gets sent when */}
-                <JourneyScheduleCard />
-
                 {/* Unified feed — what went out across all email systems */}
                 <WhatWentOutFeed items={whatWentOut as any} />
+
+                {/* Journey Schedule — what gets sent when */}
+                <JourneyScheduleCard />
 
               </div>
             ),
