@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,9 @@ import { ArrowRight } from "lucide-react";
 import { LogoSpinner, LogoVideo } from "@/components/brand/Logo";
 import Link from "next/link";
 
-export default function LoginPage() {
+function LoginContent() {
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("return_to");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -31,6 +34,11 @@ export default function LoginPage() {
       setError("Invalid email or password");
       setLoading(false);
     } else {
+      // External return_to (e.g. from Pulse360)
+      if (returnTo) {
+        window.location.href = returnTo;
+        return;
+      }
       // Check session to determine redirect target
       try {
         const sess = await fetch("/api/auth/session").then(r => r.json());
@@ -156,7 +164,7 @@ export default function LoginPage() {
 
               <button
                 type="button"
-                onClick={() => signIn("google", { callbackUrl: "/" })}
+                onClick={() => signIn("google", { callbackUrl: returnTo || "/" })}
                 className="w-full flex items-center justify-center gap-3 h-11 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors text-sm font-medium text-foreground"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -170,7 +178,7 @@ export default function LoginPage() {
 
               <p className="text-xs text-muted-foreground text-center mt-3">
                 Don&apos;t have an account?{" "}
-                <a href="/signup" className="text-primary font-medium hover:underline">
+                <a href={returnTo ? `/signup?return_to=${encodeURIComponent(returnTo)}` : "/signup"} className="text-primary font-medium hover:underline">
                   Sign up free
                 </a>
               </p>
@@ -185,5 +193,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   );
 }
