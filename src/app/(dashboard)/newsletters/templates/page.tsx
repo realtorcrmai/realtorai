@@ -70,6 +70,15 @@ export default async function TemplateGalleryPage() {
   const session = await auth();
   const userName = session?.user?.name || "Your Name";
 
+  // Feature gate: require newsletters feature
+  const { getAuthenticatedTenantClient } = await import("@/lib/supabase/tenant");
+  const { getUserFeatures } = await import("@/lib/features");
+  const { redirect } = await import("next/navigation");
+  const tc = await getAuthenticatedTenantClient();
+  const { data: gateUser } = await tc.from("users").select("plan, enabled_features").eq("id", session?.user?.id ?? "").single();
+  const gateFeatures = getUserFeatures((gateUser?.plan as string) ?? "free", gateUser?.enabled_features as string[] | null);
+  if (!gateFeatures.includes("newsletters")) redirect("/");
+
   // Fetch realtor branding — fall back to user's account name
   const brandProfile = await getBrandProfile();
   const branding: RealtorBranding = {
