@@ -1,17 +1,28 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
 
 // ── Read Config ─────────────────────────────────────────────
 export async function getRealtorConfig() {
-  const supabase = createAdminClient();
-  const { data } = await supabase
-    .from("realtor_agent_config")
-    .select("*")
-    .limit(1)
-    .single();
-  return data;
+  try {
+    const tc = await getAuthenticatedTenantClient();
+    const { data } = await tc
+      .from("realtor_agent_config")
+      .select("*")
+      .maybeSingle();
+    return data;
+  } catch {
+    // Fallback for unauthenticated contexts (cron jobs)
+    const supabase = createAdminClient();
+    const { data } = await supabase
+      .from("realtor_agent_config")
+      .select("*")
+      .limit(1)
+      .maybeSingle();
+    return data;
+  }
 }
 
 // ── Update Settings ─────────────────────────────────────────
