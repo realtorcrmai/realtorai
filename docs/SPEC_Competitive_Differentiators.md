@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-22T18 -->
+<!-- docs-audit-reviewed: 2026-04-25 --pipeline-a11y -->
 <!-- docs-audit: docs/SPEC_*, docs/PLAN_*, src/actions/*, src/components/*, src/lib/* -->
 # Competitive Differentiators — Complete Specification
 
