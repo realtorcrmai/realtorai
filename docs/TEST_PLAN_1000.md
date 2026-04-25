@@ -3140,6 +3140,23 @@ Full onboarding test cases are maintained in `docs/TEST_PLAN_ONBOARDING.md`. Thi
 **Expected:** Flags contacts with no activity past threshold as dormant. Creates notifications.
 **Priority:** P2
 
+### Audit Chain Verify (`src/app/api/cron/audit-chain-verify/route.ts`)
+
+#### CRON-AUDIT-CHAIN-001: GET /api/cron/audit-chain-verify (auth)
+**Steps:** Send GET without `Authorization` header, then with `Bearer wrong`, then with `Bearer $CRON_SECRET`.
+**Expected:** First two return 401. Third invokes `verifyAuditChain()` and returns JSON `{ ok: true, sequence_checked }` when chain is intact.
+**Priority:** P1
+
+#### CRON-AUDIT-CHAIN-002: chain-break detection writes critical audit event
+**Steps:** Tamper with one row in `compliance_audit_log` (e.g. flip `metadata`) via service-role, then trigger the cron.
+**Expected:** Returns `{ ok: false, broken_at_sequence }`. Inserts a new audit row with `action = CHAIN_BREAK_DETECTED` and `severity = critical`.
+**Priority:** P1
+
+#### CRON-AUDIT-CHAIN-003: clean chain stays clean across runs
+**Steps:** Run the cron twice in a row with no DB changes between.
+**Expected:** Both runs return `ok: true`. No `CHAIN_BREAK_DETECTED` rows are inserted. `sequence_checked` is non-decreasing.
+**Priority:** P2
+
 ### MLS Scraper (`src/actions/mls-scraper.ts`)
 
 #### ACTION-MLS-SCRAPER-001: Happy path — scrape valid MLS listing URL
