@@ -640,7 +640,7 @@ export async function sendEdition(
     // Fetch realtor's brand profile for email headers + rendering
     const { data: brandProfileData } = await tc
       .from('realtor_brand_profiles')
-      .select('display_name, title, brokerage_name, phone, email, brand_color, physical_address')
+      .select('display_name, title, brokerage_name, phone, email, brand_color, physical_address, headshot_url, logo_url')
       .eq('realtor_id', tc.realtorId)
       .maybeSingle();
 
@@ -688,6 +688,8 @@ export async function sendEdition(
           email: brandProfileData?.email ?? process.env.AGENT_EMAIL ?? '',
           accentColor: brandProfileData?.brand_color ?? '#FF7A59',
           physicalAddress: brandProfileData?.physical_address ?? process.env.AGENT_PHYSICAL_ADDRESS ?? '',
+          headshotUrl: brandProfileData?.headshot_url ?? undefined,
+          logoUrl: brandProfileData?.logo_url ?? undefined,
         },
         // Use placeholder — replaced per-recipient in the send loop with a signed URL
         unsubscribe_url: UNSUBSCRIBE_PLACEHOLDER,
