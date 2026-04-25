@@ -207,6 +207,8 @@ interface SendDialogProps {
   segments: SegmentOption[]
   selectedSegmentId: string | undefined
   onSegmentChange: (id: string | undefined) => void
+  /** When false, only test send is available (edition not ready for full send) */
+  allowFullSend?: boolean
 }
 
 function SendDialog({
@@ -219,6 +221,7 @@ function SendDialog({
   segments,
   selectedSegmentId,
   onSegmentChange,
+  allowFullSend = true,
 }: SendDialogProps) {
   const [mode, setMode] = React.useState<'test' | 'full'>('test')
   const [testEmail, setTestEmail] = React.useState('')
@@ -294,31 +297,39 @@ function SendDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Mode toggle */}
-        <div className="flex gap-1 rounded-lg border border-border p-1 bg-muted/30">
-          <button
-            onClick={() => setMode('test')}
-            className={[
-              'flex-1 text-sm font-medium px-3 py-1.5 rounded-md transition-colors',
-              mode === 'test'
-                ? 'bg-card text-foreground shadow-sm border border-border'
-                : 'text-muted-foreground hover:text-foreground',
-            ].join(' ')}
-          >
-            🧪 Test Send
-          </button>
-          <button
-            onClick={() => setMode('full')}
-            className={[
-              'flex-1 text-sm font-medium px-3 py-1.5 rounded-md transition-colors',
-              mode === 'full'
-                ? 'bg-card text-foreground shadow-sm border border-border'
-                : 'text-muted-foreground hover:text-foreground',
-            ].join(' ')}
-          >
-            🚀 Send to All
-          </button>
-        </div>
+        {/* Mode toggle — only show tabs when full send is available */}
+        {allowFullSend ? (
+          <div className="flex gap-1 rounded-lg border border-border p-1 bg-muted/30">
+            <button
+              onClick={() => setMode('test')}
+              className={[
+                'flex-1 text-sm font-medium px-3 py-1.5 rounded-md transition-colors',
+                mode === 'test'
+                  ? 'bg-card text-foreground shadow-sm border border-border'
+                  : 'text-muted-foreground hover:text-foreground',
+              ].join(' ')}
+            >
+              🧪 Test Send
+            </button>
+            <button
+              onClick={() => setMode('full')}
+              className={[
+                'flex-1 text-sm font-medium px-3 py-1.5 rounded-md transition-colors',
+                mode === 'full'
+                  ? 'bg-card text-foreground shadow-sm border border-border'
+                  : 'text-muted-foreground hover:text-foreground',
+              ].join(' ')}
+            >
+              🚀 Send to All
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 px-3 py-2">
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              Generate content first to unlock full send. Test send is available now.
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-col gap-3 py-2">
           {/* Subject line preview — shared by both modes */}
@@ -731,6 +742,7 @@ export function EditionEditorClient({ edition, voiceProfile: _voiceProfile, hasV
   // ── Render ────────────────────────────────────────────────────────────────
 
   const canSend = edition.status === 'ready' && !isGenerating
+  const canTestSend = !isGenerating && edition.status !== 'generating'
   const canGenerate = edition.status !== 'sent' && !isGenerating
 
   return (
@@ -799,14 +811,14 @@ export function EditionEditorClient({ edition, voiceProfile: _voiceProfile, hasV
             )}
           </Button>
 
-          {canSend && (
+          {(canSend || canTestSend) && (
             <Button
               variant="brand"
               size="sm"
               onClick={handleSendOpen}
-              aria-label="Send this edition"
+              aria-label={canSend ? "Send this edition" : "Send test email"}
             >
-              📤 Send Edition
+              {canSend ? '📤 Send Edition' : '🧪 Test Send'}
             </Button>
           )}
         </div>
@@ -868,6 +880,7 @@ export function EditionEditorClient({ edition, voiceProfile: _voiceProfile, hasV
         segments={segments}
         selectedSegmentId={selectedSegmentId}
         onSegmentChange={setSelectedSegmentId}
+        allowFullSend={canSend}
       />
 
       {/* Upgrade modal — shown when starter tier monthly limit is reached */}
