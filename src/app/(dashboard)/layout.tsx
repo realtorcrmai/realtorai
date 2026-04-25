@@ -34,7 +34,19 @@ export default async function DashboardLayout({
     redirect("/verify");
   }
 
+  // ── MFA challenge gate — SOC 2 CC6.6 ──
+  // If the user has MFA enabled but hasn't elevated this session,
+  // force them to /mfa-challenge before any dashboard route renders.
+  // Server-side check is the source of truth; we don't trust client.
+  // Runs before the onboarding overlay so MFA always wins, regardless
+  // of onboarding state.
+  if (user.mfaActive === true && user.mfaVerified !== true) {
+    redirect("/mfa-challenge");
+  }
+
   // ── Onboarding: show as dismissible modal overlay instead of hard redirect ──
+  // (Onboarding redirect was retired in favour of OnboardingOverlay below —
+  // see PR #285. The flags are surfaced through to the JSX.)
   const needsPersonalization = user.personalizationCompleted === false;
   const needsOnboarding = user.onboardingCompleted === false;
 

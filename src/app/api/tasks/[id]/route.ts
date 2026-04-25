@@ -85,7 +85,7 @@ export async function GET(
   });
 }
 
-// POST /api/tasks/[id]/duplicate — duplicate a task
+// POST /api/tasks/[id] — duplicate a task (creates a copy with " (copy)" suffix and status=pending)
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

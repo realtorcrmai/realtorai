@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-22 --tasks-labels-fix -->
+<!-- docs-audit-reviewed: 2026-04-25 --soc2-mfa-drift -->
 <!-- docs-audit: src/app/api/tasks/** -->
 # Test Case Book: Task / Activity Functionality
 

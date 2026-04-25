@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TASK_STATUSES, TASK_PRIORITIES, TASK_CATEGORIES } from "@/lib/constants";
 
 export const taskSchema = z.object({
-  title: z.string().min(1, "Title is required"),
+  title: z.string().min(1, "Title is required").max(200, "Title must be 200 characters or less"),
   description: z.string().nullish(),
   status: z.enum(TASK_STATUSES).default("pending"),
   priority: z.enum(TASK_PRIORITIES).default("medium"),

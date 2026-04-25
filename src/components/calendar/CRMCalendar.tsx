@@ -299,6 +299,18 @@ export function CRMCalendar() {
     return () => cancelAnimationFrame(raf);
   }, [isMobile]);
 
+  // a11y — mirror the active view on the react-big-calendar view toggle buttons
+  // as aria-pressed for screen readers.
+  useEffect(() => {
+    const buttons = document.querySelectorAll<HTMLButtonElement>(
+      ".rbc-toolbar .rbc-btn-group:last-child button"
+    );
+    buttons.forEach((btn) => {
+      const label = (btn.textContent || "").trim().toLowerCase();
+      btn.setAttribute("aria-pressed", String(label === view));
+    });
+  }, [view, events]);
+
   return (
     <div className="space-y-4">
       {/* Legend */}

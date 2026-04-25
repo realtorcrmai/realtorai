@@ -152,6 +152,7 @@ export function TaskForm({ task, teamMembers = [], onSuccess, onCancel }: TaskFo
           placeholder="What needs to be done?"
           required
           autoFocus
+          maxLength={200}
           className="h-12 text-base font-medium border-0 border-b border-border rounded-none px-0 focus-visible:ring-0 focus-visible:border-brand placeholder:text-muted-foreground/40"
         />
       </div>
@@ -176,6 +177,8 @@ export function TaskForm({ task, teamMembers = [], onSuccess, onCancel }: TaskFo
               key={p.value}
               type="button"
               onClick={() => setPriority(p.value)}
+              aria-pressed={priority === p.value}
+              aria-label={`Priority: ${p.label}`}
               className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border-2 transition-all text-center cursor-pointer ${
                 priority === p.value
                   ? "border-brand bg-brand/5 shadow-sm scale-[1.02]"
@@ -198,6 +201,8 @@ export function TaskForm({ task, teamMembers = [], onSuccess, onCancel }: TaskFo
               key={c.value}
               type="button"
               onClick={() => setCategory(c.value)}
+              aria-pressed={category === c.value}
+              aria-label={`Category: ${c.label}`}
               className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
                 category === c.value
                   ? "bg-brand/10 text-brand border border-brand/30"

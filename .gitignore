@@ -85,3 +85,4 @@ logo/mikemarfori-full.png
 logo/*.mp4
 *.xlsx
 ~$*.xlsx
+.claude/worktrees/

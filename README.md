@@ -1,3 +1,4 @@
+<!-- docs-audit-reviewed: 2026-04-25 --soc2-mfa-drift -->
 <!-- docs-audit: package.json, src/**, docs/* -->
 <!-- docs-audit-reviewed: 2026-04-24 -->
 # RealtorAI

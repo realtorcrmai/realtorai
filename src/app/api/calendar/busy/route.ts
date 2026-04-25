@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { auth } from "@/lib/auth";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { fetchBusyBlocks } from "@/lib/google-calendar";
 
 export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
   const searchParams = req.nextUrl.searchParams;
   const start = searchParams.get("start");
   const end = searchParams.get("end");
@@ -14,13 +20,14 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const supabase = createAdminClient();
-  const { data: tokenData } = await supabase
+  // google_tokens is a global table keyed by user_email — fetch via tenant
+  // client's raw escape and scope to the requesting user (HC-12 compliance).
+  const tc = await getAuthenticatedTenantClient();
+  const { data: tokenRow } = await tc.raw
     .from("google_tokens")
-    .select("*")
-    .limit(1);
-
-  const tokenRow = tokenData?.[0] ?? null;
+    .select("user_email")
+    .eq("user_email", session.user.email)
+    .maybeSingle();
 
   if (!tokenRow) {
     return NextResponse.json({ busy: [] });
@@ -34,10 +41,7 @@ export async function GET(req: NextRequest) {
     );
     return NextResponse.json({ busy });
   } catch (err) {
-    console.error("Busy blocks API error:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch busy blocks" },
-      { status: 500 }
-    );
+    console.warn("Busy blocks API degraded to empty:", err);
+    return NextResponse.json({ busy: [], error: "google_unavailable" });
   }
 }

@@ -1,18 +1,24 @@
 import { google } from "googleapis";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  decryptGoogleToken,
+  encryptGoogleTokenFields,
+} from "@/lib/google-tokens";
 
 async function getOAuth2Client(userEmail: string) {
   const supabase = createAdminClient();
-  const { data: tokenRow } = await supabase
+  const { data: rawTokenRow } = await supabase
     .from("google_tokens")
     .select("*")
     .eq("user_email", userEmail)
     .maybeSingle();
 
-  if (!tokenRow) {
+  if (!rawTokenRow) {
     console.warn(`[google-calendar] No token row found for user: ${userEmail}`);
     throw new Error("No Google token found for user");
   }
+
+  const tokenRow = decryptGoogleToken(rawTokenRow)!;
 
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
@@ -30,11 +36,13 @@ async function getOAuth2Client(userEmail: string) {
       try {
         await supabase
           .from("google_tokens")
-          .update({
-            access_token: tokens.access_token,
-            expiry_date: tokens.expiry_date ?? null,
-            updated_at: new Date().toISOString(),
-          })
+          .update(
+            encryptGoogleTokenFields({
+              access_token: tokens.access_token,
+              expiry_date: tokens.expiry_date ?? null,
+              updated_at: new Date().toISOString(),
+            })
+          )
           .eq("user_email", userEmail);
       } catch (err) {
         console.error("[google-calendar] Token refresh DB update failed:", err instanceof Error ? err.message : err);

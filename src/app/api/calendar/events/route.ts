@@ -13,6 +13,21 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  const startTime = new Date(start).getTime();
+  const endTime = new Date(end).getTime();
+  if (Number.isNaN(startTime) || Number.isNaN(endTime)) {
+    return NextResponse.json(
+      { error: "start and end must be valid ISO date strings" },
+      { status: 400 }
+    );
+  }
+  if (startTime > endTime) {
+    return NextResponse.json(
+      { error: "start must be before end" },
+      { status: 400 }
+    );
+  }
+
   try {
     const events = await getCalendarEvents(start, end);
     return NextResponse.json(events);
