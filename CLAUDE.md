@@ -34,23 +34,27 @@ Read the playbook before every task. It covers: pre-flight, task classification,
 
 **Full reference:** `docs/ENVIRONMENTS.md` — always read this before running migrations, changing env vars, or deploying.
 
-**Quick summary as of 2026-04-10:**
+**Quick summary as of 2026-04-25:**
 
-| Service | Platform | Status | Auto-deploy |
-|---------|----------|--------|-------------|
-| **CRM (Next.js)** | Vercel Preview | Live | Push to `dev` |
-| **Newsletter Agent** | **Render ($7/mo)** | **Live — all flags ON** | Push to `dev` (root: `realtors360-newsletter`) |
-| **Database** | Supabase `qcohfohjihazivkforsj` | Live | — |
+| Service | Platform | Database | Auto-deploy |
+|---------|----------|----------|-------------|
+| **CRM Production** | Vercel Production (`magnate360.com`) | `opbrqlmhhqvfomevvkon` **(PROD)** | Push to `main` |
+| **CRM Preview** | Vercel Preview | `qcohfohjihazivkforsj` **(DEV)** | Push to `dev` |
+| **Newsletter Agent** | **Render ($7/mo)** | `opbrqlmhhqvfomevvkon` **(PROD)** | Push to `dev` |
+
+**⚠️ TWO SEPARATE DATABASES — NEVER CONFUSE THEM:**
+- **Dev DB:** `qcohfohjihazivkforsj` — used by `.env.local`, Vercel Preview, local dev. Test/seed data.
+- **Prod DB:** `opbrqlmhhqvfomevvkon` — used by `magnate360.com`, Render newsletter agent. Real data.
+- **`.env.local` points to DEV, NOT production.** When debugging prod issues, pull prod env vars: `vercel env pull .env.prod-check --environment production` (delete after use).
+- **Migrations must be applied to BOTH databases** — dev first, then prod.
 
 **Critical rules:**
-- **Two live services deploy from `dev`.** CRM → Vercel, Newsletter → Render. Both share the same Supabase DB.
 - **Newsletter Agent is LIVE on Render** with 19 tools, 12 crons, all 7 feature flags ON. Env vars are in the Render dashboard (not Vercel).
 - **`FLAG_PROCESS_WORKFLOWS=on` on Render** means the CRM's Vercel cron for process-workflows should be DISABLED to avoid double-processing.
-- **One Supabase project: `qcohfohjihazivkforsj`.** Two orphaned projects (`ybgiljuclpsuhbmdhust`, `rsfjescdjuubxadfjyxb`) pending deletion — do not reference them.
-- **`main` branch is reserved** for future production. `dev` is the only active branch.
 - **CRM env vars** → Vercel dashboard. **Newsletter env vars** → Render dashboard. Don't mix them up.
 - **Never push directly to `dev` or `main`** — always via PR.
-- **Migrations:** paste SQL into https://supabase.com/dashboard/project/qcohfohjihazivkforsj/sql/new. Latest: 097.
+- **Migrations (dev):** paste SQL into https://supabase.com/dashboard/project/qcohfohjihazivkforsj/sql/new
+- **Migrations (prod):** paste SQL into https://supabase.com/dashboard/project/opbrqlmhhqvfomevvkon/sql/new
 
 **Full details, migration file catalogue, orphan table notes, deploy flow diagram, and follow-up items — all in `docs/ENVIRONMENTS.md`.**
 
