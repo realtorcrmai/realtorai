@@ -1373,77 +1373,128 @@ export async function sendListingBlast(listingId: string, _template: string) {
   try {
     const tc = await getAuthenticatedTenantClient();
 
-    // 1. Get listing
-    const { data: listing, error: listingErr } = await tc
-      .from("listings")
-      .select("*")
-      .eq("id", listingId)
-      .single();
+    // 1. Get listing with photos
+    const [{ data: listing, error: listingErr }, { data: photos }] = await Promise.all([
+      tc.from("listings").select("*").eq("id", listingId).single(),
+      tc.from("listing_photos").select("url, sort_order").eq("listing_id", listingId).order("sort_order").limit(6),
+    ]);
     if (listingErr || !listing) return { error: "Listing not found or does not belong to you" };
 
-    // 2. Build recipient list — all agent/partner contacts
-    const { data: agents } = await tc
+    // 2. Build recipient list — all contacts with email (buyers, sellers, agents)
+    const { data: recipients } = await tc
       .from("contacts")
-      .select("email")
-      .in("type", ["agent", "partner"])
-      .not("email", "is", null);
-    const emails = (agents || [])
-      .map((a: { email: string | null }) => a.email)
-      .filter((e: string | null): e is string => !!e && e.includes("@"));
-    if (emails.length === 0) return { error: "No agent contacts with valid emails found" };
+      .select("id, email, name, type, casl_consent_given, newsletter_unsubscribed")
+      .not("email", "is", null)
+      .eq("casl_consent_given", true)
+      .eq("newsletter_unsubscribed", false);
+    const validRecipients = (recipients || []).filter(
+      (c: { email: string | null }) => c.email && c.email.includes("@")
+    );
+    if (validRecipients.length === 0) return { error: "No contacts with valid emails and CASL consent found" };
 
-    // 3. Get brand config
-    const { data: config } = await tc
-      .from("realtor_agent_config")
-      .select("brand_config")
-      .limit(1)
-      .single();
-    const brand = (config?.brand_config as Record<string, string>) || {};
+    // 3. Get realtor branding (from brand profile, not legacy config)
+    const branding = await getRealtorBranding();
 
-    // 4. Build email
+    // 4. Build email with real listing data + photos
     const address = listing.address || "New Listing";
     const price = listing.list_price ? `$${Number(listing.list_price).toLocaleString()}` : "Price on Request";
     const subject = `NEW LISTING: ${address} — ${price}`;
-    const intro = `I'm pleased to present my new listing at ${address}. This property is now available at ${price}. Please share with any interested buyers.`;
-    const heroImage = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&h=600&fit=crop";
+    const intro = `I'm pleased to present my new listing at ${address}. This ${listing.property_type || "property"} is now available at ${price}.`;
 
-    const { assembleEmail, runPreSendChecks } = await import("@/lib/email-blocks");
-    const checks = await runPreSendChecks(subject, intro, "blast", "Fellow Agent", "agent", "listing_alert");
+    // Use real listing photos, fall back to hero_image_url
+    const photoUrls = (photos || []).map((p: { url: string }) => p.url).filter(Boolean);
+    if (photoUrls.length === 0 && listing.hero_image_url) {
+      photoUrls.push(listing.hero_image_url);
+    }
+
+    // Extract features from listing notes
+    const noteText = listing.notes || "";
+    const features = noteText.split(",").map((s: string) => s.trim()).filter((s: string) => s.length > 5).slice(0, 6)
+      .map((f: string, i: number) => ({
+        icon: ["🏠", "🛏️", "🔑", "📐", "🌳", "🚗"][i % 6],
+        title: f,
+        desc: "",
+      }));
+
+    const { assembleEmail } = await import("@/lib/email-blocks");
     const html = assembleEmail("listing_alert", {
-      contact: { name: "Fellow Agent", firstName: "Fellow Agent", type: "agent" },
+      contact: { name: "Valued Client", firstName: "there", type: "buyer" },
       agent: {
-        name: brand.realtorName || "Kunal",
-        brokerage: brand.brokerage || "RE/MAX City Realty",
-        phone: brand.phone || "604-555-0123",
-        initials: (brand.realtorName || "K")[0],
+        name: branding.name,
+        brokerage: branding.brokerage || "",
+        phone: branding.phone || "",
+        email: branding.email || "",
+        title: branding.title || "REALTOR\u00ae",
+        initials: branding.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2),
+        headshotUrl: branding.headshotUrl,
+        logoUrl: branding.logoUrl,
+        brandColor: branding.accentColor,
+        socialLinks: branding.socialLinks,
       },
-      content: { subject: checks.subject || subject, intro: checks.body || intro, body: "", ctaText: "Schedule a Showing" },
+      content: {
+        subject,
+        intro,
+        body: listing.property_type ? `${listing.property_type} · ${listing.bedrooms || "—"} bed · ${listing.bathrooms || "—"} bath${listing.square_feet ? ` · ${listing.square_feet} sq ft` : ""}` : "",
+        ctaText: "Schedule a Showing",
+        ctaUrl: `mailto:${branding.email || ""}?subject=Showing Request — ${address}`,
+      },
       listing: {
-        address, area: listing.city || "Vancouver", price,
-        beds: listing.bedrooms, baths: listing.bathrooms,
+        address,
+        area: listing.city || listing.address?.split(",").slice(-2, -1)[0]?.trim() || "Vancouver",
+        price,
+        beds: listing.bedrooms,
+        baths: listing.bathrooms,
         sqft: listing.square_feet ? String(listing.square_feet) : undefined,
-        photos: [heroImage],
+        photos: photoUrls,
+        features: features.length > 0 ? features : undefined,
       },
+      physicalAddress: branding.physicalAddress,
+      unsubscribeUrl: "#",
     });
 
-    // 5. Send batch
-    const { sendBatchEmails } = await import("@/lib/resend");
-    const emailPayloads = emails.map((to: string) => ({
-      to, subject, html,
-      from: process.env.RESEND_FROM_EMAIL || "hello@magnate360.com",
-      tags: [{ name: "type", value: "listing_blast" }, { name: "listing_id", value: listingId }],
-    }));
-    const result = await sendBatchEmails(emailPayloads);
+    // 5. Send to each recipient individually (for tracking + personalization)
+    const baseDomain = process.env.RESEND_FROM_EMAIL || "hello@magnate360.com";
+    const fromLine = `${branding.name} <${baseDomain}>`;
+    let sentCount = 0;
+    let failedCount = 0;
 
-    // 6. Log blast
-    await tc.from("newsletters").insert({
-      subject, email_type: "listing_blast", status: "sent",
-      sent_at: new Date().toISOString(), html_body: html,
-      ai_context: { blast: true, listing_id: listingId, recipient_count: emails.length, sent: result.sent, failed: result.failed },
-    });
+    for (const recipient of validRecipients) {
+      try {
+        await sendEmail({
+          to: recipient.email!,
+          subject,
+          html,
+          from: fromLine,
+          replyTo: branding.email || undefined,
+          tags: [
+            { name: "email_type", value: "listing_blast" },
+            { name: "listing_id", value: listingId },
+            { name: "contact_id", value: recipient.id },
+          ],
+        });
+
+        // Log per-contact newsletter record for tracking
+        await tc.from("newsletters").insert({
+          contact_id: recipient.id,
+          subject,
+          email_type: "listing_blast",
+          status: "sent",
+          sent_at: new Date().toISOString(),
+          html_body: html,
+          send_mode: "auto",
+          template_slug: "new-listing-alert",
+          ai_context: { blast: true, listing_id: listingId },
+        });
+
+        sentCount++;
+      } catch {
+        failedCount++;
+      }
+    }
 
     revalidatePath("/newsletters");
-    return { success: true, sent: result.sent, failed: result.failed };
+    revalidatePath("/newsletters/campaigns");
+    return { success: true, sent: sentCount, failed: failedCount };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Blast failed" };
   }
