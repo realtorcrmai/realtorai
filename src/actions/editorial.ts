@@ -20,9 +20,12 @@ import {
 const UNSUBSCRIBE_PLACEHOLDER = '__UNSUBSCRIBE_URL__';
 
 function buildUnsubscribeUrl(email: string, editionId: string): string {
-  const secret = process.env.NEXTAUTH_SECRET ?? '';
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    console.error('[editorial] NEXTAUTH_SECRET is not set — unsubscribe tokens will be insecure');
+  }
   const ts = Math.floor(Date.now() / 1000);
-  const token = createHmac('sha256', secret)
+  const token = createHmac('sha256', secret || 'fallback-dev-only')
     .update(`${email}:${editionId}:${ts}`)
     .digest('hex');
   const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
@@ -701,7 +704,16 @@ export async function sendEdition(
       };
     }
 
-    const subject = edition.subject_a ?? edition.title;
+    const subject = edition.subject_a || edition.title || 'Newsletter';
+    if (!subject.trim()) {
+      return { data: null, error: 'Edition has no subject line or title. Generate content first.' };
+    }
+
+    // Guard: reject oversized emails (Resend limit is 25MB)
+    const htmlSizeBytes = new TextEncoder().encode(html).length;
+    if (htmlSizeBytes > 20_000_000) {
+      return { data: null, error: `Email HTML is ${(htmlSizeBytes / 1_000_000).toFixed(1)}MB — exceeds the 25MB limit. Remove some blocks.` };
+    }
     const baseDomain = process.env.RESEND_FROM_EMAIL ?? 'hello@magnate360.com';
     const realtorName = brandProfileData?.display_name ?? process.env.AGENT_NAME ?? '';
     const realtorEmail = brandProfileData?.email ?? process.env.AGENT_EMAIL ?? '';
@@ -871,11 +883,15 @@ export async function sendEdition(
 
     for (const contact of sendableContacts) {
       try {
-        // Substitute placeholder with a per-recipient HMAC-signed unsubscribe URL
-        const htmlWithUnsub = html.replace(
-          UNSUBSCRIBE_PLACEHOLDER,
-          buildUnsubscribeUrl(contact.email!, editionId),
-        );
+        // Skip contacts with no valid email (defensive)
+        if (!contact.email || !contact.email.trim()) {
+          failed++;
+          continue;
+        }
+
+        // Substitute ALL placeholder occurrences with a per-recipient HMAC-signed unsubscribe URL
+        const unsubUrl = buildUnsubscribeUrl(contact.email, editionId);
+        const htmlWithUnsub = html.replaceAll(UNSUBSCRIBE_PLACEHOLDER, unsubUrl);
 
         // ── Per-contact personalized block injection ─────────────────────────
         // Only inject when the contact has intelligence signals and the cap
@@ -956,13 +972,13 @@ export async function sendEdition(
             }),
           });
 
+          const resBody = await response.json().catch(() => null);
+
           if (response.ok) {
             sent++;
 
-            // Phase 2 fix: insert per-recipient row into newsletters table
-            // so editorial sends count toward the global frequency cap
+            // Log per-recipient send for frequency capping + audit trail
             try {
-              const resData = await response.json().catch(() => null);
               await tc.from('newsletters').insert({
                 contact_id: contact.id,
                 subject: resolvedSubject,
@@ -970,7 +986,7 @@ export async function sendEdition(
                 status: 'sent',
                 html_body: finalHtml,
                 sent_at: new Date().toISOString(),
-                resend_message_id: resData?.id || null,
+                resend_message_id: resBody?.id || null,
                 send_mode: 'auto',
                 ai_context: { source: 'editorial', edition_id: editionId, edition_type: (edition as { edition_type: string }).edition_type },
               });
@@ -979,6 +995,29 @@ export async function sendEdition(
             }
           } else {
             failed++;
+            // Log failed send for recovery/debugging
+            console.error(
+              `[sendEdition] Resend failed for contact ${contact.id}:`,
+              response.status,
+              resBody?.message || resBody?.error || 'unknown',
+            );
+            try {
+              await tc.from('newsletters').insert({
+                contact_id: contact.id,
+                subject: resolvedSubject,
+                email_type: 'editorial',
+                status: 'failed',
+                sent_at: new Date().toISOString(),
+                send_mode: 'auto',
+                ai_context: {
+                  source: 'editorial',
+                  edition_id: editionId,
+                  error: `Resend ${response.status}: ${resBody?.message || 'unknown'}`,
+                },
+              });
+            } catch {
+              // Best effort
+            }
           }
         }
       } catch {
@@ -988,31 +1027,44 @@ export async function sendEdition(
 
     // 8. Update edition status and counts
     const nowIso = new Date().toISOString();
+    // If all sends failed, mark as failed so realtor can retry
+    const finalStatus = sent === 0 && failed > 0 ? 'failed' : 'sent';
     const editionUpdate: Record<string, unknown> = {
-      status: 'sent',
+      status: finalStatus,
       sent_at: nowIso,
       send_count: sent,
       recipient_count: allContacts.length,
       updated_at: nowIso,
+      // Store failure count for audit
+      generation_error: failed > 0 ? `${failed} of ${sendableContacts.length} emails failed to send` : null,
     };
     if (hasABTest) {
       editionUpdate.active_variant = 'ab_testing';
       editionUpdate.ab_test_sent_at = nowIso;
     }
-    await tc
-      .from('editorial_editions')
-      .update(editionUpdate)
-      .eq('id', editionId);
+    try {
+      await tc
+        .from('editorial_editions')
+        .update(editionUpdate)
+        .eq('id', editionId);
+    } catch (updateErr) {
+      console.error('[sendEdition] Failed to update edition status after send:', updateErr);
+      // Don't throw — emails were already sent, just status update failed
+    }
 
-    // 8. Update analytics
-    const admin = createAdminClient();
-    await admin
-      .from('editorial_analytics')
-      .update({
-        recipients: allContacts.length,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('edition_id', editionId);
+    // 8b. Update analytics
+    try {
+      const admin = createAdminClient();
+      await admin
+        .from('editorial_analytics')
+        .update({
+          recipients: allContacts.length,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('edition_id', editionId);
+    } catch {
+      // Best effort — analytics update is not critical
+    }
 
     revalidatePath('/newsletters/editorial');
 
