@@ -1,5 +1,5 @@
 <!-- docs-audit: src/components/**, src/app/(dashboard)/** -->
-<!-- docs-audit-reviewed: 2026-04-22 -->
+<!-- docs-audit-reviewed: 2026-04-25 --pipeline-a11y -->
 # Accessibility Baseline
 
 **Target:** WCAG 2.2 AA
