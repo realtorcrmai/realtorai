@@ -543,7 +543,6 @@ export default async function NewsletterDashboard() {
                 <ListingBlastAutomation
                   enabled={(realtorConfig?.brand_config as any)?.listing_blast_enabled !== false}
                 />
-                <GreetingAutomations initialRules={greetingRules as any} />
 
                 {/* Workflows */}
                 <div>
