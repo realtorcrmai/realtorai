@@ -9,6 +9,7 @@ type Props = {
   children: {
     ai: React.ReactNode;
     campaigns?: React.ReactNode;
+    insights: React.ReactNode;
     automations: React.ReactNode;
   };
 };
@@ -20,6 +21,7 @@ export function EmailMarketingTabs({ queueCount, hasAutomations, children }: Pro
 
   const tabs = [
     { id: "ai", label: "AI Nurture", badge: queueCount > 0 ? queueCount : undefined, locked: false },
+    { id: "insights", label: "AI Insights", locked: false },
     { id: "automations", label: "Automations", locked: !hasAutomations },
   ];
 
@@ -55,6 +57,7 @@ export function EmailMarketingTabs({ queueCount, hasAutomations, children }: Pro
       <div className="min-h-[400px]">
         {activeTab === "ai" && children.ai}
         {activeTab === "campaigns" && children.campaigns}
+        {activeTab === "insights" && children.insights}
         {activeTab === "automations" && (
           hasAutomations
             ? children.automations
