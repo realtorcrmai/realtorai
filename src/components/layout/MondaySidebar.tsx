@@ -35,7 +35,7 @@ const TOOLS_NAV: NavItem[] = [
   { href: "/tasks", label: "Tasks", icon: ListTodo, featureKey: "tasks" },
   { href: "/content", label: "Content Engine", icon: Wand2, featureKey: "content" },
   { href: "/newsletters", label: "Email Marketing", icon: Mail, featureKey: "newsletters" },
-  { href: "/newsletters/editorial", label: "Editorial", icon: Newspaper, featureKey: "editorial" },
+  { href: "/newsletters/editorial", label: "Editorial", icon: Newspaper },
   { href: "/automations", label: "Automations", icon: Zap, featureKey: "automations" },
 ];
 
