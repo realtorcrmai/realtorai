@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-25 --pipeline-a11y -->
+<!-- docs-audit-reviewed: 2026-04-25 --soc2-mfa-drift-rebase -->
 <!-- docs-audit: src/components/** -->
 # Realtors360 UI/UX Audit — Full Application Review
 
