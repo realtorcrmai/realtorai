@@ -1,8 +1,22 @@
 "use server";
 
+/**
+ * Buyer identity (FINTRAC KYC) server actions.
+ *
+ * Mirrors seller-identities.ts — required when a listing transitions to
+ * pending/sold with a buyer_id. PII encryption + audit wiring added in
+ * migration 147 / SOC 2 WS-1.
+ */
+
 import { z } from "zod";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
+import {
+  encryptFields,
+  decryptFields,
+  FINTRAC_ENCRYPTED_FIELDS,
+} from "@/lib/crypto";
+import { logAuditEvent, AUDIT_ACTIONS } from "@/lib/audit";
 
 const BuyerIdentitySchema = z.object({
   listing_id: z.string().uuid(),
@@ -29,16 +43,40 @@ export async function createBuyerIdentity(input: BuyerIdentityInput) {
   }
 
   const tc = await getAuthenticatedTenantClient();
+
+  const encrypted = encryptFields(parsed.data, FINTRAC_ENCRYPTED_FIELDS);
+
   const { data, error } = await tc
     .from("buyer_identities")
-    .insert(parsed.data)
+    .insert(encrypted)
     .select()
     .single();
 
   if (error) return { error: "Failed to create buyer identity" };
 
+  await logAuditEvent({
+    action: AUDIT_ACTIONS.IDENTITY_CREATED,
+    actor: { id: tc.realtorId },
+    tenantId: tc.realtorId,
+    resource: { type: "buyer_identity", id: data?.id ?? null },
+    metadata: {
+      listing_id: parsed.data.listing_id,
+      changed_fields: Object.keys(parsed.data).filter(
+        (k) =>
+          (parsed.data as Record<string, unknown>)[k] !== null &&
+          (parsed.data as Record<string, unknown>)[k] !== undefined
+      ),
+    },
+  });
+
   revalidatePath(`/listings/${parsed.data.listing_id}`);
-  return { success: true, data };
+  return {
+    success: true,
+    data: decryptFields(
+      data as Record<string, unknown>,
+      FINTRAC_ENCRYPTED_FIELDS
+    ),
+  };
 }
 
 export async function deleteBuyerIdentity(id: string, listingId: string) {
@@ -49,6 +87,14 @@ export async function deleteBuyerIdentity(id: string, listingId: string) {
     .eq("id", id);
 
   if (error) return { error: "Failed to delete buyer identity" };
+
+  await logAuditEvent({
+    action: AUDIT_ACTIONS.IDENTITY_DELETED,
+    actor: { id: tc.realtorId },
+    tenantId: tc.realtorId,
+    resource: { type: "buyer_identity", id },
+    metadata: { listing_id: listingId },
+  });
 
   revalidatePath(`/listings/${listingId}`);
   return { success: true };
@@ -63,5 +109,24 @@ export async function getBuyerIdentities(listingId: string) {
     .order("sort_order", { ascending: true });
 
   if (error) return [];
-  return data ?? [];
+
+  const rows = (data ?? []).map((r: Record<string, unknown>) =>
+    decryptFields(r, FINTRAC_ENCRYPTED_FIELDS)
+  );
+
+  if (rows.length > 0) {
+    await logAuditEvent({
+      action: AUDIT_ACTIONS.PII_VIEWED,
+      actor: { id: tc.realtorId },
+      tenantId: tc.realtorId,
+      resource: { type: "buyer_identity", id: listingId },
+      metadata: {
+        count: rows.length,
+        listing_id: listingId,
+        source: "buyer_identities.list",
+      },
+    });
+  }
+
+  return rows;
 }

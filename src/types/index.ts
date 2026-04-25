@@ -249,6 +249,8 @@ declare module "next-auth" {
       emailVerified?: boolean;
       plan?: string;
       isActive?: boolean;
+      mfaActive?: boolean;
+      mfaVerified?: boolean;
     };
   }
 }
