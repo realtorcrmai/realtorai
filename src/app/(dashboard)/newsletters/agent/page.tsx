@@ -91,7 +91,7 @@ export default async function AgentDashboardPage() {
         title="Agent Dashboard"
         subtitle="Newsletter agent activity, decisions, and trust levels"
         breadcrumbs={[
-          { label: "Email Marketing", href: "/newsletters" },
+          { label: "AI Agents", href: "/newsletters" },
           { label: "Agent Dashboard" },
         ]}
         actions={
@@ -99,7 +99,7 @@ export default async function AgentDashboardPage() {
             href="/newsletters"
             className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
           >
-            &larr; Back to Email Marketing
+            &larr; Back to AI Agents
           </a>
         }
       />

@@ -55,8 +55,8 @@ const NAV_MAP: Record<string, { path: string; label: string }> = {
   listing: { path: "/listings", label: "Listings" },
   showings: { path: "/showings", label: "Showings" },
   calendar: { path: "/calendar", label: "Calendar" },
-  newsletters: { path: "/newsletters", label: "Email Marketing" },
-  email: { path: "/newsletters", label: "Email Marketing" },
+  newsletters: { path: "/newsletters", label: "AI Agents" },
+  email: { path: "/newsletters", label: "AI Agents" },
   assistant: { path: "/assistant", label: "AI Assistant" },
   knowledge: { path: "/assistant/knowledge", label: "Knowledge Base" },
 };
@@ -81,7 +81,7 @@ const PAGE_LABELS: Record<string, string> = {
   "/listings": "Listings",
   "/showings": "Showings",
   "/calendar": "Calendar",
-  "/newsletters": "Email Marketing",
+  "/newsletters": "AI Agents",
   "/assistant": "AI Assistant",
   "/assistant/knowledge": "Knowledge Base",
 };
@@ -97,7 +97,7 @@ function getGreeting(pathname: string): string {
     "/listings": `${timeGreeting}! You're viewing Listings. I can search properties, check active listings, or help prep one for MLS. What do you need?`,
     "/showings": `${timeGreeting}! I can help manage your showings — check availability, send confirmations, or review feedback.`,
     "/calendar": `${timeGreeting}! Let me help with your schedule. Want to see today's appointments or find a free slot?`,
-    "/newsletters": `${timeGreeting}! Email Marketing dashboard. I can check pending drafts, review hot leads, or generate a new campaign.`,
+    "/newsletters": `${timeGreeting}! AI Agents dashboard. I can check pending drafts, review hot leads, or generate a new campaign.`,
     "/tasks": `${timeGreeting}! Let's tackle your tasks. Want me to prioritize them or check what's overdue?`,
   };
 

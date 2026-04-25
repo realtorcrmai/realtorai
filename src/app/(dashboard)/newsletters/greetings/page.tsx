@@ -25,7 +25,7 @@ export default async function GreetingsPage() {
         title="Greetings"
         subtitle="Automated holiday and milestone greetings for your contacts"
         breadcrumbs={[
-          { label: "Email Marketing", href: "/newsletters" },
+          { label: "AI Agents", href: "/newsletters" },
         ]}
       />
       <div className="p-6">

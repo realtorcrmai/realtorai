@@ -39,7 +39,7 @@ export default async function RelationshipsPage({
         title="Relationships"
         subtitle="Manage contact journey enrollments and email cadence"
         breadcrumbs={[
-          { label: "Email Marketing", href: "/newsletters" },
+          { label: "AI Agents", href: "/newsletters" },
           { label: "Relationships" },
         ]}
         actions={

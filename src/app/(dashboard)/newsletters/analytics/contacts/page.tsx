@@ -89,7 +89,7 @@ export default async function ContactEngagementPage() {
         title="Contact Engagement"
         subtitle={`${totalContacts} contacts ranked by engagement score`}
         breadcrumbs={[
-          { label: "Email Marketing", href: "/newsletters" },
+          { label: "AI Agents", href: "/newsletters" },
           { label: "Analytics", href: "/newsletters/analytics" },
           { label: "Contacts" },
         ]}

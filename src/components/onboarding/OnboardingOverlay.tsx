@@ -86,7 +86,7 @@ const P_SCREENS = [
     options: [
       { value: "contacts", icon: "📇", label: "Manage Contacts", description: "Organize your client database" },
       { value: "listings", icon: "🏠", label: "List Properties", description: "Create and manage listings" },
-      { value: "marketing", icon: "📧", label: "Email Marketing", description: "Send newsletters and drip campaigns" },
+      { value: "marketing", icon: "📧", label: "AI Agents", description: "Send newsletters and drip campaigns" },
       { value: "showings", icon: "📅", label: "Schedule Showings", description: "Book and track property viewings" },
       { value: "ai_content", icon: "🤖", label: "AI Content", description: "Generate MLS remarks and social posts" },
       { value: "import", icon: "📥", label: "Import Data", description: "Bring in contacts from other tools" },

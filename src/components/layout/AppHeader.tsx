@@ -54,7 +54,7 @@ const moreItems: { href: string; label: string; icon: typeof Building2; featureK
   { href: "/workflow", label: "MLS Workflow", icon: GitBranch, featureKey: "workflow" },
   { href: "/import", label: "Excel Import", icon: Upload, featureKey: "import" },
   { href: "/forms", label: "BC Forms", icon: FileText, featureKey: "forms" },
-  { href: "/newsletters", label: "Email Marketing", icon: Mail, featureKey: "newsletters" },
+  { href: "/newsletters", label: "AI Agents", icon: Mail, featureKey: "newsletters" },
   { href: "/websites", label: "Website Marketing", icon: Globe, featureKey: "website" },
   { href: "/mls-browse", label: "MLS Browse", icon: Search, featureKey: "mls-browse" },
 ];

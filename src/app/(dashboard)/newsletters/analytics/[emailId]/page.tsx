@@ -93,7 +93,7 @@ export default async function EmailDetailPage({
         title="Email Detail"
         subtitle={newsletter.subject}
         breadcrumbs={[
-          { label: "Email Marketing", href: "/newsletters" },
+          { label: "AI Agents", href: "/newsletters" },
           { label: "Analytics", href: "/newsletters/analytics" },
           { label: newsletter.subject.length > 30 ? newsletter.subject.slice(0, 27) + "..." : newsletter.subject },
         ]}

@@ -87,7 +87,7 @@ export function SettingsTab({ config, unsubscribeCount = 0, complaintCount = 0 }
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Email Marketing Settings</h3>
+        <h3 className="text-lg font-semibold">AI Agents Settings</h3>
         <button
           onClick={handleSave}
           disabled={isPending}

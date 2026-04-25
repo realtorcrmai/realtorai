@@ -17,7 +17,7 @@ interface FeatureAdoptionTableProps {
 const FEATURE_LABELS: Record<string, string> = {
   contacts: "Contacts",
   listings: "Listings",
-  newsletters: "Email Marketing",
+  newsletters: "AI Agents",
   showings: "Showings",
   content: "AI Content",
   calendar: "Calendar",
