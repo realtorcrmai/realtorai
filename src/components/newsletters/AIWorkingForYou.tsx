@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -20,16 +19,6 @@ interface UpcomingSend {
   count: number;
 }
 
-interface ScheduledEmail {
-  id: string;
-  contactId: string;
-  contactName: string;
-  contactType: string;
-  emailType: string;
-  scheduledAt: string;
-  phase?: string;
-}
-
 interface AIWorkingForYouProps {
   totalSent: number;
   openRate: number;
@@ -37,8 +26,6 @@ interface AIWorkingForYouProps {
   hotLeadCount: number;
   successStories: SuccessStory[];
   upcomingSends: UpcomingSend[];
-  scheduledEmails?: ScheduledEmail[];
-  templatePreviews?: Record<string, string>;
 }
 
 /**
@@ -52,48 +39,7 @@ export function AIWorkingForYou({
   hotLeadCount,
   successStories,
   upcomingSends,
-  scheduledEmails,
-  templatePreviews,
 }: AIWorkingForYouProps) {
-  const [showAllSends, setShowAllSends] = useState(false);
-  const [expandedSendId, setExpandedSendId] = useState<string | null>(null);
-
-  // Group scheduled emails by date
-  const groupedSchedule: Record<string, ScheduledEmail[]> = {};
-  const defaultCutoff = new Date();
-  defaultCutoff.setDate(defaultCutoff.getDate() + 2);
-  defaultCutoff.setHours(23, 59, 59, 999);
-
-  let totalCount = 0;
-  let defaultCount = 0;
-
-  if (scheduledEmails) {
-    for (const item of scheduledEmails) {
-      const d = new Date(item.scheduledAt);
-      const now = new Date();
-      const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
-      let dateLabel: string;
-      if (d.toDateString() === now.toDateString()) dateLabel = "Today";
-      else if (d.toDateString() === tomorrow.toDateString()) dateLabel = "Tomorrow";
-      else dateLabel = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-      if (!groupedSchedule[dateLabel]) groupedSchedule[dateLabel] = [];
-      groupedSchedule[dateLabel].push(item);
-      totalCount++;
-      if (d.getTime() <= defaultCutoff.getTime()) defaultCount++;
-    }
-  }
-
-  // Filter to 2-day window unless expanded
-  const visibleSchedule: Record<string, ScheduledEmail[]> = {};
-  if (showAllSends) {
-    Object.assign(visibleSchedule, groupedSchedule);
-  } else {
-    for (const [label, items] of Object.entries(groupedSchedule)) {
-      const filtered = items.filter(item => new Date(item.scheduledAt).getTime() <= defaultCutoff.getTime());
-      if (filtered.length > 0) visibleSchedule[label] = filtered;
-    }
-  }
-  const hiddenCount = totalCount - defaultCount;
   return (
     <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-[#0F7694]/5">
       <CardContent className="p-5 space-y-4">
@@ -176,97 +122,11 @@ export function AIWorkingForYou({
           </div>
         )}
 
-        {/* Upcoming sends — detailed per-contact schedule */}
-        {scheduledEmails && scheduledEmails.length > 0 ? (
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Upcoming Sends
-              </h4>
-              <span className="text-[10px] text-muted-foreground">
-                {showAllSends ? `${totalCount} emails` : `Next 2 days · ${defaultCount} email${defaultCount !== 1 ? "s" : ""}`}
-              </span>
-            </div>
-            <div className="space-y-3">
-              {Object.entries(visibleSchedule).map(([dateLabel, items]) => (
-                <div key={dateLabel}>
-                  <p className="text-[11px] font-semibold text-primary mb-1.5 pl-1">{dateLabel}</p>
-                  <div className="space-y-1">
-                    {items.map((item) => {
-                      const previewHtml = templatePreviews?.[item.emailType];
-                      const isExpanded = expandedSendId === item.id;
-                      return (
-                        <div key={item.id}>
-                          <button
-                            onClick={() => setExpandedSendId(isExpanded ? null : item.id)}
-                            className="w-full flex items-center gap-2.5 bg-white/50 rounded-md px-2.5 py-2 border hover:bg-white/80 transition-colors text-left"
-                          >
-                            <span className="text-[11px] font-semibold text-foreground w-12 shrink-0">
-                              {new Date(item.scheduledAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}
-                            </span>
-                            <div
-                              className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 ${
-                                item.contactType === "seller"
-                                  ? "bg-gradient-to-br from-primary to-brand"
-                                  : "bg-gradient-to-br from-primary to-purple-500"
-                              }`}
-                            >
-                              {item.contactName.charAt(0).toUpperCase()}
-                            </div>
-                            <span className="text-xs font-medium flex-1 truncate">
-                              {item.contactName}
-                            </span>
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
-                              {item.emailType.replace(/_/g, " ")}
-                            </Badge>
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 ${
-                              item.contactType === "seller"
-                                ? "bg-orange-100 text-orange-700"
-                                : "bg-blue-100 text-blue-700"
-                            }`}>
-                              {item.contactType.toUpperCase()}
-                            </span>
-                            {previewHtml && (
-                              <span className="text-[10px] text-muted-foreground shrink-0">
-                                {isExpanded ? "▲" : "▼"}
-                              </span>
-                            )}
-                          </button>
-                          {isExpanded && previewHtml && (
-                            <div className="ml-14 mr-2 mt-1 mb-2 border border-primary/20 rounded-lg overflow-hidden">
-                              <div className="px-3 py-1.5 bg-white/60 border-b border-border flex items-center justify-between">
-                                <span className="text-[11px] font-medium text-muted-foreground">Template Preview</span>
-                                <span className="text-[10px] text-muted-foreground italic">AI will personalize this for {item.contactName}</span>
-                              </div>
-                              <iframe
-                                srcDoc={previewHtml}
-                                className="w-full border-0 bg-white"
-                                style={{ height: 420 }}
-                                sandbox="allow-same-origin"
-                                title={`Preview: ${item.emailType}`}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-            {hiddenCount > 0 && (
-              <button
-                onClick={() => setShowAllSends(!showAllSends)}
-                className="mt-2 text-xs text-primary font-medium hover:underline"
-              >
-                {showAllSends ? "Show next 2 days only" : `Show all ${totalCount} scheduled (${hiddenCount} more)`}
-              </button>
-            )}
-          </div>
-        ) : upcomingSends.length > 0 ? (
+        {/* Upcoming sends summary — just counts, detail is in standalone card */}
+        {upcomingSends.length > 0 && (
           <div>
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-              Upcoming Sends
+              Coming Up
             </h4>
             <div className="flex flex-wrap gap-2">
               {upcomingSends.map((send, i) => (
@@ -282,7 +142,7 @@ export function AIWorkingForYou({
               ))}
             </div>
           </div>
-        ) : null}
+        )}
       </CardContent>
     </Card>
   );
