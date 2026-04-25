@@ -156,6 +156,38 @@ export default async function NewsletterDashboard() {
   }
   const upcomingSends = Object.values(upcomingSendsMap).slice(0, 5);
 
+  // Detailed per-contact schedule for the AI tab
+  const scheduledEmails = (upcomingJourneys || [])
+    .filter((uj: any) => uj.next_email_at)
+    .map((uj: any) => {
+      const contact = Array.isArray(uj.contacts) ? uj.contacts[0] : uj.contacts;
+      const JOURNEY_EMAIL_TYPES: Record<string, string[]> = {
+        buyer_lead: ["welcome", "neighbourhood_guide", "new_listing_alert", "market_update", "new_listing_alert"],
+        buyer_active: ["new_listing_alert", "market_update"],
+        buyer_under_contract: ["closing_checklist", "inspection_reminder", "neighbourhood_guide"],
+        buyer_past_client: ["home_anniversary", "referral_ask", "market_update"],
+        buyer_dormant: ["reengagement", "new_listing_alert", "referral_ask"],
+        seller_lead: ["welcome", "market_update", "neighbourhood_guide"],
+        seller_active: ["market_update"],
+        seller_under_contract: ["closing_checklist", "inspection_reminder", "closing_countdown"],
+        seller_past_client: ["market_update", "referral_ask", "home_anniversary"],
+        seller_dormant: ["reengagement", "market_update", "referral_ask"],
+      };
+      const key = `${uj.journey_type}_${uj.current_phase}`;
+      const types = JOURNEY_EMAIL_TYPES[key] || ["email"];
+      const emailType = types[Math.min(uj.emails_sent_in_phase || 0, types.length - 1)] || "email";
+      return {
+        id: uj.id,
+        contactId: uj.contact_id,
+        contactName: contact?.name || "Unknown",
+        contactType: contact?.type || uj.journey_type || "buyer",
+        emailType,
+        scheduledAt: uj.next_email_at,
+      };
+    })
+    .sort((a: any, b: any) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
+    .slice(0, 20);
+
   // Pipeline phases
   const phases = ["lead", "active", "under_contract", "past_client", "dormant"];
   const phaseLabels: Record<string, string> = { lead: "New Leads", active: "Active", under_contract: "Under Contract", past_client: "Past Clients", dormant: "Dormant" };
@@ -255,6 +287,7 @@ export default async function NewsletterDashboard() {
                   hotLeadCount={hotLeads.length}
                   successStories={successStories}
                   upcomingSends={upcomingSends}
+                  scheduledEmails={scheduledEmails}
                 />
 
                 {/* Approval queue — only shown when there are drafts */}
