@@ -16,7 +16,11 @@ import { sendNewsletter, skipNewsletter, bulkApproveNewsletters, sendListingBlas
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { WORKFLOW_BLUEPRINTS } from "@/lib/constants";
 import { JOURNEY_SCHEDULES } from "@/lib/constants/journey-schedules";
+import { TEMPLATE_REGISTRY } from "@/lib/constants/template-registry";
+import { assembleEmail } from "@/lib/email-blocks";
+import type { RealtorBranding } from "@/emails/BaseLayout";
 import { getRealtorConfig, getAutomationRules, getGreetingRules } from "@/actions/config";
+import { getBrandProfile } from "@/actions/brand-profile";
 import { AIAgentQueue } from "@/components/newsletters/AIAgentQueue";
 import { WhatWentOutFeed } from "@/components/newsletters/WhatWentOutFeed";
 import { JourneyScheduleCard } from "@/components/newsletters/JourneyScheduleCard";
@@ -206,6 +210,35 @@ export default async function NewsletterDashboard() {
   scheduledEmails.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
   const scheduledEmailsTruncated = scheduledEmails.slice(0, 30);
 
+  // Pre-render template previews for upcoming email types
+  const brandProfile = await getBrandProfile();
+  const previewBranding: RealtorBranding = {
+    name: brandProfile?.display_name || session?.user?.name || "Your Name",
+    title: brandProfile?.title || "REALTOR\u00ae",
+    brokerage: brandProfile?.brokerage_name || "",
+    phone: brandProfile?.phone || "",
+    email: brandProfile?.email || "",
+    headshotUrl: brandProfile?.headshot_url || undefined,
+    logoUrl: brandProfile?.logo_url || undefined,
+    accentColor: brandProfile?.brand_color || "#4f35d2",
+    physicalAddress: brandProfile?.physical_address || "",
+    socialLinks: {
+      instagram: brandProfile?.instagram_url || undefined,
+      facebook: brandProfile?.facebook_url || undefined,
+      linkedin: brandProfile?.linkedin_url || undefined,
+    },
+  };
+  const upcomingEmailTypes = [...new Set(scheduledEmailsTruncated.map(e => e.emailType))];
+  const templatePreviews: Record<string, string> = {};
+  for (const emailType of upcomingEmailTypes) {
+    const entry = TEMPLATE_REGISTRY[emailType];
+    if (!entry) continue;
+    try {
+      const data = entry.sampleData(previewBranding);
+      templatePreviews[emailType] = assembleEmail(entry.blockType, data as any);
+    } catch { /* skip if render fails */ }
+  }
+
   // Pipeline — build detailed contact list for NurturePipelineCard
   const nurturedContacts: NurturedContact[] = (journeys || []).map((j: any) => {
     const c = Array.isArray(j.contacts) ? j.contacts[0] : j.contacts;
@@ -324,6 +357,7 @@ export default async function NewsletterDashboard() {
                   successStories={successStories}
                   upcomingSends={upcomingSends}
                   scheduledEmails={scheduledEmailsTruncated}
+                  templatePreviews={templatePreviews}
                 />
 
                 {/* Approval queue — only shown when there are drafts */}

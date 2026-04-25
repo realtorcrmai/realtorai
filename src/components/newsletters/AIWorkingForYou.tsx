@@ -38,6 +38,7 @@ interface AIWorkingForYouProps {
   successStories: SuccessStory[];
   upcomingSends: UpcomingSend[];
   scheduledEmails?: ScheduledEmail[];
+  templatePreviews?: Record<string, string>;
 }
 
 /**
@@ -52,8 +53,10 @@ export function AIWorkingForYou({
   successStories,
   upcomingSends,
   scheduledEmails,
+  templatePreviews,
 }: AIWorkingForYouProps) {
   const [showAllSends, setShowAllSends] = useState(false);
+  const [expandedSendId, setExpandedSendId] = useState<string | null>(null);
 
   // Group scheduled emails by date
   const groupedSchedule: Record<string, ScheduledEmail[]> = {};
@@ -189,38 +192,64 @@ export function AIWorkingForYou({
                 <div key={dateLabel}>
                   <p className="text-[11px] font-semibold text-primary mb-1.5 pl-1">{dateLabel}</p>
                   <div className="space-y-1">
-                    {items.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center gap-2.5 bg-white/50 rounded-md px-2.5 py-2 border"
-                      >
-                        <span className="text-[11px] font-semibold text-foreground w-12 shrink-0">
-                          {new Date(item.scheduledAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}
-                        </span>
-                        <div
-                          className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 ${
-                            item.contactType === "seller"
-                              ? "bg-gradient-to-br from-primary to-brand"
-                              : "bg-gradient-to-br from-primary to-purple-500"
-                          }`}
-                        >
-                          {item.contactName.charAt(0).toUpperCase()}
+                    {items.map((item) => {
+                      const previewHtml = templatePreviews?.[item.emailType];
+                      const isExpanded = expandedSendId === item.id;
+                      return (
+                        <div key={item.id}>
+                          <button
+                            onClick={() => setExpandedSendId(isExpanded ? null : item.id)}
+                            className="w-full flex items-center gap-2.5 bg-white/50 rounded-md px-2.5 py-2 border hover:bg-white/80 transition-colors text-left"
+                          >
+                            <span className="text-[11px] font-semibold text-foreground w-12 shrink-0">
+                              {new Date(item.scheduledAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}
+                            </span>
+                            <div
+                              className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 ${
+                                item.contactType === "seller"
+                                  ? "bg-gradient-to-br from-primary to-brand"
+                                  : "bg-gradient-to-br from-primary to-purple-500"
+                              }`}
+                            >
+                              {item.contactName.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="text-xs font-medium flex-1 truncate">
+                              {item.contactName}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
+                              {item.emailType.replace(/_/g, " ")}
+                            </Badge>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 ${
+                              item.contactType === "seller"
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-blue-100 text-blue-700"
+                            }`}>
+                              {item.contactType.toUpperCase()}
+                            </span>
+                            {previewHtml && (
+                              <span className="text-[10px] text-muted-foreground shrink-0">
+                                {isExpanded ? "▲" : "▼"}
+                              </span>
+                            )}
+                          </button>
+                          {isExpanded && previewHtml && (
+                            <div className="ml-14 mr-2 mt-1 mb-2 border border-primary/20 rounded-lg overflow-hidden">
+                              <div className="px-3 py-1.5 bg-white/60 border-b border-border flex items-center justify-between">
+                                <span className="text-[11px] font-medium text-muted-foreground">Template Preview</span>
+                                <span className="text-[10px] text-muted-foreground italic">AI will personalize this for {item.contactName}</span>
+                              </div>
+                              <iframe
+                                srcDoc={previewHtml}
+                                className="w-full border-0 bg-white"
+                                style={{ height: 420 }}
+                                sandbox="allow-same-origin"
+                                title={`Preview: ${item.emailType}`}
+                              />
+                            </div>
+                          )}
                         </div>
-                        <span className="text-xs font-medium flex-1 truncate">
-                          {item.contactName}
-                        </span>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
-                          {item.emailType.replace(/_/g, " ")}
-                        </Badge>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 ${
-                          item.contactType === "seller"
-                            ? "bg-orange-100 text-orange-700"
-                            : "bg-blue-100 text-blue-700"
-                        }`}>
-                          {item.contactType.toUpperCase()}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
