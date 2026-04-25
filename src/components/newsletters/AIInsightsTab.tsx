@@ -43,6 +43,41 @@ interface GovernorActivity {
   autoSunset: number;
 }
 
+interface HeatmapContact {
+  name: string;
+  contactId: string;
+  type: string;
+  days: number[]; // 7 values (Mon-Sun), each = activity level 0-3
+}
+
+interface TrendingContact {
+  name: string;
+  contactId: string;
+  type: string;
+  scoreDelta: number;
+  currentScore: number;
+}
+
+interface TopLink {
+  category: string;
+  icon: string;
+  clicks: number;
+}
+
+interface AlertItem {
+  contactName: string;
+  contactId: string;
+  type: "unsubscribe" | "bounce" | "complaint";
+  date: string;
+}
+
+interface EngagementOverview {
+  heatmap: HeatmapContact[];
+  trending: TrendingContact[];
+  topLinks: TopLink[];
+  alerts: AlertItem[];
+}
+
 export interface AIInsightsData {
   voiceRules: VoiceRule[];
   abTests: ABTest[];
@@ -52,6 +87,7 @@ export interface AIInsightsData {
   governor: GovernorActivity;
   learningConfidence: string;
   totalEmailsAnalyzed: number;
+  engagement: EngagementOverview;
 }
 
 const DAY_NAMES: Record<string, string> = {
@@ -107,6 +143,124 @@ export function AIInsightsTab({ data }: { data: AIInsightsData }) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Engagement Overview */}
+      <Card>
+        <CardContent className="p-4">
+          <h4 className="text-sm font-semibold mb-3">Engagement Overview</h4>
+
+          {/* Unsubscribe/Bounce Alerts */}
+          {data.engagement.alerts.length > 0 && (
+            <div className="mb-4 space-y-1.5">
+              {data.engagement.alerts.map((alert, i) => (
+                <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs ${
+                  alert.type === "complaint" ? "bg-red-50 border border-red-200 text-red-700" :
+                  alert.type === "unsubscribe" ? "bg-amber-50 border border-amber-200 text-amber-700" :
+                  "bg-orange-50 border border-orange-200 text-orange-700"
+                }`}>
+                  <span>{alert.type === "complaint" ? "🚨" : alert.type === "unsubscribe" ? "🚫" : "⚠️"}</span>
+                  <span className="font-medium">{alert.contactName}</span>
+                  <span>{alert.type === "complaint" ? "filed a complaint" : alert.type === "unsubscribe" ? "unsubscribed" : "email bounced"}</span>
+                  <span className="text-muted-foreground ml-auto">{new Date(alert.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                  <a href={`/contacts/${alert.contactId}`} className="font-medium hover:underline ml-1">View</a>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 7-Day Engagement Heatmap */}
+          {data.engagement.heatmap.length > 0 && (
+            <div className="mb-4">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2">7-Day Activity</p>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1">
+                  <span className="w-24 shrink-0" />
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(d => (
+                    <span key={d} className="flex-1 text-center text-[9px] text-muted-foreground">{d}</span>
+                  ))}
+                </div>
+                {data.engagement.heatmap.slice(0, 10).map((contact) => (
+                  <a key={contact.contactId} href={`/contacts/${contact.contactId}`} className="flex items-center gap-1 group">
+                    <span className="w-24 shrink-0 text-[11px] truncate group-hover:text-primary transition-colors">
+                      {contact.name}
+                    </span>
+                    {contact.days.map((level, di) => (
+                      <div
+                        key={di}
+                        className={`flex-1 h-5 rounded-sm ${
+                          level === 3 ? "bg-green-500" :
+                          level === 2 ? "bg-green-300" :
+                          level === 1 ? "bg-green-100" :
+                          "bg-gray-100"
+                        }`}
+                        title={`${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][di]}: ${level === 0 ? "No activity" : level === 1 ? "Opened" : level === 2 ? "Clicked" : "Multiple interactions"}`}
+                      />
+                    ))}
+                  </a>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 mt-2 justify-end">
+                <span className="text-[9px] text-muted-foreground">Less</span>
+                {[0, 1, 2, 3].map(l => (
+                  <div key={l} className={`w-3 h-3 rounded-sm ${l === 3 ? "bg-green-500" : l === 2 ? "bg-green-300" : l === 1 ? "bg-green-100" : "bg-gray-100"}`} />
+                ))}
+                <span className="text-[9px] text-muted-foreground">More</span>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Trending Contacts */}
+            <div>
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Trending This Week</p>
+              {data.engagement.trending.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-3">No significant changes this week.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {data.engagement.trending.slice(0, 6).map((c) => (
+                    <a key={c.contactId} href={`/contacts/${c.contactId}`} className="flex items-center gap-2 py-1 px-2 rounded-md hover:bg-muted/40 transition-colors">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 ${
+                        c.type === "seller" ? "bg-gradient-to-br from-primary to-brand" : "bg-gradient-to-br from-primary to-purple-500"
+                      }`}>
+                        {c.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-xs font-medium flex-1 truncate">{c.name}</span>
+                      <span className={`text-xs font-bold ${c.scoreDelta > 0 ? "text-green-600" : "text-red-600"}`}>
+                        {c.scoreDelta > 0 ? "+" : ""}{c.scoreDelta}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">({c.currentScore})</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Top Clicked Links */}
+            <div>
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2">What Contacts Click</p>
+              {data.engagement.topLinks.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-3">No click data yet.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {data.engagement.topLinks.map((link, i) => {
+                    const maxClicks = data.engagement.topLinks[0]?.clicks || 1;
+                    return (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="text-sm shrink-0">{link.icon}</span>
+                        <span className="text-xs flex-1">{link.category}</span>
+                        <div className="w-20 h-2 rounded-full bg-muted overflow-hidden">
+                          <div className="bg-primary h-full rounded-full" style={{ width: `${(link.clicks / maxClicks) * 100}%` }} />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground w-6 text-right">{link.clicks}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Voice Rules Learned */}
       <Card>

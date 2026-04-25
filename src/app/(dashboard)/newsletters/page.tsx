@@ -326,7 +326,90 @@ export default async function NewsletterDashboard() {
     },
     learningConfidence: voiceRules.length >= 10 ? "high" : voiceRules.length >= 3 ? "medium" : "low",
     totalEmailsAnalyzed: dashboard.totalSent,
+    engagement: buildEngagementOverview(allContacts, sentNewsletters),
   };
+
+  function buildEngagementOverview(contacts: any[], newsletters: any[]) {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
+
+    // Heatmap: for each contact with engagement, calculate 7-day activity
+    const heatmapContacts = contacts
+      .filter((c: any) => c.newsletter_intelligence?.engagement_score > 0)
+      .sort((a: any, b: any) => (b.newsletter_intelligence?.engagement_score || 0) - (a.newsletter_intelligence?.engagement_score || 0))
+      .slice(0, 10)
+      .map((c: any) => {
+        const intel = c.newsletter_intelligence || {};
+        // Build 7 day slots (Mon=0 to Sun=6) based on timing patterns
+        const days = [0, 0, 0, 0, 0, 0, 0];
+        // Use last_opened_at and last_clicked_at to estimate recent activity
+        if (intel.last_clicked_at && new Date(intel.last_clicked_at) >= sevenDaysAgo) {
+          const dayIdx = new Date(intel.last_clicked_at).getDay();
+          const mappedDay = dayIdx === 0 ? 6 : dayIdx - 1; // Sun=6, Mon=0
+          days[mappedDay] = 3;
+        }
+        if (intel.last_opened_at && new Date(intel.last_opened_at) >= sevenDaysAgo) {
+          const dayIdx = new Date(intel.last_opened_at).getDay();
+          const mappedDay = dayIdx === 0 ? 6 : dayIdx - 1;
+          if (days[mappedDay] < 2) days[mappedDay] = 2;
+        }
+        if (intel.last_engagement_at && new Date(intel.last_engagement_at) >= sevenDaysAgo) {
+          const dayIdx = new Date(intel.last_engagement_at).getDay();
+          const mappedDay = dayIdx === 0 ? 6 : dayIdx - 1;
+          if (days[mappedDay] < 1) days[mappedDay] = 1;
+        }
+        return { name: c.name, contactId: c.id, type: c.type, days };
+      });
+
+    // Trending: contacts with notable score changes (use engagement_trend field)
+    const trending = contacts
+      .filter((c: any) => {
+        const intel = c.newsletter_intelligence;
+        return intel?.engagement_score > 0 && intel?.engagement_trend && intel.engagement_trend !== "stable";
+      })
+      .map((c: any) => {
+        const intel = c.newsletter_intelligence;
+        const delta = intel.engagement_trend === "accelerating" ? Math.round(intel.engagement_score * 0.15) :
+                      intel.engagement_trend === "declining" ? -Math.round(intel.engagement_score * 0.1) : 0;
+        return { name: c.name, contactId: c.id, type: c.type, scoreDelta: delta, currentScore: intel.engagement_score };
+      })
+      .sort((a: any, b: any) => Math.abs(b.scoreDelta) - Math.abs(a.scoreDelta))
+      .slice(0, 6);
+
+    // Top clicked link categories from newsletter events
+    const linkCategories: Record<string, { icon: string; clicks: number }> = {};
+    for (const nl of newsletters) {
+      for (const ev of (nl.events || [])) {
+        if (ev.event_type !== "clicked") continue;
+        const meta = ev.metadata as Record<string, unknown> | null;
+        const linkType = (meta?.link_type as string) || (meta?.category as string) || "other";
+        const icons: Record<string, string> = {
+          listing: "🏠", showing: "📅", cma: "📊", contact_agent: "📞",
+          market_report: "📈", neighbourhood: "🏘️", mortgage: "🏦", other: "🔗",
+        };
+        if (!linkCategories[linkType]) linkCategories[linkType] = { icon: icons[linkType] || "🔗", clicks: 0 };
+        linkCategories[linkType].clicks++;
+      }
+    }
+    const topLinks = Object.entries(linkCategories)
+      .map(([category, data]) => ({ category: category.replace(/_/g, " "), icon: data.icon, clicks: data.clicks }))
+      .sort((a, b) => b.clicks - a.clicks)
+      .slice(0, 6);
+
+    // Alerts: unsubscribed or bounced contacts (recent)
+    const alerts = contacts
+      .filter((c: any) => c.newsletter_unsubscribed || (c.newsletter_intelligence?.bounce_count > 0))
+      .map((c: any) => ({
+        contactName: c.name,
+        contactId: c.id,
+        type: c.newsletter_unsubscribed ? "unsubscribe" as const :
+              (c.newsletter_intelligence?.complaint_count > 0 ? "complaint" as const : "bounce" as const),
+        date: c.newsletter_intelligence?.last_engagement_at || c.updated_at || new Date().toISOString(),
+      }))
+      .slice(0, 5);
+
+    return { heatmap: heatmapContacts, trending, topLinks, alerts };
+  }
 
   return (
     <>
