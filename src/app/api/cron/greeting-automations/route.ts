@@ -203,24 +203,34 @@ async function getContactsForOccasion(
 
   // Personal milestones — match from contact_dates
   if (occasion === "birthday") {
-    // contact_dates uses: event_type (not date_type), date (not date_value)
-    const monthDay = `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    const { data: dates } = await supabase
+    // contact_dates.date is a DATE column — can't use LIKE.
+    // Use textual cast via PostgREST filter: cast date to text then match month-day.
+    // Simpler approach: query all birthdays and filter in JS (table is small).
+    const { data: allBirthdays } = await supabase
       .from("contact_dates")
-      .select("contact_id")
-      .eq("event_type", "birthday")
-      .like("date", `%-${monthDay}`);
-    return (dates || []).map((d: any) => d.contact_id);
+      .select("contact_id, date")
+      .eq("event_type", "birthday");
+    const monthDay = `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    return (allBirthdays || [])
+      .filter((d: any) => {
+        const dateStr = typeof d.date === "string" ? d.date : String(d.date);
+        return dateStr.endsWith(monthDay);
+      })
+      .map((d: any) => d.contact_id);
   }
 
   if (occasion === "home_anniversary") {
-    const monthDay = `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    const { data: dates } = await supabase
+    const { data: allAnniversaries } = await supabase
       .from("contact_dates")
-      .select("contact_id")
-      .in("event_type", ["closing_anniversary", "anniversary", "home_anniversary"])
-      .like("date", `%-${monthDay}`);
-    return (dates || []).map((d: any) => d.contact_id);
+      .select("contact_id, date")
+      .in("event_type", ["closing_anniversary", "anniversary", "home_anniversary"]);
+    const monthDay = `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    return (allAnniversaries || [])
+      .filter((d: any) => {
+        const dateStr = typeof d.date === "string" ? d.date : String(d.date);
+        return dateStr.endsWith(monthDay);
+      })
+      .map((d: any) => d.contact_id);
   }
 
   // Fixed-date holidays — check if today matches
