@@ -431,7 +431,7 @@ export default async function NewsletterDashboard() {
         }
       />
       <div className="p-6 space-y-6">
-        <EmailMarketingTabs queueCount={queue.length} hasAutomations={hasAutomations}>
+        <EmailMarketingTabs queueCount={queue.length}>
           {{
             /* ══════════════════════════════
                AI TAB
@@ -532,63 +532,6 @@ export default async function NewsletterDashboard() {
             ══════════════════════════════ */
             insights: (
               <AIInsightsTab data={aiInsightsData} />
-            ),
-
-            /* ══════════════════════════════
-               AUTOMATIONS TAB
-               Greetings + listing blast toggle + workflows
-            ══════════════════════════════ */
-            automations: (
-              <div className="space-y-6">
-                <ListingBlastAutomation
-                  enabled={(realtorConfig?.brand_config as any)?.listing_blast_enabled !== false}
-                />
-
-                {/* Workflows */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold">Workflows</h4>
-                    <a href="/automations" className="text-xs text-primary font-medium hover:underline">Manage →</a>
-                  </div>
-                  {workflowList.length === 0 ? (
-                    <Card>
-                      <CardContent className="py-8 text-center">
-                        <p className="text-sm text-muted-foreground">No workflows yet.</p>
-                        <a href="/automations" className="text-xs text-primary hover:underline mt-1 inline-block">Create your first workflow →</a>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {workflowList.map((w: any) => {
-                        const icon = blueprintsBySlug[w.slug]?.icon || "⚙️";
-                        const stepCount = Array.isArray(w.workflow_steps) ? w.workflow_steps.length : 0;
-                        return (
-                          <a key={w.id} href={`/automations/workflows/${w.id}`} className="group">
-                            <Card className="h-full hover:shadow-md transition-shadow group-hover:border-primary/30">
-                              <CardContent className="p-4 space-y-2">
-                                <div className="flex items-center gap-3">
-                                  <span className="text-2xl">{icon}</span>
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors">{w.name}</p>
-                                    <p className="text-xs text-muted-foreground">{stepCount} step{stepCount !== 1 ? "s" : ""}</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  {w.is_active ? (
-                                    <Badge className="bg-success/10 text-success hover:bg-success/10 text-[11px]">Active</Badge>
-                                  ) : (
-                                    <Badge variant="secondary" className="text-[11px]">Paused</Badge>
-                                  )}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </a>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
             ),
 
           }}
