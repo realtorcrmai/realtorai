@@ -3,7 +3,7 @@
 # Vendor Risk Register
 
 **Review cadence:** Annually
-**Last reviewed:** 2026-04-21
+**Last reviewed:** 2026-04-24
 
 ---
 
