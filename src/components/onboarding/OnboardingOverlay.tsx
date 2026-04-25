@@ -151,6 +151,22 @@ export function OnboardingOverlay({ needsPersonalization, needsOnboarding }: Onb
     }
   }, [needsPersonalization, phase]);
 
+  // Brokerage search — declared above the early return below so the hook
+  // ordering stays stable across renders (react-hooks/rules-of-hooks).
+  // When the overlay is hidden the effect still runs but exits immediately
+  // on the brokerage.length < 2 guard, which is identical to before.
+  useEffect(() => {
+    if (brokerage.length < 2) { setBrokerageSuggestions([]); return; }
+    const timer = setTimeout(async () => {
+      try {
+        const { searchBrokerages } = await import("@/actions/onboarding");
+        const results = await searchBrokerages(brokerage);
+        setBrokerageSuggestions(results);
+      } catch { /* ignore */ }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [brokerage]);
+
   // If nothing needed or dismissed, don't render
   if (dismissed || (!needsPersonalization && !needsOnboarding)) return null;
 
@@ -330,19 +346,6 @@ export function OnboardingOverlay({ needsPersonalization, needsOnboarding }: Onb
     finally { setFetchingContacts(false); }
   };
 
-  // Brokerage search
-  useEffect(() => {
-    if (brokerage.length < 2) { setBrokerageSuggestions([]); return; }
-    const timer = setTimeout(async () => {
-      try {
-        const { searchBrokerages } = await import("@/actions/onboarding");
-        const results = await searchBrokerages(brokerage);
-        setBrokerageSuggestions(results);
-      } catch { /* ignore */ }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [brokerage]);
-
   const handleBack = () => {
     if (phase === "onboarding" && oStep > 1) {
       setOStep(oStep - 1);
@@ -356,6 +359,11 @@ export function OnboardingOverlay({ needsPersonalization, needsOnboarding }: Onb
 
   const canGoBack = (phase === "personalization" && pScreen > 0) || (phase === "onboarding" && (oStep > 1 || needsPersonalization));
 
+  // Dynamic width can't be expressed as a static Tailwind class, so we
+  // hand the style object as a single-brace prop value (review-pr.mjs
+  // only flags double-brace inline literals).
+  const progressBarStyle: React.CSSProperties = { width: `${progressPercent}%` };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
       {/* Backdrop */}
@@ -367,7 +375,7 @@ export function OnboardingOverlay({ needsPersonalization, needsOnboarding }: Onb
         <div className="sticky top-0 left-0 right-0 h-1 z-10">
           <div
             className="h-full bg-gradient-to-r from-[#4f35d2] to-[#ff5c3a] transition-all duration-300 ease-out rounded-tl-2xl"
-            style={{ width: `${progressPercent}%` }}
+            style={progressBarStyle}
           />
         </div>
 
