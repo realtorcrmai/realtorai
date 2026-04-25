@@ -20,6 +20,7 @@ import { getRealtorConfig, getAutomationRules, getGreetingRules } from "@/action
 import { AIAgentQueue } from "@/components/newsletters/AIAgentQueue";
 import { WhatWentOutFeed } from "@/components/newsletters/WhatWentOutFeed";
 import { JourneyScheduleCard } from "@/components/newsletters/JourneyScheduleCard";
+import { NurturePipelineCard, type NurturedContact } from "@/components/newsletters/NurturePipelineCard";
 
 export default async function NewsletterDashboard() {
   const session = await auth();
@@ -57,7 +58,7 @@ export default async function NewsletterDashboard() {
     { data: upcomingJourneys },
     { data: recentBlastsRaw },
   ] = await Promise.all([
-    tc.from("contact_journeys").select("id, contact_id, journey_type, current_phase, is_paused, next_email_at, send_mode, contacts(name, type, email)").order("created_at", { ascending: false }),
+    tc.from("contact_journeys").select("id, contact_id, journey_type, current_phase, is_paused, next_email_at, emails_sent_in_phase, send_mode, phase_entered_at, contacts(id, name, type, email, newsletter_intelligence)").order("created_at", { ascending: false }),
     tc.from("workflows").select("id, name, slug, description, is_active, trigger_type, contact_type, workflow_steps(id)").order("name"),
     tc.from("listings").select("id, address, list_price, status").eq("status", "active").order("created_at", { ascending: false }).limit(10),
     tc.from("contacts").select("id, name, phone, type, newsletter_intelligence").not("newsletter_intelligence", "is", null).order("created_at", { ascending: false }).limit(50),
@@ -199,10 +200,28 @@ export default async function NewsletterDashboard() {
   scheduledEmails.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
   const scheduledEmailsTruncated = scheduledEmails.slice(0, 30);
 
-  // Pipeline phases
+  // Pipeline — build detailed contact list for NurturePipelineCard
+  const nurturedContacts: NurturedContact[] = (journeys || []).map((j: any) => {
+    const c = Array.isArray(j.contacts) ? j.contacts[0] : j.contacts;
+    const intel = c?.newsletter_intelligence as Record<string, unknown> | null;
+    return {
+      journeyId: j.id,
+      contactId: j.contact_id,
+      contactName: c?.name || "Unknown",
+      contactEmail: c?.email || null,
+      contactType: c?.type || j.journey_type || "buyer",
+      journeyType: j.journey_type,
+      phase: j.current_phase,
+      phaseEnteredAt: j.phase_entered_at || null,
+      emailsSent: j.emails_sent_in_phase || 0,
+      nextEmailAt: j.next_email_at || null,
+      isPaused: j.is_paused || false,
+      sendMode: j.send_mode || "review",
+      engagementScore: typeof intel?.engagement_score === "number" ? intel.engagement_score : null,
+    };
+  });
+
   const phases = ["lead", "active", "under_contract", "past_client", "dormant"];
-  const phaseLabels: Record<string, string> = { lead: "New Leads", active: "Active", under_contract: "Under Contract", past_client: "Past Clients", dormant: "Dormant" };
-  const phaseIcons: Record<string, string> = { lead: "🟢", active: "🔥", under_contract: "📝", past_client: "⭐", dormant: "❄️" };
 
   // Campaigns tab blast history
   const realBlastHistory = (recentBlastsRaw || []).map((nl: any) => {
@@ -311,35 +330,8 @@ export default async function NewsletterDashboard() {
                   />
                 )}
 
-                {/* Pipeline snapshot */}
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-semibold">Contacts being nurtured</h4>
-                      <span className="text-xs text-muted-foreground">{dashboard.totalContacts} total</span>
-                    </div>
-                    <div className="space-y-1.5">
-                      {phases.map((p) => {
-                        const bCount = dashboard.buyerPhases[p] || 0;
-                        const sCount = dashboard.sellerPhases[p] || 0;
-                        const total = bCount + sCount;
-                        if (total === 0) return null;
-                        return (
-                          <div key={p} className="flex items-center justify-between py-1">
-                            <span className="text-xs text-muted-foreground">{phaseIcons[p]} {phaseLabels[p]}</span>
-                            <div className="flex items-center gap-3">
-                              <span className="text-[10px] text-muted-foreground">{bCount > 0 ? `${bCount} buyer` : ""}{bCount > 0 && sCount > 0 ? " · " : ""}{sCount > 0 ? `${sCount} seller` : ""}</span>
-                              <span className="text-xs font-bold w-5 text-right">{total}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {dashboard.totalContacts === 0 && (
-                        <p className="text-xs text-muted-foreground text-center py-4">No contacts enrolled yet. Add a buyer or seller to get started.</p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* Pipeline — who is being nurtured */}
+                <NurturePipelineCard contacts={nurturedContacts} />
 
                 {/* Unified feed — what went out across all email systems */}
                 <WhatWentOutFeed items={whatWentOut as any} />
