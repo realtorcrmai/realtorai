@@ -59,33 +59,36 @@ function renderBlock(
   country: 'CA' | 'US',
   branding: RealtorBranding,
 ): React.ReactElement | null {
+  const accent = branding.accentColor || '#4f35d2'
+
   switch (block.type) {
     case 'hero':
-      return <HeroBlock content={block.content} />
+      return <HeroBlock content={block.content} accentColor={accent} />
     case 'just_sold':
-      return <JustSoldBlock content={block.content} />
+      return <JustSoldBlock content={block.content} accentColor={accent} />
     case 'market_commentary':
-      return <MarketCommentaryBlock content={block.content} />
+      return <MarketCommentaryBlock content={block.content} accentColor={accent} />
     case 'rate_watch':
-      return <RateWatchBlock content={block.content} country={country} />
+      return <RateWatchBlock content={block.content} country={country} accentColor={accent} />
     case 'neighborhood_spotlight':
-      return <NeighborhoodSpotlightBlock content={block.content} />
+      return <NeighborhoodSpotlightBlock content={block.content} accentColor={accent} />
     case 'local_intel':
-      return <LocalIntelBlock content={block.content} />
+      return <LocalIntelBlock content={block.content} accentColor={accent} />
     case 'quick_tip':
-      return <QuickTipBlock content={block.content} />
+      return <QuickTipBlock content={block.content} accentColor={accent} />
     case 'agent_note':
       return (
         <AgentNoteBlock
           content={block.content}
           agentName={branding.name}
           agentTitle={branding.title}
+          accentColor={accent}
         />
       )
     case 'cta':
-      return <CtaBlock content={block.content} />
+      return <CtaBlock content={block.content} accentColor={accent} />
     case 'divider':
-      return <DividerBlock content={block.content} />
+      return <DividerBlock content={block.content} accentColor={accent} />
     default:
       return null
   }
@@ -201,7 +204,12 @@ export function EditorialDigest({
           </Section>
 
           {/* ── Masthead: Edition title + subtitle ── */}
-          <MastheadBlock title={edition.title} subtitle={subtitle} />
+          <MastheadBlock
+            title={edition.title}
+            subtitle={subtitle}
+            accentColor={accent}
+            agentName={branding.name}
+          />
 
           {/* ── Content blocks ── */}
           <Section className="ed-content">

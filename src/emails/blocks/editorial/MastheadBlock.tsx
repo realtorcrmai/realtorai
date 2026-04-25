@@ -5,47 +5,40 @@ export interface MastheadBlockProps {
   title: string
   subtitle: string
   edition_label?: string | null
+  accentColor?: string
+  agentName?: string
 }
 
-const FOREST_GREEN = '#1a2e1a'
-const GOLD = '#c9a96e'
-const WHITE = '#ffffff'
-const MUTED_GREEN = '#8aaa8a'
+export function MastheadBlock({ title, subtitle, accentColor, agentName }: MastheadBlockProps) {
+  const accent = accentColor || '#4f35d2'
 
-export function MastheadBlock({ title, subtitle, edition_label }: MastheadBlockProps) {
   return (
-    <Section
-      style={{
-        backgroundColor: FOREST_GREEN,
-        padding: '36px 40px 28px',
-        textAlign: 'center',
-      }}
-    >
-      {/* Eyebrow */}
+    <Section style={{ padding: '28px 32px 20px', textAlign: 'center' }}>
+      {/* Edition eyebrow */}
       <Text
         style={{
-          fontFamily: 'Arial, Helvetica, sans-serif',
-          fontSize: '10px',
-          fontWeight: '700',
-          letterSpacing: '3px',
-          color: GOLD,
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+          fontSize: '11px',
+          fontWeight: '600',
+          letterSpacing: '2px',
+          color: accent,
           textTransform: 'uppercase',
-          margin: '0 0 16px',
+          margin: '0 0 12px',
         }}
       >
-        {edition_label ? `${edition_label} · REALTORS360 EDITORIAL` : 'REALTORS360 EDITORIAL'}
+        {agentName ? `${agentName} · Newsletter` : 'Newsletter'}
       </Text>
 
       {/* Title */}
       <Heading
         as="h1"
         style={{
-          fontFamily: "Georgia, 'Times New Roman', serif",
-          fontSize: '32px',
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+          fontSize: '26px',
           fontWeight: '700',
-          color: WHITE,
-          margin: '0 0 10px',
-          lineHeight: '1.2',
+          color: '#1a1535',
+          margin: '0 0 8px',
+          lineHeight: '1.25',
           letterSpacing: '-0.5px',
         }}
       >
@@ -55,23 +48,24 @@ export function MastheadBlock({ title, subtitle, edition_label }: MastheadBlockP
       {/* Subtitle */}
       <Text
         style={{
-          fontFamily: 'Arial, Helvetica, sans-serif',
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
           fontSize: '13px',
-          color: MUTED_GREEN,
-          margin: '0 0 24px',
-          letterSpacing: '0.3px',
+          color: '#6b6b8d',
+          margin: '0 0 20px',
+          letterSpacing: '0.2px',
         }}
       >
         {subtitle}
       </Text>
 
-      {/* Gold divider */}
+      {/* Accent divider */}
       <Hr
         style={{
-          borderColor: GOLD,
-          borderTopWidth: '1px',
+          borderColor: accent,
+          borderTopWidth: '2px',
           borderStyle: 'solid',
-          margin: '0',
+          margin: '0 auto',
+          width: '48px',
         }}
       />
     </Section>

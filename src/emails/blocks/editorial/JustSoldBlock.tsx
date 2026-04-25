@@ -3,11 +3,12 @@ import { Section, Text, Row, Column } from '@react-email/components'
 import type { JustSoldBlockContent } from '@/types/editorial'
 
 export interface JustSoldBlockEmailProps {
+  accentColor?: string
   content: JustSoldBlockContent
 }
 
-const FOREST_GREEN = '#1a2e1a'
-const GOLD = '#c9a96e'
+const HEADING_COLOR = '#1a1535'
+
 const SUCCESS_GREEN = '#1a6e3c'
 const TEXT_BODY = '#4a4a3a'
 const TEXT_MUTED = '#6b6b5a'
@@ -28,7 +29,8 @@ function formatPct(pct: number | null | undefined): string | null {
   return `${sign}${pct.toFixed(1)}%`
 }
 
-export function JustSoldBlock({ content }: JustSoldBlockEmailProps) {
+export function JustSoldBlock({ content, accentColor }: JustSoldBlockEmailProps) {
+  const accent = accentColor || '#4f35d2'
   const {
     address,
     sale_price,
@@ -56,7 +58,7 @@ export function JustSoldBlock({ content }: JustSoldBlockEmailProps) {
     <Section
       style={{
         backgroundColor: CARD_BG,
-        borderLeft: `4px solid ${GOLD}`,
+        borderLeft: `4px solid ${accent}`,
         padding: '0',
         margin: '0',
       }}
@@ -69,7 +71,7 @@ export function JustSoldBlock({ content }: JustSoldBlockEmailProps) {
             fontSize: '10px',
             fontWeight: '700',
             letterSpacing: '2.5px',
-            color: GOLD,
+            color: accent,
             textTransform: 'uppercase',
             margin: '0 0 10px',
           }}
@@ -83,7 +85,7 @@ export function JustSoldBlock({ content }: JustSoldBlockEmailProps) {
             fontFamily: "Georgia, 'Times New Roman', serif",
             fontSize: '18px',
             fontWeight: '700',
-            color: FOREST_GREEN,
+            color: HEADING_COLOR,
             margin: '0 0 12px',
             lineHeight: '1.3',
           }}

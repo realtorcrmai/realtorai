@@ -3,11 +3,12 @@ import { Section, Text, Heading } from '@react-email/components'
 import type { MarketCommentaryBlockContent } from '@/types/editorial'
 
 export interface MarketCommentaryBlockEmailProps {
+  accentColor?: string
   content: MarketCommentaryBlockContent
 }
 
-const FOREST_GREEN = '#1a2e1a'
-const GOLD = '#c9a96e'
+const HEADING_COLOR = '#1a1535'
+
 const TEXT_BODY = '#4a4a3a'
 const TEXT_MUTED = '#6b6b5a'
 const CARD_BG = '#f9f7f2'
@@ -39,7 +40,8 @@ function formatYoy(pct: number | null | undefined): { text: string; color: strin
   }
 }
 
-export function MarketCommentaryBlock({ content }: MarketCommentaryBlockEmailProps) {
+export function MarketCommentaryBlock({ content, accentColor }: MarketCommentaryBlockEmailProps) {
+  const accent = accentColor || '#4f35d2'
   const {
     neighbourhood,
     body,
@@ -74,7 +76,7 @@ export function MarketCommentaryBlock({ content }: MarketCommentaryBlockEmailPro
             fontSize: '10px',
             fontWeight: '700',
             letterSpacing: '2.5px',
-            color: GOLD,
+            color: accent,
             textTransform: 'uppercase',
             margin: '0 0 4px',
           }}
@@ -89,7 +91,7 @@ export function MarketCommentaryBlock({ content }: MarketCommentaryBlockEmailPro
             fontFamily: "Georgia, 'Times New Roman', serif",
             fontSize: '20px',
             fontWeight: '700',
-            color: FOREST_GREEN,
+            color: HEADING_COLOR,
             margin: '0 0 4px',
           }}
         >
@@ -137,7 +139,7 @@ export function MarketCommentaryBlock({ content }: MarketCommentaryBlockEmailPro
                       fontFamily: "Georgia, 'Times New Roman', serif",
                       fontSize: '22px',
                       fontWeight: '700',
-                      color: FOREST_GREEN,
+                      color: HEADING_COLOR,
                       margin: '0 0 4px',
                     }}
                   >
@@ -169,7 +171,7 @@ export function MarketCommentaryBlock({ content }: MarketCommentaryBlockEmailPro
                       fontFamily: "Georgia, 'Times New Roman', serif",
                       fontSize: '22px',
                       fontWeight: '700',
-                      color: FOREST_GREEN,
+                      color: HEADING_COLOR,
                       margin: '0 0 4px',
                     }}
                   >

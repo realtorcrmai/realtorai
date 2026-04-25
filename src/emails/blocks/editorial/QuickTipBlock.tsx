@@ -3,11 +3,12 @@ import { Section, Text, Heading } from '@react-email/components'
 import type { QuickTipBlockContent } from '@/types/editorial'
 
 export interface QuickTipBlockEmailProps {
+  accentColor?: string
   content: QuickTipBlockContent
 }
 
-const FOREST_GREEN = '#1a2e1a'
-const GOLD = '#c9a96e'
+const HEADING_COLOR = '#1a1535'
+
 const TEXT_BODY = '#4a4a3a'
 const BOX_BG = '#f4f1eb'
 
@@ -21,7 +22,8 @@ const CATEGORY_LABELS: Record<QuickTipBlockContent['category'], string> = {
   general: 'General',
 }
 
-export function QuickTipBlock({ content }: QuickTipBlockEmailProps) {
+export function QuickTipBlock({ content, accentColor }: QuickTipBlockEmailProps) {
+  const accent = accentColor || '#4f35d2'
   const { title, body, category, icon_emoji } = content
 
   if (!title && !body) return null
@@ -32,7 +34,7 @@ export function QuickTipBlock({ content }: QuickTipBlockEmailProps) {
     <Section
       style={{
         backgroundColor: BOX_BG,
-        borderLeft: `4px solid ${FOREST_GREEN}`,
+        borderLeft: `4px solid ${HEADING_COLOR}`,
         padding: '0',
         margin: '0',
       }}
@@ -45,7 +47,7 @@ export function QuickTipBlock({ content }: QuickTipBlockEmailProps) {
             fontSize: '10px',
             fontWeight: '700',
             letterSpacing: '2.5px',
-            color: GOLD,
+            color: accent,
             textTransform: 'uppercase',
             margin: '0 0 8px',
           }}
@@ -61,7 +63,7 @@ export function QuickTipBlock({ content }: QuickTipBlockEmailProps) {
               fontFamily: "Georgia, 'Times New Roman', serif",
               fontSize: '17px',
               fontWeight: '700',
-              color: FOREST_GREEN,
+              color: HEADING_COLOR,
               margin: '0 0 10px',
               lineHeight: '1.3',
             }}

@@ -3,11 +3,12 @@ import { Section, Text, Heading } from '@react-email/components'
 import type { NeighborhoodSpotlightBlockContent } from '@/types/editorial'
 
 export interface NeighborhoodSpotlightBlockEmailProps {
+  accentColor?: string
   content: NeighborhoodSpotlightBlockContent
 }
 
-const FOREST_GREEN = '#1a2e1a'
-const GOLD = '#c9a96e'
+const HEADING_COLOR = '#1a1535'
+
 const TEXT_BODY = '#4a4a3a'
 const TEXT_MUTED = '#6b6b5a'
 const CARD_BG = '#f9f7f2'
@@ -26,7 +27,8 @@ function formatAvgPrice(cents: number | null | undefined): string | null {
   return 'Avg. $' + dollars.toLocaleString('en-CA')
 }
 
-export function NeighborhoodSpotlightBlock({ content }: NeighborhoodSpotlightBlockEmailProps) {
+export function NeighborhoodSpotlightBlock({ content, accentColor }: NeighborhoodSpotlightBlockEmailProps) {
+  const accent = accentColor || '#4f35d2'
   const {
     neighbourhood,
     tagline,
@@ -61,7 +63,7 @@ export function NeighborhoodSpotlightBlock({ content }: NeighborhoodSpotlightBlo
             fontSize: '10px',
             fontWeight: '700',
             letterSpacing: '2.5px',
-            color: GOLD,
+            color: accent,
             textTransform: 'uppercase',
             margin: '0 0 8px',
           }}
@@ -76,7 +78,7 @@ export function NeighborhoodSpotlightBlock({ content }: NeighborhoodSpotlightBlo
             fontFamily: "Georgia, 'Times New Roman', serif",
             fontSize: '20px',
             fontWeight: '700',
-            color: FOREST_GREEN,
+            color: HEADING_COLOR,
             margin: '0 0 6px',
             lineHeight: '1.25',
           }}
@@ -133,7 +135,7 @@ export function NeighborhoodSpotlightBlock({ content }: NeighborhoodSpotlightBlo
                       style={{
                         fontFamily: 'Arial, Helvetica, sans-serif',
                         fontSize: '14px',
-                        color: GOLD,
+                        color: accent,
                         margin: '0',
                         fontWeight: '700',
                       }}

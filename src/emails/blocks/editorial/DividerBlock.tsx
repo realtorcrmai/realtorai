@@ -3,12 +3,14 @@ import { Hr, Section } from '@react-email/components'
 import type { DividerBlockContent } from '@/types/editorial'
 
 export interface DividerBlockEmailProps {
+  accentColor?: string
   content: DividerBlockContent
 }
 
-const GOLD = '#c9a96e'
 
-export function DividerBlock({ content }: DividerBlockEmailProps) {
+
+export function DividerBlock({ content, accentColor }: DividerBlockEmailProps) {
+  const accent = accentColor || '#4f35d2'
   const { style, spacer_height, color } = content
 
   // Spacer — invisible height-only block
@@ -36,7 +38,7 @@ export function DividerBlock({ content }: DividerBlockEmailProps) {
             display: 'inline-block',
             width: '6px',
             height: '6px',
-            backgroundColor: color || GOLD,
+            backgroundColor: color || accent,
             borderRadius: '50%',
             margin: '0 4px',
           }}
@@ -46,7 +48,7 @@ export function DividerBlock({ content }: DividerBlockEmailProps) {
             display: 'inline-block',
             width: '6px',
             height: '6px',
-            backgroundColor: color || GOLD,
+            backgroundColor: color || accent,
             borderRadius: '50%',
             margin: '0 4px',
           }}
@@ -56,7 +58,7 @@ export function DividerBlock({ content }: DividerBlockEmailProps) {
             display: 'inline-block',
             width: '6px',
             height: '6px',
-            backgroundColor: color || GOLD,
+            backgroundColor: color || accent,
             borderRadius: '50%',
             margin: '0 4px',
           }}
@@ -69,7 +71,7 @@ export function DividerBlock({ content }: DividerBlockEmailProps) {
   return (
     <Hr
       style={{
-        borderColor: color || GOLD,
+        borderColor: color || accent,
         borderTopWidth: '1px',
         borderStyle: 'solid',
         margin: '0',
