@@ -29,10 +29,10 @@ const MAIN_NAV: NavItem[] = [
   { href: "/listings", label: "Listings", icon: Building2 },
   { href: "/showings", label: "Showings", icon: Clock, featureKey: "showings" },
   { href: "/calendar", label: "Calendar", icon: Calendar, featureKey: "calendar" },
+  { href: "/tasks", label: "Tasks", icon: ListTodo, featureKey: "tasks" },
 ];
 
 const TOOLS_NAV: NavItem[] = [
-  { href: "/tasks", label: "Tasks", icon: ListTodo, featureKey: "tasks" },
   { href: "/content", label: "Content Engine", icon: Wand2, featureKey: "content" },
   { href: "/newsletters", label: "Email Marketing", icon: Mail, featureKey: "newsletters" },
   { href: "/newsletters/campaigns", label: "Campaigns", icon: Megaphone },
