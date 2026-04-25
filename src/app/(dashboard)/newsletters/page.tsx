@@ -281,6 +281,9 @@ export default async function NewsletterDashboard() {
         subtitle="AI sends emails to your contacts automatically"
         actions={
           <div className="flex items-center gap-2">
+            <a href="/newsletters/campaigns" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-border">
+              📢 Campaigns
+            </a>
             <a href="/newsletters/templates" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-border">
               📋 Templates
             </a>
@@ -385,19 +388,6 @@ export default async function NewsletterDashboard() {
                 <JourneyScheduleCard />
 
               </div>
-            ),
-
-            /* ══════════════════════════════
-               CAMPAIGNS TAB
-               Editorial newsletters + listing blasts
-            ══════════════════════════════ */
-            campaigns: (
-              <CampaignsTab
-                listings={(listings || []) as any}
-                blastHistory={realBlastHistory}
-                onSendBlast={sendListingBlast}
-                onSendCampaign={sendCampaign}
-              />
             ),
 
             /* ══════════════════════════════

@@ -8,7 +8,7 @@ type Props = {
   hasAutomations: boolean;
   children: {
     ai: React.ReactNode;
-    campaigns: React.ReactNode;
+    campaigns?: React.ReactNode;
     automations: React.ReactNode;
   };
 };
@@ -20,7 +20,6 @@ export function EmailMarketingTabs({ queueCount, hasAutomations, children }: Pro
 
   const tabs = [
     { id: "ai", label: "AI Nurture", badge: queueCount > 0 ? queueCount : undefined, locked: false },
-    { id: "campaigns", label: "Campaigns", locked: false },
     { id: "automations", label: "Automations", locked: !hasAutomations },
   ];
 
