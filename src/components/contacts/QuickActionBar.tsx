@@ -9,12 +9,10 @@ import {
   ListTodo,
   Send,
   X,
-  Mic,
 } from "lucide-react";
 import { LogoSpinner } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
 import { sendContactMessage, addCommunicationNote } from "@/actions/contacts";
-import { ClickToVoiceButton } from "@/components/voice-agent/ClickToVoiceButton";
 
 export function QuickActionBar({
   contactId,
