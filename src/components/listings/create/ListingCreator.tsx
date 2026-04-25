@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ChevronDown, ChevronUp, Building2, X, PenLine, Link2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Building2, X, PenLine, Link2, FileText } from "lucide-react";
 import Link from "next/link";
 import { PropertyTypeSelector } from "./PropertyTypeSelector";
 import { ListingPreviewCard } from "./ListingPreviewCard";
 import { MLSImportTab } from "./MLSImportTab";
+import { ParagonPDFTab } from "./ParagonPDFTab";
 import { createListing } from "@/actions/listings";
 import type { Contact } from "@/types";
 
@@ -18,7 +19,7 @@ export function ListingCreator() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showMore, setShowMore] = useState(false);
-  const [activeTab, setActiveTab] = useState<"manual" | "mls-import">("mls-import");
+  const [activeTab, setActiveTab] = useState<"paragon-pdf" | "manual" | "mls-import">("paragon-pdf");
 
   // Sellers loaded from API
   const [sellers, setSellers] = useState<Contact[]>([]);
@@ -114,6 +115,18 @@ export function ListingCreator() {
         <div className="inline-flex items-center bg-muted/30 rounded-xl p-1 border border-border/30">
           <button
             type="button"
+            onClick={() => setActiveTab("paragon-pdf")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeTab === "paragon-pdf"
+                ? "bg-white dark:bg-zinc-800 text-foreground shadow-sm border border-border/30"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <FileText className="h-4 w-4" />
+            Paragon PDF
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab("mls-import")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               activeTab === "mls-import"
@@ -143,7 +156,9 @@ export function ListingCreator() {
       <div className="max-w-6xl mx-auto px-6 py-8 flex gap-8">
         {/* LEFT — Form */}
         <div className="flex-1 min-w-0">
-          {activeTab === "mls-import" ? (
+          {activeTab === "paragon-pdf" ? (
+            <ParagonPDFTab sellers={sellers} loadingSellers={loadingSellers} />
+          ) : activeTab === "mls-import" ? (
             <MLSImportTab sellers={sellers} loadingSellers={loadingSellers} />
           ) : (
           <>
