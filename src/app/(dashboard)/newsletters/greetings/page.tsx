@@ -3,8 +3,20 @@ export const dynamic = "force-dynamic";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { GreetingAutomations } from "@/components/newsletters/GreetingAutomations";
 import { getGreetingRules } from "@/actions/config";
+import { auth } from "@/lib/auth";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
+import { getUserFeatures } from "@/lib/features";
+import { redirect } from "next/navigation";
 
 export default async function GreetingsPage() {
+  const session = await auth();
+  const tc = await getAuthenticatedTenantClient();
+
+  // Feature gate: require newsletters feature
+  const { data: user } = await tc.from("users").select("plan, enabled_features").eq("id", session?.user?.id ?? "").single();
+  const features = getUserFeatures((user?.plan as string) ?? "free", user?.enabled_features as string[] | null);
+  if (!features.includes("newsletters")) redirect("/");
+
   const greetingRules = await getGreetingRules();
 
   return (

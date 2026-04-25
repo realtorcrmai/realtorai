@@ -4,9 +4,18 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { CampaignsTab } from "@/components/newsletters/CampaignsTab";
 import { sendListingBlast, sendCampaign } from "@/actions/newsletters";
+import { auth } from "@/lib/auth";
+import { getUserFeatures } from "@/lib/features";
+import { redirect } from "next/navigation";
 
 export default async function CampaignsPage() {
+  const session = await auth();
   const tc = await getAuthenticatedTenantClient();
+
+  // Feature gate: require newsletters feature
+  const { data: user } = await tc.from("users").select("plan, enabled_features").eq("id", session?.user?.id ?? "").single();
+  const features = getUserFeatures((user?.plan as string) ?? "free", user?.enabled_features as string[] | null);
+  if (!features.includes("newsletters")) redirect("/");
 
   const [{ data: listings }, { data: recentBlastsRaw }] = await Promise.all([
     tc
