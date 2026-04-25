@@ -203,13 +203,13 @@ async function getContactsForOccasion(
 
   // Personal milestones — match from contact_dates
   if (occasion === "birthday") {
-    // Query contact_dates for birthdays matching today's month/day
+    // contact_dates uses: event_type (not date_type), date (not date_value)
     const monthDay = `${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const { data: dates } = await supabase
       .from("contact_dates")
       .select("contact_id")
-      .eq("date_type", "birthday")
-      .like("date_value", `%-${monthDay}`);
+      .eq("event_type", "birthday")
+      .like("date", `%-${monthDay}`);
     return (dates || []).map((d: any) => d.contact_id);
   }
 
@@ -218,8 +218,8 @@ async function getContactsForOccasion(
     const { data: dates } = await supabase
       .from("contact_dates")
       .select("contact_id")
-      .in("date_type", ["closing_anniversary", "anniversary"])
-      .like("date_value", `%-${monthDay}`);
+      .in("event_type", ["closing_anniversary", "anniversary", "home_anniversary"])
+      .like("date", `%-${monthDay}`);
     return (dates || []).map((d: any) => d.contact_id);
   }
 
