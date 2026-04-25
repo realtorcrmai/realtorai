@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-22 -->
+<!-- docs-audit-reviewed: 2026-04-25 --soc2-mfa-drift -->
 <!-- docs-audit: tests/e2e/*, scripts/eval-browser* -->
 <!-- last-verified: 2026-04-13 -->
 # Browser & UX Test Plan — Realtors360 CRM

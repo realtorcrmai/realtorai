@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { X, ChevronLeft, ChevronRight, Camera } from "lucide-react";
 
-interface Photo {
+export interface Photo {
   id: string;
   photo_url: string;
   role: string;

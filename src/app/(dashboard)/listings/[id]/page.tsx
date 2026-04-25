@@ -14,7 +14,7 @@ import { ShowingStatusBadge } from "@/components/showings/ShowingStatusBadge";
 import { AlertBanner } from "@/components/shared/AlertBanner";
 
 import { NeighborhoodButton } from "@/components/listings/NeighborhoodButton";
-import { PhotoGallery } from "@/components/listings/PhotoGallery";
+import { PhotoGallery, type Photo } from "@/components/listings/PhotoGallery";
 import { DDFSyncButton } from "@/components/listings/DDFSyncButton";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
@@ -174,7 +174,7 @@ export default async function ListingDetailPage({
 
         {/* Photo Gallery — full width */}
         <div className="px-4 md:px-6 lg:px-8 pt-4">
-          <PhotoGallery photos={(listingPhotos ?? []) as any} address={listing.address} />
+          <PhotoGallery photos={(listingPhotos ?? []) as Photo[]} address={listing.address} />
         </div>
 
         {/* ── Hero Section ─────────────────────────────── */}

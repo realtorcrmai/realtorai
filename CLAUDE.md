@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-22 --tasks-labels-fix --task-mgmt -->
+<!-- docs-audit-reviewed: 2026-04-25 --soc2-mfa-drift -->
 # CLAUDE.md — Realtors360 Real Estate CRM
 
 ## Think Thoroughly — Depth Over Speed

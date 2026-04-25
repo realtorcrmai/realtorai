@@ -127,8 +127,10 @@ export async function syncGoogleContacts(
     .select("phone, sync_external_id")
     .eq("realtor_id", realtorId);
 
-  const existingPhones = new Set((existing || []).map((c: any) => normalizePhone(c.phone || "")));
-  const existingExternalIds = new Set((existing || []).map((c: any) => c.sync_external_id).filter(Boolean));
+  type ExistingContact = { phone: string | null; sync_external_id: string | null };
+  const existingRows = (existing ?? []) as ExistingContact[];
+  const existingPhones = new Set(existingRows.map((c) => normalizePhone(c.phone || "")));
+  const existingExternalIds = new Set(existingRows.map((c) => c.sync_external_id).filter(Boolean));
 
   let imported = 0;
   let skipped = 0;
