@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { titleCaseName } from "@/lib/format";
 
 /** Password strength: 0=empty, 1=weak, 2=medium, 3=strong (S12) */
@@ -20,8 +20,10 @@ function getPasswordStrength(pw: string): { level: number; label: string; color:
 // Cloudflare Turnstile site key — falls back gracefully if not set
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
 
-export default function SignupPage() {
+function SignupContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("return_to");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -158,12 +160,17 @@ export default function SignupPage() {
       });
 
       if (signInResult?.ok) {
+        // External return_to (e.g. from Pulse360) — redirect after sign-in
+        if (returnTo) {
+          window.location.href = returnTo;
+          return;
+        }
         // Redirect to email verification — mandatory before onboarding
         const verifyUrl = hasTeam ? "/verify?next=/onboarding?create_team=true" : "/verify";
         router.push(verifyUrl);
       } else {
         // Account created but auto-sign-in failed — send to login
-        router.push("/login");
+        router.push(returnTo ? `/login?return_to=${encodeURIComponent(returnTo)}` : "/login");
       }
     } catch {
       setError("Something went wrong. Please try again.");
@@ -246,7 +253,7 @@ export default function SignupPage() {
             {/* Google OAuth signup */}
             <button
               type="button"
-              onClick={() => signIn("google", { callbackUrl: "/" })}
+              onClick={() => signIn("google", { callbackUrl: returnTo || "/" })}
               className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -400,5 +407,13 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupContent />
+    </Suspense>
   );
 }
