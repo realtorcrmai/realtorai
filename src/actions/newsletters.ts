@@ -338,6 +338,9 @@ async function renderEmailTemplate(
     // (no-op: intro/ctaText from the base content object are sufficient)
   };
 
+  // CASL compliance: physical address is required in footer
+  emailData.physicalAddress = branding.physicalAddress;
+
   return assembleEmail(blockType, emailData, undefined, journeyPhase, engagementScore);
 }
 
