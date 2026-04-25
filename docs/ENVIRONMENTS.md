@@ -1,30 +1,31 @@
-<!-- docs-audit-reviewed: 2026-04-21 -->
+<!-- docs-audit-reviewed: 2026-04-25 -->
 <!-- docs-audit: vercel.json, .env.local.example, supabase/migrations/* -->
 # Environments — Realtors360 CRM
 
 > **Source of truth** for which Supabase projects, Vercel environments, and branches map to dev vs production. If you're a developer or AI agent starting work on this repo, **read this first**.
-> Last updated: 2026-04-10 (newsletter service live on Render)
+> Last updated: 2026-04-25 (proper dev/prod separation)
 
 ---
 
 ## TL;DR
 
-| | Dev / Current Production |
-|---|---|
-| **Supabase project** | `qcohfohjihazivkforsj` ("realtyaicontent") |
-| **Git branch** | `dev` (all active development + deployments) |
-| **CRM (Next.js)** | Vercel Preview — `https://realestate-crm-git-dev-amandhindsas-projects.vercel.app` |
-| **Newsletter Agent** | **Render (LIVE)** — auto-deploys from `dev` branch, root dir `realtors360-newsletter` |
-| **Deploy trigger** | Auto on push to `dev` for both CRM + Newsletter |
-| **Region** | us-west-2 (Supabase), Render region TBD |
+| | Dev | Production |
+|---|---|---|
+| **Git branch** | `dev` | `main` |
+| **Supabase project** | `qcohfohjihazivkforsj` | `opbrqlmhhqvfomevvkon` |
+| **CRM (Next.js)** | Vercel Preview | Vercel Production — https://magnate360.com |
+| **Newsletter Agent** | — | Render ($7/mo) — auto-deploys from `dev` branch |
+| **Deploy trigger** | Push to `dev` → Vercel Preview | Merge PR to `main` → Vercel Production |
 
 ### Services currently running
 
-| Service | Platform | Status | Health Check |
-|---------|----------|--------|-------------|
-| **CRM** | Vercel | Live | `https://realestate-crm-git-dev-amandhindsas-projects.vercel.app` |
-| **Newsletter Agent** | Render ($7/mo) | **Live** | `https://<render-url>/health` |
-| **Database** | Supabase | Live | Dashboard: https://supabase.com/dashboard/project/qcohfohjihazivkforsj |
+| Service | Platform | Environment | Database | Status |
+|---------|----------|-------------|----------|--------|
+| **CRM** | Vercel Production | `main` branch | `opbrqlmhhqvfomevvkon` (prod) | Live — https://magnate360.com |
+| **CRM Preview** | Vercel Preview | `dev` branch | `qcohfohjihazivkforsj` (dev) | Live — auto-deploy on push |
+| **Newsletter Agent** | Render ($7/mo) | `dev` branch | `opbrqlmhhqvfomevvkon` (prod) | Live |
+| **Dev Database** | Supabase | — | `qcohfohjihazivkforsj` | Live |
+| **Prod Database** | Supabase | — | `opbrqlmhhqvfomevvkon` | Live |
 
 ### Newsletter Agent Feature Flags (set in Render env vars)
 
@@ -38,20 +39,34 @@
 | `FLAG_RAG_BACKFILL` | ON | RAG embeddings backfill (Sunday 3am Vancouver) |
 | `FLAG_MARKET_SCRAPER` | ON | Market stats for 8 BC areas (Sunday 2am Vancouver) |
 
-**`main` branch** is reserved for future separate production environment. Not in active use yet.
+### Git Workflow
+
+```
+feature branch → PR → dev (preview) → PR → main (production / magnate360.com)
+```
+
+- **Never push directly to `dev` or `main`** — always via PR
+- `dev` pushes auto-deploy to Vercel Preview + Render Newsletter
+- `main` merges auto-deploy to Vercel Production (magnate360.com)
 
 ---
 
 ## Supabase
 
-### The one project currently in use
+### Two projects — dev and production
 
-- **Ref:** `qcohfohjihazivkforsj`
-- **Display name:** "realtyaicontent" (legacy — should be renamed)
-- **Region:** `us-west-2` (AWS)
-- **Dashboard:** https://supabase.com/dashboard/project/qcohfohjihazivkforsj
-- **SQL editor:** https://supabase.com/dashboard/project/qcohfohjihazivkforsj/sql/new
-- **REST API base:** `https://qcohfohjihazivkforsj.supabase.co`
+| | Dev | Production |
+|---|---|---|
+| **Ref** | `qcohfohjihazivkforsj` | `opbrqlmhhqvfomevvkon` |
+| **Display name** | "realtyaicontent" (legacy) | Magnate360 Prod |
+| **Dashboard** | [Dev Dashboard](https://supabase.com/dashboard/project/qcohfohjihazivkforsj) | [Prod Dashboard](https://supabase.com/dashboard/project/opbrqlmhhqvfomevvkon) |
+| **SQL editor** | [Dev SQL](https://supabase.com/dashboard/project/qcohfohjihazivkforsj/sql/new) | [Prod SQL](https://supabase.com/dashboard/project/opbrqlmhhqvfomevvkon/sql/new) |
+| **REST API** | `https://qcohfohjihazivkforsj.supabase.co` | `https://opbrqlmhhqvfomevvkon.supabase.co` |
+| **Data** | Test/seed data | Real client data |
+
+**Both databases have identical schemas (171 tables).** Migrations must be applied to BOTH databases. Run on dev first, verify, then apply to prod.
+
+**Local development** (`.env.local`) points to the dev database.
 
 ### History — what existed before 2026-04-09
 

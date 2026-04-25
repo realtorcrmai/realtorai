@@ -159,11 +159,12 @@ realestate-crm/                  ← You are here (repo root)
 
 | | Dev | Production |
 |---|---|---|
-| **URL** | Preview deploys from `dev` branch | https://magnate360.com |
+| **URL** | Vercel Preview (auto on push to `dev`) | https://magnate360.com |
 | **Supabase** | `qcohfohjihazivkforsj` | `opbrqlmhhqvfomevvkon` |
-| **Vercel project** | `realestate-crm` | `realestate-crm` (amandhindsas-projects) |
+| **Vercel project** | `realestate-crm` (Preview) | `realestate-crm` (Production) |
 | **Git branch** | `dev` | `main` |
-| **Newsletter (Render)** | — | https://realtors360-newsletter.onrender.com |
+| **Newsletter (Render)** | — | https://realtors360-newsletter.onrender.com → prod DB |
+| **Deploy trigger** | Push to `dev` | Merge PR to `main` |
 
 Full details: `docs/ENVIRONMENTS.md`
 
