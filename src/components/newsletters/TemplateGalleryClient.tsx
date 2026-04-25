@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
   Dialog,
@@ -10,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { sendTestTemplateEmail } from "@/actions/newsletters";
 
 export interface TemplateCard {
   slug: string;
@@ -161,6 +163,16 @@ export function TemplateGalleryClient({
 }: Props) {
   const [activeSection, setActiveSection] = useState<"buyer" | "seller" | "alerts">("buyer");
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateCard | null>(null);
+  const [sendingTest, startSendTest] = useTransition();
+  const [testResult, setTestResult] = useState<{ success?: boolean; sentTo?: string; error?: string } | null>(null);
+
+  function handleSendTest(card: TemplateCard) {
+    setTestResult(null);
+    startSendTest(async () => {
+      const result = await sendTestTemplateEmail(card.slug, card.subject, card.html);
+      setTestResult(result);
+    });
+  }
 
   const sections = [
     { id: "buyer" as const, label: "Buyer Journey", count: buyerJourney.reduce((n, g) => n + g.emails.length, 0) },
@@ -276,7 +288,7 @@ export function TemplateGalleryClient({
       {/* Full preview dialog */}
       <Dialog
         open={!!selectedTemplate}
-        onOpenChange={(open) => !open && setSelectedTemplate(null)}
+        onOpenChange={(open) => { if (!open) { setSelectedTemplate(null); setTestResult(null); } }}
       >
         <DialogContent className="max-w-3xl h-[85vh] flex flex-col p-0">
           {selectedTemplate && (
@@ -300,6 +312,15 @@ export function TemplateGalleryClient({
                   <p className="text-[10px] text-muted-foreground/70 italic flex-1">
                     AI personalizes this email with each contact's details, area preferences, and market data.
                   </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={sendingTest}
+                    onClick={() => handleSendTest(selectedTemplate)}
+                    className="text-xs shrink-0"
+                  >
+                    {sendingTest ? "Sending..." : "Send Test"}
+                  </Button>
                   <Link
                     href={`/newsletters/templates/${selectedTemplate.slug}`}
                     className="text-xs px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shrink-0"
@@ -308,6 +329,13 @@ export function TemplateGalleryClient({
                     Full Page
                   </Link>
                 </div>
+                {testResult && (
+                  <div className={`mt-2 text-xs px-3 py-2 rounded-md ${testResult.success ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                    {testResult.success
+                      ? `Sent to ${testResult.sentTo}`
+                      : `Failed: ${testResult.error}`}
+                  </div>
+                )}
               </DialogHeader>
               <div className="flex-1 overflow-hidden">
                 <iframe

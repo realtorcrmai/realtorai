@@ -1590,3 +1590,47 @@ export async function getContactEmailHistory(contactId: string) {
     },
   };
 }
+
+/**
+ * Send a test email to the realtor using the template preview HTML.
+ * This sends the exact same HTML shown in the template gallery.
+ */
+export async function sendTestTemplateEmail(emailType: string, subject: string, html: string) {
+  const tc = await getAuthenticatedTenantClient();
+
+  // Get realtor's email from brand profile or user record
+  const { data: brandProfile } = await tc.raw
+    .from("realtor_brand_profiles")
+    .select("display_name, email")
+    .eq("realtor_id", tc.realtorId)
+    .maybeSingle();
+
+  const { data: user } = await tc.raw
+    .from("users")
+    .select("email, name")
+    .eq("id", tc.realtorId)
+    .maybeSingle();
+
+  const realtorEmail = brandProfile?.email || user?.email;
+  const realtorName = brandProfile?.display_name || user?.name || "Realtor";
+
+  if (!realtorEmail) {
+    return { error: "No email address found for your account. Update your brand profile." };
+  }
+
+  try {
+    await sendEmail({
+      to: realtorEmail,
+      subject: `[TEST] ${subject}`,
+      html,
+      tags: [
+        { name: "email_type", value: `test_${emailType}` },
+        { name: "triggered_by", value: "template_gallery" },
+      ],
+    });
+
+    return { success: true, sentTo: realtorEmail };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to send test email" };
+  }
+}
