@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-21 -->
+<!-- docs-audit-reviewed: 2026-04-25 --soc2-mfa-drift -->
 <!-- docs-audit: supabase/migrations/* -->
 # Pending Migrations — Apply to Supabase
 

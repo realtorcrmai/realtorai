@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-22 -->
+<!-- docs-audit-reviewed: 2026-04-25 --soc2-mfa-drift -->
 <!-- docs-audit: src/app/(auth)/*, src/app/(dashboard)/onboarding/* -->
 # SPEC: Realtor Signup & Onboarding v2
 
