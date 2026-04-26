@@ -204,7 +204,7 @@ export function MondaySidebar() {
         <LogoVideo size={72} />
         <div className="text-center mt-1">
           <span className="text-[15px] font-semibold text-sidebar-foreground tracking-tight">Magnate</span>
-          <span className="block text-[9px] text-sidebar-foreground/40 tracking-widest uppercase">AI Platform</span>
+          <span className="block text-[9px] text-sidebar-foreground/70 tracking-widest uppercase">AI Platform</span>
         </div>
       </div>
 
@@ -214,10 +214,10 @@ export function MondaySidebar() {
       {smartLists.length > 0 && (
         <>
           <div className="flex items-center justify-between px-5 pt-4 pb-1">
-            <span className="text-[10px] uppercase tracking-wider text-sidebar-foreground/50 font-semibold">Smart Lists</span>
+            <span className="text-[10px] uppercase tracking-wider text-sidebar-foreground/70 font-semibold">Smart Lists</span>
             <button
               onClick={() => setShowSmartListBuilder(true)}
-              className="text-sidebar-foreground/40 hover:text-sidebar-foreground transition-colors"
+              className="text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors"
               aria-label="Create smart list"
             >
               <Plus className="h-3.5 w-3.5" />
@@ -295,7 +295,7 @@ export function MondaySidebar() {
 
       {/* Version */}
       <div className="px-3 pb-1 text-center">
-        <span className="text-[10px] text-sidebar-foreground/30 tabular-nums">
+        <span className="text-[10px] text-sidebar-foreground/70 tabular-nums">
           v{process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0"}
           {process.env.NEXT_PUBLIC_BUILD_ID && process.env.NEXT_PUBLIC_BUILD_ID !== "local" && (
             <span className="ml-1">({process.env.NEXT_PUBLIC_BUILD_ID})</span>
@@ -314,7 +314,7 @@ export function MondaySidebar() {
             <Users className="h-3.5 w-3.5 text-sidebar-primary shrink-0" />
             <span className="text-xs font-medium text-sidebar-primary truncate">{teamName}</span>
             {teamRole && (
-              <span className="ml-auto text-[10px] text-sidebar-foreground/50 capitalize shrink-0">{teamRole}</span>
+              <span className="ml-auto text-[10px] text-sidebar-foreground/70 capitalize shrink-0">{teamRole}</span>
             )}
           </Link>
         )}
@@ -328,14 +328,14 @@ export function MondaySidebar() {
           )}
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-sidebar-foreground truncate">{userName}</p>
-            <p className="text-xs text-sidebar-foreground/50 truncate">{userEmail}</p>
+            <p className="text-xs text-sidebar-foreground/70 truncate">{userEmail}</p>
           </div>
           <button
             onClick={() => {
               useRecentItems.getState().clearItems();
               signOut({ callbackUrl: "/login" });
             }}
-            className="p-1.5 rounded-md text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors shrink-0"
+            className="p-1.5 rounded-md text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors shrink-0"
             title="Sign out"
           >
             <LogOut className="h-4 w-4" />
