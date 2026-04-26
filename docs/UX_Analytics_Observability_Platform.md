@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-22 -->
+<!-- docs-audit-reviewed: 2026-04-25 --sidebar-a11y-contrast -->
 <!-- docs-audit: src/app/(admin)/admin/analytics/**, src/app/(dashboard)/page.tsx, src/components/analytics/**, src/components/admin/** -->
 # UX Design Document: Analytics & Observability Platform — Realtors360
 

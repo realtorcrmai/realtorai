@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-25 --paragon-pdf-import -->
+<!-- docs-audit-reviewed: 2026-04-25 --sidebar-a11y-contrast -->
 # Contributing to Realtors360
 
 ## Local Development Setup
@@ -132,13 +132,12 @@ realestate-crm/                  ← You are here (repo root)
 │   │   ├── brand/               # Logo components (LogoIcon, LogoAnimated, etc.)
 │   │   ├── layout/              # MondaySidebar, MondayHeader, MobileNav
 │   │   ├── contacts/            # Contact features
-│   │   ├── listings/            # Listing features (incl. create/ParagonPDFTab + ParagonReviewStep for Paragon PDF import)
+│   │   ├── listings/            # Listing features
 │   │   ├── newsletters/         # Newsletter features
 │   │   └── ui/                  # shadcn primitives
 │   ├── lib/                     # Shared utilities
 │   │   ├── supabase/            # DB clients (admin, tenant, server)
 │   │   ├── compliance/          # CASL consent + FINTRAC gates
-│   │   ├── paragon/             # Paragon Listing Detail Report PDF parser (Claude vision)
 │   │   └── ai-agent/            # AI agent tools
 │   ├── emails/                  # React Email templates
 │   ├── hooks/                   # React hooks
