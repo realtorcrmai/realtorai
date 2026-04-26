@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-25 --sidebar-a11y-contrast -->
+<!-- docs-audit-reviewed: 2026-04-25 --paragon-csv-import -->
 <!-- docs-audit: src/actions/*, src/components/* -->
 <!-- last-verified: 2026-04-20 -->
 # Realtors360 — User Journey Maps
@@ -688,7 +688,46 @@ All sample records are marked with `is_sample = true` for easy identification an
 
 ---
 
-*Generated 2026-03-23, updated 2026-04-12 — Realtors360 CRM*
+## 13. Listing Import from Paragon (PDF or CSV)
+
+**Persona:** Realtor re-listing a property they sold 1–3 years ago. Realtor.ca dropped the listing when it sold, but the realtor's Paragon account still has the historical record under "My Listings."
+
+**Goal:** Pre-fill a new listing with as many fields as possible without retyping.
+
+**Two import paths share the same review/create flow:**
+
+| Path | When to use | Source | Fields | Cost / time |
+|------|-------------|--------|--------|-------------|
+| **Paragon PDF** (Listing Detail Report) | You have the full agent-detail PDF | Claude vision OCR with confidence scores | address, MLS#, price, bed, **bath**, **sqft**, year, lot, **taxes**, **description**, property_type | ~30s, Claude API call |
+| **Paragon CSV** (ML Default Spreadsheet) | Quick re-list of a known property; you only need the basics | Deterministic client-side parse, no AI | address, MLS#, price, bed, year, lot, property_type, sub-area | <100ms, free |
+
+**User flow (CSV path):**
+1. Realtor exports the *ML Default Spreadsheet* from Paragon (single property selected)
+2. Goes to `/listings/new` → **Paragon Import** tab → drops `.csv` file
+3. Parser maps columns → `ParagonParseResult` shape and routes to the existing review step
+4. Amber warning banner surfaces missing fields the CSV doesn't carry: bathrooms, sqft, city/postal
+5. Realtor selects seller (contact picker), enters lockbox code, fills in bathrooms/sqft, reviews
+6. Submit → listing created with `notes` prefixed `📄 Imported from Paragon CSV · YYYY-MM-DD`
+
+**Error matrix (CSV path):**
+| Condition | Behaviour |
+|-----------|-----------|
+| Empty file | Error: "CSV file is empty." Returns to upload state. |
+| Header-only, no data row | Error: "CSV has a header but no data rows." |
+| Unrecognized columns (no MLS# or Address) | Error: "Couldn't recognize this CSV. Expected the Paragon 'ML Default Spreadsheet' format." |
+| Multiple data rows | First row imports; warning surfaces ignored count. |
+| Unknown `TypeDwel` code | Falls back to text-match on `Prop Type` column; sets confidence accordingly. |
+| Unparseable price (e.g. "Call") | `list_price = null`, no error. |
+
+**Cross-references:**
+- Implementation: `src/lib/paragon/csv-parser.ts`, `src/lib/paragon/parse.ts`
+- UI: `src/components/listings/create/ParagonPDFTab.tsx`, `ParagonReviewStep.tsx`
+- Tests: `src/__tests__/lib/paragon-csv-parser.test.ts` (21 cases)
+- Test plan: `docs/TEST_PLAN_UI_UX_Features.md` Section 25
+
+---
+
+*Generated 2026-03-23, updated 2026-04-25 — Realtors360 CRM*
 
 <!-- Last reviewed: 2026-04-21 -->
 
