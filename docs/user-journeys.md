@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-25 --onboarding-hook-rules-fix -->
+<!-- docs-audit-reviewed: 2026-04-25 --paragon-pdf-import -->
 <!-- docs-audit: src/actions/*, src/components/* -->
 <!-- last-verified: 2026-04-20 -->
 # Realtors360 — User Journey Maps
@@ -602,7 +602,30 @@ flowchart TD
 
 ---
 
-## 12. New User Onboarding Journey
+## 12. Listing Import via Paragon PDF
+
+**Persona:** Listing realtor who already has a Paragon (BC MLS) Listing Detail Report and wants to skip retyping property data into Realtors360.
+
+1. Navigate to `/listings/new` and select the **Import from Paragon** entry point
+2. Drag-drop the exported "Listing Detail Report" PDF (≤15 MB) onto the upload zone
+3. The CRM uploads the PDF to private Supabase Storage at `paragon-imports/<realtor_id>/<uuid>.pdf` (RLS-scoped to the realtor) and forwards it to Claude Sonnet via the `document` content type with a forced `tool_use` schema
+4. Within ~5–10s the review step shows auto-populated fields: address, list price, bedrooms, bathrooms, square footage, MLS number, property type, photos. Confidence indicators flag low-certainty values for review
+5. **Try parsing again** — if extraction looks off, click the rescan button. The original PDF is reused (no re-upload); Claude re-runs at temperature 0.4 for variety. Returns 404 with a friendly "may have expired (we keep them for 7 days)" message if the upload has been swept
+6. Edit any field inline (address, price, beds, baths, etc.) before submitting
+7. Submit creates the listing record exactly as if the realtor had typed every field manually
+8. **Retention** — uploaded PDFs auto-delete after 7 days via `/api/cron/cleanup-paragon-pdfs` (Vercel cron, daily 03:00 UTC). Listings created from them remain.
+
+**Errors surfaced to the realtor:**
+- Non-PDF or 0-byte file → 400 with friendly toast
+- File >15 MB → 413 "File too large (max 15 MB)"
+- Corrupted / non-Paragon PDF → 422 with friendly message; the failed upload is cleaned up immediately so storage doesn't fill with garbage
+- Another realtor's storagePath in re-parse call → 403 (path-prefix tenant check; RLS also denies)
+
+**See also:** `.claude/skills/paragon-import.md`, `docs/TEST_PLAN_Listing_Property_Details.md` Section 9 (PP-01 through PP-16).
+
+---
+
+## 13. New User Onboarding Journey
 
 ### Full Flow
 

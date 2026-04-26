@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-25 --onboarding-hook-rules-fix -->
+<!-- docs-audit-reviewed: 2026-04-25 --paragon-pdf-import -->
 <!-- docs-audit: src/components/** -->
 # Realtors360 UI/UX Audit — Full Application Review
 

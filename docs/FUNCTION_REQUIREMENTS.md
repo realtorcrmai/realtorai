@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-25 --soc2-mfa-drift -->
+<!-- docs-audit-reviewed: 2026-04-25 --paragon-pdf-import -->
 <!-- docs-audit: src/actions/*, src/app/api/* -->
 # Function Requirements — Detailed Specifications
 

@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-25 --soc2-mfa-drift -->
+<!-- docs-audit-reviewed: 2026-04-25 --paragon-pdf-import -->
 # CLAUDE.md — Realtors360 Real Estate CRM
 
 ## Think Thoroughly — Depth Over Speed
@@ -157,7 +157,8 @@ When you add a new secret: edit `.env.local` → run `encrypt` → commit `.env.
 │   │   │   ├── calendar/          # events + busy endpoints
 │   │   │   ├── contacts/          # Contact CRUD API
 │   │   │   ├── forms/generate/    # BCREA form generation proxy
-│   │   │   ├── listings/          # Listing CRUD API
+│   │   │   ├── listings/          # Listing CRUD API + parse-paragon, reparse-paragon (Paragon PDF import)
+│   │   │   ├── cron/cleanup-paragon-pdfs/ # 7-day TTL cleanup for paragon-imports bucket
 │   │   │   ├── showings/          # Showing CRUD API
 │   │   │   ├── mls-remarks/       # Claude AI MLS remarks
 │   │   │   ├── neighborhood/      # Mock neighbourhood comps
