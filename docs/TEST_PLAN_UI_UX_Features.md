@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-25 --sidebar-a11y-contrast -->
+<!-- docs-audit-reviewed: 2026-04-25 --paragon-csv-import -->
 <!-- docs-audit: src/components/**, tests/e2e/* -->
 <!-- last-verified: 2026-04-20 -->
 # Test Plan: UI Redesign & Competitive UX Features
@@ -1324,6 +1324,42 @@
 **Steps:** Open workflow-builder with VoiceOver/NVDA. Navigate the flow canvas.
 **Expected:** Each node announces its type, label, and connection count. Toolbar actions have aria-labels.
 **Priority:** P2
+
+---
+
+## 25. Paragon Import — CSV path (listings/create)
+
+The Paragon Import tab (`src/components/listings/create/ParagonPDFTab.tsx`) accepts both PDF (Listing Detail Report, AI-parsed) and CSV (ML Default Spreadsheet, deterministic parse). CSV parses entirely client-side via `src/lib/paragon/csv-parser.ts` — no API call.
+
+### TC-125: Drop a valid ML Default Spreadsheet CSV
+**Steps:** Go to `/listings/new` → Paragon Import tab → drop a CSV with the header row `"PicCount","Pics","ML #","Address","Price","Tot BR","Status","Yr Blt","DOM","TypeDwel","S/A","Prop Type","Lot Sz(SF)"` and one data row.
+**Expected:** File chip shows `CSV · ready to import`. Click Continue → review step pre-fills MLS#, address (with sub-area appended), price, beds, year, lot, property type. Source badge says "Replace CSV". Amber warning banner lists missing fields (bathrooms, sqft, city/postal).
+**Priority:** P0
+
+### TC-126: CSV with multiple rows imports first only
+**Steps:** Drop a CSV with 5 data rows.
+**Expected:** Only first row pre-fills. Warning banner reads "CSV has 5 rows — only the first was imported." No silent data loss.
+**Priority:** P1
+
+### TC-127: CSV with unrecognized columns is rejected cleanly
+**Steps:** Drop a CSV without `ML #` or `Address` columns (e.g. a different Paragon view).
+**Expected:** Error "Couldn't recognize this CSV. Expected the Paragon 'ML Default Spreadsheet' format with at least an MLS # or Address column." Returns to upload state. No partial review.
+**Priority:** P0
+
+### TC-128: PDF flow remains unaffected
+**Steps:** Drop a Paragon Listing Detail Report PDF in the same tab.
+**Expected:** Existing 30s Claude vision parse runs, AI banner shows confidence highlights, "Try parsing again" rescan button works. Zero regression vs prior behaviour.
+**Priority:** P0
+
+### TC-129: CSV-imported listing notes label correctly
+**Steps:** Complete the CSV import flow and submit.
+**Expected:** `listings.notes` starts with `📄 Imported from Paragon CSV · YYYY-MM-DD` (not "PDF").
+**Priority:** P1
+
+### A11Y-PI-001: Paragon Import file input accessible label
+**Steps:** Navigate the upload tab with screen reader.
+**Expected:** Hidden file input announces "Paragon Listing Detail Report (PDF) or ML Default Spreadsheet (CSV)". Drop zone subtitle is readable.
+**Priority:** P1
 
 ---
 

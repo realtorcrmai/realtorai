@@ -123,7 +123,7 @@ export function ListingCreator() {
             }`}
           >
             <FileText className="h-4 w-4" />
-            Paragon PDF
+            Paragon Import
           </button>
           <button
             type="button"

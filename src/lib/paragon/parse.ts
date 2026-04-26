@@ -208,10 +208,17 @@ export async function parseParagonPDF(
  * Build the markdown notes block we persist into listings.notes for v1
  * (since rich fields like bedrooms/sqft/description don't all live in listingSchema yet).
  * v2 (migration 150) will lift these into dedicated columns.
+ *
+ * `source` lets the CSV import path label the block correctly while reusing
+ * everything else. Defaults to "PDF" so existing callers stay unchanged.
  */
-export function buildImportNotes(parsed: ParagonParseResult, originalNotes: string): string {
+export function buildImportNotes(
+  parsed: ParagonParseResult,
+  originalNotes: string,
+  source: "PDF" | "CSV" = "PDF"
+): string {
   const lines: string[] = [];
-  lines.push(`📄 Imported from Paragon PDF · ${new Date().toISOString().slice(0, 10)}`);
+  lines.push(`📄 Imported from Paragon ${source} · ${new Date().toISOString().slice(0, 10)}`);
 
   const facts: string[] = [];
   if (parsed.bedrooms.value != null) facts.push(`${parsed.bedrooms.value} bed`);

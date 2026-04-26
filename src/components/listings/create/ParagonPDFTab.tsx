@@ -18,10 +18,20 @@ import {
 } from "@/components/ui/popover";
 import { ParagonReviewStep } from "./ParagonReviewStep";
 import type { ParagonParseResult } from "@/lib/paragon/parse";
+import { parseParagonCsv } from "@/lib/paragon/csv-parser";
 import type { Contact } from "@/types";
 
 const MAX_BYTES = 15 * 1024 * 1024; // 15 MB
-const ACCEPT = "application/pdf,.pdf";
+const ACCEPT = "application/pdf,.pdf,text/csv,.csv";
+
+type ImportSource = "PDF" | "CSV";
+
+function detectSource(f: File): ImportSource | null {
+  const name = f.name.toLowerCase();
+  if (f.type === "application/pdf" || name.endsWith(".pdf")) return "PDF";
+  if (f.type === "text/csv" || name.endsWith(".csv")) return "CSV";
+  return null;
+}
 
 interface ParagonPDFTabProps {
   sellers: Contact[];
@@ -33,8 +43,10 @@ type Phase = "upload" | "parsing" | "review";
 export function ParagonPDFTab({ sellers, loadingSellers }: ParagonPDFTabProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [source, setSource] = useState<ImportSource | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [phase, setPhase] = useState<Phase>("upload");
   const [parsed, setParsed] = useState<ParagonParseResult | null>(null);
   const [storagePath, setStoragePath] = useState<string | null>(null);
@@ -42,10 +54,12 @@ export function ParagonPDFTab({ sellers, loadingSellers }: ParagonPDFTabProps) {
 
   const handleFile = useCallback((f: File) => {
     setError(null);
-    const isPdf =
-      f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
-    if (!isPdf) {
-      setError("That's not a PDF. Please upload the Listing Detail Report as a PDF.");
+    setWarnings([]);
+    const detected = detectSource(f);
+    if (!detected) {
+      setError(
+        "Unsupported file. Upload a Paragon Listing Detail Report (PDF) or ML Default Spreadsheet (CSV)."
+      );
       return;
     }
     if (f.size > MAX_BYTES) {
@@ -55,6 +69,7 @@ export function ParagonPDFTab({ sellers, loadingSellers }: ParagonPDFTabProps) {
       return;
     }
     setFile(f);
+    setSource(detected);
   }, []);
 
   function onPick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -71,10 +86,34 @@ export function ParagonPDFTab({ sellers, loadingSellers }: ParagonPDFTabProps) {
   }
 
   async function onContinue() {
-    if (!file) return;
+    if (!file || !source) return;
     setError(null);
+    setWarnings([]);
     setPhase("parsing");
 
+    if (source === "CSV") {
+      // CSV parses entirely in the browser — no API call, no Claude vision cost.
+      try {
+        const text = await file.text();
+        const result = parseParagonCsv(text);
+        if ("error" in result) {
+          setError(result.error);
+          setPhase("upload");
+          return;
+        }
+        setParsed(result.parsed);
+        setStoragePath(null); // CSV has no rescan path — re-upload to redo
+        setWarnings(result.warnings);
+        setPhase("review");
+      } catch (err) {
+        console.error("[ParagonImportTab] CSV parse failed:", err);
+        setError("Couldn't read this CSV. Make sure it's the Paragon ML Default Spreadsheet export.");
+        setPhase("upload");
+      }
+      return;
+    }
+
+    // PDF path — unchanged.
     const fd = new FormData();
     fd.append("file", file);
 
@@ -159,7 +198,9 @@ export function ParagonPDFTab({ sellers, loadingSellers }: ParagonPDFTabProps) {
 
   function reset() {
     setFile(null);
+    setSource(null);
     setError(null);
+    setWarnings([]);
     setParsed(null);
     setStoragePath(null);
     setPhase("upload");
@@ -176,6 +217,8 @@ export function ParagonPDFTab({ sellers, loadingSellers }: ParagonPDFTabProps) {
         onBack={reset}
         onRescan={storagePath ? onRescan : undefined}
         rescanning={rescanning}
+        source={source ?? "PDF"}
+        warnings={warnings}
       />
     );
   }
@@ -192,7 +235,7 @@ export function ParagonPDFTab({ sellers, loadingSellers }: ParagonPDFTabProps) {
             1
           </div>
           <h2 className="text-sm font-semibold">
-            Upload Paragon Listing Detail Report{" "}
+            Upload Paragon export (PDF or CSV){" "}
             <span className="text-red-400">*</span>
           </h2>
         </div>
@@ -325,7 +368,7 @@ export function ParagonPDFTab({ sellers, loadingSellers }: ParagonPDFTabProps) {
           accept={ACCEPT}
           onChange={onPick}
           className="sr-only"
-          aria-label="Paragon Listing Detail Report PDF"
+          aria-label="Paragon Listing Detail Report (PDF) or ML Default Spreadsheet (CSV)"
           disabled={!!file || isParsing}
         />
 
@@ -342,8 +385,10 @@ export function ParagonPDFTab({ sellers, loadingSellers }: ParagonPDFTabProps) {
               <p className="font-semibold text-sm truncate">{file.name}</p>
               <p className="text-xs text-muted-foreground">
                 {isParsing
-                  ? "Reading the PDF — this takes 15–30 seconds…"
-                  : `${formatBytes(file.size)} · PDF · ready to import`}
+                  ? source === "CSV"
+                    ? "Reading the CSV…"
+                    : "Reading the PDF — this takes 15–30 seconds…"
+                  : `${formatBytes(file.size)} · ${source ?? "FILE"} · ready to import`}
               </p>
             </div>
             {!isParsing && (
@@ -368,9 +413,9 @@ export function ParagonPDFTab({ sellers, loadingSellers }: ParagonPDFTabProps) {
             <div className="w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center mb-4">
               <Upload className="h-6 w-6 text-brand" />
             </div>
-            <p className="text-sm font-semibold">Drop your Paragon PDF here</p>
+            <p className="text-sm font-semibold">Drop your Paragon export here</p>
             <p className="text-xs text-muted-foreground mt-1">
-              or click to browse · PDF only · max 15 MB
+              or click to browse · PDF (Listing Detail Report) or CSV (ML Default Spreadsheet) · max 15 MB
             </p>
           </div>
         )}
@@ -396,14 +441,14 @@ export function ParagonPDFTab({ sellers, loadingSellers }: ParagonPDFTabProps) {
         {isParsing ? (
           <>
             <Loader2 className="h-5 w-5 animate-spin" />
-            Reading PDF…
+            {source === "CSV" ? "Reading CSV…" : "Reading PDF…"}
           </>
         ) : file ? (
           <>
             Continue to review <ArrowRight className="h-5 w-5" />
           </>
         ) : (
-          "Upload a PDF to continue"
+          "Upload a PDF or CSV to continue"
         )}
       </Button>
     </div>
