@@ -73,7 +73,7 @@ export function AdminSidebar() {
               <Icon className="h-[18px] w-[18px] shrink-0" />
               <span className="flex-1">{item.label}</span>
               {item.badge && (
-                <span className="text-[9px] bg-sidebar-accent/40 text-sidebar-foreground/50 px-1.5 py-0.5 rounded-full leading-none">
+                <span className="text-[9px] bg-sidebar-accent/40 text-sidebar-foreground/70 px-1.5 py-0.5 rounded-full leading-none">
                   {item.badge}
                 </span>
               )}
@@ -89,7 +89,7 @@ export function AdminSidebar() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
           </span>
-          <span className="text-xs text-sidebar-foreground/50">All systems OK</span>
+          <span className="text-xs text-sidebar-foreground/70">All systems OK</span>
         </div>
       </div>
 
@@ -101,11 +101,11 @@ export function AdminSidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-sidebar-foreground truncate">{adminName}</p>
-            <p className="text-xs text-sidebar-foreground/50 truncate">{adminEmail}</p>
+            <p className="text-xs text-sidebar-foreground/70 truncate">{adminEmail}</p>
           </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="p-1.5 rounded-md text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors shrink-0"
+            className="p-1.5 rounded-md text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors shrink-0"
             aria-label="Sign out"
             title="Sign out"
           >

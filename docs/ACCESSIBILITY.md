@@ -1,5 +1,5 @@
 <!-- docs-audit: src/components/**, src/app/(dashboard)/** -->
-<!-- docs-audit-reviewed: 2026-04-25 --paragon-pdf-import -->
+<!-- docs-audit-reviewed: 2026-04-25 --sidebar-a11y-contrast -->
 # Accessibility Baseline
 
 **Target:** WCAG 2.2 AA
