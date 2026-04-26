@@ -267,7 +267,7 @@ echo ""
 echo "━━━ 5B. EXTENDED CRON AUTH ━━━"
 
 # Test every cron endpoint rejects requests without valid token
-CRON_ENDPOINTS="agent-evaluate agent-recommendations consent-expiry daily-digest greeting-automations score-contacts social-publish voice-session-cleanup weekly-learning welcome-drip trial-expiry"
+CRON_ENDPOINTS="agent-evaluate agent-recommendations consent-expiry daily-digest greeting-automations score-contacts social-publish voice-session-cleanup weekly-learning welcome-drip trial-expiry cleanup-paragon-pdfs"
 for ENDPOINT in $CRON_ENDPOINTS; do
   CODE=$(curl -s -o /dev/null -w "%{http_code}" "${APP}/api/cron/${ENDPOINT}")
   [[ "$CODE" == "401" ]] && pass "Cron ${ENDPOINT} (no token) → 401" || fail "Cron ${ENDPOINT} no-auth" "HTTP $CODE (expected 401)"
@@ -297,6 +297,13 @@ CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${APP}/api/deals" -H "Con
 
 CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${APP}/api/listings" -H "Content-Type: application/json" -d '{"address":"Test"}')
 [[ "$CODE" == "401" ]] && pass "POST /api/listings requires auth → 401" || fail "POST /api/listings auth" "HTTP $CODE"
+
+# Paragon PDF import endpoints — POST without auth must return 401
+CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${APP}/api/listings/parse-paragon")
+[[ "$CODE" == "401" ]] && pass "POST /api/listings/parse-paragon requires auth → 401" || fail "POST /api/listings/parse-paragon auth" "HTTP $CODE"
+
+CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${APP}/api/listings/reparse-paragon" -H "Content-Type: application/json" -d '{"storagePath":"x/y.pdf"}')
+[[ "$CODE" == "401" ]] && pass "POST /api/listings/reparse-paragon requires auth → 401" || fail "POST /api/listings/reparse-paragon auth" "HTTP $CODE"
 
 # ── 6. CASCADE DELETE TEST ─────────────────────────────────
 echo ""
