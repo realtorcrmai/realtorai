@@ -7,7 +7,16 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createWithRetry } from "@/lib/anthropic/retry";
 import { z } from "zod";
 
-const anthropic = new Anthropic();
+// Lazy-initialized so this module is safe to import in client bundles
+// (e.g. ParagonReviewStep pulls in `buildImportNotes` from here, and the
+// CSV import path runs entirely client-side). The Anthropic constructor
+// throws in browser-like environments, so defer it until parseParagonPDF
+// is actually invoked — which only happens server-side.
+let _anthropic: Anthropic | null = null;
+function getAnthropic(): Anthropic {
+  if (!_anthropic) _anthropic = new Anthropic();
+  return _anthropic;
+}
 
 export const PARAGON_PROPERTY_TYPES = [
   "Residential",
@@ -160,7 +169,7 @@ export async function parseParagonPDF(
   const base64 = pdfBuffer.toString("base64");
   const model = process.env.PARAGON_PARSE_MODEL || "claude-sonnet-4-6";
 
-  const response = await createWithRetry(anthropic, {
+  const response = await createWithRetry(getAnthropic(), {
     model,
     max_tokens: 4096,
     temperature: opts.temperature ?? 0,

@@ -1,5 +1,5 @@
 <!-- docs-audit: src/lib/*, src/app/api/* -->
-<!-- docs-audit-reviewed: 2026-04-25 --paragon-csv-import -->
+<!-- docs-audit-reviewed: 2026-04-25 --paragon-browser-fix -->
 # Observability Baseline
 
 **Last reviewed:** 2026-04-21

@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-25 --paragon-csv-import -->
+<!-- docs-audit-reviewed: 2026-04-25 --paragon-browser-fix -->
 <!-- docs-audit: CONTRIBUTING.md, .env.local.example -->
 # Developer Sync — Post-Consolidation (2026-04-09)
 
