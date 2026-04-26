@@ -1,9 +1,9 @@
-<!-- docs-audit-reviewed: 2026-04-21 -->
+<!-- docs-audit-reviewed: 2026-04-25 --paragon-pdf-import -->
 <!-- docs-audit: docs/ENVIRONMENTS.md, supabase/migrations/, src/lib/supabase/, package.json -->
 # Capacity Planning — Realtors360
 
 > Supabase limits, Vercel serverless limits, cost-per-realtor modelling, and scaling
-> thresholds for each growth tier. Last updated: 2026-04-21.
+> thresholds for each growth tier. Last updated: 2026-04-24.
 > Current load: <50 realtors, <10K contacts, <1K listings.
 
 ---

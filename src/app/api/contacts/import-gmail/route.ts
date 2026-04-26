@@ -1,23 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchGmailContacts } from "@/lib/contacts/gmail-import";
 import { auth } from "@/lib/auth";
+import { decryptGoogleToken } from "@/lib/google-tokens";
+import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 
 /** GET: Fetch contacts from Gmail → returns preview list with dedup flags */
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.id) {
+  if (!session?.user?.id || !session.user.email) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
 
-  // Get stored Google access token
-  const { data: tokenData } = await supabase
+  // google_tokens is a global table keyed by user_email — use the raw
+  // escape; encrypted at rest via migration 148.
+  const { data: rawTokenData } = await tc.raw
     .from("google_tokens")
     .select("access_token")
     .eq("user_email", session.user.email)
     .single();
+
+  const tokenData = decryptGoogleToken(rawTokenData);
 
   if (!tokenData?.access_token) {
     return NextResponse.json(
@@ -27,17 +31,19 @@ export async function GET() {
   }
 
   try {
-    const contacts = await fetchGmailContacts(tokenData.access_token);
+    const contacts = await fetchGmailContacts(tokenData.access_token as string);
 
-    // Get existing contact emails for dedup
-    const { data: existing } = await supabase
+    // tenant client auto-scopes contacts by realtor_id
+    const { data: existing } = await tc
       .from("contacts")
       .select("email")
-      .eq("realtor_id", session.user.id)
       .not("email", "is", null);
 
+    type ExistingEmail = { email: string | null };
     const existingEmails = new Set(
-      (existing || []).map((c) => c.email?.toLowerCase()).filter(Boolean)
+      (((existing as ExistingEmail[]) ?? [])
+        .map((c) => c.email?.toLowerCase())
+        .filter(Boolean))
     );
 
     const contactsWithDedup = contacts.map((c) => ({
@@ -72,15 +78,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Maximum 2000 contacts per import" }, { status: 422 });
   }
 
-  const supabase = createAdminClient();
+  const tc = await getAuthenticatedTenantClient();
   let imported = 0;
   let skipped = 0;
 
-  // Batch insert in chunks of 50
+  // Batch upsert in chunks of 50 — tenant client auto-injects realtor_id.
   for (let i = 0; i < contacts.length; i += 50) {
     const batch = contacts.slice(i, i + 50);
     const rows = batch.map((c: Record<string, string>) => ({
-      realtor_id: session.user.id,
       name: c.name || "Unknown",
       email: c.email || null,
       phone: c.phone || null,
@@ -91,7 +96,7 @@ export async function POST(request: NextRequest) {
       is_sample: false,
     }));
 
-    const { data, error } = await supabase
+    const { data, error } = await tc
       .from("contacts")
       .upsert(rows, { onConflict: "realtor_id,email", ignoreDuplicates: true })
       .select("id");
@@ -103,21 +108,24 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Clean up sample data if user now has real contacts
+  // Clean up sample data once user has real contacts
   if (imported > 0) {
-    await supabase
-      .from("contacts")
-      .delete()
-      .eq("realtor_id", session.user.id)
-      .eq("is_sample", true);
+    const { error: delErr } = await tc.from("contacts").delete().eq("is_sample", true);
+    if (delErr) {
+      console.error("[gmail-import] sample cleanup failed:", delErr.message);
+    }
   }
 
-  // Log event
-  await supabase.from("signup_events").insert({
+  // Log event — non-fatal, surface in server logs if it fails. signup_events
+  // is a global onboarding table keyed by user_id; use raw escape.
+  const { error } = await tc.raw.from("signup_events").insert({
     user_id: session.user.id,
     event: "contacts_imported",
     metadata: { source: "gmail", imported, skipped, total: contacts.length },
   });
+  if (error) {
+    console.error("[import-gmail] signup_events insert failed:", error.message);
+  }
 
   return NextResponse.json({ imported, skipped, total: contacts.length });
 }

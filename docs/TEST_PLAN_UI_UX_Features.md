@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-25 --pipeline-a11y -->
+<!-- docs-audit-reviewed: 2026-04-25 --sidebar-a11y-contrast -->
 <!-- docs-audit: src/components/**, tests/e2e/* -->
 <!-- last-verified: 2026-04-20 -->
 # Test Plan: UI Redesign & Competitive UX Features

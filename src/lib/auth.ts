@@ -10,6 +10,8 @@ import {
   isRateLimited,
   resetRateLimit,
 } from "@/lib/rate-limit";
+import { logAuditEvent, AUDIT_ACTIONS } from "@/lib/audit";
+import { encryptGoogleTokenFields } from "@/lib/google-tokens";
 
 const DEMO_EMAIL = process.env.DEMO_EMAIL;
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD;
@@ -38,12 +40,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const rateLimit = isRateLimited(clientIp);
         if (rateLimit.isLimited) {
           const minutesUntilRetry = rateLimit.minutesUntilRetry || 15;
+          await logAuditEvent({
+            action: AUDIT_ACTIONS.LOGIN_FAILED,
+            severity: "warning",
+            actor: { email: email ?? null },
+            ip: clientIp,
+            metadata: { reason: "rate_limited", source: "credentials" },
+          });
           throw new Error(
             `Too many login attempts. Please try again in ${minutesUntilRetry} minute${minutesUntilRetry !== 1 ? "s" : ""}.`
           );
         }
 
-        if (!email || !password) return null;
+        if (!email || !password) {
+          await logAuditEvent({
+            action: AUDIT_ACTIONS.LOGIN_FAILED,
+            actor: { email: email ?? null },
+            ip: clientIp,
+            metadata: { reason: "missing_credentials", source: "credentials" },
+          });
+          return null;
+        }
 
         // Demo password — works for seeded users in dev/demo.
         // In production: only works if the email matches DEMO_EMAIL exactly.
@@ -92,6 +109,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // Failed attempt
         const isNowBlocked = recordFailedAttempt(clientIp);
+        await logAuditEvent({
+          action: AUDIT_ACTIONS.LOGIN_FAILED,
+          severity: isNowBlocked ? "warning" : "info",
+          actor: { email: email ?? null },
+          ip: clientIp,
+          metadata: {
+            reason: "invalid_credentials",
+            source: "credentials",
+            // note: `now_blocked` is a known structural key (boolean) →
+            // not scanned as PII. Documents whether this failure pushed
+            // the IP past the lockout threshold.
+            success: false,
+          },
+        });
         if (isNowBlocked) {
           throw new Error("Too many login attempts. Please try again in 15 minutes.");
         }
@@ -121,14 +152,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, account, trigger }) {
+    async jwt({ token, account, trigger, session: updateSession }) {
       try {
         const supabase = createAdminClient();
 
-        // Store Google tokens on sign-in
+        // ── MFA elevation via client-side update() ────────────────
+        // The /mfa-challenge page calls `update({ mfaVerified: true })`
+        // after a successful POST to /api/auth/mfa/elevate. We accept
+        // ONLY the boolean true here — never trust other fields the
+        // client passes through update(). Once flipped, mfaVerified
+        // sticks for the lifetime of the JWT (1h max).
+        if (trigger === "update" && updateSession) {
+          const incoming = updateSession as { mfaVerified?: unknown };
+          if (incoming.mfaVerified === true) {
+            token.mfaVerified = true;
+          }
+        }
+
+        // Store Google tokens on sign-in (encrypted at rest — migration 148)
         if (account && account.provider === "google" && account.refresh_token) {
           await supabase.from("google_tokens").upsert(
-            {
+            encryptGoogleTokenFields({
               user_email: token.email as string,
               access_token: account.access_token!,
               refresh_token: account.refresh_token,
@@ -136,7 +180,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 ? account.expires_at * 1000
                 : null,
               updated_at: new Date().toISOString(),
-            },
+            }),
             { onConflict: "user_email" }
           );
 
@@ -176,6 +220,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
 
             if (existingUser) {
+              // ── MFA active flag ───────────────────────────────
+              // On sign-in, query mfa_credentials to see if this
+              // user has an active second factor. If yes, the JWT
+              // starts with mfaVerified=false; the dashboard layout
+              // then forces a redirect to /mfa-challenge until the
+              // user elevates the session.
+              if (trigger === "signIn" || account) {
+                const { data: mfaRow } = await supabase
+                  .from("mfa_credentials")
+                  .select("enrolled_at, disabled_at")
+                  .eq("user_id", existingUser.id)
+                  .maybeSingle();
+                token.mfaActive = !!mfaRow?.enrolled_at && !mfaRow.disabled_at;
+                token.mfaVerified = false;
+              }
+
               // Update last_active_at on every login
               const { error: updateError } = await supabase.from("users").update({ last_active_at: new Date().toISOString() }).eq("id", existingUser.id);
               if (updateError) console.error("[auth] Error updating last_active_at:", updateError.message);
@@ -328,7 +388,47 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       (session.user as unknown as Record<string, unknown>).teamRole = (token.teamRole as string) ?? null;
       (session.user as unknown as Record<string, unknown>).teamName = (token.teamName as string) ?? null;
       (session.user as unknown as Record<string, unknown>).teamPermissions = (token.teamPermissions as Record<string, boolean>) ?? {};
+      // MFA gate state — read by dashboard layout to force /mfa-challenge
+      (session.user as unknown as Record<string, unknown>).mfaActive = (token.mfaActive as boolean) ?? false;
+      (session.user as unknown as Record<string, unknown>).mfaVerified = (token.mfaVerified as boolean) ?? false;
       return session;
+    },
+  },
+  events: {
+    // Fires AFTER a successful sign-in (any provider). NextAuth does not
+    // pass the raw request here, so no IP/userAgent — those are captured
+    // on FAILURE paths in authorize() where they matter most.
+    async signIn({ user, account, isNewUser }) {
+      await logAuditEvent({
+        action: AUDIT_ACTIONS.LOGIN_SUCCESS,
+        actor: {
+          id: (user as { id?: string })?.id ?? null,
+          email: user?.email ?? null,
+        },
+        tenantId: (user as { id?: string })?.id ?? null,
+        metadata: {
+          source: account?.provider ?? "unknown",
+          success: true,
+          // isNewUser is NextAuth's hint that a signup happened in the
+          // same flow. Useful for distinguishing signup vs. returning
+          // login in the audit trail.
+          from: isNewUser ? "signup" : "returning",
+        },
+      });
+    },
+    async signOut(message) {
+      // NextAuth v5 passes either { session } or { token } depending
+      // on strategy. We're on JWT, so expect `token`.
+      const token = (message as { token?: { email?: string; userId?: string } })
+        .token;
+      await logAuditEvent({
+        action: AUDIT_ACTIONS.LOGOUT,
+        actor: {
+          id: token?.userId ?? null,
+          email: token?.email ?? null,
+        },
+        tenantId: token?.userId ?? null,
+      });
     },
   },
   cookies: process.env.NODE_ENV === "development" ? {

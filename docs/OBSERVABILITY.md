@@ -1,5 +1,5 @@
 <!-- docs-audit: src/lib/*, src/app/api/* -->
-<!-- docs-audit-reviewed: 2026-04-22 --tasks-labels-fix -->
+<!-- docs-audit-reviewed: 2026-04-25 --paragon-pdf-import -->
 # Observability Baseline
 
 **Last reviewed:** 2026-04-21

@@ -7,31 +7,34 @@
  * seller in a transaction (FINTRAC Part XV.1). This file provides the
  * CRUD helpers the Phase 1 intake UI uses to capture that data.
  *
- * Data shape (from migration 078_seller_identities.sql):
- *   listing_id        FK, required
- *   contact_id        FK, optional (seller contact if known)
- *   full_name         text, required
- *   dob               date, optional
- *   citizenship       text, default 'canadian'
- *   id_type           text, default 'drivers_license'
- *   id_number         text, optional
- *   id_expiry         date, optional
- *   phone             text
- *   email             text
- *   mailing_address   text
- *   occupation        text
- *   sort_order        integer, default 0
+ * PII handling (SOC 2 CC6.1 — migration 147):
+ *   - id_number, dob, citizenship, mailing_address are stored encrypted
+ *     (AES-256-GCM via src/lib/crypto.ts).
+ *   - Writes: encryptFields() runs after Zod validation, before insert/update.
+ *   - Reads: decryptFields() runs on every row returned to the caller so
+ *     UI code sees plaintext.
+ *   - Empty/null values pass through unencrypted — see crypto.ts for why.
+ *
+ * Audit events (SOC 2 CC7.2):
+ *   - Every list read logs PII_VIEWED (fingerprints the fact of access,
+ *     never the values).
+ *   - Create/update/delete log IDENTITY_CREATED / UPDATED / DELETED with
+ *     changed_fields only — the values themselves are blocked by
+ *     sanitizeMetadata() as a second line of defence.
  *
  * Multi-tenancy: all reads/writes go through getAuthenticatedTenantClient
  * so realtor_id is auto-injected. See HC-12.
- *
- * Added: 2026-04-09 (post-consolidation QA audit surfaced 22 active
- * listings with zero seller_identities rows — a compliance breach).
  */
 
 import { z } from "zod";
 import { getAuthenticatedTenantClient } from "@/lib/supabase/tenant";
 import { revalidatePath } from "next/cache";
+import {
+  encryptFields,
+  decryptFields,
+  FINTRAC_ENCRYPTED_FIELDS,
+} from "@/lib/crypto";
+import { logAuditEvent, AUDIT_ACTIONS } from "@/lib/audit";
 
 const CreateSellerIdentitySchema = z.object({
   listing_id: z.string().uuid(),
@@ -55,6 +58,9 @@ export type SellerIdentityInput = z.infer<typeof CreateSellerIdentitySchema>;
  * Returns the FINTRAC status for a listing: whether at least one
  * seller_identities row exists. Used by the listing detail UI to
  * surface a warning banner when FINTRAC data is missing.
+ *
+ * Count-only — no rows fetched, no decryption needed, no PII_VIEWED event
+ * (we are not reading identity values).
  */
 export async function getListingFintracStatus(listingId: string) {
   const tc = await getAuthenticatedTenantClient();
@@ -68,7 +74,8 @@ export async function getListingFintracStatus(listingId: string) {
 }
 
 /**
- * List all seller identities for a listing.
+ * List all seller identities for a listing. Decrypts FINTRAC fields
+ * before returning and logs a PII_VIEWED event.
  */
 export async function listSellerIdentities(listingId: string) {
   const tc = await getAuthenticatedTenantClient();
@@ -76,10 +83,30 @@ export async function listSellerIdentities(listingId: string) {
     .from("seller_identities")
     .select("*")
     .eq("listing_id", listingId)
+    .eq("realtor_id", tc.realtorId)
     .order("sort_order", { ascending: true });
 
   if (error) return { error: error.message };
-  return { data: data ?? [] };
+
+  const rows = (data ?? []).map((r) =>
+    decryptFields(r as Record<string, unknown>, FINTRAC_ENCRYPTED_FIELDS)
+  );
+
+  if (rows.length > 0) {
+    await logAuditEvent({
+      action: AUDIT_ACTIONS.PII_VIEWED,
+      actor: { id: tc.realtorId },
+      tenantId: tc.realtorId,
+      resource: { type: "seller_identity", id: listingId },
+      metadata: {
+        count: rows.length,
+        listing_id: listingId,
+        source: "seller_identities.list",
+      },
+    });
+  }
+
+  return { data: rows };
 }
 
 /**
@@ -105,10 +132,12 @@ export async function createSellerIdentity(input: SellerIdentityInput) {
     return { error: "Listing not found or not accessible" };
   }
 
+  const encrypted = encryptFields(parsed.data, FINTRAC_ENCRYPTED_FIELDS);
+
   const { data, error } = await tc.raw
     .from("seller_identities")
     .insert({
-      ...parsed.data,
+      ...encrypted,
       realtor_id: tc.realtorId,
     })
     .select()
@@ -116,8 +145,27 @@ export async function createSellerIdentity(input: SellerIdentityInput) {
 
   if (error) return { error: error.message };
 
+  await logAuditEvent({
+    action: AUDIT_ACTIONS.IDENTITY_CREATED,
+    actor: { id: tc.realtorId },
+    tenantId: tc.realtorId,
+    resource: { type: "seller_identity", id: data?.id ?? null },
+    metadata: {
+      listing_id: parsed.data.listing_id,
+      changed_fields: Object.keys(parsed.data).filter(
+        (k) =>
+          (parsed.data as Record<string, unknown>)[k] !== null &&
+          (parsed.data as Record<string, unknown>)[k] !== undefined
+      ),
+    },
+  });
+
   revalidatePath(`/listings/${parsed.data.listing_id}`);
-  return { data };
+
+  // Return decrypted row to the caller — UI expects plaintext
+  return {
+    data: decryptFields(data as Record<string, unknown>, FINTRAC_ENCRYPTED_FIELDS),
+  };
 }
 
 /**
@@ -128,9 +176,15 @@ export async function updateSellerIdentity(
   patch: Partial<SellerIdentityInput>
 ) {
   const tc = await getAuthenticatedTenantClient();
+
+  const encryptedPatch = encryptFields(
+    patch as Record<string, unknown>,
+    FINTRAC_ENCRYPTED_FIELDS
+  );
+
   const { data, error } = await tc.raw
     .from("seller_identities")
-    .update(patch)
+    .update(encryptedPatch)
     .eq("id", id)
     .eq("realtor_id", tc.realtorId)
     .select()
@@ -138,8 +192,22 @@ export async function updateSellerIdentity(
 
   if (error) return { error: error.message };
 
+  await logAuditEvent({
+    action: AUDIT_ACTIONS.IDENTITY_UPDATED,
+    actor: { id: tc.realtorId },
+    tenantId: tc.realtorId,
+    resource: { type: "seller_identity", id },
+    metadata: {
+      listing_id: data?.listing_id ?? null,
+      changed_fields: Object.keys(patch),
+    },
+  });
+
   if (data?.listing_id) revalidatePath(`/listings/${data.listing_id}`);
-  return { data };
+
+  return {
+    data: decryptFields(data as Record<string, unknown>, FINTRAC_ENCRYPTED_FIELDS),
+  };
 }
 
 /**
@@ -163,6 +231,16 @@ export async function deleteSellerIdentity(id: string) {
     .eq("realtor_id", tc.realtorId);
 
   if (error) return { error: error.message };
+
+  await logAuditEvent({
+    action: AUDIT_ACTIONS.IDENTITY_DELETED,
+    actor: { id: tc.realtorId },
+    tenantId: tc.realtorId,
+    resource: { type: "seller_identity", id },
+    metadata: {
+      listing_id: row?.listing_id ?? null,
+    },
+  });
 
   if (row?.listing_id) revalidatePath(`/listings/${row.listing_id}`);
   return { success: true };

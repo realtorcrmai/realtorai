@@ -1,9 +1,10 @@
+<!-- docs-audit-reviewed: 2026-04-25 --soc2-mfa-drift -->
 <!-- docs-audit: package.json -->
 
 # Vendor Risk Register
 
 **Review cadence:** Annually
-**Last reviewed:** 2026-04-21
+**Last reviewed:** 2026-04-24
 
 ---
 

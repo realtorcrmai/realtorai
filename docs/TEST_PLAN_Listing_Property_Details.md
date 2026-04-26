@@ -1,6 +1,6 @@
-<!-- docs-audit: none --><!-- docs-audit-reviewed: 2026-04-21 -->
-<!-- last-verified: 2026-04-20 -->
-<!-- test-count: 47 -->
+<!-- docs-audit: none --><!-- docs-audit-reviewed: 2026-04-25 -->
+<!-- last-verified: 2026-04-25 -->
+<!-- test-count: 68 -->
 # Test Plan: Listing Property Details, Pagination, Soft Delete, Buyer FINTRAC & CMA
 
 ## Overview
@@ -89,3 +89,34 @@ Tests for the listing enhancement PR: property detail columns, server-side pagin
 | WR-04 | SkipStepButton still functional | Skipping advances phase correctly |
 | WR-05 | Editable fields in completed phases work | Save triggers updateListing/updateContact |
 | WR-06 | TypeScript compiles clean | npx tsc --noEmit passes |
+
+## 8. MLS Import from realtor.ca (src/actions/mls-scraper.ts)
+
+| ID | Scenario | Expected |
+|----|----------|----------|
+| MLS-01 | scrapeRealtorCa with valid realtor.ca URL | Returns parsed listing payload (address, price, beds, baths, sqft, photos) |
+| MLS-02 | scrapeRealtorCa with non-realtor.ca URL | Returns `{ error }` — rejects SSRF-class hosts |
+| MLS-03 | scrapeRealtorCa called by unauthenticated user | Returns `{ error: "Unauthorized" }` |
+| MLS-04 | scrapeRealtorCa with malformed/404 URL | Returns `{ error }`, no unhandled exception |
+| MLS-05 | Imported listing fields auto-populate Create Listing form | Address, price, photos visible without manual entry |
+
+## 9. Paragon PDF Import (src/app/api/listings/parse-paragon, reparse-paragon, cron/cleanup-paragon-pdfs)
+
+| ID | Scenario | Expected |
+|----|----------|----------|
+| PP-01 | POST /api/listings/parse-paragon with valid Paragon Listing Detail Report PDF | Returns `{ parsed, storagePath }` — fields auto-populate review step |
+| PP-02 | POST /api/listings/parse-paragon unauthenticated | Returns 401 Unauthorized |
+| PP-03 | POST /api/listings/parse-paragon with non-PDF file | Returns 400 "Only PDF files are supported" |
+| PP-04 | POST /api/listings/parse-paragon with file >15 MB | Returns 413 "File too large (max 15 MB)" |
+| PP-05 | POST /api/listings/parse-paragon with 0-byte file | Returns 400 "File is empty" |
+| PP-06 | POST /api/listings/parse-paragon with corrupted/non-Paragon PDF | Returns 422 with friendly message; uploaded PDF cleaned up |
+| PP-07 | Storage path follows `<realtor_id>/<uuid>.pdf` convention | Object listed under correct realtor folder |
+| PP-08 | POST /api/listings/reparse-paragon with valid storagePath | Returns `{ parsed, storagePath }` with re-parsed fields (temperature 0.4) |
+| PP-09 | POST /api/listings/reparse-paragon with foreign realtor's path | Returns 403 Forbidden — tenant scope enforced |
+| PP-10 | POST /api/listings/reparse-paragon with expired/missing path | Returns 404 with "may have expired (we keep them for 7 days)" message |
+| PP-11 | POST /api/listings/reparse-paragon unauthenticated | Returns 401 Unauthorized |
+| PP-12 | GET /api/cron/cleanup-paragon-pdfs without Bearer CRON_SECRET | Returns 401 Unauthorized |
+| PP-13 | GET /api/cron/cleanup-paragon-pdfs with valid Bearer token | Returns `{ scanned, deleted, ttl_days: 7 }` |
+| PP-14 | Cron deletes objects older than 7 days, keeps fresh ones | `deleted` count matches expired objects, fresh remain in bucket |
+| PP-15 | Realtor uploads PDF, sees parsed fields, clicks "Try parsing again" | Re-parse triggered; new fields shown without re-uploading |
+| PP-16 | Realtor's session cannot read another realtor's paragon-imports object via direct path | RLS denies; storage returns no row |

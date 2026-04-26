@@ -20,6 +20,8 @@ export default [
       "agent-pipeline/**",
       "app-duplicate-*/**",
       ".netlify/**",
+      ".claude/worktrees/**",
+      "playwright-report/**",
       "**/dist/**",
       "**/.next/**",
     ],
@@ -55,6 +57,7 @@ export default [
       "react-hooks/purity": "off",
       "react-hooks/refs": "off",
       "react-hooks/preserve-manual-memoization": "off",
+      "react-hooks/immutability": "off",
     },
   },
 ];

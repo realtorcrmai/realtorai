@@ -12,10 +12,15 @@ export default async function CampaignsPage() {
   const session = await auth();
   const tc = await getAuthenticatedTenantClient();
 
-  // Feature gate: require newsletters feature
-  const { data: user } = await tc.from("users").select("plan, enabled_features").eq("id", session?.user?.id ?? "").single();
-  const features = getUserFeatures((user?.plan as string) ?? "free", user?.enabled_features as string[] | null);
-  if (!features.includes("newsletters")) redirect("/");
+  // Feature gate: require newsletters feature (fail-open if lookup fails)
+  const userId = session?.user?.id || tc.realtorId;
+  if (userId) {
+    const { data: user } = await tc.from("users").select("plan, enabled_features").eq("id", userId).single();
+    if (user) {
+      const features = getUserFeatures((user.plan as string) ?? "free", user.enabled_features as string[] | null);
+      if (!features.includes("newsletters")) redirect("/");
+    }
+  }
 
   const [{ data: listings }, { data: recentBlastsRaw }] = await Promise.all([
     tc

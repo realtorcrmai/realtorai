@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-25 -->
+<!-- docs-audit-reviewed: 2026-04-25 --paragon-pdf-import -->
 <!-- docs-audit: vercel.json, .env.local.example, supabase/migrations/* -->
 # Environments — Realtors360 CRM
 
@@ -283,7 +283,7 @@ If you're Claude Code or another agent working in this repo, here's what you nee
 - **Newsletter Agent is LIVE** with all 7 feature flags ON. 19 tools, 12 crons, 121 tests. Code at `realtors360-newsletter/`.
 - **Both services share the same Supabase DB** (`qcohfohjihazivkforsj`). Changes to DB schema affect both.
 - **Newsletter env vars** are set in the Render dashboard (not Vercel). CRM env vars are in Vercel.
-- **Migration files:** `supabase/migrations/*.sql`. Latest: 104. Never modify applied migrations — create new ones.
+- **Migration files:** `supabase/migrations/*.sql`. Latest: 151 (`paragon_imports_bucket` — private 15 MB bucket + RLS for Paragon PDF imports, auto-cleaned after 7 days by `/api/cron/cleanup-paragon-pdfs`). Never modify applied migrations — create new ones.
 - **Pending production migrations:** When merging `dev → main`, apply these to the production DB:
   - `104_ai_quality_tier.sql` — adds `ai_quality_tier` column to `realtor_agent_config`
 - **Running SQL:** Use dashboard SQL editor at https://supabase.com/dashboard/project/qcohfohjihazivkforsj/sql/new

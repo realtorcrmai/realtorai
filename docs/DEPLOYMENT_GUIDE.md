@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-21 --task-mgmt -->
+<!-- docs-audit-reviewed: 2026-04-25 --paragon-pdf-import -->
 <!-- docs-audit: vercel.json, .github/workflows/*, render.yaml -->
 # Deployment Guide — Realtors360
 

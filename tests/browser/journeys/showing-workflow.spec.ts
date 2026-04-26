@@ -16,7 +16,7 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // Either redirects to /showings/:id or shows empty state
     const heading = page.locator("h1, h2").first();
     await expect(heading).toBeVisible();
@@ -30,7 +30,7 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const heading = page.locator("h1").first();
     await expect(heading).toBeVisible();
     await expect(heading).not.toHaveText("");
@@ -44,7 +44,7 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // ShowingStatusBadge renders requested/confirmed/denied/cancelled
     const badge = page.locator("text=/requested|confirmed|denied|cancelled/i").first();
     await expect(badge).toBeVisible();
@@ -58,7 +58,7 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // Buyer agent name and phone are displayed
     const agentInfo = page.locator("main").first();
     await expect(agentInfo).toBeVisible();
@@ -72,11 +72,11 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
-    // Time display with formatDistanceToNow
-    const timeInfo = page.locator("text=/ago|minutes|hours|days/i").first();
-    const isVisible = await timeInfo.isVisible().catch(() => false);
-    expect(isVisible).toBeTruthy();
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
+    // Time display with formatDistanceToNow. Scope to main so hidden sidebar
+    // links (e.g. "23 days" in unrelated tooltips) don't win `.first()`.
+    const timeInfo = page.locator("main").getByText(/ago|minutes|hours|days/i).first();
+    await expect(timeInfo).toBeVisible({ timeout: 5000 });
   });
 
   // ── Showing workflow component ─────────────────────────────
@@ -89,7 +89,7 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // ShowingWorkflow is inside a Card
     const workflowSection = page.locator("main .space-y-6").first();
     await expect(workflowSection).toBeVisible();
@@ -103,8 +103,9 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
-    await expect(page.locator("text=Notes")).toBeVisible();
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
+    // Card title is "Notes & Feedback" (src/app/(dashboard)/showings/[id]/page.tsx)
+    await expect(page.getByText(/Notes\s*&\s*Feedback/i).first()).toBeVisible({ timeout: 5000 });
   });
 
   // ── Context panel ──────────────────────────────────────────
@@ -118,7 +119,7 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // ShowingContextPanel renders in an aside
     const aside = page.locator("aside").first();
     await expect(aside).toBeVisible();
@@ -131,7 +132,7 @@ test.describe("Showing Workflow Journey", () => {
     test.skip(!id, 'No listings in database');
     await page.goto(`/listings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     await expect(page.locator("text=Showing History")).toBeVisible();
   });
 
@@ -150,22 +151,23 @@ test.describe("Showing Workflow Journey", () => {
   test("dashboard has a Showings tile linking to /showings", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    const showingsTile = page.locator("a[href='/showings']").first();
+    // `:visible` skips the hidden desktop MondaySidebar link on mobile viewports.
+    const showingsTile = page.locator("a[href='/showings']:visible").first();
     await expect(showingsTile).toBeVisible();
   });
 
   test("clicking Showings tile navigates to showings page", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    const showingsTile = page.locator("a[href='/showings']").first();
+    const showingsTile = page.locator("a[href='/showings']:visible").first();
     await showingsTile.click();
-    await page.waitForTimeout(3000);
+    await page.waitForURL(/\/showings/, { timeout: 10000 });
     expect(page.url()).toContain("/showings");
   });
 
   // ── Sidebar navigation ─────────────────────────────────────
 
-  test("showing sidebar is visible on desktop with showing entries", async ({ page }) => {
+  test("main navigation sidebar is visible on desktop", async ({ page }) => {
     test.skip(test.info().project.name === "mobile", "Desktop sidebar only");
     const id = await getFirstEntityId(page, 'showings');
     if (!id) {
@@ -174,8 +176,9 @@ test.describe("Showing Workflow Journey", () => {
     }
     await page.goto(`/showings/${id}`);
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
-    const sidebar = page.locator(".border-r").first();
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
+    // MondaySidebar renders as <aside>; showing detail has no per-showing list sidebar.
+    const sidebar = page.locator("aside").first();
     await expect(sidebar).toBeVisible();
   });
 });

@@ -408,6 +408,42 @@ export interface Database {
           uploaded_at?: string;
         };
       };
+      mfa_credentials: {
+        // SOC 2 CC6.6 — TOTP + backup codes (migration 149).
+        // totp_secret and each backup_codes entry are AES-256-GCM
+        // ciphertext (v1:iv:tag:ct). Read/write only via the MFA
+        // service that decrypts with src/lib/crypto.ts.
+        Row: {
+          user_id: string;
+          totp_secret: string;
+          backup_codes: string[];
+          enrolled_at: string | null;
+          last_used_at: string | null;
+          disabled_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          totp_secret: string;
+          backup_codes?: string[];
+          enrolled_at?: string | null;
+          last_used_at?: string | null;
+          disabled_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          totp_secret?: string;
+          backup_codes?: string[];
+          enrolled_at?: string | null;
+          last_used_at?: string | null;
+          disabled_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       google_tokens: {
         Row: {
           id: string;

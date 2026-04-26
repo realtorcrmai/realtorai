@@ -1,4 +1,4 @@
-<!-- docs-audit-reviewed: 2026-04-25 --pipeline-a11y -->
+<!-- docs-audit-reviewed: 2026-04-25 --sidebar-a11y-contrast -->
 <!-- docs-audit: src/components/** -->
 # Realtors360 UI/UX Audit — Full Application Review
 

@@ -9,7 +9,7 @@ test.describe("Calendar Page", () => {
   test("calendar page loads successfully", async ({ page }) => {
     await page.goto("/calendar");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     expect(pageText.length).toBeGreaterThan(10);
   });
@@ -17,7 +17,7 @@ test.describe("Calendar Page", () => {
   test("calendar legend badges are visible", async ({ page }) => {
     await page.goto("/calendar");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // CRMCalendar renders 4 legend badges: Google Calendar, Requested, Confirmed, Denied
     await expect(page.getByText("Google Calendar").first()).toBeVisible({ timeout: 5000 });
     await expect(page.getByText("Requested", { exact: true }).first()).toBeVisible({ timeout: 5000 });
@@ -28,7 +28,7 @@ test.describe("Calendar Page", () => {
   test("calendar renders date content", async ({ page }) => {
     await page.goto("/calendar");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const pageText = await page.evaluate(() => document.querySelector("main")?.innerText || "");
     // react-big-calendar shows month names or day names
     expect(pageText).toMatch(/Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Mon|Tue|Wed|Thu|Fri|Sat|Sun/);
@@ -37,7 +37,7 @@ test.describe("Calendar Page", () => {
   test("calendar has view navigation buttons", async ({ page }) => {
     await page.goto("/calendar");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     // react-big-calendar toolbar has view buttons: Month, Week, Day, Agenda
     const buttonCount = await page.locator("button").count();
     expect(buttonCount).toBeGreaterThanOrEqual(3);
@@ -46,13 +46,11 @@ test.describe("Calendar Page", () => {
   test("calendar component container has proper height", async ({ page }) => {
     await page.goto("/calendar");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
-    // The calendar is rendered inside a div with h-[600px] or h-[700px]
-    const calContainer = await page.evaluate(() => {
-      const el = document.querySelector("[class*='h-\\[600px\\]'], [class*='h-\\[700px\\]'], .rbc-calendar");
-      return !!el;
-    });
-    expect(calContainer).toBe(true);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
+    // CRMCalendar is a client-side dynamic import (ssr:false), so wait for
+    // react-big-calendar's .rbc-calendar root to mount rather than racing the
+    // chunk load.
+    await expect(page.locator(".rbc-calendar").first()).toBeVisible({ timeout: 15000 });
   });
 
   test("calendar has animation class on container", async ({ page }) => {
@@ -68,7 +66,7 @@ test.describe("Calendar Page", () => {
   test("no NaN or undefined values", async ({ page }) => {
     await page.goto("/calendar");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const text = await page.evaluate(() => {
       const main = document.querySelector("main");
       const clone = main?.cloneNode(true) as HTMLElement;
@@ -82,7 +80,7 @@ test.describe("Calendar Page", () => {
   test("calendar page does not overflow viewport", async ({ page }) => {
     await page.goto("/calendar");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const overflows = await page.evaluate(() => {
       return document.documentElement.scrollWidth > document.documentElement.clientWidth + 5;
     });
@@ -92,11 +90,11 @@ test.describe("Calendar Page", () => {
   test("navigation to calendar from dashboard works", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const calLink = page.locator("a[href='/calendar']");
     if (await calLink.isVisible({ timeout: 3000 }).catch(() => false)) {
       await calLink.click();
-      await page.waitForTimeout(2000);
+      await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
       expect(page.url()).toContain("/calendar");
     }
   });
@@ -108,7 +106,7 @@ test.describe("Calendar Page", () => {
     });
     await page.goto("/calendar");
     await page.waitForLoadState("domcontentloaded");
-    await page.waitForTimeout(2000);
+    await page.waitForFunction(() => !document.querySelector('main img[alt="Loading"]'), { timeout: 20000 }).catch(() => {});
     const critical = errors.filter(
       (e) =>
         !e.includes("favicon") &&
