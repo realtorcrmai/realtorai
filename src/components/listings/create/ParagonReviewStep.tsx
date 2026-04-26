@@ -27,6 +27,10 @@ interface ParagonReviewStepProps {
    *  Omitted when storage upload failed and we have nothing to re-parse. */
   onRescan?: () => void;
   rescanning?: boolean;
+  /** "PDF" (Listing Detail Report, AI parsed) or "CSV" (ML Default Spreadsheet, deterministic parse). */
+  source?: "PDF" | "CSV";
+  /** Soft warnings from the parser to surface to the realtor (missing columns, multi-row CSVs, etc). */
+  warnings?: string[];
 }
 
 export function ParagonReviewStep({
@@ -37,6 +41,8 @@ export function ParagonReviewStep({
   onBack,
   onRescan,
   rescanning = false,
+  source = "PDF",
+  warnings = [],
 }: ParagonReviewStepProps) {
   const router = useRouter();
   const [submitting, startSubmit] = useTransition();
@@ -77,7 +83,7 @@ export function ParagonReviewStep({
     setError(null);
 
     startSubmit(async () => {
-      const notes = buildImportNotes(parsed, extraNotes);
+      const notes = buildImportNotes(parsed, extraNotes, source);
       const priceNum = listPrice ? Number(listPrice) : undefined;
 
       const payload = {
@@ -114,7 +120,9 @@ export function ParagonReviewStep({
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold">We pre-filled the listing from {fileName}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Review every field — yellow highlights mean we weren't certain.
+            {source === "CSV"
+              ? "CSV imports are exact but include fewer fields than the PDF. Review the highlights and add anything missing."
+              : "Review every field — yellow highlights mean we weren't certain."}
             {lowConfFields > 0 && ` (${lowConfFields} field${lowConfFields > 1 ? "s" : ""} need a closer look.)`}
           </p>
         </div>
@@ -142,10 +150,24 @@ export function ParagonReviewStep({
             className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-50 inline-flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted/50"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Replace PDF
+            {source === "CSV" ? "Replace CSV" : "Replace PDF"}
           </button>
         </div>
       </div>
+
+      {warnings.length > 0 && (
+        <div
+          role="status"
+          className="rounded-xl border border-amber-200/60 bg-amber-50/60 dark:bg-amber-950/20 dark:border-amber-900/30 p-3 text-xs text-amber-800 dark:text-amber-200 space-y-1"
+        >
+          <p className="font-semibold">A few things to double-check:</p>
+          <ul className="list-disc list-inside space-y-0.5">
+            {warnings.map((w, i) => (
+              <li key={i}>{w}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {error && (
         <div role="alert" className="p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/30 text-sm text-red-700 dark:text-red-300">
