@@ -9,7 +9,7 @@ import {
   Wand2, Settings, LogOut, Newspaper, Megaphone, PartyPopper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import { Plus } from "lucide-react";
 import type { FeatureKey } from "@/lib/features";
 import { useRecentItems } from "@/stores/recent-items";
@@ -191,6 +191,13 @@ export function MondaySidebar() {
     );
   }
 
+  // Dynamic brand glow — drop-shadow color tracks the active section, with
+  // hex `30` appended for ~19% opacity. Extracted to a const to keep the
+  // JSX declarative.
+  const brandGlowStyle: CSSProperties = {
+    filter: `drop-shadow(0 0 18px ${glowColor}30)`,
+  };
+
   return (
     <aside className="hidden md:flex flex-col w-60 shrink-0 bg-sidebar h-full overflow-y-auto">
       {/* Brand — logo glow changes per active section, pulses on notifications */}
@@ -199,7 +206,7 @@ export function MondaySidebar() {
           "flex flex-col items-center justify-center h-[140px] px-3 shrink-0 transition-all duration-700",
           hasUnread && "animate-[logo-pulse_2s_ease-in-out_infinite]"
         )}
-        style={{ filter: `drop-shadow(0 0 18px ${glowColor}30)` }}
+        style={brandGlowStyle}
       >
         <LogoVideo size={72} />
         <div className="text-center mt-1">
